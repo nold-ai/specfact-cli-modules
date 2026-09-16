@@ -1,0 +1,14 @@
+"""Exercise third-party Python and native-extension imports without network access."""
+
+import pyodbc
+import requests
+
+
+def prepared_method() -> str:
+    """Prepare a request locally; never send it."""
+    return requests.Request("GET", "https://example.invalid").prepare().method
+
+
+def installed_drivers() -> list[str]:
+    """Load the native ODBC manager without connecting to a database."""
+    return pyodbc.drivers()

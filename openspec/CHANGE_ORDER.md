@@ -65,6 +65,12 @@ These archived specs are now the shipped basis for the flagship demo: run review
 produce JSON evidence, identify AI-bloat findings, hand remediation packets to an
 AI IDE, rerun, and compare improved evidence.
 
+## Portable External Project Runtime
+
+| Change | Issue | Status | Dependencies |
+|---|---|---|---|
+| `code-review-16-portable-project-runtime` | [#473](https://github.com/nold-ai/specfact-cli-modules/issues/473) | Implementation authorized 2026-09-14; automatic customer runtime preparation and external corpus | No open prerequisites; blocks #472; #466/#459/#175 are baseline context |
+
 ## Customer Capsule Corrective Track
 
 | Change | GitHub issue | Positioning | Dependencies |

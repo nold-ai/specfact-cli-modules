@@ -95,6 +95,8 @@ class ReviewRunRequest:
     focus_facets: tuple[str, ...] = ()
     review_focus: ReviewFocus | None = None
     requirements_evidence: Path | None = None
+    project_config: Path | None = None
+    project_runtime: Path | None = None
 
 
 @dataclass(frozen=True)
@@ -110,6 +112,8 @@ class _ReviewLoopFlags:
     review_level: ReviewLevelFilter | None
     review_focus: ReviewFocus | None
     assurance_kind: LocalAssuranceKind = "explicit_files"
+    project_config: Path | None = None
+    project_runtime: Path | None = None
 
 
 def _changed_files_from_git_diff(*, include_tests: bool) -> list[Path]:
@@ -518,6 +522,8 @@ def _run_review_with_progress(
             review_level=flags.review_level,
             review_focus=flags.review_focus,
             assurance_kind=flags.assurance_kind,
+            project_config=flags.project_config,
+            project_runtime=flags.project_runtime,
         ),
     )
 
@@ -539,6 +545,8 @@ def _run_review_with_status(
             review_level=flags.review_level,
             review_focus=flags.review_focus,
             assurance_kind=flags.assurance_kind,
+            project_config=flags.project_config,
+            project_runtime=flags.project_runtime,
         )
         report = _run_review_once(files, base)
         applied_simplification_findings: list[ReviewFinding] = []
@@ -571,6 +579,8 @@ def _run_review_once(files: list[Path], flags: _ReviewLoopFlags) -> ReviewReport
         review_level=flags.review_level,
         focus=flags.review_focus,
         assurance_kind=flags.assurance_kind,
+        project_config=flags.project_config,
+        project_runtime=flags.project_runtime,
     )
     applied_simplification_findings: list[ReviewFinding] = []
     if flags.fix:
@@ -599,6 +609,8 @@ def _run_review_once(files: list[Path], flags: _ReviewLoopFlags) -> ReviewReport
             review_level=flags.review_level,
             focus=flags.review_focus,
             assurance_kind=flags.assurance_kind,
+            project_config=flags.project_config,
+            project_runtime=flags.project_runtime,
         )
         report = _with_applied_simplification_findings(report, applied_simplification_findings)
     if flags.preview_fixes:
@@ -744,6 +756,8 @@ def _build_review_run_request(
         focus_facets=focus_facets,
         review_focus=_review_focus_from_facets(focus_facets),
         requirements_evidence=requirements_evidence,
+        project_config=cast(Path | None, _get_optional_param("project_config", _as_optional_path)),
+        project_runtime=cast(Path | None, _get_optional_param("project_runtime", _as_optional_path)),
     )
 
     # Reject any unexpected keyword arguments
@@ -853,6 +867,7 @@ def _immutable_scope_report(request: ReviewRunRequest) -> ReviewReport:
             with_mutation=request.with_mutation,
             pr_context_file=request.pr_context_file,
             repository_slug=_repository_slug(Path.cwd()),
+            portable_project_runtime=request.pr_context_file is None,
         )
     )
     try:
@@ -863,6 +878,8 @@ def _immutable_scope_report(request: ReviewRunRequest) -> ReviewReport:
                 resolution,
                 options=ReviewOptions(
                     no_tests=request.no_tests,
+                    project_config=request.project_config,
+                    project_runtime=request.project_runtime,
                     include_noise=request.include_noise,
                     bug_hunt=request.bug_hunt,
                     review_level=request.review_level,
@@ -965,6 +982,8 @@ def _normalize_review_request(request: ReviewRunRequest) -> ReviewRunRequest:
         focus_facets=request.focus_facets,
         review_focus=_review_focus_from_facets(request.focus_facets),
         requirements_evidence=request.requirements_evidence,
+        project_config=request.project_config,
+        project_runtime=request.project_runtime,
     )
 
 
@@ -1142,6 +1161,35 @@ def _canonical_json_digest(value: dict[str, Any]) -> str:
     return f"sha256:{hashlib.sha256(canonical_json.encode('utf-8')).hexdigest()}"
 
 
+def _resolve_worktree_files(request: ReviewRunRequest) -> list[Path]:
+    file_focus_facets = tuple(facet for facet in request.focus_facets if facet in {"source", "tests", "docs"})
+    include_for_resolve = request.include_tests or bool(file_focus_facets)
+    legacy_scope: Literal["changed", "full"] | None = None
+    if request.scope in {"changed", "worktree"}:
+        legacy_scope = "changed"
+    elif request.scope == "full":
+        legacy_scope = "full"
+    resolved_files = resolve_legacy_files(
+        request.files,
+        LegacyFileSelectionRequest(
+            include_tests=include_for_resolve,
+            scope=legacy_scope,
+            path_filters=request.path_filters or [],
+            changed_discovery=_changed_files_from_git_diff,
+            full_discovery=_all_python_files_from_git,
+        ),
+    )
+    resolved_files = _filter_files_by_focus(resolved_files, request.focus_facets)
+    if not resolved_files:
+        raise NoReviewableFilesError(
+            "No reviewable Python files matched the selected --focus facets."
+            if request.focus_facets
+            else "No Python files to review were provided or detected."
+        )
+
+    return resolved_files
+
+
 @beartype
 @require(
     lambda request_or_files: request_or_files is None or isinstance(request_or_files, (list, ReviewRunRequest)),
@@ -1173,30 +1221,7 @@ def run_command(
             )
         return _render_review_result(report, request)
 
-    file_focus_facets = tuple(facet for facet in request.focus_facets if facet in {"source", "tests", "docs"})
-    include_for_resolve = request.include_tests or bool(file_focus_facets)
-    legacy_scope: Literal["changed", "full"] | None = None
-    if request.scope in {"changed", "worktree"}:
-        legacy_scope = "changed"
-    elif request.scope == "full":
-        legacy_scope = "full"
-    resolved_files = resolve_legacy_files(
-        request.files,
-        LegacyFileSelectionRequest(
-            include_tests=include_for_resolve,
-            scope=legacy_scope,
-            path_filters=request.path_filters or [],
-            changed_discovery=_changed_files_from_git_diff,
-            full_discovery=_all_python_files_from_git,
-        ),
-    )
-    resolved_files = _filter_files_by_focus(resolved_files, request.focus_facets)
-    if not resolved_files:
-        raise NoReviewableFilesError(
-            "No reviewable Python files matched the selected --focus facets."
-            if request.focus_facets
-            else "No Python files to review were provided or detected."
-        )
+    resolved_files = _resolve_worktree_files(request)
 
     requirements_evidence = (
         _requirements_evidence_context(request.requirements_evidence)
@@ -1207,6 +1232,8 @@ def run_command(
         resolved_files,
         _ReviewLoopFlags(
             no_tests=request.no_tests,
+            project_config=request.project_config,
+            project_runtime=request.project_runtime,
             include_noise=request.include_noise,
             fix=request.fix,
             preview_fixes=request.preview_fixes,

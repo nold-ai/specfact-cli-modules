@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import os
+from contextlib import contextmanager
+from contextvars import ContextVar
 from pathlib import Path
 from typing import Literal
 
@@ -68,6 +70,20 @@ def tool_error(
     )
 
 
+_DEVELOPMENT_RUNTIME: ContextVar[Path | None] = ContextVar("development_runtime", default=None)
+
+
+@contextmanager
+@require(lambda root: root.is_absolute())
+def development_runtime(root: Path):
+    """Bind the known development interpreter only while reviewing a staged snapshot."""
+    token = _DEVELOPMENT_RUNTIME.set(root)
+    try:
+        yield
+    finally:
+        _DEVELOPMENT_RUNTIME.reset(token)
+
+
 _CAPSULE_TOOL_MODULES = {
     "radon": "radon",
     "pylint": "pylint",
@@ -83,17 +99,29 @@ _CAPSULE_TOOL_MODULES = {
 def analyzer_command(command: list[str]) -> list[str]:
     """Preserve isolated Python child imports and private Ruff cache in a capsule."""
     if Path(__file__).parent != Path("/opt/specfact/builtin/specfact_code_review"):
+        development = _DEVELOPMENT_RUNTIME.get()
+        if development is not None and command[0] == "basedpyright":
+            return [*command, "--pythonpath", str(development / "bin/python")]
         return command
     if command[0] == "ruff":
         return [*command, "--cache-dir", "/opt/specfact/tmp/cache/ruff"]
     module = _CAPSULE_TOOL_MODULES.get(command[0])
     if module is None:
         return command
+    target_worker = (
+        command[0] in {"basedpyright", "pylint", "crosshair"}
+        and Path("/opt/specfact/project-runtime/project-runtime.json").is_file()
+    )
+    if target_worker:
+        from specfact_code_review.run.target_launch import target_command
+
+        return target_command(module, command[1:])
+    bootstrap = "/opt/specfact/bootstrap/sealed_bootstrap.py"
     return [
         "/opt/specfact/python/bin/python",
         "-I",
         "-S",
-        "/opt/specfact/bootstrap/sealed_bootstrap.py",
+        bootstrap,
         module,
         *command[1:],
     ]

@@ -1,0 +1,334 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: <WORKTREE>
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 110 items
+
+tests/unit/specfact_code_review/run/test_runtime_artifacts.py ....FFF    [  6%]
+tests/unit/specfact_code_review/run/test_runtime_builder.py ......FF     [ 13%]
+tests/unit/specfact_code_review/run/test_target_bootstrap.py .....FFF    [ 20%]
+tests/unit/specfact_code_review/run/test_commands.py ................... [ 38%]
+...........................................................F             [ 92%]
+tests/unit/test_external_capsule_corpus.py .......F                      [100%]
+
+=================================== FAILURES ===================================
+___________ test_descriptor_rejects_malformed_inventory[inventory0] ____________
+
+tmp_path = PosixPath('<TMPDIR>/pytest-of-dom/pytest-129/test_descriptor_rejects_malfor0')
+inventory = []
+
+    @pytest.mark.parametrize("inventory", [[], {"analyzer_conflicts": []}, {"member_graphs": []}])
+    def test_descriptor_rejects_malformed_inventory(tmp_path: Path, inventory) -> None:
+        from specfact_code_review.run.runtime_models import document_digest
+
+        source, artifact = tmp_path / "source", tmp_path / "artifact"
+        source.mkdir()
+        artifact.mkdir()
+        plan = discover_project(source)
+        prepared = seal_runtime(artifact, plan=plan, environment_id="linux-x86_64-cp312", worker_identity="worker")
+        data = prepared.descriptor
+        data["inventory"] = inventory
+        data["identity"] = document_digest({key: value for key, value in data.items() if key != "identity"})
+        prepared.descriptor_path.write_text(json.dumps(data))
+>       with pytest.raises(ProjectRuntimeError, match="inventory_invalid"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ProjectRuntimeError
+
+tests/unit/specfact_code_review/run/test_runtime_artifacts.py:129: Failed
+___________ test_descriptor_rejects_malformed_inventory[inventory1] ____________
+
+tmp_path = PosixPath('<TMPDIR>/pytest-of-dom/pytest-129/test_descriptor_rejects_malfor1')
+inventory = {'analyzer_conflicts': []}
+
+    @pytest.mark.parametrize("inventory", [[], {"analyzer_conflicts": []}, {"member_graphs": []}])
+    def test_descriptor_rejects_malformed_inventory(tmp_path: Path, inventory) -> None:
+        from specfact_code_review.run.runtime_models import document_digest
+
+        source, artifact = tmp_path / "source", tmp_path / "artifact"
+        source.mkdir()
+        artifact.mkdir()
+        plan = discover_project(source)
+        prepared = seal_runtime(artifact, plan=plan, environment_id="linux-x86_64-cp312", worker_identity="worker")
+        data = prepared.descriptor
+        data["inventory"] = inventory
+        data["identity"] = document_digest({key: value for key, value in data.items() if key != "identity"})
+        prepared.descriptor_path.write_text(json.dumps(data))
+>       with pytest.raises(ProjectRuntimeError, match="inventory_invalid"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ProjectRuntimeError
+
+tests/unit/specfact_code_review/run/test_runtime_artifacts.py:129: Failed
+___________ test_descriptor_rejects_malformed_inventory[inventory2] ____________
+
+tmp_path = PosixPath('<TMPDIR>/pytest-of-dom/pytest-129/test_descriptor_rejects_malfor2')
+inventory = {'member_graphs': []}
+
+    @pytest.mark.parametrize("inventory", [[], {"analyzer_conflicts": []}, {"member_graphs": []}])
+    def test_descriptor_rejects_malformed_inventory(tmp_path: Path, inventory) -> None:
+        from specfact_code_review.run.runtime_models import document_digest
+
+        source, artifact = tmp_path / "source", tmp_path / "artifact"
+        source.mkdir()
+        artifact.mkdir()
+        plan = discover_project(source)
+        prepared = seal_runtime(artifact, plan=plan, environment_id="linux-x86_64-cp312", worker_identity="worker")
+        data = prepared.descriptor
+        data["inventory"] = inventory
+        data["identity"] = document_digest({key: value for key, value in data.items() if key != "identity"})
+        prepared.descriptor_path.write_text(json.dumps(data))
+>       with pytest.raises(ProjectRuntimeError, match="inventory_invalid"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ProjectRuntimeError
+
+tests/unit/specfact_code_review/run/test_runtime_artifacts.py:129: Failed
+________ test_concurrent_cache_publication_accepts_existing_winner[17] _________
+
+tmp_path = PosixPath('<TMPDIR>/pytest-of-dom/pytest-129/test_concurrent_cache_publicat0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10df23e10>
+number = 17
+
+    @pytest.mark.parametrize("number", [17, 39])
+    def test_concurrent_cache_publication_accepts_existing_winner(tmp_path, monkeypatch, number) -> None:
+        from specfact_code_review.run import runtime_builder
+
+        def raced(source, destination):
+            raise OSError(number, "concurrent publication")
+
+        monkeypatch.setattr(runtime_builder.os, "rename", raced)
+>       runtime_builder.publish_artifact(tmp_path / "candidate", tmp_path / "winner")
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: module 'specfact_code_review.run.runtime_builder' has no attribute 'publish_artifact'
+
+tests/unit/specfact_code_review/run/test_runtime_builder.py:73: AttributeError
+________ test_concurrent_cache_publication_accepts_existing_winner[39] _________
+
+tmp_path = PosixPath('<TMPDIR>/pytest-of-dom/pytest-129/test_concurrent_cache_publicat1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10e234640>
+number = 39
+
+    @pytest.mark.parametrize("number", [17, 39])
+    def test_concurrent_cache_publication_accepts_existing_winner(tmp_path, monkeypatch, number) -> None:
+        from specfact_code_review.run import runtime_builder
+
+        def raced(source, destination):
+            raise OSError(number, "concurrent publication")
+
+        monkeypatch.setattr(runtime_builder.os, "rename", raced)
+>       runtime_builder.publish_artifact(tmp_path / "candidate", tmp_path / "winner")
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: module 'specfact_code_review.run.runtime_builder' has no attribute 'publish_artifact'
+
+tests/unit/specfact_code_review/run/test_runtime_builder.py:73: AttributeError
+___________ test_python_startup_cannot_bypass_runtime[arguments0--I] ___________
+
+arguments = ['-I', '-c', 'pass'], option = '-I'
+
+    @pytest.mark.parametrize("arguments, option", [(["-I", "-c", "pass"], "-I"), (["-uS", "script"], "-S"), (["-E", "-m", "pytest"], "-E")])
+    def test_python_startup_cannot_bypass_runtime(arguments, option) -> None:
+>       with pytest.raises(RuntimeError, match=f"project_python_option_unsupported:{option}"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE RuntimeError
+
+tests/unit/specfact_code_review/run/test_target_bootstrap.py:76: Failed
+___________ test_python_startup_cannot_bypass_runtime[arguments1--S] ___________
+
+arguments = ['-uS', 'script'], option = '-S'
+
+    @pytest.mark.parametrize("arguments, option", [(["-I", "-c", "pass"], "-I"), (["-uS", "script"], "-S"), (["-E", "-m", "pytest"], "-E")])
+    def test_python_startup_cannot_bypass_runtime(arguments, option) -> None:
+>       with pytest.raises(RuntimeError, match=f"project_python_option_unsupported:{option}"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE RuntimeError
+
+tests/unit/specfact_code_review/run/test_target_bootstrap.py:76: Failed
+___________ test_python_startup_cannot_bypass_runtime[arguments2--E] ___________
+
+arguments = ['-E', '-m', 'pytest'], option = '-E'
+
+    @pytest.mark.parametrize("arguments, option", [(["-I", "-c", "pass"], "-I"), (["-uS", "script"], "-S"), (["-E", "-m", "pytest"], "-E")])
+    def test_python_startup_cannot_bypass_runtime(arguments, option) -> None:
+>       with pytest.raises(RuntimeError, match=f"project_python_option_unsupported:{option}"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE RuntimeError
+
+tests/unit/specfact_code_review/run/test_target_bootstrap.py:76: Failed
+_______ test_normalized_simplify_request_preserves_project_runtime_paths _______
+
+    def test_normalized_simplify_request_preserves_project_runtime_paths() -> None:
+        request = run_commands.ReviewRunRequest(files=[], focus_facets=("simplify",), project_config=Path("project.toml"), project_runtime=Path("project-runtime.json"))
+        normalized = run_commands._normalize_review_request(request)
+>       assert normalized.project_config == request.project_config
+E       AssertionError: assert None == PosixPath('project.toml')
+E        +  where None = ReviewRunRequest(files=[], include_tests=False, scope=None, path_filters=None, base_ref=None, head_ref=None, pr_contex...s_facets=('simplify',), review_focus='simplify', requirements_evidence=None, project_config=None, project_runtime=None).project_config
+E        +  and   PosixPath('project.toml') = ReviewRunRequest(files=[], include_tests=False, scope=None, path_filters=None, base_ref=None, head_ref=None, pr_contex...equirements_evidence=None, project_config=PosixPath('project.toml'), project_runtime=PosixPath('project-runtime.json')).project_config
+
+tests/unit/specfact_code_review/run/test_commands.py:1801: AssertionError
+_________ test_source_identity_detects_new_untracked_and_ignored_files _________
+
+tmp_path = PosixPath('<TMPDIR>/pytest-of-dom/pytest-129/test_source_identity_detects_n0')
+
+    def test_source_identity_detects_new_untracked_and_ignored_files(tmp_path: Path) -> None:
+        module = _load()
+        (tmp_path / ".git").mkdir()
+        (tmp_path / "source.py").write_text("VALUE = 1\n")
+>       before = module.tracked_identity(tmp_path)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/test_external_capsule_corpus.py:104:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+scripts/external_capsule_corpus.py:114: in tracked_identity
+    subprocess.check_output(["git", "ls-files", "-z"], cwd=root).decode().split("\0")
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<SYSTEM_PREFIX>/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/subprocess.py:473: in check_output
+    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+input = None, capture_output = False, timeout = None, check = True
+popenargs = (['git', 'ls-files', '-z'],)
+kwargs = {'stdout': -1, 'cwd': PosixPath('<TMPDIR>/pytest-of-dom/pytest-129/test_source_identity_detects_n0')}
+
+    def run(*popenargs,
+            input=None, capture_output=False, timeout=None, check=False, **kwargs):
+        """Run command with arguments and return a CompletedProcess instance.
+
+        The returned instance will have attributes args, returncode, stdout and
+        stderr. By default, stdout and stderr are not captured, and those attributes
+        will be None. Pass stdout=PIPE and/or stderr=PIPE in order to capture them,
+        or pass capture_output=True to capture both.
+
+        If check is True and the exit code was non-zero, it raises a
+        CalledProcessError. The CalledProcessError object will have the return code
+        in the returncode attribute, and output & stderr attributes if those streams
+        were captured.
+
+        If timeout (seconds) is given and the process takes too long,
+         a TimeoutExpired exception will be raised.
+
+        There is an optional argument "input", allowing you to
+        pass bytes or a string to the subprocess's stdin.  If you use this argument
+        you may not also use the Popen constructor's "stdin" argument, as
+        it will be used internally.
+
+        By default, all communication is in bytes, and therefore any "input" should
+        be bytes, and the stdout and stderr will be bytes. If in text mode, any
+        "input" should be a string, and stdout and stderr will be strings decoded
+        according to locale encoding, or by "encoding" if set. Text mode is
+        triggered by setting any of text, encoding, errors or universal_newlines.
+
+        The other arguments are the same as for the Popen constructor.
+        """
+        if input is not None:
+            if kwargs.get('stdin') is not None:
+                raise ValueError('stdin and input arguments may not both be used.')
+            kwargs['stdin'] = PIPE
+
+        if capture_output:
+            if kwargs.get('stdout') is not None or kwargs.get('stderr') is not None:
+                raise ValueError('stdout and stderr arguments may not be used '
+                                 'with capture_output.')
+            kwargs['stdout'] = PIPE
+            kwargs['stderr'] = PIPE
+
+        with Popen(*popenargs, **kwargs) as process:
+            try:
+                stdout, stderr = process.communicate(input, timeout=timeout)
+            except TimeoutExpired as exc:
+                process.kill()
+                if _mswindows:
+                    # Windows accumulates the output in a single blocking
+                    # read() call run on child threads, with the timeout
+                    # being done in a join() on those threads.  communicate()
+                    # _after_ kill() is required to collect that and add it
+                    # to the exception.
+                    exc.stdout, exc.stderr = process.communicate()
+                else:
+                    # POSIX _communicate already populated the output so
+                    # far into the TimeoutExpired exception.
+                    process.wait()
+                raise
+            except:  # Including KeyboardInterrupt, communicate handled that.
+                process.kill()
+                # We don't call process.wait() as .__exit__ does that for us.
+                raise
+            retcode = process.poll()
+            if check and retcode:
+>               raise CalledProcessError(retcode, process.args,
+                                         output=stdout, stderr=stderr)
+E               subprocess.CalledProcessError: Command '['git', 'ls-files', '-z']' returned non-zero exit status 128.
+
+<SYSTEM_PREFIX>/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/subprocess.py:578: CalledProcessError
+----------------------------- Captured stderr call -----------------------------
+fatal: not a git repository (or any of the parent directories): .git
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_runtime_artifacts.py::test_descriptor_rejects_malformed_inventory[inventory0]
+FAILED tests/unit/specfact_code_review/run/test_runtime_artifacts.py::test_descriptor_rejects_malformed_inventory[inventory1]
+FAILED tests/unit/specfact_code_review/run/test_runtime_artifacts.py::test_descriptor_rejects_malformed_inventory[inventory2]
+FAILED tests/unit/specfact_code_review/run/test_runtime_builder.py::test_concurrent_cache_publication_accepts_existing_winner[17]
+FAILED tests/unit/specfact_code_review/run/test_runtime_builder.py::test_concurrent_cache_publication_accepts_existing_winner[39]
+FAILED tests/unit/specfact_code_review/run/test_target_bootstrap.py::test_python_startup_cannot_bypass_runtime[arguments0--I]
+FAILED tests/unit/specfact_code_review/run/test_target_bootstrap.py::test_python_startup_cannot_bypass_runtime[arguments1--S]
+FAILED tests/unit/specfact_code_review/run/test_target_bootstrap.py::test_python_startup_cannot_bypass_runtime[arguments2--E]
+FAILED tests/unit/specfact_code_review/run/test_commands.py::test_normalized_simplify_request_preserves_project_runtime_paths
+FAILED tests/unit/test_external_capsule_corpus.py::test_source_identity_detects_new_untracked_and_ignored_files
+======================== 10 failed, 100 passed in 0.74s ========================
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: <WORKTREE>
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 139 items
+
+tests/unit/specfact_code_review/run/test_portable_worker.py .......F     [  5%]
+tests/unit/specfact_code_review/run/test_runtime_compatibility.py ...    [  7%]
+tests/unit/specfact_code_review/run/test_scope.py ...................... [ 23%]
+........................................................................ [ 75%]
+.................................F                                       [100%]
+
+=================================== FAILURES ===================================
+_________ test_failed_pytest_startup_cannot_reuse_previous_observation _________
+
+tmp_path = PosixPath('<TMPDIR>/pytest-of-dom/pytest-130/test_failed_pytest_startup_can0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1083b0510>
+
+    def test_failed_pytest_startup_cannot_reuse_previous_observation(tmp_path, monkeypatch) -> None:
+        import json
+        from types import SimpleNamespace
+        from specfact_code_review.run import portable_worker, target_launch
+
+        observation = tmp_path / "pytest-observation.json"
+        observation.write_text(json.dumps({"exit_code": 0, "collected": ["a"], "records": [{"nodeid": "a", "phase": "call", "outcome": "passed"}], "coverage": {"files": {"app.py": {}}}}))
+        monkeypatch.setattr(portable_worker, "Path", lambda value: observation if value == "/opt/specfact/tmp/pytest-observation.json" else Path(value))
+        monkeypatch.setattr(target_launch, "target_command", lambda *args: ["child"])
+        monkeypatch.setattr(portable_worker.subprocess, "run", lambda *args, **kwargs: SimpleNamespace(returncode=0))
+>       assert portable_worker.run_portable_pytest([tmp_path / "app.py"], ("portable-pytest-v2", "{}"))
+E       AssertionError: assert []
+E        +  where [] = <function run_portable_pytest at 0x107b44670>([PosixPath('<TMPDIR>/pytest-of-dom/pytest-130/test_failed_pytest_startup_can0/app.py')], ('portable-pytest-v2', '{}'))
+E        +    where <function run_portable_pytest at 0x107b44670> = <module 'specfact_code_review.run.portable_worker' from '<WORKTREE>/packages/specfact-code-review/src/specfact_code_review/run/portable_worker.py'>.run_portable_pytest
+
+tests/unit/specfact_code_review/run/test_portable_worker.py:89: AssertionError
+___________ test_portable_range_records_candidate_referenced_policy ____________
+
+scope_api = <module 'specfact_code_review.run.scope' from '<WORKTREE>/packages/specfact-code-review/src/specfact_code_review/run/scope.py'>
+git_repo = PosixPath('<TMPDIR>/pytest-of-dom/pytest-130/test_portable_range_records_ca0/repo')
+
+    def test_portable_range_records_candidate_referenced_policy(scope_api: Any, git_repo: Path) -> None:
+        base = _git(git_repo, "rev-parse", "HEAD")
+        (git_repo / "config").mkdir()
+        (git_repo / "ruff.toml").write_text('extend="config/candidate.toml"\n')
+        (git_repo / "config/candidate.toml").write_text('line-length=99\n')
+        head = _commit(git_repo, "candidate policy closure")
+        result = scope_api.resolve_scope(_range_request(scope_api, git_repo, base, head, portable_project_runtime=True))
+        try:
+            assert result.status == "PASS", result.diagnostics
+>           assert "config/candidate.toml" in result.selected_paths
+E           AssertionError: assert 'config/candidate.toml' in ('ruff.toml',)
+E            +  where ('ruff.toml',) = ScopeResolution(status='PASS', reason='resolved', selected_paths=('ruff.toml',), assurance_kind='range_preview', effec...01471d9c4d4', candidate_policy_change_digest='sha256:1feb555f4d55fceafc9d7679835ecf326b96cfafe6bc64a2db0b58e68195c644').selected_paths
+
+tests/unit/specfact_code_review/run/test_scope.py:1375: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_portable_worker.py::test_failed_pytest_startup_cannot_reuse_previous_observation
+FAILED tests/unit/specfact_code_review/run/test_scope.py::test_portable_range_records_candidate_referenced_policy
+======================== 2 failed, 137 passed in 9.18s =========================

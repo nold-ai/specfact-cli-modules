@@ -5,14 +5,14 @@ import subprocess
 from pathlib import Path
 from unittest.mock import Mock
 
-from pytest import MonkeyPatch
+from pytest import MonkeyPatch, mark
 
 from specfact_code_review.tools.pylint_runner import run_pylint
 from tests.unit.specfact_code_review.tools.helpers import assert_tool_run, completed_process
 
 
 def test_run_pylint_returns_empty_for_no_files() -> None:
-    assert run_pylint([]) == []
+    assert not run_pylint([])
 
 
 def test_run_pylint_maps_bare_except_to_architecture(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
@@ -167,76 +167,27 @@ def test_run_pylint_empty_stdout_truncates_long_stderr(tmp_path: Path, monkeypat
     assert f"... ({len(long_stderr)} chars total)" in findings[0].message
 
 
-def test_run_pylint_coerces_line_zero_to_one(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
+@mark.parametrize(
+    ("fields", "expected"),
+    [
+        ((0, "line too long"), (1, "line too long")),
+        ((-5, "line too long"), (1, "line too long")),
+        ((3, ""), (3, "(pylint provided no message text)")),
+        ((3, "   \t\n  "), (3, "(pylint provided no message text)")),
+    ],
+)
+def test_run_pylint_normalizes_report_fields(
+    tmp_path: Path, monkeypatch: MonkeyPatch, fields: tuple[int, str], expected: tuple[int, str]
+) -> None:
     file_path = tmp_path / "target.py"
-    payload = [
-        {
-            "message-id": "C0301",
-            "path": str(file_path),
-            "line": 0,
-            "message": "line too long",
-        }
-    ]
+    line, message = fields
+    payload = [{"message-id": "C0301", "path": str(file_path), "line": line, "message": message}]
     monkeypatch.setattr(subprocess, "run", Mock(return_value=completed_process("pylint", stdout=json.dumps(payload))))
 
     findings = run_pylint([file_path])
 
     assert len(findings) == 1
-    assert findings[0].line == 1
-
-
-def test_run_pylint_coerces_empty_message_text(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
-    file_path = tmp_path / "target.py"
-    payload = [
-        {
-            "message-id": "C0301",
-            "path": str(file_path),
-            "line": 3,
-            "message": "",
-        }
-    ]
-    monkeypatch.setattr(subprocess, "run", Mock(return_value=completed_process("pylint", stdout=json.dumps(payload))))
-
-    findings = run_pylint([file_path])
-
-    assert len(findings) == 1
-    assert findings[0].message == "(pylint provided no message text)"
-
-
-def test_run_pylint_coerces_negative_line_to_one(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
-    file_path = tmp_path / "target.py"
-    payload = [
-        {
-            "message-id": "C0301",
-            "path": str(file_path),
-            "line": -5,
-            "message": "line too long",
-        }
-    ]
-    monkeypatch.setattr(subprocess, "run", Mock(return_value=completed_process("pylint", stdout=json.dumps(payload))))
-
-    findings = run_pylint([file_path])
-
-    assert len(findings) == 1
-    assert findings[0].line == 1
-
-
-def test_run_pylint_coerces_whitespace_only_message(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
-    file_path = tmp_path / "target.py"
-    payload = [
-        {
-            "message-id": "C0301",
-            "path": str(file_path),
-            "line": 3,
-            "message": "   \t\n  ",
-        }
-    ]
-    monkeypatch.setattr(subprocess, "run", Mock(return_value=completed_process("pylint", stdout=json.dumps(payload))))
-
-    findings = run_pylint([file_path])
-
-    assert len(findings) == 1
-    assert findings[0].message == "(pylint provided no message text)"
+    assert (findings[0].line, findings[0].message) == expected
 
 
 def test_run_pylint_parses_json_with_surrounding_whitespace(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
@@ -271,3 +222,19 @@ def test_run_pylint_returns_tool_error_for_invalid_payload_item(tmp_path: Path, 
     assert len(findings) == 1
     assert findings[0].category == "tool_error"
     assert findings[0].tool == "pylint"
+
+
+def test_run_pylint_rejects_startup_failure_with_clean_json(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
+    diagnostic = "project_worker_startup_import_state_changed"
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        Mock(return_value=completed_process("pylint", stdout="[]", stderr=diagnostic, returncode=78)),
+    )
+
+    findings = run_pylint([tmp_path / "target.py"])
+
+    assert len(findings) == 1
+    assert findings[0].category == "tool_error"
+    assert diagnostic in findings[0].message
+    assert "78" in findings[0].message

@@ -1,0 +1,212 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: <workspace>
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 23 items / 20 deselected / 3 selected
+
+tests/unit/specfact_code_review/run/test_runtime_vcs.py FFF              [100%]
+
+=================================== FAILURES ===================================
+_____________ test_frozen_vcs_tags_exclude_newly_added_tag_history _____________
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-273/test_frozen_vcs_tags_exclude_n0')
+
+    def test_frozen_vcs_tags_exclude_newly_added_tag_history(tmp_path: Path) -> None:
+        root = tmp_path / "source"
+        _repository(root)
+        bound = vcs_context(root)
+        unrelated = _git(root, "-c", "user.name=Fixture", "-c", "user.email=fixture@example.test", "commit-tree", bound["tree"], "-m", "unbound commit")
+        _git(root, "tag", "late", unrelated)
+        copied = tmp_path / "copy"
+        copied.mkdir()
+>       copy_vcs_context(root, copied, bound_vcs=bound)
+
+tests/unit/specfact_code_review/run/test_runtime_vcs.py:419: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+args = (PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-273/test_frozen_vcs_tags_exc...rivate/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-273/test_frozen_vcs_tags_exclude_n0/copy'))
+kwargs = {'bound_vcs': {'commit': '9a2c9027fec277397df7d92be4d73fc4d438dcdf', 'tree': 'ae7df65c33f278677e0d7eb633690c0053ddf0b7', 'tags': '', 'shallow': ''}}
+
+    def wrapper(*args, **kwargs):  # type: ignore
+        """Wrap func by checking the preconditions and postconditions."""
+        kwargs_error = _assert_no_invalid_kwargs(kwargs)
+        if kwargs_error:
+            raise kwargs_error
+    
+        # We need to create a new in-progress set if it is None as the ``ContextVar`` does not accept
+        # a factory function for the default argument. If we didn't do this, and simply set an empty
+        # set as the default, ``ContextVar`` would always point to the same set by copying the default
+        # by reference.
+        in_progress = _IN_PROGRESS.get()
+        if in_progress is None:
+            in_progress = set()
+            _IN_PROGRESS.set(in_progress)
+    
+        # Use try-finally instead of ExitStack for performance.
+        try:
+            # If the wrapper is already checking the contracts for the wrapped function, avoid a recursive loop
+            # by skipping any subsequent contract checks for the same function.
+            if id_func in in_progress:
+                return func(*args, **kwargs)
+    
+            in_progress.add(id_func)
+    
+            (preconditions, snapshots, postconditions) = _unpack_pre_snap_posts(
+                wrapper
+            )
+    
+            resolved_kwargs = kwargs_from_call(
+                param_names=param_names,
+                kwdefaults=kwdefaults,
+                args=args,
+                kwargs=kwargs,
+            )
+    
+            type_error = _assert_resolved_kwargs_valid(
+                postconditions=postconditions, resolved_kwargs=resolved_kwargs
+            )
+            if type_error:
+                raise type_error
+    
+            violation_error = _assert_preconditions(
+                preconditions=preconditions,
+                resolved_kwargs=resolved_kwargs,
+                func=func,
+            )
+            if violation_error:
+                raise violation_error
+    
+            # Capture the snapshots
+            if postconditions and snapshots:
+                resolved_kwargs["OLD"] = _capture_old(
+                    snapshots=snapshots, resolved_kwargs=resolved_kwargs, func=func
+                )
+    
+            # Ideally, we would catch any exception here and strip the checkers from the traceback.
+            # Unfortunately, this can not be done in Python 3, see
+            # https://stackoverflow.com/questions/44813333/how-can-i-elide-a-function-wrapper-from-the-traceback-in-python-3
+>           result = func(*args, **kwargs)
+                     ^^^^^^^^^^^^^^^^^^^^^
+E           TypeError: copy_vcs_context() got an unexpected keyword argument 'bound_vcs'
+
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: TypeError
+____________ test_frozen_shallow_boundary_controls_object_traversal ____________
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-273/test_frozen_shallow_boundary_c0')
+
+    def test_frozen_shallow_boundary_controls_object_traversal(tmp_path: Path) -> None:
+        root = tmp_path / "source"
+        _repository(root)
+        (root / "app.py").write_text("VALUE = 2\n")
+        selected = _commit_fixture(root, "selected")
+        bound = vcs_context(root)
+        (root / ".git/shallow").write_text(selected + "\n")
+        copied = tmp_path / "copy"
+        copied.mkdir()
+>       copy_vcs_context(root, copied, bound_vcs=bound)
+
+tests/unit/specfact_code_review/run/test_runtime_vcs.py:433: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+args = (PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-273/test_frozen_shallow_boun...rivate/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-273/test_frozen_shallow_boundary_c0/copy'))
+kwargs = {'bound_vcs': {'commit': '2d07f386619e5b43d329436856d0ada35427ab99', 'tree': 'dc72567ae5cda25891b9ab3e4fc6c31f523e86ee', 'tags': '', 'shallow': ''}}
+
+    def wrapper(*args, **kwargs):  # type: ignore
+        """Wrap func by checking the preconditions and postconditions."""
+        kwargs_error = _assert_no_invalid_kwargs(kwargs)
+        if kwargs_error:
+            raise kwargs_error
+    
+        # We need to create a new in-progress set if it is None as the ``ContextVar`` does not accept
+        # a factory function for the default argument. If we didn't do this, and simply set an empty
+        # set as the default, ``ContextVar`` would always point to the same set by copying the default
+        # by reference.
+        in_progress = _IN_PROGRESS.get()
+        if in_progress is None:
+            in_progress = set()
+            _IN_PROGRESS.set(in_progress)
+    
+        # Use try-finally instead of ExitStack for performance.
+        try:
+            # If the wrapper is already checking the contracts for the wrapped function, avoid a recursive loop
+            # by skipping any subsequent contract checks for the same function.
+            if id_func in in_progress:
+                return func(*args, **kwargs)
+    
+            in_progress.add(id_func)
+    
+            (preconditions, snapshots, postconditions) = _unpack_pre_snap_posts(
+                wrapper
+            )
+    
+            resolved_kwargs = kwargs_from_call(
+                param_names=param_names,
+                kwdefaults=kwdefaults,
+                args=args,
+                kwargs=kwargs,
+            )
+    
+            type_error = _assert_resolved_kwargs_valid(
+                postconditions=postconditions, resolved_kwargs=resolved_kwargs
+            )
+            if type_error:
+                raise type_error
+    
+            violation_error = _assert_preconditions(
+                preconditions=preconditions,
+                resolved_kwargs=resolved_kwargs,
+                func=func,
+            )
+            if violation_error:
+                raise violation_error
+    
+            # Capture the snapshots
+            if postconditions and snapshots:
+                resolved_kwargs["OLD"] = _capture_old(
+                    snapshots=snapshots, resolved_kwargs=resolved_kwargs, func=func
+                )
+    
+            # Ideally, we would catch any exception here and strip the checkers from the traceback.
+            # Unfortunately, this can not be done in Python 3, see
+            # https://stackoverflow.com/questions/44813333/how-can-i-elide-a-function-wrapper-from-the-traceback-in-python-3
+>           result = func(*args, **kwargs)
+                     ^^^^^^^^^^^^^^^^^^^^^
+E           TypeError: copy_vcs_context() got an unexpected keyword argument 'bound_vcs'
+
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: TypeError
+________ test_builder_copies_frozen_plan_refs_after_input_verification _________
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-273/test_builder_copies_frozen_pla0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1096e0b00>
+
+    def test_builder_copies_frozen_plan_refs_after_input_verification(tmp_path: Path, monkeypatch) -> None:
+        root = tmp_path / "source"
+        _repository(root)
+        plan = discover_project(root)
+        unrelated = _git(root, "-c", "user.name=Fixture", "-c", "user.email=fixture@example.test", "commit-tree", plan.vcs["tree"], "-m", "unbound commit")
+        staging = tmp_path / "staging"
+        staging.mkdir()
+    
+        def change_tags_after_verification(selected_plan):
+            verify_inputs(selected_plan)
+            _git(root, "tag", "late", unrelated)
+    
+        def stop_before_acquisition(*_args, **_kwargs):
+            raise RuntimeError("stop before acquisition")
+    
+        monkeypatch.setattr(runtime_builder, "verify_inputs", change_tags_after_verification)
+        monkeypatch.setattr(runtime_builder, "stage_git", stop_before_acquisition)
+        with pytest.raises(RuntimeError, match="stop before acquisition"):
+            runtime_builder._build(plan, object(), staging)
+>       assert not _git(staging / "project", "for-each-ref", "--format=%(refname)")
+E       AssertionError: assert not 'refs/tags/late'
+E        +  where 'refs/tags/late' = _git((PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-273/test_builder_copies_frozen_pla0/staging') / 'project'), 'for-each-ref', '--format=%(refname)')
+
+tests/unit/specfact_code_review/run/test_runtime_vcs.py:457: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_runtime_vcs.py::test_frozen_vcs_tags_exclude_newly_added_tag_history
+FAILED tests/unit/specfact_code_review/run/test_runtime_vcs.py::test_frozen_shallow_boundary_controls_object_traversal
+FAILED tests/unit/specfact_code_review/run/test_runtime_vcs.py::test_builder_copies_frozen_plan_refs_after_input_verification
+======================= 3 failed, 20 deselected in 0.81s =======================

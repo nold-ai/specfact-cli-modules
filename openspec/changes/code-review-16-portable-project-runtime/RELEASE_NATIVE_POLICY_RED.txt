@@ -1,0 +1,277 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: /private/tmp/specfact-477-pytest-release
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 13 items
+
+tests/unit/specfact_code_review/run/test_portable_pytest_policy.py FFFFF [ 38%]
+FFFFF...                                                                 [100%]
+
+=================================== FAILURES ===================================
+_ test_native_coverage_threshold_preserves_configuration_and_cli_precedence[arguments0-70.0] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-533/test_native_coverage_threshold0')
+arguments = [], expected = 70.0
+
+    @pytest.mark.parametrize(
+        "arguments,expected", [([], 70.0), (["--cov-fail-under=60"], 60.0), (["--cov-config=alternate.ini"], 90.0)]
+    )
+    def test_native_coverage_threshold_preserves_configuration_and_cli_precedence(
+        tmp_path: Path, arguments: list[str], expected: float
+    ) -> None:
+        project = tmp_path / "project"
+        project.mkdir()
+        (project / "pytest.ini").write_text("[pytest]\n")
+        (project / ".coveragerc").write_text("[report]\nfail_under = 70\n")
+        (project / "alternate.ini").write_text("[report]\nfail_under = 90\n")
+        (project / "test_policy.py").write_text("def test_valid(): assert True\n")
+        result = _observe_policy(project, tmp_path / "policy.json", arguments)
+>       assert result["coverage_threshold"] == expected
+E       assert None == 70.0
+
+tests/unit/specfact_code_review/run/test_portable_pytest_policy.py:83: AssertionError
+_ test_native_coverage_threshold_preserves_configuration_and_cli_precedence[arguments1-60.0] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-533/test_native_coverage_threshold1')
+arguments = ['--cov-fail-under=60'], expected = 60.0
+
+    @pytest.mark.parametrize(
+        "arguments,expected", [([], 70.0), (["--cov-fail-under=60"], 60.0), (["--cov-config=alternate.ini"], 90.0)]
+    )
+    def test_native_coverage_threshold_preserves_configuration_and_cli_precedence(
+        tmp_path: Path, arguments: list[str], expected: float
+    ) -> None:
+        project = tmp_path / "project"
+        project.mkdir()
+        (project / "pytest.ini").write_text("[pytest]\n")
+        (project / ".coveragerc").write_text("[report]\nfail_under = 70\n")
+        (project / "alternate.ini").write_text("[report]\nfail_under = 90\n")
+        (project / "test_policy.py").write_text("def test_valid(): assert True\n")
+        result = _observe_policy(project, tmp_path / "policy.json", arguments)
+>       assert result["coverage_threshold"] == expected
+E       assert None == 60.0
+
+tests/unit/specfact_code_review/run/test_portable_pytest_policy.py:83: AssertionError
+_ test_native_coverage_threshold_preserves_configuration_and_cli_precedence[arguments2-90.0] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-533/test_native_coverage_threshold2')
+arguments = ['--cov-config=alternate.ini'], expected = 90.0
+
+    @pytest.mark.parametrize(
+        "arguments,expected", [([], 70.0), (["--cov-fail-under=60"], 60.0), (["--cov-config=alternate.ini"], 90.0)]
+    )
+    def test_native_coverage_threshold_preserves_configuration_and_cli_precedence(
+        tmp_path: Path, arguments: list[str], expected: float
+    ) -> None:
+        project = tmp_path / "project"
+        project.mkdir()
+        (project / "pytest.ini").write_text("[pytest]\n")
+        (project / ".coveragerc").write_text("[report]\nfail_under = 70\n")
+        (project / "alternate.ini").write_text("[report]\nfail_under = 90\n")
+        (project / "test_policy.py").write_text("def test_valid(): assert True\n")
+        result = _observe_policy(project, tmp_path / "policy.json", arguments)
+>       assert result["coverage_threshold"] == expected
+E       assert None == 90.0
+
+tests/unit/specfact_code_review/run/test_portable_pytest_policy.py:83: AssertionError
+_ test_native_test_support_roots_expand_from_configuration_root[pytest.ini-tests-expected0] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-533/test_native_test_support_roots0')
+configuration = 'pytest.ini', testpaths = 'tests', expected = ['tests']
+
+    @pytest.mark.parametrize(
+        "configuration,testpaths,expected",
+        [
+            ("pytest.ini", "tests", ["tests"]),
+            ("pytest.ini", "tests/*", ["tests/unit"]),
+            ("pytest.ini", ".", []),
+            ("pytest.ini", "tests/unit/test_policy.py", []),
+            ("tests/pytest.ini", ".", ["tests"]),
+            ("tests/pytest.ini", "unit", ["tests/unit"]),
+        ],
+    )
+    def test_native_test_support_roots_expand_from_configuration_root(
+        tmp_path: Path, configuration: str, testpaths: str, expected: list[str]
+    ) -> None:
+        project = tmp_path / "project"
+        (project / "tests/unit").mkdir(parents=True)
+        (project / configuration).write_text(f"[pytest]\ntestpaths = {testpaths}\n")
+        (project / "tests/unit/test_policy.py").write_text("def test_valid(): assert True\n")
+        result = _observe_policy(project, tmp_path / "roots.json", ["-c", configuration])
+>       assert result["test_roots"] == expected
+E       AssertionError: assert None == ['tests']
+
+tests/unit/specfact_code_review/run/test_portable_pytest_policy.py:105: AssertionError
+_ test_native_test_support_roots_expand_from_configuration_root[pytest.ini-tests/*-expected1] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-533/test_native_test_support_roots1')
+configuration = 'pytest.ini', testpaths = 'tests/*', expected = ['tests/unit']
+
+    @pytest.mark.parametrize(
+        "configuration,testpaths,expected",
+        [
+            ("pytest.ini", "tests", ["tests"]),
+            ("pytest.ini", "tests/*", ["tests/unit"]),
+            ("pytest.ini", ".", []),
+            ("pytest.ini", "tests/unit/test_policy.py", []),
+            ("tests/pytest.ini", ".", ["tests"]),
+            ("tests/pytest.ini", "unit", ["tests/unit"]),
+        ],
+    )
+    def test_native_test_support_roots_expand_from_configuration_root(
+        tmp_path: Path, configuration: str, testpaths: str, expected: list[str]
+    ) -> None:
+        project = tmp_path / "project"
+        (project / "tests/unit").mkdir(parents=True)
+        (project / configuration).write_text(f"[pytest]\ntestpaths = {testpaths}\n")
+        (project / "tests/unit/test_policy.py").write_text("def test_valid(): assert True\n")
+        result = _observe_policy(project, tmp_path / "roots.json", ["-c", configuration])
+>       assert result["test_roots"] == expected
+E       AssertionError: assert None == ['tests/unit']
+
+tests/unit/specfact_code_review/run/test_portable_pytest_policy.py:105: AssertionError
+_ test_native_test_support_roots_expand_from_configuration_root[pytest.ini-.-expected2] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-533/test_native_test_support_roots2')
+configuration = 'pytest.ini', testpaths = '.', expected = []
+
+    @pytest.mark.parametrize(
+        "configuration,testpaths,expected",
+        [
+            ("pytest.ini", "tests", ["tests"]),
+            ("pytest.ini", "tests/*", ["tests/unit"]),
+            ("pytest.ini", ".", []),
+            ("pytest.ini", "tests/unit/test_policy.py", []),
+            ("tests/pytest.ini", ".", ["tests"]),
+            ("tests/pytest.ini", "unit", ["tests/unit"]),
+        ],
+    )
+    def test_native_test_support_roots_expand_from_configuration_root(
+        tmp_path: Path, configuration: str, testpaths: str, expected: list[str]
+    ) -> None:
+        project = tmp_path / "project"
+        (project / "tests/unit").mkdir(parents=True)
+        (project / configuration).write_text(f"[pytest]\ntestpaths = {testpaths}\n")
+        (project / "tests/unit/test_policy.py").write_text("def test_valid(): assert True\n")
+        result = _observe_policy(project, tmp_path / "roots.json", ["-c", configuration])
+>       assert result["test_roots"] == expected
+E       assert None == []
+
+tests/unit/specfact_code_review/run/test_portable_pytest_policy.py:105: AssertionError
+_ test_native_test_support_roots_expand_from_configuration_root[pytest.ini-tests/unit/test_policy.py-expected3] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-533/test_native_test_support_roots3')
+configuration = 'pytest.ini', testpaths = 'tests/unit/test_policy.py'
+expected = []
+
+    @pytest.mark.parametrize(
+        "configuration,testpaths,expected",
+        [
+            ("pytest.ini", "tests", ["tests"]),
+            ("pytest.ini", "tests/*", ["tests/unit"]),
+            ("pytest.ini", ".", []),
+            ("pytest.ini", "tests/unit/test_policy.py", []),
+            ("tests/pytest.ini", ".", ["tests"]),
+            ("tests/pytest.ini", "unit", ["tests/unit"]),
+        ],
+    )
+    def test_native_test_support_roots_expand_from_configuration_root(
+        tmp_path: Path, configuration: str, testpaths: str, expected: list[str]
+    ) -> None:
+        project = tmp_path / "project"
+        (project / "tests/unit").mkdir(parents=True)
+        (project / configuration).write_text(f"[pytest]\ntestpaths = {testpaths}\n")
+        (project / "tests/unit/test_policy.py").write_text("def test_valid(): assert True\n")
+        result = _observe_policy(project, tmp_path / "roots.json", ["-c", configuration])
+>       assert result["test_roots"] == expected
+E       assert None == []
+
+tests/unit/specfact_code_review/run/test_portable_pytest_policy.py:105: AssertionError
+_ test_native_test_support_roots_expand_from_configuration_root[tests/pytest.ini-.-expected4] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-533/test_native_test_support_roots4')
+configuration = 'tests/pytest.ini', testpaths = '.', expected = ['tests']
+
+    @pytest.mark.parametrize(
+        "configuration,testpaths,expected",
+        [
+            ("pytest.ini", "tests", ["tests"]),
+            ("pytest.ini", "tests/*", ["tests/unit"]),
+            ("pytest.ini", ".", []),
+            ("pytest.ini", "tests/unit/test_policy.py", []),
+            ("tests/pytest.ini", ".", ["tests"]),
+            ("tests/pytest.ini", "unit", ["tests/unit"]),
+        ],
+    )
+    def test_native_test_support_roots_expand_from_configuration_root(
+        tmp_path: Path, configuration: str, testpaths: str, expected: list[str]
+    ) -> None:
+        project = tmp_path / "project"
+        (project / "tests/unit").mkdir(parents=True)
+        (project / configuration).write_text(f"[pytest]\ntestpaths = {testpaths}\n")
+        (project / "tests/unit/test_policy.py").write_text("def test_valid(): assert True\n")
+        result = _observe_policy(project, tmp_path / "roots.json", ["-c", configuration])
+>       assert result["test_roots"] == expected
+E       AssertionError: assert None == ['tests']
+
+tests/unit/specfact_code_review/run/test_portable_pytest_policy.py:105: AssertionError
+_ test_native_test_support_roots_expand_from_configuration_root[tests/pytest.ini-unit-expected5] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-533/test_native_test_support_roots5')
+configuration = 'tests/pytest.ini', testpaths = 'unit'
+expected = ['tests/unit']
+
+    @pytest.mark.parametrize(
+        "configuration,testpaths,expected",
+        [
+            ("pytest.ini", "tests", ["tests"]),
+            ("pytest.ini", "tests/*", ["tests/unit"]),
+            ("pytest.ini", ".", []),
+            ("pytest.ini", "tests/unit/test_policy.py", []),
+            ("tests/pytest.ini", ".", ["tests"]),
+            ("tests/pytest.ini", "unit", ["tests/unit"]),
+        ],
+    )
+    def test_native_test_support_roots_expand_from_configuration_root(
+        tmp_path: Path, configuration: str, testpaths: str, expected: list[str]
+    ) -> None:
+        project = tmp_path / "project"
+        (project / "tests/unit").mkdir(parents=True)
+        (project / configuration).write_text(f"[pytest]\ntestpaths = {testpaths}\n")
+        (project / "tests/unit/test_policy.py").write_text("def test_valid(): assert True\n")
+        result = _observe_policy(project, tmp_path / "roots.json", ["-c", configuration])
+>       assert result["test_roots"] == expected
+E       AssertionError: assert None == ['tests/unit']
+
+tests/unit/specfact_code_review/run/test_portable_pytest_policy.py:105: AssertionError
+________ test_native_test_support_roots_exclude_paths_outside_snapshot _________
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-533/test_native_test_support_roots6')
+
+    def test_native_test_support_roots_exclude_paths_outside_snapshot(tmp_path: Path) -> None:
+        project = tmp_path / "project"
+        project.mkdir()
+        outside = tmp_path / "outside"
+        outside.mkdir()
+        (outside / "test_external.py").write_text("def test_external(): assert True\n")
+        (project / "test_policy.py").write_text("def test_valid(): assert True\n")
+        (project / "pytest.ini").write_text("[pytest]\ntestpaths = ../outside\n")
+        result = _observe_policy(project, tmp_path / "outside.json", ["test_policy.py"])
+>       assert result["test_roots"] == []
+E       assert None == []
+
+tests/unit/specfact_code_review/run/test_portable_pytest_policy.py:117: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_portable_pytest_policy.py::test_native_coverage_threshold_preserves_configuration_and_cli_precedence[arguments0-70.0]
+FAILED tests/unit/specfact_code_review/run/test_portable_pytest_policy.py::test_native_coverage_threshold_preserves_configuration_and_cli_precedence[arguments1-60.0]
+FAILED tests/unit/specfact_code_review/run/test_portable_pytest_policy.py::test_native_coverage_threshold_preserves_configuration_and_cli_precedence[arguments2-90.0]
+FAILED tests/unit/specfact_code_review/run/test_portable_pytest_policy.py::test_native_test_support_roots_expand_from_configuration_root[pytest.ini-tests-expected0]
+FAILED tests/unit/specfact_code_review/run/test_portable_pytest_policy.py::test_native_test_support_roots_expand_from_configuration_root[pytest.ini-tests/*-expected1]
+FAILED tests/unit/specfact_code_review/run/test_portable_pytest_policy.py::test_native_test_support_roots_expand_from_configuration_root[pytest.ini-.-expected2]
+FAILED tests/unit/specfact_code_review/run/test_portable_pytest_policy.py::test_native_test_support_roots_expand_from_configuration_root[pytest.ini-tests/unit/test_policy.py-expected3]
+FAILED tests/unit/specfact_code_review/run/test_portable_pytest_policy.py::test_native_test_support_roots_expand_from_configuration_root[tests/pytest.ini-.-expected4]
+FAILED tests/unit/specfact_code_review/run/test_portable_pytest_policy.py::test_native_test_support_roots_expand_from_configuration_root[tests/pytest.ini-unit-expected5]
+FAILED tests/unit/specfact_code_review/run/test_portable_pytest_policy.py::test_native_test_support_roots_exclude_paths_outside_snapshot
+========================= 10 failed, 3 passed in 3.35s =========================

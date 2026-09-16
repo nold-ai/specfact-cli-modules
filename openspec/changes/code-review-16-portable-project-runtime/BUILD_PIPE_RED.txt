@@ -1,0 +1,39 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: /private/tmp/specfact-473-delivery
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 18 items / 16 deselected / 2 selected
+
+tests/unit/specfact_code_review/run/test_runtime_builder_logging.py Fs   [100%]
+
+=================================== FAILURES ===================================
+______________ test_builder_stdout_is_pipe_not_private_log_inode _______________
+
+tmp_path = PosixPath('<PYTEST_TMP>/test_builder_stdout_is_pipe_no0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10ca35e00>
+
+    def test_builder_stdout_is_pipe_not_private_log_inode(tmp_path: Path, monkeypatch) -> None:
+        script = (
+            "import stat; "
+            "assert stat.S_ISFIFO(os.fstat(1).st_mode), 'controller log inode exposed'; "
+            "print('PIPE_BOUNDARY_OK', flush=True); sys.exit(1)"
+        )
+        plan, runtime, cache, _ = _builder(tmp_path, monkeypatch, script)
+        _failed_build(plan, runtime, cache)
+>       assert _retained_logs(cache)[0].read_text() == "PIPE_BOUNDARY_OK\n"
+E       assert 'Traceback (m...ode exposed\n' == 'PIPE_BOUNDARY_OK\n'
+E
+E         - PIPE_BOUNDARY_OK
+E         + Traceback (most recent call last):
+E         +   File "<string>", line 1, in <module>
+E         +     import os,sys,time; from pathlib import Path; staging=Path(sys.argv[1]); import stat; assert stat.S_ISFIFO(os.fstat(1).st_mode), 'controller log inode exposed'; print('PIPE_BOUNDARY_OK', flush=True); sys.exit(1)
+E         +                                                                                                  ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+E         + AssertionError: controller log inode exposed
+
+tests/unit/specfact_code_review/run/test_runtime_builder_logging.py:231: AssertionError
+=========================== short test summary info ============================
+SKIPPED [1] tests/unit/specfact_code_review/run/test_runtime_builder_logging.py:234: Linux proc descriptor contract
+FAILED tests/unit/specfact_code_review/run/test_runtime_builder_logging.py::test_builder_stdout_is_pipe_not_private_log_inode
+================= 1 failed, 1 skipped, 16 deselected in 1.00s ==================

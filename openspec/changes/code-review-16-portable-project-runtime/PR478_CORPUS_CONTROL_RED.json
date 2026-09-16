@@ -1,0 +1,148 @@
+{
+  "status": "FAIL",
+  "authority": "retained CI regression evidence, not acceptance",
+  "run": "https://github.com/nold-ai/specfact-cli-modules/actions/runs/35124077143",
+  "head": "38402b964f8544b48d9501e4847eca3a8be4a8ec",
+  "injector_sha256": "e433b51e1de4a0b89f1779cd2acc202183fb7e2455651b505ffd4ee76afbb703",
+  "cold_warm_executions": 30,
+  "cold_warm_unknown": 0,
+  "cold_warm_pytest_pass": 30,
+  "controlled_unknown": [
+    {
+      "abi": "311",
+      "repository": "requests",
+      "mode": "controlled-defect",
+      "verdict": "FAIL",
+      "unknown": true,
+      "pytest_outcome": "UNKNOWN",
+      "exit": 1,
+      "call_outcomes": {
+        "failed": 1
+      },
+      "errors": [
+        "Coverage data missing for /opt/specfact/snapshot/specfact_controlled.py"
+      ]
+    },
+    {
+      "abi": "311",
+      "repository": "hatch",
+      "mode": "controlled-defect",
+      "verdict": "FAIL",
+      "unknown": true,
+      "pytest_outcome": "UNKNOWN",
+      "exit": 1,
+      "call_outcomes": {
+        "failed": 1
+      },
+      "errors": [
+        "Coverage data missing for /opt/specfact/snapshot/specfact_controlled.py"
+      ]
+    },
+    {
+      "abi": "311",
+      "repository": "flask",
+      "mode": "controlled-defect",
+      "verdict": "FAIL",
+      "unknown": true,
+      "pytest_outcome": "UNKNOWN",
+      "exit": 1,
+      "call_outcomes": {
+        "failed": 1
+      },
+      "errors": [
+        "Coverage data missing for /opt/specfact/snapshot/specfact_controlled.py"
+      ]
+    },
+    {
+      "abi": "312",
+      "repository": "requests",
+      "mode": "controlled-defect",
+      "verdict": "FAIL",
+      "unknown": true,
+      "pytest_outcome": "UNKNOWN",
+      "exit": 1,
+      "call_outcomes": {
+        "failed": 1
+      },
+      "errors": [
+        "Coverage data missing for /opt/specfact/snapshot/specfact_controlled.py"
+      ]
+    },
+    {
+      "abi": "312",
+      "repository": "hatch",
+      "mode": "controlled-defect",
+      "verdict": "FAIL",
+      "unknown": true,
+      "pytest_outcome": "UNKNOWN",
+      "exit": 1,
+      "call_outcomes": {
+        "failed": 1
+      },
+      "errors": [
+        "Coverage data missing for /opt/specfact/snapshot/specfact_controlled.py"
+      ]
+    },
+    {
+      "abi": "312",
+      "repository": "flask",
+      "mode": "controlled-defect",
+      "verdict": "FAIL",
+      "unknown": true,
+      "pytest_outcome": "UNKNOWN",
+      "exit": 1,
+      "call_outcomes": {
+        "failed": 1
+      },
+      "errors": [
+        "Coverage data missing for /opt/specfact/snapshot/specfact_controlled.py"
+      ]
+    },
+    {
+      "abi": "313",
+      "repository": "requests",
+      "mode": "controlled-defect",
+      "verdict": "FAIL",
+      "unknown": true,
+      "pytest_outcome": "UNKNOWN",
+      "exit": 1,
+      "call_outcomes": {
+        "failed": 1
+      },
+      "errors": [
+        "Coverage data missing for /opt/specfact/snapshot/specfact_controlled.py"
+      ]
+    },
+    {
+      "abi": "313",
+      "repository": "hatch",
+      "mode": "controlled-defect",
+      "verdict": "FAIL",
+      "unknown": true,
+      "pytest_outcome": "UNKNOWN",
+      "exit": 1,
+      "call_outcomes": {
+        "failed": 1
+      },
+      "errors": [
+        "Coverage data missing for /opt/specfact/snapshot/specfact_controlled.py"
+      ]
+    },
+    {
+      "abi": "313",
+      "repository": "flask",
+      "mode": "controlled-defect",
+      "verdict": "FAIL",
+      "unknown": true,
+      "pytest_outcome": "UNKNOWN",
+      "exit": 1,
+      "call_outcomes": {
+        "failed": 1
+      },
+      "errors": [
+        "Coverage data missing for /opt/specfact/snapshot/specfact_controlled.py"
+      ]
+    }
+  ],
+  "limitation": "Complete native cold/warm execution does not make the overall corpus pass; required controlled-defect evidence is incomplete. Configured source restrictions remain authoritative and the injected root function was never called."
+}

@@ -1,0 +1,318 @@
+{
+  "authority": "local-container-smoke-not-capsule-acceptance",
+  "payload_bytes": 38128554,
+  "payload_files": 50,
+  "identity": "sha256:d56dcce0a11a61cd9844d0c6a9c4740bc73063df5e794ed8a31c380c3e7fefe8",
+  "inventory": {
+    "native-tools/executables/git": {
+      "source": "/usr/bin/git",
+      "sha256": "sha256:2a8c18fbf43da9f692d75474c72bea9dfd796c260b0f3dfe456376abc3bbd668"
+    },
+    "native-tools/executables/sed": {
+      "source": "/usr/bin/sed",
+      "sha256": "sha256:23f70dd6496d75419823039e1cebf95a2fd0508c6dfec72ac2352f7e08391dd5"
+    },
+    "native-tools/executables/uname": {
+      "source": "/usr/bin/uname",
+      "sha256": "sha256:c6e023b172383fae5318c600e6f2f3a153513df62bf06ad6c9269296d2a78e89"
+    },
+    "native-tools/executables/git-core/git-remote-http": {
+      "source": "/usr/lib/git-core/git-remote-http",
+      "sha256": "sha256:8353a5124ddb2281838bc54bd97c21cbecfe900615fdb60b281198c5058ddb5b"
+    },
+    "native-tools/executables/git-core/git-remote-https": {
+      "source": "/usr/lib/git-core/git-remote-http",
+      "sha256": "sha256:8353a5124ddb2281838bc54bd97c21cbecfe900615fdb60b281198c5058ddb5b"
+    },
+    "native-tools/executables/git-core/git-upload-pack": {
+      "source": "/usr/lib/git-core/git",
+      "sha256": "sha256:2a8c18fbf43da9f692d75474c72bea9dfd796c260b0f3dfe456376abc3bbd668"
+    },
+    "native-tools/executables/git-core/git-receive-pack": {
+      "source": "/usr/lib/git-core/git",
+      "sha256": "sha256:2a8c18fbf43da9f692d75474c72bea9dfd796c260b0f3dfe456376abc3bbd668"
+    },
+    "native-tools/executables/git-core/git-upload-archive": {
+      "source": "/usr/lib/git-core/git",
+      "sha256": "sha256:2a8c18fbf43da9f692d75474c72bea9dfd796c260b0f3dfe456376abc3bbd668"
+    },
+    "native-tools/native/ld-linux-x86-64.so.2": {
+      "source": "/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2",
+      "sha256": "sha256:cd4df4f3c7b83673d61189bf2eaebd33ca4f2853ab9772b8a25e025ef99b1e81"
+    },
+    "native-tools/native/libacl.so.1": {
+      "source": "/usr/lib/x86_64-linux-gnu/libacl.so.1.1.2302",
+      "sha256": "sha256:1f5247285409ec89990e9fe384d78dfb2ae6ec8e210a2657073babc8d6b7e54f"
+    },
+    "native-tools/native/libc.so.6": {
+      "source": "/usr/lib/x86_64-linux-gnu/libc.so.6",
+      "sha256": "sha256:8db37cf3f2169f59a0f07ef1fea308c35656668c64c8ff294e1860f4121eb161"
+    },
+    "native-tools/native/libcurl-gnutls.so.4": {
+      "source": "/usr/lib/x86_64-linux-gnu/libcurl-gnutls.so.4.8.0",
+      "sha256": "sha256:78e00eca595180e14691e9d5b59aaeecb48ee3f34dab0c9858656bc87c37ad4f"
+    },
+    "native-tools/native/libbrotlidec.so.1": {
+      "source": "/usr/lib/x86_64-linux-gnu/libbrotlidec.so.1.1.0",
+      "sha256": "sha256:64d8a5019d4c294b89fde1193343ea324bbd8603652554e5545f0a01595fa2c5"
+    },
+    "native-tools/native/libbrotlicommon.so.1": {
+      "source": "/usr/lib/x86_64-linux-gnu/libbrotlicommon.so.1.1.0",
+      "sha256": "sha256:a91ead095d2c80520c55a89057bbe10b031a075340442e63f44b310f93883a1b"
+    },
+    "native-tools/native/libgnutls.so.30": {
+      "source": "/usr/lib/x86_64-linux-gnu/libgnutls.so.30.37.1",
+      "sha256": "sha256:ddbae2995750875c07bc218d12a062d73f8250678f54dedda7e9be5068781c98"
+    },
+    "native-tools/native/libgmp.so.10": {
+      "source": "/usr/lib/x86_64-linux-gnu/libgmp.so.10.5.0",
+      "sha256": "sha256:0ccdfb6d6f5c039465f6d002cf7e4c072d48ac6a2cffc8dd6c748dec31592804"
+    },
+    "native-tools/native/libgssapi_krb5.so.2": {
+      "source": "/usr/lib/x86_64-linux-gnu/libgssapi_krb5.so.2.2",
+      "sha256": "sha256:6c1b81696044d79a47d6f0f494ee60aaf641c525c46a11da0c6e4a041a782d3c"
+    },
+    "native-tools/native/libcom_err.so.2": {
+      "source": "/usr/lib/x86_64-linux-gnu/libcom_err.so.2.1",
+      "sha256": "sha256:022943b3b11c860b049bce41342f1c2594941b7b401d95dfdf235521099fee08"
+    },
+    "native-tools/native/libhogweed.so.6": {
+      "source": "/usr/lib/x86_64-linux-gnu/libhogweed.so.6.8",
+      "sha256": "sha256:c3c606139d4f7776efa4dbd4a6b62e30c916b07a0cafd8c3ef173d6f093607e3"
+    },
+    "native-tools/native/libidn2.so.0": {
+      "source": "/usr/lib/x86_64-linux-gnu/libidn2.so.0.4.0",
+      "sha256": "sha256:6e632fd9a3125db60bbc623719bbc17b0470330321c5b1c57f1ff7190e5551ad"
+    },
+    "native-tools/native/libk5crypto.so.3": {
+      "source": "/usr/lib/x86_64-linux-gnu/libk5crypto.so.3.1",
+      "sha256": "sha256:73bc9d72c0c684d6149a3c38f96aab891d178375415c05954fdda587685936f5"
+    },
+    "native-tools/native/libkrb5.so.3": {
+      "source": "/usr/lib/x86_64-linux-gnu/libkrb5.so.3.3",
+      "sha256": "sha256:9615a2841f0783c410eec7fae005a951282551cfedd377737ad8431c8c8cde64"
+    },
+    "native-tools/native/libkeyutils.so.1": {
+      "source": "/usr/lib/x86_64-linux-gnu/libkeyutils.so.1.10",
+      "sha256": "sha256:f48214417757f18793ed6e180cc14ee1d6f04252a518fc7270e8ca1d0b4260fe"
+    },
+    "native-tools/native/libkrb5support.so.0": {
+      "source": "/usr/lib/x86_64-linux-gnu/libkrb5support.so.0.1",
+      "sha256": "sha256:0aa43578471faecbd642ed2ee6ab92b6682a2b676644193e956fc59d18ca24bb"
+    },
+    "native-tools/native/liblber.so.2": {
+      "source": "/usr/lib/x86_64-linux-gnu/liblber.so.2.0.200",
+      "sha256": "sha256:ddf14275b1fb70ba06510094071adcc1462e675f15ae6cdcadbf40c1dabe5a03"
+    },
+    "native-tools/native/libldap.so.2": {
+      "source": "/usr/lib/x86_64-linux-gnu/libldap.so.2.0.200",
+      "sha256": "sha256:a9829b999c95452eb0a34cc7b5349427b76dbf3e5d5c8672a5ca69e454c1b151"
+    },
+    "native-tools/native/libnettle.so.8": {
+      "source": "/usr/lib/x86_64-linux-gnu/libnettle.so.8.8",
+      "sha256": "sha256:a245ed916229583d6fe0b07657b3ed945bc148c28cc08b5266295f620d2b91cc"
+    },
+    "native-tools/native/libnghttp2.so.14": {
+      "source": "/usr/lib/x86_64-linux-gnu/libnghttp2.so.14.26.0",
+      "sha256": "sha256:46764ab5b6ca7e353a322054f0bee45d9158a27f3e6a82a2fa4447f2ba9ba268"
+    },
+    "native-tools/native/libp11-kit.so.0": {
+      "source": "/usr/lib/x86_64-linux-gnu/libp11-kit.so.0.3.1",
+      "sha256": "sha256:a59efd4792d3343dedea1d26a28f5597abfe3369082deb504c4802a31b014897"
+    },
+    "native-tools/native/libffi.so.8": {
+      "source": "/usr/lib/x86_64-linux-gnu/libffi.so.8.1.4",
+      "sha256": "sha256:00f593fe192f2851b8ce23b25cec2488d769beb5a8f63e8c9e563071e1075153"
+    },
+    "native-tools/native/libpcre2-8.so.0": {
+      "source": "/usr/lib/x86_64-linux-gnu/libpcre2-8.so.0.11.2",
+      "sha256": "sha256:e00576d71d81d3ba0cfa4903c835a44a8723aac96f72f79ff75200b4cff9071b"
+    },
+    "native-tools/native/libpsl.so.5": {
+      "source": "/usr/lib/x86_64-linux-gnu/libpsl.so.5.3.4",
+      "sha256": "sha256:ae6c5a9aecc249fc66e03c16ec6c4385d09d7e12e0ea7694bb831ab4fee8133c"
+    },
+    "native-tools/native/libresolv.so.2": {
+      "source": "/usr/lib/x86_64-linux-gnu/libresolv.so.2",
+      "sha256": "sha256:4086b12d3b95ef6f02373b30b88444e7d79fb8693ed1cfeaa5162e6959878912"
+    },
+    "native-tools/native/librtmp.so.1": {
+      "source": "/usr/lib/x86_64-linux-gnu/librtmp.so.1",
+      "sha256": "sha256:15a2a75e8c437b9c99971b5ee10278ab110beef1a56d1d9e5d6759ea140e98ac"
+    },
+    "native-tools/native/libsasl2.so.2": {
+      "source": "/usr/lib/x86_64-linux-gnu/libsasl2.so.2.0.25",
+      "sha256": "sha256:a0f410ad093236856eee59c4ff2838dc04d932ea0993400f23ed77d67d85af34"
+    },
+    "native-tools/native/libcrypto.so.3": {
+      "source": "/usr/lib/x86_64-linux-gnu/libcrypto.so.3",
+      "sha256": "sha256:6a66c3ba6b3749aacc9497973fff00f6ba61c703ba7015d0d7ab3fd9510974b6"
+    },
+    "native-tools/native/libselinux.so.1": {
+      "source": "/usr/lib/x86_64-linux-gnu/libselinux.so.1",
+      "sha256": "sha256:0ec0843463f90e227b0e138e1f379774f50b5514bd7f5dbd4c8a87aca0aa6670"
+    },
+    "native-tools/native/libssh.so.4": {
+      "source": "/usr/lib/x86_64-linux-gnu/libssh.so.4.9.6",
+      "sha256": "sha256:b82bd54edb908605b8142be1a6d242df65501af0e9bb7581cc36ebf4d8a5ecfd"
+    },
+    "native-tools/native/libtasn1.so.6": {
+      "source": "/usr/lib/x86_64-linux-gnu/libtasn1.so.6.6.3",
+      "sha256": "sha256:59994414d0cdec4f678ef91eaaafc44b26b00bca507e4cc7978caaf79f584173"
+    },
+    "native-tools/native/libunistring.so.5": {
+      "source": "/usr/lib/x86_64-linux-gnu/libunistring.so.5.0.0",
+      "sha256": "sha256:7bcf825cd449892db5105ad2aed91dcf94a27b796426600c765720c584c54dd1"
+    },
+    "native-tools/native/libz.so.1": {
+      "source": "/usr/lib/x86_64-linux-gnu/libz.so.1.3",
+      "sha256": "sha256:86200da370f20476a2507e9097a789b5ef97269b4ca8d5e164ad82dab9d99892"
+    },
+    "native-tools/native/libzstd.so.1": {
+      "source": "/usr/lib/x86_64-linux-gnu/libzstd.so.1.5.5",
+      "sha256": "sha256:0a2128bc10841fb29e76d08d945864dfb0b6a66da5df6df5d8299197439e54bb"
+    },
+    "bin/git": {
+      "source": "generated-controller-launcher",
+      "sha256": "sha256:719aed1ab68bbc0f0888bd0f304351edf977ce52cfbc74172d5c5575596ece0c"
+    },
+    "bin/sed": {
+      "source": "generated-controller-launcher",
+      "sha256": "sha256:804c4a9dd336b8ad8508b762157cffc69b30e84bd3df75e1afe7d50631fa99b1"
+    },
+    "bin/uname": {
+      "source": "generated-controller-launcher",
+      "sha256": "sha256:2b956649fc11c040b7a6a5abf347316b59aa49a197544bf27c3d9a4ecba23a52"
+    },
+    "native-tools/git-core/git-remote-http": {
+      "source": "generated-controller-launcher",
+      "sha256": "sha256:500e637f5b05948d09f9db427b752aaefe6cd073a9702637a45ab0a17adebeda"
+    },
+    "native-tools/git-core/git-remote-https": {
+      "source": "generated-controller-launcher",
+      "sha256": "sha256:d9a57e59ad8f81e0a82091bba3549f263513159fcc84e1f07e0e1e05e4ee689d"
+    },
+    "native-tools/git-core/git-upload-pack": {
+      "source": "generated-controller-launcher",
+      "sha256": "sha256:af325af3eb44720eeccf865daf7a71bb11bdc358f03d1fbea3c79ba94939ac6b"
+    },
+    "native-tools/git-core/git-receive-pack": {
+      "source": "generated-controller-launcher",
+      "sha256": "sha256:c6e694c397bd198232a623802a52751bc8c1eecc45d74683d4fa6981c78fcc8f"
+    },
+    "native-tools/git-core/git-upload-archive": {
+      "source": "generated-controller-launcher",
+      "sha256": "sha256:ee01fa082b248246a96af60831f68594d69c7b557ad574f4b6195c2fa2c98e85"
+    },
+    "@capsule/bin/sh": {
+      "source": "/bin/sh",
+      "sha256": "sha256:86d31f6fb799e91fa21bad341484564510ca287703a16e9e46c53338776f4f42"
+    }
+  },
+  "commands": [
+    {
+      "argv": [
+        "uname",
+        "-s"
+      ],
+      "exit": 0,
+      "stdout": "Linux\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "sed",
+        "--version"
+      ],
+      "exit": 0,
+      "stdout": "/opt/specfact/project-runtime/native-tools/executables/sed (GNU sed) 4.9\nPackaged by Debian\nCopyright (C) 2022 Free Software Foundation, Inc.\nLicense GPLv3+: GNU GPL version 3 or later <https://gnu.org/licenses/gpl.html>.\nThis is free software: you are free to change and redistribute it.\nThere is NO WARRANTY, to the extent permitted by law.\n\nWritten by Jay Fenlason, Tom Lord, Ken Pizzini,\nPaolo Bonzini, Jim Meyering, and Assaf Gordon.\n\nThis sed program was built with SELinux support.\nSELinux is disabled on this system.\n\nGNU sed home page: <https://www.gnu.org/software/sed/>.\nGeneral help using GNU software: <https://www.gnu.org/gethelp/>.\nE-mail bug reports to: <bug-sed@gnu.org>.\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "init",
+        "/tmp/tmp5q42o2vh/repository"
+      ],
+      "exit": 0,
+      "stdout": "Initialized empty Git repository in /tmp/tmp5q42o2vh/repository/.git/\n",
+      "stderr": "hint: Using 'master' as the name for the initial branch. This default branch name\nhint: is subject to change. To configure the initial branch name to use in all\nhint: of your new repositories, which will suppress this warning, call:\nhint: \nhint: \tgit config --global init.defaultBranch <name>\nhint: \nhint: Names commonly chosen instead of 'master' are 'main', 'trunk' and\nhint: 'development'. The just-created branch can be renamed via this command:\nhint: \nhint: \tgit branch -m <name>\n"
+    },
+    {
+      "argv": [
+        "git",
+        "config",
+        "user.email",
+        "fixture@example.invalid"
+      ],
+      "exit": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "config",
+        "user.name",
+        "Native fixture"
+      ],
+      "exit": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "config",
+        "filter.fixture.clean",
+        "sed s/SAFE/BLOCKED/"
+      ],
+      "exit": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "add",
+        "."
+      ],
+      "exit": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "show",
+        ":data.txt"
+      ],
+      "exit": 0,
+      "stdout": "BLOCKED\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "commit",
+        "-m",
+        "fixture"
+      ],
+      "exit": 0,
+      "stdout": "[master (root-commit) 47cffa7] fixture\n 2 files changed, 2 insertions(+)\n create mode 100644 .gitattributes\n create mode 100644 data.txt\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "clone",
+        "--depth=1",
+        "file:///tmp/tmp5q42o2vh/repository",
+        "/tmp/tmp5q42o2vh/clone"
+      ],
+      "exit": 0,
+      "stdout": "",
+      "stderr": "Cloning into '/tmp/tmp5q42o2vh/clone'...\n"
+    }
+  ]
+}

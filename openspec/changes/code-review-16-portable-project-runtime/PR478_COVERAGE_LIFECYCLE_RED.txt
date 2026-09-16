@@ -1,0 +1,96 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: /private/tmp/specfact-477-pytest-release
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, xdist-3.8.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 12 items
+
+tests/unit/specfact_code_review/run/test_target_coverage.py .......FF... [100%]
+
+=================================== FAILURES ===================================
+______ test_excluded_measurement_preserves_success_and_incomplete_reason _______
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-781/test_excluded_measurement_pres0')
+
+    def test_excluded_measurement_preserves_success_and_incomplete_reason(tmp_path):
+        source = _project(tmp_path)
+        config = source / 'pyproject.toml'
+        config.write_text(config.read_text().replace('source=["app"]', 'source=["not_installed_anywhere"]'))
+>       completed, receipt = _run(source, tmp_path)
+                             ^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/specfact_code_review/run/test_target_coverage.py:161:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+source = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-781/test_excluded_measurement_pres0/project')
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-781/test_excluded_measurement_pres0')
+extra = (), startup = None
+
+    def _run(source, tmp_path, extra=(), *, startup=None):
+        output = tmp_path / "private.json"
+        arguments = tmp_path / "arguments.json"
+        arguments.write_text(json.dumps(extra))
+        completed = subprocess.run(
+            [sys.executable, "-c", _SCRIPT, str(_HELPER), str(source), str(output), str(arguments)],
+            cwd=source,
+            env={**os.environ, "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1", "COVERAGE_FILE": str(tmp_path / ".coverage"),
+                 **({"PYTHONPATH": str(startup)} if startup else {})},
+            text=True,
+            capture_output=True,
+            check=False,
+            timeout=60,
+        )
+        receipt = output.with_suffix(".receipt")
+>       assert receipt.is_file(), completed.stdout + completed.stderr
+E       AssertionError: .                                                                        [100%]
+E         =============================== warnings summary ===============================
+E         ../../../../../../../../../tmp/specfact-477-pytest-release/.venv/lib/python3.14/site-packages/_pytest/config/__init__.py:864
+E           /private/tmp/specfact-477-pytest-release/.venv/lib/python3.14/site-packages/_pytest/config/__init__.py:864: PytestAssertRewriteWarning: Module already imported so cannot be rewritten; _specfact_target_coverage
+E             self.import_plugin(arg, consider_entry_points=True)
+E
+E         -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+E         1 passed, 1 warning in 0.01s
+E         /private/tmp/specfact-477-pytest-release/.venv/lib/python3.14/site-packages/coverage/inorout.py:558: CoverageWarning: Module not_installed_anywhere was never imported. (module-not-imported); see https://coverage.readthedocs.io/en/7.16.1/messages.html#warning-module-not-imported
+E           self.warn(f"Module {pkg} was never imported.", slug="module-not-imported")
+E         /private/tmp/specfact-477-pytest-release/.venv/lib/python3.14/site-packages/coverage/control.py:967: CoverageWarning: No data was collected. (no-data-collected); see https://coverage.readthedocs.io/en/7.16.1/messages.html#warning-no-data-collected
+E           self._warn("No data was collected.", slug="no-data-collected")
+E         Traceback (most recent call last):
+E           File "<string>", line 15, in <module>
+E             evidence = module.evidence()
+E           File "/private/tmp/specfact-477-pytest-release/packages/specfact-code-review/src/specfact_code_review/run/target_coverage.py", line 163, in evidence
+E             payload = _export()
+E           File "/private/tmp/specfact-477-pytest-release/packages/specfact-code-review/src/specfact_code_review/run/target_coverage.py", line 150, in _export
+E             total = controller.cov.json_report(outfile=str(output))
+E           File "/private/tmp/specfact-477-pytest-release/.venv/lib/python3.14/site-packages/coverage/control.py", line 1336, in json_report
+E             return render_report(self.config.json_output, JsonReporter(self), morfs, self._message)
+E           File "/private/tmp/specfact-477-pytest-release/.venv/lib/python3.14/site-packages/coverage/report_core.py", line 59, in render_report
+E             ret = reporter.report(morfs, outfile=outfile)
+E           File "/private/tmp/specfact-477-pytest-release/.venv/lib/python3.14/site-packages/coverage/jsonreport.py", line 89, in report
+E             for file_reporter, analysis in get_analysis_to_report(self.coverage, morfs):
+E                                            ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^
+E           File "/private/tmp/specfact-477-pytest-release/.venv/lib/python3.14/site-packages/coverage/report_core.py", line 94, in get_analysis_to_report
+E             raise NoDataError("No data to report.")
+E         coverage.exceptions.NoDataError: No data to report.
+E
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-781/test_excluded_measurement_pres0/private.receipt').is_file
+
+tests/unit/specfact_code_review/run/test_target_coverage.py:75: AssertionError
+__________ test_native_collect_only_does_not_claim_aggregate_failure ___________
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-781/test_native_collect_only_does_0')
+
+    def test_native_collect_only_does_not_claim_aggregate_failure(tmp_path):
+        source = _project(tmp_path, native='--cov --collect-only')
+        completed, receipt = _run(source, tmp_path)
+        assert completed.returncode == 0
+>       assert receipt['coverage_policy']['native_threshold_failed'] is False
+E       assert True is False
+
+tests/unit/specfact_code_review/run/test_target_coverage.py:171: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_target_coverage.py::test_excluded_measurement_preserves_success_and_incomplete_reason
+FAILED tests/unit/specfact_code_review/run/test_target_coverage.py::test_native_collect_only_does_not_claim_aggregate_failure
+========================= 2 failed, 10 passed in 2.13s =========================

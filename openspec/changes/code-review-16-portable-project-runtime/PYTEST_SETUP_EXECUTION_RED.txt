@@ -1,0 +1,56 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: <worktree>
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 16 items / 11 deselected / 5 selected
+
+tests/unit/specfact_code_review/run/test_portable_pytest_discovery.py F. [ 40%]
+...                                                                      [100%]
+
+=================================== FAILURES ===================================
+_______ test_mixed_phase_failures_preserve_actual_body_execution[setup] ________
+
+tmp_path = PosixPath('<pytest-temp>/test_mixed_phase_failures_pres0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10b050050>
+phase = 'setup'
+
+    @pytest.mark.parametrize("phase", ["setup", "call", "teardown"])
+    def test_mixed_phase_failures_preserve_actual_body_execution(tmp_path: Path, monkeypatch, phase: str) -> None:
+        effects = {
+            "setup": "    raise RuntimeError('controlled setup failure')\n    yield\n",
+            "call": "    yield\n",
+            "teardown": "    yield\n    raise RuntimeError('controlled teardown failure')\n",
+        }
+        body = "assert False" if phase == "call" else "assert True"
+        (tmp_path / "pytest.ini").write_text("[pytest]\n")
+        (tmp_path / "test_case.py").write_text(
+            "import pytest\n"
+            "@pytest.fixture\n"
+            "def fixture_effect():\n"
+            f"{effects[phase]}"
+            f"def test_affected(fixture_effect): {body}\n"
+            "def test_healthy(): assert True\n"
+        )
+        observation, output = _observe_discovery(tmp_path, tmp_path / "phases.json", ("test_case.py",))
+        assert observation["exit_code"] == 1, output
+        executed = {row["nodeid"] for row in observation["records"] if row["phase"] == "call"}
+        assert "test_case.py::test_healthy" in executed
+        assert ("test_case.py::test_affected" in executed) == (phase != "setup")
+        findings = _parse_recorded_observation(tmp_path, observation, monkeypatch)
+        failures = [finding for finding in findings if finding.rule == "TEST_OUTCOME_NOT_PASS"]
+        assert len(failures) == 1
+        assert f"failed during {phase}" in failures[0].message
+        response = runner._capsule_member_response("targeted-pytest-coverage", findings)
+        if phase == "setup":
+>           assert response["execution_state"] == "error"
+E           AssertionError: assert 'ran' == 'error'
+E
+E             - error
+E             + ran
+
+tests/unit/specfact_code_review/run/test_portable_pytest_discovery.py:187: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_portable_pytest_discovery.py::test_mixed_phase_failures_preserve_actual_body_execution[setup]
+================== 1 failed, 4 passed, 11 deselected in 1.19s ==================

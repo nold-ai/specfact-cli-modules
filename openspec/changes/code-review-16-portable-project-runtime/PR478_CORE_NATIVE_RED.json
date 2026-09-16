@@ -1,0 +1,43 @@
+{
+  "run": 35081982712,
+  "scope": "actual native BasedPyright missing import, not a parser or environment waiver",
+  "findings": [
+    {
+      "category": "type_safety",
+      "severity": "error",
+      "tool": "basedpyright",
+      "rule": "reportMissingImports",
+      "file": "packages/specfact-code-review/src/specfact_code_review/run/runner.py",
+      "line": 484,
+      "message": "Import \"specfact_cli.registry\" could not be resolved",
+      "fixable": false,
+      "status": "open",
+      "differential_state": null,
+      "autofix_available": false,
+      "blocking": true,
+      "waiver_reference": null,
+      "execution_state": null,
+      "evidence_outcome": null,
+      "evidence_refs": null,
+      "confidence": null,
+      "rewrite_hint": null,
+      "canonical_pattern": null,
+      "intent_key": null,
+      "estimated_deletion_lines": null,
+      "related_locations": null,
+      "guidance_kind": null,
+      "recommended_action": null,
+      "clean_code_principle": null,
+      "rationale": null,
+      "safety_checks": null,
+      "preserve_reason": null,
+      "action_status": null,
+      "before_ref": null,
+      "after_ref": null,
+      "improvement": null,
+      "signal_trace": null,
+      "preserve_reasons": null,
+      "remediation_packet": null
+    }
+  ]
+}

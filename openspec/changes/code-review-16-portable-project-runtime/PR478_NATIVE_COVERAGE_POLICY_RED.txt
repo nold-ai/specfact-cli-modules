@@ -1,0 +1,781 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: /private/tmp/specfact-477-pytest-release
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 71 items
+
+tests/unit/specfact_code_review/run/test_portable_worker.py ............ [ 16%]
+..............................FFFFFFFFFFFFFFFFFFFFF........              [100%]
+
+=================================== FAILURES ===================================
+_____ test_native_aggregate_coverage_failure_has_explicit_blocking_finding _____
+
+observe_coverage_policy = <function fixture_observe_coverage_policy.<locals>.observe at 0x1089c0bf0>
+
+    def test_native_aggregate_coverage_failure_has_explicit_blocking_finding(observe_coverage_policy) -> None:
+        """A real native aggregate failure remains a failure even when every test passed."""
+        findings = observe_coverage_policy(_coverage_observation(), 1)
+        assert len(findings) == 1
+        finding = findings[0]
+>       assert (finding.rule, finding.category, finding.severity) == ("TEST_COVERAGE_POLICY_FAILED", "testing", "error")
+E       AssertionError: assert ('tool_error'...ror', 'error') == ('TEST_COVERA...ing', 'error')
+E
+E         At index 0 diff: 'tool_error' != 'TEST_COVERAGE_POLICY_FAILED'
+E         Use -v to get more diff
+
+/private/tmp/specfact-477-pytest-release/tests/unit/specfact_code_review/run/test_portable_worker.py:309: AssertionError
+_ test_native_coverage_failure_retains_incomplete_and_failed_test_evidence[False] _
+
+observe_coverage_policy = <function fixture_observe_coverage_policy.<locals>.observe at 0x10897f8a0>
+empty_records = False
+
+    @pytest.mark.parametrize("empty_records", [False, True])
+    def test_native_coverage_failure_retains_incomplete_and_failed_test_evidence(
+        observe_coverage_policy, empty_records: bool
+    ) -> None:
+        """The aggregate finding supplements, rather than replaces, partial test evidence."""
+        observation = _coverage_observation()
+        observation["collection_errors"] = ["controlled collection failure"]
+        observation["records"] = (
+            [] if empty_records else [{"nodeid": "test_app.py::test_app", "phase": "call", "outcome": "failed"}]
+        )
+        findings = observe_coverage_policy(observation, 1)
+>       assert "TEST_COVERAGE_POLICY_FAILED" in {row.rule for row in findings}
+E       AssertionError: assert 'TEST_COVERAGE_POLICY_FAILED' in {'TEST_OUTCOME_NOT_PASS', 'tool_error'}
+
+/private/tmp/specfact-477-pytest-release/tests/unit/specfact_code_review/run/test_portable_worker.py:324: AssertionError
+_ test_native_coverage_failure_retains_incomplete_and_failed_test_evidence[True] _
+
+observe_coverage_policy = <function fixture_observe_coverage_policy.<locals>.observe at 0x10897da60>
+empty_records = True
+
+    @pytest.mark.parametrize("empty_records", [False, True])
+    def test_native_coverage_failure_retains_incomplete_and_failed_test_evidence(
+        observe_coverage_policy, empty_records: bool
+    ) -> None:
+        """The aggregate finding supplements, rather than replaces, partial test evidence."""
+        observation = _coverage_observation()
+        observation["collection_errors"] = ["controlled collection failure"]
+        observation["records"] = (
+            [] if empty_records else [{"nodeid": "test_app.py::test_app", "phase": "call", "outcome": "failed"}]
+        )
+        findings = observe_coverage_policy(observation, 1)
+>       assert "TEST_COVERAGE_POLICY_FAILED" in {row.rule for row in findings}
+E       AssertionError: assert 'TEST_COVERAGE_POLICY_FAILED' in {'tool_error'}
+
+/private/tmp/specfact-477-pytest-release/tests/unit/specfact_code_review/run/test_portable_worker.py:324: AssertionError
+_ test_malformed_or_contradictory_coverage_policy_is_actionable[mode-unknown] __
+
+observe_coverage_policy = <function fixture_observe_coverage_policy.<locals>.observe at 0x10897f060>
+field = 'mode', value = 'unknown'
+
+    @pytest.mark.parametrize(
+        ("field", "value"),
+        [
+            ("mode", "unknown"),
+            ("threshold", True),
+            ("threshold", 101),
+            ("threshold", float("nan")),
+            ("precision", True),
+            ("precision", -1),
+            ("precision", 10),
+            ("measured_total", "46.88"),
+            ("measured_total", float("inf")),
+            ("measured_total", None),
+            ("native_threshold_failed", 1),
+            ("mode", "reviewer"),
+            ("mode", "disabled"),
+        ],
+    )
+    def test_malformed_or_contradictory_coverage_policy_is_actionable(observe_coverage_policy, field, value) -> None:
+        """Reject invalid evidence without attributing arbitrary nonzero exits to coverage."""
+        observation = _coverage_observation()
+        observation["coverage_policy"][field] = value
+        findings = observe_coverage_policy(observation, 1)
+>       assert any("project_pytest_coverage_policy_invalid" in row.message for row in findings)
+E       assert False
+E        +  where False = any(<generator object test_malformed_or_contradictory_coverage_policy_is_actionable.<locals>.<genexpr> at 0x108960d40>)
+
+/private/tmp/specfact-477-pytest-release/tests/unit/specfact_code_review/run/test_portable_worker.py:352: AssertionError
+_ test_malformed_or_contradictory_coverage_policy_is_actionable[threshold-True] _
+
+observe_coverage_policy = <function fixture_observe_coverage_policy.<locals>.observe at 0x10897ee50>
+field = 'threshold', value = True
+
+    @pytest.mark.parametrize(
+        ("field", "value"),
+        [
+            ("mode", "unknown"),
+            ("threshold", True),
+            ("threshold", 101),
+            ("threshold", float("nan")),
+            ("precision", True),
+            ("precision", -1),
+            ("precision", 10),
+            ("measured_total", "46.88"),
+            ("measured_total", float("inf")),
+            ("measured_total", None),
+            ("native_threshold_failed", 1),
+            ("mode", "reviewer"),
+            ("mode", "disabled"),
+        ],
+    )
+    def test_malformed_or_contradictory_coverage_policy_is_actionable(observe_coverage_policy, field, value) -> None:
+        """Reject invalid evidence without attributing arbitrary nonzero exits to coverage."""
+        observation = _coverage_observation()
+        observation["coverage_policy"][field] = value
+        findings = observe_coverage_policy(observation, 1)
+>       assert any("project_pytest_coverage_policy_invalid" in row.message for row in findings)
+E       assert False
+E        +  where False = any(<generator object test_malformed_or_contradictory_coverage_policy_is_actionable.<locals>.<genexpr> at 0x108960ad0>)
+
+/private/tmp/specfact-477-pytest-release/tests/unit/specfact_code_review/run/test_portable_worker.py:352: AssertionError
+_ test_malformed_or_contradictory_coverage_policy_is_actionable[threshold-101] _
+
+observe_coverage_policy = <function fixture_observe_coverage_policy.<locals>.observe at 0x10897f110>
+field = 'threshold', value = 101
+
+    @pytest.mark.parametrize(
+        ("field", "value"),
+        [
+            ("mode", "unknown"),
+            ("threshold", True),
+            ("threshold", 101),
+            ("threshold", float("nan")),
+            ("precision", True),
+            ("precision", -1),
+            ("precision", 10),
+            ("measured_total", "46.88"),
+            ("measured_total", float("inf")),
+            ("measured_total", None),
+            ("native_threshold_failed", 1),
+            ("mode", "reviewer"),
+            ("mode", "disabled"),
+        ],
+    )
+    def test_malformed_or_contradictory_coverage_policy_is_actionable(observe_coverage_policy, field, value) -> None:
+        """Reject invalid evidence without attributing arbitrary nonzero exits to coverage."""
+        observation = _coverage_observation()
+        observation["coverage_policy"][field] = value
+        findings = observe_coverage_policy(observation, 1)
+>       assert any("project_pytest_coverage_policy_invalid" in row.message for row in findings)
+E       assert False
+E        +  where False = any(<generator object test_malformed_or_contradictory_coverage_policy_is_actionable.<locals>.<genexpr> at 0x1089605f0>)
+
+/private/tmp/specfact-477-pytest-release/tests/unit/specfact_code_review/run/test_portable_worker.py:352: AssertionError
+_ test_malformed_or_contradictory_coverage_policy_is_actionable[threshold-nan] _
+
+observe_coverage_policy = <function fixture_observe_coverage_policy.<locals>.observe at 0x10897f270>
+field = 'threshold', value = nan
+
+    @pytest.mark.parametrize(
+        ("field", "value"),
+        [
+            ("mode", "unknown"),
+            ("threshold", True),
+            ("threshold", 101),
+            ("threshold", float("nan")),
+            ("precision", True),
+            ("precision", -1),
+            ("precision", 10),
+            ("measured_total", "46.88"),
+            ("measured_total", float("inf")),
+            ("measured_total", None),
+            ("native_threshold_failed", 1),
+            ("mode", "reviewer"),
+            ("mode", "disabled"),
+        ],
+    )
+    def test_malformed_or_contradictory_coverage_policy_is_actionable(observe_coverage_policy, field, value) -> None:
+        """Reject invalid evidence without attributing arbitrary nonzero exits to coverage."""
+        observation = _coverage_observation()
+        observation["coverage_policy"][field] = value
+        findings = observe_coverage_policy(observation, 1)
+>       assert any("project_pytest_coverage_policy_invalid" in row.message for row in findings)
+E       assert False
+E        +  where False = any(<generator object test_malformed_or_contradictory_coverage_policy_is_actionable.<locals>.<genexpr> at 0x10899b1d0>)
+
+/private/tmp/specfact-477-pytest-release/tests/unit/specfact_code_review/run/test_portable_worker.py:352: AssertionError
+_ test_malformed_or_contradictory_coverage_policy_is_actionable[precision-True] _
+
+observe_coverage_policy = <function fixture_observe_coverage_policy.<locals>.observe at 0x10897f740>
+field = 'precision', value = True
+
+    @pytest.mark.parametrize(
+        ("field", "value"),
+        [
+            ("mode", "unknown"),
+            ("threshold", True),
+            ("threshold", 101),
+            ("threshold", float("nan")),
+            ("precision", True),
+            ("precision", -1),
+            ("precision", 10),
+            ("measured_total", "46.88"),
+            ("measured_total", float("inf")),
+            ("measured_total", None),
+            ("native_threshold_failed", 1),
+            ("mode", "reviewer"),
+            ("mode", "disabled"),
+        ],
+    )
+    def test_malformed_or_contradictory_coverage_policy_is_actionable(observe_coverage_policy, field, value) -> None:
+        """Reject invalid evidence without attributing arbitrary nonzero exits to coverage."""
+        observation = _coverage_observation()
+        observation["coverage_policy"][field] = value
+        findings = observe_coverage_policy(observation, 1)
+>       assert any("project_pytest_coverage_policy_invalid" in row.message for row in findings)
+E       assert False
+E        +  where False = any(<generator object test_malformed_or_contradictory_coverage_policy_is_actionable.<locals>.<genexpr> at 0x10899acf0>)
+
+/private/tmp/specfact-477-pytest-release/tests/unit/specfact_code_review/run/test_portable_worker.py:352: AssertionError
+_ test_malformed_or_contradictory_coverage_policy_is_actionable[precision--1] __
+
+observe_coverage_policy = <function fixture_observe_coverage_policy.<locals>.observe at 0x10897d6f0>
+field = 'precision', value = -1
+
+    @pytest.mark.parametrize(
+        ("field", "value"),
+        [
+            ("mode", "unknown"),
+            ("threshold", True),
+            ("threshold", 101),
+            ("threshold", float("nan")),
+            ("precision", True),
+            ("precision", -1),
+            ("precision", 10),
+            ("measured_total", "46.88"),
+            ("measured_total", float("inf")),
+            ("measured_total", None),
+            ("native_threshold_failed", 1),
+            ("mode", "reviewer"),
+            ("mode", "disabled"),
+        ],
+    )
+    def test_malformed_or_contradictory_coverage_policy_is_actionable(observe_coverage_policy, field, value) -> None:
+        """Reject invalid evidence without attributing arbitrary nonzero exits to coverage."""
+        observation = _coverage_observation()
+        observation["coverage_policy"][field] = value
+        findings = observe_coverage_policy(observation, 1)
+>       assert any("project_pytest_coverage_policy_invalid" in row.message for row in findings)
+E       assert False
+E        +  where False = any(<generator object test_malformed_or_contradictory_coverage_policy_is_actionable.<locals>.<genexpr> at 0x10899b780>)
+
+/private/tmp/specfact-477-pytest-release/tests/unit/specfact_code_review/run/test_portable_worker.py:352: AssertionError
+_ test_malformed_or_contradictory_coverage_policy_is_actionable[precision-10] __
+
+observe_coverage_policy = <function fixture_observe_coverage_policy.<locals>.observe at 0x1089e1b10>
+field = 'precision', value = 10
+
+    @pytest.mark.parametrize(
+        ("field", "value"),
+        [
+            ("mode", "unknown"),
+            ("threshold", True),
+            ("threshold", 101),
+            ("threshold", float("nan")),
+            ("precision", True),
+            ("precision", -1),
+            ("precision", 10),
+            ("measured_total", "46.88"),
+            ("measured_total", float("inf")),
+            ("measured_total", None),
+            ("native_threshold_failed", 1),
+            ("mode", "reviewer"),
+            ("mode", "disabled"),
+        ],
+    )
+    def test_malformed_or_contradictory_coverage_policy_is_actionable(observe_coverage_policy, field, value) -> None:
+        """Reject invalid evidence without attributing arbitrary nonzero exits to coverage."""
+        observation = _coverage_observation()
+        observation["coverage_policy"][field] = value
+        findings = observe_coverage_policy(observation, 1)
+>       assert any("project_pytest_coverage_policy_invalid" in row.message for row in findings)
+E       assert False
+E        +  where False = any(<generator object test_malformed_or_contradictory_coverage_policy_is_actionable.<locals>.<genexpr> at 0x108998110>)
+
+/private/tmp/specfact-477-pytest-release/tests/unit/specfact_code_review/run/test_portable_worker.py:352: AssertionError
+_ test_malformed_or_contradictory_coverage_policy_is_actionable[measured_total-46.88] _
+
+observe_coverage_policy = <function fixture_observe_coverage_policy.<locals>.observe at 0x1089e1dd0>
+field = 'measured_total', value = '46.88'
+
+    @pytest.mark.parametrize(
+        ("field", "value"),
+        [
+            ("mode", "unknown"),
+            ("threshold", True),
+            ("threshold", 101),
+            ("threshold", float("nan")),
+            ("precision", True),
+            ("precision", -1),
+            ("precision", 10),
+            ("measured_total", "46.88"),
+            ("measured_total", float("inf")),
+            ("measured_total", None),
+            ("native_threshold_failed", 1),
+            ("mode", "reviewer"),
+            ("mode", "disabled"),
+        ],
+    )
+    def test_malformed_or_contradictory_coverage_policy_is_actionable(observe_coverage_policy, field, value) -> None:
+        """Reject invalid evidence without attributing arbitrary nonzero exits to coverage."""
+        observation = _coverage_observation()
+        observation["coverage_policy"][field] = value
+        findings = observe_coverage_policy(observation, 1)
+>       assert any("project_pytest_coverage_policy_invalid" in row.message for row in findings)
+E       assert False
+E        +  where False = any(<generator object test_malformed_or_contradictory_coverage_policy_is_actionable.<locals>.<genexpr> at 0x108999080>)
+
+/private/tmp/specfact-477-pytest-release/tests/unit/specfact_code_review/run/test_portable_worker.py:352: AssertionError
+_ test_malformed_or_contradictory_coverage_policy_is_actionable[measured_total-inf] _
+
+observe_coverage_policy = <function fixture_observe_coverage_policy.<locals>.observe at 0x1089e2560>
+field = 'measured_total', value = inf
+
+    @pytest.mark.parametrize(
+        ("field", "value"),
+        [
+            ("mode", "unknown"),
+            ("threshold", True),
+            ("threshold", 101),
+            ("threshold", float("nan")),
+            ("precision", True),
+            ("precision", -1),
+            ("precision", 10),
+            ("measured_total", "46.88"),
+            ("measured_total", float("inf")),
+            ("measured_total", None),
+            ("native_threshold_failed", 1),
+            ("mode", "reviewer"),
+            ("mode", "disabled"),
+        ],
+    )
+    def test_malformed_or_contradictory_coverage_policy_is_actionable(observe_coverage_policy, field, value) -> None:
+        """Reject invalid evidence without attributing arbitrary nonzero exits to coverage."""
+        observation = _coverage_observation()
+        observation["coverage_policy"][field] = value
+        findings = observe_coverage_policy(observation, 1)
+>       assert any("project_pytest_coverage_policy_invalid" in row.message for row in findings)
+E       assert False
+E        +  where False = any(<generator object test_malformed_or_contradictory_coverage_policy_is_actionable.<locals>.<genexpr> at 0x10899aa80>)
+
+/private/tmp/specfact-477-pytest-release/tests/unit/specfact_code_review/run/test_portable_worker.py:352: AssertionError
+_ test_malformed_or_contradictory_coverage_policy_is_actionable[measured_total-None] _
+
+observe_coverage_policy = <function fixture_observe_coverage_policy.<locals>.observe at 0x1089e2980>
+field = 'measured_total', value = None
+
+    @pytest.mark.parametrize(
+        ("field", "value"),
+        [
+            ("mode", "unknown"),
+            ("threshold", True),
+            ("threshold", 101),
+            ("threshold", float("nan")),
+            ("precision", True),
+            ("precision", -1),
+            ("precision", 10),
+            ("measured_total", "46.88"),
+            ("measured_total", float("inf")),
+            ("measured_total", None),
+            ("native_threshold_failed", 1),
+            ("mode", "reviewer"),
+            ("mode", "disabled"),
+        ],
+    )
+    def test_malformed_or_contradictory_coverage_policy_is_actionable(observe_coverage_policy, field, value) -> None:
+        """Reject invalid evidence without attributing arbitrary nonzero exits to coverage."""
+        observation = _coverage_observation()
+        observation["coverage_policy"][field] = value
+        findings = observe_coverage_policy(observation, 1)
+>       assert any("project_pytest_coverage_policy_invalid" in row.message for row in findings)
+E       assert False
+E        +  where False = any(<generator object test_malformed_or_contradictory_coverage_policy_is_actionable.<locals>.<genexpr> at 0x10899bd30>)
+
+/private/tmp/specfact-477-pytest-release/tests/unit/specfact_code_review/run/test_portable_worker.py:352: AssertionError
+_ test_malformed_or_contradictory_coverage_policy_is_actionable[native_threshold_failed-1] _
+
+observe_coverage_policy = <function fixture_observe_coverage_policy.<locals>.observe at 0x10897e770>
+field = 'native_threshold_failed', value = 1
+
+    @pytest.mark.parametrize(
+        ("field", "value"),
+        [
+            ("mode", "unknown"),
+            ("threshold", True),
+            ("threshold", 101),
+            ("threshold", float("nan")),
+            ("precision", True),
+            ("precision", -1),
+            ("precision", 10),
+            ("measured_total", "46.88"),
+            ("measured_total", float("inf")),
+            ("measured_total", None),
+            ("native_threshold_failed", 1),
+            ("mode", "reviewer"),
+            ("mode", "disabled"),
+        ],
+    )
+    def test_malformed_or_contradictory_coverage_policy_is_actionable(observe_coverage_policy, field, value) -> None:
+        """Reject invalid evidence without attributing arbitrary nonzero exits to coverage."""
+        observation = _coverage_observation()
+        observation["coverage_policy"][field] = value
+        findings = observe_coverage_policy(observation, 1)
+>       assert any("project_pytest_coverage_policy_invalid" in row.message for row in findings)
+E       assert False
+E        +  where False = any(<generator object test_malformed_or_contradictory_coverage_policy_is_actionable.<locals>.<genexpr> at 0x108aa1ff0>)
+
+/private/tmp/specfact-477-pytest-release/tests/unit/specfact_code_review/run/test_portable_worker.py:352: AssertionError
+_ test_malformed_or_contradictory_coverage_policy_is_actionable[mode-reviewer] _
+
+observe_coverage_policy = <function fixture_observe_coverage_policy.<locals>.observe at 0x10897d2d0>
+field = 'mode', value = 'reviewer'
+
+    @pytest.mark.parametrize(
+        ("field", "value"),
+        [
+            ("mode", "unknown"),
+            ("threshold", True),
+            ("threshold", 101),
+            ("threshold", float("nan")),
+            ("precision", True),
+            ("precision", -1),
+            ("precision", 10),
+            ("measured_total", "46.88"),
+            ("measured_total", float("inf")),
+            ("measured_total", None),
+            ("native_threshold_failed", 1),
+            ("mode", "reviewer"),
+            ("mode", "disabled"),
+        ],
+    )
+    def test_malformed_or_contradictory_coverage_policy_is_actionable(observe_coverage_policy, field, value) -> None:
+        """Reject invalid evidence without attributing arbitrary nonzero exits to coverage."""
+        observation = _coverage_observation()
+        observation["coverage_policy"][field] = value
+        findings = observe_coverage_policy(observation, 1)
+>       assert any("project_pytest_coverage_policy_invalid" in row.message for row in findings)
+E       assert False
+E        +  where False = any(<generator object test_malformed_or_contradictory_coverage_policy_is_actionable.<locals>.<genexpr> at 0x108aa18a0>)
+
+/private/tmp/specfact-477-pytest-release/tests/unit/specfact_code_review/run/test_portable_worker.py:352: AssertionError
+_ test_malformed_or_contradictory_coverage_policy_is_actionable[mode-disabled] _
+
+observe_coverage_policy = <function fixture_observe_coverage_policy.<locals>.observe at 0x10897e090>
+field = 'mode', value = 'disabled'
+
+    @pytest.mark.parametrize(
+        ("field", "value"),
+        [
+            ("mode", "unknown"),
+            ("threshold", True),
+            ("threshold", 101),
+            ("threshold", float("nan")),
+            ("precision", True),
+            ("precision", -1),
+            ("precision", 10),
+            ("measured_total", "46.88"),
+            ("measured_total", float("inf")),
+            ("measured_total", None),
+            ("native_threshold_failed", 1),
+            ("mode", "reviewer"),
+            ("mode", "disabled"),
+        ],
+    )
+    def test_malformed_or_contradictory_coverage_policy_is_actionable(observe_coverage_policy, field, value) -> None:
+        """Reject invalid evidence without attributing arbitrary nonzero exits to coverage."""
+        observation = _coverage_observation()
+        observation["coverage_policy"][field] = value
+        findings = observe_coverage_policy(observation, 1)
+>       assert any("project_pytest_coverage_policy_invalid" in row.message for row in findings)
+E       assert False
+E        +  where False = any(<generator object test_malformed_or_contradictory_coverage_policy_is_actionable.<locals>.<genexpr> at 0x108aa1560>)
+
+/private/tmp/specfact-477-pytest-release/tests/unit/specfact_code_review/run/test_portable_worker.py:352: AssertionError
+__________ test_incomplete_coverage_policy_shape_is_actionable[None] ___________
+
+observe_coverage_policy = <function fixture_observe_coverage_policy.<locals>.observe at 0x10897f7f0>
+policy = None
+
+    @pytest.mark.parametrize("policy", [None, [], {}, {"mode": "native"}])
+    def test_incomplete_coverage_policy_shape_is_actionable(observe_coverage_policy, policy) -> None:
+        """A present but incomplete receipt cannot use the legacy missing-receipt path."""
+        observation = _coverage_observation()
+        observation["coverage_policy"] = policy
+        findings = observe_coverage_policy(observation, 1)
+>       assert any("project_pytest_coverage_policy_invalid" in row.message for row in findings)
+E       assert False
+E        +  where False = any(<generator object test_incomplete_coverage_policy_shape_is_actionable.<locals>.<genexpr> at 0x108aa3100>)
+
+/private/tmp/specfact-477-pytest-release/tests/unit/specfact_code_review/run/test_portable_worker.py:362: AssertionError
+_________ test_incomplete_coverage_policy_shape_is_actionable[policy1] _________
+
+observe_coverage_policy = <function fixture_observe_coverage_policy.<locals>.observe at 0x1089e26c0>
+policy = []
+
+    @pytest.mark.parametrize("policy", [None, [], {}, {"mode": "native"}])
+    def test_incomplete_coverage_policy_shape_is_actionable(observe_coverage_policy, policy) -> None:
+        """A present but incomplete receipt cannot use the legacy missing-receipt path."""
+        observation = _coverage_observation()
+        observation["coverage_policy"] = policy
+        findings = observe_coverage_policy(observation, 1)
+>       assert any("project_pytest_coverage_policy_invalid" in row.message for row in findings)
+E       assert False
+E        +  where False = any(<generator object test_incomplete_coverage_policy_shape_is_actionable.<locals>.<genexpr> at 0x108aa3c60>)
+
+/private/tmp/specfact-477-pytest-release/tests/unit/specfact_code_review/run/test_portable_worker.py:362: AssertionError
+_________ test_incomplete_coverage_policy_shape_is_actionable[policy2] _________
+
+observe_coverage_policy = <function fixture_observe_coverage_policy.<locals>.observe at 0x1089e2770>
+policy = {}
+
+    @pytest.mark.parametrize("policy", [None, [], {}, {"mode": "native"}])
+    def test_incomplete_coverage_policy_shape_is_actionable(observe_coverage_policy, policy) -> None:
+        """A present but incomplete receipt cannot use the legacy missing-receipt path."""
+        observation = _coverage_observation()
+        observation["coverage_policy"] = policy
+        findings = observe_coverage_policy(observation, 1)
+>       assert any("project_pytest_coverage_policy_invalid" in row.message for row in findings)
+E       assert False
+E        +  where False = any(<generator object test_incomplete_coverage_policy_shape_is_actionable.<locals>.<genexpr> at 0x108aa0ad0>)
+
+/private/tmp/specfact-477-pytest-release/tests/unit/specfact_code_review/run/test_portable_worker.py:362: AssertionError
+_________ test_incomplete_coverage_policy_shape_is_actionable[policy3] _________
+
+observe_coverage_policy = <function fixture_observe_coverage_policy.<locals>.observe at 0x1089e2cf0>
+policy = {'mode': 'native'}
+
+    @pytest.mark.parametrize("policy", [None, [], {}, {"mode": "native"}])
+    def test_incomplete_coverage_policy_shape_is_actionable(observe_coverage_policy, policy) -> None:
+        """A present but incomplete receipt cannot use the legacy missing-receipt path."""
+        observation = _coverage_observation()
+        observation["coverage_policy"] = policy
+        findings = observe_coverage_policy(observation, 1)
+>       assert any("project_pytest_coverage_policy_invalid" in row.message for row in findings)
+E       assert False
+E        +  where False = any(<generator object test_incomplete_coverage_policy_shape_is_actionable.<locals>.<genexpr> at 0x108aa0450>)
+
+/private/tmp/specfact-477-pytest-release/tests/unit/specfact_code_review/run/test_portable_worker.py:362: AssertionError
+________ test_native_coverage_failure_cannot_contradict_successful_exit ________
+
+observe_coverage_policy = <function fixture_observe_coverage_policy.<locals>.observe at 0x1089e35e0>
+
+    def test_native_coverage_failure_cannot_contradict_successful_exit(observe_coverage_policy) -> None:
+        """A failed-policy receipt paired with exit zero must remain incomplete evidence."""
+        findings = observe_coverage_policy(_coverage_observation(0), 0)
+>       assert any("project_pytest_coverage_policy_invalid" in row.message for row in findings)
+E       assert False
+E        +  where False = any(<generator object test_native_coverage_failure_cannot_contradict_successful_exit.<locals>.<genexpr> at 0x108aa3030>)
+
+/private/tmp/specfact-477-pytest-release/tests/unit/specfact_code_review/run/test_portable_worker.py:368: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_portable_worker.py::test_native_aggregate_coverage_failure_has_explicit_blocking_finding
+FAILED tests/unit/specfact_code_review/run/test_portable_worker.py::test_native_coverage_failure_retains_incomplete_and_failed_test_evidence[False]
+FAILED tests/unit/specfact_code_review/run/test_portable_worker.py::test_native_coverage_failure_retains_incomplete_and_failed_test_evidence[True]
+FAILED tests/unit/specfact_code_review/run/test_portable_worker.py::test_malformed_or_contradictory_coverage_policy_is_actionable[mode-unknown]
+FAILED tests/unit/specfact_code_review/run/test_portable_worker.py::test_malformed_or_contradictory_coverage_policy_is_actionable[threshold-True]
+FAILED tests/unit/specfact_code_review/run/test_portable_worker.py::test_malformed_or_contradictory_coverage_policy_is_actionable[threshold-101]
+FAILED tests/unit/specfact_code_review/run/test_portable_worker.py::test_malformed_or_contradictory_coverage_policy_is_actionable[threshold-nan]
+FAILED tests/unit/specfact_code_review/run/test_portable_worker.py::test_malformed_or_contradictory_coverage_policy_is_actionable[precision-True]
+FAILED tests/unit/specfact_code_review/run/test_portable_worker.py::test_malformed_or_contradictory_coverage_policy_is_actionable[precision--1]
+FAILED tests/unit/specfact_code_review/run/test_portable_worker.py::test_malformed_or_contradictory_coverage_policy_is_actionable[precision-10]
+FAILED tests/unit/specfact_code_review/run/test_portable_worker.py::test_malformed_or_contradictory_coverage_policy_is_actionable[measured_total-46.88]
+FAILED tests/unit/specfact_code_review/run/test_portable_worker.py::test_malformed_or_contradictory_coverage_policy_is_actionable[measured_total-inf]
+FAILED tests/unit/specfact_code_review/run/test_portable_worker.py::test_malformed_or_contradictory_coverage_policy_is_actionable[measured_total-None]
+FAILED tests/unit/specfact_code_review/run/test_portable_worker.py::test_malformed_or_contradictory_coverage_policy_is_actionable[native_threshold_failed-1]
+FAILED tests/unit/specfact_code_review/run/test_portable_worker.py::test_malformed_or_contradictory_coverage_policy_is_actionable[mode-reviewer]
+FAILED tests/unit/specfact_code_review/run/test_portable_worker.py::test_malformed_or_contradictory_coverage_policy_is_actionable[mode-disabled]
+FAILED tests/unit/specfact_code_review/run/test_portable_worker.py::test_incomplete_coverage_policy_shape_is_actionable[None]
+FAILED tests/unit/specfact_code_review/run/test_portable_worker.py::test_incomplete_coverage_policy_shape_is_actionable[policy1]
+FAILED tests/unit/specfact_code_review/run/test_portable_worker.py::test_incomplete_coverage_policy_shape_is_actionable[policy2]
+FAILED tests/unit/specfact_code_review/run/test_portable_worker.py::test_incomplete_coverage_policy_shape_is_actionable[policy3]
+FAILED tests/unit/specfact_code_review/run/test_portable_worker.py::test_native_coverage_failure_cannot_contradict_successful_exit
+======================== 21 failed, 50 passed in 1.44s =========================
+
+
+FOLLOW-UP: specific coverage diagnostic, before implementation
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: /private/tmp/specfact-477-pytest-release
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 83 items
+
+tests/unit/specfact_code_review/run/test_portable_worker.py ............ [ 14%]
+...........................................................FFFFFFFF....  [100%]
+
+=================================== FAILURES ===================================
+_ test_specific_missing_coverage_diagnostic_preserves_other_failures[project_pytest_coverage_disabled:--no-cov; required reviewer evidence unavailable] _
+
+observe_coverage_policy = <function fixture_observe_coverage_policy.<locals>.observe at 0x1096d1c70>
+diagnostic = 'project_pytest_coverage_disabled:--no-cov; required reviewer evidence unavailable'
+
+    @pytest.mark.parametrize(
+        "diagnostic",
+        [
+            "project_pytest_coverage_disabled:--no-cov; required reviewer evidence unavailable",
+            "project_pytest_coverage_xdist_unsupported:missing worker coverage",
+            "project_pytest_coverage_export_failed:configured report suppression",
+        ],
+    )
+    def test_specific_missing_coverage_diagnostic_preserves_other_failures(observe_coverage_policy, diagnostic) -> None:
+        """Keep the exact target remedy together with native policy and actual test failures."""
+        observation = _coverage_observation()
+        observation["coverage"] = {}
+        observation["coverage_diagnostic"] = diagnostic
+        observation["records"][0]["outcome"] = "failed"
+        findings = observe_coverage_policy(observation, 1)
+>       assert any(row.message == diagnostic for row in findings)
+E       assert False
+E        +  where False = any(<generator object test_specific_missing_coverage_diagnostic_preserves_other_failures.<locals>.<genexpr> at 0x1096497e0>)
+
+/private/tmp/specfact-477-pytest-release/tests/unit/specfact_code_review/run/test_portable_worker.py:401: AssertionError
+_ test_specific_missing_coverage_diagnostic_preserves_other_failures[project_pytest_coverage_xdist_unsupported:missing worker coverage] _
+
+observe_coverage_policy = <function fixture_observe_coverage_policy.<locals>.observe at 0x1096a19b0>
+diagnostic = 'project_pytest_coverage_xdist_unsupported:missing worker coverage'
+
+    @pytest.mark.parametrize(
+        "diagnostic",
+        [
+            "project_pytest_coverage_disabled:--no-cov; required reviewer evidence unavailable",
+            "project_pytest_coverage_xdist_unsupported:missing worker coverage",
+            "project_pytest_coverage_export_failed:configured report suppression",
+        ],
+    )
+    def test_specific_missing_coverage_diagnostic_preserves_other_failures(observe_coverage_policy, diagnostic) -> None:
+        """Keep the exact target remedy together with native policy and actual test failures."""
+        observation = _coverage_observation()
+        observation["coverage"] = {}
+        observation["coverage_diagnostic"] = diagnostic
+        observation["records"][0]["outcome"] = "failed"
+        findings = observe_coverage_policy(observation, 1)
+>       assert any(row.message == diagnostic for row in findings)
+E       assert False
+E        +  where False = any(<generator object test_specific_missing_coverage_diagnostic_preserves_other_failures.<locals>.<genexpr> at 0x1096499a0>)
+
+/private/tmp/specfact-477-pytest-release/tests/unit/specfact_code_review/run/test_portable_worker.py:401: AssertionError
+_ test_specific_missing_coverage_diagnostic_preserves_other_failures[project_pytest_coverage_export_failed:configured report suppression] _
+
+observe_coverage_policy = <function fixture_observe_coverage_policy.<locals>.observe at 0x1096f3b60>
+diagnostic = 'project_pytest_coverage_export_failed:configured report suppression'
+
+    @pytest.mark.parametrize(
+        "diagnostic",
+        [
+            "project_pytest_coverage_disabled:--no-cov; required reviewer evidence unavailable",
+            "project_pytest_coverage_xdist_unsupported:missing worker coverage",
+            "project_pytest_coverage_export_failed:configured report suppression",
+        ],
+    )
+    def test_specific_missing_coverage_diagnostic_preserves_other_failures(observe_coverage_policy, diagnostic) -> None:
+        """Keep the exact target remedy together with native policy and actual test failures."""
+        observation = _coverage_observation()
+        observation["coverage"] = {}
+        observation["coverage_diagnostic"] = diagnostic
+        observation["records"][0]["outcome"] = "failed"
+        findings = observe_coverage_policy(observation, 1)
+>       assert any(row.message == diagnostic for row in findings)
+E       assert False
+E        +  where False = any(<generator object test_specific_missing_coverage_diagnostic_preserves_other_failures.<locals>.<genexpr> at 0x10964a260>)
+
+/private/tmp/specfact-477-pytest-release/tests/unit/specfact_code_review/run/test_portable_worker.py:401: AssertionError
+_____ test_malformed_missing_coverage_diagnostic_is_not_stringified[None] ______
+
+observe_coverage_policy = <function fixture_observe_coverage_policy.<locals>.observe at 0x1097101a0>
+diagnostic = None
+
+    @pytest.mark.parametrize("diagnostic", [None, False, 7, [], {"reason": "untrusted"}])
+    def test_malformed_missing_coverage_diagnostic_is_not_stringified(observe_coverage_policy, diagnostic) -> None:
+        """Reject a malformed target diagnostic instead of formatting an arbitrary object."""
+        observation = _coverage_observation()
+        observation["coverage"] = {}
+        observation["coverage_diagnostic"] = diagnostic
+        findings = observe_coverage_policy(observation, 1)
+>       assert any("project_pytest_coverage_diagnostic_invalid" in row.message for row in findings)
+E       assert False
+E        +  where False = any(<generator object test_malformed_missing_coverage_diagnostic_is_not_stringified.<locals>.<genexpr> at 0x1097e9150>)
+
+/private/tmp/specfact-477-pytest-release/tests/unit/specfact_code_review/run/test_portable_worker.py:413: AssertionError
+_____ test_malformed_missing_coverage_diagnostic_is_not_stringified[False] _____
+
+observe_coverage_policy = <function fixture_observe_coverage_policy.<locals>.observe at 0x1097105c0>
+diagnostic = False
+
+    @pytest.mark.parametrize("diagnostic", [None, False, 7, [], {"reason": "untrusted"}])
+    def test_malformed_missing_coverage_diagnostic_is_not_stringified(observe_coverage_policy, diagnostic) -> None:
+        """Reject a malformed target diagnostic instead of formatting an arbitrary object."""
+        observation = _coverage_observation()
+        observation["coverage"] = {}
+        observation["coverage_diagnostic"] = diagnostic
+        findings = observe_coverage_policy(observation, 1)
+>       assert any("project_pytest_coverage_diagnostic_invalid" in row.message for row in findings)
+E       assert False
+E        +  where False = any(<generator object test_malformed_missing_coverage_diagnostic_is_not_stringified.<locals>.<genexpr> at 0x1097eb510>)
+
+/private/tmp/specfact-477-pytest-release/tests/unit/specfact_code_review/run/test_portable_worker.py:413: AssertionError
+_______ test_malformed_missing_coverage_diagnostic_is_not_stringified[7] _______
+
+observe_coverage_policy = <function fixture_observe_coverage_policy.<locals>.observe at 0x1097109e0>
+diagnostic = 7
+
+    @pytest.mark.parametrize("diagnostic", [None, False, 7, [], {"reason": "untrusted"}])
+    def test_malformed_missing_coverage_diagnostic_is_not_stringified(observe_coverage_policy, diagnostic) -> None:
+        """Reject a malformed target diagnostic instead of formatting an arbitrary object."""
+        observation = _coverage_observation()
+        observation["coverage"] = {}
+        observation["coverage_diagnostic"] = diagnostic
+        findings = observe_coverage_policy(observation, 1)
+>       assert any("project_pytest_coverage_diagnostic_invalid" in row.message for row in findings)
+E       assert False
+E        +  where False = any(<generator object test_malformed_missing_coverage_diagnostic_is_not_stringified.<locals>.<genexpr> at 0x1097e81e0>)
+
+/private/tmp/specfact-477-pytest-release/tests/unit/specfact_code_review/run/test_portable_worker.py:413: AssertionError
+__ test_malformed_missing_coverage_diagnostic_is_not_stringified[diagnostic3] __
+
+observe_coverage_policy = <function fixture_observe_coverage_policy.<locals>.observe at 0x109710eb0>
+diagnostic = []
+
+    @pytest.mark.parametrize("diagnostic", [None, False, 7, [], {"reason": "untrusted"}])
+    def test_malformed_missing_coverage_diagnostic_is_not_stringified(observe_coverage_policy, diagnostic) -> None:
+        """Reject a malformed target diagnostic instead of formatting an arbitrary object."""
+        observation = _coverage_observation()
+        observation["coverage"] = {}
+        observation["coverage_diagnostic"] = diagnostic
+        findings = observe_coverage_policy(observation, 1)
+>       assert any("project_pytest_coverage_diagnostic_invalid" in row.message for row in findings)
+E       assert False
+E        +  where False = any(<generator object test_malformed_missing_coverage_diagnostic_is_not_stringified.<locals>.<genexpr> at 0x1097fe5a0>)
+
+/private/tmp/specfact-477-pytest-release/tests/unit/specfact_code_review/run/test_portable_worker.py:413: AssertionError
+__ test_malformed_missing_coverage_diagnostic_is_not_stringified[diagnostic4] __
+
+observe_coverage_policy = <function fixture_observe_coverage_policy.<locals>.observe at 0x109711380>
+diagnostic = {'reason': 'untrusted'}
+
+    @pytest.mark.parametrize("diagnostic", [None, False, 7, [], {"reason": "untrusted"}])
+    def test_malformed_missing_coverage_diagnostic_is_not_stringified(observe_coverage_policy, diagnostic) -> None:
+        """Reject a malformed target diagnostic instead of formatting an arbitrary object."""
+        observation = _coverage_observation()
+        observation["coverage"] = {}
+        observation["coverage_diagnostic"] = diagnostic
+        findings = observe_coverage_policy(observation, 1)
+>       assert any("project_pytest_coverage_diagnostic_invalid" in row.message for row in findings)
+E       assert False
+E        +  where False = any(<generator object test_malformed_missing_coverage_diagnostic_is_not_stringified.<locals>.<genexpr> at 0x1097fca00>)
+
+/private/tmp/specfact-477-pytest-release/tests/unit/specfact_code_review/run/test_portable_worker.py:413: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_portable_worker.py::test_specific_missing_coverage_diagnostic_preserves_other_failures[project_pytest_coverage_disabled:--no-cov; required reviewer evidence unavailable]
+FAILED tests/unit/specfact_code_review/run/test_portable_worker.py::test_specific_missing_coverage_diagnostic_preserves_other_failures[project_pytest_coverage_xdist_unsupported:missing worker coverage]
+FAILED tests/unit/specfact_code_review/run/test_portable_worker.py::test_specific_missing_coverage_diagnostic_preserves_other_failures[project_pytest_coverage_export_failed:configured report suppression]
+FAILED tests/unit/specfact_code_review/run/test_portable_worker.py::test_malformed_missing_coverage_diagnostic_is_not_stringified[None]
+FAILED tests/unit/specfact_code_review/run/test_portable_worker.py::test_malformed_missing_coverage_diagnostic_is_not_stringified[False]
+FAILED tests/unit/specfact_code_review/run/test_portable_worker.py::test_malformed_missing_coverage_diagnostic_is_not_stringified[7]
+FAILED tests/unit/specfact_code_review/run/test_portable_worker.py::test_malformed_missing_coverage_diagnostic_is_not_stringified[diagnostic3]
+FAILED tests/unit/specfact_code_review/run/test_portable_worker.py::test_malformed_missing_coverage_diagnostic_is_not_stringified[diagnostic4]
+========================= 8 failed, 75 passed in 0.29s =========================

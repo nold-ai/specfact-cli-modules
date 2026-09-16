@@ -1,0 +1,51 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: /private/tmp/specfact-477-pytest-release
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 56 items / 54 deselected / 2 selected
+
+tests/unit/specfact_code_review/run/test_runtime_vcs.py .F               [100%]
+
+=================================== FAILURES ===================================
+__________ test_unbound_grafts_cannot_remove_selected_ancestry[True] ___________
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-762/test_unbound_grafts_cannot_rem1')
+empty_template = True
+
+    @pytest.mark.parametrize("empty_template", [False, True])
+    def test_unbound_grafts_cannot_remove_selected_ancestry(tmp_path: Path, empty_template: bool) -> None:
+        root = tmp_path / "source"
+        _repository(root, empty_template=empty_template)
+        (root / "app.py").write_text("VALUE = 2\n")
+        selected = _commit_fixture(root, "selected")
+        before = vcs_context(root)
+>       (root / ".git/info/grafts").write_text(selected + "\n")
+
+tests/unit/specfact_code_review/run/test_runtime_vcs.py:476:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:809: in write_text
+    with self.open(mode='w', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-762/test_unbound_grafts_cannot_rem1/source/.git/info/grafts')
+mode = 'w', buffering = -1, encoding = 'locale', errors = None, newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed to by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+>       return io.open(self, mode, buffering, encoding, errors, newline)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: '/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-762/test_unbound_grafts_cannot_rem1/source/.git/info/grafts'
+
+/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:771: FileNotFoundError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_runtime_vcs.py::test_unbound_grafts_cannot_remove_selected_ancestry[True]
+================== 1 failed, 1 passed, 54 deselected in 0.51s ==================

@@ -1,0 +1,4 @@
+Checking dependencies
+
+
+Error: Invalid value: project_analyzer_dependency_incompatible:pylint:isort; selected=9.0.1, required=!=5.13,<9,>=5; private log: /home/runner/work/_temp/native-hooks/home/.cache/specfact/code-review/project-runtimes-v2/failed-cd0f3af355b55f461cbd7f0778745d9b0d3d184a5fda875998a1508f432760d7-ippyozod.log

@@ -1,0 +1,27 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: <USER_HOME>/git/nold-ai/specfact-cli-modules-worktrees/feature/code-review-16-portable-project-runtime
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 7 items
+
+tests/unit/specfact_code_review/run/test_runtime_artifacts.py ......F    [100%]
+
+=================================== FAILURES ===================================
+____________ test_explicit_groups_do_not_install_unrelated_defaults ____________
+
+tmp_path = PosixPath('<TMPDIR>/pytest-of-dom/pytest-24/test_explicit_groups_do_not_in0')
+
+    def test_explicit_groups_do_not_install_unrelated_defaults(tmp_path: Path) -> None:
+        from specfact_code_review.run.runtime_adapters import install_commands
+        from specfact_code_review.run.runtime_models import ProjectPlan
+        uv = install_commands(ProjectPlan(root=tmp_path, manager='uv', groups=('tests',)), python='python')[0]
+        poetry = install_commands(ProjectPlan(root=tmp_path, manager='poetry', groups=('test',)), python='python')[0]
+>       assert '--no-default-groups' in uv
+E       AssertionError: assert '--no-default-groups' in ('python', '-m', 'uv', 'sync', '--active', '--no-editable', ...)
+
+tests/unit/specfact_code_review/run/test_runtime_artifacts.py:109: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_runtime_artifacts.py::test_explicit_groups_do_not_install_unrelated_defaults
+========================= 1 failed, 6 passed in 0.11s ==========================

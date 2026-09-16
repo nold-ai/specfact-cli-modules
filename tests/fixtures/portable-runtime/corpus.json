@@ -1,0 +1,124 @@
+{
+  "schema": "specfact-external-python-corpus-v1",
+  "platform": "ubuntu-24.04-linux-x86_64",
+  "python": [
+    "3.11",
+    "3.12",
+    "3.13"
+  ],
+  "job_timeout_minutes": 90,
+  "repositories": [
+    {
+      "name": "requests",
+      "url": "https://github.com/psf/requests.git",
+      "commit": "dae7ef63b4df6eded86637f251fc4e3a06c3b479",
+      "manager": "pip",
+      "groups": [
+        "test"
+      ],
+      "environment": "default",
+      "paths": [
+        "src/requests/structures.py",
+        "tests/test_structures.py"
+      ],
+      "controlled_defect": {
+        "source": "src/requests/specfact_controlled.py",
+        "import": "requests.specfact_controlled"
+      }
+    },
+    {
+      "name": "hatch",
+      "url": "https://github.com/pypa/hatch.git",
+      "commit": "d5f7bfe813dd4d81520def23b43f5d46aad1899c",
+      "manager": "hatch",
+      "groups": [],
+      "environment": "hatch-test",
+      "paths": [
+        "src/hatch/utils/structures.py",
+        "tests/utils/test_structures.py"
+      ],
+      "controlled_defect": {
+        "source": "src/hatch/specfact_controlled.py",
+        "import": "hatch.specfact_controlled"
+      }
+    },
+    {
+      "name": "flask",
+      "url": "https://github.com/pallets/flask.git",
+      "commit": "d73fa1cdcbd8b1465c151db8924ba58b1dd14e35",
+      "manager": "uv",
+      "groups": [
+        "tests"
+      ],
+      "environment": "default",
+      "paths": [
+        "src/flask/config.py",
+        "tests/test_config.py"
+      ],
+      "controlled_defect": {
+        "source": "src/flask/specfact_controlled.py",
+        "import": "flask.specfact_controlled"
+      }
+    },
+    {
+      "name": "poetry",
+      "url": "https://github.com/python-poetry/poetry.git",
+      "commit": "be56ff07db06e9b82574648433ca228e4cac549b",
+      "manager": "poetry",
+      "groups": [
+        "test"
+      ],
+      "environment": "default",
+      "paths": [
+        "src/poetry/utils/extras.py",
+        "tests/utils/test_extras.py"
+      ],
+      "verified_imports": [
+        {
+          "file": "tests/utils/test_extras.py",
+          "line": 7,
+          "module": "poetry.core.packages.package"
+        },
+        {
+          "file": "tests/utils/test_extras.py",
+          "line": 9,
+          "module": "poetry.factory"
+        },
+        {
+          "file": "tests/utils/test_extras.py",
+          "line": 10,
+          "module": "poetry.utils.extras"
+        }
+      ],
+      "controlled_defect": {
+        "source": "src/poetry/specfact_controlled.py",
+        "import": "poetry.specfact_controlled"
+      }
+    }
+  ],
+  "reconstructions": [
+    {
+      "name": "hatch-detached",
+      "fixture": "hatch-detached",
+      "manager": "hatch",
+      "environment": "review",
+      "groups": [],
+      "native_libraries": [
+        "libodbc.so.2"
+      ],
+      "paths": [
+        "src/portable_customer/core.py",
+        "tests/test_core.py"
+      ],
+      "host_pytest_args": [
+        "-p",
+        "no:asyncio"
+      ],
+      "host_note": "Disable only the asyncio entry-point alias; pytest_asyncio.plugin remains explicitly loaded by the unchanged fixture addopts.",
+      "controlled_defect": {
+        "source": "src/portable_customer/specfact_controlled.py",
+        "import": "portable_customer.specfact_controlled"
+      }
+    }
+  ]
+}

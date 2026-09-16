@@ -15,6 +15,7 @@ from specfact_code_review.tools.semgrep_runner import (
     _parse_semgrep_results,
     _run_semgrep_command,
     _snip_stderr_tail,
+    _validate_semgrep_completion,
     find_semgrep_ai_bloat_config,
     find_semgrep_bugs_config,
     find_semgrep_config,
@@ -257,6 +258,71 @@ def test_sealed_semgrep_rejects_structured_execution_errors(tmp_path: Path, monk
     assert len(findings) == 1
     assert findings[0].category == "tool_error"
     assert "structured errors" in findings[0].message
+
+
+@pytest.mark.parametrize("bug_pass", [False, True], ids=["clean", "bugs"])
+@pytest.mark.parametrize("returncode", [0, 1])
+def test_structured_semgrep_errors_retain_diagnostic_context(
+    tmp_path: Path, monkeypatch: MonkeyPatch, bug_pass: bool, returncode: int
+) -> None:
+    """Both passes retain the native error without accepting partial execution."""
+    bundle = tmp_path / "bundle"
+    (bundle / ".semgrep").mkdir(parents=True)
+    for name in ("clean_code", "bugs"):
+        (bundle / f".semgrep/{name}.yaml").write_text("rules: []\n", encoding="utf-8")
+    target = tmp_path / "target.py"
+    target.write_text("VALUE = 1\n", encoding="utf-8")
+    payload = {
+        "results": [],
+        "errors": [{"type": "ParseError", "code": 3, "message": "target parse failed", "source": "PRIVATE_SOURCE"}],
+    }
+    process = Mock(return_value=completed_process("semgrep", stdout=json.dumps(payload), returncode=returncode))
+    monkeypatch.setattr(subprocess, "run", process)
+
+    findings = (run_semgrep_bugs if bug_pass else run_semgrep)([target], bundle_root=bundle)
+
+    assert len(findings) == 1
+    assert (findings[0].category, findings[0].severity) == ("tool_error", "error")
+    assert "count=1" in findings[0].message
+    assert json.loads(findings[0].message.split("; details=", 1)[1]) == [
+        {"type": "ParseError", "code": 3, "message": "target parse failed"}
+    ]
+    assert process.call_count == 2
+
+
+def test_structured_semgrep_error_diagnostics_are_bounded_and_escaped() -> None:
+    """Untrusted nested metadata and long control-filled messages stay bounded."""
+    payload: dict[str, object] = {
+        "errors": [
+            {"type": "ParseError", "code": 3, "message": "parse\n\t\x1b" + "x" * 1000},
+            {"type": {"source": "PRIVATE_SOURCE"}, "code": ["PRIVATE_SOURCE"], "message": {"source": "PRIVATE_SOURCE"}},
+            {"type": "z" * 1000, "code": "z" * 1000, "message": "\x00" * 1000},
+            {"type": "FOURTH_ERROR", "message": "OMITTED_MESSAGE"},
+        ]
+    }
+
+    with pytest.raises(ValueError) as error:
+        _validate_semgrep_completion(completed_process("semgrep", stdout="", returncode=0), payload)
+
+    diagnostic = str(error.value)
+    assert "count=4" in diagnostic
+    assert "omitted=1" in diagnostic
+    assert "PRIVATE_SOURCE" not in diagnostic
+    assert "FOURTH_ERROR" not in diagnostic
+    assert "OMITTED_MESSAGE" not in diagnostic
+    assert "\\n\\t\\u001b" in diagnostic
+    assert not any(ord(char) < 32 for char in diagnostic)
+    _assert_bounded_semgrep_details(diagnostic)
+
+
+def _assert_bounded_semgrep_details(diagnostic: str) -> None:
+    """Validate the aggregate bound and the surviving allowlisted JSON fields."""
+    assert len(diagnostic) <= 3900
+    details = json.loads(diagnostic.split("; details=", 1)[1])
+    assert len(details) == 3
+    assert details[1] == {}
+    assert len(details[0]["message"]) <= 512
+    assert len(details[2]["message"]) <= 512
 
 
 @pytest.fixture(autouse=True)

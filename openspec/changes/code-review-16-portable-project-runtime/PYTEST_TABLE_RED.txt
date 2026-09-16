@@ -1,0 +1,1441 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: <workspace>
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 143 items / 109 deselected / 34 selected
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py FFFFFFFFFF [ 29%]
+FFFFFFFFFFFFFFFFFF                                                       [ 82%]
+tests/unit/specfact_code_review/run/test_portable_snapshot.py .FFF..     [100%]
+
+=================================== FAILURES ===================================
+__ test_malformed_pytest_table_has_project_diagnostic[1-pytest.toml-pytest-] ___
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-249/test_malformed_pytest_table_ha0')
+filename = 'pytest.toml', section = 'pytest', prefix = '', value = '1'
+
+    @pytest.mark.parametrize("filename,section,prefix", [
+        ("pytest.toml", "pytest", ""),
+        (".pytest.toml", "pytest", ""),
+        ("pyproject.toml", "tool.pytest", "[tool]\n"),
+        ("pyproject.toml", "tool.pytest.ini_options", "[tool.pytest]\n"),
+    ])
+    @pytest.mark.parametrize("value", ["1", "0", "true", "false", "[]", '["tests"]', '"invalid"'])
+    def test_malformed_pytest_table_has_project_diagnostic(
+        tmp_path: Path, filename: str, section: str, prefix: str, value: str
+    ) -> None:
+        (tmp_path / filename).write_text(prefix + section.rsplit(".", 1)[-1] + "=" + value + "\n")
+        with pytest.raises(ProjectRuntimeError, match=f"project_pytest_config_invalid:{filename}:{section}; expected a table"):
+>           discover_project(tmp_path)
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:357: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:344: in discover_project
+    pytest = _pytest_config(root, project)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+root = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-249/test_malformed_pytest_table_ha0')
+project = {}
+
+    def _pytest_config(root: Path, project: dict[str, Any]) -> dict[str, Any]:
+        for name in ("pytest.toml", ".pytest.toml"):
+            if (root / name).exists():
+>               return _validated_pytest_paths(dict(_toml(root / name).get("pytest", {})), name)
+                                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E               TypeError: 'int' object is not iterable
+
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:217: TypeError
+__ test_malformed_pytest_table_has_project_diagnostic[1-.pytest.toml-pytest-] __
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-249/test_malformed_pytest_table_ha1')
+filename = '.pytest.toml', section = 'pytest', prefix = '', value = '1'
+
+    @pytest.mark.parametrize("filename,section,prefix", [
+        ("pytest.toml", "pytest", ""),
+        (".pytest.toml", "pytest", ""),
+        ("pyproject.toml", "tool.pytest", "[tool]\n"),
+        ("pyproject.toml", "tool.pytest.ini_options", "[tool.pytest]\n"),
+    ])
+    @pytest.mark.parametrize("value", ["1", "0", "true", "false", "[]", '["tests"]', '"invalid"'])
+    def test_malformed_pytest_table_has_project_diagnostic(
+        tmp_path: Path, filename: str, section: str, prefix: str, value: str
+    ) -> None:
+        (tmp_path / filename).write_text(prefix + section.rsplit(".", 1)[-1] + "=" + value + "\n")
+        with pytest.raises(ProjectRuntimeError, match=f"project_pytest_config_invalid:{filename}:{section}; expected a table"):
+>           discover_project(tmp_path)
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:357: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:344: in discover_project
+    pytest = _pytest_config(root, project)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+root = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-249/test_malformed_pytest_table_ha1')
+project = {}
+
+    def _pytest_config(root: Path, project: dict[str, Any]) -> dict[str, Any]:
+        for name in ("pytest.toml", ".pytest.toml"):
+            if (root / name).exists():
+>               return _validated_pytest_paths(dict(_toml(root / name).get("pytest", {})), name)
+                                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E               TypeError: 'int' object is not iterable
+
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:217: TypeError
+_ test_malformed_pytest_table_has_project_diagnostic[1-pyproject.toml-tool.pytest-[tool]\n] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-249/test_malformed_pytest_table_ha2')
+filename = 'pyproject.toml', section = 'tool.pytest', prefix = '[tool]\n'
+value = '1'
+
+    @pytest.mark.parametrize("filename,section,prefix", [
+        ("pytest.toml", "pytest", ""),
+        (".pytest.toml", "pytest", ""),
+        ("pyproject.toml", "tool.pytest", "[tool]\n"),
+        ("pyproject.toml", "tool.pytest.ini_options", "[tool.pytest]\n"),
+    ])
+    @pytest.mark.parametrize("value", ["1", "0", "true", "false", "[]", '["tests"]', '"invalid"'])
+    def test_malformed_pytest_table_has_project_diagnostic(
+        tmp_path: Path, filename: str, section: str, prefix: str, value: str
+    ) -> None:
+        (tmp_path / filename).write_text(prefix + section.rsplit(".", 1)[-1] + "=" + value + "\n")
+        with pytest.raises(ProjectRuntimeError, match=f"project_pytest_config_invalid:{filename}:{section}; expected a table"):
+>           discover_project(tmp_path)
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:357: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:344: in discover_project
+    pytest = _pytest_config(root, project)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+root = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-249/test_malformed_pytest_table_ha2')
+project = {'tool': {'pytest': 1}}
+
+    def _pytest_config(root: Path, project: dict[str, Any]) -> dict[str, Any]:
+        for name in ("pytest.toml", ".pytest.toml"):
+            if (root / name).exists():
+                return _validated_pytest_paths(dict(_toml(root / name).get("pytest", {})), name)
+        for name in ("pytest.ini", ".pytest.ini", "pyproject.toml", "tox.ini", "setup.cfg"):
+            if name == "pyproject.toml":
+                pytest = project.get("tool", {}).get("pytest", {})
+                if pytest:
+>                   return _validated_pytest_paths(dict(pytest.get("ini_options", pytest)), name)
+                                                        ^^^^^^^^^^
+E                   AttributeError: 'int' object has no attribute 'get'
+
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:222: AttributeError
+_ test_malformed_pytest_table_has_project_diagnostic[1-pyproject.toml-tool.pytest.ini_options-[tool.pytest]\n] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-249/test_malformed_pytest_table_ha3')
+filename = 'pyproject.toml', section = 'tool.pytest.ini_options'
+prefix = '[tool.pytest]\n', value = '1'
+
+    @pytest.mark.parametrize("filename,section,prefix", [
+        ("pytest.toml", "pytest", ""),
+        (".pytest.toml", "pytest", ""),
+        ("pyproject.toml", "tool.pytest", "[tool]\n"),
+        ("pyproject.toml", "tool.pytest.ini_options", "[tool.pytest]\n"),
+    ])
+    @pytest.mark.parametrize("value", ["1", "0", "true", "false", "[]", '["tests"]', '"invalid"'])
+    def test_malformed_pytest_table_has_project_diagnostic(
+        tmp_path: Path, filename: str, section: str, prefix: str, value: str
+    ) -> None:
+        (tmp_path / filename).write_text(prefix + section.rsplit(".", 1)[-1] + "=" + value + "\n")
+        with pytest.raises(ProjectRuntimeError, match=f"project_pytest_config_invalid:{filename}:{section}; expected a table"):
+>           discover_project(tmp_path)
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:357: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:344: in discover_project
+    pytest = _pytest_config(root, project)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+root = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-249/test_malformed_pytest_table_ha3')
+project = {'tool': {'pytest': {'ini_options': 1}}}
+
+    def _pytest_config(root: Path, project: dict[str, Any]) -> dict[str, Any]:
+        for name in ("pytest.toml", ".pytest.toml"):
+            if (root / name).exists():
+                return _validated_pytest_paths(dict(_toml(root / name).get("pytest", {})), name)
+        for name in ("pytest.ini", ".pytest.ini", "pyproject.toml", "tox.ini", "setup.cfg"):
+            if name == "pyproject.toml":
+                pytest = project.get("tool", {}).get("pytest", {})
+                if pytest:
+>                   return _validated_pytest_paths(dict(pytest.get("ini_options", pytest)), name)
+                                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E                   TypeError: 'int' object is not iterable
+
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:222: TypeError
+__ test_malformed_pytest_table_has_project_diagnostic[0-pytest.toml-pytest-] ___
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-249/test_malformed_pytest_table_ha4')
+filename = 'pytest.toml', section = 'pytest', prefix = '', value = '0'
+
+    @pytest.mark.parametrize("filename,section,prefix", [
+        ("pytest.toml", "pytest", ""),
+        (".pytest.toml", "pytest", ""),
+        ("pyproject.toml", "tool.pytest", "[tool]\n"),
+        ("pyproject.toml", "tool.pytest.ini_options", "[tool.pytest]\n"),
+    ])
+    @pytest.mark.parametrize("value", ["1", "0", "true", "false", "[]", '["tests"]', '"invalid"'])
+    def test_malformed_pytest_table_has_project_diagnostic(
+        tmp_path: Path, filename: str, section: str, prefix: str, value: str
+    ) -> None:
+        (tmp_path / filename).write_text(prefix + section.rsplit(".", 1)[-1] + "=" + value + "\n")
+        with pytest.raises(ProjectRuntimeError, match=f"project_pytest_config_invalid:{filename}:{section}; expected a table"):
+>           discover_project(tmp_path)
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:357: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:344: in discover_project
+    pytest = _pytest_config(root, project)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+root = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-249/test_malformed_pytest_table_ha4')
+project = {}
+
+    def _pytest_config(root: Path, project: dict[str, Any]) -> dict[str, Any]:
+        for name in ("pytest.toml", ".pytest.toml"):
+            if (root / name).exists():
+>               return _validated_pytest_paths(dict(_toml(root / name).get("pytest", {})), name)
+                                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E               TypeError: 'int' object is not iterable
+
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:217: TypeError
+__ test_malformed_pytest_table_has_project_diagnostic[0-.pytest.toml-pytest-] __
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-249/test_malformed_pytest_table_ha5')
+filename = '.pytest.toml', section = 'pytest', prefix = '', value = '0'
+
+    @pytest.mark.parametrize("filename,section,prefix", [
+        ("pytest.toml", "pytest", ""),
+        (".pytest.toml", "pytest", ""),
+        ("pyproject.toml", "tool.pytest", "[tool]\n"),
+        ("pyproject.toml", "tool.pytest.ini_options", "[tool.pytest]\n"),
+    ])
+    @pytest.mark.parametrize("value", ["1", "0", "true", "false", "[]", '["tests"]', '"invalid"'])
+    def test_malformed_pytest_table_has_project_diagnostic(
+        tmp_path: Path, filename: str, section: str, prefix: str, value: str
+    ) -> None:
+        (tmp_path / filename).write_text(prefix + section.rsplit(".", 1)[-1] + "=" + value + "\n")
+        with pytest.raises(ProjectRuntimeError, match=f"project_pytest_config_invalid:{filename}:{section}; expected a table"):
+>           discover_project(tmp_path)
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:357: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:344: in discover_project
+    pytest = _pytest_config(root, project)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+root = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-249/test_malformed_pytest_table_ha5')
+project = {}
+
+    def _pytest_config(root: Path, project: dict[str, Any]) -> dict[str, Any]:
+        for name in ("pytest.toml", ".pytest.toml"):
+            if (root / name).exists():
+>               return _validated_pytest_paths(dict(_toml(root / name).get("pytest", {})), name)
+                                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E               TypeError: 'int' object is not iterable
+
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:217: TypeError
+_ test_malformed_pytest_table_has_project_diagnostic[0-pyproject.toml-tool.pytest-[tool]\n] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-249/test_malformed_pytest_table_ha6')
+filename = 'pyproject.toml', section = 'tool.pytest', prefix = '[tool]\n'
+value = '0'
+
+    @pytest.mark.parametrize("filename,section,prefix", [
+        ("pytest.toml", "pytest", ""),
+        (".pytest.toml", "pytest", ""),
+        ("pyproject.toml", "tool.pytest", "[tool]\n"),
+        ("pyproject.toml", "tool.pytest.ini_options", "[tool.pytest]\n"),
+    ])
+    @pytest.mark.parametrize("value", ["1", "0", "true", "false", "[]", '["tests"]', '"invalid"'])
+    def test_malformed_pytest_table_has_project_diagnostic(
+        tmp_path: Path, filename: str, section: str, prefix: str, value: str
+    ) -> None:
+        (tmp_path / filename).write_text(prefix + section.rsplit(".", 1)[-1] + "=" + value + "\n")
+        with pytest.raises(ProjectRuntimeError, match=f"project_pytest_config_invalid:{filename}:{section}; expected a table"):
+>           discover_project(tmp_path)
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:357: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:344: in discover_project
+    pytest = _pytest_config(root, project)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+root = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-249/test_malformed_pytest_table_ha6')
+project = {'tool': {'pytest': 0}}
+
+    def _pytest_config(root: Path, project: dict[str, Any]) -> dict[str, Any]:
+        for name in ("pytest.toml", ".pytest.toml"):
+            if (root / name).exists():
+                return _validated_pytest_paths(dict(_toml(root / name).get("pytest", {})), name)
+        for name in ("pytest.ini", ".pytest.ini", "pyproject.toml", "tox.ini", "setup.cfg"):
+            if name == "pyproject.toml":
+                pytest = project.get("tool", {}).get("pytest", {})
+                if pytest:
+                    return _validated_pytest_paths(dict(pytest.get("ini_options", pytest)), name)
+                continue
+            path = root / name
+            if not path.exists():
+                continue
+            parser = _ini(path)
+            section = "tool:pytest" if name == "setup.cfg" else "pytest"
+            if parser.has_section(section):
+                return _validated_pytest_paths(dict(parser[section]), name)
+        tools = project.get("tool", {})
+        pytest = tools.get("pytest", {})
+>       return _validated_pytest_paths(dict(pytest.get("ini_options", pytest)), "pyproject.toml")
+                                            ^^^^^^^^^^
+E       AttributeError: 'int' object has no attribute 'get'
+
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:233: AttributeError
+_ test_malformed_pytest_table_has_project_diagnostic[0-pyproject.toml-tool.pytest.ini_options-[tool.pytest]\n] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-249/test_malformed_pytest_table_ha7')
+filename = 'pyproject.toml', section = 'tool.pytest.ini_options'
+prefix = '[tool.pytest]\n', value = '0'
+
+    @pytest.mark.parametrize("filename,section,prefix", [
+        ("pytest.toml", "pytest", ""),
+        (".pytest.toml", "pytest", ""),
+        ("pyproject.toml", "tool.pytest", "[tool]\n"),
+        ("pyproject.toml", "tool.pytest.ini_options", "[tool.pytest]\n"),
+    ])
+    @pytest.mark.parametrize("value", ["1", "0", "true", "false", "[]", '["tests"]', '"invalid"'])
+    def test_malformed_pytest_table_has_project_diagnostic(
+        tmp_path: Path, filename: str, section: str, prefix: str, value: str
+    ) -> None:
+        (tmp_path / filename).write_text(prefix + section.rsplit(".", 1)[-1] + "=" + value + "\n")
+        with pytest.raises(ProjectRuntimeError, match=f"project_pytest_config_invalid:{filename}:{section}; expected a table"):
+>           discover_project(tmp_path)
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:357: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:344: in discover_project
+    pytest = _pytest_config(root, project)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+root = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-249/test_malformed_pytest_table_ha7')
+project = {'tool': {'pytest': {'ini_options': 0}}}
+
+    def _pytest_config(root: Path, project: dict[str, Any]) -> dict[str, Any]:
+        for name in ("pytest.toml", ".pytest.toml"):
+            if (root / name).exists():
+                return _validated_pytest_paths(dict(_toml(root / name).get("pytest", {})), name)
+        for name in ("pytest.ini", ".pytest.ini", "pyproject.toml", "tox.ini", "setup.cfg"):
+            if name == "pyproject.toml":
+                pytest = project.get("tool", {}).get("pytest", {})
+                if pytest:
+>                   return _validated_pytest_paths(dict(pytest.get("ini_options", pytest)), name)
+                                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E                   TypeError: 'int' object is not iterable
+
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:222: TypeError
+_ test_malformed_pytest_table_has_project_diagnostic[true-pytest.toml-pytest-] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-249/test_malformed_pytest_table_ha8')
+filename = 'pytest.toml', section = 'pytest', prefix = '', value = 'true'
+
+    @pytest.mark.parametrize("filename,section,prefix", [
+        ("pytest.toml", "pytest", ""),
+        (".pytest.toml", "pytest", ""),
+        ("pyproject.toml", "tool.pytest", "[tool]\n"),
+        ("pyproject.toml", "tool.pytest.ini_options", "[tool.pytest]\n"),
+    ])
+    @pytest.mark.parametrize("value", ["1", "0", "true", "false", "[]", '["tests"]', '"invalid"'])
+    def test_malformed_pytest_table_has_project_diagnostic(
+        tmp_path: Path, filename: str, section: str, prefix: str, value: str
+    ) -> None:
+        (tmp_path / filename).write_text(prefix + section.rsplit(".", 1)[-1] + "=" + value + "\n")
+        with pytest.raises(ProjectRuntimeError, match=f"project_pytest_config_invalid:{filename}:{section}; expected a table"):
+>           discover_project(tmp_path)
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:357: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:344: in discover_project
+    pytest = _pytest_config(root, project)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+root = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-249/test_malformed_pytest_table_ha8')
+project = {}
+
+    def _pytest_config(root: Path, project: dict[str, Any]) -> dict[str, Any]:
+        for name in ("pytest.toml", ".pytest.toml"):
+            if (root / name).exists():
+>               return _validated_pytest_paths(dict(_toml(root / name).get("pytest", {})), name)
+                                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E               TypeError: 'bool' object is not iterable
+
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:217: TypeError
+_ test_malformed_pytest_table_has_project_diagnostic[true-.pytest.toml-pytest-] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-249/test_malformed_pytest_table_ha9')
+filename = '.pytest.toml', section = 'pytest', prefix = '', value = 'true'
+
+    @pytest.mark.parametrize("filename,section,prefix", [
+        ("pytest.toml", "pytest", ""),
+        (".pytest.toml", "pytest", ""),
+        ("pyproject.toml", "tool.pytest", "[tool]\n"),
+        ("pyproject.toml", "tool.pytest.ini_options", "[tool.pytest]\n"),
+    ])
+    @pytest.mark.parametrize("value", ["1", "0", "true", "false", "[]", '["tests"]', '"invalid"'])
+    def test_malformed_pytest_table_has_project_diagnostic(
+        tmp_path: Path, filename: str, section: str, prefix: str, value: str
+    ) -> None:
+        (tmp_path / filename).write_text(prefix + section.rsplit(".", 1)[-1] + "=" + value + "\n")
+        with pytest.raises(ProjectRuntimeError, match=f"project_pytest_config_invalid:{filename}:{section}; expected a table"):
+>           discover_project(tmp_path)
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:357: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:344: in discover_project
+    pytest = _pytest_config(root, project)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+root = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-249/test_malformed_pytest_table_ha9')
+project = {}
+
+    def _pytest_config(root: Path, project: dict[str, Any]) -> dict[str, Any]:
+        for name in ("pytest.toml", ".pytest.toml"):
+            if (root / name).exists():
+>               return _validated_pytest_paths(dict(_toml(root / name).get("pytest", {})), name)
+                                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E               TypeError: 'bool' object is not iterable
+
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:217: TypeError
+_ test_malformed_pytest_table_has_project_diagnostic[true-pyproject.toml-tool.pytest-[tool]\n] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-249/test_malformed_pytest_table_ha10')
+filename = 'pyproject.toml', section = 'tool.pytest', prefix = '[tool]\n'
+value = 'true'
+
+    @pytest.mark.parametrize("filename,section,prefix", [
+        ("pytest.toml", "pytest", ""),
+        (".pytest.toml", "pytest", ""),
+        ("pyproject.toml", "tool.pytest", "[tool]\n"),
+        ("pyproject.toml", "tool.pytest.ini_options", "[tool.pytest]\n"),
+    ])
+    @pytest.mark.parametrize("value", ["1", "0", "true", "false", "[]", '["tests"]', '"invalid"'])
+    def test_malformed_pytest_table_has_project_diagnostic(
+        tmp_path: Path, filename: str, section: str, prefix: str, value: str
+    ) -> None:
+        (tmp_path / filename).write_text(prefix + section.rsplit(".", 1)[-1] + "=" + value + "\n")
+        with pytest.raises(ProjectRuntimeError, match=f"project_pytest_config_invalid:{filename}:{section}; expected a table"):
+>           discover_project(tmp_path)
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:357: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:344: in discover_project
+    pytest = _pytest_config(root, project)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+root = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-249/test_malformed_pytest_table_ha10')
+project = {'tool': {'pytest': True}}
+
+    def _pytest_config(root: Path, project: dict[str, Any]) -> dict[str, Any]:
+        for name in ("pytest.toml", ".pytest.toml"):
+            if (root / name).exists():
+                return _validated_pytest_paths(dict(_toml(root / name).get("pytest", {})), name)
+        for name in ("pytest.ini", ".pytest.ini", "pyproject.toml", "tox.ini", "setup.cfg"):
+            if name == "pyproject.toml":
+                pytest = project.get("tool", {}).get("pytest", {})
+                if pytest:
+>                   return _validated_pytest_paths(dict(pytest.get("ini_options", pytest)), name)
+                                                        ^^^^^^^^^^
+E                   AttributeError: 'bool' object has no attribute 'get'
+
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:222: AttributeError
+_ test_malformed_pytest_table_has_project_diagnostic[true-pyproject.toml-tool.pytest.ini_options-[tool.pytest]\n] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-249/test_malformed_pytest_table_ha11')
+filename = 'pyproject.toml', section = 'tool.pytest.ini_options'
+prefix = '[tool.pytest]\n', value = 'true'
+
+    @pytest.mark.parametrize("filename,section,prefix", [
+        ("pytest.toml", "pytest", ""),
+        (".pytest.toml", "pytest", ""),
+        ("pyproject.toml", "tool.pytest", "[tool]\n"),
+        ("pyproject.toml", "tool.pytest.ini_options", "[tool.pytest]\n"),
+    ])
+    @pytest.mark.parametrize("value", ["1", "0", "true", "false", "[]", '["tests"]', '"invalid"'])
+    def test_malformed_pytest_table_has_project_diagnostic(
+        tmp_path: Path, filename: str, section: str, prefix: str, value: str
+    ) -> None:
+        (tmp_path / filename).write_text(prefix + section.rsplit(".", 1)[-1] + "=" + value + "\n")
+        with pytest.raises(ProjectRuntimeError, match=f"project_pytest_config_invalid:{filename}:{section}; expected a table"):
+>           discover_project(tmp_path)
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:357: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:344: in discover_project
+    pytest = _pytest_config(root, project)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+root = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-249/test_malformed_pytest_table_ha11')
+project = {'tool': {'pytest': {'ini_options': True}}}
+
+    def _pytest_config(root: Path, project: dict[str, Any]) -> dict[str, Any]:
+        for name in ("pytest.toml", ".pytest.toml"):
+            if (root / name).exists():
+                return _validated_pytest_paths(dict(_toml(root / name).get("pytest", {})), name)
+        for name in ("pytest.ini", ".pytest.ini", "pyproject.toml", "tox.ini", "setup.cfg"):
+            if name == "pyproject.toml":
+                pytest = project.get("tool", {}).get("pytest", {})
+                if pytest:
+>                   return _validated_pytest_paths(dict(pytest.get("ini_options", pytest)), name)
+                                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E                   TypeError: 'bool' object is not iterable
+
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:222: TypeError
+_ test_malformed_pytest_table_has_project_diagnostic[false-pytest.toml-pytest-] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-249/test_malformed_pytest_table_ha12')
+filename = 'pytest.toml', section = 'pytest', prefix = '', value = 'false'
+
+    @pytest.mark.parametrize("filename,section,prefix", [
+        ("pytest.toml", "pytest", ""),
+        (".pytest.toml", "pytest", ""),
+        ("pyproject.toml", "tool.pytest", "[tool]\n"),
+        ("pyproject.toml", "tool.pytest.ini_options", "[tool.pytest]\n"),
+    ])
+    @pytest.mark.parametrize("value", ["1", "0", "true", "false", "[]", '["tests"]', '"invalid"'])
+    def test_malformed_pytest_table_has_project_diagnostic(
+        tmp_path: Path, filename: str, section: str, prefix: str, value: str
+    ) -> None:
+        (tmp_path / filename).write_text(prefix + section.rsplit(".", 1)[-1] + "=" + value + "\n")
+        with pytest.raises(ProjectRuntimeError, match=f"project_pytest_config_invalid:{filename}:{section}; expected a table"):
+>           discover_project(tmp_path)
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:357: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:344: in discover_project
+    pytest = _pytest_config(root, project)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+root = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-249/test_malformed_pytest_table_ha12')
+project = {}
+
+    def _pytest_config(root: Path, project: dict[str, Any]) -> dict[str, Any]:
+        for name in ("pytest.toml", ".pytest.toml"):
+            if (root / name).exists():
+>               return _validated_pytest_paths(dict(_toml(root / name).get("pytest", {})), name)
+                                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E               TypeError: 'bool' object is not iterable
+
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:217: TypeError
+_ test_malformed_pytest_table_has_project_diagnostic[false-.pytest.toml-pytest-] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-249/test_malformed_pytest_table_ha13')
+filename = '.pytest.toml', section = 'pytest', prefix = '', value = 'false'
+
+    @pytest.mark.parametrize("filename,section,prefix", [
+        ("pytest.toml", "pytest", ""),
+        (".pytest.toml", "pytest", ""),
+        ("pyproject.toml", "tool.pytest", "[tool]\n"),
+        ("pyproject.toml", "tool.pytest.ini_options", "[tool.pytest]\n"),
+    ])
+    @pytest.mark.parametrize("value", ["1", "0", "true", "false", "[]", '["tests"]', '"invalid"'])
+    def test_malformed_pytest_table_has_project_diagnostic(
+        tmp_path: Path, filename: str, section: str, prefix: str, value: str
+    ) -> None:
+        (tmp_path / filename).write_text(prefix + section.rsplit(".", 1)[-1] + "=" + value + "\n")
+        with pytest.raises(ProjectRuntimeError, match=f"project_pytest_config_invalid:{filename}:{section}; expected a table"):
+>           discover_project(tmp_path)
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:357: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:344: in discover_project
+    pytest = _pytest_config(root, project)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+root = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-249/test_malformed_pytest_table_ha13')
+project = {}
+
+    def _pytest_config(root: Path, project: dict[str, Any]) -> dict[str, Any]:
+        for name in ("pytest.toml", ".pytest.toml"):
+            if (root / name).exists():
+>               return _validated_pytest_paths(dict(_toml(root / name).get("pytest", {})), name)
+                                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E               TypeError: 'bool' object is not iterable
+
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:217: TypeError
+_ test_malformed_pytest_table_has_project_diagnostic[false-pyproject.toml-tool.pytest-[tool]\n] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-249/test_malformed_pytest_table_ha14')
+filename = 'pyproject.toml', section = 'tool.pytest', prefix = '[tool]\n'
+value = 'false'
+
+    @pytest.mark.parametrize("filename,section,prefix", [
+        ("pytest.toml", "pytest", ""),
+        (".pytest.toml", "pytest", ""),
+        ("pyproject.toml", "tool.pytest", "[tool]\n"),
+        ("pyproject.toml", "tool.pytest.ini_options", "[tool.pytest]\n"),
+    ])
+    @pytest.mark.parametrize("value", ["1", "0", "true", "false", "[]", '["tests"]', '"invalid"'])
+    def test_malformed_pytest_table_has_project_diagnostic(
+        tmp_path: Path, filename: str, section: str, prefix: str, value: str
+    ) -> None:
+        (tmp_path / filename).write_text(prefix + section.rsplit(".", 1)[-1] + "=" + value + "\n")
+        with pytest.raises(ProjectRuntimeError, match=f"project_pytest_config_invalid:{filename}:{section}; expected a table"):
+>           discover_project(tmp_path)
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:357: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:344: in discover_project
+    pytest = _pytest_config(root, project)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+root = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-249/test_malformed_pytest_table_ha14')
+project = {'tool': {'pytest': False}}
+
+    def _pytest_config(root: Path, project: dict[str, Any]) -> dict[str, Any]:
+        for name in ("pytest.toml", ".pytest.toml"):
+            if (root / name).exists():
+                return _validated_pytest_paths(dict(_toml(root / name).get("pytest", {})), name)
+        for name in ("pytest.ini", ".pytest.ini", "pyproject.toml", "tox.ini", "setup.cfg"):
+            if name == "pyproject.toml":
+                pytest = project.get("tool", {}).get("pytest", {})
+                if pytest:
+                    return _validated_pytest_paths(dict(pytest.get("ini_options", pytest)), name)
+                continue
+            path = root / name
+            if not path.exists():
+                continue
+            parser = _ini(path)
+            section = "tool:pytest" if name == "setup.cfg" else "pytest"
+            if parser.has_section(section):
+                return _validated_pytest_paths(dict(parser[section]), name)
+        tools = project.get("tool", {})
+        pytest = tools.get("pytest", {})
+>       return _validated_pytest_paths(dict(pytest.get("ini_options", pytest)), "pyproject.toml")
+                                            ^^^^^^^^^^
+E       AttributeError: 'bool' object has no attribute 'get'
+
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:233: AttributeError
+_ test_malformed_pytest_table_has_project_diagnostic[false-pyproject.toml-tool.pytest.ini_options-[tool.pytest]\n] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-249/test_malformed_pytest_table_ha15')
+filename = 'pyproject.toml', section = 'tool.pytest.ini_options'
+prefix = '[tool.pytest]\n', value = 'false'
+
+    @pytest.mark.parametrize("filename,section,prefix", [
+        ("pytest.toml", "pytest", ""),
+        (".pytest.toml", "pytest", ""),
+        ("pyproject.toml", "tool.pytest", "[tool]\n"),
+        ("pyproject.toml", "tool.pytest.ini_options", "[tool.pytest]\n"),
+    ])
+    @pytest.mark.parametrize("value", ["1", "0", "true", "false", "[]", '["tests"]', '"invalid"'])
+    def test_malformed_pytest_table_has_project_diagnostic(
+        tmp_path: Path, filename: str, section: str, prefix: str, value: str
+    ) -> None:
+        (tmp_path / filename).write_text(prefix + section.rsplit(".", 1)[-1] + "=" + value + "\n")
+        with pytest.raises(ProjectRuntimeError, match=f"project_pytest_config_invalid:{filename}:{section}; expected a table"):
+>           discover_project(tmp_path)
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:357: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:344: in discover_project
+    pytest = _pytest_config(root, project)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+root = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-249/test_malformed_pytest_table_ha15')
+project = {'tool': {'pytest': {'ini_options': False}}}
+
+    def _pytest_config(root: Path, project: dict[str, Any]) -> dict[str, Any]:
+        for name in ("pytest.toml", ".pytest.toml"):
+            if (root / name).exists():
+                return _validated_pytest_paths(dict(_toml(root / name).get("pytest", {})), name)
+        for name in ("pytest.ini", ".pytest.ini", "pyproject.toml", "tox.ini", "setup.cfg"):
+            if name == "pyproject.toml":
+                pytest = project.get("tool", {}).get("pytest", {})
+                if pytest:
+>                   return _validated_pytest_paths(dict(pytest.get("ini_options", pytest)), name)
+                                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E                   TypeError: 'bool' object is not iterable
+
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:222: TypeError
+__ test_malformed_pytest_table_has_project_diagnostic[[]-pytest.toml-pytest-] __
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-249/test_malformed_pytest_table_ha16')
+filename = 'pytest.toml', section = 'pytest', prefix = '', value = '[]'
+
+    @pytest.mark.parametrize("filename,section,prefix", [
+        ("pytest.toml", "pytest", ""),
+        (".pytest.toml", "pytest", ""),
+        ("pyproject.toml", "tool.pytest", "[tool]\n"),
+        ("pyproject.toml", "tool.pytest.ini_options", "[tool.pytest]\n"),
+    ])
+    @pytest.mark.parametrize("value", ["1", "0", "true", "false", "[]", '["tests"]', '"invalid"'])
+    def test_malformed_pytest_table_has_project_diagnostic(
+        tmp_path: Path, filename: str, section: str, prefix: str, value: str
+    ) -> None:
+        (tmp_path / filename).write_text(prefix + section.rsplit(".", 1)[-1] + "=" + value + "\n")
+>       with pytest.raises(ProjectRuntimeError, match=f"project_pytest_config_invalid:{filename}:{section}; expected a table"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ProjectRuntimeError
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:356: Failed
+_ test_malformed_pytest_table_has_project_diagnostic[[]-.pytest.toml-pytest-] __
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-249/test_malformed_pytest_table_ha17')
+filename = '.pytest.toml', section = 'pytest', prefix = '', value = '[]'
+
+    @pytest.mark.parametrize("filename,section,prefix", [
+        ("pytest.toml", "pytest", ""),
+        (".pytest.toml", "pytest", ""),
+        ("pyproject.toml", "tool.pytest", "[tool]\n"),
+        ("pyproject.toml", "tool.pytest.ini_options", "[tool.pytest]\n"),
+    ])
+    @pytest.mark.parametrize("value", ["1", "0", "true", "false", "[]", '["tests"]', '"invalid"'])
+    def test_malformed_pytest_table_has_project_diagnostic(
+        tmp_path: Path, filename: str, section: str, prefix: str, value: str
+    ) -> None:
+        (tmp_path / filename).write_text(prefix + section.rsplit(".", 1)[-1] + "=" + value + "\n")
+>       with pytest.raises(ProjectRuntimeError, match=f"project_pytest_config_invalid:{filename}:{section}; expected a table"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ProjectRuntimeError
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:356: Failed
+_ test_malformed_pytest_table_has_project_diagnostic[[]-pyproject.toml-tool.pytest-[tool]\n] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-249/test_malformed_pytest_table_ha18')
+filename = 'pyproject.toml', section = 'tool.pytest', prefix = '[tool]\n'
+value = '[]'
+
+    @pytest.mark.parametrize("filename,section,prefix", [
+        ("pytest.toml", "pytest", ""),
+        (".pytest.toml", "pytest", ""),
+        ("pyproject.toml", "tool.pytest", "[tool]\n"),
+        ("pyproject.toml", "tool.pytest.ini_options", "[tool.pytest]\n"),
+    ])
+    @pytest.mark.parametrize("value", ["1", "0", "true", "false", "[]", '["tests"]', '"invalid"'])
+    def test_malformed_pytest_table_has_project_diagnostic(
+        tmp_path: Path, filename: str, section: str, prefix: str, value: str
+    ) -> None:
+        (tmp_path / filename).write_text(prefix + section.rsplit(".", 1)[-1] + "=" + value + "\n")
+        with pytest.raises(ProjectRuntimeError, match=f"project_pytest_config_invalid:{filename}:{section}; expected a table"):
+>           discover_project(tmp_path)
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:357: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:344: in discover_project
+    pytest = _pytest_config(root, project)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+root = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-249/test_malformed_pytest_table_ha18')
+project = {'tool': {'pytest': []}}
+
+    def _pytest_config(root: Path, project: dict[str, Any]) -> dict[str, Any]:
+        for name in ("pytest.toml", ".pytest.toml"):
+            if (root / name).exists():
+                return _validated_pytest_paths(dict(_toml(root / name).get("pytest", {})), name)
+        for name in ("pytest.ini", ".pytest.ini", "pyproject.toml", "tox.ini", "setup.cfg"):
+            if name == "pyproject.toml":
+                pytest = project.get("tool", {}).get("pytest", {})
+                if pytest:
+                    return _validated_pytest_paths(dict(pytest.get("ini_options", pytest)), name)
+                continue
+            path = root / name
+            if not path.exists():
+                continue
+            parser = _ini(path)
+            section = "tool:pytest" if name == "setup.cfg" else "pytest"
+            if parser.has_section(section):
+                return _validated_pytest_paths(dict(parser[section]), name)
+        tools = project.get("tool", {})
+        pytest = tools.get("pytest", {})
+>       return _validated_pytest_paths(dict(pytest.get("ini_options", pytest)), "pyproject.toml")
+                                            ^^^^^^^^^^
+E       AttributeError: 'list' object has no attribute 'get'
+
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:233: AttributeError
+_ test_malformed_pytest_table_has_project_diagnostic[[]-pyproject.toml-tool.pytest.ini_options-[tool.pytest]\n] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-249/test_malformed_pytest_table_ha19')
+filename = 'pyproject.toml', section = 'tool.pytest.ini_options'
+prefix = '[tool.pytest]\n', value = '[]'
+
+    @pytest.mark.parametrize("filename,section,prefix", [
+        ("pytest.toml", "pytest", ""),
+        (".pytest.toml", "pytest", ""),
+        ("pyproject.toml", "tool.pytest", "[tool]\n"),
+        ("pyproject.toml", "tool.pytest.ini_options", "[tool.pytest]\n"),
+    ])
+    @pytest.mark.parametrize("value", ["1", "0", "true", "false", "[]", '["tests"]', '"invalid"'])
+    def test_malformed_pytest_table_has_project_diagnostic(
+        tmp_path: Path, filename: str, section: str, prefix: str, value: str
+    ) -> None:
+        (tmp_path / filename).write_text(prefix + section.rsplit(".", 1)[-1] + "=" + value + "\n")
+>       with pytest.raises(ProjectRuntimeError, match=f"project_pytest_config_invalid:{filename}:{section}; expected a table"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ProjectRuntimeError
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:356: Failed
+_ test_malformed_pytest_table_has_project_diagnostic[["tests"]-pytest.toml-pytest-] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-249/test_malformed_pytest_table_ha20')
+filename = 'pytest.toml', section = 'pytest', prefix = '', value = '["tests"]'
+
+    @pytest.mark.parametrize("filename,section,prefix", [
+        ("pytest.toml", "pytest", ""),
+        (".pytest.toml", "pytest", ""),
+        ("pyproject.toml", "tool.pytest", "[tool]\n"),
+        ("pyproject.toml", "tool.pytest.ini_options", "[tool.pytest]\n"),
+    ])
+    @pytest.mark.parametrize("value", ["1", "0", "true", "false", "[]", '["tests"]', '"invalid"'])
+    def test_malformed_pytest_table_has_project_diagnostic(
+        tmp_path: Path, filename: str, section: str, prefix: str, value: str
+    ) -> None:
+        (tmp_path / filename).write_text(prefix + section.rsplit(".", 1)[-1] + "=" + value + "\n")
+        with pytest.raises(ProjectRuntimeError, match=f"project_pytest_config_invalid:{filename}:{section}; expected a table"):
+>           discover_project(tmp_path)
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:357: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:344: in discover_project
+    pytest = _pytest_config(root, project)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+root = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-249/test_malformed_pytest_table_ha20')
+project = {}
+
+    def _pytest_config(root: Path, project: dict[str, Any]) -> dict[str, Any]:
+        for name in ("pytest.toml", ".pytest.toml"):
+            if (root / name).exists():
+>               return _validated_pytest_paths(dict(_toml(root / name).get("pytest", {})), name)
+                                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E               ValueError: dictionary update sequence element #0 has length 5; 2 is required
+
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:217: ValueError
+_ test_malformed_pytest_table_has_project_diagnostic[["tests"]-.pytest.toml-pytest-] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-249/test_malformed_pytest_table_ha21')
+filename = '.pytest.toml', section = 'pytest', prefix = '', value = '["tests"]'
+
+    @pytest.mark.parametrize("filename,section,prefix", [
+        ("pytest.toml", "pytest", ""),
+        (".pytest.toml", "pytest", ""),
+        ("pyproject.toml", "tool.pytest", "[tool]\n"),
+        ("pyproject.toml", "tool.pytest.ini_options", "[tool.pytest]\n"),
+    ])
+    @pytest.mark.parametrize("value", ["1", "0", "true", "false", "[]", '["tests"]', '"invalid"'])
+    def test_malformed_pytest_table_has_project_diagnostic(
+        tmp_path: Path, filename: str, section: str, prefix: str, value: str
+    ) -> None:
+        (tmp_path / filename).write_text(prefix + section.rsplit(".", 1)[-1] + "=" + value + "\n")
+        with pytest.raises(ProjectRuntimeError, match=f"project_pytest_config_invalid:{filename}:{section}; expected a table"):
+>           discover_project(tmp_path)
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:357: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:344: in discover_project
+    pytest = _pytest_config(root, project)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+root = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-249/test_malformed_pytest_table_ha21')
+project = {}
+
+    def _pytest_config(root: Path, project: dict[str, Any]) -> dict[str, Any]:
+        for name in ("pytest.toml", ".pytest.toml"):
+            if (root / name).exists():
+>               return _validated_pytest_paths(dict(_toml(root / name).get("pytest", {})), name)
+                                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E               ValueError: dictionary update sequence element #0 has length 5; 2 is required
+
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:217: ValueError
+_ test_malformed_pytest_table_has_project_diagnostic[["tests"]-pyproject.toml-tool.pytest-[tool]\n] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-249/test_malformed_pytest_table_ha22')
+filename = 'pyproject.toml', section = 'tool.pytest', prefix = '[tool]\n'
+value = '["tests"]'
+
+    @pytest.mark.parametrize("filename,section,prefix", [
+        ("pytest.toml", "pytest", ""),
+        (".pytest.toml", "pytest", ""),
+        ("pyproject.toml", "tool.pytest", "[tool]\n"),
+        ("pyproject.toml", "tool.pytest.ini_options", "[tool.pytest]\n"),
+    ])
+    @pytest.mark.parametrize("value", ["1", "0", "true", "false", "[]", '["tests"]', '"invalid"'])
+    def test_malformed_pytest_table_has_project_diagnostic(
+        tmp_path: Path, filename: str, section: str, prefix: str, value: str
+    ) -> None:
+        (tmp_path / filename).write_text(prefix + section.rsplit(".", 1)[-1] + "=" + value + "\n")
+        with pytest.raises(ProjectRuntimeError, match=f"project_pytest_config_invalid:{filename}:{section}; expected a table"):
+>           discover_project(tmp_path)
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:357: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:344: in discover_project
+    pytest = _pytest_config(root, project)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+root = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-249/test_malformed_pytest_table_ha22')
+project = {'tool': {'pytest': ['tests']}}
+
+    def _pytest_config(root: Path, project: dict[str, Any]) -> dict[str, Any]:
+        for name in ("pytest.toml", ".pytest.toml"):
+            if (root / name).exists():
+                return _validated_pytest_paths(dict(_toml(root / name).get("pytest", {})), name)
+        for name in ("pytest.ini", ".pytest.ini", "pyproject.toml", "tox.ini", "setup.cfg"):
+            if name == "pyproject.toml":
+                pytest = project.get("tool", {}).get("pytest", {})
+                if pytest:
+>                   return _validated_pytest_paths(dict(pytest.get("ini_options", pytest)), name)
+                                                        ^^^^^^^^^^
+E                   AttributeError: 'list' object has no attribute 'get'
+
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:222: AttributeError
+_ test_malformed_pytest_table_has_project_diagnostic[["tests"]-pyproject.toml-tool.pytest.ini_options-[tool.pytest]\n] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-249/test_malformed_pytest_table_ha23')
+filename = 'pyproject.toml', section = 'tool.pytest.ini_options'
+prefix = '[tool.pytest]\n', value = '["tests"]'
+
+    @pytest.mark.parametrize("filename,section,prefix", [
+        ("pytest.toml", "pytest", ""),
+        (".pytest.toml", "pytest", ""),
+        ("pyproject.toml", "tool.pytest", "[tool]\n"),
+        ("pyproject.toml", "tool.pytest.ini_options", "[tool.pytest]\n"),
+    ])
+    @pytest.mark.parametrize("value", ["1", "0", "true", "false", "[]", '["tests"]', '"invalid"'])
+    def test_malformed_pytest_table_has_project_diagnostic(
+        tmp_path: Path, filename: str, section: str, prefix: str, value: str
+    ) -> None:
+        (tmp_path / filename).write_text(prefix + section.rsplit(".", 1)[-1] + "=" + value + "\n")
+        with pytest.raises(ProjectRuntimeError, match=f"project_pytest_config_invalid:{filename}:{section}; expected a table"):
+>           discover_project(tmp_path)
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:357: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:344: in discover_project
+    pytest = _pytest_config(root, project)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+root = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-249/test_malformed_pytest_table_ha23')
+project = {'tool': {'pytest': {'ini_options': ['tests']}}}
+
+    def _pytest_config(root: Path, project: dict[str, Any]) -> dict[str, Any]:
+        for name in ("pytest.toml", ".pytest.toml"):
+            if (root / name).exists():
+                return _validated_pytest_paths(dict(_toml(root / name).get("pytest", {})), name)
+        for name in ("pytest.ini", ".pytest.ini", "pyproject.toml", "tox.ini", "setup.cfg"):
+            if name == "pyproject.toml":
+                pytest = project.get("tool", {}).get("pytest", {})
+                if pytest:
+>                   return _validated_pytest_paths(dict(pytest.get("ini_options", pytest)), name)
+                                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E                   ValueError: dictionary update sequence element #0 has length 5; 2 is required
+
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:222: ValueError
+_ test_malformed_pytest_table_has_project_diagnostic["invalid"-pytest.toml-pytest-] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-249/test_malformed_pytest_table_ha24')
+filename = 'pytest.toml', section = 'pytest', prefix = '', value = '"invalid"'
+
+    @pytest.mark.parametrize("filename,section,prefix", [
+        ("pytest.toml", "pytest", ""),
+        (".pytest.toml", "pytest", ""),
+        ("pyproject.toml", "tool.pytest", "[tool]\n"),
+        ("pyproject.toml", "tool.pytest.ini_options", "[tool.pytest]\n"),
+    ])
+    @pytest.mark.parametrize("value", ["1", "0", "true", "false", "[]", '["tests"]', '"invalid"'])
+    def test_malformed_pytest_table_has_project_diagnostic(
+        tmp_path: Path, filename: str, section: str, prefix: str, value: str
+    ) -> None:
+        (tmp_path / filename).write_text(prefix + section.rsplit(".", 1)[-1] + "=" + value + "\n")
+        with pytest.raises(ProjectRuntimeError, match=f"project_pytest_config_invalid:{filename}:{section}; expected a table"):
+>           discover_project(tmp_path)
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:357: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:344: in discover_project
+    pytest = _pytest_config(root, project)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+root = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-249/test_malformed_pytest_table_ha24')
+project = {}
+
+    def _pytest_config(root: Path, project: dict[str, Any]) -> dict[str, Any]:
+        for name in ("pytest.toml", ".pytest.toml"):
+            if (root / name).exists():
+>               return _validated_pytest_paths(dict(_toml(root / name).get("pytest", {})), name)
+                                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E               ValueError: dictionary update sequence element #0 has length 1; 2 is required
+
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:217: ValueError
+_ test_malformed_pytest_table_has_project_diagnostic["invalid"-.pytest.toml-pytest-] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-249/test_malformed_pytest_table_ha25')
+filename = '.pytest.toml', section = 'pytest', prefix = '', value = '"invalid"'
+
+    @pytest.mark.parametrize("filename,section,prefix", [
+        ("pytest.toml", "pytest", ""),
+        (".pytest.toml", "pytest", ""),
+        ("pyproject.toml", "tool.pytest", "[tool]\n"),
+        ("pyproject.toml", "tool.pytest.ini_options", "[tool.pytest]\n"),
+    ])
+    @pytest.mark.parametrize("value", ["1", "0", "true", "false", "[]", '["tests"]', '"invalid"'])
+    def test_malformed_pytest_table_has_project_diagnostic(
+        tmp_path: Path, filename: str, section: str, prefix: str, value: str
+    ) -> None:
+        (tmp_path / filename).write_text(prefix + section.rsplit(".", 1)[-1] + "=" + value + "\n")
+        with pytest.raises(ProjectRuntimeError, match=f"project_pytest_config_invalid:{filename}:{section}; expected a table"):
+>           discover_project(tmp_path)
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:357: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:344: in discover_project
+    pytest = _pytest_config(root, project)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+root = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-249/test_malformed_pytest_table_ha25')
+project = {}
+
+    def _pytest_config(root: Path, project: dict[str, Any]) -> dict[str, Any]:
+        for name in ("pytest.toml", ".pytest.toml"):
+            if (root / name).exists():
+>               return _validated_pytest_paths(dict(_toml(root / name).get("pytest", {})), name)
+                                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E               ValueError: dictionary update sequence element #0 has length 1; 2 is required
+
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:217: ValueError
+_ test_malformed_pytest_table_has_project_diagnostic["invalid"-pyproject.toml-tool.pytest-[tool]\n] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-249/test_malformed_pytest_table_ha26')
+filename = 'pyproject.toml', section = 'tool.pytest', prefix = '[tool]\n'
+value = '"invalid"'
+
+    @pytest.mark.parametrize("filename,section,prefix", [
+        ("pytest.toml", "pytest", ""),
+        (".pytest.toml", "pytest", ""),
+        ("pyproject.toml", "tool.pytest", "[tool]\n"),
+        ("pyproject.toml", "tool.pytest.ini_options", "[tool.pytest]\n"),
+    ])
+    @pytest.mark.parametrize("value", ["1", "0", "true", "false", "[]", '["tests"]', '"invalid"'])
+    def test_malformed_pytest_table_has_project_diagnostic(
+        tmp_path: Path, filename: str, section: str, prefix: str, value: str
+    ) -> None:
+        (tmp_path / filename).write_text(prefix + section.rsplit(".", 1)[-1] + "=" + value + "\n")
+        with pytest.raises(ProjectRuntimeError, match=f"project_pytest_config_invalid:{filename}:{section}; expected a table"):
+>           discover_project(tmp_path)
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:357: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:344: in discover_project
+    pytest = _pytest_config(root, project)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+root = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-249/test_malformed_pytest_table_ha26')
+project = {'tool': {'pytest': 'invalid'}}
+
+    def _pytest_config(root: Path, project: dict[str, Any]) -> dict[str, Any]:
+        for name in ("pytest.toml", ".pytest.toml"):
+            if (root / name).exists():
+                return _validated_pytest_paths(dict(_toml(root / name).get("pytest", {})), name)
+        for name in ("pytest.ini", ".pytest.ini", "pyproject.toml", "tox.ini", "setup.cfg"):
+            if name == "pyproject.toml":
+                pytest = project.get("tool", {}).get("pytest", {})
+                if pytest:
+>                   return _validated_pytest_paths(dict(pytest.get("ini_options", pytest)), name)
+                                                        ^^^^^^^^^^
+E                   AttributeError: 'str' object has no attribute 'get'
+
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:222: AttributeError
+_ test_malformed_pytest_table_has_project_diagnostic["invalid"-pyproject.toml-tool.pytest.ini_options-[tool.pytest]\n] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-249/test_malformed_pytest_table_ha27')
+filename = 'pyproject.toml', section = 'tool.pytest.ini_options'
+prefix = '[tool.pytest]\n', value = '"invalid"'
+
+    @pytest.mark.parametrize("filename,section,prefix", [
+        ("pytest.toml", "pytest", ""),
+        (".pytest.toml", "pytest", ""),
+        ("pyproject.toml", "tool.pytest", "[tool]\n"),
+        ("pyproject.toml", "tool.pytest.ini_options", "[tool.pytest]\n"),
+    ])
+    @pytest.mark.parametrize("value", ["1", "0", "true", "false", "[]", '["tests"]', '"invalid"'])
+    def test_malformed_pytest_table_has_project_diagnostic(
+        tmp_path: Path, filename: str, section: str, prefix: str, value: str
+    ) -> None:
+        (tmp_path / filename).write_text(prefix + section.rsplit(".", 1)[-1] + "=" + value + "\n")
+        with pytest.raises(ProjectRuntimeError, match=f"project_pytest_config_invalid:{filename}:{section}; expected a table"):
+>           discover_project(tmp_path)
+
+tests/unit/specfact_code_review/run/test_runtime_discovery.py:357: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:344: in discover_project
+    pytest = _pytest_config(root, project)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+root = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-249/test_malformed_pytest_table_ha27')
+project = {'tool': {'pytest': {'ini_options': 'invalid'}}}
+
+    def _pytest_config(root: Path, project: dict[str, Any]) -> dict[str, Any]:
+        for name in ("pytest.toml", ".pytest.toml"):
+            if (root / name).exists():
+                return _validated_pytest_paths(dict(_toml(root / name).get("pytest", {})), name)
+        for name in ("pytest.ini", ".pytest.ini", "pyproject.toml", "tox.ini", "setup.cfg"):
+            if name == "pyproject.toml":
+                pytest = project.get("tool", {}).get("pytest", {})
+                if pytest:
+>                   return _validated_pytest_paths(dict(pytest.get("ini_options", pytest)), name)
+                                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E                   ValueError: dictionary update sequence element #0 has length 1; 2 is required
+
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:222: ValueError
+_ test_malformed_configuration_preserves_independent_analyzer_evidence[pytest.toml-pytest=1\n-project_pytest_config_invalid:pytest.toml:pytest] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-249/test_malformed_configuration_p1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x108d20fc0>
+filename = 'pytest.toml', contents = 'pytest=1\n'
+diagnostic = 'project_pytest_config_invalid:pytest.toml:pytest'
+
+    @pytest.mark.parametrize(
+        ("filename", "contents", "diagnostic"),
+        [
+            ("setup.cfg", "missing section header\n", "project_config_invalid:setup.cfg:"),
+            ("pytest.toml", "pytest=1\n", "project_pytest_config_invalid:pytest.toml:pytest"),
+            ("pyproject.toml", "[tool]\npytest=false\n", "project_pytest_config_invalid:pyproject.toml:tool.pytest"),
+            ("pyproject.toml", "[tool.pytest]\nini_options=[]\n", "project_pytest_config_invalid:pyproject.toml:tool.pytest.ini_options"),
+            (
+                "pyproject.toml",
+                "[tool.pytest.ini_options]\npythonpath=[1]\n",
+                "project_pytest_config_invalid:pyproject.toml:pythonpath",
+            ),
+            (
+                "pyproject.toml",
+                "[tool.pytest.ini_options]\ntestpaths=1\n",
+                "project_pytest_config_invalid:pyproject.toml:testpaths",
+            ),
+        ],
+    )
+    def test_malformed_configuration_preserves_independent_analyzer_evidence(
+        tmp_path: Path, monkeypatch, filename: str, contents: str, diagnostic: str
+    ) -> None:
+        (tmp_path / filename).write_text(contents)
+        source = tmp_path / "app.py"
+        source.write_text("import dependency\n")
+        calls = []
+    
+        def dispatch(request, **_context):
+            calls.append(request.member)
+            return {"execution_state": "ran", "evidence_outcome": "PASS", "findings": []}
+    
+        monkeypatch.setattr(runner, "_dispatch_capsule_member", dispatch)
+        runtime = SimpleNamespace(identity="sha256:" + "a" * 64, environment_id="linux-x86_64-cp312")
+>       snapshot, evidence = run_project_snapshot(
+            runtime, ProjectSnapshotRequest(tmp_path, [source], runner.ReviewOptions(), "explicit_files")
+        )
+
+tests/unit/specfact_code_review/run/test_portable_snapshot.py:190: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/portable_snapshot.py:80: in run_project_snapshot
+    plan = discover_snapshot(snapshot_root, config_path=options.project_config, source_snapshot=source_snapshot)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/portable_snapshot.py:50: in discover_snapshot
+    plan = discover_project(root, config_path=config_path)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:344: in discover_project
+    pytest = _pytest_config(root, project)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+root = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-249/test_malformed_configuration_p1')
+project = {}
+
+    def _pytest_config(root: Path, project: dict[str, Any]) -> dict[str, Any]:
+        for name in ("pytest.toml", ".pytest.toml"):
+            if (root / name).exists():
+>               return _validated_pytest_paths(dict(_toml(root / name).get("pytest", {})), name)
+                                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E               TypeError: 'int' object is not iterable
+
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:217: TypeError
+_ test_malformed_configuration_preserves_independent_analyzer_evidence[pyproject.toml-[tool]\npytest=false\n-project_pytest_config_invalid:pyproject.toml:tool.pytest] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-249/test_malformed_configuration_p2')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1080a0cb0>
+filename = 'pyproject.toml', contents = '[tool]\npytest=false\n'
+diagnostic = 'project_pytest_config_invalid:pyproject.toml:tool.pytest'
+
+    @pytest.mark.parametrize(
+        ("filename", "contents", "diagnostic"),
+        [
+            ("setup.cfg", "missing section header\n", "project_config_invalid:setup.cfg:"),
+            ("pytest.toml", "pytest=1\n", "project_pytest_config_invalid:pytest.toml:pytest"),
+            ("pyproject.toml", "[tool]\npytest=false\n", "project_pytest_config_invalid:pyproject.toml:tool.pytest"),
+            ("pyproject.toml", "[tool.pytest]\nini_options=[]\n", "project_pytest_config_invalid:pyproject.toml:tool.pytest.ini_options"),
+            (
+                "pyproject.toml",
+                "[tool.pytest.ini_options]\npythonpath=[1]\n",
+                "project_pytest_config_invalid:pyproject.toml:pythonpath",
+            ),
+            (
+                "pyproject.toml",
+                "[tool.pytest.ini_options]\ntestpaths=1\n",
+                "project_pytest_config_invalid:pyproject.toml:testpaths",
+            ),
+        ],
+    )
+    def test_malformed_configuration_preserves_independent_analyzer_evidence(
+        tmp_path: Path, monkeypatch, filename: str, contents: str, diagnostic: str
+    ) -> None:
+        (tmp_path / filename).write_text(contents)
+        source = tmp_path / "app.py"
+        source.write_text("import dependency\n")
+        calls = []
+    
+        def dispatch(request, **_context):
+            calls.append(request.member)
+            return {"execution_state": "ran", "evidence_outcome": "PASS", "findings": []}
+    
+        monkeypatch.setattr(runner, "_dispatch_capsule_member", dispatch)
+        runtime = SimpleNamespace(identity="sha256:" + "a" * 64, environment_id="linux-x86_64-cp312")
+>       snapshot, evidence = run_project_snapshot(
+            runtime, ProjectSnapshotRequest(tmp_path, [source], runner.ReviewOptions(), "explicit_files")
+        )
+
+tests/unit/specfact_code_review/run/test_portable_snapshot.py:190: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/portable_snapshot.py:80: in run_project_snapshot
+    plan = discover_snapshot(snapshot_root, config_path=options.project_config, source_snapshot=source_snapshot)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/portable_snapshot.py:50: in discover_snapshot
+    plan = discover_project(root, config_path=config_path)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:344: in discover_project
+    pytest = _pytest_config(root, project)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+root = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-249/test_malformed_configuration_p2')
+project = {'tool': {'pytest': False}}
+
+    def _pytest_config(root: Path, project: dict[str, Any]) -> dict[str, Any]:
+        for name in ("pytest.toml", ".pytest.toml"):
+            if (root / name).exists():
+                return _validated_pytest_paths(dict(_toml(root / name).get("pytest", {})), name)
+        for name in ("pytest.ini", ".pytest.ini", "pyproject.toml", "tox.ini", "setup.cfg"):
+            if name == "pyproject.toml":
+                pytest = project.get("tool", {}).get("pytest", {})
+                if pytest:
+                    return _validated_pytest_paths(dict(pytest.get("ini_options", pytest)), name)
+                continue
+            path = root / name
+            if not path.exists():
+                continue
+            parser = _ini(path)
+            section = "tool:pytest" if name == "setup.cfg" else "pytest"
+            if parser.has_section(section):
+                return _validated_pytest_paths(dict(parser[section]), name)
+        tools = project.get("tool", {})
+        pytest = tools.get("pytest", {})
+>       return _validated_pytest_paths(dict(pytest.get("ini_options", pytest)), "pyproject.toml")
+                                            ^^^^^^^^^^
+E       AttributeError: 'bool' object has no attribute 'get'
+
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:233: AttributeError
+_ test_malformed_configuration_preserves_independent_analyzer_evidence[pyproject.toml-[tool.pytest]\nini_options=[]\n-project_pytest_config_invalid:pyproject.toml:tool.pytest.ini_options] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-249/test_malformed_configuration_p3')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x108a7a580>
+filename = 'pyproject.toml', contents = '[tool.pytest]\nini_options=[]\n'
+diagnostic = 'project_pytest_config_invalid:pyproject.toml:tool.pytest.ini_options'
+
+    @pytest.mark.parametrize(
+        ("filename", "contents", "diagnostic"),
+        [
+            ("setup.cfg", "missing section header\n", "project_config_invalid:setup.cfg:"),
+            ("pytest.toml", "pytest=1\n", "project_pytest_config_invalid:pytest.toml:pytest"),
+            ("pyproject.toml", "[tool]\npytest=false\n", "project_pytest_config_invalid:pyproject.toml:tool.pytest"),
+            ("pyproject.toml", "[tool.pytest]\nini_options=[]\n", "project_pytest_config_invalid:pyproject.toml:tool.pytest.ini_options"),
+            (
+                "pyproject.toml",
+                "[tool.pytest.ini_options]\npythonpath=[1]\n",
+                "project_pytest_config_invalid:pyproject.toml:pythonpath",
+            ),
+            (
+                "pyproject.toml",
+                "[tool.pytest.ini_options]\ntestpaths=1\n",
+                "project_pytest_config_invalid:pyproject.toml:testpaths",
+            ),
+        ],
+    )
+    def test_malformed_configuration_preserves_independent_analyzer_evidence(
+        tmp_path: Path, monkeypatch, filename: str, contents: str, diagnostic: str
+    ) -> None:
+        (tmp_path / filename).write_text(contents)
+        source = tmp_path / "app.py"
+        source.write_text("import dependency\n")
+        calls = []
+    
+        def dispatch(request, **_context):
+            calls.append(request.member)
+            return {"execution_state": "ran", "evidence_outcome": "PASS", "findings": []}
+    
+        monkeypatch.setattr(runner, "_dispatch_capsule_member", dispatch)
+        runtime = SimpleNamespace(identity="sha256:" + "a" * 64, environment_id="linux-x86_64-cp312")
+        snapshot, evidence = run_project_snapshot(
+            runtime, ProjectSnapshotRequest(tmp_path, [source], runner.ReviewOptions(), "explicit_files")
+        )
+        assert "ruff" in calls and not set(calls) & DEPENDENT_MEMBERS
+>       assert evidence["diagnostic"].startswith(diagnostic)
+E       assert False
+E        +  where False = <built-in method startswith of str object at 0x107261680>('project_pytest_config_invalid:pyproject.toml:tool.pytest.ini_options')
+E        +    where <built-in method startswith of str object at 0x107261680> = "[Errno 1] Operation not permitted: '<workspace>/.cache/specfact'".startswith
+
+tests/unit/specfact_code_review/run/test_portable_snapshot.py:194: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_malformed_pytest_table_has_project_diagnostic[1-pytest.toml-pytest-]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_malformed_pytest_table_has_project_diagnostic[1-.pytest.toml-pytest-]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_malformed_pytest_table_has_project_diagnostic[1-pyproject.toml-tool.pytest-[tool]\n]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_malformed_pytest_table_has_project_diagnostic[1-pyproject.toml-tool.pytest.ini_options-[tool.pytest]\n]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_malformed_pytest_table_has_project_diagnostic[0-pytest.toml-pytest-]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_malformed_pytest_table_has_project_diagnostic[0-.pytest.toml-pytest-]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_malformed_pytest_table_has_project_diagnostic[0-pyproject.toml-tool.pytest-[tool]\n]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_malformed_pytest_table_has_project_diagnostic[0-pyproject.toml-tool.pytest.ini_options-[tool.pytest]\n]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_malformed_pytest_table_has_project_diagnostic[true-pytest.toml-pytest-]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_malformed_pytest_table_has_project_diagnostic[true-.pytest.toml-pytest-]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_malformed_pytest_table_has_project_diagnostic[true-pyproject.toml-tool.pytest-[tool]\n]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_malformed_pytest_table_has_project_diagnostic[true-pyproject.toml-tool.pytest.ini_options-[tool.pytest]\n]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_malformed_pytest_table_has_project_diagnostic[false-pytest.toml-pytest-]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_malformed_pytest_table_has_project_diagnostic[false-.pytest.toml-pytest-]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_malformed_pytest_table_has_project_diagnostic[false-pyproject.toml-tool.pytest-[tool]\n]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_malformed_pytest_table_has_project_diagnostic[false-pyproject.toml-tool.pytest.ini_options-[tool.pytest]\n]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_malformed_pytest_table_has_project_diagnostic[[]-pytest.toml-pytest-]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_malformed_pytest_table_has_project_diagnostic[[]-.pytest.toml-pytest-]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_malformed_pytest_table_has_project_diagnostic[[]-pyproject.toml-tool.pytest-[tool]\n]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_malformed_pytest_table_has_project_diagnostic[[]-pyproject.toml-tool.pytest.ini_options-[tool.pytest]\n]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_malformed_pytest_table_has_project_diagnostic[["tests"]-pytest.toml-pytest-]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_malformed_pytest_table_has_project_diagnostic[["tests"]-.pytest.toml-pytest-]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_malformed_pytest_table_has_project_diagnostic[["tests"]-pyproject.toml-tool.pytest-[tool]\n]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_malformed_pytest_table_has_project_diagnostic[["tests"]-pyproject.toml-tool.pytest.ini_options-[tool.pytest]\n]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_malformed_pytest_table_has_project_diagnostic["invalid"-pytest.toml-pytest-]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_malformed_pytest_table_has_project_diagnostic["invalid"-.pytest.toml-pytest-]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_malformed_pytest_table_has_project_diagnostic["invalid"-pyproject.toml-tool.pytest-[tool]\n]
+FAILED tests/unit/specfact_code_review/run/test_runtime_discovery.py::test_malformed_pytest_table_has_project_diagnostic["invalid"-pyproject.toml-tool.pytest.ini_options-[tool.pytest]\n]
+FAILED tests/unit/specfact_code_review/run/test_portable_snapshot.py::test_malformed_configuration_preserves_independent_analyzer_evidence[pytest.toml-pytest=1\n-project_pytest_config_invalid:pytest.toml:pytest]
+FAILED tests/unit/specfact_code_review/run/test_portable_snapshot.py::test_malformed_configuration_preserves_independent_analyzer_evidence[pyproject.toml-[tool]\npytest=false\n-project_pytest_config_invalid:pyproject.toml:tool.pytest]
+FAILED tests/unit/specfact_code_review/run/test_portable_snapshot.py::test_malformed_configuration_preserves_independent_analyzer_evidence[pyproject.toml-[tool.pytest]\nini_options=[]\n-project_pytest_config_invalid:pyproject.toml:tool.pytest.ini_options]
+================= 31 failed, 3 passed, 109 deselected in 0.56s =================

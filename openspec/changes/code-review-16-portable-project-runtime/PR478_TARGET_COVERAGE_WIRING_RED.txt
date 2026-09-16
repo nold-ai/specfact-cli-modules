@@ -1,0 +1,51 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: /private/tmp/specfact-477-pytest-release
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 7 items / 6 deselected / 1 selected
+
+tests/unit/specfact_code_review/run/test_target_coverage.py F            [100%]
+
+=================================== FAILURES ===================================
+_______ test_target_observer_does_not_override_native_coverage_arguments _______
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-777/test_target_observer_does_not_0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1077c82b0>
+
+    def test_target_observer_does_not_override_native_coverage_arguments(tmp_path, monkeypatch):
+        from types import SimpleNamespace
+
+        runtime = tmp_path / "runtime"
+        runtime.mkdir()
+        (runtime / "project-runtime.json").write_text(json.dumps({
+            "project": {"pytest_config": {"addopts": "--cov=app --cov-report=json:customer.json"}},
+            "inventory": {"pytest_arguments": []},
+        }))
+        measurement = {"coverage": {}, "coverage_policy": {"mode": "reviewer"}, "coverage_threshold": 95}
+        collector = SimpleNamespace(configure=lambda **_kwargs: None, evidence=lambda: measurement)
+        monkeypatch.setitem(sys.modules, "_specfact_target_coverage", collector)
+        monkeypatch.setattr(target_pytest, "ROOT", runtime)
+        monkeypatch.setattr(target_pytest, "SNAPSHOT_ROOT", tmp_path)
+        monkeypatch.setattr(target_pytest, "Path", lambda value: Path(str(value).replace("/opt/specfact/tmp", str(tmp_path))))
+        monkeypatch.setattr(sys, "argv", ["observer", json.dumps({"selectors": ["tests"]})])
+        captured = []
+
+        def run(arguments, *, plugins):
+            assert len(plugins) == 1
+            captured.extend(arguments)
+            return 0
+
+        monkeypatch.setattr(pytest, "main", run)
+        with pytest.raises(SystemExit) as result:
+            target_pytest.main()
+        assert result.value.code == 0
+>       assert not any(token.startswith(("--cov=", "--cov-report=")) for token in captured)
+E       assert not True
+E        +  where True = any(<generator object test_target_observer_does_not_override_native_coverage_arguments.<locals>.<genexpr> at 0x108361e00>)
+
+tests/unit/specfact_code_review/run/test_target_coverage.py:150: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_target_coverage.py::test_target_observer_does_not_override_native_coverage_arguments
+======================= 1 failed, 6 deselected in 0.10s ========================

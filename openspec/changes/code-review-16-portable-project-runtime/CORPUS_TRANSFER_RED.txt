@@ -1,0 +1,27 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: <WORKTREE>
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 1 item
+
+tests/unit/test_external_capsule_corpus.py F                             [100%]
+
+=================================== FAILURES ===================================
+______ test_network_evidence_excludes_loopback_and_reports_counter_deltas ______
+
+tmp_path = PosixPath('<TMPDIR>/pytest-of-dom/pytest-146/test_network_evidence_excludes0')
+
+    def test_network_evidence_excludes_loopback_and_reports_counter_deltas(tmp_path: Path) -> None:
+        module = _load()
+        counters = tmp_path / "net-dev"
+        counters.write_text("Inter-| Receive | Transmit\n face |bytes packets errs drop fifo frame compressed multicast|bytes packets errs drop fifo colls carrier compressed\n lo: 900 0 0 0 0 0 0 0 800 0 0 0 0 0 0 0\n eth0: 120 0 0 0 0 0 0 0 70 0 0 0 0 0 0 0\n")
+>       before = module.network_counters(counters)
+                 ^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: module 'external_capsule_corpus' has no attribute 'network_counters'
+
+tests/unit/test_external_capsule_corpus.py:113: AttributeError
+=========================== short test summary info ============================
+FAILED tests/unit/test_external_capsule_corpus.py::test_network_evidence_excludes_loopback_and_reports_counter_deltas
+============================== 1 failed in 0.03s ===============================

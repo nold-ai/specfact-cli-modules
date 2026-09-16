@@ -1,0 +1,29 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: /private/tmp/specfact-477-pytest-release
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, xdist-3.8.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 1 item
+
+tests/unit/specfact_code_review/run/test_target_coverage.py F            [100%]
+
+=================================== FAILURES ===================================
+__________ test_effective_scope_receipt_reflects_native_cli_overrides __________
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-817/test_effective_scope_receipt_r0')
+
+    def test_effective_scope_receipt_reflects_native_cli_overrides(tmp_path):
+        source = _project(tmp_path, native='--cov=unrelated --cov-branch --cov-fail-under=0 --cov-precision=4')
+        completed, receipt = _run(source, tmp_path)
+        assert completed.returncode == 0
+        configuration = receipt['coverage_configuration']
+        assert configuration['run']['source'] == ['app']
+>       assert configuration['effective']['run']['source'] == ['unrelated']
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       KeyError: 'effective'
+
+tests/unit/specfact_code_review/run/test_target_coverage.py:293: KeyError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_target_coverage.py::test_effective_scope_receipt_reflects_native_cli_overrides
+============================== 1 failed in 0.26s ===============================

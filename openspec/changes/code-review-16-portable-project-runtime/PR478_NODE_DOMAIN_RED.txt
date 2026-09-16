@@ -1,0 +1,34 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: /private/tmp/specfact-477-pytest-release
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 10 items / 6 deselected / 4 selected
+
+tests/unit/specfact_code_review/run/test_runtime_compatibility.py F.F.   [100%]
+
+=================================== FAILURES ===================================
+_____________ test_basedpyright_node_version_conflict_is_explicit ______________
+tests/unit/specfact_code_review/run/test_runtime_compatibility.py:118: in test_basedpyright_node_version_conflict_is_explicit
+    assert analyzer_dependency_conflicts(inventory, node_analyzers) == {
+E   AssertionError: assert {} == {'basedpyrigh...ntry=24.16.0'}
+E
+E     Right contains 1 more item:
+E     {'basedpyright': 'project_analyzer_dependency_incompatible:nodejs-wheel-binaries: '
+E                      'target=24.19.0, sealed entry=24.16.0'}
+E     Use -v to get more diff
+________ test_basedpyright_node_closure_keeps_verified_import[matching] ________
+tests/unit/specfact_code_review/run/test_runtime_compatibility.py:156: in test_basedpyright_node_closure_keeps_verified_import
+    spec = finder.find_spec("nodejs_wheel")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/target_bootstrap.py:56: in find_spec
+    return _verified_analyzer_spec(fullname, spec)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/target_bootstrap.py:41: in _verified_analyzer_spec
+    raise ImportError(f"project_worker_analyzer_origin_mismatch:{fullname}")
+E   ImportError: project_worker_analyzer_origin_mismatch:nodejs_wheel
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_runtime_compatibility.py::test_basedpyright_node_version_conflict_is_explicit
+FAILED tests/unit/specfact_code_review/run/test_runtime_compatibility.py::test_basedpyright_node_closure_keeps_verified_import[matching]
+================== 2 failed, 2 passed, 6 deselected in 0.12s ===================

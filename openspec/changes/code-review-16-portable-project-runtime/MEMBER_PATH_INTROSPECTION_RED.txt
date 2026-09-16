@@ -1,0 +1,35 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: <WORKTREE>
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 6 items
+
+tests/unit/specfact_code_review/run/test_target_launch.py .....F         [100%]
+
+=================================== FAILURES ===================================
+__________ test_member_mounts_expose_only_recorded_distribution_files __________
+
+tmp_path = PosixPath('<TMPDIR>/pytest-of-dom/pytest-125/test_member_mounts_expose_only0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10a82b020>
+
+    def test_member_mounts_expose_only_recorded_distribution_files(tmp_path, monkeypatch) -> None:
+        import json
+        from specfact_code_review.run import target_launch
+
+        sealed = tmp_path / "sealed"
+        sealed.mkdir()
+        for name in ("pylint", "pylint-4.0.7.dist-info", "unrelated", "unrelated-1.0.dist-info"):
+            (sealed / name).mkdir()
+        (tmp_path / "project-runtime.json").write_text(json.dumps({"inventory": {"member_graphs": {
+            "pylint": {"sealed_imports": ["pylint"], "installed": [{"name": "pylint", "origin": "analyzer"}]}
+        }}}))
+        monkeypatch.setattr(target_launch, "PROJECT", tmp_path)
+>       monkeypatch.setattr(target_launch, "SEALED", sealed)
+E       AttributeError: <module 'specfact_code_review.run.target_launch' from '<WORKTREE>/packages/specfact-code-review/src/specfact_code_review/run/target_launch.py'> has no attribute 'SEALED'
+
+tests/unit/specfact_code_review/run/test_target_launch.py:87: AttributeError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_target_launch.py::test_member_mounts_expose_only_recorded_distribution_files
+========================= 1 failed, 5 passed in 0.09s ==========================

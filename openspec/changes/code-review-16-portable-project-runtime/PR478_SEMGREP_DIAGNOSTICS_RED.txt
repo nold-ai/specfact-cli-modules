@@ -1,0 +1,186 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: /private/tmp/specfact-477-pytest-release
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 63 items / 58 deselected / 5 selected
+
+tests/unit/specfact_code_review/tools/test_semgrep_runner.py FFFFF       [100%]
+
+=================================== FAILURES ===================================
+______ test_structured_semgrep_errors_retain_diagnostic_context[0-clean] _______
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-652/test_structured_semgrep_errors0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x109d4de00>
+bug_pass = False, returncode = 0
+
+    @pytest.mark.parametrize("bug_pass", [False, True], ids=["clean", "bugs"])
+    @pytest.mark.parametrize("returncode", [0, 1])
+    def test_structured_semgrep_errors_retain_diagnostic_context(
+        tmp_path: Path, monkeypatch: MonkeyPatch, bug_pass: bool, returncode: int
+    ) -> None:
+        """Both passes retain the native error without accepting partial execution."""
+        bundle = tmp_path / "bundle"
+        (bundle / ".semgrep").mkdir(parents=True)
+        for name in ("clean_code", "bugs"):
+            (bundle / f".semgrep/{name}.yaml").write_text("rules: []\n", encoding="utf-8")
+        target = tmp_path / "target.py"
+        target.write_text("VALUE = 1\n", encoding="utf-8")
+        payload = {
+            "results": [],
+            "errors": [{"type": "ParseError", "code": 3, "message": "target parse failed", "source": "PRIVATE_SOURCE"}],
+        }
+        process = Mock(return_value=completed_process("semgrep", stdout=json.dumps(payload), returncode=returncode))
+        monkeypatch.setattr(subprocess, "run", process)
+
+        findings = (run_semgrep_bugs if bug_pass else run_semgrep)([target], bundle_root=bundle)
+
+        assert len(findings) == 1
+        assert findings[0].category == "tool_error"
+        assert findings[0].severity == "error"
+        assert "count=1" in findings[0].message
+>       assert '"type":"ParseError"' in findings[0].message
+E       assert '"type":"ParseError"' in 'Unable to parse Semgrep output: semgrep returned structured errors (count=1)'
+E        +  where 'Unable to parse Semgrep output: semgrep returned structured errors (count=1)' = ReviewFinding(category='tool_error', severity='error', tool='semgrep', rule='tool_error', file='/private/var/folders/l..., before_ref=None, after_ref=None, improvement=None, signal_trace=None, preserve_reasons=None, remediation_packet=None).message
+
+tests/unit/specfact_code_review/tools/test_semgrep_runner.py:287: AssertionError
+_______ test_structured_semgrep_errors_retain_diagnostic_context[0-bugs] _______
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-652/test_structured_semgrep_errors1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x109d4e8b0>
+bug_pass = True, returncode = 0
+
+    @pytest.mark.parametrize("bug_pass", [False, True], ids=["clean", "bugs"])
+    @pytest.mark.parametrize("returncode", [0, 1])
+    def test_structured_semgrep_errors_retain_diagnostic_context(
+        tmp_path: Path, monkeypatch: MonkeyPatch, bug_pass: bool, returncode: int
+    ) -> None:
+        """Both passes retain the native error without accepting partial execution."""
+        bundle = tmp_path / "bundle"
+        (bundle / ".semgrep").mkdir(parents=True)
+        for name in ("clean_code", "bugs"):
+            (bundle / f".semgrep/{name}.yaml").write_text("rules: []\n", encoding="utf-8")
+        target = tmp_path / "target.py"
+        target.write_text("VALUE = 1\n", encoding="utf-8")
+        payload = {
+            "results": [],
+            "errors": [{"type": "ParseError", "code": 3, "message": "target parse failed", "source": "PRIVATE_SOURCE"}],
+        }
+        process = Mock(return_value=completed_process("semgrep", stdout=json.dumps(payload), returncode=returncode))
+        monkeypatch.setattr(subprocess, "run", process)
+
+        findings = (run_semgrep_bugs if bug_pass else run_semgrep)([target], bundle_root=bundle)
+
+        assert len(findings) == 1
+        assert findings[0].category == "tool_error"
+        assert findings[0].severity == "error"
+        assert "count=1" in findings[0].message
+>       assert '"type":"ParseError"' in findings[0].message
+E       assert '"type":"ParseError"' in 'Unable to parse Semgrep bugs pass output: semgrep returned structured errors (count=1)'
+E        +  where 'Unable to parse Semgrep bugs pass output: semgrep returned structured errors (count=1)' = ReviewFinding(category='tool_error', severity='error', tool='semgrep', rule='tool_error', file='/private/var/folders/l..., before_ref=None, after_ref=None, improvement=None, signal_trace=None, preserve_reasons=None, remediation_packet=None).message
+
+tests/unit/specfact_code_review/tools/test_semgrep_runner.py:287: AssertionError
+______ test_structured_semgrep_errors_retain_diagnostic_context[1-clean] _______
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-652/test_structured_semgrep_errors2')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x109e80830>
+bug_pass = False, returncode = 1
+
+    @pytest.mark.parametrize("bug_pass", [False, True], ids=["clean", "bugs"])
+    @pytest.mark.parametrize("returncode", [0, 1])
+    def test_structured_semgrep_errors_retain_diagnostic_context(
+        tmp_path: Path, monkeypatch: MonkeyPatch, bug_pass: bool, returncode: int
+    ) -> None:
+        """Both passes retain the native error without accepting partial execution."""
+        bundle = tmp_path / "bundle"
+        (bundle / ".semgrep").mkdir(parents=True)
+        for name in ("clean_code", "bugs"):
+            (bundle / f".semgrep/{name}.yaml").write_text("rules: []\n", encoding="utf-8")
+        target = tmp_path / "target.py"
+        target.write_text("VALUE = 1\n", encoding="utf-8")
+        payload = {
+            "results": [],
+            "errors": [{"type": "ParseError", "code": 3, "message": "target parse failed", "source": "PRIVATE_SOURCE"}],
+        }
+        process = Mock(return_value=completed_process("semgrep", stdout=json.dumps(payload), returncode=returncode))
+        monkeypatch.setattr(subprocess, "run", process)
+
+        findings = (run_semgrep_bugs if bug_pass else run_semgrep)([target], bundle_root=bundle)
+
+        assert len(findings) == 1
+        assert findings[0].category == "tool_error"
+        assert findings[0].severity == "error"
+        assert "count=1" in findings[0].message
+>       assert '"type":"ParseError"' in findings[0].message
+E       assert '"type":"ParseError"' in 'Unable to parse Semgrep output: semgrep returned structured errors (count=1)'
+E        +  where 'Unable to parse Semgrep output: semgrep returned structured errors (count=1)' = ReviewFinding(category='tool_error', severity='error', tool='semgrep', rule='tool_error', file='/private/var/folders/l..., before_ref=None, after_ref=None, improvement=None, signal_trace=None, preserve_reasons=None, remediation_packet=None).message
+
+tests/unit/specfact_code_review/tools/test_semgrep_runner.py:287: AssertionError
+_______ test_structured_semgrep_errors_retain_diagnostic_context[1-bugs] _______
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-652/test_structured_semgrep_errors3')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x109d657b0>
+bug_pass = True, returncode = 1
+
+    @pytest.mark.parametrize("bug_pass", [False, True], ids=["clean", "bugs"])
+    @pytest.mark.parametrize("returncode", [0, 1])
+    def test_structured_semgrep_errors_retain_diagnostic_context(
+        tmp_path: Path, monkeypatch: MonkeyPatch, bug_pass: bool, returncode: int
+    ) -> None:
+        """Both passes retain the native error without accepting partial execution."""
+        bundle = tmp_path / "bundle"
+        (bundle / ".semgrep").mkdir(parents=True)
+        for name in ("clean_code", "bugs"):
+            (bundle / f".semgrep/{name}.yaml").write_text("rules: []\n", encoding="utf-8")
+        target = tmp_path / "target.py"
+        target.write_text("VALUE = 1\n", encoding="utf-8")
+        payload = {
+            "results": [],
+            "errors": [{"type": "ParseError", "code": 3, "message": "target parse failed", "source": "PRIVATE_SOURCE"}],
+        }
+        process = Mock(return_value=completed_process("semgrep", stdout=json.dumps(payload), returncode=returncode))
+        monkeypatch.setattr(subprocess, "run", process)
+
+        findings = (run_semgrep_bugs if bug_pass else run_semgrep)([target], bundle_root=bundle)
+
+        assert len(findings) == 1
+        assert findings[0].category == "tool_error"
+        assert findings[0].severity == "error"
+        assert "count=1" in findings[0].message
+>       assert '"type":"ParseError"' in findings[0].message
+E       assert '"type":"ParseError"' in 'Unable to parse Semgrep bugs pass output: semgrep returned structured errors (count=1)'
+E        +  where 'Unable to parse Semgrep bugs pass output: semgrep returned structured errors (count=1)' = ReviewFinding(category='tool_error', severity='error', tool='semgrep', rule='tool_error', file='/private/var/folders/l..., before_ref=None, after_ref=None, improvement=None, signal_trace=None, preserve_reasons=None, remediation_packet=None).message
+
+tests/unit/specfact_code_review/tools/test_semgrep_runner.py:287: AssertionError
+______ test_structured_semgrep_error_diagnostics_are_bounded_and_escaped _______
+
+    def test_structured_semgrep_error_diagnostics_are_bounded_and_escaped() -> None:
+        """Untrusted nested metadata and long control-filled messages stay bounded."""
+        from specfact_code_review.tools.semgrep_runner import _validate_semgrep_completion
+
+        payload = {
+            "errors": [
+                {"type": "ParseError", "code": 3, "message": "parse\n\t\x1b" + "x" * 1000},
+                {"type": {"source": "PRIVATE_SOURCE"}, "code": ["PRIVATE_SOURCE"], "message": {"source": "PRIVATE_SOURCE"}},
+                {"type": "z" * 1000, "code": "z" * 1000, "message": "\x00" * 1000},
+                {"type": "FOURTH_ERROR", "message": "OMITTED_MESSAGE"},
+            ]
+        }
+
+        with pytest.raises(ValueError) as error:
+            _validate_semgrep_completion(completed_process("semgrep", stdout="", returncode=0), payload)
+
+        diagnostic = str(error.value)
+        assert "count=4" in diagnostic
+>       assert "omitted=1" in diagnostic
+E       AssertionError: assert 'omitted=1' in 'semgrep returned structured errors (count=4)'
+
+tests/unit/specfact_code_review/tools/test_semgrep_runner.py:312: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/tools/test_semgrep_runner.py::test_structured_semgrep_errors_retain_diagnostic_context[0-clean]
+FAILED tests/unit/specfact_code_review/tools/test_semgrep_runner.py::test_structured_semgrep_errors_retain_diagnostic_context[0-bugs]
+FAILED tests/unit/specfact_code_review/tools/test_semgrep_runner.py::test_structured_semgrep_errors_retain_diagnostic_context[1-clean]
+FAILED tests/unit/specfact_code_review/tools/test_semgrep_runner.py::test_structured_semgrep_errors_retain_diagnostic_context[1-bugs]
+FAILED tests/unit/specfact_code_review/tools/test_semgrep_runner.py::test_structured_semgrep_error_diagnostics_are_bounded_and_escaped
+======================= 5 failed, 58 deselected in 0.27s =======================

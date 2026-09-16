@@ -1,0 +1,412 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: <implementation-worktree>
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 138 items / 128 deselected / 10 selected
+
+tests/unit/specfact_code_review/run/test_scope.py FFFFFFFF..             [100%]
+
+=================================== FAILURES ===================================
+____ test_portable_immutable_snapshots_retain_package_and_data_links[range] ____
+
+git_repo = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-223/test_portable_immutable_snapsh0/repo')
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-223/test_portable_immutable_snapsh0')
+scope_name = 'range'
+
+    @pytest.mark.parametrize("scope_name", ["range", "index"])
+    def test_portable_immutable_snapshots_retain_package_and_data_links(git_repo: Path, tmp_path: Path, scope_name: str) -> None:
+        package = git_repo / "src/customer"
+        package.mkdir()
+        (package / "__init__.py").write_text("VALUE = 1\n")
+        (package / "data.txt").write_text("original")
+        (git_repo / "customer").symlink_to("src/customer", target_is_directory=True)
+        (git_repo / "data-link").symlink_to("src/customer/data.txt")
+        base = _commit(git_repo, "project links")
+        (git_repo / "src/app.py").write_text("VALUE = 2\n")
+        (package / "data.txt").write_text("updated")
+        _git(git_repo, "add", "-A")
+        head = _commit(git_repo, "update project") if scope_name == "range" else None
+        request = scope.ScopeRequest(
+            repository=git_repo, scope=scope_name, base_ref=base if head else None,
+            head_ref=head, portable_project_runtime=True,
+        )
+        result = scope.resolve_scope(request)
+        try:
+            assert result.status == "PASS"
+            for side, snapshot in (("base", result.base_snapshot), ("head", result.head_snapshot)):
+                assert snapshot is not None
+>               assert (snapshot.root / "customer").is_symlink()
+E               AssertionError: assert False
+E                +  where False = is_symlink()
+E                +    where is_symlink = (PosixPath('/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/specfact-review-505ee4d76064-elpyq46k') / 'customer').is_symlink
+E                +      where PosixPath('/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/specfact-review-505ee4d76064-elpyq46k') = Snapshot(root=PosixPath('/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/specfact-review-505ee4d76064-elpyq46k'), com...rivate/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-223/test_portable_immutable_snapsh0/repo')).root
+
+tests/unit/specfact_code_review/run/test_scope.py:1405: AssertionError
+____ test_portable_immutable_snapshots_retain_package_and_data_links[index] ____
+
+git_repo = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-223/test_portable_immutable_snapsh1/repo')
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-223/test_portable_immutable_snapsh1')
+scope_name = 'index'
+
+    @pytest.mark.parametrize("scope_name", ["range", "index"])
+    def test_portable_immutable_snapshots_retain_package_and_data_links(git_repo: Path, tmp_path: Path, scope_name: str) -> None:
+        package = git_repo / "src/customer"
+        package.mkdir()
+        (package / "__init__.py").write_text("VALUE = 1\n")
+        (package / "data.txt").write_text("original")
+        (git_repo / "customer").symlink_to("src/customer", target_is_directory=True)
+        (git_repo / "data-link").symlink_to("src/customer/data.txt")
+        base = _commit(git_repo, "project links")
+        (git_repo / "src/app.py").write_text("VALUE = 2\n")
+        (package / "data.txt").write_text("updated")
+        _git(git_repo, "add", "-A")
+        head = _commit(git_repo, "update project") if scope_name == "range" else None
+        request = scope.ScopeRequest(
+            repository=git_repo, scope=scope_name, base_ref=base if head else None,
+            head_ref=head, portable_project_runtime=True,
+        )
+        result = scope.resolve_scope(request)
+        try:
+            assert result.status == "PASS"
+            for side, snapshot in (("base", result.base_snapshot), ("head", result.head_snapshot)):
+                assert snapshot is not None
+>               assert (snapshot.root / "customer").is_symlink()
+E               AssertionError: assert False
+E                +  where False = is_symlink()
+E                +    where is_symlink = (PosixPath('/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/specfact-review-325d6f0f0e1b-a14sl_6b') / 'customer').is_symlink
+E                +      where PosixPath('/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/specfact-review-325d6f0f0e1b-a14sl_6b') = Snapshot(root=PosixPath('/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/specfact-review-325d6f0f0e1b-a14sl_6b'), com...rivate/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-223/test_portable_immutable_snapsh1/repo')).root
+
+tests/unit/specfact_code_review/run/test_scope.py:1405: AssertionError
+_ test_portable_immutable_snapshots_reject_unsafe_links_before_policy_reads[data-link-../outside.toml-range] _
+
+git_repo = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-223/test_portable_immutable_snapsh2/repo')
+scope_name = 'range', link_name = 'data-link', target = '../outside.toml'
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1083bda70>
+
+    @pytest.mark.parametrize("scope_name", ["range", "index"])
+    @pytest.mark.parametrize("link_name,target", [("data-link", "../outside.toml"), ("pyproject.toml", "../outside.toml"), ("setup.cfg", ".env")])
+    def test_portable_immutable_snapshots_reject_unsafe_links_before_policy_reads(
+        git_repo: Path, scope_name: str, link_name: str, target: str, monkeypatch
+    ) -> None:
+        base = _git(git_repo, "rev-parse", "HEAD")
+        (git_repo.parent / "outside.toml").write_text('[project]\nname="private"\n')
+        (git_repo / ".env").write_text("private fixture")
+        (git_repo / link_name).symlink_to(target)
+        _git(git_repo, "add", "-A")
+        head = _commit(git_repo, "unsafe project link") if scope_name == "range" else None
+
+        def forbid_policy_read(*_args, **_kwargs):
+            pytest.fail("unsafe source links reached policy discovery")
+
+        monkeypatch.setattr(scope, "_range_policy_closure", forbid_policy_read)
+        monkeypatch.setattr(scope, "_resolved_index_policy_paths", forbid_policy_read)
+>       result = scope.resolve_scope(scope.ScopeRequest(
+            repository=git_repo, scope=scope_name, base_ref=base if head else None,
+            head_ref=head, portable_project_runtime=True,
+        ))
+
+tests/unit/specfact_code_review/run/test_scope.py:1432:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/scope.py:2876: in resolve_scope
+    return _resolve_range(normalized)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/scope.py:2373: in _resolve_range
+    resolved = _materialized_range(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/scope.py:2154: in _materialized_range
+    additional_policy_paths = _range_policy_closure(request, target_snapshot.root, head_snapshot.root)
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+_args = (ScopeRequest(repository=PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-223/...9be733-ime8j2a6'), PosixPath('/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/specfact-review-562c39ec89b0-3d30ds8f'))
+_kwargs = {}
+
+    def forbid_policy_read(*_args, **_kwargs):
+>       pytest.fail("unsafe source links reached policy discovery")
+E       Failed: unsafe source links reached policy discovery
+
+tests/unit/specfact_code_review/run/test_scope.py:1428: Failed
+_ test_portable_immutable_snapshots_reject_unsafe_links_before_policy_reads[data-link-../outside.toml-index] _
+
+git_repo = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-223/test_portable_immutable_snapsh3/repo')
+scope_name = 'index', link_name = 'data-link', target = '../outside.toml'
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1083be650>
+
+    @pytest.mark.parametrize("scope_name", ["range", "index"])
+    @pytest.mark.parametrize("link_name,target", [("data-link", "../outside.toml"), ("pyproject.toml", "../outside.toml"), ("setup.cfg", ".env")])
+    def test_portable_immutable_snapshots_reject_unsafe_links_before_policy_reads(
+        git_repo: Path, scope_name: str, link_name: str, target: str, monkeypatch
+    ) -> None:
+        base = _git(git_repo, "rev-parse", "HEAD")
+        (git_repo.parent / "outside.toml").write_text('[project]\nname="private"\n')
+        (git_repo / ".env").write_text("private fixture")
+        (git_repo / link_name).symlink_to(target)
+        _git(git_repo, "add", "-A")
+        head = _commit(git_repo, "unsafe project link") if scope_name == "range" else None
+
+        def forbid_policy_read(*_args, **_kwargs):
+            pytest.fail("unsafe source links reached policy discovery")
+
+        monkeypatch.setattr(scope, "_range_policy_closure", forbid_policy_read)
+        monkeypatch.setattr(scope, "_resolved_index_policy_paths", forbid_policy_read)
+>       result = scope.resolve_scope(scope.ScopeRequest(
+            repository=git_repo, scope=scope_name, base_ref=base if head else None,
+            head_ref=head, portable_project_runtime=True,
+        ))
+
+tests/unit/specfact_code_review/run/test_scope.py:1432:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/scope.py:2878: in resolve_scope
+    return _resolve_index(normalized)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/scope.py:2557: in _resolve_index
+    context = _materialized_index_context(request.repository)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/scope.py:2575: in _materialized_index_context
+    return _materialized_index_context_from_capture(repository, capture)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/scope.py:2724: in _materialized_index_context_from_capture
+    base_policy_paths, _ = _resolved_index_policy_paths(base_snapshot.root)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+_args = (PosixPath('/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/specfact-review-6f8d129be733-n3o_e0_y'),)
+_kwargs = {}
+
+    def forbid_policy_read(*_args, **_kwargs):
+>       pytest.fail("unsafe source links reached policy discovery")
+E       Failed: unsafe source links reached policy discovery
+
+tests/unit/specfact_code_review/run/test_scope.py:1428: Failed
+_ test_portable_immutable_snapshots_reject_unsafe_links_before_policy_reads[pyproject.toml-../outside.toml-range] _
+
+git_repo = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-223/test_portable_immutable_snapsh4/repo')
+scope_name = 'range', link_name = 'pyproject.toml', target = '../outside.toml'
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x108c78050>
+
+    @pytest.mark.parametrize("scope_name", ["range", "index"])
+    @pytest.mark.parametrize("link_name,target", [("data-link", "../outside.toml"), ("pyproject.toml", "../outside.toml"), ("setup.cfg", ".env")])
+    def test_portable_immutable_snapshots_reject_unsafe_links_before_policy_reads(
+        git_repo: Path, scope_name: str, link_name: str, target: str, monkeypatch
+    ) -> None:
+        base = _git(git_repo, "rev-parse", "HEAD")
+        (git_repo.parent / "outside.toml").write_text('[project]\nname="private"\n')
+        (git_repo / ".env").write_text("private fixture")
+        (git_repo / link_name).symlink_to(target)
+        _git(git_repo, "add", "-A")
+        head = _commit(git_repo, "unsafe project link") if scope_name == "range" else None
+
+        def forbid_policy_read(*_args, **_kwargs):
+            pytest.fail("unsafe source links reached policy discovery")
+
+        monkeypatch.setattr(scope, "_range_policy_closure", forbid_policy_read)
+        monkeypatch.setattr(scope, "_resolved_index_policy_paths", forbid_policy_read)
+>       result = scope.resolve_scope(scope.ScopeRequest(
+            repository=git_repo, scope=scope_name, base_ref=base if head else None,
+            head_ref=head, portable_project_runtime=True,
+        ))
+
+tests/unit/specfact_code_review/run/test_scope.py:1432:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/scope.py:2876: in resolve_scope
+    return _resolve_range(normalized)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/scope.py:2373: in _resolve_range
+    resolved = _materialized_range(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/scope.py:2154: in _materialized_range
+    additional_policy_paths = _range_policy_closure(request, target_snapshot.root, head_snapshot.root)
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+_args = (ScopeRequest(repository=PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-223/...9be733-m4shzcjq'), PosixPath('/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/specfact-review-c97865fc1489-aeqqpkll'))
+_kwargs = {}
+
+    def forbid_policy_read(*_args, **_kwargs):
+>       pytest.fail("unsafe source links reached policy discovery")
+E       Failed: unsafe source links reached policy discovery
+
+tests/unit/specfact_code_review/run/test_scope.py:1428: Failed
+_ test_portable_immutable_snapshots_reject_unsafe_links_before_policy_reads[pyproject.toml-../outside.toml-index] _
+
+git_repo = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-223/test_portable_immutable_snapsh5/repo')
+scope_name = 'index', link_name = 'pyproject.toml', target = '../outside.toml'
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1082d7460>
+
+    @pytest.mark.parametrize("scope_name", ["range", "index"])
+    @pytest.mark.parametrize("link_name,target", [("data-link", "../outside.toml"), ("pyproject.toml", "../outside.toml"), ("setup.cfg", ".env")])
+    def test_portable_immutable_snapshots_reject_unsafe_links_before_policy_reads(
+        git_repo: Path, scope_name: str, link_name: str, target: str, monkeypatch
+    ) -> None:
+        base = _git(git_repo, "rev-parse", "HEAD")
+        (git_repo.parent / "outside.toml").write_text('[project]\nname="private"\n')
+        (git_repo / ".env").write_text("private fixture")
+        (git_repo / link_name).symlink_to(target)
+        _git(git_repo, "add", "-A")
+        head = _commit(git_repo, "unsafe project link") if scope_name == "range" else None
+
+        def forbid_policy_read(*_args, **_kwargs):
+            pytest.fail("unsafe source links reached policy discovery")
+
+        monkeypatch.setattr(scope, "_range_policy_closure", forbid_policy_read)
+        monkeypatch.setattr(scope, "_resolved_index_policy_paths", forbid_policy_read)
+>       result = scope.resolve_scope(scope.ScopeRequest(
+            repository=git_repo, scope=scope_name, base_ref=base if head else None,
+            head_ref=head, portable_project_runtime=True,
+        ))
+
+tests/unit/specfact_code_review/run/test_scope.py:1432:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/scope.py:2878: in resolve_scope
+    return _resolve_index(normalized)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/scope.py:2557: in _resolve_index
+    context = _materialized_index_context(request.repository)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/scope.py:2575: in _materialized_index_context
+    return _materialized_index_context_from_capture(repository, capture)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/scope.py:2724: in _materialized_index_context_from_capture
+    base_policy_paths, _ = _resolved_index_policy_paths(base_snapshot.root)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+_args = (PosixPath('/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/specfact-review-6f8d129be733-rz9eo14y'),)
+_kwargs = {}
+
+    def forbid_policy_read(*_args, **_kwargs):
+>       pytest.fail("unsafe source links reached policy discovery")
+E       Failed: unsafe source links reached policy discovery
+
+tests/unit/specfact_code_review/run/test_scope.py:1428: Failed
+_ test_portable_immutable_snapshots_reject_unsafe_links_before_policy_reads[setup.cfg-.env-range] _
+
+git_repo = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-223/test_portable_immutable_snapsh6/repo')
+scope_name = 'range', link_name = 'setup.cfg', target = '.env'
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x108d94490>
+
+    @pytest.mark.parametrize("scope_name", ["range", "index"])
+    @pytest.mark.parametrize("link_name,target", [("data-link", "../outside.toml"), ("pyproject.toml", "../outside.toml"), ("setup.cfg", ".env")])
+    def test_portable_immutable_snapshots_reject_unsafe_links_before_policy_reads(
+        git_repo: Path, scope_name: str, link_name: str, target: str, monkeypatch
+    ) -> None:
+        base = _git(git_repo, "rev-parse", "HEAD")
+        (git_repo.parent / "outside.toml").write_text('[project]\nname="private"\n')
+        (git_repo / ".env").write_text("private fixture")
+        (git_repo / link_name).symlink_to(target)
+        _git(git_repo, "add", "-A")
+        head = _commit(git_repo, "unsafe project link") if scope_name == "range" else None
+
+        def forbid_policy_read(*_args, **_kwargs):
+            pytest.fail("unsafe source links reached policy discovery")
+
+        monkeypatch.setattr(scope, "_range_policy_closure", forbid_policy_read)
+        monkeypatch.setattr(scope, "_resolved_index_policy_paths", forbid_policy_read)
+>       result = scope.resolve_scope(scope.ScopeRequest(
+            repository=git_repo, scope=scope_name, base_ref=base if head else None,
+            head_ref=head, portable_project_runtime=True,
+        ))
+
+tests/unit/specfact_code_review/run/test_scope.py:1432:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/scope.py:2876: in resolve_scope
+    return _resolve_range(normalized)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/scope.py:2373: in _resolve_range
+    resolved = _materialized_range(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/scope.py:2154: in _materialized_range
+    additional_policy_paths = _range_policy_closure(request, target_snapshot.root, head_snapshot.root)
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+_args = (ScopeRequest(repository=PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-223/...9be733-ch71ybbw'), PosixPath('/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/specfact-review-8d5bdf7a7f25-wtdxobef'))
+_kwargs = {}
+
+    def forbid_policy_read(*_args, **_kwargs):
+>       pytest.fail("unsafe source links reached policy discovery")
+E       Failed: unsafe source links reached policy discovery
+
+tests/unit/specfact_code_review/run/test_scope.py:1428: Failed
+_ test_portable_immutable_snapshots_reject_unsafe_links_before_policy_reads[setup.cfg-.env-index] _
+
+git_repo = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-223/test_portable_immutable_snapsh7/repo')
+scope_name = 'index', link_name = 'setup.cfg', target = '.env'
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10841a050>
+
+    @pytest.mark.parametrize("scope_name", ["range", "index"])
+    @pytest.mark.parametrize("link_name,target", [("data-link", "../outside.toml"), ("pyproject.toml", "../outside.toml"), ("setup.cfg", ".env")])
+    def test_portable_immutable_snapshots_reject_unsafe_links_before_policy_reads(
+        git_repo: Path, scope_name: str, link_name: str, target: str, monkeypatch
+    ) -> None:
+        base = _git(git_repo, "rev-parse", "HEAD")
+        (git_repo.parent / "outside.toml").write_text('[project]\nname="private"\n')
+        (git_repo / ".env").write_text("private fixture")
+        (git_repo / link_name).symlink_to(target)
+        _git(git_repo, "add", "-A")
+        head = _commit(git_repo, "unsafe project link") if scope_name == "range" else None
+
+        def forbid_policy_read(*_args, **_kwargs):
+            pytest.fail("unsafe source links reached policy discovery")
+
+        monkeypatch.setattr(scope, "_range_policy_closure", forbid_policy_read)
+        monkeypatch.setattr(scope, "_resolved_index_policy_paths", forbid_policy_read)
+>       result = scope.resolve_scope(scope.ScopeRequest(
+            repository=git_repo, scope=scope_name, base_ref=base if head else None,
+            head_ref=head, portable_project_runtime=True,
+        ))
+
+tests/unit/specfact_code_review/run/test_scope.py:1432:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+../specfact-473-worktree/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/scope.py:2878: in resolve_scope
+    return _resolve_index(normalized)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/scope.py:2557: in _resolve_index
+    context = _materialized_index_context(request.repository)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/scope.py:2575: in _materialized_index_context
+    return _materialized_index_context_from_capture(repository, capture)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/scope.py:2724: in _materialized_index_context_from_capture
+    base_policy_paths, _ = _resolved_index_policy_paths(base_snapshot.root)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+_args = (PosixPath('/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/specfact-review-5922e0c13c3d-6k2k8t2t'),)
+_kwargs = {}
+
+    def forbid_policy_read(*_args, **_kwargs):
+>       pytest.fail("unsafe source links reached policy discovery")
+E       Failed: unsafe source links reached policy discovery
+
+tests/unit/specfact_code_review/run/test_scope.py:1428: Failed
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_scope.py::test_portable_immutable_snapshots_retain_package_and_data_links[range]
+FAILED tests/unit/specfact_code_review/run/test_scope.py::test_portable_immutable_snapshots_retain_package_and_data_links[index]
+FAILED tests/unit/specfact_code_review/run/test_scope.py::test_portable_immutable_snapshots_reject_unsafe_links_before_policy_reads[data-link-../outside.toml-range]
+FAILED tests/unit/specfact_code_review/run/test_scope.py::test_portable_immutable_snapshots_reject_unsafe_links_before_policy_reads[data-link-../outside.toml-index]
+FAILED tests/unit/specfact_code_review/run/test_scope.py::test_portable_immutable_snapshots_reject_unsafe_links_before_policy_reads[pyproject.toml-../outside.toml-range]
+FAILED tests/unit/specfact_code_review/run/test_scope.py::test_portable_immutable_snapshots_reject_unsafe_links_before_policy_reads[pyproject.toml-../outside.toml-index]
+FAILED tests/unit/specfact_code_review/run/test_scope.py::test_portable_immutable_snapshots_reject_unsafe_links_before_policy_reads[setup.cfg-.env-range]
+FAILED tests/unit/specfact_code_review/run/test_scope.py::test_portable_immutable_snapshots_reject_unsafe_links_before_policy_reads[setup.cfg-.env-index]
+================= 8 failed, 2 passed, 128 deselected in 2.34s ==================

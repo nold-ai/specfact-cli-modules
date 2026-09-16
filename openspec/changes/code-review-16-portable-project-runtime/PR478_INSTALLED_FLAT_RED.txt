@@ -1,0 +1,37 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: /private/tmp/specfact-477-pytest-release
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 24 items / 23 deselected / 1 selected
+
+tests/unit/specfact_code_review/run/test_installed_coverage.py F         [100%]
+
+=================================== FAILURES ===================================
+___ test_unexecuted_flat_snapshot_row_does_not_mask_real_installed_coverage ____
+
+installed_project = namespace(snapshot=PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-576/test_u...h0000gn/T/pytest-of-dom/pytest-576/test_unexecuted_flat_snapshot_0/runtime/site-packages/capsule-owned-1.0.dist-info'))
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-576/test_unexecuted_flat_snapshot_0')
+
+    def test_unexecuted_flat_snapshot_row_does_not_mask_real_installed_coverage(installed_project, tmp_path):
+        project = installed_project
+        flat = project.snapshot / "capsule_owned"
+        project.source.parent.rename(flat)
+        project.source = flat / "math.py"
+        (flat / "__init__.py").write_bytes((project.installed.parent / "__init__.py").read_bytes())
+        bridge = _bridge(project)
+        result, raw = _native_coverage(project, bridge, tmp_path, import_mode="importlib")
+        assert result.returncode == 0, result.stdout + result.stderr
+        snapshot_row = raw["files"]["capsule_owned/math.py"]
+        assert snapshot_row["executed_lines"] == []
+        assert snapshot_row["summary"]["percent_covered"] == 0
+        attributed, diagnostics = _normalize(project, bridge, raw)
+>       assert attributed["files"][str(project.source)]["summary"]["percent_covered"] == 100
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       KeyError: '/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-576/test_unexecuted_flat_snapshot_0/snapshot/capsule_owned/math.py'
+
+tests/unit/specfact_code_review/run/test_installed_coverage.py:336: KeyError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_installed_coverage.py::test_unexecuted_flat_snapshot_row_does_not_mask_real_installed_coverage
+======================= 1 failed, 23 deselected in 0.26s =======================

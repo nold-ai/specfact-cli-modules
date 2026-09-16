@@ -1,0 +1,46 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: /private/tmp/specfact-477-pytest-release
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 33 items / 32 deselected / 1 selected
+
+tests/unit/specfact_code_review/run/test_installed_coverage.py F         [100%]
+
+=================================== FAILURES ===================================
+___________ test_native_alias_cannot_credit_renamed_unmatched_source ___________
+
+aliased_project = namespace(snapshot=PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-599/test_n...plbft6h0000gn/T/pytest-of-dom/pytest-599/test_native_alias_cannot_credi0/runtime/site-packages/capsule_owned/good.py'))
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-599/test_native_alias_cannot_credi0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10b0fba80>
+
+    def test_native_alias_cannot_credit_renamed_unmatched_source(aliased_project, tmp_path, monkeypatch):
+        project = aliased_project
+        destination = project.snapshot / "src/original/math.py"
+        destination.parent.mkdir()
+        project.source.rename(destination)
+        project.source = destination
+        project.source.write_text("def add(left, right):\n    return left - right\n")
+        (project.snapshot / "pyproject.toml").write_text(
+            '[tool.coverage.paths]\nsource=["src/original", "*/site-packages/capsule_owned"]\n'
+        )
+        bridge = installed_coverage.plan_installed_coverage(
+            [project.source, project.good], snapshot=project.snapshot, site_packages=project.site
+        )
+        result, raw = _native_coverage(project, bridge, tmp_path)
+        assert result.returncode == 0, result.stdout + result.stderr
+        attributed, diagnostics = installed_coverage.attribute_installed_coverage(
+            bridge, raw, snapshot=project.snapshot, relocations=_native_relocations(project)
+        )
+>       assert "coverage_alias_origin_unverified" in diagnostics.get(str(project.source), "")
+E       AssertionError: assert 'coverage_alias_origin_unverified' in ''
+E        +  where '' = <built-in method get of dict object at 0x10b2a0800>('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-599/test_native_alias_cannot_credi0/snapshot/src/original/math.py', '')
+E        +    where <built-in method get of dict object at 0x10b2a0800> = {}.get
+E        +    and   '/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-599/test_native_alias_cannot_credi0/snapshot/src/original/math.py' = str(PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-599/test_native_alias_cannot_credi0/snapshot/src/original/math.py'))
+E        +      where PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-599/test_native_alias_cannot_credi0/snapshot/src/original/math.py') = namespace(snapshot=PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-599/test_n...plbft6h0000gn/T/pytest-of-dom/pytest-599/test_native_alias_cannot_credi0/runtime/site-packages/capsule_owned/good.py')).source
+
+tests/unit/specfact_code_review/run/test_installed_coverage.py:525: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_installed_coverage.py::test_native_alias_cannot_credit_renamed_unmatched_source
+======================= 1 failed, 32 deselected in 1.50s =======================

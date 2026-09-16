@@ -1,0 +1,33 @@
+{
+  "scope": "Official Semgrep1.144.0 initialization in offline disposable Linux; diagnostic-only, not updated capsule acceptance",
+  "records": [
+    {
+      "uname": "/usr/bin/uname",
+      "cert_bytes": 240216
+    },
+    {
+      "case": "missing-explicit",
+      "exit": 2,
+      "stdout": "",
+      "stderr": "Fatal error: exception Failure(\"Failed to create system store X509 authenticator: ca-certs: no trust anchor file found, looked into /tmp/absent.pem.\\nPlease report an issue at https://github.com/mirage/ca-certs, including:\\n- the output of uname -s\\n- the distribution you use\\n- the location of default trust anchors (if known)\\n\")\nRaised at Stdlib.failwith in file \"stdlib.ml\", line 29, characters 17-33\nCalled from Opentelemetry_client_cohttp_eio.Httpc.authenticator in file \"src/client-cohttp-eio/opentelemetry_client_cohttp_eio.ml\", line 119, characters 6-75\n"
+    },
+    {
+      "case": "valid-explicit",
+      "exit": 0,
+      "stdout": "1.144.0\n",
+      "stderr": ""
+    },
+    {
+      "case": "default-before",
+      "exit": 2,
+      "stdout": "",
+      "stderr": "Fatal error: exception Failure(\"Failed to create system store X509 authenticator: ca-certs: no trust anchor file found, looked into /etc/ssl/certs/ca-certificates.crt, /etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem, /etc/ssl/ca-bundle.pem.\\nPlease report an issue at https://github.com/mirage/ca-certs, including:\\n- the output of uname -s\\n- the distribution you use\\n- the location of default trust anchors (if known)\\n\")\nRaised at Stdlib.failwith in file \"stdlib.ml\", line 29, characters 17-33\nCalled from Opentelemetry_client_cohttp_eio.Httpc.authenticator in file \"src/client-cohttp-eio/opentelemetry_client_cohttp_eio.ml\", line 119, characters 6-75\n"
+    },
+    {
+      "case": "default-after",
+      "exit": 0,
+      "stdout": "1.144.0\n",
+      "stderr": ""
+    }
+  ]
+}

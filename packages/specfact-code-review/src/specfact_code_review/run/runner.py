@@ -130,6 +130,8 @@ class ReviewOptions:
     review_level: Literal["error", "warning"] | None = None
     review_mode: ReviewEnforcementMode = "full"
     focus: ReviewFocus | None = None
+    project_config: Path | None = None
+    project_runtime: Path | None = None
 
 
 @dataclass(frozen=True)
@@ -221,6 +223,7 @@ class CapsuleMemberExecutionRequest:
     adapter_argv: tuple[str, ...] = ()
     complete_pytest_inventory: bool = False
     project_runtime_root: Path | None = None
+    portable_runtime: bool = False
 
 
 @dataclass(frozen=True)
@@ -648,26 +651,37 @@ def _selected_module_payload() -> SelectedModulePayload:
         (parent for parent in source.parents if source == parent / _PACKAGE_ROOT / "run/runner.py"), None
     )
     candidate_checkout = candidate_root is not None and (candidate_root / ".git").exists()
-    if os.environ.get("GITHUB_ACTIONS") == "true" and candidate_checkout:
+    if (
+        os.environ.get("GITHUB_ACTIONS") == "true"
+        and os.environ.get("GITHUB_REPOSITORY") == "nold-ai/specfact-cli-modules"
+        and candidate_checkout
+    ):
         return _protected_candidate_payload()
     payload, reason = _official_installed_payload()
     return SelectedModulePayload(payload, reason)
 
 
-def _prepare_capsule_runtime(*, project_runtime_identity: str = "not-applicable") -> tuple[CapsuleRuntime | None, str]:
+def _capsule_lock_environment(environment_id: str | None) -> tuple[dict[str, object], str, dict[str, object]]:
+    lock_path = Path(__file__).parents[1] / "resources/contracts/pr-range-v1-toolchain-lock.json"
+    lock = cast(dict[str, object], json.loads(lock_path.read_text(encoding="utf-8")))
+    environment_id = environment_id or _capsule_environment_id()
+    environments = cast(list[dict[str, object]], lock["environments"])
+    environment = next(
+        item for item in environments if str(item.get("environment_id") or item.get("id")) == environment_id
+    )
+    return lock, environment_id, environment
+
+
+def _prepare_capsule_runtime(
+    *, project_runtime_identity: str = "not-applicable", environment_id: str | None = None
+) -> tuple[CapsuleRuntime | None, str]:
     """Materialize and compose the signed runtime without host analyzer fallback."""
 
     if platform.system() != "Linux" or platform.machine() not in {"x86_64", "AMD64"}:
         return None, "unsupported_controller_platform"
     capsule_root: Path | None = None
     try:
-        lock_path = Path(__file__).parents[1] / "resources/contracts/pr-range-v1-toolchain-lock.json"
-        lock = cast(dict[str, object], json.loads(lock_path.read_text(encoding="utf-8")))
-        environment_id = _capsule_environment_id()
-        environments = cast(list[dict[str, object]], lock["environments"])
-        environment = next(
-            item for item in environments if str(item.get("environment_id") or item.get("id")) == environment_id
-        )
+        lock, environment_id, environment = _capsule_lock_environment(environment_id)
         storage_root = Path(
             os.environ.get(
                 "SPECFACT_CODE_REVIEW_CAPSULE_CACHE",
@@ -909,6 +923,10 @@ def _configured_member_findings(
     if member == "targeted-pytest-plugin-preflight":
         return _pytest_plugin_preflight_findings(adapter_argv)
     if member == "targeted-pytest-coverage":
+        if adapter_argv and adapter_argv[0] == "portable-pytest-v2":
+            from specfact_code_review.run.portable_worker import run_portable_pytest
+
+            return run_portable_pytest(files, adapter_argv)
         findings, _coverage = (
             _evaluate_complete_tdd_gate(files, adapter_argv) if complete_pytest_inventory else _evaluate_tdd_gate(files)
         )
@@ -1074,6 +1092,14 @@ def _capsule_process_request(request_path: Path) -> None:
                 complete_pytest_inventory=complete_pytest_inventory,
             ),
         )
+        observation_path = Path("/opt/specfact/tmp/pytest-observation.json")
+        if (
+            member == "targeted-pytest-coverage"
+            and adapter_argv
+            and adapter_argv[0] == "portable-pytest-v2"
+            and observation_path.is_file()
+        ):
+            response["target_execution"] = json.loads(observation_path.read_text(encoding="utf-8"))
     except (KeyError, OSError, TypeError, ValueError, json.JSONDecodeError) as exc:
         response = {
             "member": "unknown",
@@ -1141,6 +1167,7 @@ def _execute_capsule_member(request: CapsuleMemberExecutionRequest) -> dict[str,
             network="none",
             control_root=control_root,
             environment_id=request.runtime.environment_id,
+            import_domain="portable" if request.portable_runtime else "sealed",
         )
         preflight = preflight_reserved_imports(context)
         if preflight.status != "PASS":
@@ -1215,46 +1242,74 @@ def _dispatch_capsule_member(
     return _execute_capsule_member(request)
 
 
+@dataclass(frozen=True)
+class CapsuleSnapshotSettings:
+    """Execution-domain and policy bindings shared across one member roster."""
+
+    config_roots: tuple[Path, ...] = ()
+    member_argv: dict[str, tuple[str, ...]] | None = None
+    project_runtime_root: Path | None = None
+    scope_paths: tuple[str, ...] | None = None
+    portable_runtime: bool = False
+    unavailable_members: dict[str, dict[str, object]] | None = None
+
+
+def _complete_snapshot_pytest(member: str, settings: CapsuleSnapshotSettings) -> bool:
+    return (
+        member == "targeted-pytest-coverage"
+        and settings.member_argv is not None
+        and member in settings.member_argv
+        and not settings.portable_runtime
+    )
+
+
+def _snapshot_relative_inputs(snapshot_root: Path, files: list[Path]) -> tuple[str, ...]:
+    resolved_snapshot = snapshot_root.resolve()
+    resolved_inputs = tuple(path.resolve() for path in files)
+    return tuple(
+        path.relative_to(resolved_snapshot).as_posix() if path.is_relative_to(resolved_snapshot) else path.as_posix()
+        for path in resolved_inputs
+    )
+
+
 def _run_capsule_snapshot(
     runtime: CapsuleRuntime,
     *,
     snapshot_root: Path,
     files: list[Path],
     options: ReviewOptions,
-    config_roots: tuple[Path, ...] = (),
-    member_argv: dict[str, tuple[str, ...]] | None = None,
-    project_runtime_root: Path | None = None,
-    scope_paths: tuple[str, ...] | None = None,
+    settings: CapsuleSnapshotSettings | None = None,
 ) -> CapsuleSnapshotResult:
+    settings = settings or CapsuleSnapshotSettings()
     evidence: dict[str, dict[str, object]] = {}
     findings_by_member: dict[str, list[ReviewFinding]] = {}
-    resolved_snapshot = snapshot_root.resolve()
-    resolved_inputs = tuple(path.resolve() for path in files)
-    relative_inputs = tuple(
-        path.relative_to(resolved_snapshot).as_posix() if path.is_relative_to(resolved_snapshot) else path.as_posix()
-        for path in resolved_inputs
+    relative_inputs = _snapshot_relative_inputs(snapshot_root, files)
+    applicability = classify_snapshot_input_kinds(
+        relative_inputs if settings.scope_paths is None else settings.scope_paths
     )
-    applicability = classify_snapshot_input_kinds(relative_inputs if scope_paths is None else scope_paths)
     for member in default_pr_range_profile().all_ids:
-        sealed_bugs_policy = member_argv is not None and "semgrep-bugs" in member_argv
-        raw = _dispatch_capsule_member(
-            CapsuleMemberExecutionRequest(
-                runtime=runtime,
-                member=member,
-                invocation_id=str(uuid4()),
-                snapshot_root=snapshot_root,
-                files=files,
-                options=options,
-                config_roots=config_roots,
-                adapter_argv=(member_argv or {}).get(member, ()),
-                complete_pytest_inventory=(
-                    member == "targeted-pytest-coverage" and member_argv is not None and member in member_argv
+        sealed_bugs_policy = settings.member_argv is not None and "semgrep-bugs" in settings.member_argv
+        raw = (settings.unavailable_members or {}).get(member)
+        if raw is None:
+            raw = _dispatch_capsule_member(
+                CapsuleMemberExecutionRequest(
+                    runtime=runtime,
+                    member=member,
+                    invocation_id=str(uuid4()),
+                    snapshot_root=snapshot_root,
+                    files=files,
+                    options=options,
+                    config_roots=settings.config_roots,
+                    adapter_argv=(settings.member_argv or {}).get(member, ()),
+                    complete_pytest_inventory=_complete_snapshot_pytest(member, settings),
+                    project_runtime_root=(
+                        settings.project_runtime_root if member in _PROJECT_RUNTIME_MEMBERS else None
+                    ),
+                    portable_runtime=settings.portable_runtime,
                 ),
-                project_runtime_root=(project_runtime_root if member in _PROJECT_RUNTIME_MEMBERS else None),
-            ),
-            applicability=applicability,
-            sealed_bugs_policy=sealed_bugs_policy,
-        )
+                applicability=applicability,
+                sealed_bugs_policy=sealed_bugs_policy,
+            )
         raw_findings = raw.get("findings", [])
         findings = [ReviewFinding.model_validate(value) for value in cast(list[object], raw_findings)]
         findings_by_member[member] = findings
@@ -1266,6 +1321,7 @@ def _run_capsule_snapshot(
             "sandbox_invocation": "fresh",
             "capsule_identity": runtime.identity,
             "environment_id": getattr(runtime, "environment_id", ""),
+            **({"target_execution": raw["target_execution"]} if "target_execution" in raw else {}),
         }
     return CapsuleSnapshotResult(evidence, findings_by_member)
 
@@ -3888,7 +3944,8 @@ def _pytest_in_capsule() -> bool:
 
 
 def _pytest_env() -> dict[str, str]:
-    env = os.environ.copy()
+    env = _candidate_git_environment()
+    env.pop("SPECFACT_CODE_REVIEW_CHANGED_DIFF", None)
     if _pytest_in_capsule():
         env.pop("PYTHONPATH", None)
         env["PYTEST_DISABLE_PLUGIN_AUTOLOAD"] = "1"
@@ -4469,6 +4526,19 @@ class CachedAnalysisSnapshot:
     entries: dict[str, tuple[str, str]]
     directories: tuple[MaterializedDirectoryIdentity, ...]
     diff: CachedDiffIdentity
+    vcs_commit: str = ""
+
+    @property
+    @ensure(lambda result: re.fullmatch(r"(?:[0-9a-f]{40}|[0-9a-f]{64})", result) is not None)
+    def tree(self) -> str:
+        """Expose the captured index tree through common snapshot discovery."""
+        return self.diff.index_tree
+
+    @property
+    @ensure(lambda result: result.startswith("index-"))
+    def commit(self) -> str:
+        """Carry the staged tree context through common snapshot discovery."""
+        return "index-" + self.diff.index_tree
 
 
 @dataclass(frozen=True)
@@ -5057,6 +5127,15 @@ def _cached_caller_prefix(repository: Path) -> str | None:
     return "" if prefix == "." else f"{prefix}/"
 
 
+def _cached_head_commit(repository: Path) -> str:
+    """Capture a real HEAD commit while retaining unborn cached-analysis support."""
+    result = _run_changed_line_git_command(["git", "-C", str(repository), "rev-parse", "--verify", "HEAD^{commit}"])
+    if result is None or not result.stdout.endswith("\n"):
+        return ""
+    commit = result.stdout.removesuffix("\n")
+    return commit if re.fullmatch(r"(?:[0-9a-f]{40}|[0-9a-f]{64})", commit) else ""
+
+
 def _cached_analysis_snapshot(files: list[Path], destination: Path) -> CachedAnalysisSnapshot | None:
     """Bind selected paths and analyzer input to one immutable staged tree."""
     repository_paths = _cached_repository_paths(files)
@@ -5064,11 +5143,12 @@ def _cached_analysis_snapshot(files: list[Path], destination: Path) -> CachedAna
         return None
     repository, selected = repository_paths
     caller_prefix = _cached_caller_prefix(repository)
+    vcs_commit = _cached_head_commit(repository)
     base_tree = _cached_base_tree_identity(repository)
     tree_oid = _git_tree_identity(repository, "index")
     if caller_prefix is None or base_tree is None or tree_oid is None:
         return None
-    if _cached_base_tree_identity(repository) != base_tree:
+    if (_cached_base_tree_identity(repository), _cached_head_commit(repository)) != (base_tree, vcs_commit):
         return None
     entries = _cached_tree_entries(repository, tree_oid)
     selected_unsupported = entries is not None and any(
@@ -5087,6 +5167,7 @@ def _cached_analysis_snapshot(files: list[Path], destination: Path) -> CachedAna
         entries=entries,
         directories=directories,
         diff=CachedDiffIdentity(base_tree=base_tree, index_tree=tree_oid, caller_prefix=caller_prefix),
+        vcs_commit=vcs_commit,
     )
 
 
@@ -6055,15 +6136,79 @@ def _coverage_findings(
     return findings, coverage_by_source
 
 
+@ensure(lambda result: result.is_absolute() and result.is_relative_to(Path.cwd().resolve()))
+def resolve_portable_pytest_root(observation: dict[str, Any]) -> Path:
+    """Resolve the native pytest root within the reviewed source snapshot."""
+    recorded_root = observation.get("pytest_root", ".")
+    if not isinstance(recorded_root, str) or not recorded_root:
+        raise ValueError("project_pytest_root_missing_or_invalid; inspect target_execution")
+    snapshot = Path.cwd().resolve()
+    pytest_root = (snapshot / recorded_root).resolve()
+    if not pytest_root.is_relative_to(snapshot):
+        raise ValueError("project_pytest_root_outside_snapshot")
+    return pytest_root
+
+
+def _portable_coverage_sources(files: list[Path], observation: dict[str, Any]) -> list[Path]:
+    snapshot = Path.cwd().resolve()
+    pytest_root = resolve_portable_pytest_root(observation)
+    test_files = {
+        (pytest_root / str(nodeid).split("::", maxsplit=1)[0]).resolve()
+        for nodeid in (*observation.get("collected", []), *observation.get("deselected", []))
+    }
+    return [
+        path
+        for path in files
+        if path.suffix == ".py"
+        and path.name != "conftest.py"
+        and path.resolve() not in test_files
+        and not _is_test_file(path.resolve().relative_to(snapshot))
+    ]
+
+
+@ensure(lambda result: all(isinstance(finding, ReviewFinding) for finding in result))
+def evaluate_portable_pytest_coverage(files: list[Path], observation: dict[str, Any]) -> list[ReviewFinding]:
+    """Apply the production-source gate to native target-worker coverage evidence."""
+    anchor = files[0] if files else Path.cwd()
+    configured = observation.get("coverage_threshold")
+    threshold = _COVERAGE_THRESHOLD if configured is None else configured
+    if isinstance(threshold, bool) or not isinstance(threshold, int | float) or not 0 <= threshold <= 100:
+        return [tool_error(tool="pytest", file_path=anchor, message="project_pytest_coverage_threshold_invalid")]
+    try:
+        sources = _portable_coverage_sources(files, observation)
+    except ValueError as exc:
+        return [tool_error(tool="pytest", file_path=anchor, message=str(exc))]
+    attribution_errors = observation.get("coverage_attribution_errors", {})
+    for source in sources:
+        if diagnostic := attribution_errors.get(str(source.resolve())):
+            return [
+                tool_error(
+                    tool="pytest",
+                    file_path=source,
+                    message=f"project_pytest_installed_coverage:{diagnostic}:{source}; "
+                    "rebuild the runtime for this snapshot or declare the intended source environment",
+                )
+            ]
+    findings, _coverage = _coverage_findings(
+        sources,
+        observation["coverage"],
+        allow_project_omitted_initializers=False,
+        threshold=max(_COVERAGE_THRESHOLD, threshold),
+        blocking_low_coverage=True,
+    )
+    return findings
+
+
 def _pytest_junit_identities(observer: tuple[dict[str, object], ...]) -> dict[tuple[str, str], list[str]]:
     observed_nodes = tuple(dict.fromkeys(str(record.get("nodeid", "")) for record in observer))
     junit_identities: dict[tuple[str, str], list[str]] = {}
     for nodeid in observed_nodes:
-        path, *qualifiers = nodeid.split("::")
+        address, parameter_open, parameters = nodeid.partition("[")
+        path, *qualifiers = address.split("::")
         if not qualifiers or not path.endswith(".py"):
             continue
         classname_parts = [path[:-3].replace("/", "."), *qualifiers[:-1]]
-        identity = (".".join(classname_parts), qualifiers[-1])
+        identity = (".".join(classname_parts), qualifiers[-1] + parameter_open + parameters)
         junit_identities.setdefault(identity, []).append(nodeid)
     return junit_identities
 
@@ -6292,6 +6437,8 @@ def _review_options_from_kwargs(options: ReviewOptions | None, overrides: dict[s
         "review_level",
         "review_mode",
         "focus",
+        "project_config",
+        "project_runtime",
     }
     unknown_keys = set(overrides) - allowed_keys
     if unknown_keys:
@@ -6326,6 +6473,8 @@ def _review_options_from_kwargs(options: ReviewOptions | None, overrides: dict[s
         review_level=cast(Literal["error", "warning"] | None, review_level),
         review_mode=cast(ReviewEnforcementMode, review_mode),
         focus=cast(ReviewFocus | None, focus),
+        project_config=cast(Path | None, overrides.get("project_config")),
+        project_runtime=cast(Path | None, overrides.get("project_runtime")),
     )
 
 
@@ -6579,7 +6728,9 @@ def _run_cached_development_host_review(
                 files=files,
                 findings_by_member={},
             )
-        with chdir(cached_snapshot.root):
+        from specfact_code_review._review_utils import development_runtime
+
+        with chdir(cached_snapshot.root), development_runtime(Path(sys.prefix)):
             host_report = run_review(cached_snapshot.files, replace(options, review_mode="full"))
         if not _materialized_tree_matches_entries(
             cached_snapshot.root, cached_snapshot.entries, cached_snapshot.directories
@@ -6706,8 +6857,7 @@ def _run_local_capsule_snapshot(
             snapshot_root=snapshot_root,
             files=files,
             options=options,
-            config_roots=bindings.config_roots,
-            member_argv=bindings.member_argv,
+            settings=CapsuleSnapshotSettings(config_roots=bindings.config_roots, member_argv=bindings.member_argv),
         )
     except (OSError, TypeError, ValueError, configparser.Error) as exc:
         return _local_pytest_failure_snapshot(
@@ -6716,6 +6866,142 @@ def _run_local_capsule_snapshot(
     finally:
         for root in builder.cleanup_roots:
             shutil.rmtree(root, ignore_errors=True)
+
+
+@dataclass(frozen=True)
+class _LocalCapsuleReviewContext:
+    files: list[Path]
+    options: ReviewOptions
+    scope_evidence: dict[str, object]
+    cached_snapshot: CachedAnalysisSnapshot | None
+    cached_diff: CachedDiffIdentity | None
+    worktree_identity: WorktreeReviewIdentity | Literal["not_repository"]
+
+
+def _finalize_local_capsule_snapshot(
+    snapshot: CapsuleSnapshotResult, context: _LocalCapsuleReviewContext
+) -> ReviewReport:
+    files, review_options, scope_evidence = context.files, context.options, context.scope_evidence
+    cached_snapshot, cached_diff = context.cached_snapshot, context.cached_diff
+    worktree_identity = context.worktree_identity
+    if _worktree_analysis_identity_changed(worktree_identity, files):
+        return _worktree_snapshot_unknown(
+            "worktree_snapshot_changed_during_analysis",
+            files=files,
+            options=review_options,
+            scope_evidence=scope_evidence,
+        )
+    findings_by_member = snapshot.findings_by_member
+    if cached_snapshot is not None:
+        rebased_findings = _rebase_cached_snapshot_findings(
+            findings_by_member,
+            snapshot_root=cached_snapshot.root,
+            repository=cached_snapshot.repository,
+        )
+        if rebased_findings is None:
+            return _with_capsule_enforcement(
+                _unknown_capsule_report(
+                    "cached_capsule_finding_path_unavailable",
+                    options=review_options,
+                    scope_evidence=scope_evidence,
+                ),
+                review_options,
+                files=files,
+                findings_by_member={},
+                cached_diff=cached_diff,
+            )
+        findings_by_member = rebased_findings
+    enforced_report = _with_capsule_enforcement(
+        _capsule_report(
+            snapshot.evidence,
+            findings_by_member,
+            options=review_options,
+            scope_evidence=scope_evidence,
+        ),
+        review_options,
+        files=files,
+        findings_by_member=findings_by_member,
+        cached_diff=cached_diff,
+    )
+    if _worktree_analysis_identity_changed(worktree_identity, files):
+        return _worktree_snapshot_unknown(
+            "worktree_snapshot_changed_during_analysis",
+            files=files,
+            options=review_options,
+            scope_evidence=scope_evidence,
+        )
+    return enforced_report
+
+
+def _run_local_capsule_context(
+    runtime: CapsuleRuntime,
+    files: list[Path],
+    review_options: ReviewOptions,
+    scope_evidence: dict[str, object],
+    assurance_kind: LocalAssuranceKind,
+) -> ReviewReport:
+    with ExitStack() as stack:
+        snapshot_root = Path.cwd()
+        snapshot_files = files
+        cached_diff: CachedDiffIdentity | None = None
+        cached_snapshot: CachedAnalysisSnapshot | None = None
+        worktree_identity: WorktreeReviewIdentity | Literal["not_repository"] = "not_repository"
+        if _cached_review_requested(review_options):
+            temporary_root = Path(stack.enter_context(tempfile.TemporaryDirectory(prefix="specfact-index-")))
+            cached_snapshot = _cached_analysis_snapshot(files, temporary_root)
+            if cached_snapshot is None:
+                return _with_capsule_enforcement(
+                    _unknown_capsule_report(
+                        "cached_snapshot_materialization_unavailable",
+                        options=review_options,
+                        scope_evidence=scope_evidence,
+                    ),
+                    review_options,
+                    files=files,
+                    findings_by_member={},
+                )
+            snapshot_root, snapshot_files = cached_snapshot.root, cached_snapshot.files
+            cached_diff = cached_snapshot.diff
+        elif review_options.review_mode == "changed":
+            captured_identity = _capture_worktree_analysis_identity(files)
+            if captured_identity is None:
+                return _worktree_snapshot_unknown(
+                    "worktree_snapshot_identity_unavailable",
+                    files=files,
+                    options=review_options,
+                    scope_evidence=scope_evidence,
+                )
+            worktree_identity = captured_identity
+        from specfact_code_review.run.portable_snapshot import (
+            ProjectSnapshotRequest,
+            project_runtime_requested,
+            run_project_snapshot,
+        )
+
+        if project_runtime_requested(snapshot_root, review_options):
+            snapshot, project_evidence = run_project_snapshot(
+                runtime,
+                ProjectSnapshotRequest(
+                    snapshot_root=snapshot_root,
+                    files=snapshot_files,
+                    options=review_options,
+                    assurance_kind=assurance_kind,
+                    source_snapshot=cached_snapshot,
+                ),
+            )
+            scope_evidence["project_runtime"] = project_evidence
+        else:
+            snapshot = _run_local_capsule_snapshot(
+                runtime,
+                snapshot_root=snapshot_root,
+                files=snapshot_files,
+                options=review_options,
+                assurance_kind=assurance_kind,
+            )
+        context = _LocalCapsuleReviewContext(
+            files, review_options, scope_evidence, cached_snapshot, cached_diff, worktree_identity
+        )
+        return _finalize_local_capsule_snapshot(snapshot, context)
 
 
 def run_capsule_review(
@@ -6744,92 +7030,7 @@ def run_capsule_review(
             findings_by_member={},
         )
     try:
-        with ExitStack() as stack:
-            snapshot_root = Path.cwd()
-            snapshot_files = files
-            cached_diff: CachedDiffIdentity | None = None
-            cached_snapshot: CachedAnalysisSnapshot | None = None
-            worktree_identity: WorktreeReviewIdentity | Literal["not_repository"] = "not_repository"
-            if _cached_review_requested(review_options):
-                temporary_root = Path(stack.enter_context(tempfile.TemporaryDirectory(prefix="specfact-index-")))
-                cached_snapshot = _cached_analysis_snapshot(files, temporary_root)
-                if cached_snapshot is None:
-                    return _with_capsule_enforcement(
-                        _unknown_capsule_report(
-                            "cached_snapshot_materialization_unavailable",
-                            options=review_options,
-                            scope_evidence=scope_evidence,
-                        ),
-                        review_options,
-                        files=files,
-                        findings_by_member={},
-                    )
-                snapshot_root, snapshot_files = cached_snapshot.root, cached_snapshot.files
-                cached_diff = cached_snapshot.diff
-            elif review_options.review_mode == "changed":
-                captured_identity = _capture_worktree_analysis_identity(files)
-                if captured_identity is None:
-                    return _worktree_snapshot_unknown(
-                        "worktree_snapshot_identity_unavailable",
-                        files=files,
-                        options=review_options,
-                        scope_evidence=scope_evidence,
-                    )
-                worktree_identity = captured_identity
-            snapshot = _run_local_capsule_snapshot(
-                runtime,
-                snapshot_root=snapshot_root,
-                files=snapshot_files,
-                options=review_options,
-                assurance_kind=assurance_kind,
-            )
-            if _worktree_analysis_identity_changed(worktree_identity, files):
-                return _worktree_snapshot_unknown(
-                    "worktree_snapshot_changed_during_analysis",
-                    files=files,
-                    options=review_options,
-                    scope_evidence=scope_evidence,
-                )
-            findings_by_member = snapshot.findings_by_member
-            if cached_snapshot is not None:
-                rebased_findings = _rebase_cached_snapshot_findings(
-                    findings_by_member,
-                    snapshot_root=cached_snapshot.root,
-                    repository=cached_snapshot.repository,
-                )
-                if rebased_findings is None:
-                    return _with_capsule_enforcement(
-                        _unknown_capsule_report(
-                            "cached_capsule_finding_path_unavailable",
-                            options=review_options,
-                            scope_evidence=scope_evidence,
-                        ),
-                        review_options,
-                        files=files,
-                        findings_by_member={},
-                        cached_diff=cached_diff,
-                    )
-                findings_by_member = rebased_findings
-            enforced_report = _with_capsule_enforcement(
-                _capsule_report(
-                    snapshot.evidence,
-                    findings_by_member,
-                    options=review_options,
-                    scope_evidence=scope_evidence,
-                ),
-                review_options,
-                files=files,
-                findings_by_member=findings_by_member,
-                cached_diff=cached_diff,
-            )
-            if _worktree_analysis_identity_changed(worktree_identity, files):
-                return _worktree_snapshot_unknown(
-                    "worktree_snapshot_changed_during_analysis",
-                    files=files,
-                    options=review_options,
-                    scope_evidence=scope_evidence,
-                )
-            return enforced_report
+        return _run_local_capsule_context(runtime, files, review_options, scope_evidence, assurance_kind)
     finally:
         _cleanup_capsule_runtime(runtime)
 
@@ -7520,10 +7721,12 @@ def _run_bound_snapshot_pair(
                 snapshot_root=side.root,
                 files=side.files,
                 options=options,
-                config_roots=side.bindings.config_roots,
-                member_argv=side.bindings.member_argv,
-                project_runtime_root=project_runtime_root,
-                scope_paths=scope_paths,
+                settings=CapsuleSnapshotSettings(
+                    config_roots=side.bindings.config_roots,
+                    member_argv=side.bindings.member_argv,
+                    project_runtime_root=project_runtime_root,
+                    scope_paths=scope_paths,
+                ),
             )
             for side in (base, head)
         )
@@ -7575,6 +7778,12 @@ def _run_immutable_scope_review_with_runtime(
             options=options,
             scope_evidence=scope_evidence,
         )
+    from specfact_code_review.run.portable_snapshot import project_runtime_requested, run_project_scope_pair
+
+    if project_runtime is None and (
+        project_runtime_requested(base_snapshot.root, options) or project_runtime_requested(head_snapshot.root, options)
+    ):
+        return run_project_scope_pair(resolution, runtime=runtime, options=options, scope_evidence=scope_evidence)
     pytest_inventory, reason = _prepare_immutable_pytest_inventory(
         resolution,
         options,

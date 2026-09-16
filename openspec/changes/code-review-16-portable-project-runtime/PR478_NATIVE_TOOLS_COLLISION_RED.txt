@@ -1,0 +1,52 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: /private/tmp/specfact-477-pytest-release
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 18 items / 15 deselected / 3 selected
+
+tests/unit/specfact_code_review/run/test_runtime_tools.py .F.            [100%]
+
+=================================== FAILURES ===================================
+__________ test_builder_tool_collisions_fail_before_any_install[bin] ___________
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-696/test_builder_tool_collisions_f1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10bad0510>
+collision = 'bin'
+
+    @pytest.mark.parametrize("collision", ["bin/uname", "bin", "native-tools/forged"])
+    def test_builder_tool_collisions_fail_before_any_install(tmp_path: Path, monkeypatch, collision: str) -> None:
+        tools, _ = _native_fixture(tmp_path, monkeypatch)
+        capture = tools.capture_native_tools(("uname",))
+        artifact = tmp_path / "artifact"
+        target = artifact / collision
+        target.parent.mkdir(parents=True)
+        target.write_text("builder controlled")
+        with pytest.raises(ProjectRuntimeError, match="native_tool_collision"):
+>           tools.install_native_tools(capture, artifact)
+
+tests/unit/specfact_code_review/run/test_runtime_tools.py:83:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_tools.py:148: in install_native_tools
+    target.parent.mkdir(parents=True, exist_ok=True)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-696/test_builder_tool_collisions_f1/artifact/bin')
+mode = 511, parents = True, exist_ok = True
+
+    def mkdir(self, mode=0o777, parents=False, exist_ok=False):
+        """
+        Create a new directory at this given path.
+        """
+        try:
+>           os.mkdir(self, mode)
+E           FileExistsError: [Errno 17] File exists: '/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-696/test_builder_tool_collisions_f1/artifact/bin'
+
+/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:1011: FileExistsError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_runtime_tools.py::test_builder_tool_collisions_fail_before_any_install[bin]
+================== 1 failed, 2 passed, 15 deselected in 0.25s ==================
