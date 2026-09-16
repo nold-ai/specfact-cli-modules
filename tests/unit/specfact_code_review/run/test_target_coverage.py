@@ -10,11 +10,12 @@ from types import SimpleNamespace
 import pytest
 
 from specfact_code_review.run import target_coverage, target_pytest
+from specfact_code_review.run.target_coverage import _request
 
 
 _HELPER = Path(target_pytest.__file__).with_name("target_coverage.py")
 _SCRIPT = r"""
-import importlib.util, json, os, sys
+import importlib.util, inspect, json, os, sys
 from pathlib import Path
 import pytest
 helper, snapshot, output, extra = map(Path, sys.argv[1:])
@@ -24,7 +25,8 @@ if helper.is_file():
     module = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = module
     spec.loader.exec_module(module)
-    module.configure(snapshot=snapshot, output=output, directories=[])
+    options = {"modules": json.loads(os.environ.get("TEST_COVERAGE_MODULES", "[]"))} if "modules" in inspect.signature(module.configure).parameters else {}
+    module.configure(snapshot=snapshot, output=output, directories=[], **options)
     args[0:0] = ["-p", spec.name]
     code = pytest.main(args)
     evidence = module.evidence()
@@ -58,7 +60,7 @@ def _project(tmp_path, *, native="", extra_config="", failure=False):
     return source
 
 
-def _run(source, tmp_path, extra=(), *, startup=None):
+def _run(source, tmp_path, extra=(), *, startup=None, modules=()):
     output = tmp_path / "private.json"
     arguments = tmp_path / "arguments.json"
     arguments.write_text(json.dumps(extra))
@@ -69,6 +71,7 @@ def _run(source, tmp_path, extra=(), *, startup=None):
             **os.environ,
             "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1",
             "COVERAGE_FILE": str(tmp_path / ".coverage"),
+            "TEST_COVERAGE_MODULES": json.dumps(modules),
             **({"PYTHONPATH": str(startup)} if startup else {}),
         },
         text=True,
@@ -138,14 +141,19 @@ def test_target_observer_does_not_override_native_coverage_arguments(tmp_path, m
         )
     )
     measurement = {"coverage": {}, "coverage_policy": {"mode": "reviewer"}, "coverage_threshold": 95}
-    collector = SimpleNamespace(configure=lambda **_kwargs: None, evidence=lambda: measurement)
+    configured = {}
+    collector = SimpleNamespace(configure=lambda **kwargs: configured.update(kwargs), evidence=lambda: measurement)
     monkeypatch.setitem(sys.modules, "_specfact_target_coverage", collector)
     monkeypatch.setattr(target_pytest, "ROOT", runtime)
     monkeypatch.setattr(target_pytest, "SNAPSHOT_ROOT", tmp_path)
     monkeypatch.setattr(
         target_pytest, "Path", lambda value: Path(str(value).replace("/opt/specfact/tmp", str(tmp_path)))
     )
-    monkeypatch.setattr(sys, "argv", ["observer", json.dumps({"selectors": ["tests"]})])
+    (runtime / "site-packages").mkdir()
+    (runtime / "site-packages/standalone.py").write_text("VALUE = 42\n")
+    monkeypatch.setattr(
+        sys, "argv", ["observer", json.dumps({"selectors": ["tests"], "coverage_modules": ["standalone"]})]
+    )
     captured = []
 
     def run(arguments, *, plugins):
@@ -159,6 +167,7 @@ def test_target_observer_does_not_override_native_coverage_arguments(tmp_path, m
     assert result.value.code == 0
     assert not any(token.startswith(("--cov=", "--cov-report=")) for token in captured)
     assert "_specfact_target_coverage" in captured
+    assert configured["modules"] == ["standalone"]
     observation = json.loads((tmp_path / "pytest-observation.json").read_text())
     assert observation["coverage_policy"] == measurement["coverage_policy"]
 
@@ -295,3 +304,74 @@ def test_effective_scope_receipt_reflects_native_cli_overrides(tmp_path):
     assert configuration["effective"]["threshold"] == 0
     assert configuration["effective"]["precision"] == 4
     assert receipt["coverage_policy"]["mode"] == "native"
+
+
+def _installed_module_project(tmp_path, scope, collision):
+    """Build a real installed module and retain the requested native source scope."""
+    source = _project(tmp_path)
+    if collision:
+        (source / "standalone").mkdir()
+    site = tmp_path / "site-packages"
+    site.mkdir()
+    (site / "standalone.py").write_text("import foreign\ndef answer():\n    return foreign.VALUE\n")
+    (site / "foreign.py").write_text("VALUE = 42\n")
+    (source / "tests/test_installed.py").write_text(
+        "from standalone import answer\ndef test_answer():\n    assert answer() == 42\n"
+    )
+    configuration = source / "pyproject.toml"
+    configuration.write_text(configuration.read_text().replace('source=["app"]\n', ""))
+    if scope == "configured":
+        configuration.write_text(
+            configuration.read_text().replace("[tool.coverage.run]", '[tool.coverage.run]\nsource=["app"]')
+        )
+    return source, site
+
+
+def _assert_module_selector_ambiguity(receipt):
+    """Ambiguous default selectors cannot claim coverage from the wrong directory."""
+    assert receipt["coverage"] == {}
+    assert "project_pytest_coverage_module_selector_ambiguous:standalone" in receipt["coverage_diagnostic"]
+    assert "explicit coverage source" in receipt["coverage_diagnostic"]
+
+
+def _assert_module_measurement_scope(receipt, *, included):
+    """Verify exact installed execution while excluding unrelated imported site code."""
+    assert not receipt["coverage_diagnostic"]
+    measured = receipt["coverage"]["files"]
+    assert any(path.endswith("standalone.py") for path in measured) is included
+    assert not any(path.endswith("foreign.py") for path in measured)
+    if included:
+        row = next(row for path, row in measured.items() if path.endswith("standalone.py"))
+        assert row["executed_lines"] == [1, 2, 3]
+
+
+@pytest.mark.parametrize("scope", ["default", "configured", "native"])
+@pytest.mark.parametrize("collision", [False, True], ids=["unambiguous", "directory-collision"])
+def test_top_level_installed_module_respects_reviewer_and_native_scope(tmp_path, scope, collision):
+    source, site = _installed_module_project(tmp_path, scope, collision)
+    extra = ("--cov=app", "--cov-fail-under=0") if scope == "native" else ()
+    completed, receipt = _run(source, tmp_path, extra, startup=site, modules=["standalone"])
+    assert completed.returncode == 0, completed.stdout + completed.stderr
+    assert receipt["coverage_policy"]["mode"] == ("native" if scope == "native" else "reviewer")
+    assert "2 passed" in completed.stdout
+    if scope == "default" and collision:
+        _assert_module_selector_ambiguity(receipt)
+        return
+    _assert_module_measurement_scope(receipt, included=scope == "default")
+
+
+@pytest.mark.parametrize("modules", [None, "standalone", [1], ["pkg.module"], ["class"], ["../escape"]])
+def test_coverage_child_request_rejects_invalid_module_selectors(tmp_path, monkeypatch, modules):
+    monkeypatch.setenv(
+        "SPECFACT_REVIEW_COVERAGE_REQUEST",
+        json.dumps(
+            {
+                "snapshot": str(tmp_path),
+                "output": str(tmp_path / "coverage.json"),
+                "directories": [],
+                "modules": modules,
+            }
+        ),
+    )
+    with pytest.raises(ValueError, match="project_pytest_coverage_request_invalid"):
+        _request()

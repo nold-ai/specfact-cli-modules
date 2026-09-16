@@ -6,6 +6,7 @@ import base64
 import csv
 import hashlib
 import json
+import keyword
 import os
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
@@ -34,6 +35,7 @@ class CoverageBridge:
     diagnostics: dict[str, str]
     candidates: dict[str, tuple[str, ...]]
     measured_origins: tuple[str, ...] = ()
+    modules: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -132,8 +134,7 @@ def _snapshot_index(snapshot: Path) -> dict[str, list[Path]]:
 def _source_candidates(snapshot: Path, relative: str, index: dict[str, list[Path]]) -> list[Path]:
     """Require an entire recorded package path, never a basename-only match."""
     if len(PurePosixPath(relative).parts) < 2:
-        candidate = snapshot / relative
-        return [candidate] if candidate.is_file() else []
+        return index.get(relative, [])
     return [
         candidate
         for candidate in index.get(PurePosixPath(relative).name, [])
@@ -191,13 +192,25 @@ def _source_mapping(
     if error := _source_identity_error(source, relative, record, context):
         return None, None, error
     installed = context.site / relative
+    directory, error = _measurement_directory(installed, record, context)
+    if error:
+        return None, None, error
+    return InstalledSource(source, installed, _digest(source), record.name), directory, ""
+
+
+def _measurement_directory(
+    installed: Path, record: DistributionRecord, context: _CoverageContext
+) -> tuple[Path | None, str]:
+    """Keep valid module selectors separate from package-directory measurement."""
+    if installed.parent == context.site:
+        if not installed.stem.isidentifier() or keyword.iskeyword(installed.stem):
+            return None, "invalid_top_level_module_name"
+        return None, ""
     cache_key = (installed.parent, record.name)
     if cache_key not in context.directories:
         context.directories[cache_key] = _owned_directory(installed, context.site, record, context.owners)
     directory = context.directories[cache_key]
-    if directory is None:
-        return None, None, "coverage_directory_ownership_unavailable"
-    return InstalledSource(source, installed, _digest(source), record.name), directory, ""
+    return directory, "coverage_directory_ownership_unavailable" if directory is None else ""
 
 
 def _distribution_context(snapshot: Path, site: Path) -> tuple[list[DistributionRecord], _CoverageContext]:
@@ -224,7 +237,9 @@ def _candidate_paths(source: Path, records: list[DistributionRecord], site: Path
     )
 
 
-def _measured_origins(records: list[DistributionRecord], site: Path, directories: set[Path]) -> tuple[str, ...]:
+def _measured_origins(
+    records: list[DistributionRecord], site: Path, directories: set[Path], modules: tuple[str, ...]
+) -> tuple[str, ...]:
     """Retain every measured owned origin, including generated or renamed packages."""
     return tuple(
         sorted(
@@ -234,8 +249,13 @@ def _measured_origins(records: list[DistributionRecord], site: Path, directories
                 for relative in record.files
                 if any(parent in directories for parent in (site / relative).parents)
             }
+            | {str(site / f"{name}.py") for name in modules}
         )
     )
+
+
+def _module_selectors(mappings: list[InstalledSource], site: Path) -> tuple[str, ...]:
+    return tuple(sorted({mapping.installed.stem for mapping in mappings if mapping.installed.parent == site}))
 
 
 @ensure(lambda result, files: {row.source for row in result.mappings} <= {file.resolve() for file in files})
@@ -252,16 +272,19 @@ def plan_installed_coverage(files: list[Path], *, snapshot: Path, site_packages:
             mapping, directory, error = _source_mapping(source, record, context)
             if error:
                 diagnostics[str(source)] = error
-            if mapping is not None and directory is not None:
+            if mapping is not None:
                 mappings.append(mapping)
+            if directory is not None:
                 directories.add(directory)
     candidates = {str(source): _candidate_paths(source, records, site) for source in sources}
+    modules = _module_selectors(mappings, site)
     return CoverageBridge(
         tuple(sorted(directories)),
         tuple(mappings),
         diagnostics,
         candidates,
-        _measured_origins(records, site, directories),
+        _measured_origins(records, site, directories, modules),
+        modules,
     )
 
 

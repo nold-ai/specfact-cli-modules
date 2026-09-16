@@ -12,6 +12,7 @@ from specfact_code_review.run import portable_worker
 from specfact_code_review.run.findings import ReviewFinding
 from specfact_code_review.run.installed_coverage import CoverageBridge
 from specfact_code_review.run.portable_worker import (
+    _portable_pytest_command,
     preparation_failure_snapshot,
     select_test_paths,
     validate_observation,
@@ -435,3 +436,16 @@ def test_empty_or_absent_missing_coverage_diagnostic_retains_legacy_remedy(obser
         observation["coverage_diagnostic"] = diagnostic
     findings = observe_coverage_policy(observation, 1)
     assert any("project_pytest_coverage_missing" in row.message for row in findings)
+
+
+def test_portable_pytest_command_transmits_verified_module_names(monkeypatch):
+    bridge = CoverageBridge((), (), {}, {}, modules=("standalone",))
+    monkeypatch.setattr(portable_worker, "plan_installed_coverage", lambda *_args, **_kwargs: bridge)
+    monkeypatch.setattr(portable_worker, "target_command", lambda domain, arguments: [domain, *arguments])
+    actual, command = _portable_pytest_command([], json.dumps({"selectors": ["tests"]}))
+    assert actual is bridge
+    assert command[0] == "pytest-observe"
+    request = json.loads(command[1])
+    assert request["coverage_modules"] == ["standalone"]
+    assert request["coverage_directories"] == []
+    assert request["selectors"] == ["tests"]

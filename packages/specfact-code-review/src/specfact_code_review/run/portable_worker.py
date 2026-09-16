@@ -337,6 +337,7 @@ def _portable_pytest_command(files: list[Path], encoded: str) -> tuple[CoverageB
     )
     request = json.loads(encoded)
     request["coverage_directories"] = [str(path) for path in bridge.directories]
+    request["coverage_modules"] = list(bridge.modules)
     request["coverage_candidates"] = sorted(
         {path for paths in bridge.candidates.values() for path in paths} | set(bridge.measured_origins)
     )

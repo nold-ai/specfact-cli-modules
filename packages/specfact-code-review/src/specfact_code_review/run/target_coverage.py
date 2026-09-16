@@ -10,6 +10,7 @@ import contextlib
 import copy
 import importlib.metadata
 import json
+import keyword
 import os
 from pathlib import Path
 from types import SimpleNamespace
@@ -21,9 +22,11 @@ _SUPPORTED = {"7.0.0", "7.1.0"}
 _FILTERS = ("source", "source_pkgs", "source_dirs", "include", "omit")
 
 
-def configure(*, snapshot: Path, output: Path, directories: list[str]) -> None:
+def configure(*, snapshot: Path, output: Path, directories: list[str], modules: list[str] | None = None) -> None:
     """Publish controller-validated measurement locations to this pytest process tree."""
-    os.environ[_REQUEST] = json.dumps({"snapshot": str(snapshot), "output": str(output), "directories": directories})
+    os.environ[_REQUEST] = json.dumps(
+        {"snapshot": str(snapshot), "output": str(output), "directories": directories, "modules": modules or []}
+    )
 
 
 def _request() -> dict:
@@ -36,7 +39,17 @@ def _request() -> dict:
         isinstance(path, str) and Path(path).is_absolute() for path in directories
     ):
         raise ValueError("project_pytest_coverage_request_invalid")
+    request["modules"] = _module_names(request.get("modules", []))
     return request
+
+
+def _module_names(modules) -> list[str]:
+    """Validate named coverage selectors independently of filesystem locations."""
+    if not isinstance(modules, list) or not all(
+        isinstance(name, str) and name.isidentifier() and not keyword.iskeyword(name) for name in modules
+    ):
+        raise ValueError("project_pytest_coverage_request_invalid")
+    return modules
 
 
 def _coverage_options(native):
@@ -70,6 +83,19 @@ def _configuration(options):
     )
 
 
+def _reviewer_sources(request, configured):
+    if any(configured.values()):
+        return [True]
+    collisions = [name for name in request["modules"] if Path(name).is_dir()]
+    if collisions:
+        raise ValueError(
+            f"project_pytest_coverage_module_selector_ambiguous:{','.join(collisions)}; "
+            "a same-named directory exists at pytest startup; configure an explicit coverage source_pkgs "
+            "selection to disambiguate installed modules"
+        )
+    return [request["snapshot"], *request["directories"], *request["modules"]]
+
+
 def _reviewer(options, manager, request, configured):
     from pytest_cov.plugin import CovPlugin
 
@@ -81,7 +107,7 @@ def _reviewer(options, manager, request, configured):
             return False
 
     owned = copy.copy(options)
-    owned.cov_source = [True] if any(configured.values()) else [request["snapshot"], *request["directories"]]
+    owned.cov_source = _reviewer_sources(request, configured)
     owned.cov_report = {}
     return ReviewerCoverage(owned, manager)
 

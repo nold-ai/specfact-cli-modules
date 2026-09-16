@@ -208,6 +208,11 @@ requirements:
       method: test
       intent: Retain transformed-source uncertainty when native coverage aliases rewrite installed filenames.
       observable: A real two-file alias reproduction cannot pass for different source bytes; identical mappings and unrelated native alias patterns remain supported, post-execution identity errors persist, and unavailable origin APIs preserve test records with an explicit diagnostic. Renamed package origins are recorded for the whole measured directory and cannot credit an unmatched reviewed source.
+    - case_id: 478-installed-single-module
+      scenario_id: observe-ordinary-customer-pytest-execution
+      method: test
+      intent: Attribute uniquely owned installed py_modules without granting coverage over unrelated site packages.
+      observable: Actual root and src-layout module imports retain verified 100 percent source attribution and untouched raw rows; duplicate source/ownership, changed bytes and malformed names reject credit. Native and configured source scopes remain authoritative while reviewer defaults use only the verified module selector.
     - case_id: 478-pytest-coverage-fidelity
       scenario_id: observe-ordinary-customer-pytest-execution
       method: test
@@ -246,6 +251,11 @@ requirements:
         pinned Linux capsule corpus.
       observable: Actual test assertions and retained runtime/report evidence must demonstrate the stated scenario.
         Local unit or bootstrap results do not constitute signed release acceptance.
+    - case_id: 478-controlled-package-execution
+      scenario_id: validate-external-repositories-through-released-installation
+      method: test
+      intent: Execute the deliberate type defect through ordinary package imports inside unchanged native measurement scope.
+      observable: Generated tests call the wrong-return function, actually fail, and produce measured function body lines under source_pkgs and omit-only configurations; pinned metadata, contained exclusive writes, original source identity and strict complete-evidence checks remain enforced.
   ? openspec:code-review-16-portable-project-runtime:portable-project-runtime:native-environment-and-execution-evidence-fidelity
   : rationale: Native environments, test phases, VCS versions and signed Python selection must match the actual
       target project.

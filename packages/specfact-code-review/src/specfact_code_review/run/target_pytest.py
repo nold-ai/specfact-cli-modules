@@ -6,6 +6,7 @@ import contextlib
 import glob
 import importlib.metadata
 import json
+import keyword
 import os
 import runpy
 import shlex
@@ -190,6 +191,22 @@ def _installed_coverage_directories(request: dict) -> list[str]:
     return directories
 
 
+def _installed_coverage_modules(request: dict) -> list[str]:
+    """Limit named selectors to regular top-level modules in the attached runtime."""
+    site = (ROOT / "site-packages").resolve()
+    modules = request.get("coverage_modules", [])
+    if not isinstance(modules, list) or not all(
+        isinstance(name, str)
+        and name.isidentifier()
+        and not keyword.iskeyword(name)
+        and (site / f"{name}.py").is_file()
+        and not (site / f"{name}.py").is_symlink()
+        for name in modules
+    ):
+        raise ValueError("project_pytest_installed_coverage_module_invalid")
+    return modules
+
+
 def main() -> None:
     import pytest
 
@@ -209,7 +226,10 @@ def main() -> None:
         bootstrap = runpy.run_path(str(Path(__file__).with_name("target_bootstrap.py")))
         helper = bootstrap["_load_pytest_coverage"]()
     helper.configure(
-        snapshot=SNAPSHOT_ROOT, output=coverage_output, directories=_installed_coverage_directories(request)
+        snapshot=SNAPSHOT_ROOT,
+        output=coverage_output,
+        directories=_installed_coverage_directories(request),
+        modules=_installed_coverage_modules(request),
     )
     args = [
         "-p",

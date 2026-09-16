@@ -1,0 +1,569 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: /private/tmp/specfact-477-pytest-release
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, xdist-3.8.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 47 items
+
+tests/unit/test_external_capsule_corpus.py ..........FFFFFFFFFFFFF...... [ 61%]
+..................                                                       [100%]
+
+=================================== FAILURES ===================================
+_ test_controlled_fixture_executes_inside_unchanged_native_measurement[source_pkgs] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-892/test_controlled_fixture_execut0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x107032e70>
+scope = 'source_pkgs'
+
+    @pytest.mark.parametrize("scope", ["source_pkgs", "omit_only"])
+    def test_controlled_fixture_executes_inside_unchanged_native_measurement(tmp_path, monkeypatch, scope) -> None:
+        """The generated test must really call the bad function under native coverage filters."""
+        module = _load()
+        root = tmp_path / "upstream"
+        (root / "tests").mkdir(parents=True)
+        (root / "src/customer").mkdir(parents=True)
+        (root / "src/customer/__init__.py").write_text("")
+        (root / "pyproject.toml").write_text('[tool.pytest.ini_options]\npythonpath=["src"]\n')
+        configured = "source_pkgs = customer, tests" if scope == "source_pkgs" else "omit = customer/unused/*"
+        (root / ".coveragerc").write_text(f"[run]\n{configured}\n")
+        original = module.tracked_identity(root)
+
+        def review(copy, _evidence, _config, paths, **_kwargs):
+            report = tmp_path / "native-coverage.json"
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "pytest",
+                    "-q",
+                    "-p",
+                    "pytest_cov",
+                    "--cov",
+                    f"--cov-report=json:{report}",
+                    paths[1],
+                ],
+                cwd=copy,
+                env={**os.environ, "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1", "COVERAGE_FILE": str(tmp_path / ".coverage")},
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=60,
+            )
+            assert completed.returncode == 1, completed.stdout + completed.stderr
+            assert "SPECFACT_CONTROLLED_473" in completed.stdout
+            assert "injected wrong type" in completed.stdout
+            payload = json.loads(report.read_text())
+            selected = "src/customer/specfact_controlled.py"
+            assert paths == [selected, "tests/test_specfact_controlled.py"]
+            assert payload["files"][selected]["executed_lines"] == [1, 2]
+            assert module.tracked_identity(root) == original
+            assert (copy / ".coveragerc").read_bytes() == (root / ".coveragerc").read_bytes()
+            return _detected_controlled_findings()
+
+        monkeypatch.setattr(module, "review", review)
+>       _invoke_controlled(module, root, tmp_path, tmp_path, _controlled_entry())
+
+tests/unit/test_external_capsule_corpus.py:231:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/unit/test_external_capsule_corpus.py:177: in _invoke_controlled
+    module.controlled_defect(root, evidence, workspace / "config.toml", workspace, **options)
+scripts/external_capsule_corpus.py:373: in controlled_defect
+    report = review(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+copy = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-892/test_controlled_fixture_execut0/controlled/upstream')
+_evidence = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-892/test_controlled_fixture_execut0')
+_config = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-892/test_controlled_fixture_execut0/config.toml')
+paths = ['specfact_controlled.py', 'tests/test_specfact_controlled.py']
+_kwargs = {'name': 'controlled-defect'}
+
+    def review(copy, _evidence, _config, paths, **_kwargs):
+        report = tmp_path / "native-coverage.json"
+        completed = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "pytest",
+                "-q",
+                "-p",
+                "pytest_cov",
+                "--cov",
+                f"--cov-report=json:{report}",
+                paths[1],
+            ],
+            cwd=copy,
+            env={**os.environ, "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1", "COVERAGE_FILE": str(tmp_path / ".coverage")},
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=60,
+        )
+        assert completed.returncode == 1, completed.stdout + completed.stderr
+        assert "SPECFACT_CONTROLLED_473" in completed.stdout
+>       assert "injected wrong type" in completed.stdout
+E       AssertionError: assert 'injected wrong type' in 'F\nWARNING: Failed to generate report: No data to report.\n\n                                                        ...===============\nFAILED tests/test_specfact_controlled.py::test_specfact_controlled_failure - ...\n1 failed in 0.01s\n'
+E        +  where 'F\nWARNING: Failed to generate report: No data to report.\n\n                                                        ...===============\nFAILED tests/test_specfact_controlled.py::test_specfact_controlled_failure - ...\n1 failed in 0.01s\n' = CompletedProcess(args=['/private/tmp/specfact-477-pytest-release/.venv/bin/python', '-m', 'pytest', '-q', '-p', 'pytes...tWarning: Failed to generate report: No data to report.\n\n  warnings.warn(CovReportWarning(message), stacklevel=1)\n').stdout
+
+tests/unit/test_external_capsule_corpus.py:221: AssertionError
+_ test_controlled_fixture_executes_inside_unchanged_native_measurement[omit_only] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-892/test_controlled_fixture_execut1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1070218c0>
+scope = 'omit_only'
+
+    @pytest.mark.parametrize("scope", ["source_pkgs", "omit_only"])
+    def test_controlled_fixture_executes_inside_unchanged_native_measurement(tmp_path, monkeypatch, scope) -> None:
+        """The generated test must really call the bad function under native coverage filters."""
+        module = _load()
+        root = tmp_path / "upstream"
+        (root / "tests").mkdir(parents=True)
+        (root / "src/customer").mkdir(parents=True)
+        (root / "src/customer/__init__.py").write_text("")
+        (root / "pyproject.toml").write_text('[tool.pytest.ini_options]\npythonpath=["src"]\n')
+        configured = "source_pkgs = customer, tests" if scope == "source_pkgs" else "omit = customer/unused/*"
+        (root / ".coveragerc").write_text(f"[run]\n{configured}\n")
+        original = module.tracked_identity(root)
+
+        def review(copy, _evidence, _config, paths, **_kwargs):
+            report = tmp_path / "native-coverage.json"
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "pytest",
+                    "-q",
+                    "-p",
+                    "pytest_cov",
+                    "--cov",
+                    f"--cov-report=json:{report}",
+                    paths[1],
+                ],
+                cwd=copy,
+                env={**os.environ, "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1", "COVERAGE_FILE": str(tmp_path / ".coverage")},
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=60,
+            )
+            assert completed.returncode == 1, completed.stdout + completed.stderr
+            assert "SPECFACT_CONTROLLED_473" in completed.stdout
+            assert "injected wrong type" in completed.stdout
+            payload = json.loads(report.read_text())
+            selected = "src/customer/specfact_controlled.py"
+            assert paths == [selected, "tests/test_specfact_controlled.py"]
+            assert payload["files"][selected]["executed_lines"] == [1, 2]
+            assert module.tracked_identity(root) == original
+            assert (copy / ".coveragerc").read_bytes() == (root / ".coveragerc").read_bytes()
+            return _detected_controlled_findings()
+
+        monkeypatch.setattr(module, "review", review)
+>       _invoke_controlled(module, root, tmp_path, tmp_path, _controlled_entry())
+
+tests/unit/test_external_capsule_corpus.py:231:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/unit/test_external_capsule_corpus.py:177: in _invoke_controlled
+    module.controlled_defect(root, evidence, workspace / "config.toml", workspace, **options)
+scripts/external_capsule_corpus.py:373: in controlled_defect
+    report = review(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+copy = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-892/test_controlled_fixture_execut1/controlled/upstream')
+_evidence = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-892/test_controlled_fixture_execut1')
+_config = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-892/test_controlled_fixture_execut1/config.toml')
+paths = ['specfact_controlled.py', 'tests/test_specfact_controlled.py']
+_kwargs = {'name': 'controlled-defect'}
+
+    def review(copy, _evidence, _config, paths, **_kwargs):
+        report = tmp_path / "native-coverage.json"
+        completed = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "pytest",
+                "-q",
+                "-p",
+                "pytest_cov",
+                "--cov",
+                f"--cov-report=json:{report}",
+                paths[1],
+            ],
+            cwd=copy,
+            env={**os.environ, "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1", "COVERAGE_FILE": str(tmp_path / ".coverage")},
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=60,
+        )
+        assert completed.returncode == 1, completed.stdout + completed.stderr
+        assert "SPECFACT_CONTROLLED_473" in completed.stdout
+>       assert "injected wrong type" in completed.stdout
+E       AssertionError: assert 'injected wrong type' in 'F                                                                        [100%]\n=================================== ...===============\nFAILED tests/test_specfact_controlled.py::test_specfact_controlled_failure - ...\n1 failed in 0.01s\n'
+E        +  where 'F                                                                        [100%]\n=================================== ...===============\nFAILED tests/test_specfact_controlled.py::test_specfact_controlled_failure - ...\n1 failed in 0.01s\n' = CompletedProcess(args=['/private/tmp/specfact-477-pytest-release/.venv/bin/python', '-m', 'pytest', '-q', '-p', 'pytes...===\nFAILED tests/test_specfact_controlled.py::test_specfact_controlled_failure - ...\n1 failed in 0.01s\n', stderr='').stdout
+
+tests/unit/test_external_capsule_corpus.py:221: AssertionError
+______ test_controlled_fixture_rejects_unsafe_write_targets[parent-link] _______
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-892/test_controlled_fixture_reject0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x107023130>
+unsafe = 'parent-link'
+
+    @pytest.mark.parametrize(
+        "unsafe", ["parent-link", "test-parent-link", "source-exists", "test-exists", "destination-link"]
+    )
+    def test_controlled_fixture_rejects_unsafe_write_targets(tmp_path, monkeypatch, unsafe) -> None:
+        """Copy injection cannot follow customer links or overwrite existing fixture paths."""
+        module = _load()
+        root = tmp_path / "upstream"
+        (root / "src/customer").mkdir(parents=True)
+        (root / "tests").mkdir()
+        outside = tmp_path / "outside"
+        outside.mkdir()
+        targets = {"parent-link": root / "src/customer", "test-parent-link": root / "tests"}
+        if unsafe in targets:
+            targets[unsafe].rmdir()
+            targets[unsafe].symlink_to(outside, target_is_directory=True)
+        elif unsafe == "destination-link":
+            (tmp_path / "controlled").symlink_to(outside, target_is_directory=True)
+        else:
+            name = (
+                "src/customer/specfact_controlled.py" if unsafe == "source-exists" else "tests/test_specfact_controlled.py"
+            )
+            (root / name).write_text("ORIGINAL = True\n")
+        original = module.tracked_identity(root)
+        monkeypatch.setattr(module, "review", lambda *_args, **_kwargs: _detected_controlled_findings())
+>       with pytest.raises(ValueError, match="controlled.*(path|destination)"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests/unit/test_external_capsule_corpus.py:258: Failed
+____ test_controlled_fixture_rejects_unsafe_write_targets[test-parent-link] ____
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-892/test_controlled_fixture_reject1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10716c350>
+unsafe = 'test-parent-link'
+
+    @pytest.mark.parametrize(
+        "unsafe", ["parent-link", "test-parent-link", "source-exists", "test-exists", "destination-link"]
+    )
+    def test_controlled_fixture_rejects_unsafe_write_targets(tmp_path, monkeypatch, unsafe) -> None:
+        """Copy injection cannot follow customer links or overwrite existing fixture paths."""
+        module = _load()
+        root = tmp_path / "upstream"
+        (root / "src/customer").mkdir(parents=True)
+        (root / "tests").mkdir()
+        outside = tmp_path / "outside"
+        outside.mkdir()
+        targets = {"parent-link": root / "src/customer", "test-parent-link": root / "tests"}
+        if unsafe in targets:
+            targets[unsafe].rmdir()
+            targets[unsafe].symlink_to(outside, target_is_directory=True)
+        elif unsafe == "destination-link":
+            (tmp_path / "controlled").symlink_to(outside, target_is_directory=True)
+        else:
+            name = (
+                "src/customer/specfact_controlled.py" if unsafe == "source-exists" else "tests/test_specfact_controlled.py"
+            )
+            (root / name).write_text("ORIGINAL = True\n")
+        original = module.tracked_identity(root)
+        monkeypatch.setattr(module, "review", lambda *_args, **_kwargs: _detected_controlled_findings())
+>       with pytest.raises(ValueError, match="controlled.*(path|destination)"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests/unit/test_external_capsule_corpus.py:258: Failed
+_____ test_controlled_fixture_rejects_unsafe_write_targets[source-exists] ______
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-892/test_controlled_fixture_reject2')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10709c350>
+unsafe = 'source-exists'
+
+    @pytest.mark.parametrize(
+        "unsafe", ["parent-link", "test-parent-link", "source-exists", "test-exists", "destination-link"]
+    )
+    def test_controlled_fixture_rejects_unsafe_write_targets(tmp_path, monkeypatch, unsafe) -> None:
+        """Copy injection cannot follow customer links or overwrite existing fixture paths."""
+        module = _load()
+        root = tmp_path / "upstream"
+        (root / "src/customer").mkdir(parents=True)
+        (root / "tests").mkdir()
+        outside = tmp_path / "outside"
+        outside.mkdir()
+        targets = {"parent-link": root / "src/customer", "test-parent-link": root / "tests"}
+        if unsafe in targets:
+            targets[unsafe].rmdir()
+            targets[unsafe].symlink_to(outside, target_is_directory=True)
+        elif unsafe == "destination-link":
+            (tmp_path / "controlled").symlink_to(outside, target_is_directory=True)
+        else:
+            name = (
+                "src/customer/specfact_controlled.py" if unsafe == "source-exists" else "tests/test_specfact_controlled.py"
+            )
+            (root / name).write_text("ORIGINAL = True\n")
+        original = module.tracked_identity(root)
+        monkeypatch.setattr(module, "review", lambda *_args, **_kwargs: _detected_controlled_findings())
+>       with pytest.raises(ValueError, match="controlled.*(path|destination)"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests/unit/test_external_capsule_corpus.py:258: Failed
+______ test_controlled_fixture_rejects_unsafe_write_targets[test-exists] _______
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-892/test_controlled_fixture_reject3')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x107081400>
+unsafe = 'test-exists'
+
+    @pytest.mark.parametrize(
+        "unsafe", ["parent-link", "test-parent-link", "source-exists", "test-exists", "destination-link"]
+    )
+    def test_controlled_fixture_rejects_unsafe_write_targets(tmp_path, monkeypatch, unsafe) -> None:
+        """Copy injection cannot follow customer links or overwrite existing fixture paths."""
+        module = _load()
+        root = tmp_path / "upstream"
+        (root / "src/customer").mkdir(parents=True)
+        (root / "tests").mkdir()
+        outside = tmp_path / "outside"
+        outside.mkdir()
+        targets = {"parent-link": root / "src/customer", "test-parent-link": root / "tests"}
+        if unsafe in targets:
+            targets[unsafe].rmdir()
+            targets[unsafe].symlink_to(outside, target_is_directory=True)
+        elif unsafe == "destination-link":
+            (tmp_path / "controlled").symlink_to(outside, target_is_directory=True)
+        else:
+            name = (
+                "src/customer/specfact_controlled.py" if unsafe == "source-exists" else "tests/test_specfact_controlled.py"
+            )
+            (root / name).write_text("ORIGINAL = True\n")
+        original = module.tracked_identity(root)
+        monkeypatch.setattr(module, "review", lambda *_args, **_kwargs: _detected_controlled_findings())
+>       with pytest.raises(ValueError, match="controlled.*(path|destination)"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests/unit/test_external_capsule_corpus.py:258: Failed
+____ test_controlled_fixture_rejects_unsafe_write_targets[destination-link] ____
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-892/test_controlled_fixture_reject4')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x107082e40>
+unsafe = 'destination-link'
+
+    @pytest.mark.parametrize(
+        "unsafe", ["parent-link", "test-parent-link", "source-exists", "test-exists", "destination-link"]
+    )
+    def test_controlled_fixture_rejects_unsafe_write_targets(tmp_path, monkeypatch, unsafe) -> None:
+        """Copy injection cannot follow customer links or overwrite existing fixture paths."""
+        module = _load()
+        root = tmp_path / "upstream"
+        (root / "src/customer").mkdir(parents=True)
+        (root / "tests").mkdir()
+        outside = tmp_path / "outside"
+        outside.mkdir()
+        targets = {"parent-link": root / "src/customer", "test-parent-link": root / "tests"}
+        if unsafe in targets:
+            targets[unsafe].rmdir()
+            targets[unsafe].symlink_to(outside, target_is_directory=True)
+        elif unsafe == "destination-link":
+            (tmp_path / "controlled").symlink_to(outside, target_is_directory=True)
+        else:
+            name = (
+                "src/customer/specfact_controlled.py" if unsafe == "source-exists" else "tests/test_specfact_controlled.py"
+            )
+            (root / name).write_text("ORIGINAL = True\n")
+        original = module.tracked_identity(root)
+        monkeypatch.setattr(module, "review", lambda *_args, **_kwargs: _detected_controlled_findings())
+>       with pytest.raises(ValueError, match="controlled.*(path|destination)"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests/unit/test_external_capsule_corpus.py:258: Failed
+_ test_controlled_fixture_rejects_invalid_explicit_package_metadata[source-../outside.py] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-892/test_controlled_fixture_reject5')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1071a4830>
+field = 'source', value = '../outside.py'
+
+    @pytest.mark.parametrize(
+        ("field", "value"),
+        [
+            ("source", "../outside.py"),
+            ("source", "/outside.py"),
+            ("import", "customer;raise RuntimeError"),
+            ("import", "other.specfact_controlled"),
+            ("import", "customer.class"),
+        ],
+    )
+    def test_controlled_fixture_rejects_invalid_explicit_package_metadata(tmp_path, monkeypatch, field, value) -> None:
+        """An explicit corpus path and import must describe the same contained Python module."""
+        module = _load()
+        root = tmp_path / "upstream"
+        (root / "src/customer").mkdir(parents=True)
+        (root / "tests").mkdir()
+        entry = _controlled_entry()
+        entry["controlled_defect"][field] = value
+        monkeypatch.setattr(module, "review", lambda *_args, **_kwargs: _detected_controlled_findings())
+>       with pytest.raises(ValueError, match="controlled.*(path|import)"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests/unit/test_external_capsule_corpus.py:283: Failed
+_ test_controlled_fixture_rejects_invalid_explicit_package_metadata[source-/outside.py] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-892/test_controlled_fixture_reject6')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1071a73f0>
+field = 'source', value = '/outside.py'
+
+    @pytest.mark.parametrize(
+        ("field", "value"),
+        [
+            ("source", "../outside.py"),
+            ("source", "/outside.py"),
+            ("import", "customer;raise RuntimeError"),
+            ("import", "other.specfact_controlled"),
+            ("import", "customer.class"),
+        ],
+    )
+    def test_controlled_fixture_rejects_invalid_explicit_package_metadata(tmp_path, monkeypatch, field, value) -> None:
+        """An explicit corpus path and import must describe the same contained Python module."""
+        module = _load()
+        root = tmp_path / "upstream"
+        (root / "src/customer").mkdir(parents=True)
+        (root / "tests").mkdir()
+        entry = _controlled_entry()
+        entry["controlled_defect"][field] = value
+        monkeypatch.setattr(module, "review", lambda *_args, **_kwargs: _detected_controlled_findings())
+>       with pytest.raises(ValueError, match="controlled.*(path|import)"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests/unit/test_external_capsule_corpus.py:283: Failed
+_ test_controlled_fixture_rejects_invalid_explicit_package_metadata[import-customer;raise RuntimeError] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-892/test_controlled_fixture_reject7')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10719eea0>
+field = 'import', value = 'customer;raise RuntimeError'
+
+    @pytest.mark.parametrize(
+        ("field", "value"),
+        [
+            ("source", "../outside.py"),
+            ("source", "/outside.py"),
+            ("import", "customer;raise RuntimeError"),
+            ("import", "other.specfact_controlled"),
+            ("import", "customer.class"),
+        ],
+    )
+    def test_controlled_fixture_rejects_invalid_explicit_package_metadata(tmp_path, monkeypatch, field, value) -> None:
+        """An explicit corpus path and import must describe the same contained Python module."""
+        module = _load()
+        root = tmp_path / "upstream"
+        (root / "src/customer").mkdir(parents=True)
+        (root / "tests").mkdir()
+        entry = _controlled_entry()
+        entry["controlled_defect"][field] = value
+        monkeypatch.setattr(module, "review", lambda *_args, **_kwargs: _detected_controlled_findings())
+>       with pytest.raises(ValueError, match="controlled.*(path|import)"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests/unit/test_external_capsule_corpus.py:283: Failed
+_ test_controlled_fixture_rejects_invalid_explicit_package_metadata[import-other.specfact_controlled] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-892/test_controlled_fixture_reject8')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1071be390>
+field = 'import', value = 'other.specfact_controlled'
+
+    @pytest.mark.parametrize(
+        ("field", "value"),
+        [
+            ("source", "../outside.py"),
+            ("source", "/outside.py"),
+            ("import", "customer;raise RuntimeError"),
+            ("import", "other.specfact_controlled"),
+            ("import", "customer.class"),
+        ],
+    )
+    def test_controlled_fixture_rejects_invalid_explicit_package_metadata(tmp_path, monkeypatch, field, value) -> None:
+        """An explicit corpus path and import must describe the same contained Python module."""
+        module = _load()
+        root = tmp_path / "upstream"
+        (root / "src/customer").mkdir(parents=True)
+        (root / "tests").mkdir()
+        entry = _controlled_entry()
+        entry["controlled_defect"][field] = value
+        monkeypatch.setattr(module, "review", lambda *_args, **_kwargs: _detected_controlled_findings())
+>       with pytest.raises(ValueError, match="controlled.*(path|import)"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests/unit/test_external_capsule_corpus.py:283: Failed
+_ test_controlled_fixture_rejects_invalid_explicit_package_metadata[import-customer.class] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-892/test_controlled_fixture_reject9')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x106f9a810>
+field = 'import', value = 'customer.class'
+
+    @pytest.mark.parametrize(
+        ("field", "value"),
+        [
+            ("source", "../outside.py"),
+            ("source", "/outside.py"),
+            ("import", "customer;raise RuntimeError"),
+            ("import", "other.specfact_controlled"),
+            ("import", "customer.class"),
+        ],
+    )
+    def test_controlled_fixture_rejects_invalid_explicit_package_metadata(tmp_path, monkeypatch, field, value) -> None:
+        """An explicit corpus path and import must describe the same contained Python module."""
+        module = _load()
+        root = tmp_path / "upstream"
+        (root / "src/customer").mkdir(parents=True)
+        (root / "tests").mkdir()
+        entry = _controlled_entry()
+        entry["controlled_defect"][field] = value
+        monkeypatch.setattr(module, "review", lambda *_args, **_kwargs: _detected_controlled_findings())
+>       with pytest.raises(ValueError, match="controlled.*(path|import)"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests/unit/test_external_capsule_corpus.py:283: Failed
+________ test_pinned_corpus_records_explicit_controlled_package_context ________
+
+    def test_pinned_corpus_records_explicit_controlled_package_context() -> None:
+        """Each frozen upstream and reconstruction has its own reviewed package destination."""
+        module = _load()
+        manifest = json.loads(module.MANIFEST.read_text())
+        entries = [*manifest["repositories"], *manifest["reconstructions"]]
+        expected = {
+            "requests": "requests",
+            "hatch": "hatch",
+            "flask": "flask",
+            "poetry": "poetry",
+            "hatch-detached": "portable_customer",
+        }
+        for entry in entries:
+            package = expected[entry["name"]]
+>           assert entry.get("controlled_defect") == {
+                "source": f"src/{package}/specfact_controlled.py",
+                "import": f"{package}.specfact_controlled",
+            }
+E           AssertionError: assert None == {'source': 'src/requests/specfact_controlled.py', 'import': 'requests.specfact_controlled'}
+E            +  where None = <built-in method get of dict object at 0x107064800>('controlled_defect')
+E            +    where <built-in method get of dict object at 0x107064800> = {'name': 'requests', 'url': 'https://github.com/psf/requests.git', 'commit': 'dae7ef63b4df6eded86637f251fc4e3a06c3b479', 'manager': 'pip', ...}.get
+
+tests/unit/test_external_capsule_corpus.py:301: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/test_external_capsule_corpus.py::test_controlled_fixture_executes_inside_unchanged_native_measurement[source_pkgs]
+FAILED tests/unit/test_external_capsule_corpus.py::test_controlled_fixture_executes_inside_unchanged_native_measurement[omit_only]
+FAILED tests/unit/test_external_capsule_corpus.py::test_controlled_fixture_rejects_unsafe_write_targets[parent-link]
+FAILED tests/unit/test_external_capsule_corpus.py::test_controlled_fixture_rejects_unsafe_write_targets[test-parent-link]
+FAILED tests/unit/test_external_capsule_corpus.py::test_controlled_fixture_rejects_unsafe_write_targets[source-exists]
+FAILED tests/unit/test_external_capsule_corpus.py::test_controlled_fixture_rejects_unsafe_write_targets[test-exists]
+FAILED tests/unit/test_external_capsule_corpus.py::test_controlled_fixture_rejects_unsafe_write_targets[destination-link]
+FAILED tests/unit/test_external_capsule_corpus.py::test_controlled_fixture_rejects_invalid_explicit_package_metadata[source-../outside.py]
+FAILED tests/unit/test_external_capsule_corpus.py::test_controlled_fixture_rejects_invalid_explicit_package_metadata[source-/outside.py]
+FAILED tests/unit/test_external_capsule_corpus.py::test_controlled_fixture_rejects_invalid_explicit_package_metadata[import-customer;raise RuntimeError]
+FAILED tests/unit/test_external_capsule_corpus.py::test_controlled_fixture_rejects_invalid_explicit_package_metadata[import-other.specfact_controlled]
+FAILED tests/unit/test_external_capsule_corpus.py::test_controlled_fixture_rejects_invalid_explicit_package_metadata[import-customer.class]
+FAILED tests/unit/test_external_capsule_corpus.py::test_pinned_corpus_records_explicit_controlled_package_context
+======================== 13 failed, 34 passed in 0.41s =========================

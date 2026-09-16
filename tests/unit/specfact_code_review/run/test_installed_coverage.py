@@ -91,6 +91,7 @@ def _native_coverage(project, bridge, tmp_path, *, import_mode="prepend"):
         f"--import-mode={import_mode}",
         f"--cov={project.snapshot}",
         *[f"--cov={path}" for path in bridge.directories],
+        *[f"--cov={name}" for name in getattr(bridge, "modules", ())],
         f"--cov-report=json:{report}",
         "tests/test_math.py",
     ]
@@ -599,3 +600,92 @@ def test_missing_measured_origin_receipt_cannot_authenticate_snapshot_row(instal
         bridge, raw, snapshot=project.snapshot, relocations={str(project.installed): str(project.installed)}
     )
     assert diagnostics[str(project.source)] == "coverage_origin_unavailable"
+
+
+@pytest.fixture(name="installed_single_module")
+def installed_single_module_fixture(tmp_path: Path) -> SimpleNamespace:
+    snapshot, site = tmp_path / "snapshot", tmp_path / "runtime/site-packages"
+    snapshot.mkdir()
+    site.mkdir(parents=True)
+    source, installed = snapshot / "standalone.py", site / "standalone.py"
+    source.write_text("def answer():\n    return 42\n")
+    installed.write_bytes(source.read_bytes())
+    metadata = _distribution(site, "standalone-owned", [installed])
+    foreign = site / "unrelated.py"
+    foreign.write_text("VALUE = 99\n")
+    _distribution(site, "unrelated-owned", [foreign], local=False)
+    tests = snapshot / "tests"
+    tests.mkdir()
+    (tests / "test_math.py").write_text(
+        "import standalone, unrelated\ndef test_answer():\n"
+        "    assert standalone.answer() == 42\n    assert unrelated.VALUE == 99\n"
+    )
+    return SimpleNamespace(snapshot=snapshot, site=site, source=source, installed=installed, metadata=metadata)
+
+
+@pytest.mark.parametrize("layout", ["root", "src"])
+def test_native_single_module_keeps_narrow_measurement_and_verified_attribution(
+    installed_single_module, tmp_path, layout
+):
+    project = installed_single_module
+    if layout == "src":
+        target = project.snapshot / "src/standalone.py"
+        target.parent.mkdir()
+        project.source.rename(target)
+        project.source = target
+    bridge = _bridge(project)
+    assert len(bridge.mappings) == 1, bridge.diagnostics
+    assert bridge.directories == ()
+    assert bridge.modules == ("standalone",)
+    assert str(project.installed) in bridge.measured_origins
+    result, raw = _native_coverage(project, bridge, tmp_path, import_mode="importlib")
+    assert result.returncode == 0, result.stdout + result.stderr
+    _assert_single_module_attribution(project, bridge, raw)
+
+
+def _assert_single_module_attribution(project, bridge, raw):
+    original = json.dumps(raw, sort_keys=True)
+    assert not any(path.endswith("unrelated.py") for path in raw["files"])
+    attributed, diagnostics = _normalize(project, bridge, raw)
+    assert not diagnostics
+    assert attributed["files"][str(project.source)]["summary"]["percent_covered"] == 100
+    assert json.dumps(raw, sort_keys=True) == original
+
+
+@pytest.mark.parametrize("invalid", ["duplicate-source", "duplicate-owner", "content", "module-name"])
+def test_single_module_identity_rejection_keeps_measurement_closed(installed_single_module, invalid):
+    project = installed_single_module
+    if invalid == "duplicate-source":
+        duplicate = project.snapshot / "src/standalone.py"
+        duplicate.parent.mkdir()
+        duplicate.write_bytes(project.source.read_bytes())
+    elif invalid == "duplicate-owner":
+        _distribution(project.site, "second-owner", [project.installed])
+    elif invalid == "content":
+        project.source.write_text("def answer():\n    return 0\n")
+    else:
+        source = project.source.with_name("not-a-module.py")
+        installed = project.installed.with_name(source.name)
+        project.source.rename(source)
+        project.installed.rename(installed)
+        project.source = source
+        (project.metadata / "RECORD").write_text(
+            f"{installed.name},{_record_hash(installed)},{installed.stat().st_size}\n"
+        )
+    bridge = _bridge(project)
+    assert not bridge.mappings
+    assert not getattr(bridge, "modules", ())
+    assert not bridge.directories
+    assert str(project.source) in bridge.diagnostics
+
+
+@pytest.mark.parametrize("changed", ["source", "installed"])
+def test_single_module_changed_after_execution_cannot_receive_credit(installed_single_module, tmp_path, changed):
+    project = installed_single_module
+    bridge = _bridge(project)
+    result, raw = _native_coverage(project, bridge, tmp_path, import_mode="importlib")
+    assert result.returncode == 0, result.stdout + result.stderr
+    getattr(project, changed).write_text("def answer():\n    return -1\n")
+    attributed, diagnostics = _normalize(project, bridge, raw)
+    assert diagnostics[str(project.source)] == "source_identity_changed_after_execution"
+    assert str(project.source) not in attributed["files"]

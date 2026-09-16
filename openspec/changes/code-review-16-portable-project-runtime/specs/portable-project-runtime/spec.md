@@ -160,7 +160,7 @@ The system SHALL preserve pytest configuration, source paths, plugins and select
 - **WHEN** the capsule obtains required reviewer coverage evidence
 - **THEN** it SHALL use a separately identified reviewer-owned collector while preserving the native pytest exit and the configured coverage threshold value
 - **AND** it SHALL enforce the existing per-reviewed-source floor of the greater of 80 percent and the effective configured threshold
-- **AND** native Coverage source, source_pkgs, source_dirs, include and omit semantics SHALL remain authoritative; default scope may include only the snapshot and controller-verified installed directories when no such configuration is present
+- **AND** native Coverage source, source_pkgs, source_dirs, include and omit semantics SHALL remain authoritative; default scope may include only the snapshot, controller-verified installed directories and uniquely owned top-level Python module selectors when no such configuration is present
 - **AND** excluded or missing reviewed sources SHALL remain incomplete rather than receive synthesized coverage.
 
 #### Scenario: Explicit native coverage policy retains its outcome and report destinations
@@ -208,6 +208,16 @@ The system SHALL preserve pytest configuration, source paths, plugins and select
 - **AND** native origin receipts SHALL cover every owned Python file in measured installed directories, including package-renamed files with no matching snapshot suffix
 - **AND** a rewritten source path without a controller-verified source correspondence SHALL remain incomplete instead of acquiring execution credit
 
+#### Scenario: Single-file installed modules retain verified coverage attribution
+
+- **GIVEN** a local non-editable distribution uniquely owns a top-level Python module through its sealed RECORD and the selected snapshot contains exactly one matching source with identical verified bytes
+- **WHEN** its tests import the installed single-file module
+- **THEN** coverage attribution SHALL preserve the installed import and map only actual byte-verified execution to the selected source, including a module under a unique source-layout directory
+- **AND** reviewer-only default instrumentation may use the native module selector without measuring the entire site-packages directory; imported unrelated distributions SHALL NOT gain coverage credit
+- **AND** explicitly configured or native-active coverage scope SHALL remain unchanged, with excluded source evidence incomplete
+- **AND** ambiguous snapshot paths, distribution ownership, stale content, malformed module names and post-execution mutation SHALL remain incomplete rather than being guessed or credited
+- **AND** if native module-selector semantics would instead select a same-named working-directory folder, reviewer-default collection SHALL report that ambiguity explicitly without expanding scope or altering native/configured collection
+
 ### Requirement: Validate external repositories through released installation
 
 The system SHALL require a pinned Requests/pip, Hatch/Hatch, Flask/uv and Poetry/Poetry corpus on Ubuntu 24.04 CPython 3.11/3.12/3.13 for relevant changes and published releases. Tests SHALL reject empty or UNKNOWN required analysis, retain real findings, verify source immutability, and capture exact artifacts, test inventory, exit codes, duration and transfer cost.
@@ -216,6 +226,15 @@ The system SHALL require a pinned Requests/pip, Hatch/Hatch, Flask/uv and Poetry
 - **GIVEN** the published signed module and pinned upstream checkouts
 - **WHEN** cold and offline-warm customer reviews run
 - **THEN** actual applicable analysis and test execution complete without development overrides
+
+#### Scenario: Controlled corpus defects execute inside native measurement scope
+
+- **GIVEN** an identified disposable copy of a pinned corpus repository with unchanged native coverage configuration
+- **WHEN** validating that a known defect still fails
+- **THEN** the corpus SHALL place an annotated wrong-return function at an explicit contained package path/import recorded for that pinned entry and the generated test SHALL import and call that function before its deliberately failing assertion
+- **AND** the reviewed function SHALL be within native package measurement scope rather than depending on enumeration of an unexecuted root file
+- **AND** validation SHALL still require complete required analyzer evidence, the actual failing test and the actual static type defect; no coverage source, exclusion, threshold or outcome checks may be relaxed
+- **AND** ordinary upstream checkout files and configuration SHALL remain unchanged; only the identified controlled copy contains the injected source and test
 
 ### Requirement: Native environment and execution evidence fidelity
 The runtime SHALL select a concrete environment from the package manager's native export, preserve installed executable entry points, and retain actual pytest setup, collection, and call failures. Corpus host baselines SHALL reject startup failures without executed tests.
