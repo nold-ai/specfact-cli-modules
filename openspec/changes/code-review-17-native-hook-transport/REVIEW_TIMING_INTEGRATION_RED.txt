@@ -1,0 +1,604 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: /private/tmp/specfact-478-native-hook-transport
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 63 items / 49 deselected / 14 selected
+
+tests/unit/test_native_hook_transport.py .F.F.F.F.F.F.F                  [100%]
+
+=================================== FAILURES ===================================
+__ test_receipt_binds_actual_outer_identity_and_report[outcomes0-False-True] ___
+
+snapshot = (PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-747/test_receipt_binds_actua...wtHxjDwGwSKPJM+2Fv6DfgH9F5R7XpalNNMb/CoalXKQF3jaevKmaXgfWTgAGbPrOoWIK/UqrfVazdYCEmgCaxVej+fLCQ5ASv/uRn0AxcfK/28BAAA='})
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-747/test_receipt_binds_actual_oute1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1078e6b10>
+outcomes = (0, 9), basedpyright = False, review_timing = True
+
+    @pytest.mark.parametrize("review_timing", [False, True])
+    @pytest.mark.parametrize("basedpyright", [False, True])
+    @pytest.mark.parametrize("outcomes", [(0, 9), (7, 0), (7, 9)])
+    def test_receipt_binds_actual_outer_identity_and_report(
+        snapshot: tuple[Path, dict[str, str]],
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        outcomes: tuple[int, int],
+        basedpyright: bool,
+        review_timing: bool,
+    ) -> None:
+        """The CLI records actual authority and binds retained review bytes."""
+        hook_exit, diagnostic_exit = outcomes
+        repo, request = snapshot
+        request_path = tmp_path / "request.json"
+        request_path.write_text(json.dumps(request), encoding="utf-8")
+        evidence = tmp_path / "evidence"
+        interpreter = repo / ".venv/bin/python"
+        interpreter.parent.mkdir(parents=True)
+        interpreter.write_text(
+            "#!/bin/sh\nmkdir -p .specfact\nprintf '{}' > .specfact/code-review.json\n"
+            f'[ "$2" != "pre_commit" ] || exit {hook_exit}\n'
+            f'case "$1" in *native_*diagnostic.py) exit {diagnostic_exit};; esac\n',
+            encoding="utf-8",
+        )
+        interpreter.chmod(0o755)
+        # Ordinary bootstrap artifacts are ignored by the real repository too.
+        (repo / ".git/info/exclude").write_text(".venv/\n.specfact/\n", encoding="utf-8")
+        monkeypatch.setattr(
+            "sys.argv",
+            [
+                str(_SCRIPT),
+                "--checkout",
+                str(repo),
+                "--request",
+                str(request_path),
+                "--evidence",
+                str(evidence),
+                *(["--basedpyright-diagnostic"] if basedpyright else []),
+                *(["--review-timing-diagnostic"] if review_timing else []),
+            ],
+        )
+        runtime = {
+            "authority": "local_build",
+            "identity": "fixture-runtime",
+            "descriptor": "/private/runtime.json",
+            "project": {"manager": "hatch", "environment": "default"},
+        }
+        _fake_hatch(tmp_path, json.dumps(runtime), monkeypatch, diagnostic_exit)
+        monkeypatch.setenv("GITHUB_ACTIONS", "true")
+        monkeypatch.setenv("GITHUB_RUN_ID", "fixture-run")
+>       assert _transport().main() == hook_exit
+               ^^^^^^^^^^^^^^^^^^^
+
+tests/unit/test_native_hook_transport.py:283:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+scripts/native_hook_transport.py:468: in main
+    args = parser.parse_args()
+           ^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/argparse.py:2012: in parse_args
+    self.error(msg)
+/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/argparse.py:2785: in error
+    self.exit(2, _('%(prog)s: error: %(message)s\n') % args)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = ArgumentParser(prog='native_hook_transport.py', usage=None, description='Run unchanged developer hooks on a bounded, exact staged Linux snapshot.', formatter_class=<class 'argparse.HelpFormatter'>, conflict_handler='error', add_help=True)
+status = 2
+message = 'native_hook_transport.py: error: unrecognized arguments: --review-timing-diagnostic\n'
+
+    def exit(self, status=0, message=None):
+        if message:
+            self._print_message(message, _sys.stderr)
+>       _sys.exit(status)
+E       SystemExit: 2
+
+/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/argparse.py:2772: SystemExit
+----------------------------- Captured stderr call -----------------------------
+usage: native_hook_transport.py [-h] --checkout CHECKOUT --request REQUEST
+                                --evidence EVIDENCE
+                                [--basedpyright-diagnostic]
+native_hook_transport.py: error: unrecognized arguments: --review-timing-diagnostic
+___ test_receipt_binds_actual_outer_identity_and_report[outcomes0-True-True] ___
+
+snapshot = (PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-747/test_receipt_binds_actua...wtHxjDwGwSKPJM+2Fv6DfgH9F5R7XpalNNMb/CoalXKQF3jaevKmaXgfWTgAGbPrOoWIK/UqrfVazdYCEmgCaxVej+fLCQ5ASv/uRn0AxcfK/28BAAA='})
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-747/test_receipt_binds_actual_oute3')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x107a4cc00>
+outcomes = (0, 9), basedpyright = True, review_timing = True
+
+    @pytest.mark.parametrize("review_timing", [False, True])
+    @pytest.mark.parametrize("basedpyright", [False, True])
+    @pytest.mark.parametrize("outcomes", [(0, 9), (7, 0), (7, 9)])
+    def test_receipt_binds_actual_outer_identity_and_report(
+        snapshot: tuple[Path, dict[str, str]],
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        outcomes: tuple[int, int],
+        basedpyright: bool,
+        review_timing: bool,
+    ) -> None:
+        """The CLI records actual authority and binds retained review bytes."""
+        hook_exit, diagnostic_exit = outcomes
+        repo, request = snapshot
+        request_path = tmp_path / "request.json"
+        request_path.write_text(json.dumps(request), encoding="utf-8")
+        evidence = tmp_path / "evidence"
+        interpreter = repo / ".venv/bin/python"
+        interpreter.parent.mkdir(parents=True)
+        interpreter.write_text(
+            "#!/bin/sh\nmkdir -p .specfact\nprintf '{}' > .specfact/code-review.json\n"
+            f'[ "$2" != "pre_commit" ] || exit {hook_exit}\n'
+            f'case "$1" in *native_*diagnostic.py) exit {diagnostic_exit};; esac\n',
+            encoding="utf-8",
+        )
+        interpreter.chmod(0o755)
+        # Ordinary bootstrap artifacts are ignored by the real repository too.
+        (repo / ".git/info/exclude").write_text(".venv/\n.specfact/\n", encoding="utf-8")
+        monkeypatch.setattr(
+            "sys.argv",
+            [
+                str(_SCRIPT),
+                "--checkout",
+                str(repo),
+                "--request",
+                str(request_path),
+                "--evidence",
+                str(evidence),
+                *(["--basedpyright-diagnostic"] if basedpyright else []),
+                *(["--review-timing-diagnostic"] if review_timing else []),
+            ],
+        )
+        runtime = {
+            "authority": "local_build",
+            "identity": "fixture-runtime",
+            "descriptor": "/private/runtime.json",
+            "project": {"manager": "hatch", "environment": "default"},
+        }
+        _fake_hatch(tmp_path, json.dumps(runtime), monkeypatch, diagnostic_exit)
+        monkeypatch.setenv("GITHUB_ACTIONS", "true")
+        monkeypatch.setenv("GITHUB_RUN_ID", "fixture-run")
+>       assert _transport().main() == hook_exit
+               ^^^^^^^^^^^^^^^^^^^
+
+tests/unit/test_native_hook_transport.py:283:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+scripts/native_hook_transport.py:468: in main
+    args = parser.parse_args()
+           ^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/argparse.py:2012: in parse_args
+    self.error(msg)
+/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/argparse.py:2785: in error
+    self.exit(2, _('%(prog)s: error: %(message)s\n') % args)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = ArgumentParser(prog='native_hook_transport.py', usage=None, description='Run unchanged developer hooks on a bounded, exact staged Linux snapshot.', formatter_class=<class 'argparse.HelpFormatter'>, conflict_handler='error', add_help=True)
+status = 2
+message = 'native_hook_transport.py: error: unrecognized arguments: --review-timing-diagnostic\n'
+
+    def exit(self, status=0, message=None):
+        if message:
+            self._print_message(message, _sys.stderr)
+>       _sys.exit(status)
+E       SystemExit: 2
+
+/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/argparse.py:2772: SystemExit
+----------------------------- Captured stderr call -----------------------------
+usage: native_hook_transport.py [-h] --checkout CHECKOUT --request REQUEST
+                                --evidence EVIDENCE
+                                [--basedpyright-diagnostic]
+native_hook_transport.py: error: unrecognized arguments: --review-timing-diagnostic
+__ test_receipt_binds_actual_outer_identity_and_report[outcomes1-False-True] ___
+
+snapshot = (PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-747/test_receipt_binds_actua...wtHxjDwGwSKPJM+2Fv6DfgH9F5R7XpalNNMb/CoalXKQF3jaevKmaXgfWTgAGbPrOoWIK/UqrfVazdYCEmgCaxVej+fLCQ5ASv/uRn0AxcfK/28BAAA='})
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-747/test_receipt_binds_actual_oute5')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x107aebe50>
+outcomes = (7, 0), basedpyright = False, review_timing = True
+
+    @pytest.mark.parametrize("review_timing", [False, True])
+    @pytest.mark.parametrize("basedpyright", [False, True])
+    @pytest.mark.parametrize("outcomes", [(0, 9), (7, 0), (7, 9)])
+    def test_receipt_binds_actual_outer_identity_and_report(
+        snapshot: tuple[Path, dict[str, str]],
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        outcomes: tuple[int, int],
+        basedpyright: bool,
+        review_timing: bool,
+    ) -> None:
+        """The CLI records actual authority and binds retained review bytes."""
+        hook_exit, diagnostic_exit = outcomes
+        repo, request = snapshot
+        request_path = tmp_path / "request.json"
+        request_path.write_text(json.dumps(request), encoding="utf-8")
+        evidence = tmp_path / "evidence"
+        interpreter = repo / ".venv/bin/python"
+        interpreter.parent.mkdir(parents=True)
+        interpreter.write_text(
+            "#!/bin/sh\nmkdir -p .specfact\nprintf '{}' > .specfact/code-review.json\n"
+            f'[ "$2" != "pre_commit" ] || exit {hook_exit}\n'
+            f'case "$1" in *native_*diagnostic.py) exit {diagnostic_exit};; esac\n',
+            encoding="utf-8",
+        )
+        interpreter.chmod(0o755)
+        # Ordinary bootstrap artifacts are ignored by the real repository too.
+        (repo / ".git/info/exclude").write_text(".venv/\n.specfact/\n", encoding="utf-8")
+        monkeypatch.setattr(
+            "sys.argv",
+            [
+                str(_SCRIPT),
+                "--checkout",
+                str(repo),
+                "--request",
+                str(request_path),
+                "--evidence",
+                str(evidence),
+                *(["--basedpyright-diagnostic"] if basedpyright else []),
+                *(["--review-timing-diagnostic"] if review_timing else []),
+            ],
+        )
+        runtime = {
+            "authority": "local_build",
+            "identity": "fixture-runtime",
+            "descriptor": "/private/runtime.json",
+            "project": {"manager": "hatch", "environment": "default"},
+        }
+        _fake_hatch(tmp_path, json.dumps(runtime), monkeypatch, diagnostic_exit)
+        monkeypatch.setenv("GITHUB_ACTIONS", "true")
+        monkeypatch.setenv("GITHUB_RUN_ID", "fixture-run")
+>       assert _transport().main() == hook_exit
+               ^^^^^^^^^^^^^^^^^^^
+
+tests/unit/test_native_hook_transport.py:283:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+scripts/native_hook_transport.py:468: in main
+    args = parser.parse_args()
+           ^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/argparse.py:2012: in parse_args
+    self.error(msg)
+/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/argparse.py:2785: in error
+    self.exit(2, _('%(prog)s: error: %(message)s\n') % args)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = ArgumentParser(prog='native_hook_transport.py', usage=None, description='Run unchanged developer hooks on a bounded, exact staged Linux snapshot.', formatter_class=<class 'argparse.HelpFormatter'>, conflict_handler='error', add_help=True)
+status = 2
+message = 'native_hook_transport.py: error: unrecognized arguments: --review-timing-diagnostic\n'
+
+    def exit(self, status=0, message=None):
+        if message:
+            self._print_message(message, _sys.stderr)
+>       _sys.exit(status)
+E       SystemExit: 2
+
+/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/argparse.py:2772: SystemExit
+----------------------------- Captured stderr call -----------------------------
+usage: native_hook_transport.py [-h] --checkout CHECKOUT --request REQUEST
+                                --evidence EVIDENCE
+                                [--basedpyright-diagnostic]
+native_hook_transport.py: error: unrecognized arguments: --review-timing-diagnostic
+___ test_receipt_binds_actual_outer_identity_and_report[outcomes1-True-True] ___
+
+snapshot = (PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-747/test_receipt_binds_actua...wtHxjDwGwSKPJM+2Fv6DfgH9F5R7XpalNNMb/CoalXKQF3jaevKmaXgfWTgAGbPrOoWIK/UqrfVazdYCEmgCaxVej+fLCQ5ASv/uRn0AxcfK/28BAAA='})
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-747/test_receipt_binds_actual_oute7')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x107a9e7b0>
+outcomes = (7, 0), basedpyright = True, review_timing = True
+
+    @pytest.mark.parametrize("review_timing", [False, True])
+    @pytest.mark.parametrize("basedpyright", [False, True])
+    @pytest.mark.parametrize("outcomes", [(0, 9), (7, 0), (7, 9)])
+    def test_receipt_binds_actual_outer_identity_and_report(
+        snapshot: tuple[Path, dict[str, str]],
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        outcomes: tuple[int, int],
+        basedpyright: bool,
+        review_timing: bool,
+    ) -> None:
+        """The CLI records actual authority and binds retained review bytes."""
+        hook_exit, diagnostic_exit = outcomes
+        repo, request = snapshot
+        request_path = tmp_path / "request.json"
+        request_path.write_text(json.dumps(request), encoding="utf-8")
+        evidence = tmp_path / "evidence"
+        interpreter = repo / ".venv/bin/python"
+        interpreter.parent.mkdir(parents=True)
+        interpreter.write_text(
+            "#!/bin/sh\nmkdir -p .specfact\nprintf '{}' > .specfact/code-review.json\n"
+            f'[ "$2" != "pre_commit" ] || exit {hook_exit}\n'
+            f'case "$1" in *native_*diagnostic.py) exit {diagnostic_exit};; esac\n',
+            encoding="utf-8",
+        )
+        interpreter.chmod(0o755)
+        # Ordinary bootstrap artifacts are ignored by the real repository too.
+        (repo / ".git/info/exclude").write_text(".venv/\n.specfact/\n", encoding="utf-8")
+        monkeypatch.setattr(
+            "sys.argv",
+            [
+                str(_SCRIPT),
+                "--checkout",
+                str(repo),
+                "--request",
+                str(request_path),
+                "--evidence",
+                str(evidence),
+                *(["--basedpyright-diagnostic"] if basedpyright else []),
+                *(["--review-timing-diagnostic"] if review_timing else []),
+            ],
+        )
+        runtime = {
+            "authority": "local_build",
+            "identity": "fixture-runtime",
+            "descriptor": "/private/runtime.json",
+            "project": {"manager": "hatch", "environment": "default"},
+        }
+        _fake_hatch(tmp_path, json.dumps(runtime), monkeypatch, diagnostic_exit)
+        monkeypatch.setenv("GITHUB_ACTIONS", "true")
+        monkeypatch.setenv("GITHUB_RUN_ID", "fixture-run")
+>       assert _transport().main() == hook_exit
+               ^^^^^^^^^^^^^^^^^^^
+
+tests/unit/test_native_hook_transport.py:283:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+scripts/native_hook_transport.py:468: in main
+    args = parser.parse_args()
+           ^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/argparse.py:2012: in parse_args
+    self.error(msg)
+/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/argparse.py:2785: in error
+    self.exit(2, _('%(prog)s: error: %(message)s\n') % args)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = ArgumentParser(prog='native_hook_transport.py', usage=None, description='Run unchanged developer hooks on a bounded, exact staged Linux snapshot.', formatter_class=<class 'argparse.HelpFormatter'>, conflict_handler='error', add_help=True)
+status = 2
+message = 'native_hook_transport.py: error: unrecognized arguments: --review-timing-diagnostic\n'
+
+    def exit(self, status=0, message=None):
+        if message:
+            self._print_message(message, _sys.stderr)
+>       _sys.exit(status)
+E       SystemExit: 2
+
+/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/argparse.py:2772: SystemExit
+----------------------------- Captured stderr call -----------------------------
+usage: native_hook_transport.py [-h] --checkout CHECKOUT --request REQUEST
+                                --evidence EVIDENCE
+                                [--basedpyright-diagnostic]
+native_hook_transport.py: error: unrecognized arguments: --review-timing-diagnostic
+__ test_receipt_binds_actual_outer_identity_and_report[outcomes2-False-True] ___
+
+snapshot = (PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-747/test_receipt_binds_actua...wtHxjDwGwSKPJM+2Fv6DfgH9F5R7XpalNNMb/CoalXKQF3jaevKmaXgfWTgAGbPrOoWIK/UqrfVazdYCEmgCaxVej+fLCQ5ASv/uRn0AxcfK/28BAAA='})
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-747/test_receipt_binds_actual_oute9')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x107adba10>
+outcomes = (7, 9), basedpyright = False, review_timing = True
+
+    @pytest.mark.parametrize("review_timing", [False, True])
+    @pytest.mark.parametrize("basedpyright", [False, True])
+    @pytest.mark.parametrize("outcomes", [(0, 9), (7, 0), (7, 9)])
+    def test_receipt_binds_actual_outer_identity_and_report(
+        snapshot: tuple[Path, dict[str, str]],
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        outcomes: tuple[int, int],
+        basedpyright: bool,
+        review_timing: bool,
+    ) -> None:
+        """The CLI records actual authority and binds retained review bytes."""
+        hook_exit, diagnostic_exit = outcomes
+        repo, request = snapshot
+        request_path = tmp_path / "request.json"
+        request_path.write_text(json.dumps(request), encoding="utf-8")
+        evidence = tmp_path / "evidence"
+        interpreter = repo / ".venv/bin/python"
+        interpreter.parent.mkdir(parents=True)
+        interpreter.write_text(
+            "#!/bin/sh\nmkdir -p .specfact\nprintf '{}' > .specfact/code-review.json\n"
+            f'[ "$2" != "pre_commit" ] || exit {hook_exit}\n'
+            f'case "$1" in *native_*diagnostic.py) exit {diagnostic_exit};; esac\n',
+            encoding="utf-8",
+        )
+        interpreter.chmod(0o755)
+        # Ordinary bootstrap artifacts are ignored by the real repository too.
+        (repo / ".git/info/exclude").write_text(".venv/\n.specfact/\n", encoding="utf-8")
+        monkeypatch.setattr(
+            "sys.argv",
+            [
+                str(_SCRIPT),
+                "--checkout",
+                str(repo),
+                "--request",
+                str(request_path),
+                "--evidence",
+                str(evidence),
+                *(["--basedpyright-diagnostic"] if basedpyright else []),
+                *(["--review-timing-diagnostic"] if review_timing else []),
+            ],
+        )
+        runtime = {
+            "authority": "local_build",
+            "identity": "fixture-runtime",
+            "descriptor": "/private/runtime.json",
+            "project": {"manager": "hatch", "environment": "default"},
+        }
+        _fake_hatch(tmp_path, json.dumps(runtime), monkeypatch, diagnostic_exit)
+        monkeypatch.setenv("GITHUB_ACTIONS", "true")
+        monkeypatch.setenv("GITHUB_RUN_ID", "fixture-run")
+>       assert _transport().main() == hook_exit
+               ^^^^^^^^^^^^^^^^^^^
+
+tests/unit/test_native_hook_transport.py:283:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+scripts/native_hook_transport.py:468: in main
+    args = parser.parse_args()
+           ^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/argparse.py:2012: in parse_args
+    self.error(msg)
+/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/argparse.py:2785: in error
+    self.exit(2, _('%(prog)s: error: %(message)s\n') % args)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = ArgumentParser(prog='native_hook_transport.py', usage=None, description='Run unchanged developer hooks on a bounded, exact staged Linux snapshot.', formatter_class=<class 'argparse.HelpFormatter'>, conflict_handler='error', add_help=True)
+status = 2
+message = 'native_hook_transport.py: error: unrecognized arguments: --review-timing-diagnostic\n'
+
+    def exit(self, status=0, message=None):
+        if message:
+            self._print_message(message, _sys.stderr)
+>       _sys.exit(status)
+E       SystemExit: 2
+
+/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/argparse.py:2772: SystemExit
+----------------------------- Captured stderr call -----------------------------
+usage: native_hook_transport.py [-h] --checkout CHECKOUT --request REQUEST
+                                --evidence EVIDENCE
+                                [--basedpyright-diagnostic]
+native_hook_transport.py: error: unrecognized arguments: --review-timing-diagnostic
+___ test_receipt_binds_actual_outer_identity_and_report[outcomes2-True-True] ___
+
+snapshot = (PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-747/test_receipt_binds_actua...wtHxjDwGwSKPJM+2Fv6DfgH9F5R7XpalNNMb/CoalXKQF3jaevKmaXgfWTgAGbPrOoWIK/UqrfVazdYCEmgCaxVej+fLCQ5ASv/uRn0AxcfK/28BAAA='})
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-747/test_receipt_binds_actual_oute11')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1079c7e10>
+outcomes = (7, 9), basedpyright = True, review_timing = True
+
+    @pytest.mark.parametrize("review_timing", [False, True])
+    @pytest.mark.parametrize("basedpyright", [False, True])
+    @pytest.mark.parametrize("outcomes", [(0, 9), (7, 0), (7, 9)])
+    def test_receipt_binds_actual_outer_identity_and_report(
+        snapshot: tuple[Path, dict[str, str]],
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        outcomes: tuple[int, int],
+        basedpyright: bool,
+        review_timing: bool,
+    ) -> None:
+        """The CLI records actual authority and binds retained review bytes."""
+        hook_exit, diagnostic_exit = outcomes
+        repo, request = snapshot
+        request_path = tmp_path / "request.json"
+        request_path.write_text(json.dumps(request), encoding="utf-8")
+        evidence = tmp_path / "evidence"
+        interpreter = repo / ".venv/bin/python"
+        interpreter.parent.mkdir(parents=True)
+        interpreter.write_text(
+            "#!/bin/sh\nmkdir -p .specfact\nprintf '{}' > .specfact/code-review.json\n"
+            f'[ "$2" != "pre_commit" ] || exit {hook_exit}\n'
+            f'case "$1" in *native_*diagnostic.py) exit {diagnostic_exit};; esac\n',
+            encoding="utf-8",
+        )
+        interpreter.chmod(0o755)
+        # Ordinary bootstrap artifacts are ignored by the real repository too.
+        (repo / ".git/info/exclude").write_text(".venv/\n.specfact/\n", encoding="utf-8")
+        monkeypatch.setattr(
+            "sys.argv",
+            [
+                str(_SCRIPT),
+                "--checkout",
+                str(repo),
+                "--request",
+                str(request_path),
+                "--evidence",
+                str(evidence),
+                *(["--basedpyright-diagnostic"] if basedpyright else []),
+                *(["--review-timing-diagnostic"] if review_timing else []),
+            ],
+        )
+        runtime = {
+            "authority": "local_build",
+            "identity": "fixture-runtime",
+            "descriptor": "/private/runtime.json",
+            "project": {"manager": "hatch", "environment": "default"},
+        }
+        _fake_hatch(tmp_path, json.dumps(runtime), monkeypatch, diagnostic_exit)
+        monkeypatch.setenv("GITHUB_ACTIONS", "true")
+        monkeypatch.setenv("GITHUB_RUN_ID", "fixture-run")
+>       assert _transport().main() == hook_exit
+               ^^^^^^^^^^^^^^^^^^^
+
+tests/unit/test_native_hook_transport.py:283:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+scripts/native_hook_transport.py:468: in main
+    args = parser.parse_args()
+           ^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/argparse.py:2012: in parse_args
+    self.error(msg)
+/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/argparse.py:2785: in error
+    self.exit(2, _('%(prog)s: error: %(message)s\n') % args)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = ArgumentParser(prog='native_hook_transport.py', usage=None, description='Run unchanged developer hooks on a bounded, exact staged Linux snapshot.', formatter_class=<class 'argparse.HelpFormatter'>, conflict_handler='error', add_help=True)
+status = 2
+message = 'native_hook_transport.py: error: unrecognized arguments: --review-timing-diagnostic\n'
+
+    def exit(self, status=0, message=None):
+        if message:
+            self._print_message(message, _sys.stderr)
+>       _sys.exit(status)
+E       SystemExit: 2
+
+/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/argparse.py:2772: SystemExit
+----------------------------- Captured stderr call -----------------------------
+usage: native_hook_transport.py [-h] --checkout CHECKOUT --request REQUEST
+                                --evidence EVIDENCE
+                                [--basedpyright-diagnostic]
+native_hook_transport.py: error: unrecognized arguments: --review-timing-diagnostic
+_______ test_diagnostic_replay_uses_real_hatch_activation[review_timing] _______
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-747/test_diagnostic_replay_uses_re1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x107a3ac90>
+kind = 'review_timing'
+
+    @pytest.mark.parametrize("kind", ["basedpyright", "review_timing"])
+    def test_diagnostic_replay_uses_real_hatch_activation(tmp_path: Path, monkeypatch, kind: str) -> None:
+        """An actual detached Hatch environment supplies verified selection context."""
+        assert shutil.which("hatch"), "native Hatch is required for this transport regression"
+        repository = tmp_path / "project"
+        repository.mkdir()
+        (repository / "pyproject.toml").write_text(
+            "[tool.hatch.envs.default]\ndetached = true\n"
+            f'path = "{tmp_path / "hatch-environment"}"\n'
+            "[tool.hatch.envs.hatch-test]\ndetached = true\n"
+        )
+        controls = tmp_path / "controls"
+        controls.mkdir()
+        probe = controls / f"native_{kind}_diagnostic.py"
+        probe.write_text(
+            "import os, json\nprint(json.dumps({'active':os.environ.get('HATCH_ENV_ACTIVE'),"
+            "'venv':os.environ.get('VIRTUAL_ENV'),'token':os.environ.get('GH_TOKEN')}))\nraise SystemExit(7)\n"
+        )
+        evidence = tmp_path / "evidence"
+        evidence.mkdir()
+        transport = _transport()
+        monkeypatch.setattr(transport, "__file__", str(controls / "native_hook_transport.py"))
+        monkeypatch.setenv("HOME", str(tmp_path / "home"))
+        monkeypatch.setenv("GH_TOKEN", "do-not-forward")
+        monkeypatch.delenv("VIRTUAL_ENV", raising=False)
+        monkeypatch.delenv("HATCH_ENV_ACTIVE", raising=False)
+        receipt = {"hook_exit": 23}
+>       operation = getattr(transport, f"diagnose_failed_{kind}")
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: module 'native_hook_transport' has no attribute 'diagnose_failed_review_timing'
+
+tests/unit/test_native_hook_transport.py:497: AttributeError
+=========================== short test summary info ============================
+FAILED tests/unit/test_native_hook_transport.py::test_receipt_binds_actual_outer_identity_and_report[outcomes0-False-True]
+FAILED tests/unit/test_native_hook_transport.py::test_receipt_binds_actual_outer_identity_and_report[outcomes0-True-True]
+FAILED tests/unit/test_native_hook_transport.py::test_receipt_binds_actual_outer_identity_and_report[outcomes1-False-True]
+FAILED tests/unit/test_native_hook_transport.py::test_receipt_binds_actual_outer_identity_and_report[outcomes1-True-True]
+FAILED tests/unit/test_native_hook_transport.py::test_receipt_binds_actual_outer_identity_and_report[outcomes2-False-True]
+FAILED tests/unit/test_native_hook_transport.py::test_receipt_binds_actual_outer_identity_and_report[outcomes2-True-True]
+FAILED tests/unit/test_native_hook_transport.py::test_diagnostic_replay_uses_real_hatch_activation[review_timing]
+================== 7 failed, 7 passed, 49 deselected in 5.67s ==================

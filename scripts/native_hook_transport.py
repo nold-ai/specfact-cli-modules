@@ -12,6 +12,7 @@ import io
 import json
 import os
 import re
+import signal
 import stat
 import subprocess
 import sys
@@ -457,6 +458,53 @@ def diagnose_failed_basedpyright(repository: Path, evidence: Path, receipt: dict
         receipt["basedpyright_diagnostic_failure"] = f"{type(exc).__name__}: {exc}"
 
 
+@ensure(lambda result, process: isinstance(result, int) and process.returncode == result)
+def wait_diagnostic_child(process: subprocess.Popen, *, timeout: float = 1860, grace: float = 5) -> int:
+    """Bound a controller-owned diagnostic session and retain its real exit."""
+    try:
+        return process.wait(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        os.killpg(process.pid, signal.SIGTERM)
+        try:
+            process.wait(timeout=grace)
+        except subprocess.TimeoutExpired:
+            os.killpg(process.pid, signal.SIGKILL)
+            process.wait(timeout=grace)
+        raise
+
+
+@ensure(lambda receipt: receipt["review_timing_diagnostic_acceptance"] is False)
+def diagnose_failed_review_timing(repository: Path, evidence: Path, receipt: dict[str, object]) -> None:
+    """Time only a separate failed-review replay without replacing hook authority."""
+    command = [
+        "hatch",
+        "run",
+        "python",
+        str(Path(__file__).with_name("native_review_timing_diagnostic.py")),
+        "--checkout",
+        str(repository),
+        "--evidence",
+        str(evidence),
+    ]
+    receipt["review_timing_diagnostic_command"] = command
+    receipt["review_timing_diagnostic_acceptance"] = False
+    try:
+        with (
+            (evidence / "review-timing-diagnostic.log").open("w", encoding="utf-8") as log,
+            subprocess.Popen(
+                command,
+                cwd=repository,
+                env=runtime_environment(repository, dict(os.environ)),
+                stdout=log,
+                stderr=subprocess.STDOUT,
+                start_new_session=True,
+            ) as process,
+        ):
+            receipt["review_timing_diagnostic_exit"] = wait_diagnostic_child(process)
+    except (OSError, subprocess.SubprocessError) as exc:
+        receipt["review_timing_diagnostic_failure"] = f"{type(exc).__name__}: {exc}"
+
+
 @ensure(lambda result: isinstance(result, int))
 def main() -> int:
     """Validate, execute and always retain the exact outer workflow receipt."""
@@ -465,6 +513,7 @@ def main() -> int:
     parser.add_argument("--request", required=True, type=Path)
     parser.add_argument("--evidence", required=True, type=Path)
     parser.add_argument("--basedpyright-diagnostic", action="store_true")
+    parser.add_argument("--review-timing-diagnostic", action="store_true")
     args = parser.parse_args()
     args.evidence.mkdir(parents=True, exist_ok=True)
     receipt: dict[str, object] = {
@@ -482,6 +531,8 @@ def main() -> int:
         exit_code = execute_hooks(args.checkout, args.evidence, receipt)
         receipt["exit_code"] = exit_code
         if exit_code:
+            if args.review_timing_diagnostic:
+                diagnose_failed_review_timing(args.checkout, args.evidence, receipt)
             _diagnose_failed_semgrep(args.checkout, args.evidence, receipt)
             if args.basedpyright_diagnostic:
                 diagnose_failed_basedpyright(args.checkout, args.evidence, receipt)

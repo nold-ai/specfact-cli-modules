@@ -220,7 +220,8 @@ def _fake_hatch(root: Path, output: str, monkeypatch: pytest.MonkeyPatch, diagno
     hatch = root / "hatch"
     hatch.write_text(
         f"#!{sys.executable}\nimport sys\n"
-        "if any(arg.endswith('native_basedpyright_diagnostic.py') for arg in sys.argv):\n"
+        "if any(arg.endswith(('native_basedpyright_diagnostic.py', "
+        "'native_review_timing_diagnostic.py')) for arg in sys.argv):\n"
         f"    raise SystemExit({diagnostic_exit})\n"
         f"sys.stdout.write({output!r})\n",
         encoding="utf-8",
@@ -229,17 +230,18 @@ def _fake_hatch(root: Path, output: str, monkeypatch: pytest.MonkeyPatch, diagno
     monkeypatch.setenv("PATH", str(root) + ":" + os.environ["PATH"])
 
 
-@pytest.mark.parametrize("basedpyright", [False, True])
+@pytest.mark.parametrize("diagnostics", [(False, False), (False, True), (True, False), (True, True)])
 @pytest.mark.parametrize("outcomes", [(0, 9), (7, 0), (7, 9)])
 def test_receipt_binds_actual_outer_identity_and_report(
     snapshot: tuple[Path, dict[str, str]],
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     outcomes: tuple[int, int],
-    basedpyright: bool,
+    diagnostics: tuple[bool, bool],
 ) -> None:
     """The CLI records actual authority and binds retained review bytes."""
     hook_exit, diagnostic_exit = outcomes
+    basedpyright, review_timing = diagnostics
     repo, request = snapshot
     request_path = tmp_path / "request.json"
     request_path.write_text(json.dumps(request), encoding="utf-8")
@@ -266,6 +268,7 @@ def test_receipt_binds_actual_outer_identity_and_report(
             "--evidence",
             str(evidence),
             *(["--basedpyright-diagnostic"] if basedpyright else []),
+            *(["--review-timing-diagnostic"] if review_timing else []),
         ],
     )
     runtime = {
@@ -281,7 +284,17 @@ def test_receipt_binds_actual_outer_identity_and_report(
     receipt = json.loads((evidence / "receipt.json").read_text())
     assert receipt["exit_code"] == receipt["hook_exit"] == hook_exit
     _assert_diagnostic_exits(receipt, outcomes, basedpyright)
+    _assert_review_timing_exit(receipt, outcomes, review_timing)
     _assert_review_receipt(receipt, evidence, request["tree"])
+
+
+def _assert_review_timing_exit(receipt: dict, outcomes: tuple[int, int], enabled: bool) -> None:
+    hook_exit, diagnostic_exit = outcomes
+    if enabled and hook_exit:
+        assert receipt["review_timing_diagnostic_exit"] == diagnostic_exit
+        assert receipt["review_timing_diagnostic_acceptance"] is False
+    else:
+        assert "review_timing_diagnostic_exit" not in receipt
 
 
 def _assert_diagnostic_exits(receipt: dict, outcomes: tuple[int, int], basedpyright: bool) -> None:
@@ -454,7 +467,8 @@ def test_only_reviewed_development_pins_are_admitted(
         assert _transport().prepare_snapshot(repo, request)["tree"] == request["tree"]
 
 
-def test_basedpyright_replay_uses_real_hatch_activation(tmp_path: Path, monkeypatch) -> None:
+@pytest.mark.parametrize("kind", ["basedpyright", "review_timing"])
+def test_diagnostic_replay_uses_real_hatch_activation(tmp_path: Path, monkeypatch, kind: str) -> None:
     """An actual detached Hatch environment supplies verified selection context."""
     assert shutil.which("hatch"), "native Hatch is required for this transport regression"
     repository = tmp_path / "project"
@@ -466,7 +480,7 @@ def test_basedpyright_replay_uses_real_hatch_activation(tmp_path: Path, monkeypa
     )
     controls = tmp_path / "controls"
     controls.mkdir()
-    probe = controls / "native_basedpyright_diagnostic.py"
+    probe = controls / f"native_{kind}_diagnostic.py"
     probe.write_text(
         "import os, json\nprint(json.dumps({'active':os.environ.get('HATCH_ENV_ACTIVE'),"
         "'venv':os.environ.get('VIRTUAL_ENV'),'token':os.environ.get('GH_TOKEN')}))\nraise SystemExit(7)\n"
@@ -480,13 +494,14 @@ def test_basedpyright_replay_uses_real_hatch_activation(tmp_path: Path, monkeypa
     monkeypatch.delenv("VIRTUAL_ENV", raising=False)
     monkeypatch.delenv("HATCH_ENV_ACTIVE", raising=False)
     receipt = {"hook_exit": 23}
-    transport.diagnose_failed_basedpyright(repository, evidence, receipt)
-    assert receipt.get("basedpyright_diagnostic_exit") == 7, (
+    operation = getattr(transport, f"diagnose_failed_{kind}")
+    operation(repository, evidence, receipt)
+    assert receipt.get(f"{kind}_diagnostic_exit") == 7, (
         receipt,
-        (evidence / "basedpyright-diagnostic.log").read_text(),
+        (evidence / f"{kind.replace('_', '-')}-diagnostic.log").read_text(),
     )
-    assert receipt["hook_exit"] == 23 and receipt["basedpyright_diagnostic_acceptance"] is False
-    output = json.loads((evidence / "basedpyright-diagnostic.log").read_text().splitlines()[-1])
+    assert receipt["hook_exit"] == 23 and receipt[f"{kind}_diagnostic_acceptance"] is False
+    output = json.loads((evidence / f"{kind.replace('_', '-')}-diagnostic.log").read_text().splitlines()[-1])
     assert (
         output["active"] == "default" and Path(output["venv"]).resolve() == (tmp_path / "hatch-environment").resolve()
     )
@@ -627,3 +642,31 @@ def test_control_encoded_payload_refused(
     with pytest.raises(ValueError, match=reason):
         transport.prepare_snapshot(repo, file_request)
     assert not _git(repo, "status", "--porcelain")
+
+
+@pytest.mark.parametrize("ignore_term", [False, True])
+def test_timing_parent_stops_only_its_owned_child_group(tmp_path: Path, ignore_term: bool) -> None:
+    """The diagnostic deadline propagates failure without signalling unrelated work."""
+    transport = _transport()
+    script = "import signal,time; "
+    if ignore_term:
+        script += "signal.signal(signal.SIGTERM, signal.SIG_IGN); "
+    script += "time.sleep(10)"
+    with (
+        subprocess.Popen([sys.executable, "-c", "import time;time.sleep(10)"], start_new_session=True) as unrelated,
+        subprocess.Popen([sys.executable, "-c", script], cwd=tmp_path, start_new_session=True) as owned,
+    ):
+        try:
+            with pytest.raises(subprocess.TimeoutExpired):
+                transport.wait_diagnostic_child(owned, timeout=0.3, grace=0.2)
+            assert owned.poll() is not None
+            assert unrelated.poll() is None
+        finally:
+            _stop_fixture_children((owned, unrelated))
+
+
+def _stop_fixture_children(children: tuple[subprocess.Popen, ...]) -> None:
+    for child in children:
+        if child.poll() is None:
+            child.kill()
+        child.wait(timeout=2)

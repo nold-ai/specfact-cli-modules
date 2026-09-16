@@ -86,3 +86,14 @@ The transport SHALL execute every unchanged pre-commit stage in a credential-fre
 - **WHEN** a diagnostic reconstructs the same index
 - **THEN** it uses the same private root permissions before discovery so identical Git inputs retain the original source and project identities
 - **AND** production identity rules remain unchanged; the diagnostic SHALL NOT normalize or waive permission differences
+
+#### Scenario: Timed review replay separates cached preparation from member execution
+
+- **GIVEN** the original unchanged hook exceeds its existing 300-second review timeout, leaves no review report, and the operator explicitly opts into timing diagnostics
+- **WHEN** a separate credential-free Hatch child reconstructs the exact private staged snapshot
+- **THEN** it records source, project, worker and runtime identities and times verified offline cache lookup followed by normal preparation only for an exact offline cache miss
+- **AND** it replays the original staged review command, targets and changed enforcement with a separate diagnostic output path and unbuffered progress, explicitly recording these startup differences
+- **AND** bounded raw streams retain total byte counts and complete stream hashes even if their stored prefixes are truncated, alongside phase timing and process outcome
+- **AND** replay is limited to 900 seconds, the parent diagnostic is bounded, and source/control identity remains unchanged
+- **AND** the original hook exit, timeout, absent report and 300-second limit remain untouched; every replay artifact carries diagnostic-only authority and acceptance false
+- **AND** a successful longer or warm replay SHALL NOT authorize a commit or replace the failed hook receipt

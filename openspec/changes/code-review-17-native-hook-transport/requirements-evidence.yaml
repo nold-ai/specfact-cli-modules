@@ -88,3 +88,13 @@ requirements:
         method: test
         intent: Reconstruct the same private immutable index root before offline cache lookup.
         observable: test_replay_preserves_real_cached_snapshot_identity uses a real Git index and controller materializer; replay must preserve production source and project identities including root permissions.
+      - case_id: 473-hook-18
+        scenario_id: preserve-real-execution-authority-and-hook-outcome
+        method: test
+        intent: Diagnose a timed-out unchanged hook without changing its limits, targets or authority.
+        observable: Actual child stream and timeout tests preserve bounded raw prefixes with full counts and hashes; opt-in replay retains original exit and genuine credential-free Hatch activation.
+      - case_id: 473-hook-19
+        scenario_id: preserve-real-execution-authority-and-hook-outcome
+        method: test
+        intent: Measure exact cached snapshot preparation separately from the total warm review while preserving source identities.
+        observable: Timing replay records source and runtime identities, exact offline miss behavior and source mutation refusal, labels every artifact diagnostic-only, and kills only its owned process groups on timeout.

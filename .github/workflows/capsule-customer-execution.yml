@@ -19,6 +19,11 @@ on:
         required: false
         type: boolean
         default: false
+      review_timing_diagnostic:
+        description: 'Time exact cached preparation and a separate failed review replay; diagnostic only'
+        required: false
+        type: boolean
+        default: false
   release:
     types: [published]
 
@@ -267,6 +272,7 @@ jobs:
         env:
           HOOK_REQUEST: ${{ inputs.hook_snapshot }}
           BASEDPYRIGHT_DIAGNOSTIC: ${{ inputs.basedpyright_diagnostic }}
+          REVIEW_TIMING_DIAGNOSTIC: ${{ inputs.review_timing_diagnostic }}
         shell: bash
         run: |
           set -euo pipefail
@@ -274,6 +280,9 @@ jobs:
           diagnostic_args=()
           if [ "$BASEDPYRIGHT_DIAGNOSTIC" = "true" ]; then
             diagnostic_args+=(--basedpyright-diagnostic)
+          fi
+          if [ "$REVIEW_TIMING_DIAGNOSTIC" = "true" ]; then
+            diagnostic_args+=(--review-timing-diagnostic)
           fi
           python controls/scripts/native_hook_transport.py "${diagnostic_args[@]}" \
             --checkout "$GITHUB_WORKSPACE/source" --request "$HOOK_ROOT/request.json" \

@@ -1,0 +1,114 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: /private/tmp/specfact-478-native-hook-transport
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 5 items
+
+tests/unit/test_native_review_timing_diagnostic.py FFFFF                 [100%]
+
+=================================== FAILURES ===================================
+______ test_capture_keeps_complete_stream_identity_when_prefix_is_bounded ______
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-748/test_capture_keeps_complete_st0')
+
+    def test_capture_keeps_complete_stream_identity_when_prefix_is_bounded(tmp_path):
+>       diagnostic = _helper()
+                     ^^^^^^^^^
+
+tests/unit/test_native_review_timing_diagnostic.py:27:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+    def _helper():
+>       assert HELPER.is_file(), "bounded review timing diagnostic is not implemented"
+E       AssertionError: bounded review timing diagnostic is not implemented
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/private/tmp/specfact-478-native-hook-transport/scripts/native_review_timing_diagnostic.py').is_file
+
+tests/unit/test_native_review_timing_diagnostic.py:18: AssertionError
+_______________ test_capture_timeout_retains_real_partial_output _______________
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-748/test_capture_timeout_retains_r0')
+
+    def test_capture_timeout_retains_real_partial_output(tmp_path):
+>       diagnostic = _helper()
+                     ^^^^^^^^^
+
+tests/unit/test_native_review_timing_diagnostic.py:39:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+    def _helper():
+>       assert HELPER.is_file(), "bounded review timing diagnostic is not implemented"
+E       AssertionError: bounded review timing diagnostic is not implemented
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/private/tmp/specfact-478-native-hook-transport/scripts/native_review_timing_diagnostic.py').is_file
+
+tests/unit/test_native_review_timing_diagnostic.py:18: AssertionError
+____________ test_only_original_timeout_without_report_is_replayed _____________
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-748/test_only_original_timeout_wit0')
+
+    def test_only_original_timeout_without_report_is_replayed(tmp_path):
+>       diagnostic = _helper()
+                     ^^^^^^^^^
+
+tests/unit/test_native_review_timing_diagnostic.py:49:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+    def _helper():
+>       assert HELPER.is_file(), "bounded review timing diagnostic is not implemented"
+E       AssertionError: bounded review timing diagnostic is not implemented
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/private/tmp/specfact-478-native-hook-transport/scripts/native_review_timing_diagnostic.py').is_file
+
+tests/unit/test_native_review_timing_diagnostic.py:18: AssertionError
+_____ test_replay_command_preserves_targets_and_changes_only_evidence_sink _____
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-748/test_replay_command_preserves_0')
+
+    def test_replay_command_preserves_targets_and_changes_only_evidence_sink(tmp_path):
+>       diagnostic = _helper()
+                     ^^^^^^^^^
+
+tests/unit/test_native_review_timing_diagnostic.py:60:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+    def _helper():
+>       assert HELPER.is_file(), "bounded review timing diagnostic is not implemented"
+E       AssertionError: bounded review timing diagnostic is not implemented
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/private/tmp/specfact-478-native-hook-transport/scripts/native_review_timing_diagnostic.py').is_file
+
+tests/unit/test_native_review_timing_diagnostic.py:18: AssertionError
+_________ test_failed_runtime_profile_cannot_be_reported_as_acceptance _________
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-748/test_failed_runtime_profile_ca0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10b4356e0>
+
+    def test_failed_runtime_profile_cannot_be_reported_as_acceptance(tmp_path, monkeypatch):
+>       diagnostic = _helper()
+                     ^^^^^^^^^
+
+tests/unit/test_native_review_timing_diagnostic.py:70:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+    def _helper():
+>       assert HELPER.is_file(), "bounded review timing diagnostic is not implemented"
+E       AssertionError: bounded review timing diagnostic is not implemented
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/private/tmp/specfact-478-native-hook-transport/scripts/native_review_timing_diagnostic.py').is_file
+
+tests/unit/test_native_review_timing_diagnostic.py:18: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/test_native_review_timing_diagnostic.py::test_capture_keeps_complete_stream_identity_when_prefix_is_bounded
+FAILED tests/unit/test_native_review_timing_diagnostic.py::test_capture_timeout_retains_real_partial_output
+FAILED tests/unit/test_native_review_timing_diagnostic.py::test_only_original_timeout_without_report_is_replayed
+FAILED tests/unit/test_native_review_timing_diagnostic.py::test_replay_command_preserves_targets_and_changes_only_evidence_sink
+FAILED tests/unit/test_native_review_timing_diagnostic.py::test_failed_runtime_profile_cannot_be_reported_as_acceptance
+============================== 5 failed in 1.16s ===============================
