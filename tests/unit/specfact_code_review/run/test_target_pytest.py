@@ -2,7 +2,10 @@
 
 from types import SimpleNamespace
 
+import pytest
+
 from specfact_code_review.run import target_pytest
+from specfact_code_review.run.target_pytest import _installed_coverage_modules
 
 
 def test_explicit_plugin_module_does_not_also_load_entry_point(monkeypatch) -> None:
@@ -71,3 +74,26 @@ def test_disabled_autoload_preserves_only_explicit_plugins_and_coverage(monkeypa
         {"addopts": "--disable-plugin-autoload -p pytest_cov.plugin -p pytest_asyncio.plugin"}
     )
     assert not target_pytest._plugins({"addopts": "--disable-plugin-autoload -p no:pytest_cov"})
+
+
+@pytest.mark.parametrize(
+    "modules", [None, "standalone", [1], ["../escape"], ["pkg.module"], ["class"], ["missing"], ["linked"]]
+)
+def test_installed_module_selector_rejects_unattached_or_invalid_names(tmp_path, monkeypatch, modules):
+    site = tmp_path / "site-packages"
+    site.mkdir()
+    external = tmp_path / "external.py"
+    external.write_text("VALUE = 1\n")
+    (site / "linked.py").symlink_to(external)
+    monkeypatch.setattr(target_pytest, "ROOT", tmp_path)
+    with pytest.raises(ValueError, match="project_pytest_installed_coverage_module_invalid"):
+        _installed_coverage_modules({"coverage_modules": modules})
+
+
+def test_installed_module_selector_accepts_only_regular_attached_module(tmp_path, monkeypatch):
+    site = tmp_path / "site-packages"
+    site.mkdir()
+    (site / "standalone.py").write_text("VALUE = 1\n")
+    monkeypatch.setattr(target_pytest, "ROOT", tmp_path)
+    assert _installed_coverage_modules({"coverage_modules": ["standalone"]}) == ["standalone"]
+    assert _installed_coverage_modules({}) == []

@@ -1,0 +1,249 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: /private/tmp/specfact-477-pytest-release
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, xdist-3.8.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 122 items / 109 deselected / 13 selected
+
+tests/unit/specfact_code_review/run/test_target_pytest.py FFFFFFFFF      [ 69%]
+tests/unit/specfact_code_review/run/test_target_coverage.py F..          [ 92%]
+tests/unit/specfact_code_review/run/test_portable_worker.py F            [100%]
+
+=================================== FAILURES ===================================
+___ test_installed_module_selector_rejects_unattached_or_invalid_names[None] ___
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-868/test_installed_module_selector0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1087c4180>
+modules = None
+
+    @pytest.mark.parametrize("modules", [None, "standalone", [1], ["../escape"], ["pkg.module"], ["class"], ["missing"], ["linked"]])
+    def test_installed_module_selector_rejects_unattached_or_invalid_names(tmp_path, monkeypatch, modules):
+        site = tmp_path / "site-packages"
+        site.mkdir()
+        external = tmp_path / "external.py"
+        external.write_text("VALUE = 1\n")
+        (site / "linked.py").symlink_to(external)
+        monkeypatch.setattr(target_pytest, "ROOT", tmp_path)
+        with pytest.raises(ValueError, match="project_pytest_installed_coverage_module_invalid"):
+>           target_pytest._installed_coverage_modules({"coverage_modules": modules})
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           AttributeError: module 'specfact_code_review.run.target_pytest' has no attribute '_installed_coverage_modules'. Did you mean: '_installed_coverage_candidates'?
+
+tests/unit/specfact_code_review/run/test_target_pytest.py:87: AttributeError
+_ test_installed_module_selector_rejects_unattached_or_invalid_names[standalone] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-868/test_installed_module_selector1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1087c42b0>
+modules = 'standalone'
+
+    @pytest.mark.parametrize("modules", [None, "standalone", [1], ["../escape"], ["pkg.module"], ["class"], ["missing"], ["linked"]])
+    def test_installed_module_selector_rejects_unattached_or_invalid_names(tmp_path, monkeypatch, modules):
+        site = tmp_path / "site-packages"
+        site.mkdir()
+        external = tmp_path / "external.py"
+        external.write_text("VALUE = 1\n")
+        (site / "linked.py").symlink_to(external)
+        monkeypatch.setattr(target_pytest, "ROOT", tmp_path)
+        with pytest.raises(ValueError, match="project_pytest_installed_coverage_module_invalid"):
+>           target_pytest._installed_coverage_modules({"coverage_modules": modules})
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           AttributeError: module 'specfact_code_review.run.target_pytest' has no attribute '_installed_coverage_modules'. Did you mean: '_installed_coverage_candidates'?
+
+tests/unit/specfact_code_review/run/test_target_pytest.py:87: AttributeError
+_ test_installed_module_selector_rejects_unattached_or_invalid_names[modules2] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-868/test_installed_module_selector2')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1087e6450>
+modules = [1]
+
+    @pytest.mark.parametrize("modules", [None, "standalone", [1], ["../escape"], ["pkg.module"], ["class"], ["missing"], ["linked"]])
+    def test_installed_module_selector_rejects_unattached_or_invalid_names(tmp_path, monkeypatch, modules):
+        site = tmp_path / "site-packages"
+        site.mkdir()
+        external = tmp_path / "external.py"
+        external.write_text("VALUE = 1\n")
+        (site / "linked.py").symlink_to(external)
+        monkeypatch.setattr(target_pytest, "ROOT", tmp_path)
+        with pytest.raises(ValueError, match="project_pytest_installed_coverage_module_invalid"):
+>           target_pytest._installed_coverage_modules({"coverage_modules": modules})
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           AttributeError: module 'specfact_code_review.run.target_pytest' has no attribute '_installed_coverage_modules'. Did you mean: '_installed_coverage_candidates'?
+
+tests/unit/specfact_code_review/run/test_target_pytest.py:87: AttributeError
+_ test_installed_module_selector_rejects_unattached_or_invalid_names[modules3] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-868/test_installed_module_selector3')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10871dae0>
+modules = ['../escape']
+
+    @pytest.mark.parametrize("modules", [None, "standalone", [1], ["../escape"], ["pkg.module"], ["class"], ["missing"], ["linked"]])
+    def test_installed_module_selector_rejects_unattached_or_invalid_names(tmp_path, monkeypatch, modules):
+        site = tmp_path / "site-packages"
+        site.mkdir()
+        external = tmp_path / "external.py"
+        external.write_text("VALUE = 1\n")
+        (site / "linked.py").symlink_to(external)
+        monkeypatch.setattr(target_pytest, "ROOT", tmp_path)
+        with pytest.raises(ValueError, match="project_pytest_installed_coverage_module_invalid"):
+>           target_pytest._installed_coverage_modules({"coverage_modules": modules})
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           AttributeError: module 'specfact_code_review.run.target_pytest' has no attribute '_installed_coverage_modules'. Did you mean: '_installed_coverage_candidates'?
+
+tests/unit/specfact_code_review/run/test_target_pytest.py:87: AttributeError
+_ test_installed_module_selector_rejects_unattached_or_invalid_names[modules4] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-868/test_installed_module_selector4')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10871e250>
+modules = ['pkg.module']
+
+    @pytest.mark.parametrize("modules", [None, "standalone", [1], ["../escape"], ["pkg.module"], ["class"], ["missing"], ["linked"]])
+    def test_installed_module_selector_rejects_unattached_or_invalid_names(tmp_path, monkeypatch, modules):
+        site = tmp_path / "site-packages"
+        site.mkdir()
+        external = tmp_path / "external.py"
+        external.write_text("VALUE = 1\n")
+        (site / "linked.py").symlink_to(external)
+        monkeypatch.setattr(target_pytest, "ROOT", tmp_path)
+        with pytest.raises(ValueError, match="project_pytest_installed_coverage_module_invalid"):
+>           target_pytest._installed_coverage_modules({"coverage_modules": modules})
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           AttributeError: module 'specfact_code_review.run.target_pytest' has no attribute '_installed_coverage_modules'. Did you mean: '_installed_coverage_candidates'?
+
+tests/unit/specfact_code_review/run/test_target_pytest.py:87: AttributeError
+_ test_installed_module_selector_rejects_unattached_or_invalid_names[modules5] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-868/test_installed_module_selector5')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10895d350>
+modules = ['class']
+
+    @pytest.mark.parametrize("modules", [None, "standalone", [1], ["../escape"], ["pkg.module"], ["class"], ["missing"], ["linked"]])
+    def test_installed_module_selector_rejects_unattached_or_invalid_names(tmp_path, monkeypatch, modules):
+        site = tmp_path / "site-packages"
+        site.mkdir()
+        external = tmp_path / "external.py"
+        external.write_text("VALUE = 1\n")
+        (site / "linked.py").symlink_to(external)
+        monkeypatch.setattr(target_pytest, "ROOT", tmp_path)
+        with pytest.raises(ValueError, match="project_pytest_installed_coverage_module_invalid"):
+>           target_pytest._installed_coverage_modules({"coverage_modules": modules})
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           AttributeError: module 'specfact_code_review.run.target_pytest' has no attribute '_installed_coverage_modules'. Did you mean: '_installed_coverage_candidates'?
+
+tests/unit/specfact_code_review/run/test_target_pytest.py:87: AttributeError
+_ test_installed_module_selector_rejects_unattached_or_invalid_names[modules6] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-868/test_installed_module_selector6')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10895d950>
+modules = ['missing']
+
+    @pytest.mark.parametrize("modules", [None, "standalone", [1], ["../escape"], ["pkg.module"], ["class"], ["missing"], ["linked"]])
+    def test_installed_module_selector_rejects_unattached_or_invalid_names(tmp_path, monkeypatch, modules):
+        site = tmp_path / "site-packages"
+        site.mkdir()
+        external = tmp_path / "external.py"
+        external.write_text("VALUE = 1\n")
+        (site / "linked.py").symlink_to(external)
+        monkeypatch.setattr(target_pytest, "ROOT", tmp_path)
+        with pytest.raises(ValueError, match="project_pytest_installed_coverage_module_invalid"):
+>           target_pytest._installed_coverage_modules({"coverage_modules": modules})
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           AttributeError: module 'specfact_code_review.run.target_pytest' has no attribute '_installed_coverage_modules'. Did you mean: '_installed_coverage_candidates'?
+
+tests/unit/specfact_code_review/run/test_target_pytest.py:87: AttributeError
+_ test_installed_module_selector_rejects_unattached_or_invalid_names[modules7] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-868/test_installed_module_selector7')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x108767d40>
+modules = ['linked']
+
+    @pytest.mark.parametrize("modules", [None, "standalone", [1], ["../escape"], ["pkg.module"], ["class"], ["missing"], ["linked"]])
+    def test_installed_module_selector_rejects_unattached_or_invalid_names(tmp_path, monkeypatch, modules):
+        site = tmp_path / "site-packages"
+        site.mkdir()
+        external = tmp_path / "external.py"
+        external.write_text("VALUE = 1\n")
+        (site / "linked.py").symlink_to(external)
+        monkeypatch.setattr(target_pytest, "ROOT", tmp_path)
+        with pytest.raises(ValueError, match="project_pytest_installed_coverage_module_invalid"):
+>           target_pytest._installed_coverage_modules({"coverage_modules": modules})
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           AttributeError: module 'specfact_code_review.run.target_pytest' has no attribute '_installed_coverage_modules'. Did you mean: '_installed_coverage_candidates'?
+
+tests/unit/specfact_code_review/run/test_target_pytest.py:87: AttributeError
+_____ test_installed_module_selector_accepts_only_regular_attached_module ______
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-868/test_installed_module_selector8')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x108766e40>
+
+    def test_installed_module_selector_accepts_only_regular_attached_module(tmp_path, monkeypatch):
+        site = tmp_path / "site-packages"
+        site.mkdir()
+        (site / "standalone.py").write_text("VALUE = 1\n")
+        monkeypatch.setattr(target_pytest, "ROOT", tmp_path)
+>       assert target_pytest._installed_coverage_modules({"coverage_modules": ["standalone"]}) == ["standalone"]
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: module 'specfact_code_review.run.target_pytest' has no attribute '_installed_coverage_modules'. Did you mean: '_installed_coverage_candidates'?
+
+tests/unit/specfact_code_review/run/test_target_pytest.py:95: AttributeError
+_ test_top_level_installed_module_respects_reviewer_and_native_scope[default] __
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-868/test_top_level_installed_modul0')
+scope = 'default'
+
+    @pytest.mark.parametrize("scope", ["default", "configured", "native"])
+    def test_top_level_installed_module_respects_reviewer_and_native_scope(tmp_path, scope):
+        source = _project(tmp_path)
+        site = tmp_path / "site-packages"
+        site.mkdir()
+        (site / "standalone.py").write_text("import foreign\ndef answer():\n    return foreign.VALUE\n")
+        (site / "foreign.py").write_text("VALUE = 42\n")
+        (source / "tests/test_installed.py").write_text(
+            "from standalone import answer\ndef test_answer():\n    assert answer() == 42\n"
+        )
+        configuration = source / "pyproject.toml"
+        configuration.write_text(configuration.read_text().replace('source=["app"]\n', ""))
+        if scope == "configured":
+            configuration.write_text(configuration.read_text().replace("[tool.coverage.run]", '[tool.coverage.run]\nsource=["app"]'))
+        extra = ("--cov=app", "--cov-fail-under=0") if scope == "native" else ()
+        completed, receipt = _run(source, tmp_path, extra, startup=site, modules=["standalone"])
+        assert completed.returncode == 0, completed.stdout + completed.stderr
+        assert receipt["coverage_policy"]["mode"] == ("native" if scope == "native" else "reviewer")
+        measured = receipt["coverage"]["files"]
+>       assert any(path.endswith("standalone.py") for path in measured) is (scope == "default")
+E       AssertionError: assert False is ('default' == 'default'
+E        +  where False = any(<generator object test_top_level_installed_module_respects_reviewer_and_native_scope.<locals>.<genexpr> at 0x1088fbe60>)
+E
+E           default)
+
+tests/unit/specfact_code_review/run/test_target_coverage.py:321: AssertionError
+_________ test_portable_pytest_command_transmits_verified_module_names _________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1086dc2f0>
+
+    def test_portable_pytest_command_transmits_verified_module_names(monkeypatch):
+        bridge = CoverageBridge((), (), {}, {}, modules=("standalone",))
+        monkeypatch.setattr(portable_worker, "plan_installed_coverage", lambda *_args, **_kwargs: bridge)
+        monkeypatch.setattr(portable_worker, "target_command", lambda domain, arguments: [domain, *arguments])
+        actual, command = portable_worker._portable_pytest_command([], json.dumps({"selectors": ["tests"]}))
+        assert actual is bridge
+        assert command[0] == "pytest-observe"
+        request = json.loads(command[1])
+>       assert request["coverage_modules"] == ["standalone"]
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       KeyError: 'coverage_modules'
+
+tests/unit/specfact_code_review/run/test_portable_worker.py:448: KeyError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_target_pytest.py::test_installed_module_selector_rejects_unattached_or_invalid_names[None]
+FAILED tests/unit/specfact_code_review/run/test_target_pytest.py::test_installed_module_selector_rejects_unattached_or_invalid_names[standalone]
+FAILED tests/unit/specfact_code_review/run/test_target_pytest.py::test_installed_module_selector_rejects_unattached_or_invalid_names[modules2]
+FAILED tests/unit/specfact_code_review/run/test_target_pytest.py::test_installed_module_selector_rejects_unattached_or_invalid_names[modules3]
+FAILED tests/unit/specfact_code_review/run/test_target_pytest.py::test_installed_module_selector_rejects_unattached_or_invalid_names[modules4]
+FAILED tests/unit/specfact_code_review/run/test_target_pytest.py::test_installed_module_selector_rejects_unattached_or_invalid_names[modules5]
+FAILED tests/unit/specfact_code_review/run/test_target_pytest.py::test_installed_module_selector_rejects_unattached_or_invalid_names[modules6]
+FAILED tests/unit/specfact_code_review/run/test_target_pytest.py::test_installed_module_selector_rejects_unattached_or_invalid_names[modules7]
+FAILED tests/unit/specfact_code_review/run/test_target_pytest.py::test_installed_module_selector_accepts_only_regular_attached_module
+FAILED tests/unit/specfact_code_review/run/test_target_coverage.py::test_top_level_installed_module_respects_reviewer_and_native_scope[default]
+FAILED tests/unit/specfact_code_review/run/test_portable_worker.py::test_portable_pytest_command_transmits_verified_module_names
+================= 11 failed, 2 passed, 109 deselected in 0.62s =================

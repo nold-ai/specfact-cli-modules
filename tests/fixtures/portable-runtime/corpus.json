@@ -20,7 +20,11 @@
       "paths": [
         "src/requests/structures.py",
         "tests/test_structures.py"
-      ]
+      ],
+      "controlled_defect": {
+        "source": "src/requests/specfact_controlled.py",
+        "import": "requests.specfact_controlled"
+      }
     },
     {
       "name": "hatch",
@@ -32,7 +36,11 @@
       "paths": [
         "src/hatch/utils/structures.py",
         "tests/utils/test_structures.py"
-      ]
+      ],
+      "controlled_defect": {
+        "source": "src/hatch/specfact_controlled.py",
+        "import": "hatch.specfact_controlled"
+      }
     },
     {
       "name": "flask",
@@ -46,7 +54,11 @@
       "paths": [
         "src/flask/config.py",
         "tests/test_config.py"
-      ]
+      ],
+      "controlled_defect": {
+        "source": "src/flask/specfact_controlled.py",
+        "import": "flask.specfact_controlled"
+      }
     },
     {
       "name": "poetry",
@@ -77,7 +89,11 @@
           "line": 10,
           "module": "poetry.utils.extras"
         }
-      ]
+      ],
+      "controlled_defect": {
+        "source": "src/poetry/specfact_controlled.py",
+        "import": "poetry.specfact_controlled"
+      }
     }
   ],
   "reconstructions": [
@@ -98,7 +114,11 @@
         "-p",
         "no:asyncio"
       ],
-      "host_note": "Disable only the asyncio entry-point alias; pytest_asyncio.plugin remains explicitly loaded by the unchanged fixture addopts."
+      "host_note": "Disable only the asyncio entry-point alias; pytest_asyncio.plugin remains explicitly loaded by the unchanged fixture addopts.",
+      "controlled_defect": {
+        "source": "src/portable_customer/specfact_controlled.py",
+        "import": "portable_customer.specfact_controlled"
+      }
     }
   ]
 }

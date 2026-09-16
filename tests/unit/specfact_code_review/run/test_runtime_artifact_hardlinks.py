@@ -75,6 +75,7 @@ def test_linked_descriptor_is_rejected_before_read(runtime_fixture, tmp_path: Pa
 
 @pytest.mark.parametrize("linked_name", ["inventory.json", "site-packages/retained.log"])
 def test_prepare_rejects_log_alias_before_inventory(tmp_path: Path, monkeypatch, linked_name: str) -> None:
+    monkeypatch.setattr(runtime_builder, "capture_public_trust", lambda _root: b"synthetic public trust")
     source = tmp_path / "source"
     source.mkdir()
     plan = discover_project(source)

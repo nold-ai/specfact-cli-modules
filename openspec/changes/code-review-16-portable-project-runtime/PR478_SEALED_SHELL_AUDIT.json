@@ -1,0 +1,203 @@
+{
+  "manifest": "4574e160caedb71f8f47c8918f554678f4eddd4d9af1a4058c449b384f3a4ecd",
+  "manifest_verified": true,
+  "layers": [
+    {
+      "layer": "sha256:039e6f9f9752f74a3ff4a6a224f64c7c864da16ed98f882107704328f41b9c42",
+      "verified": true,
+      "relevant_entries": [
+        {
+          "path": "bin",
+          "type": "2",
+          "target": "usr/bin",
+          "mode": "0o777",
+          "sha256": null
+        },
+        {
+          "path": "lib",
+          "type": "2",
+          "target": "usr/lib",
+          "mode": "0o777",
+          "sha256": null
+        },
+        {
+          "path": "lib64",
+          "type": "2",
+          "target": "usr/lib64",
+          "mode": "0o777",
+          "sha256": null
+        },
+        {
+          "path": "usr",
+          "type": "5",
+          "target": "",
+          "mode": "0o755",
+          "sha256": null
+        },
+        {
+          "path": "usr/bin",
+          "type": "5",
+          "target": "",
+          "mode": "0o755",
+          "sha256": null
+        },
+        {
+          "path": "usr/bin/dash",
+          "type": "0",
+          "target": "",
+          "mode": "0o755",
+          "sha256": "f5adb8bf0100ed0f8c7782ca5f92814e9229525a4b4e0d401cf3bea09ac960a6"
+        },
+        {
+          "path": "usr/bin/sh",
+          "type": "2",
+          "target": "dash",
+          "mode": "0o777",
+          "sha256": null
+        },
+        {
+          "path": "usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2",
+          "type": "0",
+          "target": "",
+          "mode": "0o755",
+          "sha256": "02bcda52c1a5dfc236f94d9e5255b4a0e26347d8a372a5223b650e31f291ce3c"
+        },
+        {
+          "path": "usr/lib/x86_64-linux-gnu/libc.so.6",
+          "type": "0",
+          "target": "",
+          "mode": "0o755",
+          "sha256": "6b4a45352fd0c540a9c7c718f35ce8c8e46a4e482f9d3885a910c32d1a0e1421"
+        },
+        {
+          "path": "usr/lib64",
+          "type": "5",
+          "target": "",
+          "mode": "0o755",
+          "sha256": null
+        },
+        {
+          "path": "usr/lib64/ld-linux-x86-64.so.2",
+          "type": "2",
+          "target": "/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2",
+          "mode": "0o777",
+          "sha256": null
+        }
+      ]
+    },
+    {
+      "layer": "sha256:e8e392f3681c10ad9c2b19ab6614fd158f6d5a03e0f71694aea9429d38813dbd",
+      "verified": true,
+      "relevant_entries": [
+        {
+          "path": "usr",
+          "type": "5",
+          "target": "",
+          "mode": "0o755",
+          "sha256": null
+        },
+        {
+          "path": "usr/bin",
+          "type": "5",
+          "target": "",
+          "mode": "0o755",
+          "sha256": null
+        }
+      ]
+    },
+    {
+      "layer": "sha256:8e0b0d5a4a0425bc991b95b78af125c6005a0a82a89011f076802a0265d8ff32",
+      "verified": true,
+      "relevant_entries": [
+        {
+          "path": "usr",
+          "type": "5",
+          "target": "",
+          "mode": "0o755",
+          "sha256": null
+        }
+      ]
+    },
+    {
+      "layer": "sha256:1634f3c69c84a41815c187086e80cf5fdec289c6ce620014ef3ca9b54c019279",
+      "verified": true,
+      "relevant_entries": [
+        {
+          "path": "usr",
+          "type": "5",
+          "target": "",
+          "mode": "0o755",
+          "sha256": null
+        }
+      ]
+    },
+    {
+      "layer": "sha256:f29564965d59de423c4f75a3ec1030463110fbe3bdef933fa616a465dc2e6f0c",
+      "verified": true,
+      "relevant_entries": []
+    },
+    {
+      "layer": "sha256:d785c0e86650afc22c2fa1d8c0f026d23b180599223ace01702400d7c8b6a2f5",
+      "verified": true,
+      "relevant_entries": []
+    },
+    {
+      "layer": "sha256:41b40f70f9f208de81a3d2439a33b5c514406b4b49629ec65bb6adc246436300",
+      "verified": true,
+      "relevant_entries": []
+    },
+    {
+      "layer": "sha256:6ad545fc3f52bb716eb8a93afc7a974fa0ea3c9b511d0597a727c96eaf926acb",
+      "verified": true,
+      "relevant_entries": []
+    },
+    {
+      "layer": "sha256:e968d380b220fed83583e177bf65d77ec5e8870205596bd9f8eb8528093a0c37",
+      "verified": true,
+      "relevant_entries": [
+        {
+          "path": "root/.wh..cache",
+          "type": "0",
+          "target": "",
+          "mode": "0o0",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "tmp/.wh.write_manifest.py",
+          "type": "0",
+          "target": "",
+          "mode": "0o0",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "usr",
+          "type": "5",
+          "target": "",
+          "mode": "0o755",
+          "sha256": null
+        }
+      ]
+    },
+    {
+      "layer": "sha256:a07b58bafec5371f5aa327bb9bf8a4a28fb9dd57c91fb9e4a88d30f215301946",
+      "verified": true,
+      "relevant_entries": []
+    },
+    {
+      "layer": "sha256:1e81566b30b25ab6282f3e094dfbddc808f2cc7a44113093d6a2332596d9560b",
+      "verified": true,
+      "relevant_entries": []
+    },
+    {
+      "layer": "sha256:6f4e76a343af20fd6cef4ef25b31c854b616a5374c454d97bcc4baa75ef0e51d",
+      "verified": true,
+      "relevant_entries": []
+    },
+    {
+      "layer": "sha256:45638b56ff23e3aeb6f46940f90fd1dcfefd6368a99bcb65508d608ac9abc627",
+      "verified": true,
+      "relevant_entries": []
+    }
+  ],
+  "note": "Static verified OCI composition evidence only. Does not establish native execution."
+}

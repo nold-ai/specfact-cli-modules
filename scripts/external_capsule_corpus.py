@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import keyword
 import os
 import platform
 import runpy
@@ -360,21 +361,68 @@ def host_test(entry: dict[str, Any], root: Path, evidence: Path, workspace: Path
     assert_host_execution(evidence / "host-junit.xml")
 
 
-def controlled_defect(root: Path, evidence: Path, config: Path, workspace: Path) -> None:
+def _controlled_module(entry: dict[str, Any]) -> tuple[str, str]:
+    """Require one explicit canonical package path and matching Python import."""
+    definition = entry.get("controlled_defect")
+    if not isinstance(definition, dict):
+        raise ValueError("controlled fixture path/import metadata missing")
+    relative, module = definition.get("source"), definition.get("import")
+    if not isinstance(module, str) or not all(
+        part.isidentifier() and not keyword.iskeyword(part) for part in module.split(".")
+    ):
+        raise ValueError("controlled fixture import invalid")
+    return _controlled_source(relative, module), module
+
+
+def _controlled_source(relative: object, module: str) -> str:
+    """Keep the declared source path canonical and consistent with its package import."""
+    if not isinstance(relative, str):
+        raise ValueError("controlled fixture path invalid")
+    path = Path(relative)
+    suffix = module.replace(".", "/") + ".py"
+    if path.is_absolute() or path.as_posix() != relative or ".." in path.parts or "\\" in relative:
+        raise ValueError("controlled fixture path must be canonical and relative")
+    if not (relative == suffix or relative.endswith("/" + suffix)):
+        raise ValueError("controlled fixture path/import mismatch")
+    return relative
+
+
+def _controlled_destination(root: Path, relative: str) -> Path:
+    """Allow only absent files beneath existing ordinary copied package directories."""
+    parent = root
+    for part in (".", *Path(relative).parts[:-1]):
+        parent /= part
+        if parent.is_symlink() or not parent.is_dir():
+            raise ValueError(f"controlled fixture path has unsafe parent:{relative}")
+    destination = root / relative
+    if destination.exists() or destination.is_symlink():
+        raise ValueError(f"controlled fixture destination already exists:{relative}")
+    return destination
+
+
+def controlled_defect(root: Path, evidence: Path, config: Path, workspace: Path, *, entry: dict[str, Any]) -> None:
     """Require actual test failure and static defect detection in an identified copy."""
+    relative, module = _controlled_module(entry)
+    test_path = "tests/test_specfact_controlled.py"
+    _controlled_destination(root, relative)
+    _controlled_destination(root, test_path)
     copy = workspace / "controlled" / root.name
+    if copy.parent.is_symlink() or copy.exists() or copy.is_symlink():
+        raise ValueError("controlled fixture destination is unsafe or already exists")
     shutil.copytree(root, copy, symlinks=True)
-    (copy / "specfact_controlled.py").write_text(
-        'def controlled() -> int:\n    return "injected wrong type"\n', encoding="utf-8"
-    )
-    (copy / "tests/test_specfact_controlled.py").write_text(
-        'def test_specfact_controlled_failure():\n    assert False, "SPECFACT_CONTROLLED_473"\n', encoding="utf-8"
-    )
+    source, test = _controlled_destination(copy, relative), _controlled_destination(copy, test_path)
+    with source.open("x", encoding="utf-8") as stream:
+        stream.write('def controlled() -> int:\n    return "injected wrong type"\n')
+    with test.open("x", encoding="utf-8") as stream:
+        stream.write(
+            f"from {module} import controlled\n\n"
+            'def test_specfact_controlled_failure():\n    assert controlled() == 42, "SPECFACT_CONTROLLED_473"\n'
+        )
     report = review(
         copy,
         evidence,
         config,
-        ["specfact_controlled.py", "tests/test_specfact_controlled.py"],
+        [relative, test_path],
         name="controlled-defect",
     )
     findings = report.get("findings", [])
@@ -436,7 +484,7 @@ def run_entry(entry: dict[str, Any], workspace: Path) -> None:
         encoding="utf-8",
     )
     _assert_verified_imports(review(root, evidence, config, entry["paths"], descriptor=str(descriptor)), entry)
-    controlled_defect(root, evidence, config, workspace)
+    controlled_defect(root, evidence, config, workspace, entry=entry)
     if tracked_identity(root) != before:
         raise ValueError("capsule modified upstream source or environment inputs")
     (evidence / "acceptance.json").write_text(

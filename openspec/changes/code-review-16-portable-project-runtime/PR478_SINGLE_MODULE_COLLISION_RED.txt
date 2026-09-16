@@ -1,0 +1,57 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: /private/tmp/specfact-477-pytest-release
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, xdist-3.8.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 32 items / 26 deselected / 6 selected
+
+tests/unit/specfact_code_review/run/test_target_coverage.py ...F..       [100%]
+
+=================================== FAILURES ===================================
+_ test_top_level_installed_module_respects_reviewer_and_native_scope[directory-collision-default] _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-886/test_top_level_installed_modul3')
+scope = 'default', collision = True
+
+    @pytest.mark.parametrize("scope", ["default", "configured", "native"])
+    @pytest.mark.parametrize("collision", [False, True], ids=["unambiguous", "directory-collision"])
+    def test_top_level_installed_module_respects_reviewer_and_native_scope(tmp_path, scope, collision):
+        source = _project(tmp_path)
+        if collision:
+            (source / "standalone").mkdir()
+        site = tmp_path / "site-packages"
+        site.mkdir()
+        (site / "standalone.py").write_text("import foreign\ndef answer():\n    return foreign.VALUE\n")
+        (site / "foreign.py").write_text("VALUE = 42\n")
+        (source / "tests/test_installed.py").write_text(
+            "from standalone import answer\ndef test_answer():\n    assert answer() == 42\n"
+        )
+        configuration = source / "pyproject.toml"
+        configuration.write_text(configuration.read_text().replace('source=["app"]\n', ""))
+        if scope == "configured":
+            configuration.write_text(
+                configuration.read_text().replace("[tool.coverage.run]", '[tool.coverage.run]\nsource=["app"]')
+            )
+        extra = ("--cov=app", "--cov-fail-under=0") if scope == "native" else ()
+        completed, receipt = _run(source, tmp_path, extra, startup=site, modules=["standalone"])
+        assert completed.returncode == 0, completed.stdout + completed.stderr
+        assert receipt["coverage_policy"]["mode"] == ("native" if scope == "native" else "reviewer")
+        assert "2 passed" in completed.stdout
+        if scope == "default" and collision:
+>           assert receipt["coverage"] == {}
+E           AssertionError: assert {'meta': {'fo...'81.82', ...}} == {}
+E
+E             Left contains 3 more items:
+E             {'files': {'app.py': {'classes': {'': {'excluded_lines': [],
+E                                                    'executed_lines': [1, 2, 3],
+E                                                    'missing_lines': [4],
+E                                                    'start_line': 1,
+E                                                    'summary': {'covered_lines': 3,...
+E
+E             ...Full output truncated (200 lines hidden), use '-vv' to show
+
+tests/unit/specfact_code_review/run/test_target_coverage.py:334: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_target_coverage.py::test_top_level_installed_module_respects_reviewer_and_native_scope[directory-collision-default]
+================== 1 failed, 5 passed, 26 deselected in 1.98s ==================

@@ -2,7 +2,11 @@
 
 import hashlib
 import importlib.util
+import inspect
 import json
+import os
+import subprocess
+import sys
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -133,6 +137,7 @@ def test_controlled_defect_preserves_separate_report(tmp_path: Path, monkeypatch
     module = _load()
     root = tmp_path / "upstream"
     (root / "tests").mkdir(parents=True)
+    (root / "src/customer").mkdir(parents=True)
     evidence = tmp_path / "evidence"
     evidence.mkdir()
     (evidence / "cold-auto-report.json").write_text('{"untouched": true}')
@@ -154,9 +159,149 @@ def test_controlled_defect_preserves_separate_report(tmp_path: Path, monkeypatch
 
     monkeypatch.setattr(module, "execute", execute)
     monkeypatch.setattr(module, "assert_completed_report", lambda _report: None)
-    module.controlled_defect(root, evidence, tmp_path / "config.toml", tmp_path)
+    _invoke_controlled(module, root, evidence, tmp_path, _controlled_entry())
     assert (evidence / "controlled-defect-report.json").is_file()
     assert json.loads((evidence / "cold-auto-report.json").read_text()) == {"untouched": True}
+
+
+def _controlled_entry() -> dict:
+    """Identify the exact package context of the disposable regression project."""
+    return {
+        "controlled_defect": {"source": "src/customer/specfact_controlled.py", "import": "customer.specfact_controlled"}
+    }
+
+
+def _invoke_controlled(module, root, evidence, workspace, entry) -> None:
+    """Keep the new behavior regression callable against the original four-argument harness."""
+    options = {"entry": entry} if "entry" in inspect.signature(module.controlled_defect).parameters else {}
+    module.controlled_defect(root, evidence, workspace / "config.toml", workspace, **options)
+
+
+def _detected_controlled_findings() -> dict:
+    """Stub only the unrelated signed analyzer boundary during fixture-generation tests."""
+    return {"findings": [{"rule": "TEST_OUTCOME_NOT_PASS"}, {"tool": "basedpyright", "file": "specfact_controlled.py"}]}
+
+
+@pytest.mark.parametrize("scope", ["source_pkgs", "omit_only"])
+def test_controlled_fixture_executes_inside_unchanged_native_measurement(tmp_path, monkeypatch, scope) -> None:
+    """The generated test must really call the bad function under native coverage filters."""
+    module = _load()
+    root = tmp_path / "upstream"
+    (root / "tests").mkdir(parents=True)
+    (root / "src/customer").mkdir(parents=True)
+    (root / "src/customer/__init__.py").write_text("")
+    (root / "pyproject.toml").write_text('[tool.pytest.ini_options]\npythonpath=["src"]\n')
+    configured = "source_pkgs = customer, tests" if scope == "source_pkgs" else "omit = customer/unused/*"
+    (root / ".coveragerc").write_text(f"[run]\n{configured}\n")
+    original = module.tracked_identity(root)
+
+    def review(copy, _evidence, _config, paths, **_kwargs):
+        report = tmp_path / "native-coverage.json"
+        completed = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "pytest",
+                "-q",
+                "-p",
+                "pytest_cov",
+                "--cov",
+                f"--cov-report=json:{report}",
+                paths[1],
+            ],
+            cwd=copy,
+            env={**os.environ, "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1", "COVERAGE_FILE": str(tmp_path / ".coverage")},
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=60,
+        )
+        assert completed.returncode == 1, completed.stdout + completed.stderr
+        assert "SPECFACT_CONTROLLED_473" in completed.stdout
+        assert "injected wrong type" in completed.stdout
+        payload = json.loads(report.read_text())
+        selected = "src/customer/specfact_controlled.py"
+        assert paths == [selected, "tests/test_specfact_controlled.py"]
+        assert payload["files"][selected]["executed_lines"] == [1, 2]
+        assert module.tracked_identity(root) == original
+        assert (copy / ".coveragerc").read_bytes() == (root / ".coveragerc").read_bytes()
+        return _detected_controlled_findings()
+
+    monkeypatch.setattr(module, "review", review)
+    _invoke_controlled(module, root, tmp_path, tmp_path, _controlled_entry())
+
+
+@pytest.mark.parametrize(
+    "unsafe", ["parent-link", "test-parent-link", "source-exists", "test-exists", "destination-link"]
+)
+def test_controlled_fixture_rejects_unsafe_write_targets(tmp_path, monkeypatch, unsafe) -> None:
+    """Copy injection cannot follow customer links or overwrite existing fixture paths."""
+    module = _load()
+    root = tmp_path / "upstream"
+    (root / "src/customer").mkdir(parents=True)
+    (root / "tests").mkdir()
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    targets = {"parent-link": root / "src/customer", "test-parent-link": root / "tests"}
+    if unsafe in targets:
+        targets[unsafe].rmdir()
+        targets[unsafe].symlink_to(outside, target_is_directory=True)
+    elif unsafe == "destination-link":
+        (tmp_path / "controlled").symlink_to(outside, target_is_directory=True)
+    else:
+        name = (
+            "src/customer/specfact_controlled.py" if unsafe == "source-exists" else "tests/test_specfact_controlled.py"
+        )
+        (root / name).write_text("ORIGINAL = True\n")
+    original = module.tracked_identity(root)
+    monkeypatch.setattr(module, "review", lambda *_args, **_kwargs: _detected_controlled_findings())
+    with pytest.raises(ValueError, match=r"controlled.*(path|destination)"):
+        _invoke_controlled(module, root, tmp_path, tmp_path, _controlled_entry())
+    assert module.tracked_identity(root) == original
+    assert not list(outside.iterdir())
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("source", "../outside.py"),
+        ("source", "/outside.py"),
+        ("import", "customer;raise RuntimeError"),
+        ("import", "other.specfact_controlled"),
+        ("import", "customer.class"),
+    ],
+)
+def test_controlled_fixture_rejects_invalid_explicit_package_declaration(tmp_path, monkeypatch, field, value) -> None:
+    """An explicit corpus path and import must describe the same contained Python module."""
+    module = _load()
+    root = tmp_path / "upstream"
+    (root / "src/customer").mkdir(parents=True)
+    (root / "tests").mkdir()
+    entry = _controlled_entry()
+    entry["controlled_defect"][field] = value
+    monkeypatch.setattr(module, "review", lambda *_args, **_kwargs: _detected_controlled_findings())
+    with pytest.raises(ValueError, match=r"controlled.*(path|import)"):
+        _invoke_controlled(module, root, tmp_path, tmp_path, entry)
+
+
+def test_pinned_corpus_records_explicit_controlled_package_context() -> None:
+    """Each frozen upstream and reconstruction has its own reviewed package destination."""
+    module = _load()
+    manifest = json.loads(module.MANIFEST.read_text())
+    entries = [*manifest["repositories"], *manifest["reconstructions"]]
+    expected = {
+        "requests": "requests",
+        "hatch": "hatch",
+        "flask": "flask",
+        "poetry": "poetry",
+        "hatch-detached": "portable_customer",
+    }
+    for entry in entries:
+        package = expected[entry["name"]]
+        assert entry.get("controlled_defect") == {
+            "source": f"src/{package}/specfact_controlled.py",
+            "import": f"{package}.specfact_controlled",
+        }
 
 
 def test_offline_corpus_requires_provisioned_launcher(tmp_path: Path, monkeypatch) -> None:
@@ -240,7 +385,7 @@ def _run_poetry_import_guard(tmp_path: Path, monkeypatch, phase: str, finding: d
     monkeypatch.setattr(module, "checkout", lambda *_args: None)
     monkeypatch.setattr(module, "tracked_identity", lambda *_args: "unchanged")
     monkeypatch.setattr(module, "host_test", lambda *_args: None)
-    monkeypatch.setattr(module, "controlled_defect", lambda *_args: None)
+    monkeypatch.setattr(module, "controlled_defect", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(module, "execute", lambda *_args, **_kwargs: json.dumps({"descriptor": str(descriptor)}))
 
     def review(*_args, **kwargs):

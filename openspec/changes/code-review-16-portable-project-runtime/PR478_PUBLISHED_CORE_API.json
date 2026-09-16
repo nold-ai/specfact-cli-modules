@@ -1,0 +1,19 @@
+{
+  "package": "specfact-cli==0.55.4",
+  "wheel": "specfact_cli-0.55.4-py3-none-any.whl",
+  "wheel_sha256": "aac27b5b1d9d96990510f22797316909ed78e38590ab77bc72eff9d51b65f4b5",
+  "wheel_bytes": 788730,
+  "acquisition": "python -m pip download --no-deps --only-binary=:all: specfact-cli==0.55.4",
+  "validation": "isolated -I Python import from the extracted wheel, using existing developer dependencies",
+  "registry_imports": [
+    "specfact_cli.registry.module_discovery",
+    "specfact_cli.registry.module_installer"
+  ],
+  "verified_contracts": [
+    "discover_all_modules_for_project_with_shadowed is callable",
+    "USER_MODULES_ROOT and MARKETPLACE_MODULES_ROOT are Path values",
+    "module_installer._bundled_public_key_path() is an existing wheel-owned public-key file"
+  ],
+  "result": "PASS",
+  "limits": "This verifies the published Python registry interface; updated hermetic native preparation and review remain separate required gates."
+}

@@ -55,3 +55,41 @@
 - [x] Specify safe preparation reasons and preserved nested PYTHONPATH before regressions.
 - [x] Record actual failing evidence, implement both corrections and pass focused and combined gates.
 - [ ] Publish CI-signed fixes, verify current Linux acceptance and then resolve 4011304439 and 4011304448.
+
+## Release PR #477 pytest evidence findings
+- [x] Record regressions for mixed passing/non-passing pytest outcomes and per-source coverage, including native threshold and test-only selection controls.
+- [x] Preserve observed non-pass failures and validate reviewed production-source coverage without changing customer selection.
+- [ ] Validate, CI-sign and publish an immutable correction, then resolve findings 4019944740 and 4019944751 after current-head acceptance.
+
+## PR #478 nested pytest outcome paths
+
+- [x] Specify snapshot-relative outcome finding paths and record failing regressions before implementation.
+- [x] Reuse contained pytest-root validation for outcome findings and coverage, preserving native node identifiers.
+- [ ] Complete independent review, combined gates, CI signing and current-head validation before resolving finding 4020270168.
+
+## PR #478 native pytest startup failure
+
+- [x] Specify and reproduce native usage-error observations with null pytest roots and lost capsule execution evidence.
+- [x] Validate incomplete execution before outcome-path resolution, reject malformed roots explicitly and preserve native observations.
+- [ ] Complete independent review, combined gates, CI signing and current-head validation before resolving finding 4020397305.
+
+## PR #478 installed project coverage attribution
+
+- [x] Record native regular-install coverage failure before implementing a metadata-owned, byte-verified installed-source bridge.
+- [x] Preserve installed import precedence and raw coverage while verifying snapshot/RECORD ownership, content, directory boundaries, and attribution before and after execution.
+- [x] Validate real native pytest coverage, defect detection, stale and ambiguous source, foreign namespace ownership, unsafe RECORD paths and tampering locally.
+- [ ] Repeat the external capsule corpus in native CI and through the public signed release.
+
+## PR #478 native customer test tools
+
+- [x] Retain native failures, specify explicit supported tools, and record discovery/capture/helper/collision RED before fixes.
+- [x] Capture controller-owned complete native closures and immutable identities; preserve project library isolation and existing worker interfaces.
+- [x] Validate real offline Linux Git clean filters and local transport, with complete payload inventory and measured size.
+- [x] Recognize verified implicit Hatch default activation while retaining explicit precedence and immutable snapshot inputs.
+- [ ] Complete fresh exact-snapshot unchanged Linux hooks, candidate signed corpus and public signed acceptance.
+
+## Native coverage fidelity follow-up
+- [x] Specify, reproduce and correct native coverage activation/source/report semantics while preserving reviewed-file thresholds.
+- [x] Exercise real xdist/subprocess, explicit option fidelity, typed failure evidence and verified child bootstrap.
+- [ ] Refresh broad repository gates and fresh bug-hunt for the coverage-fidelity candidate.
+- [ ] Complete normal signed developer commits, canonical CI signing and exact candidate Linux/corpus acceptance.

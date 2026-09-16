@@ -386,6 +386,36 @@ def _snip_stderr_tail(stderr: str) -> str:
     return "…" + err_raw[-_SEMGREP_STDERR_SNIP_MAX:]
 
 
+def _bounded_semgrep_scalar(value: object) -> object:
+    """Bound escaped scalar text so nine fields fit the diagnostic budget."""
+
+    if not isinstance(value, str):
+        return value if len(json.dumps(value)) <= 384 else "[scalar exceeds diagnostic limit]"
+    value = value[:512]
+    if len(json.dumps(value, ensure_ascii=True)) <= 384:
+        return value
+    lower, upper = 0, len(value)
+    while lower < upper:
+        middle = (lower + upper + 1) // 2
+        if len(json.dumps(value[:middle] + "...", ensure_ascii=True)) <= 384:
+            lower = middle
+        else:
+            upper = middle - 1
+    return value[:lower] + "..."
+
+
+def _semgrep_error_fields(error: object) -> dict[str, object]:
+    """Retain diagnostic fields only; never serialize nested source metadata."""
+
+    if not isinstance(error, dict):
+        return {}
+    fields: dict[str, object] = {}
+    for key in ("type", "code", "message"):
+        if key in error and isinstance(error[key], (str, int, float, bool, type(None))):
+            fields[key] = _bounded_semgrep_scalar(error[key])
+    return fields
+
+
 def _validate_semgrep_completion(result: subprocess.CompletedProcess[str], payload: dict[str, object]) -> None:
     """Reject process and structured execution errors before accepting results."""
 
@@ -396,7 +426,13 @@ def _validate_semgrep_completion(result: subprocess.CompletedProcess[str], paylo
     if not isinstance(errors, list):
         raise ValueError("semgrep structured errors must be a list")
     if errors:
-        raise ValueError(f"semgrep returned structured errors (count={len(errors)})")
+        # Like bounded stderr, native messages may include reviewed-source text.
+        # Do not serialize arbitrary error fields or claim secret redaction.
+        details = json.dumps([_semgrep_error_fields(error) for error in errors[:3]], separators=(",", ":"))
+        raise ValueError(
+            f"semgrep returned structured errors (count={len(errors)}, omitted={max(0, len(errors) - 3)}); "
+            f"details={details}"
+        )
 
 
 def _load_semgrep_payload(

@@ -14,6 +14,7 @@ from specfact_code_review.run.runtime_models import ProjectRuntimeError
 
 
 def _prepare_fixture(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setattr(runtime_builder, "capture_public_trust", lambda _root: b"synthetic public trust")
     source = tmp_path / "source"
     source.mkdir()
     plan = discover_project(source)

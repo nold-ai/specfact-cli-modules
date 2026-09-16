@@ -1,0 +1,61 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: /private/tmp/specfact-477-pytest-release
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 25 items / 22 deselected / 3 selected
+
+tests/unit/specfact_code_review/run/test_portable_pytest_evidence.py FFF [100%]
+
+=================================== FAILURES ===================================
+_____________ test_nested_pytest_root_resolves_custom_test_modules _____________
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-542/test_nested_pytest_root_resolv0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x109f87490>
+
+    def test_nested_pytest_root_resolves_custom_test_modules(tmp_path, monkeypatch):
+        observation = _observation(_record("check_app.py::test_pass"))
+        observation["pytest_root"] = "checks"
+        observation["test_roots"] = []
+>       assert not _run(tmp_path, monkeypatch, observation, ("src/app.py", "checks/check_app.py"))
+E       AssertionError: assert not [ReviewFinding(category='tool_error', severity='error', tool='pytest', rule='tool_error', file='/private/var/folders/l... before_ref=None, after_ref=None, improvement=None, signal_trace=None, preserve_reasons=None, remediation_packet=None)]
+E        +  where [ReviewFinding(category='tool_error', severity='error', tool='pytest', rule='tool_error', file='/private/var/folders/l... before_ref=None, after_ref=None, improvement=None, signal_trace=None, preserve_reasons=None, remediation_packet=None)] = _run(PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-542/test_nested_pytest_root_resolv0'), <_pytest.monkeypatch.MonkeyPatch object at 0x109f87490>, {'exit_code': 0, 'collected': ['check_app.py::test_pass'], 'records': [{'nodeid': 'check_app.py::test_pass', 'phase': ...come': 'passed', 'wasxfail': ''}], 'coverage': {'files': {'src/app.py': {'summary': {'percent_covered': 100.0}}}}, ...}, ('src/app.py', 'checks/check_app.py'))
+
+/private/tmp/specfact-477-pytest-release/tests/unit/specfact_code_review/run/test_portable_pytest_evidence.py:170: AssertionError
+________ test_package_discovery_root_does_not_exempt_production_source _________
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-542/test_package_discovery_root_do0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x109f876f0>
+
+    def test_package_discovery_root_does_not_exempt_production_source(tmp_path, monkeypatch):
+        observation = _observation(
+            _record("package/tests/test_app.py::test_pass"),
+            coverage={"package/app.py": {"summary": {"percent_covered": 0}}},
+        )
+        observation["test_roots"] = ["package"]
+        findings = _run(tmp_path, monkeypatch, observation, ("package/app.py", "package/tests/test_app.py"))
+>       assert any(item.rule == "TEST_COVERAGE_LOW" for item in findings)
+E       assert False
+E        +  where False = any(<generator object test_package_discovery_root_does_not_exempt_production_source.<locals>.<genexpr> at 0x10b241490>)
+
+/private/tmp/specfact-477-pytest-release/tests/unit/specfact_code_review/run/test_portable_pytest_evidence.py:180: AssertionError
+___________________ test_external_pytest_root_is_incomplete ____________________
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-542/test_external_pytest_root_is_i0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10b123530>
+
+    def test_external_pytest_root_is_incomplete(tmp_path, monkeypatch):
+        observation = _observation(_record("tests/test_app.py::test_pass"))
+        observation["pytest_root"] = str(tmp_path.parent)
+        findings = _run(tmp_path, monkeypatch, observation)
+>       assert any(item.rule == "tool_error" and "pytest_root" in item.message for item in findings)
+E       assert False
+E        +  where False = any(<generator object test_external_pytest_root_is_incomplete.<locals>.<genexpr> at 0x10b241cb0>)
+
+/private/tmp/specfact-477-pytest-release/tests/unit/specfact_code_review/run/test_portable_pytest_evidence.py:187: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_portable_pytest_evidence.py::test_nested_pytest_root_resolves_custom_test_modules
+FAILED tests/unit/specfact_code_review/run/test_portable_pytest_evidence.py::test_package_discovery_root_does_not_exempt_production_source
+FAILED tests/unit/specfact_code_review/run/test_portable_pytest_evidence.py::test_external_pytest_root_is_incomplete
+======================= 3 failed, 22 deselected in 0.19s =======================

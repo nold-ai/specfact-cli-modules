@@ -17,6 +17,7 @@ import sys
 import sysconfig
 from collections.abc import Mapping
 from pathlib import Path
+from types import ModuleType
 
 
 PROJECT = Path("/opt/specfact/project-runtime")
@@ -24,6 +25,7 @@ SNAPSHOT = Path("/opt/specfact/snapshot")
 ANALYZERS = Path("/opt/specfact/config/member-analyzers")
 BUILTIN = Path("/opt/specfact/builtin")
 CONTEXT = Path("/opt/specfact/config/python-context")
+_OWNED_COVERAGE_MODULES: dict[str, ModuleType] = {}
 _TOOL_IMPORTS = {
     "pylint": {"pylint", "astroid"},
     "crosshair": {"crosshair", "z3"},
@@ -183,6 +185,37 @@ def _configure_member_site(finder: AnalyzerFinder, stdlib_paths: list[str]) -> N
     finder.validate_loaded()
 
 
+def _load_pytest_coverage() -> ModuleType:
+    """Load only the fixed builtin helper, rejecting cached customer aliases."""
+    alias = "_specfact_target_coverage"
+    helper = Path(__file__).with_name("target_coverage.py")
+    if helper.is_symlink() or not helper.is_file():
+        raise ImportError("project_pytest_coverage_helper_unavailable")
+    if alias in sys.modules:
+        loaded = sys.modules[alias]
+        owned = _OWNED_COVERAGE_MODULES.get(alias)
+        origin = getattr(getattr(loaded, "__spec__", None), "origin", None)
+        filename = getattr(loaded, "__file__", None)
+        if loaded is not owned or not origin or not filename:
+            raise ImportError("project_pytest_coverage_helper_origin_mismatch")
+        if Path(origin).resolve() != helper.resolve() or Path(filename).resolve() != helper.resolve():
+            raise ImportError("project_pytest_coverage_helper_origin_mismatch")
+        return loaded
+    spec = importlib.util.spec_from_file_location(alias, helper)
+    if spec is None or spec.loader is None:
+        raise ImportError("project_pytest_coverage_helper_unavailable")
+    loaded = importlib.util.module_from_spec(spec)
+    sys.modules[alias] = loaded
+    try:
+        spec.loader.exec_module(loaded)
+    except BaseException:
+        if sys.modules.get(alias) is loaded:
+            del sys.modules[alias]
+        raise
+    _OWNED_COVERAGE_MODULES[alias] = loaded
+    return loaded
+
+
 def _configure_runtime(module: str) -> None:
     """Initialize only the target worker; project Python gets no analyzer fallbacks."""
     caller_paths = _caller_pythonpath()
@@ -205,6 +238,8 @@ def _configure_runtime(module: str) -> None:
         sys.path.append(str(ANALYZERS))
     set_paths(sys.path, prepend, caller_paths)
     sys.executable = str(PROJECT / "bin/python")
+    if module == "pytest-observe":
+        _load_pytest_coverage()
 
 
 def _caller_pythonpath() -> list[str]:

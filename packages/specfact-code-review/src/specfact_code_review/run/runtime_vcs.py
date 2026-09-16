@@ -2,15 +2,54 @@
 
 from __future__ import annotations
 
+import json
 import os
 import shutil
+import stat
 import subprocess
 import tempfile
 from pathlib import Path
 
 from icontract import require
 
-from specfact_code_review.run.runtime_models import ProjectRuntimeError
+from specfact_code_review.run import target_launch
+from specfact_code_review.run.runtime_models import ProjectRuntimeError, content_digest
+
+
+def _attached_git() -> str:
+    """Select only the controller-recorded launcher inside the verified worker mount."""
+    project = target_launch.PROJECT
+    launcher = project / "bin/git"
+    try:
+        descriptor = json.loads((project / "project-runtime.json").read_text(encoding="utf-8"))
+        declared = descriptor["project"]["native_tools"]
+        recorded = descriptor["inventory"]["native_tools"]["bin/git"]
+        if not isinstance(declared, list) or "git" not in declared:
+            raise ValueError("undeclared capability")
+        if not stat.S_ISREG(launcher.lstat().st_mode) or not launcher.resolve().is_relative_to(project.resolve()):
+            raise ValueError("launcher must be a contained regular file")
+        if recorded["source"] != "generated-controller-launcher" or recorded["sha256"] != content_digest(
+            launcher.read_bytes()
+        ):
+            raise ValueError("launcher identity mismatch")
+    except (OSError, ValueError, KeyError, TypeError) as exc:
+        raise ProjectRuntimeError(
+            "project_git_attached_tool_invalid; declare native_tools=['git'] and prepare the runtime again"
+        ) from exc
+    return str(launcher)
+
+
+def _git_executable() -> str:
+    """Host lookup remains fixed; an inherited worker uses its attested capability."""
+    if not target_launch.CONTEXT.exists():
+        return "git"
+    try:
+        target_launch.execution_domain()
+    except RuntimeError as exc:
+        raise ProjectRuntimeError(
+            "project_git_attached_context_invalid; launch VCS inspection inside a verified target worker"
+        ) from exc
+    return _attached_git()
 
 
 def _git_result(
@@ -19,7 +58,7 @@ def _git_result(
     try:
         return subprocess.run(
             [
-                "git",
+                _git_executable(),
                 "-C",
                 str(root),
                 "-c",

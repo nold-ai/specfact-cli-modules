@@ -1,0 +1,31 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: /private/tmp/specfact-477-pytest-release
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 12 items
+
+tests/unit/specfact_code_review/run/test_runtime_tools.py ..........F.   [100%]
+
+=================================== FAILURES ===================================
+______________ test_git_helper_transitive_libraries_are_captured _______________
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-690/test_git_helper_transitive_lib0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10a3a5950>
+
+    def test_git_helper_transitive_libraries_are_captured(tmp_path: Path, monkeypatch) -> None:
+        tools, system = _native_fixture(tmp_path, monkeypatch)
+        (system / 'libhelper.so.1').write_bytes((system / 'git').read_bytes())
+        (system / 'libtransitive.so.1').write_bytes((system / 'git').read_bytes())
+        _elf_needing(system / 'git-remote-http', 'libhelper.so.1')
+        _elf_needing(system / 'libhelper.so.1', 'libtransitive.so.1')
+        capture = tools.capture_native_tools(('git',), capsule_root=_sealed_shell(tmp_path))
+>       assert 'native-tools/native/libhelper.so.1' in capture.files
+E       AssertionError: assert 'native-tools/native/libhelper.so.1' in {'native-tools/native/ld-linux-x86-64.so.2': b'\x7fELF\x02\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00>\x00\x0...\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00', ...}
+E        +  where {'native-tools/native/ld-linux-x86-64.so.2': b'\x7fELF\x02\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00>\x00\x0...\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00', ...} = CapturedTools(files={'native-tools/native/ld-linux-x86-64.so.2': b'\x7fELF\x02\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00...e/bin/sh': {'source': '/bin/sh', 'sha256': 'sha256:ffd94ee4a76de5639b2119d943bf39759049075dae35a1db573d27ee6365068e'}}).files
+
+tests/unit/specfact_code_review/run/test_runtime_tools.py:126: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_runtime_tools.py::test_git_helper_transitive_libraries_are_captured
+========================= 1 failed, 11 passed in 0.14s =========================

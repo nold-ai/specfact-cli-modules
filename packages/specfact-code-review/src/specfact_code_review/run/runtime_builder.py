@@ -37,6 +37,8 @@ from specfact_code_review.run.runtime_sources import (
     source_link_target,
     verify_inputs,
 )
+from specfact_code_review.run.runtime_tools import capture_native_tools, install_native_tools
+from specfact_code_review.run.runtime_trust import capture_public_trust, install_public_trust
 from specfact_code_review.run.runtime_vcs import copy_vcs_context
 
 
@@ -45,13 +47,18 @@ _BUILDER_FILES = (
     "runtime_builder.py",
     "runtime_artifacts.py",
     "runtime_native.py",
+    "runtime_tools.py",
+    "runtime_trust.py",
     "runtime_adapters.py",
     "runtime_domains.py",
+    "runtime_compatibility.py",
     "runtime_vcs.py",
     "runtime_git.py",
     "target_bootstrap.py",
     "target_launch.py",
     "target_pytest.py",
+    "target_coverage.py",
+    "installed_coverage.py",
     "target_pylint.py",
     "sitecustomize.py",
 )
@@ -270,6 +277,8 @@ def prepare_runtime(
     cache.mkdir(parents=True, exist_ok=True, mode=0o700)
     if cache.is_symlink():
         raise ProjectRuntimeError("project_runtime_cache_symlink")
+    native_tools = capture_native_tools(plan.native_tools, capsule_root=getattr(runtime, "root", None))
+    public_trust = capture_public_trust(getattr(runtime, "root", None))
     key = document_digest(
         {
             "project": plan.identity,
@@ -278,6 +287,8 @@ def prepare_runtime(
             "manager": MANAGER_REQUIREMENTS[plan.manager],
             "builder": {name: content_digest(Path(__file__).with_name(name).read_bytes()) for name in _BUILDER_FILES},
             "git": git_identity(),
+            "native_tools": native_tools.identity,
+            "public_trust": content_digest(public_trust),
         }
     )[7:]
     destination = cache / key
@@ -307,6 +318,9 @@ def prepare_runtime(
             inventory["native_libraries"] = inventory_native(
                 artifact, capsule_root=runtime.root, declared=plan.native_libraries, target_loader=True
             )
+            install_native_tools(native_tools, artifact)
+            inventory["native_tools"] = native_tools.inventory
+            inventory["public_trust"] = install_public_trust(public_trust, artifact)
             inventory["analyzer_conflicts"] = analyzer_dependency_conflicts(
                 inventory, runtime.root / "opt/specfact/analyzers"
             )

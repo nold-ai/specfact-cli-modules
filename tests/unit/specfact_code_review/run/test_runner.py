@@ -1726,16 +1726,25 @@ def test_capsule_cached_enforcement_rejects_unbound_selected_path(
     assert snapshot_calls == []
 
 
+def _assert_case_distinct_blobs(destination: Path, paths: tuple[str, ...], collision_kind: str) -> None:
+    """Require exact Git bytes and separate filesystem identities for case-distinct paths."""
+    upper_path, lower_path = (destination / path for path in paths)
+    assert upper_path.read_bytes() == b"UPPER\n"
+    assert lower_path.read_bytes() == b"lower\n"
+    assert not upper_path.samefile(lower_path)
+    if collision_kind == "directory":
+        assert not upper_path.parent.samefile(lower_path.parent)
+
+
 @pytest.mark.parametrize("collision_kind", ["file", "directory"])
-def test_cached_tree_materialization_rejects_case_collisions(
+def test_cached_tree_materialization_preserves_case_identities(
     tmp_path: Path,
     collision_kind: str,
 ) -> None:
     probe = tmp_path / "probe"
     probe.mkdir()
     (probe / "Case").write_text("probe", encoding="utf-8")
-    if not (probe / "case").exists():
-        pytest.skip("filesystem preserves case-distinct identities")
+    case_insensitive = (probe / "case").exists()
     runner_api = _c14_runner()
     git_env = runner_api._candidate_git_environment()
     repository = tmp_path / "repo"
@@ -1763,7 +1772,13 @@ def test_cached_tree_materialization_rejects_case_collisions(
     destination = tmp_path / "snapshot"
     destination.mkdir()
 
-    assert runner_api._materialize_cached_tree(repository, destination, entries) is None
+    identities = runner_api._materialize_cached_tree(repository, destination, entries)
+    if case_insensitive:
+        assert identities is None
+    else:
+        assert identities is not None
+        _assert_case_distinct_blobs(destination, tuple(entries), collision_kind)
+        assert runner_api._materialized_tree_matches_entries(destination, entries, identities)
 
 
 @pytest.mark.parametrize("bypass_kind", ["clean_filter", "assume_unchanged", "runtime_mutation", "replace_ref"])

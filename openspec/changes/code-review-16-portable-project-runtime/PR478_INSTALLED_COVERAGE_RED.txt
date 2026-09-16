@@ -1,0 +1,313 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: /private/tmp/specfact-477-pytest-release
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 13 items
+
+tests/unit/specfact_code_review/run/test_installed_coverage.py FFFFFFFF. [ 69%]
+FFF.                                                                     [100%]
+
+=================================== FAILURES ===================================
+_ test_native_installed_package_coverage_is_attributed_without_changing_imports _
+
+installed_project = namespace(snapshot=PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-571/test_n...h0000gn/T/pytest-of-dom/pytest-571/test_native_installed_package_0/runtime/site-packages/capsule-owned-1.0.dist-info'))
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-571/test_native_installed_package_0')
+
+    def test_native_installed_package_coverage_is_attributed_without_changing_imports(installed_project, tmp_path):
+        project = installed_project
+        bridge = _bridge(project)
+        result, raw = _native_coverage(project, bridge, tmp_path)
+        assert result.returncode == 0, result.stdout + result.stderr
+        before = json.dumps(raw, sort_keys=True)
+        attributed, diagnostics = _normalize(project, bridge, raw)
+        row = attributed["files"].get(str(project.source))
+>       assert row is not None, "native installed production source is absent from snapshot-only coverage"
+E       AssertionError: native installed production source is absent from snapshot-only coverage
+E       assert None is not None
+
+tests/unit/specfact_code_review/run/test_installed_coverage.py:97: AssertionError
+_________ test_actual_defect_stays_failed_after_installed_attribution __________
+
+installed_project = namespace(snapshot=PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-571/test_a...h0000gn/T/pytest-of-dom/pytest-571/test_actual_defect_stays_faile0/runtime/site-packages/capsule-owned-1.0.dist-info'))
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-571/test_actual_defect_stays_faile0')
+
+    def test_actual_defect_stays_failed_after_installed_attribution(installed_project, tmp_path):
+        project = installed_project
+        (project.snapshot / "tests/test_math.py").write_text(
+            "from capsule_owned.math import add\ndef test_wrong():\n    assert add(2, 3) == 6\n"
+        )
+        bridge = _bridge(project)
+        result, raw = _native_coverage(project, bridge, tmp_path)
+        attributed, diagnostics = _normalize(project, bridge, raw)
+        assert result.returncode == 1
+>       assert str(project.source) in attributed["files"]
+E       AssertionError: assert '/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-571/test_actual_defect_stays_faile0/snapshot/src/capsule_owned/math.py' in {'tests/test_math.py': {'executed_lines': [1, 2, 3], 'summary': {'covered_lines': 3, 'num_statements': 3, 'percent_covered': 100.0, 'percent_covered_display': '100', ...}, 'missing_lines': [], 'excluded_lines': [], ...}}
+E        +  where '/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-571/test_actual_defect_stays_faile0/snapshot/src/capsule_owned/math.py' = str(PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-571/test_actual_defect_stays_faile0/snapshot/src/capsule_owned/math.py'))
+E        +    where PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-571/test_actual_defect_stays_faile0/snapshot/src/capsule_owned/math.py') = namespace(snapshot=PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-571/test_a...h0000gn/T/pytest-of-dom/pytest-571/test_actual_defect_stays_faile0/runtime/site-packages/capsule-owned-1.0.dist-info')).source
+
+tests/unit/specfact_code_review/run/test_installed_coverage.py:113: AssertionError
+___________ test_unsafe_installed_attribution_is_incomplete[changed] ___________
+
+installed_project = namespace(snapshot=PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-571/test_u...h0000gn/T/pytest-of-dom/pytest-571/test_unsafe_installed_attribut0/runtime/site-packages/capsule-owned-1.0.dist-info'))
+case = 'changed'
+
+    @pytest.mark.parametrize("case", ["changed", "duplicate-source", "duplicate-owner", "record-hash", "record-escape", "foreign-namespace"])
+    def test_unsafe_installed_attribution_is_incomplete(installed_project, case):
+        project = installed_project
+        if case == "changed":
+            project.source.write_text("def add(left, right):\n    return left - right\n")
+        elif case == "duplicate-source":
+            duplicate = project.snapshot / "another/capsule_owned/math.py"
+            duplicate.parent.mkdir(parents=True)
+            duplicate.write_bytes(project.source.read_bytes())
+        elif case == "duplicate-owner":
+            _distribution(project.site, "other", [project.installed])
+        elif case == "record-hash":
+            record = project.metadata / "RECORD"
+            record.write_text(record.read_text().replace(_record_hash(project.installed), "sha256=broken"))
+        elif case == "record-escape":
+            with (project.metadata / "RECORD").open("a") as stream:
+                stream.write("../outside.py,sha256=broken,1\n")
+        else:
+            foreign = project.installed.parent / "foreign.py"
+            foreign.write_text("VALUE = 1\n")
+            _distribution(project.site, "foreign", [foreign], local=False)
+        bridge = _bridge(project)
+        assert not bridge.mappings
+>       assert str(project.source) in bridge.diagnostics
+E       AssertionError: assert '/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-571/test_unsafe_installed_attribut0/snapshot/src/capsule_owned/math.py' in {}
+E        +  where '/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-571/test_unsafe_installed_attribut0/snapshot/src/capsule_owned/math.py' = str(PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-571/test_unsafe_installed_attribut0/snapshot/src/capsule_owned/math.py'))
+E        +    where PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-571/test_unsafe_installed_attribut0/snapshot/src/capsule_owned/math.py') = namespace(snapshot=PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-571/test_u...h0000gn/T/pytest-of-dom/pytest-571/test_unsafe_installed_attribut0/runtime/site-packages/capsule-owned-1.0.dist-info')).source
+E        +  and   {} = namespace(directories=(), mappings=(), diagnostics={}).diagnostics
+
+tests/unit/specfact_code_review/run/test_installed_coverage.py:140: AssertionError
+______ test_unsafe_installed_attribution_is_incomplete[duplicate-source] _______
+
+installed_project = namespace(snapshot=PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-571/test_u...h0000gn/T/pytest-of-dom/pytest-571/test_unsafe_installed_attribut1/runtime/site-packages/capsule-owned-1.0.dist-info'))
+case = 'duplicate-source'
+
+    @pytest.mark.parametrize("case", ["changed", "duplicate-source", "duplicate-owner", "record-hash", "record-escape", "foreign-namespace"])
+    def test_unsafe_installed_attribution_is_incomplete(installed_project, case):
+        project = installed_project
+        if case == "changed":
+            project.source.write_text("def add(left, right):\n    return left - right\n")
+        elif case == "duplicate-source":
+            duplicate = project.snapshot / "another/capsule_owned/math.py"
+            duplicate.parent.mkdir(parents=True)
+            duplicate.write_bytes(project.source.read_bytes())
+        elif case == "duplicate-owner":
+            _distribution(project.site, "other", [project.installed])
+        elif case == "record-hash":
+            record = project.metadata / "RECORD"
+            record.write_text(record.read_text().replace(_record_hash(project.installed), "sha256=broken"))
+        elif case == "record-escape":
+            with (project.metadata / "RECORD").open("a") as stream:
+                stream.write("../outside.py,sha256=broken,1\n")
+        else:
+            foreign = project.installed.parent / "foreign.py"
+            foreign.write_text("VALUE = 1\n")
+            _distribution(project.site, "foreign", [foreign], local=False)
+        bridge = _bridge(project)
+        assert not bridge.mappings
+>       assert str(project.source) in bridge.diagnostics
+E       AssertionError: assert '/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-571/test_unsafe_installed_attribut1/snapshot/src/capsule_owned/math.py' in {}
+E        +  where '/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-571/test_unsafe_installed_attribut1/snapshot/src/capsule_owned/math.py' = str(PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-571/test_unsafe_installed_attribut1/snapshot/src/capsule_owned/math.py'))
+E        +    where PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-571/test_unsafe_installed_attribut1/snapshot/src/capsule_owned/math.py') = namespace(snapshot=PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-571/test_u...h0000gn/T/pytest-of-dom/pytest-571/test_unsafe_installed_attribut1/runtime/site-packages/capsule-owned-1.0.dist-info')).source
+E        +  and   {} = namespace(directories=(), mappings=(), diagnostics={}).diagnostics
+
+tests/unit/specfact_code_review/run/test_installed_coverage.py:140: AssertionError
+_______ test_unsafe_installed_attribution_is_incomplete[duplicate-owner] _______
+
+installed_project = namespace(snapshot=PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-571/test_u...h0000gn/T/pytest-of-dom/pytest-571/test_unsafe_installed_attribut2/runtime/site-packages/capsule-owned-1.0.dist-info'))
+case = 'duplicate-owner'
+
+    @pytest.mark.parametrize("case", ["changed", "duplicate-source", "duplicate-owner", "record-hash", "record-escape", "foreign-namespace"])
+    def test_unsafe_installed_attribution_is_incomplete(installed_project, case):
+        project = installed_project
+        if case == "changed":
+            project.source.write_text("def add(left, right):\n    return left - right\n")
+        elif case == "duplicate-source":
+            duplicate = project.snapshot / "another/capsule_owned/math.py"
+            duplicate.parent.mkdir(parents=True)
+            duplicate.write_bytes(project.source.read_bytes())
+        elif case == "duplicate-owner":
+            _distribution(project.site, "other", [project.installed])
+        elif case == "record-hash":
+            record = project.metadata / "RECORD"
+            record.write_text(record.read_text().replace(_record_hash(project.installed), "sha256=broken"))
+        elif case == "record-escape":
+            with (project.metadata / "RECORD").open("a") as stream:
+                stream.write("../outside.py,sha256=broken,1\n")
+        else:
+            foreign = project.installed.parent / "foreign.py"
+            foreign.write_text("VALUE = 1\n")
+            _distribution(project.site, "foreign", [foreign], local=False)
+        bridge = _bridge(project)
+        assert not bridge.mappings
+>       assert str(project.source) in bridge.diagnostics
+E       AssertionError: assert '/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-571/test_unsafe_installed_attribut2/snapshot/src/capsule_owned/math.py' in {}
+E        +  where '/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-571/test_unsafe_installed_attribut2/snapshot/src/capsule_owned/math.py' = str(PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-571/test_unsafe_installed_attribut2/snapshot/src/capsule_owned/math.py'))
+E        +    where PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-571/test_unsafe_installed_attribut2/snapshot/src/capsule_owned/math.py') = namespace(snapshot=PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-571/test_u...h0000gn/T/pytest-of-dom/pytest-571/test_unsafe_installed_attribut2/runtime/site-packages/capsule-owned-1.0.dist-info')).source
+E        +  and   {} = namespace(directories=(), mappings=(), diagnostics={}).diagnostics
+
+tests/unit/specfact_code_review/run/test_installed_coverage.py:140: AssertionError
+_________ test_unsafe_installed_attribution_is_incomplete[record-hash] _________
+
+installed_project = namespace(snapshot=PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-571/test_u...h0000gn/T/pytest-of-dom/pytest-571/test_unsafe_installed_attribut3/runtime/site-packages/capsule-owned-1.0.dist-info'))
+case = 'record-hash'
+
+    @pytest.mark.parametrize("case", ["changed", "duplicate-source", "duplicate-owner", "record-hash", "record-escape", "foreign-namespace"])
+    def test_unsafe_installed_attribution_is_incomplete(installed_project, case):
+        project = installed_project
+        if case == "changed":
+            project.source.write_text("def add(left, right):\n    return left - right\n")
+        elif case == "duplicate-source":
+            duplicate = project.snapshot / "another/capsule_owned/math.py"
+            duplicate.parent.mkdir(parents=True)
+            duplicate.write_bytes(project.source.read_bytes())
+        elif case == "duplicate-owner":
+            _distribution(project.site, "other", [project.installed])
+        elif case == "record-hash":
+            record = project.metadata / "RECORD"
+            record.write_text(record.read_text().replace(_record_hash(project.installed), "sha256=broken"))
+        elif case == "record-escape":
+            with (project.metadata / "RECORD").open("a") as stream:
+                stream.write("../outside.py,sha256=broken,1\n")
+        else:
+            foreign = project.installed.parent / "foreign.py"
+            foreign.write_text("VALUE = 1\n")
+            _distribution(project.site, "foreign", [foreign], local=False)
+        bridge = _bridge(project)
+        assert not bridge.mappings
+>       assert str(project.source) in bridge.diagnostics
+E       AssertionError: assert '/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-571/test_unsafe_installed_attribut3/snapshot/src/capsule_owned/math.py' in {}
+E        +  where '/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-571/test_unsafe_installed_attribut3/snapshot/src/capsule_owned/math.py' = str(PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-571/test_unsafe_installed_attribut3/snapshot/src/capsule_owned/math.py'))
+E        +    where PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-571/test_unsafe_installed_attribut3/snapshot/src/capsule_owned/math.py') = namespace(snapshot=PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-571/test_u...h0000gn/T/pytest-of-dom/pytest-571/test_unsafe_installed_attribut3/runtime/site-packages/capsule-owned-1.0.dist-info')).source
+E        +  and   {} = namespace(directories=(), mappings=(), diagnostics={}).diagnostics
+
+tests/unit/specfact_code_review/run/test_installed_coverage.py:140: AssertionError
+________ test_unsafe_installed_attribution_is_incomplete[record-escape] ________
+
+installed_project = namespace(snapshot=PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-571/test_u...h0000gn/T/pytest-of-dom/pytest-571/test_unsafe_installed_attribut4/runtime/site-packages/capsule-owned-1.0.dist-info'))
+case = 'record-escape'
+
+    @pytest.mark.parametrize("case", ["changed", "duplicate-source", "duplicate-owner", "record-hash", "record-escape", "foreign-namespace"])
+    def test_unsafe_installed_attribution_is_incomplete(installed_project, case):
+        project = installed_project
+        if case == "changed":
+            project.source.write_text("def add(left, right):\n    return left - right\n")
+        elif case == "duplicate-source":
+            duplicate = project.snapshot / "another/capsule_owned/math.py"
+            duplicate.parent.mkdir(parents=True)
+            duplicate.write_bytes(project.source.read_bytes())
+        elif case == "duplicate-owner":
+            _distribution(project.site, "other", [project.installed])
+        elif case == "record-hash":
+            record = project.metadata / "RECORD"
+            record.write_text(record.read_text().replace(_record_hash(project.installed), "sha256=broken"))
+        elif case == "record-escape":
+            with (project.metadata / "RECORD").open("a") as stream:
+                stream.write("../outside.py,sha256=broken,1\n")
+        else:
+            foreign = project.installed.parent / "foreign.py"
+            foreign.write_text("VALUE = 1\n")
+            _distribution(project.site, "foreign", [foreign], local=False)
+        bridge = _bridge(project)
+        assert not bridge.mappings
+>       assert str(project.source) in bridge.diagnostics
+E       AssertionError: assert '/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-571/test_unsafe_installed_attribut4/snapshot/src/capsule_owned/math.py' in {}
+E        +  where '/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-571/test_unsafe_installed_attribut4/snapshot/src/capsule_owned/math.py' = str(PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-571/test_unsafe_installed_attribut4/snapshot/src/capsule_owned/math.py'))
+E        +    where PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-571/test_unsafe_installed_attribut4/snapshot/src/capsule_owned/math.py') = namespace(snapshot=PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-571/test_u...h0000gn/T/pytest-of-dom/pytest-571/test_unsafe_installed_attribut4/runtime/site-packages/capsule-owned-1.0.dist-info')).source
+E        +  and   {} = namespace(directories=(), mappings=(), diagnostics={}).diagnostics
+
+tests/unit/specfact_code_review/run/test_installed_coverage.py:140: AssertionError
+______ test_unsafe_installed_attribution_is_incomplete[foreign-namespace] ______
+
+installed_project = namespace(snapshot=PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-571/test_u...h0000gn/T/pytest-of-dom/pytest-571/test_unsafe_installed_attribut5/runtime/site-packages/capsule-owned-1.0.dist-info'))
+case = 'foreign-namespace'
+
+    @pytest.mark.parametrize("case", ["changed", "duplicate-source", "duplicate-owner", "record-hash", "record-escape", "foreign-namespace"])
+    def test_unsafe_installed_attribution_is_incomplete(installed_project, case):
+        project = installed_project
+        if case == "changed":
+            project.source.write_text("def add(left, right):\n    return left - right\n")
+        elif case == "duplicate-source":
+            duplicate = project.snapshot / "another/capsule_owned/math.py"
+            duplicate.parent.mkdir(parents=True)
+            duplicate.write_bytes(project.source.read_bytes())
+        elif case == "duplicate-owner":
+            _distribution(project.site, "other", [project.installed])
+        elif case == "record-hash":
+            record = project.metadata / "RECORD"
+            record.write_text(record.read_text().replace(_record_hash(project.installed), "sha256=broken"))
+        elif case == "record-escape":
+            with (project.metadata / "RECORD").open("a") as stream:
+                stream.write("../outside.py,sha256=broken,1\n")
+        else:
+            foreign = project.installed.parent / "foreign.py"
+            foreign.write_text("VALUE = 1\n")
+            _distribution(project.site, "foreign", [foreign], local=False)
+        bridge = _bridge(project)
+        assert not bridge.mappings
+>       assert str(project.source) in bridge.diagnostics
+E       AssertionError: assert '/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-571/test_unsafe_installed_attribut5/snapshot/src/capsule_owned/math.py' in {}
+E        +  where '/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-571/test_unsafe_installed_attribut5/snapshot/src/capsule_owned/math.py' = str(PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-571/test_unsafe_installed_attribut5/snapshot/src/capsule_owned/math.py'))
+E        +    where PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-571/test_unsafe_installed_attribut5/snapshot/src/capsule_owned/math.py') = namespace(snapshot=PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-571/test_u...h0000gn/T/pytest-of-dom/pytest-571/test_unsafe_installed_attribut5/runtime/site-packages/capsule-owned-1.0.dist-info')).source
+E        +  and   {} = namespace(directories=(), mappings=(), diagnostics={}).diagnostics
+
+tests/unit/specfact_code_review/run/test_installed_coverage.py:140: AssertionError
+_______ test_content_change_after_planning_invalidates_coverage[source] ________
+
+installed_project = namespace(snapshot=PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-571/test_c...h0000gn/T/pytest-of-dom/pytest-571/test_content_change_after_plan0/runtime/site-packages/capsule-owned-1.0.dist-info'))
+changed = 'source'
+
+    @pytest.mark.parametrize("changed", ["source", "installed"])
+    def test_content_change_after_planning_invalidates_coverage(installed_project, changed):
+        project = installed_project
+        bridge = _bridge(project)
+>       assert bridge.mappings
+E       assert ()
+E        +  where () = namespace(directories=(), mappings=(), diagnostics={}).mappings
+
+tests/unit/specfact_code_review/run/test_installed_coverage.py:153: AssertionError
+______ test_content_change_after_planning_invalidates_coverage[installed] ______
+
+installed_project = namespace(snapshot=PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-571/test_c...h0000gn/T/pytest-of-dom/pytest-571/test_content_change_after_plan1/runtime/site-packages/capsule-owned-1.0.dist-info'))
+changed = 'installed'
+
+    @pytest.mark.parametrize("changed", ["source", "installed"])
+    def test_content_change_after_planning_invalidates_coverage(installed_project, changed):
+        project = installed_project
+        bridge = _bridge(project)
+>       assert bridge.mappings
+E       assert ()
+E        +  where () = namespace(directories=(), mappings=(), diagnostics={}).mappings
+
+tests/unit/specfact_code_review/run/test_installed_coverage.py:153: AssertionError
+_______________ test_missing_measured_row_cannot_be_manufactured _______________
+
+installed_project = namespace(snapshot=PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-571/test_m...h0000gn/T/pytest-of-dom/pytest-571/test_missing_measured_row_cann0/runtime/site-packages/capsule-owned-1.0.dist-info'))
+
+    def test_missing_measured_row_cannot_be_manufactured(installed_project):
+        project = installed_project
+        bridge = _bridge(project)
+>       assert bridge.mappings
+E       assert ()
+E        +  where () = namespace(directories=(), mappings=(), diagnostics={}).mappings
+
+tests/unit/specfact_code_review/run/test_installed_coverage.py:164: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_installed_coverage.py::test_native_installed_package_coverage_is_attributed_without_changing_imports
+FAILED tests/unit/specfact_code_review/run/test_installed_coverage.py::test_actual_defect_stays_failed_after_installed_attribution
+FAILED tests/unit/specfact_code_review/run/test_installed_coverage.py::test_unsafe_installed_attribution_is_incomplete[changed]
+FAILED tests/unit/specfact_code_review/run/test_installed_coverage.py::test_unsafe_installed_attribution_is_incomplete[duplicate-source]
+FAILED tests/unit/specfact_code_review/run/test_installed_coverage.py::test_unsafe_installed_attribution_is_incomplete[duplicate-owner]
+FAILED tests/unit/specfact_code_review/run/test_installed_coverage.py::test_unsafe_installed_attribution_is_incomplete[record-hash]
+FAILED tests/unit/specfact_code_review/run/test_installed_coverage.py::test_unsafe_installed_attribution_is_incomplete[record-escape]
+FAILED tests/unit/specfact_code_review/run/test_installed_coverage.py::test_unsafe_installed_attribution_is_incomplete[foreign-namespace]
+FAILED tests/unit/specfact_code_review/run/test_installed_coverage.py::test_content_change_after_planning_invalidates_coverage[source]
+FAILED tests/unit/specfact_code_review/run/test_installed_coverage.py::test_content_change_after_planning_invalidates_coverage[installed]
+FAILED tests/unit/specfact_code_review/run/test_installed_coverage.py::test_missing_measured_row_cannot_be_manufactured
+========================= 11 failed, 2 passed in 1.45s =========================

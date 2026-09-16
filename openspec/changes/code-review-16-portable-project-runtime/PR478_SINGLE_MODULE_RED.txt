@@ -1,0 +1,63 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: /private/tmp/specfact-477-pytest-release
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, xdist-3.8.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 53 items / 47 deselected / 6 selected
+
+tests/unit/specfact_code_review/run/test_installed_coverage.py FF....    [100%]
+
+=================================== FAILURES ===================================
+_ test_native_single_module_keeps_narrow_measurement_and_verified_attribution[root] _
+
+installed_single_module = namespace(snapshot=PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-864/test_n...00gn/T/pytest-of-dom/pytest-864/test_native_single_module_keep0/runtime/site-packages/standalone-owned-1.0.dist-info'))
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-864/test_native_single_module_keep0')
+layout = 'root'
+
+    @pytest.mark.parametrize("layout", ["root", "src"])
+    def test_native_single_module_keeps_narrow_measurement_and_verified_attribution(
+        installed_single_module, tmp_path, layout
+    ):
+        project = installed_single_module
+        if layout == "src":
+            target = project.snapshot / "src/standalone.py"
+            target.parent.mkdir()
+            project.source.rename(target)
+            project.source = target
+        bridge = _bridge(project)
+>       assert len(bridge.mappings) == 1, bridge.diagnostics
+E       AssertionError: {'/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-864/test_native_single_module_keep0/snapshot/standalone.py': 'coverage_directory_ownership_unavailable'}
+E       assert 0 == 1
+E        +  where 0 = len(())
+E        +    where () = CoverageBridge(directories=(), mappings=(), diagnostics={'/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pyt.../pytest-of-dom/pytest-864/test_native_single_module_keep0/runtime/site-packages/standalone.py',)}, measured_origins=()).mappings
+
+tests/unit/specfact_code_review/run/test_installed_coverage.py:637: AssertionError
+_ test_native_single_module_keeps_narrow_measurement_and_verified_attribution[src] _
+
+installed_single_module = namespace(snapshot=PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-864/test_n...00gn/T/pytest-of-dom/pytest-864/test_native_single_module_keep1/runtime/site-packages/standalone-owned-1.0.dist-info'))
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-864/test_native_single_module_keep1')
+layout = 'src'
+
+    @pytest.mark.parametrize("layout", ["root", "src"])
+    def test_native_single_module_keeps_narrow_measurement_and_verified_attribution(
+        installed_single_module, tmp_path, layout
+    ):
+        project = installed_single_module
+        if layout == "src":
+            target = project.snapshot / "src/standalone.py"
+            target.parent.mkdir()
+            project.source.rename(target)
+            project.source = target
+        bridge = _bridge(project)
+>       assert len(bridge.mappings) == 1, bridge.diagnostics
+E       AssertionError: {'/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-864/test_native_single_module_keep1/snapshot/src/standalone.py': 'ambiguous_snapshot_source'}
+E       assert 0 == 1
+E        +  where 0 = len(())
+E        +    where () = CoverageBridge(directories=(), mappings=(), diagnostics={'/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pyt.../pytest-of-dom/pytest-864/test_native_single_module_keep1/runtime/site-packages/standalone.py',)}, measured_origins=()).mappings
+
+tests/unit/specfact_code_review/run/test_installed_coverage.py:637: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_installed_coverage.py::test_native_single_module_keeps_narrow_measurement_and_verified_attribution[root]
+FAILED tests/unit/specfact_code_review/run/test_installed_coverage.py::test_native_single_module_keeps_narrow_measurement_and_verified_attribution[src]
+================== 2 failed, 4 passed, 47 deselected in 0.68s ==================

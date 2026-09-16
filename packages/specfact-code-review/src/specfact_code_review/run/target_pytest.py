@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
+import contextlib
+import glob
 import importlib.metadata
 import json
+import keyword
 import os
+import runpy
 import shlex
 import sys
 from pathlib import Path
@@ -12,6 +16,7 @@ from typing import Any
 
 
 ROOT = Path("/opt/specfact/project-runtime")
+SNAPSHOT_ROOT = Path("/opt/specfact/snapshot")
 
 
 def _explicit_plugins(config: dict[str, Any]) -> set[str]:
@@ -59,6 +64,18 @@ def _effective_pytest_config(descriptor: dict[str, Any]) -> dict[str, Any]:
     return config
 
 
+def _test_support_roots(config) -> list[str]:
+    """Retain configured test directories without excluding the whole snapshot."""
+    snapshot = SNAPSHOT_ROOT.resolve()
+    roots = set()
+    for pattern in config.getini("testpaths"):
+        for relative in glob.iglob(pattern, root_dir=config.rootpath, recursive=True):
+            path = (config.rootpath / relative).resolve()
+            if path.is_dir() and path != snapshot and path.is_relative_to(snapshot):
+                roots.add(path.relative_to(snapshot).as_posix())
+    return sorted(roots)
+
+
 class Observer:
     """Retain phase-specific facts without claiming setup failures executed test calls."""
 
@@ -70,6 +87,25 @@ class Observer:
         self.worker_collected = set()
         self.collection_errors = []
         self.internal_errors = []
+        self.coverage_threshold = None
+        self.coverage_origin = {"candidates": [], "relocations": {}, "diagnostic": ""}
+        self.test_roots = []
+        self.pytest_root = None
+
+    def pytest_sessionfinish(self, session, exitstatus):
+        del exitstatus
+        helper = sys.modules.get("_specfact_target_coverage")
+        coverage_plugin = helper.active_plugin() if helper is not None else None
+        if coverage_plugin is None:
+            coverage_plugin = session.config.pluginmanager.getplugin("_cov")
+        self.coverage_threshold = getattr(getattr(coverage_plugin, "options", None), "cov_fail_under", None)
+        self.coverage_origin["relocations"], self.coverage_origin["diagnostic"] = _native_coverage_relocations(
+            coverage_plugin, self.coverage_origin["candidates"]
+        )
+        self.test_roots = _test_support_roots(session.config)
+        root = session.config.rootpath.resolve()
+        snapshot = SNAPSHOT_ROOT.resolve()
+        self.pytest_root = root.relative_to(snapshot).as_posix() if root.is_relative_to(snapshot) else str(root)
 
     def pytest_internalerror(self, excrepr, excinfo):
         del excinfo
@@ -110,9 +146,65 @@ class Observer:
                 "phase": report.when,
                 "outcome": report.outcome,
                 "wasxfail": str(getattr(report, "wasxfail", "")),
+                "has_xfail": hasattr(report, "wasxfail"),
                 "detail": report.longreprtext if report.failed else "",
             }
         )
+
+
+def _native_coverage_relocations(plugin, candidates):
+    """Ask native Coverage for origin mapping without losing actual test records."""
+    if not candidates:
+        return {}, ""
+    try:
+        with contextlib.chdir(plugin.cov_controller.topdir):
+            coverage = plugin.cov_controller.cov
+            aliases = coverage._make_aliases()
+            return {path: aliases.map(path) for path in candidates}, ""
+    except (AttributeError, TypeError, ValueError, OSError) as exc:
+        return {}, f"coverage_origin_unavailable:{type(exc).__name__}"
+
+
+def _installed_coverage_candidates(request: dict) -> list[str]:
+    site = (ROOT / "site-packages").resolve()
+    candidates = request.get("coverage_candidates", [])
+    if not isinstance(candidates, list) or not all(
+        isinstance(path, str) and Path(path).is_absolute() and Path(path).resolve().is_relative_to(site)
+        for path in candidates
+    ):
+        raise ValueError("project_pytest_coverage_candidate_invalid")
+    return candidates
+
+
+def _installed_coverage_directories(request: dict) -> list[str]:
+    """Accept only controller-selected directories inside the attached runtime."""
+    site = ROOT / "site-packages"
+    directories = request.get("coverage_directories", [])
+    if not isinstance(directories, list) or not all(
+        isinstance(path, str)
+        and Path(path).is_dir()
+        and Path(path).resolve().is_relative_to(site.resolve())
+        and Path(path).resolve() != site.resolve()
+        for path in directories
+    ):
+        raise ValueError("project_pytest_installed_coverage_directory_invalid")
+    return directories
+
+
+def _installed_coverage_modules(request: dict) -> list[str]:
+    """Limit named selectors to regular top-level modules in the attached runtime."""
+    site = (ROOT / "site-packages").resolve()
+    modules = request.get("coverage_modules", [])
+    if not isinstance(modules, list) or not all(
+        isinstance(name, str)
+        and name.isidentifier()
+        and not keyword.iskeyword(name)
+        and (site / f"{name}.py").is_file()
+        and not (site / f"{name}.py").is_symlink()
+        for name in modules
+    ):
+        raise ValueError("project_pytest_installed_coverage_module_invalid")
+    return modules
 
 
 def main() -> None:
@@ -124,21 +216,33 @@ def main() -> None:
     descriptor = json.loads((ROOT / "project-runtime.json").read_text(encoding="utf-8"))
     output = Path("/opt/specfact/tmp/pytest-observation.json")
     observer = Observer()
+    observer.coverage_origin["candidates"] = _installed_coverage_candidates(request)
 
     os.environ["PYTEST_DISABLE_PLUGIN_AUTOLOAD"] = "1"
     coverage_output = Path("/opt/specfact/tmp/coverage.json")
     os.environ["COVERAGE_FILE"] = "/opt/specfact/tmp/.coverage"
+    helper = sys.modules.get("_specfact_target_coverage")
+    if helper is None:
+        bootstrap = runpy.run_path(str(Path(__file__).with_name("target_bootstrap.py")))
+        helper = bootstrap["_load_pytest_coverage"]()
+    helper.configure(
+        snapshot=SNAPSHOT_ROOT,
+        output=coverage_output,
+        directories=_installed_coverage_directories(request),
+        modules=_installed_coverage_modules(request),
+    )
     args = [
+        "-p",
+        "_specfact_target_coverage",
         *_plugins(_effective_pytest_config(descriptor)),
         *descriptor["inventory"].get("pytest_arguments", []),
         "-o",
         "cache_dir=/opt/specfact/tmp/pytest-cache",
         "--basetemp=/opt/specfact/tmp/pytest",
-        "--cov=/opt/specfact/snapshot",
-        f"--cov-report=json:{coverage_output}",
         *request["selectors"],
     ]
     code = pytest.main(args, plugins=[observer])
+    measurement = helper.evidence()
     output.write_text(
         json.dumps(
             {
@@ -152,11 +256,13 @@ def main() -> None:
                 "pytest_version": pytest.__version__,
                 "coverage_version": importlib.metadata.version("coverage"),
                 "pytest_cov_version": importlib.metadata.version("pytest-cov"),
+                **measurement,
+                "coverage_relocations": observer.coverage_origin["relocations"],
+                "coverage_origin_diagnostic": observer.coverage_origin["diagnostic"],
+                "test_roots": observer.test_roots,
+                "pytest_root": observer.pytest_root,
                 "argv": args,
                 "configured_addopts": descriptor["project"]["pytest_config"].get("addopts", []),
-                "coverage": json.loads(coverage_output.read_text(encoding="utf-8"))
-                if coverage_output.is_file()
-                else {},
             }
         ),
         encoding="utf-8",

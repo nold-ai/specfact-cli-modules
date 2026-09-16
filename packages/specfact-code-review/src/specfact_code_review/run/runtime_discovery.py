@@ -16,6 +16,7 @@ from packaging.specifiers import InvalidSpecifier, SpecifierSet
 from specfact_code_review.run.runtime_adapters import validate_adapter_inputs
 from specfact_code_review.run.runtime_models import ProjectPlan, ProjectRuntimeError, content_digest
 from specfact_code_review.run.runtime_sources import source_identity
+from specfact_code_review.run.runtime_tools import validate_native_tools
 from specfact_code_review.run.runtime_vcs import vcs_context
 
 
@@ -52,6 +53,7 @@ _CONFIG_FIELDS = frozenset(
         "constraints",
         "source_roots",
         "native_libraries",
+        "native_tools",
     }
 )
 _MANAGERS = frozenset({"pip", "hatch", "uv", "poetry"})
@@ -60,6 +62,8 @@ _PROJECT_TABLES = (
     "project",
     "dependency-groups",
     "project.optional-dependencies",
+    "tool.specfact",
+    "tool.specfact.code-review",
     "tool.uv",
     "tool.hatch",
     "tool.hatch.envs",
@@ -127,7 +131,14 @@ def _config(path: Path | None) -> dict[str, Any]:
     return values
 
 
-def _active_selection(root: Path, project: dict[str, Any], hatch: dict[str, Any]) -> dict[str, str]:
+def _hatch_environment_exists(name: str, environments: dict[str, Any]) -> bool:
+    """Hatch always defines default, even without its explicit configuration table."""
+    return name == "default" or name in environments
+
+
+def _active_selection(
+    root: Path, project: dict[str, Any], hatch: dict[str, Any], *, snapshot: bool = False
+) -> dict[str, str]:
     """Trust manager activation only when it belongs to this running interpreter."""
     prefix = os.environ.get("VIRTUAL_ENV", "")
     if not prefix or Path(prefix).resolve() != Path(sys.prefix).resolve():
@@ -138,7 +149,7 @@ def _active_selection(root: Path, project: dict[str, Any], hatch: dict[str, Any]
     selected = {}
     environments = hatch.get("envs", project.get("tool", {}).get("hatch", {}).get("envs", {}))
     active = os.environ.get("HATCH_ENV_ACTIVE", "")
-    if active and active in environments:
+    if active and (snapshot or _hatch_environment_exists(active, environments)):
         selected = {"manager": "hatch", "environment": active}
     if os.environ.get("POETRY_ACTIVE") == "1":
         if selected:
@@ -360,8 +371,30 @@ def _test_extras(
     return tuple(candidates)
 
 
+def _project_selection(
+    root: Path, project: dict[str, Any], hatch: dict[str, Any], values: dict[str, Any], activation_root: Path | None
+) -> dict[str, Any]:
+    """Combine explicit selection with independently verified snapshot activation."""
+    activation_root = root if activation_root is None else activation_root.resolve()
+    selection = (
+        {**_active_selection(activation_root, project, hatch, snapshot=activation_root != root), **values}
+        if "manager" not in values
+        else values
+    )
+    if activation_root != root and selection.get("manager") == "hatch" and "environment" not in values:
+        environments = hatch.get("envs", project.get("tool", {}).get("hatch", {}).get("envs", {}))
+        active = selection.get("environment")
+        if active and not _hatch_environment_exists(active, environments):
+            raise ProjectRuntimeError(
+                f"project_active_environment_missing:{active}; select an environment in --project-config"
+            )
+    return selection
+
+
 @require(lambda root: root.is_dir())
-def discover_project(root: Path, *, config_path: Path | None = None) -> ProjectPlan:
+def discover_project(
+    root: Path, *, config_path: Path | None = None, activation_root: Path | None = None
+) -> ProjectPlan:
     """Inspect project manifests; never install dependencies or import setup code."""
     root = root.resolve()
     values = _config(config_path)
@@ -372,7 +405,7 @@ def discover_project(root: Path, *, config_path: Path | None = None) -> ProjectP
             inputs[name] = content_digest(path.read_bytes())
     project = _metadata_tables(root / "pyproject.toml", _PROJECT_TABLES)
     hatch = _metadata_tables(root / "hatch.toml", ("envs",))
-    selection = {**_active_selection(root, project, hatch), **values} if "manager" not in values else values
+    selection = _project_selection(root, project, hatch, values, activation_root)
     manager = _manager(root, project, hatch, selection)
     requirements = tuple(values.get("requirements", ()))
     constraints = tuple(values.get("constraints", []))
@@ -403,6 +436,12 @@ def discover_project(root: Path, *, config_path: Path | None = None) -> ProjectP
         constraints=constraints,
         source_roots=_source_roots(root, values, pytest),
         native_libraries=tuple(values.get("native_libraries", [])),
+        native_tools=validate_native_tools(
+            values.get(
+                "native_tools",
+                project.get("tool", {}).get("specfact", {}).get("code-review", {}).get("native_tools", []),
+            )
+        ),
         inputs=inputs,
         pytest_config=pytest,
     )

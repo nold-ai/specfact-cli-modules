@@ -39,6 +39,17 @@ requirements:
         claims, the pinned Linux capsule corpus.
       observable: Actual test assertions and retained runtime/report evidence must demonstrate the stated scenario.
         Local unit or bootstrap results do not constitute signed release acceptance.
+    - case_id: 473-1-5
+      scenario_id: discover-a-project-without-executing-its-code
+      method: test
+      intent: Preserve verified checkout activation across actual immutable index and revision materialization.
+      observable: Snapshot dependency hashes remain distinct from live inputs; spoofed or unrelated activation is rejected,
+        explicit selection wins even when the active environment is absent, and missing environments are diagnosed.
+    - case_id: 473-1-6
+      scenario_id: discover-a-project-without-executing-its-code
+      method: test
+      intent: Recognize verified implicit Hatch default activation across live, index and revision discovery.
+      observable: Default activation passes without an explicit default table; environment-only configuration still wins and unrelated activation remains rejected.
   openspec:code-review-16-portable-project-runtime:portable-project-runtime:prepare-an-isolated-reproducible-runtime:
     rationale: Prepare an isolated reproducible runtime. The approved portable-runtime story requires independent
       customer runtime evidence.
@@ -121,6 +132,12 @@ requirements:
         execution claims, the pinned Linux capsule corpus.
       observable: Actual test assertions and retained runtime/report evidence must demonstrate the stated scenario.
         Local unit or bootstrap results do not constitute signed release acceptance.
+    - case_id: 473-4-3
+      scenario_id: attach-context-to-every-review-scope
+      method: test
+      intent: Preserve bounded Semgrep structured error context without accepting incomplete analysis.
+      observable: Focused runner tests retain total count and bounded scalar type/code/message fields while excluding
+        arbitrary nested fields; both analyzer passes remain tool errors for nonempty error lists.
   openspec:code-review-16-portable-project-runtime:portable-project-runtime:observe-ordinary-customer-pytest-execution:
     rationale: Observe ordinary customer pytest execution. The approved portable-runtime story requires independent
       customer runtime evidence.
@@ -146,6 +163,76 @@ requirements:
         Linux capsule corpus.
       observable: Actual test assertions and retained runtime/report evidence must demonstrate the stated scenario.
         Local unit or bootstrap results do not constitute signed release acceptance.
+    - case_id: 477-pytest-1
+      scenario_id: observe-ordinary-customer-pytest-execution
+      method: test
+      intent: Mixed PASS/SKIP/XFAIL/XPASS outcomes and empty expected-failure reasons yield blocking findings.
+      observable: Actual regressions in test_portable_pytest_evidence.py and test_portable_pytest_policy.py preserve
+        RED/GREEN evidence; Linux signed capsule acceptance remains required.
+    - case_id: 477-pytest-2
+      scenario_id: observe-ordinary-customer-pytest-execution
+      method: test
+      intent: Missing and low per-source coverage fail with effective native thresholds and an 80 percent minimum.
+      observable: Actual regressions in test_portable_pytest_evidence.py and test_portable_pytest_policy.py preserve
+        RED/GREEN evidence; Linux signed capsule acceptance remains required.
+    - case_id: 477-pytest-3
+      scenario_id: observe-ordinary-customer-pytest-execution
+      method: test
+      intent: Nested pytest roots resolve actual test files without exempting production under discovery roots.
+      observable: Actual regressions in test_portable_pytest_evidence.py and test_portable_pytest_policy.py preserve
+        RED/GREEN evidence; Linux signed capsule acceptance remains required.
+    - case_id: 478-pytest-paths
+      scenario_id: observe-ordinary-customer-pytest-execution
+      method: test
+      intent: Non-passing nested pytest nodeids identify snapshot-relative test files without changing raw evidence.
+      observable: Nested relative and absolute roots map findings to the reviewed test file; outside roots and
+        escaping node paths yield incomplete-evidence diagnostics without false file attribution.
+    - case_id: 478-pytest-startup
+      scenario_id: observe-ordinary-customer-pytest-execution
+      method: test
+      intent: Native pytest usage errors preserve the targeted member and recorded execution without a fabricated root.
+      observable: A real unknown-option exit four with null root retains target_execution in the capsule response;
+        malformed roots on otherwise usable observations produce actionable incomplete-evidence diagnostics.
+    - case_id: 478-installed-coverage
+      scenario_id: observe-ordinary-customer-pytest-execution
+      method: test
+      intent: Attribute native installed-project coverage only through sealed local distribution ownership and identical source bytes.
+      observable: Real installed-package pytest keeps native imports, actual defect exits, per-source coverage, and raw rows; generated code, ownership ambiguity, unsafe RECORD entries, and changed snapshots receive no guessed credit.
+    - case_id: 478-installed-flat-coverage
+      scenario_id: observe-ordinary-customer-pytest-execution
+      method: test
+      intent: Distinguish enumerated unexecuted flat-layout snapshot rows from actual installed execution.
+      observable: Native importlib pytest records zero executed snapshot lines and real installed lines; verified attribution replaces only the evaluation alias while preserving raw zero rows and true snapshot execution precedence.
+    - case_id: 478-installed-native-aliases
+      scenario_id: observe-ordinary-customer-pytest-execution
+      method: test
+      intent: Retain transformed-source uncertainty when native coverage aliases rewrite installed filenames.
+      observable: A real two-file alias reproduction cannot pass for different source bytes; identical mappings and unrelated native alias patterns remain supported, post-execution identity errors persist, and unavailable origin APIs preserve test records with an explicit diagnostic. Renamed package origins are recorded for the whole measured directory and cannot credit an unmatched reviewed source.
+    - case_id: 478-installed-single-module
+      scenario_id: observe-ordinary-customer-pytest-execution
+      method: test
+      intent: Attribute uniquely owned installed py_modules without granting coverage over unrelated site packages.
+      observable: Actual root and src-layout module imports retain verified 100 percent source attribution and untouched raw rows; duplicate source/ownership, changed bytes and malformed names reject credit. Native and configured source scopes remain authoritative while reviewer defaults use only the verified module selector.
+    - case_id: 478-pytest-coverage-fidelity
+      scenario_id: observe-ordinary-customer-pytest-execution
+      method: test
+      intent: Separate reviewer-only measurement from native coverage activation without reducing the per-file floor.
+      observable: Real subprocess tests preserve native reset, config, include/omit, report bytes, threshold, precision, disabling and failure outcomes; high aggregate coverage cannot hide low selected-file coverage.
+    - case_id: 478-pytest-coverage-workers
+      scenario_id: observe-ordinary-customer-pytest-execution
+      method: test
+      intent: Preserve real distributed and configured subprocess evidence under the supported plugin lifecycle.
+      observable: Real native and reviewer -n2 tests combine worker lines, missing worker receipts stay incomplete, configured subprocess lines are collected, and strict warning policy and customer cwd are preserved.
+    - case_id: 478-pytest-coverage-bootstrap
+      scenario_id: observe-ordinary-customer-pytest-execution
+      method: test
+      intent: Load only the verified target helper without widening supervisor or customer import paths.
+      observable: Eight startup and cache tests reject forged aliases, exercise first-entry and child bootstrap, and invalidate builder identity when helper bytes change.
+    - case_id: 478-pytest-coverage-policy
+      scenario_id: observe-ordinary-customer-pytest-execution
+      method: test
+      intent: Preserve native aggregate failures and incomplete execution with typed evidence.
+      observable: Controller tests retain real failure and collection evidence, reject malformed policy receipts and preserve exact actionable coverage diagnostics without treating arbitrary exit1 as an aggregate failure.
   ? openspec:code-review-16-portable-project-runtime:portable-project-runtime:validate-external-repositories-through-released-installation
   : rationale: Validate external repositories through released installation. The approved portable-runtime story
       requires independent customer runtime evidence.
@@ -164,6 +251,11 @@ requirements:
         pinned Linux capsule corpus.
       observable: Actual test assertions and retained runtime/report evidence must demonstrate the stated scenario.
         Local unit or bootstrap results do not constitute signed release acceptance.
+    - case_id: 478-controlled-package-execution
+      scenario_id: validate-external-repositories-through-released-installation
+      method: test
+      intent: Execute the deliberate type defect through ordinary package imports inside unchanged native measurement scope.
+      observable: Generated tests call the wrong-return function, actually fail, and produce measured function body lines under source_pkgs and omit-only configurations; pinned metadata, contained exclusive writes, original source identity and strict complete-evidence checks remain enforced.
   ? openspec:code-review-16-portable-project-runtime:portable-project-runtime:native-environment-and-execution-evidence-fidelity
   : rationale: Native environments, test phases, VCS versions and signed Python selection must match the actual
       target project.
@@ -214,53 +306,76 @@ requirements:
     - case_id: 473-7-7
       scenario_id: native-environment-and-execution-evidence-fidelity
       method: test
-      intent: Preserve tool-only setup.cfg configuration without attempting a root package installation, while retaining native pip installable-directory behavior.
-      observable: Adapter regressions retain requirements and constraints, omit an unbuildable root, and keep pyproject.toml or setup.py installation and extras controls passing.
+      intent: Preserve tool-only setup.cfg configuration without attempting a root package installation, while retaining
+        native pip installable-directory behavior.
+      observable: Adapter regressions retain requirements and constraints, omit an unbuildable root, and keep pyproject.toml
+        or setup.py installation and extras controls passing.
     - case_id: 473-7-8
       scenario_id: native-environment-and-execution-evidence-fidelity
       method: test
       intent: Match targeted source tests through configured pytest directories, literal files and glob paths.
-      observable: Real pytest-compatible cases select corresponding tests after path expansion, retain native no-match fallback and reject escaping roots without changing explicit selection or full native discovery.
+      observable: Real pytest-compatible cases select corresponding tests after path expansion, retain native no-match
+        fallback and reject escaping roots without changing explicit selection or full native discovery.
     - case_id: 473-7-9
       scenario_id: native-environment-and-execution-evidence-fidelity
       method: test
       intent: Isolate controller diagnostic capture from builder-controlled filesystem paths.
-      observable: Disposable sentinel tests reject symlink and special-file redirection, retain private failure and timeout diagnostics through a pre-created controller file descriptor, and close and remove successful logs without exposing captured output.
+      observable: Disposable sentinel tests reject symlink and special-file redirection, retain private failure
+        and timeout diagnostics through a pre-created controller file descriptor, and close and remove successful
+        logs without exposing captured output.
     - case_id: 473-7-10
       scenario_id: native-environment-and-execution-evidence-fidelity
       method: test
       intent: Validate untrusted builder artifact topology before controller-side reads or enrichment.
-      observable: Disposable sentinel regressions reject root, native-directory, inventory and nested-file symlinks and special nodes before inventory access or native writes, while valid regular artifacts and final sealing remain accepted.
+      observable: Disposable sentinel regressions reject root, native-directory, inventory and nested-file symlinks
+        and special nodes before inventory access or native writes, while valid regular artifacts and final sealing
+        remain accepted.
     - case_id: 473-7-11
       scenario_id: native-environment-and-execution-evidence-fidelity
       method: test
-      intent: Preserve nested Python environment additions, overrides and removals, working directory and caller-private temporary files.
-      observable: Real nested subprocess regressions retain caller context and relative file access; the reconstructed Hatch corpus exercises the same behavior through host, cold capsule and offline warm capsule execution.
+      intent: Preserve nested Python environment additions, overrides and removals, working directory and caller-private
+        temporary files.
+      observable: Real nested subprocess regressions retain caller context and relative file access; the reconstructed
+        Hatch corpus exercises the same behavior through host, cold capsule and offline warm capsule execution.
     - case_id: 473-7-12
       scenario_id: native-environment-and-execution-evidence-fidelity
       method: test
-      intent: Preserve the verified member dependency domain independently of mutable environment markers while retaining initial worker isolation.
-      observable: Nested launch controls retain the mounted member domain under replacement environments; first-entry commands always clear inherited supervisor state and establish private process, mount and network namespaces.
+      intent: Preserve the verified member dependency domain independently of mutable environment markers while
+        retaining initial worker isolation.
+      observable: Nested launch controls retain the mounted member domain under replacement environments; first-entry
+        commands always clear inherited supervisor state and establish private process, mount and network namespaces.
     - case_id: 473-7-13
       scenario_id: native-environment-and-execution-evidence-fidelity
       method: test
       intent: Reject multiply linked runtime payloads and descriptors before content reads or attachment.
-      observable: Disposable hardlinks fail preparation, sealing and same-byte post-seal reuse before payload reads; copied package-manager cache files remain accepted.
+      observable: Disposable hardlinks fail preparation, sealing and same-byte post-seal reuse before payload reads;
+        copied package-manager cache files remain accepted.
     - case_id: 473-7-14
       scenario_id: native-environment-and-execution-evidence-fidelity
       method: test
       intent: Keep controller diagnostic file descriptors outside the build namespace.
-      observable: Actual child processes see pipe stdout rather than regular log storage; bounded capture preserves failure, timeout and downstream diagnostics and closes resources.
+      observable: Actual child processes see pipe stdout rather than regular log storage; bounded capture preserves
+        failure, timeout and downstream diagnostics and closes resources.
     - case_id: 473-7-15
       scenario_id: native-environment-and-execution-evidence-fidelity
       method: test
       intent: Preserve safe controller validation reasons in public preparation errors.
-      observable: Actual nonzero and signal exits retain numeric status; artifact symlink, special-node and hardlink rejections expose their stable codes while arbitrary exception details stay private.
+      observable: Actual nonzero and signal exits retain numeric status; artifact symlink, special-node and hardlink
+        rejections expose their stable codes while arbitrary exception details stay private.
     - case_id: 473-7-16
       scenario_id: native-environment-and-execution-evidence-fidelity
       method: test
       intent: Preserve caller import paths for nested Python without replacing trusted startup or analyzer ownership.
-      observable: Real nested wrappers match native caller imports for inherited and explicit absolute, relative, empty-component, empty and omitted PYTHONPATH in project and analyzer domains; reconstructed Hatch validates caller-only imports in its private temporary namespace.
+      observable: Real nested wrappers match native caller imports for inherited and explicit absolute, relative,
+        empty-component, empty and omitted PYTHONPATH in project and analyzer domains; reconstructed Hatch validates
+        caller-only imports in its private temporary namespace.
+    - case_id: 473-7-17
+      scenario_id: native-environment-and-execution-evidence-fidelity
+      method: test
+      intent: Preserve builder logging assertions and keyword-only fixture inputs using pinned-engine-compatible syntax.
+      observable: Real Semgrep 1.144.0 accepts the equivalent named fixture function and all builder logging tests pass; customer parser limitations remain explicit.
+
+
   openspec:code-review-16-portable-project-runtime:portable-project-runtime:pylint-preserves-attached-namespace-source-roots:
     rationale: Attached editable namespace imports must not be shadowed by Pylint's legacy file-root discovery.
     stakeholder_refs:
@@ -274,7 +389,8 @@ requirements:
     - case_id: 473-8-1
       scenario_id: pylint-preserves-attached-namespace-source-roots
       method: test
-      intent: Run real Pylint against editable, declared and overlapping namespace import roots with a same-name leaf.
+      intent: Run real Pylint against editable, declared and overlapping namespace import roots with a same-name
+        leaf.
       observable: test_attached_namespace_root_prevents_leaf_shadowing passes its three parameter cases.
     - case_id: 473-8-2
       scenario_id: pylint-preserves-attached-namespace-source-roots
@@ -290,7 +406,8 @@ requirements:
       scenario_id: pylint-preserves-attached-namespace-source-roots
       method: test
       intent: Avoid unconfigured source overlays and preserve ordinary Pylint multiprocessing serialization.
-      observable: test_built_runtime_does_not_infer_raw_source_root and test_parallel_pylint_retains_runtime_roots pass.
+      observable: test_built_runtime_does_not_infer_raw_source_root and test_parallel_pylint_retains_runtime_roots
+        pass.
     - case_id: 473-8-5
       scenario_id: pylint-preserves-attached-namespace-source-roots
       method: test
@@ -305,4 +422,118 @@ requirements:
       scenario_id: pylint-preserves-attached-namespace-source-roots
       method: test
       intent: Invalidate cached runtime identity when only the trusted Pylint dispatcher changes.
-      observable: test_pylint_dispatcher_change_invalidates_offline_runtime_reuse preserves unchanged reuse and rejects changed bytes.
+      observable: test_controller_policy_change_invalidates_offline_runtime_reuse[target_pylint.py] preserves unchanged reuse and
+        rejects changed bytes.
+
+  openspec:code-review-16-portable-project-runtime:portable-project-runtime:declare-compatible-repository-development-analyzer-versions:
+    rationale: Repository development tooling must remain compatible with its signed review analyzer entries.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#473
+    touchpoints:
+    - id: declared-development-tools
+      kind: config_file
+      locator: pyproject.toml
+    verification_cases:
+    - case_id: 473-9-1
+      scenario_id: declare-compatible-repository-development-analyzer-versions
+      method: test
+      intent: Compare declared development tool ranges, actual observed incompatible versions and every signed ABI through production compatibility validation.
+      observable: All three signed environments accept declared selections while the recorded incompatible native versions remain rejected; customer collision policy is unchanged.
+
+    - case_id: 473-9-2
+      scenario_id: declare-compatible-repository-development-analyzer-versions
+      method: test
+      intent: Keep the actual BasedPyright Node distribution sealed and explicitly reject conflicting project versions.
+      observable: Real graph, launch mounts and import finder tests preserve matching or absent Node dependencies and unrelated legacy-name packages; all three signed ABI declarations admit only the matching Node pin.
+    - case_id: 473-9-3
+      scenario_id: declare-compatible-repository-development-analyzer-versions
+      method: test
+      intent: Prevent stale member graphs after a controller compatibility-policy change.
+      observable: Warm offline cache reuse succeeds before the policy file changes and fails afterwards with the same project and signed worker identity.
+  openspec:code-review-16-portable-project-runtime:portable-project-runtime:declare-bounded-target-native-tools:
+    rationale: External tests require explicitly declared commands without importing arbitrary host environments.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#473
+    - nold-ai/specfact-cli-modules#472
+    touchpoints:
+    - id: target-native-capabilities
+      kind: config_file
+      locator: packages/specfact-code-review/src/specfact_code_review/run/runtime_tools.py
+    verification_cases:
+    - case_id: 473-10-1
+      scenario_id: declare-bounded-target-native-tools
+      method: test
+      intent: Preserve explicit configuration precedence and reject unsupported capabilities without PATH guessing.
+      observable: Discovery regressions accept supported declarations and explicit overrides, rejecting unknown names and invalid types.
+    - case_id: 473-10-2
+      scenario_id: declare-bounded-target-native-tools
+      method: test
+      intent: Bind complete program, helper, launcher and transitive library bytes before the builder starts.
+      observable: Capture tests verify local Git services, changed helper libraries and offline cache identities; missing binaries and libraries fail precisely.
+    - case_id: 473-10-3
+      scenario_id: declare-bounded-target-native-tools
+      method: test
+      intent: Install controller capture after project library inventory while rejecting all builder destination collisions.
+      observable: Builder integration preserves original captured bytes and separate project library resolution; collision tests reject command, directory and file conflicts before writing.
+    - case_id: 473-10-4
+      scenario_id: declare-bounded-target-native-tools
+      method: test
+      intent: Execute real Git, uname and sed through the declared private launchers.
+      observable: Non-root offline Linux smoke executes Git clean filters and file transport successfully; final signed capsule acceptance remains separately required.
+  openspec:code-review-16-portable-project-runtime:portable-project-runtime:sanitized-vcs-lookup-retains-declared-target-git:
+    rationale: Sanitized metadata export must retain its verified declared executable without trusting ambient paths.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#473
+    touchpoints:
+    - id: isolated-vcs-git
+      kind: config_file
+      locator: packages/specfact-code-review/src/specfact_code_review/run/runtime_vcs.py
+    verification_cases:
+    - case_id: 473-11-1
+      scenario_id: sanitized-vcs-lookup-retains-declared-target-git
+      method: test
+      intent: Execute real Git through an authenticated declared launcher while the system search path has no Git.
+      observable: Actual Git succeeds and seven isolation-control assertions retain configuration, hook, replacement and network restrictions; invalid capabilities fail closed.
+    - case_id: 473-11-2
+      scenario_id: sanitized-vcs-lookup-retains-declared-target-git
+      method: test
+      intent: Reject hostile PATH entries and forged worker context without weakening host lookup.
+      observable: Host execution uses the fixed system path and copied context or tampered launcher cases are rejected.
+    - case_id: 473-11-3
+      scenario_id: sanitized-vcs-lookup-retains-declared-target-git
+      method: test
+      intent: Exercise graft isolation with ordinary and explicitly empty Git templates.
+      observable: Both test_unbound_grafts_cannot_remove_selected_ancestry parameter cases retain identity, complete exported ancestry and absent exported grafts.
+  openspec:code-review-16-portable-project-runtime:portable-project-runtime:the-repository-declares-its-runtime-registry-dependency:
+    rationale: A separate editable developer bootstrap does not declare dependencies for hermetic project preparation.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#473
+    touchpoints:
+    - id: declared-core-runtime
+      kind: config_file
+      locator: pyproject.toml
+    verification_cases:
+    - case_id: 473-12-1
+      scenario_id: the-repository-declares-its-runtime-registry-dependency
+      method: test
+      intent: Require an immutable declared Hatch core dependency that provides the actual registry API used by reviewed code.
+      observable: test_declared_core_dependency_supplies_registry_handoff validates the declaration against installed distribution metadata and imports real registry APIs; the published wheel was independently verified.
+  openspec:code-review-16-portable-project-runtime:portable-project-runtime:target-workers-retain-only-signed-public-default-trust-data:
+    rationale: Offline dependencies must initialize native TLS without missing public defaults or importing host trust.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#473
+    touchpoints:
+    - id: signed-public-trust
+      kind: config_file
+      locator: packages/specfact-code-review/src/specfact_code_review/run/runtime_trust.py
+    verification_cases:
+    - case_id: 473-13-1
+      scenario_id: target-workers-retain-only-signed-public-default-trust-data
+      method: test
+      intent: Capture exact signed public bytes before building, verify native SSL loading and bind warm-cache reuse to their identity.
+      observable: Real certificate loading preserves required verification and hostname checks; unchanged offline reuse succeeds and changed signed trust misses the cache.
+    - case_id: 473-13-2
+      scenario_id: target-workers-retain-only-signed-public-default-trust-data
+      method: test
+      intent: Reject missing, escaping, private, oversized or malformed trust and all untrusted builder destination collisions.
+      observable: Six invalid-source cases and two destination collisions fail closed; builder mutation cannot replace the controller's pre-build capture.

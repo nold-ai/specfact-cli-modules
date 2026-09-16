@@ -1,0 +1,93 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: /private/tmp/specfact-477-pytest-release
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 49 items / 41 deselected / 8 selected
+
+tests/unit/specfact_code_review/run/test_runtime_vcs.py FFFFFF.F         [100%]
+
+=================================== FAILURES ===================================
+________________ test_attached_vcs_git_survives_sanitized_path _________________
+packages/specfact-code-review/src/specfact_code_review/run/runtime_vcs.py:20: in _git_result
+    return subprocess.run(
+/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/subprocess.py:555: in run
+    with Popen(*popenargs, **kwargs) as process:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/subprocess.py:1039: in __init__
+    self._execute_child(args, executable, preexec_fn, close_fds,
+/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/subprocess.py:1990: in _execute_child
+    raise child_exception_type(errno_num, err_msg, err_filename)
+E   FileNotFoundError: [Errno 2] No such file or directory: 'git'
+
+The above exception was the direct cause of the following exception:
+tests/unit/specfact_code_review/run/test_runtime_vcs.py:666: in test_attached_vcs_git_survives_sanitized_path
+    selected = vcs_context(attached_vcs_git["repository"])
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_vcs.py:83: in vcs_context
+    selected = _git(root, "rev-parse", "--verify", commit + "^{commit}")
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_vcs.py:63: in _git
+    return _git_bytes(root, *arguments).decode("utf-8").strip()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_vcs.py:52: in _git_bytes
+    result = _git_result(root, *arguments, input_data=input_data, shallow_file=shallow_file)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_vcs.py:46: in _git_result
+    raise ProjectRuntimeError(
+E   specfact_code_review.run.runtime_models.ProjectRuntimeError: project_git_snapshot_failed:rev-parse:FileNotFoundError; retry local metadata export
+________ test_attached_vcs_rejects_unverified_git_launcher[undeclared] _________
+tests/unit/specfact_code_review/run/test_runtime_vcs.py:698: in test_attached_vcs_rejects_unverified_git_launcher
+    with pytest.raises(ProjectRuntimeError, match="project_git_attached_tool_invalid"):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   AssertionError: Regex pattern did not match.
+E     Expected regex: 'project_git_attached_tool_invalid'
+E     Actual message: 'project_git_snapshot_failed:rev-parse:FileNotFoundError; retry local metadata export'
+_______ test_attached_vcs_rejects_unverified_git_launcher[wrong-origin] ________
+tests/unit/specfact_code_review/run/test_runtime_vcs.py:698: in test_attached_vcs_rejects_unverified_git_launcher
+    with pytest.raises(ProjectRuntimeError, match="project_git_attached_tool_invalid"):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   AssertionError: Regex pattern did not match.
+E     Expected regex: 'project_git_attached_tool_invalid'
+E     Actual message: 'project_git_snapshot_failed:rev-parse:FileNotFoundError; retry local metadata export'
+_______ test_attached_vcs_rejects_unverified_git_launcher[wrong-digest] ________
+tests/unit/specfact_code_review/run/test_runtime_vcs.py:698: in test_attached_vcs_rejects_unverified_git_launcher
+    with pytest.raises(ProjectRuntimeError, match="project_git_attached_tool_invalid"):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   AssertionError: Regex pattern did not match.
+E     Expected regex: 'project_git_attached_tool_invalid'
+E     Actual message: 'project_git_snapshot_failed:rev-parse:FileNotFoundError; retry local metadata export'
+__________ test_attached_vcs_rejects_unverified_git_launcher[missing] __________
+tests/unit/specfact_code_review/run/test_runtime_vcs.py:698: in test_attached_vcs_rejects_unverified_git_launcher
+    with pytest.raises(ProjectRuntimeError, match="project_git_attached_tool_invalid"):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   AssertionError: Regex pattern did not match.
+E     Expected regex: 'project_git_attached_tool_invalid'
+E     Actual message: 'project_git_snapshot_failed:rev-parse:FileNotFoundError; retry local metadata export'
+__________ test_attached_vcs_rejects_unverified_git_launcher[symlink] __________
+tests/unit/specfact_code_review/run/test_runtime_vcs.py:698: in test_attached_vcs_rejects_unverified_git_launcher
+    with pytest.raises(ProjectRuntimeError, match="project_git_attached_tool_invalid"):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   AssertionError: Regex pattern did not match.
+E     Expected regex: 'project_git_attached_tool_invalid'
+E     Actual message: 'project_git_snapshot_failed:rev-parse:FileNotFoundError; retry local metadata export'
+____________ test_forged_worker_context_cannot_select_attached_git _____________
+tests/unit/specfact_code_review/run/test_runtime_vcs.py:734: in test_forged_worker_context_cannot_select_attached_git
+    with pytest.raises(ProjectRuntimeError, match="project_git_attached_context_invalid"):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   AssertionError: Regex pattern did not match.
+E     Expected regex: 'project_git_attached_context_invalid'
+E     Actual message: 'project_git_snapshot_failed:rev-parse:FileNotFoundError; retry local metadata export'
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_runtime_vcs.py::test_attached_vcs_git_survives_sanitized_path
+FAILED tests/unit/specfact_code_review/run/test_runtime_vcs.py::test_attached_vcs_rejects_unverified_git_launcher[undeclared]
+FAILED tests/unit/specfact_code_review/run/test_runtime_vcs.py::test_attached_vcs_rejects_unverified_git_launcher[wrong-origin]
+FAILED tests/unit/specfact_code_review/run/test_runtime_vcs.py::test_attached_vcs_rejects_unverified_git_launcher[wrong-digest]
+FAILED tests/unit/specfact_code_review/run/test_runtime_vcs.py::test_attached_vcs_rejects_unverified_git_launcher[missing]
+FAILED tests/unit/specfact_code_review/run/test_runtime_vcs.py::test_attached_vcs_rejects_unverified_git_launcher[symlink]
+FAILED tests/unit/specfact_code_review/run/test_runtime_vcs.py::test_forged_worker_context_cannot_select_attached_git
+================== 7 failed, 1 passed, 41 deselected in 0.92s ==================
