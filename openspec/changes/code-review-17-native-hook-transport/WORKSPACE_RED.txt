@@ -1,0 +1,28 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: /private/tmp/specfact-478-native-hook-transport
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 1 item
+
+tests/unit/test_native_hook_transport.py F                               [100%]
+
+=================================== FAILURES ===================================
+____________ test_preparation_selects_only_owned_workspace_modules _____________
+
+snapshot = (PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-633/test_preparation_selects...wtHxjDwGwSKPJM+2Fv6DfgH9F5R7XpalNNMb/CoalXKQF3jaevKmaXgfWTgAGbPrOoWIK/UqrfVazdYCEmgCaxVej+fLCQ5ASv/uRn0AxcfK/28BAAA='})
+
+    def test_preparation_selects_only_owned_workspace_modules(snapshot: tuple[Path, dict[str, str]]) -> None:
+        """The baseline cannot silently replace the workspace runtime implementation."""
+        repo, _ = snapshot
+        caller = {"HOME": "/private/home", "PATH": "/bin", "PYTHONPATH": "/unrelated/host",
+                  "SPECFACT_MODULES_ROOTS": "/unrelated/modules", "GH_TOKEN": "fixture-secret"}
+>       environment = _transport().runtime_environment(repo, caller)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: module 'native_hook_transport' has no attribute 'runtime_environment'
+
+tests/unit/test_native_hook_transport.py:332: AttributeError
+=========================== short test summary info ============================
+FAILED tests/unit/test_native_hook_transport.py::test_preparation_selects_only_owned_workspace_modules
+============================== 1 failed in 0.11s ===============================

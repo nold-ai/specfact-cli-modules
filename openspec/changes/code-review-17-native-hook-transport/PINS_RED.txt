@@ -1,0 +1,96 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: /private/tmp/specfact-478-native-hook-transport
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 2 items
+
+tests/unit/test_native_hook_transport.py FF                              [100%]
+
+=================================== FAILURES ===================================
+___________ test_only_reviewed_development_pins_are_admitted[False] ____________
+
+snapshot = (PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-637/test_only_reviewed_devel...wtHxjDwGwSKPJM+2Fv6DfgH9F5R7XpalNNMb/CoalXKQF3jaevKmaXgfWTgAGbPrOoWIK/UqrfVazdYCEmgCaxVej+fLCQ5ASv/uRn0AxcfK/28BAAA='})
+extra_change = False
+
+    @pytest.mark.parametrize("extra_change", [False, True])
+    def test_only_reviewed_development_pins_are_admitted(
+        snapshot: tuple[Path, dict[str, str]], extra_change: bool,
+    ) -> None:
+        """The dependency exception cannot carry build, hook or unrelated package changes."""
+        repo, _ = snapshot
+        config = repo / "pyproject.toml"
+        original = '[tool.hatch.envs.default]\ndependencies = ["pylint>=4.0.2", "basedpyright>=1.32.1"]\n'
+        config.write_text(original, encoding="utf-8")
+        _git(repo, "add", "pyproject.toml")
+        _git(repo, "-c", "commit.gpgsign=false", "commit", "-qm", "configuration fixture")
+        changed = original.replace("pylint>=4.0.2", "pylint==4.0.7").replace("basedpyright>=1.32.1", "basedpyright==1.39.10")
+        config.write_text(changed + ("# unrelated mutation\n" if extra_change else ""), encoding="utf-8")
+        _git(repo, "add", "pyproject.toml")
+        request = _request_for_staged_snapshot(repo)
+        if extra_change:
+            with pytest.raises(ValueError, match="development dependency"):
+                _transport().prepare_snapshot(repo, request)
+        else:
+>           assert _transport().prepare_snapshot(repo, request)["tree"] == request["tree"]
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/test_native_hook_transport.py:369: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+scripts/native_hook_transport.py:141: in prepare_snapshot
+    paths = _patch_paths(repository, patch)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+repository = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-637/test_only_reviewed_development0/repository')
+patch = b'diff --git a/pyproject.toml b/pyproject.toml\nindex cf1d2e1..8ca9bed 100644\n--- a/pyproject.toml\n+++ b/pyproject.t...dependencies = ["pylint>=4.0.2", "basedpyright>=1.32.1"]\n+dependencies = ["pylint==4.0.7", "basedpyright==1.39.10"]\n'
+
+    def _patch_paths(repository: Path, patch: bytes) -> list[str]:
+        rows = _git(repository, "apply", "--numstat", "-z", "-", data=patch).split(b"\0")
+        paths = []
+        for row in filter(None, rows):
+            pieces = row.split(b"\t", 2)
+            if len(pieces) != 3:
+                raise ValueError("unsupported patch path record")
+            path = pieces[2].decode("utf-8")
+            if path not in _ALLOWED or path in paths:
+>               raise ValueError("patch path outside reviewed allowlist or duplicated")
+E               ValueError: patch path outside reviewed allowlist or duplicated
+
+scripts/native_hook_transport.py:123: ValueError
+____________ test_only_reviewed_development_pins_are_admitted[True] ____________
+
+snapshot = (PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-637/test_only_reviewed_devel...wtHxjDwGwSKPJM+2Fv6DfgH9F5R7XpalNNMb/CoalXKQF3jaevKmaXgfWTgAGbPrOoWIK/UqrfVazdYCEmgCaxVej+fLCQ5ASv/uRn0AxcfK/28BAAA='})
+extra_change = True
+
+    @pytest.mark.parametrize("extra_change", [False, True])
+    def test_only_reviewed_development_pins_are_admitted(
+        snapshot: tuple[Path, dict[str, str]], extra_change: bool,
+    ) -> None:
+        """The dependency exception cannot carry build, hook or unrelated package changes."""
+        repo, _ = snapshot
+        config = repo / "pyproject.toml"
+        original = '[tool.hatch.envs.default]\ndependencies = ["pylint>=4.0.2", "basedpyright>=1.32.1"]\n'
+        config.write_text(original, encoding="utf-8")
+        _git(repo, "add", "pyproject.toml")
+        _git(repo, "-c", "commit.gpgsign=false", "commit", "-qm", "configuration fixture")
+        changed = original.replace("pylint>=4.0.2", "pylint==4.0.7").replace("basedpyright>=1.32.1", "basedpyright==1.39.10")
+        config.write_text(changed + ("# unrelated mutation\n" if extra_change else ""), encoding="utf-8")
+        _git(repo, "add", "pyproject.toml")
+        request = _request_for_staged_snapshot(repo)
+        if extra_change:
+>           with pytest.raises(ValueError, match="development dependency"):
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           AssertionError: Regex pattern did not match.
+E             Expected regex: 'development dependency'
+E             Actual message: 'patch path outside reviewed allowlist or duplicated'
+
+tests/unit/test_native_hook_transport.py:366: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/test_native_hook_transport.py::test_only_reviewed_development_pins_are_admitted[False]
+FAILED tests/unit/test_native_hook_transport.py::test_only_reviewed_development_pins_are_admitted[True]
+============================== 2 failed in 0.36s ===============================

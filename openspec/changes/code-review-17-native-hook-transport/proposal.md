@@ -6,7 +6,7 @@ Story [#473](https://github.com/nold-ai/specfact-cli-modules/issues/473) require
 
 ## What Changes
 
-Add an explicitly selected workflow-dispatch mode to the existing customer workflow and a bounded patch validation/receipt helper. The normal customer corpus remains unchanged. The transport accepts only the seventeen reviewed PR478 coverage paths and cannot change hooks, workflows, dependencies or trust controls.
+Add an explicitly selected workflow-dispatch mode to the existing customer workflow and a bounded patch validation/receipt helper. The normal customer corpus remains unchanged. The transport accepts only the reviewed PR478 coverage paths, their compatibility regression/evidence, and the exact two approved development analyzer pins. It cannot change hooks, workflows, unrelated dependencies or trust controls.
 
 ## Impact
 

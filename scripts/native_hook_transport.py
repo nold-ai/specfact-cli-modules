@@ -24,6 +24,9 @@ _ALLOWED = frozenset(
     [
         _CHANGE + name
         for name in (
+            "PR478_DEV_ALIGNMENT_RED.txt",
+            "PR478_NATIVE_ENVIRONMENT_PACKAGES.txt",
+            "PR478_NATIVE_ENVIRONMENT_FAILURE.txt",
             "PR478_INSTALLED_ALIAS_CWD_RED.txt",
             "PR478_INSTALLED_ALIAS_RED.txt",
             "PR478_INSTALLED_COVERAGE_RED.txt",
@@ -47,6 +50,8 @@ _ALLOWED = frozenset(
         )
     ]
     + [
+        "pyproject.toml",
+        "tests/unit/specfact_code_review/run/test_runtime_compatibility.py",
         "packages/specfact-code-review/module-package.yaml",
         "tests/unit/specfact_code_review/run/test_installed_coverage.py",
     ]
@@ -130,6 +135,21 @@ def _patch_paths(repository: Path, patch: bytes) -> list[str]:
     return sorted(paths)
 
 
+def _verify_development_alignment(repository: Path, paths: list[str]) -> None:
+    if "pyproject.toml" not in paths:
+        return
+    expected = _git(repository, "show", "HEAD:pyproject.toml")
+    for original, replacement in (
+        (b'"pylint>=4.0.2"', b'"pylint==4.0.7"'),
+        (b'"basedpyright>=1.32.1"', b'"basedpyright==1.39.10"'),
+    ):
+        if expected.count(original) != 1:
+            raise ValueError("unexpected base development dependency declaration")
+        expected = expected.replace(original, replacement)
+    if (repository / "pyproject.toml").read_bytes() != expected:
+        raise ValueError("unreviewed development dependency change")
+
+
 @ensure(lambda result: bool(result["tree"]) and bool(result["paths"]))
 def prepare_snapshot(repository: Path, request: dict[str, str]) -> dict[str, object]:
     """Validate and stage only the reviewed patch against its declared clean base."""
@@ -145,6 +165,7 @@ def prepare_snapshot(repository: Path, request: dict[str, str]) -> dict[str, obj
         entry = _git(repository, "ls-files", "--stage", "--", path)
         if not entry.startswith(b"100644 ") or not (repository / path).is_file() or (repository / path).is_symlink():
             raise ValueError("staged file mode must be regular")
+    _verify_development_alignment(repository, paths)
     tree = _git(repository, "write-tree").decode().strip()
     if tree != request["tree"]:
         raise ValueError("tree mismatch")
@@ -155,6 +176,18 @@ def prepare_snapshot(repository: Path, request: dict[str, str]) -> dict[str, obj
 def hook_environment(caller: dict[str, str]) -> dict[str, str]:
     """Keep only explicit noncredential developer context without publisher authority."""
     return {name: value for name, value in caller.items() if name in _ENVIRONMENT}
+
+
+@ensure(lambda result, repository: result["SPECFACT_MODULES_ROOTS"] == str((repository / "packages").resolve()))
+def runtime_environment(repository: Path, caller: dict[str, str]) -> dict[str, str]:
+    """Mirror unchanged hook-owned workspace selection, excluding inherited import overlays."""
+    environment = hook_environment(caller)
+    environment["SPECFACT_MODULES_REPO"] = str(repository.resolve())
+    environment["SPECFACT_CLI_MODULES_REPO"] = str(repository.resolve())
+    environment["SPECFACT_MODULES_ROOTS"] = str((repository / "packages").resolve())
+    roots = [path / "src" for path in sorted((repository / "packages").glob("specfact-*"))]
+    environment["PYTHONPATH"] = os.pathsep.join(str(path.resolve()) for path in roots if path.is_dir())
+    return environment
 
 
 def _control_hashes(repository: Path) -> dict[str, str]:
@@ -197,7 +230,8 @@ def execute_hooks(repository: Path, evidence: Path, receipt: dict[str, object]) 
     receipt["hook_log_sha256"] = hashlib.sha256((evidence / "hooks.log").read_bytes()).hexdigest()
     receipt["tree_after"] = _git(repository, "write-tree").decode().strip()
     changed = _git(repository, "diff", "--name-only").strip()
-    if changed or receipt["tree_after"] != receipt["tree"] or _control_hashes(repository) != before:
+    untracked = _git(repository, "ls-files", "--others", "--exclude-standard").strip()
+    if untracked or changed or receipt["tree_after"] != receipt["tree"] or _control_hashes(repository) != before:
         receipt["failure"] = "hooks modified tested source or controls"
         return 1
     return result.returncode
@@ -228,6 +262,9 @@ def parse_runtime_output(output: str) -> dict[str, object]:
 def _prepare_runtime(repository: Path, evidence: Path, receipt: dict[str, object]) -> None:
     command = ["hatch", "run", "python", "-m", "specfact_cli.cli", "code", "review", "runtime", "prepare", "--json"]
     receipt["runtime_command"] = command
+    environment = runtime_environment(repository, dict(os.environ))
+    receipt["runtime_workspace_roots"] = {name: environment[name] for name in ("SPECFACT_MODULES_ROOTS", "PYTHONPATH")}
+    receipt["runtime_environment_allowlist"] = sorted(environment)
     with (
         (evidence / "runtime.stdout").open("w", encoding="utf-8") as output,
         (evidence / "runtime.log").open("w", encoding="utf-8") as errors,
@@ -235,7 +272,7 @@ def _prepare_runtime(repository: Path, evidence: Path, receipt: dict[str, object
         result = subprocess.run(
             command,
             cwd=repository,
-            env=hook_environment(dict(os.environ)),
+            env=environment,
             stdout=output,
             stderr=errors,
             timeout=1_800,
@@ -251,6 +288,26 @@ def _prepare_runtime(repository: Path, evidence: Path, receipt: dict[str, object
     receipt["runtime_stdout_sha256"] = hashlib.sha256(raw_output).hexdigest()
     receipt["runtime_sha256"] = hashlib.sha256(data).hexdigest()
     receipt["runtime_identity"] = runtime["identity"]
+
+
+def _inventory_hook_environment(repository: Path, evidence: Path, receipt: dict[str, object]) -> None:
+    command = [str(repository / ".venv/bin/python"), "-m", "pip", "freeze", "--all"]
+    receipt["hook_inventory_command"] = command
+    inventory = evidence / "hook-python-freeze.txt"
+    with (
+        inventory.open("w", encoding="utf-8") as output,
+        (evidence / "hook-inventory.log").open("w", encoding="utf-8") as errors,
+    ):
+        subprocess.run(
+            command,
+            cwd=repository,
+            env=hook_environment(dict(os.environ)),
+            stdout=output,
+            stderr=errors,
+            timeout=120,
+            check=True,
+        )
+    receipt["hook_inventory_sha256"] = hashlib.sha256(inventory.read_bytes()).hexdigest()
 
 
 @ensure(lambda result: isinstance(result, int))
@@ -273,6 +330,7 @@ def main() -> int:
         request = json.loads(args.request.read_text(encoding="utf-8"))
         receipt.update(prepare_snapshot(args.checkout, request))
         _prepare_runtime(args.checkout, args.evidence, receipt)
+        _inventory_hook_environment(args.checkout, args.evidence, receipt)
         exit_code = execute_hooks(args.checkout, args.evidence, receipt)
         receipt["exit_code"] = exit_code
     except (OSError, ValueError, TypeError, subprocess.SubprocessError) as exc:

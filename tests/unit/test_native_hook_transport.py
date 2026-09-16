@@ -49,9 +49,13 @@ def snapshot_fixture(tmp_path: Path) -> tuple[Path, dict[str, str]]:
     source.write_text("VALUE = 1\n", encoding="utf-8")
     _git(repo, "add", ".")
     _git(repo, "-c", "commit.gpgsign=false", "commit", "-qm", "fixture")
-    base = _git(repo, "rev-parse", "HEAD")
     source.write_text("VALUE = 2\n", encoding="utf-8")
     _git(repo, "add", ".")
+    return repo, _request_for_staged_snapshot(repo)
+
+
+def _request_for_staged_snapshot(repo: Path) -> dict[str, str]:
+    base = _git(repo, "rev-parse", "HEAD")
     tree = _git(repo, "write-tree")
     patch = subprocess.run(
         ["git", "-C", str(repo), "diff", "--cached", "--binary"],
@@ -60,7 +64,7 @@ def snapshot_fixture(tmp_path: Path) -> tuple[Path, dict[str, str]]:
         timeout=10,
     ).stdout
     _git(repo, "reset", "--hard", "HEAD")
-    return repo, {
+    return {
         "base": base,
         "tree": tree,
         "sha256": hashlib.sha256(patch).hexdigest(),
@@ -178,6 +182,7 @@ def test_hook_exit_and_authority_are_preserved(
         encoding="utf-8",
     )
     interpreter.chmod(0o755)
+    (repo / ".git/info/exclude").write_text(".venv/\n", encoding="utf-8")
     monkeypatch.setenv("GH_TOKEN", "fixture-secret")
     monkeypatch.setenv("GITHUB_ACTIONS", "true")
     result = transport.execute_hooks(repo, evidence, receipt)
@@ -188,9 +193,11 @@ def test_hook_exit_and_authority_are_preserved(
     )
 
 
+@pytest.mark.parametrize("target", [_ALLOWED, "new_module.py"])
 def test_hook_source_mutation_fails(
     snapshot: tuple[Path, dict[str, str]],
     tmp_path: Path,
+    target: str,
 ) -> None:
     """Even a successful hook cannot authorize a different worktree."""
     repo, request = snapshot
@@ -200,7 +207,8 @@ def test_hook_source_mutation_fails(
     evidence.mkdir()
     interpreter = repo / ".venv/bin/python"
     interpreter.parent.mkdir(parents=True)
-    interpreter.write_text(f'#!/bin/sh\nprintf "VALUE = 3\\n" > "{_ALLOWED}"\n', encoding="utf-8")
+    (repo / ".git/info/exclude").write_text(".venv/\n", encoding="utf-8")
+    interpreter.write_text(f'#!/bin/sh\nprintf "VALUE = 3\\n" > "{target}"\n', encoding="utf-8")
     interpreter.chmod(0o755)
     assert transport.execute_hooks(repo, evidence, receipt) == 1
     assert receipt["hook_exit"] == 0
@@ -249,6 +257,9 @@ def test_receipt_binds_actual_outer_identity_and_report(
     assert receipt["github"]["GITHUB_RUN_ID"] == "fixture-run"
     assert receipt["github"]["GITHUB_ACTIONS"] == "true"
     assert receipt["authority"] == "local-uncommitted-explicit-files"
+    inventory = evidence / "hook-python-freeze.txt"
+    assert receipt["hook_inventory_sha256"] == hashlib.sha256(inventory.read_bytes()).hexdigest()
+    assert receipt["hook_inventory_command"][1:] == ["-m", "pip", "freeze", "--all"]
     assert receipt["tree_after"] == request["tree"]
     assert receipt["review_sha256"] == hashlib.sha256((evidence / "code-review.json").read_bytes()).hexdigest()
 
@@ -322,3 +333,47 @@ def test_incomplete_or_ambiguous_runtime_output_is_rejected(output: str) -> None
     """Decorations cannot convert missing, mistyped or duplicate descriptors into success."""
     with pytest.raises(ValueError, match="exactly one complete typed"):
         _transport().parse_runtime_output(output)
+
+
+def test_preparation_selects_only_owned_workspace_modules(snapshot: tuple[Path, dict[str, str]]) -> None:
+    """The baseline cannot silently replace the workspace runtime implementation."""
+    repo, _ = snapshot
+    caller = {
+        "HOME": "/private/home",
+        "PATH": "/bin",
+        "PYTHONPATH": "/unrelated/host",
+        "SPECFACT_MODULES_ROOTS": "/unrelated/modules",
+        "GH_TOKEN": "fixture-secret",
+    }
+    environment = _transport().runtime_environment(repo, caller)
+    assert environment["SPECFACT_MODULES_REPO"] == str(repo.resolve())
+    assert environment["SPECFACT_CLI_MODULES_REPO"] == str(repo.resolve())
+    assert environment["SPECFACT_MODULES_ROOTS"] == str((repo / "packages").resolve())
+    assert environment["PYTHONPATH"] == str((repo / "packages/specfact-code-review/src").resolve())
+    assert "GH_TOKEN" not in environment
+    assert "/unrelated" not in ":".join(environment.values())
+
+
+@pytest.mark.parametrize("extra_change", [False, True])
+def test_only_reviewed_development_pins_are_admitted(
+    snapshot: tuple[Path, dict[str, str]],
+    extra_change: bool,
+) -> None:
+    """The dependency exception cannot carry build, hook or unrelated package changes."""
+    repo, _ = snapshot
+    config = repo / "pyproject.toml"
+    original = '[tool.hatch.envs.default]\ndependencies = ["pylint>=4.0.2", "basedpyright>=1.32.1"]\n'
+    config.write_text(original, encoding="utf-8")
+    _git(repo, "add", "pyproject.toml")
+    _git(repo, "-c", "commit.gpgsign=false", "commit", "-qm", "configuration fixture")
+    changed = original.replace("pylint>=4.0.2", "pylint==4.0.7").replace(
+        "basedpyright>=1.32.1", "basedpyright==1.39.10"
+    )
+    config.write_text(changed + ("# unrelated mutation\n" if extra_change else ""), encoding="utf-8")
+    _git(repo, "add", "pyproject.toml")
+    request = _request_for_staged_snapshot(repo)
+    if extra_change:
+        with pytest.raises(ValueError, match="development dependency"):
+            _transport().prepare_snapshot(repo, request)
+    else:
+        assert _transport().prepare_snapshot(repo, request)["tree"] == request["tree"]

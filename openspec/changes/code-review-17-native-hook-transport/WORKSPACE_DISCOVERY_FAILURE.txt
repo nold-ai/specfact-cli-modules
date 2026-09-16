@@ -1,0 +1,8 @@
+SpecFact CLI - v0.55.4
+⏱️  Started: 2026-09-16 09:24:45
+Module 'nold-ai/specfact-codebase' is not installed.
+The code command group is provided by that module. Install with specfact module 
+install nold-ai/specfact-codebase, or run specfact init --profile <profile> to 
+install bundles.
+
+✓ Finished: 2026-09-16 09:24:45 | Duration: 0.01s

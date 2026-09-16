@@ -19,6 +19,11 @@ requirements:
         method: test
         intent: Reject mismatched identities, controls, escaping paths, oversized content and nonregular modes.
         observable: Focused identity, path, size, mode and dirty-checkout tests reject the request before hook execution.
+      - case_id: 473-hook-7
+        scenario_id: validate-the-exact-staged-snapshot-before-running-unchanged-hooks
+        method: test
+        intent: Permit only the exact reviewed two dependency pin replacements in pyproject.toml.
+        observable: A real Git patch with just those replacements passes; one extra byte change fails before hooks.
   openspec:code-review-17-native-hook-transport:native-hook-transport:preserve-real-execution-authority-and-hook-outcome:
     rationale: Developer evidence cannot silently become publisher authority or a successful result after hook failure.
     stakeholder_refs:
@@ -32,7 +37,7 @@ requirements:
         scenario_id: preserve-real-execution-authority-and-hook-outcome
         method: test
         intent: Execute a real child, preserve its exit and reject hook source mutation.
-        observable: Child fixture exits are propagated, credentials and publisher variables are absent, mutations fail.
+        observable: Child fixture exits are propagated, credentials and publisher variables are absent, tracked and non-ignored untracked mutations fail.
       - case_id: 473-hook-4
         scenario_id: preserve-real-execution-authority-and-hook-outcome
         method: test
@@ -43,3 +48,13 @@ requirements:
         method: test
         intent: Use genuine Hatch activation and retain decorated CLI output with one typed runtime descriptor.
         observable: Native Hatch invocation and raw output are asserted; incomplete or ambiguous JSON objects are rejected before hooks.
+      - case_id: 473-hook-6
+        scenario_id: preserve-real-execution-authority-and-hook-outcome
+        method: test
+        intent: Bind runtime preparation to the same reviewed workspace modules selected by unchanged hooks.
+        observable: Only repository-owned bundle source roots reach preparation; inherited overlays and credentials are absent.
+      - case_id: 473-hook-8
+        scenario_id: preserve-real-execution-authority-and-hook-outcome
+        method: test
+        intent: Capture the actual hook interpreter package inventory after preparation has synchronized the environment.
+        observable: The fresh pre-hook inventory command and digest are retained separately from initial installation evidence.
