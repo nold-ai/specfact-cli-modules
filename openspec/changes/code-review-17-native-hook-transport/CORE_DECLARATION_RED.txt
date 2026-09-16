@@ -1,0 +1,87 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: /private/tmp/specfact-478-native-hook-transport
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 56 items / 54 deselected / 2 selected
+
+tests/unit/test_native_hook_transport.py F.                              [100%]
+
+=================================== FAILURES ===================================
+___________ test_only_reviewed_development_pins_are_admitted[False] ____________
+
+snapshot = (PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-736/test_only_reviewed_devel...wtHxjDwGwSKPJM+2Fv6DfgH9F5R7XpalNNMb/CoalXKQF3jaevKmaXgfWTgAGbPrOoWIK/UqrfVazdYCEmgCaxVej+fLCQ5ASv/uRn0AxcfK/28BAAA='})
+extra_change = False
+
+    @pytest.mark.parametrize("extra_change", [False, True])
+    def test_only_reviewed_development_pins_are_admitted(
+        snapshot: tuple[Path, dict[str, str]],
+        extra_change: bool,
+    ) -> None:
+        """The dependency exception cannot carry build, hook or unrelated package changes."""
+        repo, _ = snapshot
+        config = repo / "pyproject.toml"
+        original = (
+            '[tool.hatch.envs.default]\ndependencies = [\n    "beartype>=0.22.0", '
+            '"pylint>=4.0.2", "basedpyright>=1.32.1"]\n'
+        )
+        config.write_text(original, encoding="utf-8")
+        _git(repo, "add", "pyproject.toml")
+        _git(repo, "-c", "commit.gpgsign=false", "commit", "-qm", "configuration fixture")
+        changed = original.replace("pylint>=4.0.2", "pylint==4.0.7").replace(
+            "basedpyright>=1.32.1", "basedpyright==1.39.10"
+        )
+        changed = changed.replace(
+            '"basedpyright==1.39.10"', '"basedpyright==1.39.10",\n    "nodejs-wheel-binaries==24.16.0"'
+        )
+        changed = changed.replace(
+            "[tool.hatch.envs.default]\n",
+            '[tool.specfact.code-review]\nnative_tools = ["git", "uname", "sed"]\n\n[tool.hatch.envs.default]\n',
+        )
+        changed = changed.replace('"beartype>=0.22.0"', '"specfact-cli==0.55.4",\n    "beartype>=0.22.0"')
+        config.write_text(changed + ("# unrelated mutation\n" if extra_change else ""), encoding="utf-8")
+        _git(repo, "add", "pyproject.toml")
+        request = _request_for_staged_snapshot(repo)
+        if extra_change:
+            with pytest.raises(ValueError, match="development dependency"):
+                _transport().prepare_snapshot(repo, request)
+        else:
+>           assert _transport().prepare_snapshot(repo, request)["tree"] == request["tree"]
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/test_native_hook_transport.py:454:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+scripts/native_hook_transport.py:234: in prepare_snapshot
+    _verify_development_alignment(repository, paths)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+repository = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-736/test_only_reviewed_development0/repository')
+paths = ['pyproject.toml']
+
+    def _verify_development_alignment(repository: Path, paths: list[str]) -> None:
+        if "pyproject.toml" not in paths:
+            return
+        expected = _git(repository, "show", "HEAD:pyproject.toml")
+        for original, replacement in (
+            (b'"pylint>=4.0.2"', b'"pylint==4.0.7"'),
+            (b'"basedpyright>=1.32.1"', b'"basedpyright==1.39.10",\n    "nodejs-wheel-binaries==24.16.0"'),
+            (
+                b"[tool.hatch.envs.default]\n",
+                b'[tool.specfact.code-review]\nnative_tools = ["git", "uname", "sed"]\n\n[tool.hatch.envs.default]\n',
+            ),
+        ):
+            if expected.count(original) != 1:
+                raise ValueError("unexpected base development dependency declaration")
+            expected = expected.replace(original, replacement)
+        if (repository / "pyproject.toml").read_bytes() != expected:
+>           raise ValueError("unreviewed development dependency change")
+E           ValueError: unreviewed development dependency change
+
+scripts/native_hook_transport.py:216: ValueError
+=========================== short test summary info ============================
+FAILED tests/unit/test_native_hook_transport.py::test_only_reviewed_development_pins_are_admitted[False]
+================== 1 failed, 1 passed, 54 deselected in 0.35s ==================

@@ -26,6 +26,14 @@ _ALLOWED = frozenset(
     [
         _CHANGE + name
         for name in (
+            "PR478_ATTACHED_VCS_GIT_EVIDENCE.md",
+            "PR478_ATTACHED_VCS_GIT_RED.txt",
+            "PR478_CORE_DECLARATION_RED.txt",
+            "PR478_CORE_NATIVE_RED.json",
+            "PR478_PUBLIC_TRUST_NATIVE_PROBE.json",
+            "PR478_PUBLIC_TRUST_RED.txt",
+            "PR478_PUBLISHED_CORE_API.json",
+            "PR478_SEMGREP_PARSER_EVIDENCE.json",
             "PR478_DEV_ALIGNMENT_RED.txt",
             "PR478_NATIVE_TOOLS_RED.txt",
             "PR478_NATIVE_TOOLS_CLOSURE_RED.txt",
@@ -65,6 +73,8 @@ _ALLOWED = frozenset(
             "runtime_builder.py",
             "runtime_models.py",
             "runtime_tools.py",
+            "runtime_trust.py",
+            "runtime_vcs.py",
             "runtime_compatibility.py",
             "target_pytest.py",
         )
@@ -73,6 +83,11 @@ _ALLOWED = frozenset(
         "pyproject.toml",
         "docs/guides/portable-project-runtime.md",
         "tests/unit/specfact_code_review/run/test_runtime_tools.py",
+        "tests/unit/specfact_code_review/run/test_runtime_trust.py",
+        "tests/unit/specfact_code_review/run/test_runtime_vcs.py",
+        "tests/unit/specfact_code_review/run/test_runtime_artifact_boundary.py",
+        "tests/unit/specfact_code_review/run/test_runtime_artifact_hardlinks.py",
+        "tests/unit/specfact_code_review/run/test_runtime_builder_logging.py",
         "tests/unit/specfact_code_review/run/test_runner.py",
         "tests/unit/specfact_code_review/run/test_runtime_builder.py",
         "tests/unit/specfact_code_review/run/test_runtime_compatibility.py",
@@ -202,6 +217,7 @@ def _verify_development_alignment(repository: Path, paths: list[str]) -> None:
         return
     expected = _git(repository, "show", "HEAD:pyproject.toml")
     for original, replacement in (
+        (b'"beartype>=0.22.0"', b'"specfact-cli==0.55.4",\n    "beartype>=0.22.0"'),
         (b'"pylint>=4.0.2"', b'"pylint==4.0.7"'),
         (b'"basedpyright>=1.32.1"', b'"basedpyright==1.39.10",\n    "nodejs-wheel-binaries==24.16.0"'),
         (

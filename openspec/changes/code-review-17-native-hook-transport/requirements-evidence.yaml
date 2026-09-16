@@ -22,7 +22,7 @@ requirements:
       - case_id: 473-hook-7
         scenario_id: validate-the-exact-staged-snapshot-before-running-unchanged-hooks
         method: test
-        intent: Permit only the exact reviewed analyzer pin replacements, Node dependency insertion and native-tools metadata insertion in pyproject.toml.
+        intent: Permit only the exact reviewed analyzer pin replacements, Node and published core dependency insertions and native-tools metadata insertion in pyproject.toml.
         observable: A real Git patch with just those replacements passes; one extra byte change fails before hooks.
       - case_id: 473-hook-16
         scenario_id: validate-the-exact-staged-snapshot-before-running-unchanged-hooks

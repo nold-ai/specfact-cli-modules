@@ -48,7 +48,7 @@ The transport SHALL execute every unchanged pre-commit stage in a credential-fre
 #### Scenario: Bounded development dependency alignment
 - **GIVEN** the exact reviewed Pylint and basedpyright declarations in the immutable base
 - **WHEN** a snapshot updates pyproject.toml
-- **THEN** only those two approved pin replacements, the explicit nodejs-wheel-binaries==24.16.0 dependency, and the reviewed native_tools declaration for git/uname/sed are accepted
+- **THEN** only those two approved pin replacements, the explicit nodejs-wheel-binaries==24.16.0 and verified published specfact-cli==0.55.4 dependencies, and the reviewed native_tools declaration for git/uname/sed are accepted
 - **AND** any other byte change fails before preparation or hooks
 
 #### Scenario: Inventory the actual hook interpreter after preparation

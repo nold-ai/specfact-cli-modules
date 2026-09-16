@@ -426,7 +426,10 @@ def test_only_reviewed_development_pins_are_admitted(
     """The dependency exception cannot carry build, hook or unrelated package changes."""
     repo, _ = snapshot
     config = repo / "pyproject.toml"
-    original = '[tool.hatch.envs.default]\ndependencies = ["pylint>=4.0.2", "basedpyright>=1.32.1"]\n'
+    original = (
+        '[tool.hatch.envs.default]\ndependencies = [\n    "beartype>=0.22.0", '
+        '"pylint>=4.0.2", "basedpyright>=1.32.1"]\n'
+    )
     config.write_text(original, encoding="utf-8")
     _git(repo, "add", "pyproject.toml")
     _git(repo, "-c", "commit.gpgsign=false", "commit", "-qm", "configuration fixture")
@@ -440,6 +443,7 @@ def test_only_reviewed_development_pins_are_admitted(
         "[tool.hatch.envs.default]\n",
         '[tool.specfact.code-review]\nnative_tools = ["git", "uname", "sed"]\n\n[tool.hatch.envs.default]\n',
     )
+    changed = changed.replace('"beartype>=0.22.0"', '"specfact-cli==0.55.4",\n    "beartype>=0.22.0"')
     config.write_text(changed + ("# unrelated mutation\n" if extra_change else ""), encoding="utf-8")
     _git(repo, "add", "pyproject.toml")
     request = _request_for_staged_snapshot(repo)
