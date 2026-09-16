@@ -19,3 +19,9 @@ Final local manual review: `hatch run specfact code review run --enforcement cha
 The verbatim RED transcript preserves pytest's trailing spaces; no diagnostic content was normalized.
 
 Normal signed commit hooks and the native exact-tree workflow receipt are still required. No dispatch has occurred. The installed coverage delivery remains a separate uncommitted staged snapshot. Local macOS/Docker results do not replace native candidate or public signed release acceptance.
+
+## Native preparation follow-up
+
+The first real native run [35067390728](https://github.com/nold-ai/specfact-cli-modules/actions/runs/35067390728) applied the exact requested staged tree and verified installation of official signed 0.50.0, then correctly failed before hooks: `project_environment_ambiguous:default,hatch-test`. Direct interpreter invocation omitted the genuine Hatch activation used by unchanged hooks. The actual failure log is retained in `NATIVE_PREPARATION_FAILURE.txt`; the workflow artifact retains the complete receipt and raw output.
+
+A new scenario preceded the focused regression, which failed before the fix (actual output `HATCH_RED.txt`). Runtime preparation now uses `hatch run python -m specfact_cli.cli code review runtime prepare --json`; the adapter independently verifies native activation. Raw CLI output remains `runtime.stdout`; exactly one typed descriptor with authority, identity, descriptor path and project metadata becomes `runtime.json`. Twenty-five focused tests pass, including incomplete, wrong-type and ambiguous descriptor rejection.

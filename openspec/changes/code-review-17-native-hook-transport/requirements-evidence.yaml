@@ -38,3 +38,8 @@ requirements:
         method: test
         intent: Retain the normal customer corpus when no transport request is supplied.
         observable: test_default_customer_workflow_is_preserved asserts opt-in selection, read-only permissions and timeout.
+      - case_id: 473-hook-5
+        scenario_id: preserve-real-execution-authority-and-hook-outcome
+        method: test
+        intent: Use genuine Hatch activation and retain decorated CLI output with one typed runtime descriptor.
+        observable: Native Hatch invocation and raw output are asserted; incomplete or ambiguous JSON objects are rejected before hooks.

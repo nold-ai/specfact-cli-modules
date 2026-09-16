@@ -203,20 +203,33 @@ def execute_hooks(repository: Path, evidence: Path, receipt: dict[str, object]) 
     return result.returncode
 
 
+@ensure(lambda result: result["authority"] == "local_build" and bool(result["identity"]))
+def parse_runtime_output(output: str) -> dict[str, object]:
+    """Extract exactly one complete runtime descriptor while retaining CLI decorations separately."""
+    decoder = json.JSONDecoder()
+    documents = []
+    for match in re.finditer(r"(?m)^\{", output):
+        try:
+            value, _ = decoder.raw_decode(output[match.start() :])
+        except ValueError:
+            continue
+        if not isinstance(value, dict) or value.get("authority") != "local_build":
+            continue
+        if not all(isinstance(value.get(name), str) and value[name] for name in ("identity", "descriptor")):
+            continue
+        if not isinstance(value.get("project"), dict) or not value["project"]:
+            continue
+        documents.append(value)
+    if len(documents) != 1:
+        raise ValueError("expected exactly one complete typed local runtime descriptor")
+    return documents[0]
+
+
 def _prepare_runtime(repository: Path, evidence: Path, receipt: dict[str, object]) -> None:
-    command = [
-        str(repository / ".venv/bin/python"),
-        "-m",
-        "specfact_cli.cli",
-        "code",
-        "review",
-        "runtime",
-        "prepare",
-        "--json",
-    ]
+    command = ["hatch", "run", "python", "-m", "specfact_cli.cli", "code", "review", "runtime", "prepare", "--json"]
     receipt["runtime_command"] = command
     with (
-        (evidence / "runtime.json").open("w", encoding="utf-8") as output,
+        (evidence / "runtime.stdout").open("w", encoding="utf-8") as output,
         (evidence / "runtime.log").open("w", encoding="utf-8") as errors,
     ):
         result = subprocess.run(
@@ -231,10 +244,11 @@ def _prepare_runtime(repository: Path, evidence: Path, receipt: dict[str, object
     receipt["runtime_exit"] = result.returncode
     if result.returncode:
         raise ValueError("explicit project runtime preparation failed; see runtime.log")
-    data = (evidence / "runtime.json").read_bytes()
-    runtime = json.loads(data)
-    if runtime.get("authority") != "local_build" or not runtime.get("identity"):
-        raise ValueError("project runtime receipt lacks local build identity")
+    raw_output = (evidence / "runtime.stdout").read_bytes()
+    runtime = parse_runtime_output(raw_output.decode("utf-8"))
+    data = (json.dumps(runtime, indent=2) + "\n").encode("utf-8")
+    (evidence / "runtime.json").write_bytes(data)
+    receipt["runtime_stdout_sha256"] = hashlib.sha256(raw_output).hexdigest()
     receipt["runtime_sha256"] = hashlib.sha256(data).hexdigest()
     receipt["runtime_identity"] = runtime["identity"]
 

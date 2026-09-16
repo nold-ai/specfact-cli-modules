@@ -1,0 +1,51 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: /private/tmp/specfact-478-native-hook-transport
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 1 item
+
+tests/unit/test_native_hook_transport.py F                               [100%]
+
+=================================== FAILURES ===================================
+___________ test_preparation_uses_native_hatch_and_preserves_stdout ____________
+
+snapshot = (PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-630/test_preparation_uses_na...wtHxjDwGwSKPJM+2Fv6DfgH9F5R7XpalNNMb/CoalXKQF3jaevKmaXgfWTgAGbPrOoWIK/UqrfVazdYCEmgCaxVej+fLCQ5ASv/uRn0AxcfK/28BAAA='})
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-630/test_preparation_uses_native_h0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x109dfe780>
+
+    def test_preparation_uses_native_hatch_and_preserves_stdout(
+        snapshot: tuple[Path, dict[str, str]], tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Genuine Hatch invocation resolves selection; CLI decorations remain evidence."""
+        repo, request = snapshot
+        request_path = tmp_path / "request.json"
+        request_path.write_text(json.dumps(request), encoding="utf-8")
+        evidence = tmp_path / "evidence"
+        runtime = {"authority": "local_build", "identity": "fixture-runtime", "descriptor": "/private/runtime.json",
+                   "project": {"manager": "hatch", "environment": "default"}}
+        decorated = "SpecFact CLI - test\n" + json.dumps(runtime) + "\nFinished\n"
+        tools = tmp_path / "bin"
+        tools.mkdir()
+        hatch = tools / "hatch"
+        hatch.write_text("#!/bin/sh\nprintf '%s\\n' '" + decorated + "'\n", encoding="utf-8")
+        hatch.chmod(0o755)
+        interpreter = repo / ".venv/bin/python"
+        interpreter.parent.mkdir(parents=True)
+        interpreter.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+        interpreter.chmod(0o755)
+        (repo / ".git/info/exclude").write_text(".venv/\n", encoding="utf-8")
+        monkeypatch.setenv("PATH", str(tools) + ":" + __import__("os").environ["PATH"])
+        monkeypatch.setattr("sys.argv", [str(_SCRIPT), "--checkout", str(repo), "--request", str(request_path),
+                                       "--evidence", str(evidence)])
+>       assert _transport().main() == 0
+E       AssertionError: assert 1 == 0
+E        +  where 1 = <function main at 0x109f7c7d0>()
+E        +    where <function main at 0x109f7c7d0> = <module 'native_hook_transport' from '/private/tmp/specfact-478-native-hook-transport/scripts/native_hook_transport.py'>.main
+E        +      where <module 'native_hook_transport' from '/private/tmp/specfact-478-native-hook-transport/scripts/native_hook_transport.py'> = _transport()
+
+tests/unit/test_native_hook_transport.py:290: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/test_native_hook_transport.py::test_preparation_uses_native_hatch_and_preserves_stdout
+============================== 1 failed in 0.44s ===============================

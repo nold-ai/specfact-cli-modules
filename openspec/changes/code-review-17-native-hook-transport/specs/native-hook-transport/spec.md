@@ -25,3 +25,9 @@ The transport SHALL execute every unchanged pre-commit stage in a credential-fre
 - **GIVEN** an ordinary workflow invocation without the transport request
 - **WHEN** the workflow selects jobs
 - **THEN** the original customer corpus runs and the transport does not
+
+#### Scenario: Native manager activation and decorated CLI output
+- **GIVEN** the repository's default Hatch environment and ordinary CLI startup output
+- **WHEN** the transport prepares the project runtime before unchanged hooks
+- **THEN** it invokes genuine Hatch activation and retains raw output plus exactly one complete typed local runtime descriptor
+- **AND** missing, malformed or ambiguous descriptors fail before hook execution

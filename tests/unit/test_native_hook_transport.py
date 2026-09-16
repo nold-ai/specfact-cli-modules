@@ -7,7 +7,9 @@ import gzip
 import hashlib
 import importlib.util
 import json
+import os
 import subprocess
+import sys
 from pathlib import Path
 from types import ModuleType
 
@@ -205,6 +207,13 @@ def test_hook_source_mutation_fails(
     assert "modified tested source" in receipt["failure"]
 
 
+def _fake_hatch(root: Path, output: str, monkeypatch: pytest.MonkeyPatch) -> None:
+    hatch = root / "hatch"
+    hatch.write_text(f"#!{sys.executable}\nimport sys\nsys.stdout.write({output!r})\n", encoding="utf-8")
+    hatch.chmod(0o755)
+    monkeypatch.setenv("PATH", str(root) + ":" + os.environ["PATH"])
+
+
 def test_receipt_binds_actual_outer_identity_and_report(
     snapshot: tuple[Path, dict[str, str]],
     tmp_path: Path,
@@ -218,12 +227,7 @@ def test_receipt_binds_actual_outer_identity_and_report(
     interpreter = repo / ".venv/bin/python"
     interpreter.parent.mkdir(parents=True)
     interpreter.write_text(
-        "#!/bin/sh\n"
-        'case "$*" in *runtime*)\n'
-        'printf \'%s\' \'{"authority":"local_build","identity":"fixture-runtime"}\'\n'
-        "exit 0;; esac\n"
-        "mkdir -p .specfact\nprintf '{}' > .specfact/code-review.json\n",
-        encoding="utf-8",
+        "#!/bin/sh\nmkdir -p .specfact\nprintf '{}' > .specfact/code-review.json\n", encoding="utf-8"
     )
     interpreter.chmod(0o755)
     # Ordinary bootstrap artifacts are ignored by the real repository too.
@@ -231,6 +235,13 @@ def test_receipt_binds_actual_outer_identity_and_report(
     monkeypatch.setattr(
         "sys.argv", [str(_SCRIPT), "--checkout", str(repo), "--request", str(request_path), "--evidence", str(evidence)]
     )
+    runtime = {
+        "authority": "local_build",
+        "identity": "fixture-runtime",
+        "descriptor": "/private/runtime.json",
+        "project": {"manager": "hatch", "environment": "default"},
+    }
+    _fake_hatch(tmp_path, json.dumps(runtime), monkeypatch)
     monkeypatch.setenv("GITHUB_ACTIONS", "true")
     monkeypatch.setenv("GITHUB_RUN_ID", "fixture-run")
     assert _transport().main() == 0
@@ -261,3 +272,53 @@ def test_bad_request_still_retains_failure_receipt(
     assert receipt["exit_code"] == 1
     assert "sha256 mismatch" in receipt["failure"]
     assert "hook_exit" not in receipt
+
+
+def test_preparation_uses_native_hatch_and_preserves_stdout(
+    snapshot: tuple[Path, dict[str, str]],
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Genuine Hatch invocation resolves selection; CLI decorations remain evidence."""
+    repo, request = snapshot
+    request_path = tmp_path / "request.json"
+    request_path.write_text(json.dumps(request), encoding="utf-8")
+    evidence = tmp_path / "evidence"
+    runtime = {
+        "authority": "local_build",
+        "identity": "fixture-runtime",
+        "descriptor": "/private/runtime.json",
+        "project": {"manager": "hatch", "environment": "default"},
+    }
+    decorated = "SpecFact CLI - test\n" + json.dumps(runtime) + "\nFinished\n"
+    _fake_hatch(tmp_path, decorated, monkeypatch)
+    interpreter = repo / ".venv/bin/python"
+    interpreter.parent.mkdir(parents=True)
+    interpreter.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+    interpreter.chmod(0o755)
+    (repo / ".git/info/exclude").write_text(".venv/\n", encoding="utf-8")
+    monkeypatch.setattr(
+        "sys.argv", [str(_SCRIPT), "--checkout", str(repo), "--request", str(request_path), "--evidence", str(evidence)]
+    )
+    assert _transport().main() == 0
+    receipt = json.loads((evidence / "receipt.json").read_text())
+    assert receipt["runtime_command"][:3] == ["hatch", "run", "python"]
+    assert (evidence / "runtime.stdout").read_text().strip() == decorated.strip()
+    assert json.loads((evidence / "runtime.json").read_text()) == runtime
+
+
+@pytest.mark.parametrize(
+    "output",
+    [
+        "not JSON",
+        "{}",
+        '{"authority":"local_build","identity":"incomplete"}',
+        '{"authority":"local_build","identity":"ok","descriptor":false,"project":{"manager":"hatch"}}',
+        '{"authority":"local_build","identity":"ok","descriptor":"/runtime","project":[]}',
+        ('{"authority":"local_build","identity":"ok","descriptor":"/runtime","project":{"manager":"hatch"}}\n' * 2),
+    ],
+)
+def test_incomplete_or_ambiguous_runtime_output_is_rejected(output: str) -> None:
+    """Decorations cannot convert missing, mistyped or duplicate descriptors into success."""
+    with pytest.raises(ValueError, match="exactly one complete typed"):
+        _transport().parse_runtime_output(output)
