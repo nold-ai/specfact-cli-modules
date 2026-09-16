@@ -1,0 +1,28 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: /private/tmp/specfact-478-native-hook-transport
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 6 items
+
+tests/unit/test_native_semgrep_diagnostic.py .....F                      [100%]
+
+=================================== FAILURES ===================================
+__________________ test_diagnostic_refuses_publisher_context ___________________
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-670/test_diagnostic_refuses_publis0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10a18e580>
+
+    def test_diagnostic_refuses_publisher_context(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        diagnostic = _diagnostic()
+        monkeypatch.setattr(sys, "argv", ["diagnostic", "--checkout", str(tmp_path), "--evidence", str(tmp_path)])
+        monkeypatch.setenv("GITHUB_ACTIONS", "true")
+>       with pytest.raises(ValueError, match="credential-free developer child"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests/unit/test_native_semgrep_diagnostic.py:122: Failed
+=========================== short test summary info ============================
+FAILED tests/unit/test_native_semgrep_diagnostic.py::test_diagnostic_refuses_publisher_context
+========================= 1 failed, 5 passed in 0.20s ==========================

@@ -11,3 +11,5 @@ Add an explicitly selected workflow-dispatch mode to the existing customer workf
 ## Impact
 
 Developer verification tooling only. No module payload, registry, signature, public CLI, user documentation URL, or release acceptance contract changes. This does not satisfy customer GitHub Actions or protected PR range evidence. Existing signed release and fifteen-combination acceptance remain required.
+
+The reviewed snapshot follow-up includes verified activation across immutable snapshots and bounded Semgrep failure diagnostics, with their focused regressions and actual RED transcripts. The transport allowlist admits those exact files; source controls remain immutable.

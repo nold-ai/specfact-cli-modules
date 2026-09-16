@@ -222,10 +222,13 @@ def _fake_hatch(root: Path, output: str, monkeypatch: pytest.MonkeyPatch) -> Non
     monkeypatch.setenv("PATH", str(root) + ":" + os.environ["PATH"])
 
 
+@pytest.mark.parametrize("hook_exit, diagnostic_exit", [(0, 9), (7, 0), (7, 9)])
 def test_receipt_binds_actual_outer_identity_and_report(
     snapshot: tuple[Path, dict[str, str]],
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    hook_exit: int,
+    diagnostic_exit: int,
 ) -> None:
     """The CLI records actual authority and binds retained review bytes."""
     repo, request = snapshot
@@ -235,7 +238,10 @@ def test_receipt_binds_actual_outer_identity_and_report(
     interpreter = repo / ".venv/bin/python"
     interpreter.parent.mkdir(parents=True)
     interpreter.write_text(
-        "#!/bin/sh\nmkdir -p .specfact\nprintf '{}' > .specfact/code-review.json\n", encoding="utf-8"
+        "#!/bin/sh\nmkdir -p .specfact\nprintf '{}' > .specfact/code-review.json\n"
+        f'[ "$2" != "pre_commit" ] || exit {hook_exit}\n'
+        f'case "$1" in *native_semgrep_diagnostic.py) exit {diagnostic_exit};; esac\n',
+        encoding="utf-8",
     )
     interpreter.chmod(0o755)
     # Ordinary bootstrap artifacts are ignored by the real repository too.
@@ -252,15 +258,26 @@ def test_receipt_binds_actual_outer_identity_and_report(
     _fake_hatch(tmp_path, json.dumps(runtime), monkeypatch)
     monkeypatch.setenv("GITHUB_ACTIONS", "true")
     monkeypatch.setenv("GITHUB_RUN_ID", "fixture-run")
-    assert _transport().main() == 0
+    assert _transport().main() == hook_exit
     receipt = json.loads((evidence / "receipt.json").read_text())
+    assert receipt["exit_code"] == receipt["hook_exit"] == hook_exit
+    if hook_exit:
+        assert receipt["semgrep_diagnostic_exit"] == diagnostic_exit
+        assert receipt["semgrep_diagnostic_acceptance"] is False
+    else:
+        assert "semgrep_diagnostic_exit" not in receipt
+    _assert_review_receipt(receipt, evidence, request["tree"])
+
+
+def _assert_review_receipt(receipt: dict, evidence: Path, tree: str) -> None:
+    """Independently bind workflow identity, actual interpreter inventory and review bytes."""
     assert receipt["github"]["GITHUB_RUN_ID"] == "fixture-run"
     assert receipt["github"]["GITHUB_ACTIONS"] == "true"
     assert receipt["authority"] == "local-uncommitted-explicit-files"
     inventory = evidence / "hook-python-freeze.txt"
     assert receipt["hook_inventory_sha256"] == hashlib.sha256(inventory.read_bytes()).hexdigest()
     assert receipt["hook_inventory_command"][1:] == ["-m", "pip", "freeze", "--all"]
-    assert receipt["tree_after"] == request["tree"]
+    assert receipt["tree_after"] == tree
     assert receipt["review_sha256"] == hashlib.sha256((evidence / "code-review.json").read_bytes()).hexdigest()
 
 

@@ -58,3 +58,13 @@ requirements:
         method: test
         intent: Capture the actual hook interpreter package inventory after preparation has synchronized the environment.
         observable: The fresh pre-hook inventory command and digest are retained separately from initial installation evidence.
+      - case_id: 473-hook-10
+        scenario_id: preserve-real-execution-authority-and-hook-outcome
+        method: test
+        intent: Retain a separate official sealed Semgrep replay without accepting failed review evidence.
+        observable: test_native_semgrep_diagnostic verifies raw error retention, source hashes, offline isolation, missing-rule/preflight/publisher-context refusal and unchanged original report.
+      - case_id: 473-hook-11
+        scenario_id: preserve-real-execution-authority-and-hook-outcome
+        method: test
+        intent: Keep failed hook status authoritative regardless of separate diagnostic success or failure.
+        observable: Real child cases preserve hook exit seven when replay exits zero or nine, and never replay successful hooks.

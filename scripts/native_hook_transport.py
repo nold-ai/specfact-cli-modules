@@ -25,6 +25,8 @@ _ALLOWED = frozenset(
         _CHANGE + name
         for name in (
             "PR478_DEV_ALIGNMENT_RED.txt",
+            "PR478_INDEX_ACTIVATION_RED.txt",
+            "PR478_SEMGREP_DIAGNOSTICS_RED.txt",
             "PR478_NATIVE_ENVIRONMENT_PACKAGES.txt",
             "PR478_NATIVE_ENVIRONMENT_FAILURE.txt",
             "PR478_INSTALLED_ALIAS_CWD_RED.txt",
@@ -43,6 +45,8 @@ _ALLOWED = frozenset(
         _RUN + name
         for name in (
             "installed_coverage.py",
+            "portable_snapshot.py",
+            "runtime_discovery.py",
             "portable_worker.py",
             "runner.py",
             "runtime_builder.py",
@@ -52,6 +56,9 @@ _ALLOWED = frozenset(
     + [
         "pyproject.toml",
         "tests/unit/specfact_code_review/run/test_runtime_compatibility.py",
+        "tests/unit/specfact_code_review/run/test_snapshot_activation.py",
+        "packages/specfact-code-review/src/specfact_code_review/tools/semgrep_runner.py",
+        "tests/unit/specfact_code_review/tools/test_semgrep_runner.py",
         "packages/specfact-code-review/module-package.yaml",
         "tests/unit/specfact_code_review/run/test_installed_coverage.py",
     ]
@@ -310,6 +317,34 @@ def _inventory_hook_environment(repository: Path, evidence: Path, receipt: dict[
     receipt["hook_inventory_sha256"] = hashlib.sha256(inventory.read_bytes()).hexdigest()
 
 
+def _diagnose_failed_semgrep(repository: Path, evidence: Path, receipt: dict[str, object]) -> None:
+    """Run a separate diagnostic child without replacing the original hook failure."""
+    command = [
+        str(repository / ".venv/bin/python"),
+        str(Path(__file__).with_name("native_semgrep_diagnostic.py")),
+        "--checkout",
+        str(repository),
+        "--evidence",
+        str(evidence),
+    ]
+    receipt["semgrep_diagnostic_command"] = command
+    receipt["semgrep_diagnostic_acceptance"] = False
+    try:
+        with (evidence / "semgrep-diagnostic.log").open("w", encoding="utf-8") as log:
+            result = subprocess.run(
+                command,
+                cwd=repository,
+                env=runtime_environment(repository, dict(os.environ)),
+                stdout=log,
+                stderr=subprocess.STDOUT,
+                check=False,
+                timeout=900,
+            )
+        receipt["semgrep_diagnostic_exit"] = result.returncode
+    except (OSError, subprocess.SubprocessError) as exc:
+        receipt["semgrep_diagnostic_failure"] = f"{type(exc).__name__}: {exc}"
+
+
 @ensure(lambda result: isinstance(result, int))
 def main() -> int:
     """Validate, execute and always retain the exact outer workflow receipt."""
@@ -333,6 +368,8 @@ def main() -> int:
         _inventory_hook_environment(args.checkout, args.evidence, receipt)
         exit_code = execute_hooks(args.checkout, args.evidence, receipt)
         receipt["exit_code"] = exit_code
+        if exit_code:
+            _diagnose_failed_semgrep(args.checkout, args.evidence, receipt)
     except (OSError, ValueError, TypeError, subprocess.SubprocessError) as exc:
         receipt["failure"] = f"{type(exc).__name__}: {exc}"
     finally:

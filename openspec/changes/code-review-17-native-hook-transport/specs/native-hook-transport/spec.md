@@ -53,3 +53,11 @@ The transport SHALL execute every unchanged pre-commit stage in a credential-fre
 - **WHEN** a successful hook creates a non-ignored source file without staging it
 - **THEN** the transport rejects the changed worktree even when its staged tree is unchanged
 - **AND** ordinary ignored cache and report artifacts remain permitted
+
+#### Scenario: Separate sealed Semgrep diagnostic replay after a failed hook
+
+- **GIVEN** the unchanged hook reports incomplete Semgrep execution without its raw error
+- **WHEN** a separate diagnostic replay runs
+- **THEN** it uses the verified official capsule, staged source snapshot, signed default rule packs, offline launcher and no project runtime imports
+- **AND** it retains raw output, exit, source/configuration identities and the startup differences from the original adapter
+- **AND** its diagnostic-only receipt neither replaces the original failure nor grants review acceptance

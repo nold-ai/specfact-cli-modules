@@ -1,0 +1,103 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: /private/tmp/specfact-478-native-hook-transport
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 4 items
+
+tests/unit/test_native_semgrep_diagnostic.py FFFF                        [100%]
+
+=================================== FAILURES ===================================
+________________ test_replay_retains_raw_error_and_isolation[0] ________________
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-660/test_replay_retains_raw_error_0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x109b383e0>
+returncode = 0
+
+    @pytest.mark.parametrize("returncode", [0, 2])
+    def test_replay_retains_raw_error_and_isolation(tmp_path: Path, monkeypatch, returncode: int) -> None:
+>       diagnostic = _diagnostic()
+                     ^^^^^^^^^^^^^
+
+tests/unit/test_native_semgrep_diagnostic.py:26: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _diagnostic():
+        script = Path(__file__).resolve().parents[2] / "scripts/native_semgrep_diagnostic.py"
+>       assert script.is_file(), "sealed diagnostic replay is absent"
+E       AssertionError: sealed diagnostic replay is absent
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/private/tmp/specfact-478-native-hook-transport/scripts/native_semgrep_diagnostic.py').is_file
+
+tests/unit/test_native_semgrep_diagnostic.py:16: AssertionError
+________________ test_replay_retains_raw_error_and_isolation[2] ________________
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-660/test_replay_retains_raw_error_1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x109b38770>
+returncode = 2
+
+    @pytest.mark.parametrize("returncode", [0, 2])
+    def test_replay_retains_raw_error_and_isolation(tmp_path: Path, monkeypatch, returncode: int) -> None:
+>       diagnostic = _diagnostic()
+                     ^^^^^^^^^^^^^
+
+tests/unit/test_native_semgrep_diagnostic.py:26: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _diagnostic():
+        script = Path(__file__).resolve().parents[2] / "scripts/native_semgrep_diagnostic.py"
+>       assert script.is_file(), "sealed diagnostic replay is absent"
+E       AssertionError: sealed diagnostic replay is absent
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/private/tmp/specfact-478-native-hook-transport/scripts/native_semgrep_diagnostic.py').is_file
+
+tests/unit/test_native_semgrep_diagnostic.py:16: AssertionError
+___________________ test_replay_refuses_missing_signed_rules ___________________
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-660/test_replay_refuses_missing_si0')
+
+    def test_replay_refuses_missing_signed_rules(tmp_path: Path) -> None:
+>       diagnostic = _diagnostic()
+                     ^^^^^^^^^^^^^
+
+tests/unit/test_native_semgrep_diagnostic.py:65: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _diagnostic():
+        script = Path(__file__).resolve().parents[2] / "scripts/native_semgrep_diagnostic.py"
+>       assert script.is_file(), "sealed diagnostic replay is absent"
+E       AssertionError: sealed diagnostic replay is absent
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/private/tmp/specfact-478-native-hook-transport/scripts/native_semgrep_diagnostic.py').is_file
+
+tests/unit/test_native_semgrep_diagnostic.py:16: AssertionError
+_______________ test_diagnostic_does_not_mutate_original_review ________________
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-660/test_diagnostic_does_not_mutat0')
+
+    def test_diagnostic_does_not_mutate_original_review(tmp_path: Path) -> None:
+>       diagnostic = _diagnostic()
+                     ^^^^^^^^^^^^^
+
+tests/unit/test_native_semgrep_diagnostic.py:71: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _diagnostic():
+        script = Path(__file__).resolve().parents[2] / "scripts/native_semgrep_diagnostic.py"
+>       assert script.is_file(), "sealed diagnostic replay is absent"
+E       AssertionError: sealed diagnostic replay is absent
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/private/tmp/specfact-478-native-hook-transport/scripts/native_semgrep_diagnostic.py').is_file
+
+tests/unit/test_native_semgrep_diagnostic.py:16: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/test_native_semgrep_diagnostic.py::test_replay_retains_raw_error_and_isolation[0]
+FAILED tests/unit/test_native_semgrep_diagnostic.py::test_replay_retains_raw_error_and_isolation[2]
+FAILED tests/unit/test_native_semgrep_diagnostic.py::test_replay_refuses_missing_signed_rules
+FAILED tests/unit/test_native_semgrep_diagnostic.py::test_diagnostic_does_not_mutate_original_review
+============================== 4 failed in 0.04s ===============================
