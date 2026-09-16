@@ -8,6 +8,7 @@ import hashlib
 import importlib.util
 import json
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -215,22 +216,30 @@ def test_hook_source_mutation_fails(
     assert "modified tested source" in receipt["failure"]
 
 
-def _fake_hatch(root: Path, output: str, monkeypatch: pytest.MonkeyPatch) -> None:
+def _fake_hatch(root: Path, output: str, monkeypatch: pytest.MonkeyPatch, diagnostic_exit: int = 0) -> None:
     hatch = root / "hatch"
-    hatch.write_text(f"#!{sys.executable}\nimport sys\nsys.stdout.write({output!r})\n", encoding="utf-8")
+    hatch.write_text(
+        f"#!{sys.executable}\nimport sys\n"
+        "if any(arg.endswith('native_basedpyright_diagnostic.py') for arg in sys.argv):\n"
+        f"    raise SystemExit({diagnostic_exit})\n"
+        f"sys.stdout.write({output!r})\n",
+        encoding="utf-8",
+    )
     hatch.chmod(0o755)
     monkeypatch.setenv("PATH", str(root) + ":" + os.environ["PATH"])
 
 
-@pytest.mark.parametrize("hook_exit, diagnostic_exit", [(0, 9), (7, 0), (7, 9)])
+@pytest.mark.parametrize("basedpyright", [False, True])
+@pytest.mark.parametrize("outcomes", [(0, 9), (7, 0), (7, 9)])
 def test_receipt_binds_actual_outer_identity_and_report(
     snapshot: tuple[Path, dict[str, str]],
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
-    hook_exit: int,
-    diagnostic_exit: int,
+    outcomes: tuple[int, int],
+    basedpyright: bool,
 ) -> None:
     """The CLI records actual authority and binds retained review bytes."""
+    hook_exit, diagnostic_exit = outcomes
     repo, request = snapshot
     request_path = tmp_path / "request.json"
     request_path.write_text(json.dumps(request), encoding="utf-8")
@@ -240,14 +249,24 @@ def test_receipt_binds_actual_outer_identity_and_report(
     interpreter.write_text(
         "#!/bin/sh\nmkdir -p .specfact\nprintf '{}' > .specfact/code-review.json\n"
         f'[ "$2" != "pre_commit" ] || exit {hook_exit}\n'
-        f'case "$1" in *native_semgrep_diagnostic.py) exit {diagnostic_exit};; esac\n',
+        f'case "$1" in *native_*diagnostic.py) exit {diagnostic_exit};; esac\n',
         encoding="utf-8",
     )
     interpreter.chmod(0o755)
     # Ordinary bootstrap artifacts are ignored by the real repository too.
     (repo / ".git/info/exclude").write_text(".venv/\n.specfact/\n", encoding="utf-8")
     monkeypatch.setattr(
-        "sys.argv", [str(_SCRIPT), "--checkout", str(repo), "--request", str(request_path), "--evidence", str(evidence)]
+        "sys.argv",
+        [
+            str(_SCRIPT),
+            "--checkout",
+            str(repo),
+            "--request",
+            str(request_path),
+            "--evidence",
+            str(evidence),
+            *(["--basedpyright-diagnostic"] if basedpyright else []),
+        ],
     )
     runtime = {
         "authority": "local_build",
@@ -255,18 +274,28 @@ def test_receipt_binds_actual_outer_identity_and_report(
         "descriptor": "/private/runtime.json",
         "project": {"manager": "hatch", "environment": "default"},
     }
-    _fake_hatch(tmp_path, json.dumps(runtime), monkeypatch)
+    _fake_hatch(tmp_path, json.dumps(runtime), monkeypatch, diagnostic_exit)
     monkeypatch.setenv("GITHUB_ACTIONS", "true")
     monkeypatch.setenv("GITHUB_RUN_ID", "fixture-run")
     assert _transport().main() == hook_exit
     receipt = json.loads((evidence / "receipt.json").read_text())
     assert receipt["exit_code"] == receipt["hook_exit"] == hook_exit
+    _assert_diagnostic_exits(receipt, outcomes, basedpyright)
+    _assert_review_receipt(receipt, evidence, request["tree"])
+
+
+def _assert_diagnostic_exits(receipt: dict, outcomes: tuple[int, int], basedpyright: bool) -> None:
+    hook_exit, diagnostic_exit = outcomes
     if hook_exit:
         assert receipt["semgrep_diagnostic_exit"] == diagnostic_exit
         assert receipt["semgrep_diagnostic_acceptance"] is False
     else:
         assert "semgrep_diagnostic_exit" not in receipt
-    _assert_review_receipt(receipt, evidence, request["tree"])
+    if basedpyright and hook_exit:
+        assert receipt["basedpyright_diagnostic_exit"] == diagnostic_exit
+        assert receipt["basedpyright_diagnostic_acceptance"] is False
+    else:
+        assert "basedpyright_diagnostic_exit" not in receipt
 
 
 def _assert_review_receipt(receipt: dict, evidence: Path, tree: str) -> None:
@@ -293,7 +322,16 @@ def test_bad_request_still_retains_failure_receipt(
     request_path.write_text(json.dumps(request), encoding="utf-8")
     evidence = tmp_path / "evidence"
     monkeypatch.setattr(
-        "sys.argv", [str(_SCRIPT), "--checkout", str(repo), "--request", str(request_path), "--evidence", str(evidence)]
+        "sys.argv",
+        [
+            str(_SCRIPT),
+            "--checkout",
+            str(repo),
+            "--request",
+            str(request_path),
+            "--evidence",
+            str(evidence),
+        ],
     )
     assert _transport().main() == 1
     receipt = json.loads((evidence / "receipt.json").read_text())
@@ -326,7 +364,16 @@ def test_preparation_uses_native_hatch_and_preserves_stdout(
     interpreter.chmod(0o755)
     (repo / ".git/info/exclude").write_text(".venv/\n", encoding="utf-8")
     monkeypatch.setattr(
-        "sys.argv", [str(_SCRIPT), "--checkout", str(repo), "--request", str(request_path), "--evidence", str(evidence)]
+        "sys.argv",
+        [
+            str(_SCRIPT),
+            "--checkout",
+            str(repo),
+            "--request",
+            str(request_path),
+            "--evidence",
+            str(evidence),
+        ],
     )
     assert _transport().main() == 0
     receipt = json.loads((evidence / "receipt.json").read_text())
@@ -394,3 +441,42 @@ def test_only_reviewed_development_pins_are_admitted(
             _transport().prepare_snapshot(repo, request)
     else:
         assert _transport().prepare_snapshot(repo, request)["tree"] == request["tree"]
+
+
+def test_basedpyright_replay_uses_real_hatch_activation(tmp_path: Path, monkeypatch) -> None:
+    """An actual detached Hatch environment supplies verified selection context."""
+    assert shutil.which("hatch"), "native Hatch is required for this transport regression"
+    repository = tmp_path / "project"
+    repository.mkdir()
+    (repository / "pyproject.toml").write_text(
+        "[tool.hatch.envs.default]\ndetached = true\n"
+        f'path = "{tmp_path / "hatch-environment"}"\n'
+        "[tool.hatch.envs.hatch-test]\ndetached = true\n"
+    )
+    controls = tmp_path / "controls"
+    controls.mkdir()
+    probe = controls / "native_basedpyright_diagnostic.py"
+    probe.write_text(
+        "import os, json\nprint(json.dumps({'active':os.environ.get('HATCH_ENV_ACTIVE'),"
+        "'venv':os.environ.get('VIRTUAL_ENV'),'token':os.environ.get('GH_TOKEN')}))\nraise SystemExit(7)\n"
+    )
+    evidence = tmp_path / "evidence"
+    evidence.mkdir()
+    transport = _transport()
+    monkeypatch.setattr(transport, "__file__", str(controls / "native_hook_transport.py"))
+    monkeypatch.setenv("HOME", str(tmp_path / "home"))
+    monkeypatch.setenv("GH_TOKEN", "do-not-forward")
+    monkeypatch.delenv("VIRTUAL_ENV", raising=False)
+    monkeypatch.delenv("HATCH_ENV_ACTIVE", raising=False)
+    receipt = {"hook_exit": 23}
+    transport.diagnose_failed_basedpyright(repository, evidence, receipt)
+    assert receipt.get("basedpyright_diagnostic_exit") == 7, (
+        receipt,
+        (evidence / "basedpyright-diagnostic.log").read_text(),
+    )
+    assert receipt["hook_exit"] == 23 and receipt["basedpyright_diagnostic_acceptance"] is False
+    output = json.loads((evidence / "basedpyright-diagnostic.log").read_text().splitlines()[-1])
+    assert (
+        output["active"] == "default" and Path(output["venv"]).resolve() == (tmp_path / "hatch-environment").resolve()
+    )
+    assert output["token"] is None

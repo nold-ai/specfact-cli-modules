@@ -61,3 +61,13 @@ The transport SHALL execute every unchanged pre-commit stage in a credential-fre
 - **THEN** it uses the verified official capsule, staged source snapshot, signed default rule packs, offline launcher and no project runtime imports
 - **AND** it retains raw output, exit, source/configuration identities and the startup differences from the original adapter
 - **AND** its diagnostic-only receipt neither replaces the original failure nor grants review acceptance
+
+#### Scenario: Explicit basedpyright replay preserves the reviewed runtime
+
+- **GIVEN** a failed hook whose basedpyright member is incomplete and explicit diagnostic opt-in
+- **WHEN** the transport replays the analyzer
+- **THEN** it recaptures the staged snapshot and verifies the discovered project, offline cached runtime, environment and bound capsule identities against the original report before execution
+- **AND** it uses the unchanged signed target worker with the original portable arguments and snapshot configuration, without host overlays, worker edits or process tracing
+- **AND** a bounded offline replay retains raw output, exit and identities as diagnostic-only evidence, never replacing the hook failure
+- **AND** mismatched identities or unavailable cached state produce an incomplete diagnostic without executing an approximate runtime
+- **AND** the diagnostic is disabled by default and no customer-corpus selection changes

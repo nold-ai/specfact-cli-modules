@@ -1,0 +1,210 @@
+FFFFFFFFFF                                                               [100%]
+=================================== FAILURES ===================================
+___________ test_identity_mismatch_prevents_replay[project_identity] ___________
+
+field = 'project_identity'
+
+    @pytest.mark.parametrize("field", ["project_identity", "identity", "environment_id", "capsule_identity"])
+    def test_identity_mismatch_prevents_replay(field: str) -> None:
+>       diagnostic = _diagnostic()
+                     ^^^^^^^^^^^^^
+
+tests/unit/test_native_basedpyright_diagnostic.py:30: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _diagnostic():
+>       assert _SCRIPT.is_file(), "basedpyright diagnostic is absent"
+E       AssertionError: basedpyright diagnostic is absent
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/private/tmp/specfact-478-native-hook-transport/scripts/native_basedpyright_diagnostic.py').is_file
+
+tests/unit/test_native_basedpyright_diagnostic.py:16: AssertionError
+_______________ test_identity_mismatch_prevents_replay[identity] _______________
+
+field = 'identity'
+
+    @pytest.mark.parametrize("field", ["project_identity", "identity", "environment_id", "capsule_identity"])
+    def test_identity_mismatch_prevents_replay(field: str) -> None:
+>       diagnostic = _diagnostic()
+                     ^^^^^^^^^^^^^
+
+tests/unit/test_native_basedpyright_diagnostic.py:30: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _diagnostic():
+>       assert _SCRIPT.is_file(), "basedpyright diagnostic is absent"
+E       AssertionError: basedpyright diagnostic is absent
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/private/tmp/specfact-478-native-hook-transport/scripts/native_basedpyright_diagnostic.py').is_file
+
+tests/unit/test_native_basedpyright_diagnostic.py:16: AssertionError
+____________ test_identity_mismatch_prevents_replay[environment_id] ____________
+
+field = 'environment_id'
+
+    @pytest.mark.parametrize("field", ["project_identity", "identity", "environment_id", "capsule_identity"])
+    def test_identity_mismatch_prevents_replay(field: str) -> None:
+>       diagnostic = _diagnostic()
+                     ^^^^^^^^^^^^^
+
+tests/unit/test_native_basedpyright_diagnostic.py:30: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _diagnostic():
+>       assert _SCRIPT.is_file(), "basedpyright diagnostic is absent"
+E       AssertionError: basedpyright diagnostic is absent
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/private/tmp/specfact-478-native-hook-transport/scripts/native_basedpyright_diagnostic.py').is_file
+
+tests/unit/test_native_basedpyright_diagnostic.py:16: AssertionError
+___________ test_identity_mismatch_prevents_replay[capsule_identity] ___________
+
+field = 'capsule_identity'
+
+    @pytest.mark.parametrize("field", ["project_identity", "identity", "environment_id", "capsule_identity"])
+    def test_identity_mismatch_prevents_replay(field: str) -> None:
+>       diagnostic = _diagnostic()
+                     ^^^^^^^^^^^^^
+
+tests/unit/test_native_basedpyright_diagnostic.py:30: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _diagnostic():
+>       assert _SCRIPT.is_file(), "basedpyright diagnostic is absent"
+E       AssertionError: basedpyright diagnostic is absent
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/private/tmp/specfact-478-native-hook-transport/scripts/native_basedpyright_diagnostic.py').is_file
+
+tests/unit/test_native_basedpyright_diagnostic.py:16: AssertionError
+_________ test_report_requires_unknown_basedpyright_and_passed_runtime _________
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-680/test_report_requires_unknown_b0')
+
+    def test_report_requires_unknown_basedpyright_and_passed_runtime(tmp_path: Path) -> None:
+>       diagnostic = _diagnostic()
+                     ^^^^^^^^^^^^^
+
+tests/unit/test_native_basedpyright_diagnostic.py:38: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _diagnostic():
+>       assert _SCRIPT.is_file(), "basedpyright diagnostic is absent"
+E       AssertionError: basedpyright diagnostic is absent
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/private/tmp/specfact-478-native-hook-transport/scripts/native_basedpyright_diagnostic.py').is_file
+
+tests/unit/test_native_basedpyright_diagnostic.py:16: AssertionError
+____________ test_raw_worker_replay_preserves_isolation_and_exit[0] ____________
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-680/test_raw_worker_replay_preserv0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10956d350>
+returncode = 0
+
+    @pytest.mark.parametrize("returncode", [0, 1, 78])
+    def test_raw_worker_replay_preserves_isolation_and_exit(tmp_path: Path, monkeypatch, returncode: int) -> None:
+>       diagnostic = _diagnostic()
+                     ^^^^^^^^^^^^^
+
+tests/unit/test_native_basedpyright_diagnostic.py:50: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _diagnostic():
+>       assert _SCRIPT.is_file(), "basedpyright diagnostic is absent"
+E       AssertionError: basedpyright diagnostic is absent
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/private/tmp/specfact-478-native-hook-transport/scripts/native_basedpyright_diagnostic.py').is_file
+
+tests/unit/test_native_basedpyright_diagnostic.py:16: AssertionError
+____________ test_raw_worker_replay_preserves_isolation_and_exit[1] ____________
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-680/test_raw_worker_replay_preserv1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10956ce90>
+returncode = 1
+
+    @pytest.mark.parametrize("returncode", [0, 1, 78])
+    def test_raw_worker_replay_preserves_isolation_and_exit(tmp_path: Path, monkeypatch, returncode: int) -> None:
+>       diagnostic = _diagnostic()
+                     ^^^^^^^^^^^^^
+
+tests/unit/test_native_basedpyright_diagnostic.py:50: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _diagnostic():
+>       assert _SCRIPT.is_file(), "basedpyright diagnostic is absent"
+E       AssertionError: basedpyright diagnostic is absent
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/private/tmp/specfact-478-native-hook-transport/scripts/native_basedpyright_diagnostic.py').is_file
+
+tests/unit/test_native_basedpyright_diagnostic.py:16: AssertionError
+___________ test_raw_worker_replay_preserves_isolation_and_exit[78] ____________
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-680/test_raw_worker_replay_preserv2')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1095f55b0>
+returncode = 78
+
+    @pytest.mark.parametrize("returncode", [0, 1, 78])
+    def test_raw_worker_replay_preserves_isolation_and_exit(tmp_path: Path, monkeypatch, returncode: int) -> None:
+>       diagnostic = _diagnostic()
+                     ^^^^^^^^^^^^^
+
+tests/unit/test_native_basedpyright_diagnostic.py:50: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _diagnostic():
+>       assert _SCRIPT.is_file(), "basedpyright diagnostic is absent"
+E       AssertionError: basedpyright diagnostic is absent
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/private/tmp/specfact-478-native-hook-transport/scripts/native_basedpyright_diagnostic.py').is_file
+
+tests/unit/test_native_basedpyright_diagnostic.py:16: AssertionError
+_____________________ test_failed_preflight_never_executes _____________________
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-680/test_failed_preflight_never_ex0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1095c8270>
+
+    def test_failed_preflight_never_executes(tmp_path: Path, monkeypatch) -> None:
+>       diagnostic = _diagnostic()
+                     ^^^^^^^^^^^^^
+
+tests/unit/test_native_basedpyright_diagnostic.py:85: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _diagnostic():
+>       assert _SCRIPT.is_file(), "basedpyright diagnostic is absent"
+E       AssertionError: basedpyright diagnostic is absent
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/private/tmp/specfact-478-native-hook-transport/scripts/native_basedpyright_diagnostic.py').is_file
+
+tests/unit/test_native_basedpyright_diagnostic.py:16: AssertionError
+________________ test_diagnostic_workflow_is_explicitly_opt_in _________________
+
+    def test_diagnostic_workflow_is_explicitly_opt_in() -> None:
+        import yaml
+        workflow = yaml.safe_load((_SCRIPT.parent.parent / ".github/workflows/capsule-customer-execution.yml").read_text())
+        inputs = workflow.get("on", workflow.get(True))["workflow_dispatch"]["inputs"]
+>       assert inputs["basedpyright_diagnostic"]["default"] is False
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       KeyError: 'basedpyright_diagnostic'
+
+tests/unit/test_native_basedpyright_diagnostic.py:100: KeyError
+=========================== short test summary info ============================
+FAILED tests/unit/test_native_basedpyright_diagnostic.py::test_identity_mismatch_prevents_replay[project_identity]
+FAILED tests/unit/test_native_basedpyright_diagnostic.py::test_identity_mismatch_prevents_replay[identity]
+FAILED tests/unit/test_native_basedpyright_diagnostic.py::test_identity_mismatch_prevents_replay[environment_id]
+FAILED tests/unit/test_native_basedpyright_diagnostic.py::test_identity_mismatch_prevents_replay[capsule_identity]
+FAILED tests/unit/test_native_basedpyright_diagnostic.py::test_report_requires_unknown_basedpyright_and_passed_runtime
+FAILED tests/unit/test_native_basedpyright_diagnostic.py::test_raw_worker_replay_preserves_isolation_and_exit[0]
+FAILED tests/unit/test_native_basedpyright_diagnostic.py::test_raw_worker_replay_preserves_isolation_and_exit[1]
+FAILED tests/unit/test_native_basedpyright_diagnostic.py::test_raw_worker_replay_preserves_isolation_and_exit[78]
+FAILED tests/unit/test_native_basedpyright_diagnostic.py::test_failed_preflight_never_executes
+FAILED tests/unit/test_native_basedpyright_diagnostic.py::test_diagnostic_workflow_is_explicitly_opt_in
+10 failed in 0.05s

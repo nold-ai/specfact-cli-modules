@@ -68,3 +68,13 @@ requirements:
         method: test
         intent: Keep failed hook status authoritative regardless of separate diagnostic success or failure.
         observable: Real child cases preserve hook exit seven when replay exits zero or nine, and never replay successful hooks.
+      - case_id: 473-hook-12
+        scenario_id: preserve-real-execution-authority-and-hook-outcome
+        method: test
+        intent: Replay incomplete basedpyright only with the exact review-bound runtime and unchanged signed target worker.
+        observable: test_native_basedpyright_diagnostic checks four identity bindings, offline-only cache use, mismatch refusal, exact portable argv, nested worker dispatch, raw outputs and exits, and default-off workflow selection.
+      - case_id: 473-hook-13
+        scenario_id: preserve-real-execution-authority-and-hook-outcome
+        method: test
+        intent: Preserve genuine manager activation and hook failure during opt-in replay.
+        observable: A real detached Hatch environment with a competing hatch-test environment supplies default activation and excludes credentials; diagnostic exit seven leaves original hook exit twenty-three unchanged.

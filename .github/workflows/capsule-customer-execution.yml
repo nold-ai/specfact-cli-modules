@@ -14,6 +14,11 @@ on:
         required: false
         type: string
         default: ''
+      basedpyright_diagnostic:
+        description: 'Replay incomplete basedpyright with the verified review runtime; diagnostic only'
+        required: false
+        type: boolean
+        default: false
   release:
     types: [published]
 
@@ -261,11 +266,16 @@ jobs:
       - name: Run every unchanged hook against the exact snapshot
         env:
           HOOK_REQUEST: ${{ inputs.hook_snapshot }}
+          BASEDPYRIGHT_DIAGNOSTIC: ${{ inputs.basedpyright_diagnostic }}
         shell: bash
         run: |
           set -euo pipefail
           printf '%s' "$HOOK_REQUEST" > "$HOOK_ROOT/request.json"
-          python controls/scripts/native_hook_transport.py \
+          diagnostic_args=()
+          if [ "$BASEDPYRIGHT_DIAGNOSTIC" = "true" ]; then
+            diagnostic_args+=(--basedpyright-diagnostic)
+          fi
+          python controls/scripts/native_hook_transport.py "${diagnostic_args[@]}" \
             --checkout "$GITHUB_WORKSPACE/source" --request "$HOOK_ROOT/request.json" \
             --evidence "$HOOK_ROOT/evidence"
       - name: Preserve exact receipt, real hook logs and review evidence

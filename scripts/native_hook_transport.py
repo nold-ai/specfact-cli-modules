@@ -345,6 +345,37 @@ def _diagnose_failed_semgrep(repository: Path, evidence: Path, receipt: dict[str
         receipt["semgrep_diagnostic_failure"] = f"{type(exc).__name__}: {exc}"
 
 
+@ensure(lambda receipt: receipt["basedpyright_diagnostic_acceptance"] is False)
+def diagnose_failed_basedpyright(repository: Path, evidence: Path, receipt: dict[str, object]) -> None:
+    """Optional replay preserves the unchanged hook result and never grants acceptance."""
+    command = [
+        "hatch",
+        "run",
+        "python",
+        str(Path(__file__).with_name("native_basedpyright_diagnostic.py")),
+        "--checkout",
+        str(repository),
+        "--evidence",
+        str(evidence),
+    ]
+    receipt["basedpyright_diagnostic_command"] = command
+    receipt["basedpyright_diagnostic_acceptance"] = False
+    try:
+        with (evidence / "basedpyright-diagnostic.log").open("w", encoding="utf-8") as log:
+            result = subprocess.run(
+                command,
+                cwd=repository,
+                env=runtime_environment(repository, dict(os.environ)),
+                stdout=log,
+                stderr=subprocess.STDOUT,
+                check=False,
+                timeout=90,
+            )
+        receipt["basedpyright_diagnostic_exit"] = result.returncode
+    except (OSError, subprocess.SubprocessError) as exc:
+        receipt["basedpyright_diagnostic_failure"] = f"{type(exc).__name__}: {exc}"
+
+
 @ensure(lambda result: isinstance(result, int))
 def main() -> int:
     """Validate, execute and always retain the exact outer workflow receipt."""
@@ -352,6 +383,7 @@ def main() -> int:
     parser.add_argument("--checkout", required=True, type=Path)
     parser.add_argument("--request", required=True, type=Path)
     parser.add_argument("--evidence", required=True, type=Path)
+    parser.add_argument("--basedpyright-diagnostic", action="store_true")
     args = parser.parse_args()
     args.evidence.mkdir(parents=True, exist_ok=True)
     receipt: dict[str, object] = {
@@ -370,6 +402,8 @@ def main() -> int:
         receipt["exit_code"] = exit_code
         if exit_code:
             _diagnose_failed_semgrep(args.checkout, args.evidence, receipt)
+            if args.basedpyright_diagnostic:
+                diagnose_failed_basedpyright(args.checkout, args.evidence, receipt)
     except (OSError, ValueError, TypeError, subprocess.SubprocessError) as exc:
         receipt["failure"] = f"{type(exc).__name__}: {exc}"
     finally:

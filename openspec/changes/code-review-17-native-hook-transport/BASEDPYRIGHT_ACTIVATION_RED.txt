@@ -1,0 +1,46 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+_____________ test_basedpyright_replay_uses_real_hatch_activation ______________
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-684/test_basedpyright_replay_uses_0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x107d62b10>
+
+    def test_basedpyright_replay_uses_real_hatch_activation(tmp_path: Path, monkeypatch) -> None:
+        """An actual detached Hatch environment supplies verified selection context."""
+        import shutil
+    
+        assert shutil.which("hatch"), "native Hatch is required for this transport regression"
+        repository = tmp_path / "project"
+        repository.mkdir()
+        (repository / "pyproject.toml").write_text(
+            '[tool.hatch.envs.default]\ndetached = true\n'
+            f'path = "{tmp_path / "hatch-environment"}"\n'
+            '[tool.hatch.envs.hatch-test]\ndetached = true\n'
+        )
+        controls = tmp_path / "controls"
+        controls.mkdir()
+        probe = controls / "native_basedpyright_diagnostic.py"
+        probe.write_text(
+            "import os, json\nprint(json.dumps({'active':os.environ.get('HATCH_ENV_ACTIVE'),"
+            "'venv':os.environ.get('VIRTUAL_ENV'),'token':os.environ.get('GH_TOKEN')}))\nraise SystemExit(7)\n"
+        )
+        evidence = tmp_path / "evidence"
+        evidence.mkdir()
+        transport = _transport()
+        monkeypatch.setattr(transport, "__file__", str(controls / "native_hook_transport.py"))
+        monkeypatch.setenv("HOME", str(tmp_path / "home"))
+        monkeypatch.setenv("GH_TOKEN", "do-not-forward")
+        monkeypatch.delenv("VIRTUAL_ENV", raising=False)
+        monkeypatch.delenv("HATCH_ENV_ACTIVE", raising=False)
+        receipt = {"hook_exit": 23}
+        transport._diagnose_failed_basedpyright(repository, evidence, receipt)
+>       assert receipt.get("basedpyright_diagnostic_exit") == 7, (receipt, (evidence / "basedpyright-diagnostic.log").read_text())
+E       AssertionError: ({'hook_exit': 23, 'basedpyright_diagnostic_command': ['/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytes...4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-684/test_basedpyright_replay_uses_0/project/.venv/bin/python'"}, '')
+E       assert None == 7
+E        +  where None = <built-in method get of dict object at 0x107d3b700>('basedpyright_diagnostic_exit')
+E        +    where <built-in method get of dict object at 0x107d3b700> = {'hook_exit': 23, 'basedpyright_diagnostic_command': ['/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest...y/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-684/test_basedpyright_replay_uses_0/project/.venv/bin/python'"}.get
+
+tests/unit/test_native_hook_transport.py:463: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/test_native_hook_transport.py::test_basedpyright_replay_uses_real_hatch_activation
+1 failed in 0.05s
