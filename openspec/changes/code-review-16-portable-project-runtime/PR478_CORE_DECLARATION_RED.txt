@@ -1,0 +1,26 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: /private/tmp/specfact-477-pytest-release
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 11 items / 10 deselected / 1 selected
+
+tests/unit/specfact_code_review/run/test_runtime_compatibility.py F      [100%]
+
+=================================== FAILURES ===================================
+___________ test_declared_core_dependency_supplies_registry_handoff ____________
+
+    def test_declared_core_dependency_supplies_registry_handoff() -> None:
+        """Hermetic Hatch inputs must include the real registry API used by review."""
+        root = Path(__file__).resolve().parents[4]
+        declared = _declared_development_dependencies(root)
+        requirement = declared.get("specfact-cli")
+>       assert requirement is not None, "Core installed by developer bootstrap is not a declared target dependency"
+E       AssertionError: Core installed by developer bootstrap is not a declared target dependency
+E       assert None is not None
+
+tests/unit/specfact_code_review/run/test_runtime_compatibility.py:194: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_runtime_compatibility.py::test_declared_core_dependency_supplies_registry_handoff
+======================= 1 failed, 10 deselected in 0.10s =======================

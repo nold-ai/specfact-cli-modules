@@ -1,0 +1,55 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: /private/tmp/specfact-477-pytest-release
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 25 items / 24 deselected / 1 selected
+
+tests/unit/specfact_code_review/run/test_installed_coverage.py F         [100%]
+
+=================================== FAILURES ===================================
+_________ test_native_coverage_alias_cannot_credit_transformed_source __________
+
+installed_project = namespace(snapshot=PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-587/test_n...h0000gn/T/pytest-of-dom/pytest-587/test_native_coverage_alias_can0/runtime/site-packages/capsule-owned-1.0.dist-info'))
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-587/test_native_coverage_alias_can0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x107d3b490>
+
+    def test_native_coverage_alias_cannot_credit_transformed_source(installed_project, tmp_path, monkeypatch):
+        import coverage
+
+        project = installed_project
+        monkeypatch.chdir(project.snapshot)
+        project.source.write_text("def add(left, right):\n    return left - right\n")
+        good = project.source.with_name("good.py")
+        installed_good = project.installed.with_name("good.py")
+        good.write_text("VALUE = 7\n")
+        installed_good.write_bytes(good.read_bytes())
+        with (project.metadata / "RECORD").open("a") as stream:
+            stream.write(f"capsule_owned/good.py,{_record_hash(installed_good)},10\n")
+        (project.snapshot / "pyproject.toml").write_text('[tool.coverage.paths]\nsource=["src", "*/site-packages"]\n')
+        test = project.snapshot / "tests/test_math.py"
+        test.write_text(test.read_text() + "from capsule_owned.good import VALUE\ndef test_good():\n    assert VALUE == 7\n")
+        bridge = installed_coverage.plan_installed_coverage([project.source, good], snapshot=project.snapshot, site_packages=project.site)
+        assert bridge.diagnostics[str(project.source)] == "installed_source_differs"
+        result, raw = _native_coverage(project, bridge, tmp_path)
+        assert result.returncode == 0, result.stdout + result.stderr
+        assert raw["files"]["src/capsule_owned/math.py"]["executed_lines"]
+        native = coverage.Coverage(config_file=str(project.snapshot / "pyproject.toml"))
+        aliases = native._make_aliases()
+        relocations = {str(path): aliases.map(str(path)) for path in (project.installed, installed_good)}
+        # Use the former interface on RED; the final controller consumes native relocation evidence.
+        arguments = {"snapshot": project.snapshot}
+        if "relocations" in __import__("inspect").signature(installed_coverage.attribute_installed_coverage).parameters:
+            arguments["relocations"] = relocations
+        attributed, diagnostics = installed_coverage.attribute_installed_coverage(bridge, raw, **arguments)
+>       assert str(project.source) in diagnostics, "native aliases erased transformed-source origin uncertainty"
+E       AssertionError: native aliases erased transformed-source origin uncertainty
+E       assert '/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-587/test_native_coverage_alias_can0/snapshot/src/capsule_owned/math.py' in {}
+E        +  where '/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-587/test_native_coverage_alias_can0/snapshot/src/capsule_owned/math.py' = str(PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-587/test_native_coverage_alias_can0/snapshot/src/capsule_owned/math.py'))
+E        +    where PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-587/test_native_coverage_alias_can0/snapshot/src/capsule_owned/math.py') = namespace(snapshot=PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-587/test_n...h0000gn/T/pytest-of-dom/pytest-587/test_native_coverage_alias_can0/runtime/site-packages/capsule-owned-1.0.dist-info')).source
+
+/private/tmp/specfact-477-pytest-release/tests/unit/specfact_code_review/run/test_installed_coverage.py:376: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_installed_coverage.py::test_native_coverage_alias_cannot_credit_transformed_source
+======================= 1 failed, 24 deselected in 0.36s =======================

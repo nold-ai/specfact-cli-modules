@@ -1,0 +1,71 @@
+Checking dependencies
+Syncing dependencies
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: /private/tmp/specfact-477-pytest-release
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 22 items / 21 deselected / 1 selected
+
+tests/unit/specfact_code_review/run/test_runtime_builder.py F            [100%]
+
+=================================== FAILURES ===================================
+______ test_member_compatibility_policy_invalidates_offline_runtime_reuse ______
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-705/test_member_compatibility_poli0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x108611ba0>
+
+    def test_member_compatibility_policy_invalidates_offline_runtime_reuse(tmp_path: Path, monkeypatch) -> None:
+>       _assert_policy_change_invalidates_reuse(tmp_path, monkeypatch, "runtime_compatibility.py")
+
+tests/unit/specfact_code_review/run/test_runtime_builder.py:248:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-705/test_member_compatibility_poli0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x108611ba0>
+helper_name = 'runtime_compatibility.py'
+
+    def _assert_policy_change_invalidates_reuse(tmp_path: Path, monkeypatch, helper_name: str) -> None:
+        helpers = tmp_path / "helpers"
+        helpers.mkdir()
+        for helper in Path(runtime_builder.__file__).parent.glob("*.py"):
+            (helpers / helper.name).write_bytes(helper.read_bytes())
+        lock = Path("resources/contracts/pr-range-v1-toolchain-lock.json")
+        (tmp_path / lock).parent.mkdir(parents=True)
+        (tmp_path / lock).write_bytes((Path(runtime_builder.__file__).parents[1] / lock).read_bytes())
+        monkeypatch.setattr(runtime_builder, "__file__", str(helpers / "runtime_builder.py"))
+        monkeypatch.setattr(runtime_builder, "git_identity", lambda: "fixed-git-identity")
+        plan = ProjectPlan(tmp_path, manager="pip")
+        runtime = SimpleNamespace(environment_id="linux-x86_64-cp312", identity="sha256:" + "a" * 64)
+        cache = tmp_path / "cache"
+        identities = []
+        digest = runtime_builder.document_digest
+
+        def record_identity(values):
+            identities.append(values)
+            return digest(values)
+
+        monkeypatch.setattr(runtime_builder, "document_digest", record_identity)
+        with pytest.raises(ProjectRuntimeError, match="offline_cache_miss"):
+            prepare_runtime(plan, runtime=runtime, cache_root=cache, offline=True)
+        cached_path = cache / digest(identities[-1])[7:]
+        cached_path.mkdir()
+        loaded = []
+
+        def load_cached(path, **_kwargs):
+            loaded.append(path)
+            return SimpleNamespace(descriptor={"project_identity": plan.identity})
+
+        monkeypatch.setattr(runtime_builder, "load_runtime", load_cached)
+        prepare_runtime(plan, runtime=runtime, cache_root=cache, offline=True)
+        helper = helpers / helper_name
+        helper.write_bytes(helper.read_bytes() + b"\n# changed dispatcher fixture\n")
+>       with pytest.raises(ProjectRuntimeError, match="offline_cache_miss"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ProjectRuntimeError
+
+tests/unit/specfact_code_review/run/test_runtime_builder.py:236: Failed
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_runtime_builder.py::test_member_compatibility_policy_invalidates_offline_runtime_reuse
+======================= 1 failed, 21 deselected in 0.12s =======================

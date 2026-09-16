@@ -1,0 +1,118 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: /private/tmp/specfact-477-pytest-release
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 6 items
+
+tests/unit/specfact_code_review/run/test_target_coverage.py FFFFFF       [100%]
+
+=================================== FAILURES ===================================
+___________ test_reviewer_does_not_activate_dormant_aggregate_policy ___________
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-773/test_reviewer_does_not_activat0')
+
+    def test_reviewer_does_not_activate_dormant_aggregate_policy(tmp_path):
+        completed, receipt = _run(_project(tmp_path), tmp_path)
+>       assert completed.returncode == 0, completed.stdout + completed.stderr
+E       AssertionError: .
+E         ERROR: Coverage failure: total of 75.00 is less than fail-under=95.00
+E                                                                                  [100%]
+E         ================================ tests coverage ================================
+E         _______________ coverage: platform darwin, python 3.14.7-final-0 _______________
+E
+E         Coverage JSON written to file /private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-773/test_reviewer_does_not_activat0/private.json
+E         FAIL Required test coverage of 95.0% not reached. Total coverage: 75.00%
+E         1 passed in 0.01s
+E
+E       assert 1 == 0
+E        +  where 1 = CompletedProcess(args=['/private/tmp/specfact-477-pytest-release/.venv/bin/python', '-c', '\nimport importlib.util, js...rivate.json\nFAIL Required test coverage of 95.0% not reached. Total coverage: 75.00%\n1 passed in 0.01s\n', stderr='').returncode
+
+tests/unit/specfact_code_review/run/test_target_coverage.py:80: AssertionError
+_______ test_native_threshold_failure_and_json_destination_remain_native _______
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-773/test_native_threshold_failure_0')
+
+    def test_native_threshold_failure_and_json_destination_remain_native(tmp_path):
+        source = _project(tmp_path, native="--cov --cov-report=json:customer.json")
+        completed, receipt = _run(source, tmp_path)
+        assert completed.returncode == 1
+>       assert (source / "customer.json").is_file()
+E       AssertionError: assert False
+E        +  where False = is_file()
+E        +    where is_file = (PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-773/test_native_threshold_failure_0/project') / 'customer.json').is_file
+
+tests/unit/specfact_code_review/run/test_target_coverage.py:91: AssertionError
+_____ test_explicit_coverage_disable_leaves_evidence_incomplete[--no-cov] ______
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-773/test_explicit_coverage_disable0')
+options = '--no-cov'
+
+    @pytest.mark.parametrize("options", ["--no-cov", "--cov --no-cov"])
+    def test_explicit_coverage_disable_leaves_evidence_incomplete(tmp_path, options):
+        completed, receipt = _run(_project(tmp_path, native=options), tmp_path)
+        assert completed.returncode == 0
+        assert receipt["coverage"] == {}
+>       assert receipt["coverage_policy"]["mode"] == "disabled"
+E       AssertionError: assert 'legacy-forced' == 'disabled'
+E
+E         - disabled
+E         + legacy-forced
+
+tests/unit/specfact_code_review/run/test_target_coverage.py:102: AssertionError
+__ test_explicit_coverage_disable_leaves_evidence_incomplete[--cov --no-cov] ___
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-773/test_explicit_coverage_disable1')
+options = '--cov --no-cov'
+
+    @pytest.mark.parametrize("options", ["--no-cov", "--cov --no-cov"])
+    def test_explicit_coverage_disable_leaves_evidence_incomplete(tmp_path, options):
+        completed, receipt = _run(_project(tmp_path, native=options), tmp_path)
+        assert completed.returncode == 0
+        assert receipt["coverage"] == {}
+>       assert receipt["coverage_policy"]["mode"] == "disabled"
+E       AssertionError: assert 'legacy-forced' == 'disabled'
+E
+E         - disabled
+E         + legacy-forced
+
+tests/unit/specfact_code_review/run/test_target_coverage.py:102: AssertionError
+______ test_native_no_report_control_does_not_disable_private_measurement ______
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-773/test_native_no_report_control_0')
+
+    def test_native_no_report_control_does_not_disable_private_measurement(tmp_path):
+        source = _project(tmp_path, native="--cov --cov-report= --cov-fail-under=0")
+        completed, receipt = _run(source, tmp_path)
+        assert completed.returncode == 0
+        assert receipt["coverage"]["files"]
+>       assert receipt["coverage_policy"]["mode"] == "native"
+E       AssertionError: assert 'legacy-forced' == 'native'
+E
+E         - native
+E         + legacy-forced
+
+tests/unit/specfact_code_review/run/test_target_coverage.py:111: AssertionError
+__________ test_native_failure_report_suppression_remains_incomplete ___________
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-773/test_native_failure_report_sup0')
+
+    def test_native_failure_report_suppression_remains_incomplete(tmp_path):
+        source = _project(tmp_path, native="--cov --no-cov-on-fail", failure=True)
+        completed, receipt = _run(source, tmp_path)
+        assert completed.returncode == 1
+        assert receipt["coverage"] == {}
+>       assert "--no-cov-on-fail" in receipt["coverage_diagnostic"]
+                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       KeyError: 'coverage_diagnostic'
+
+tests/unit/specfact_code_review/run/test_target_coverage.py:120: KeyError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_target_coverage.py::test_reviewer_does_not_activate_dormant_aggregate_policy
+FAILED tests/unit/specfact_code_review/run/test_target_coverage.py::test_native_threshold_failure_and_json_destination_remain_native
+FAILED tests/unit/specfact_code_review/run/test_target_coverage.py::test_explicit_coverage_disable_leaves_evidence_incomplete[--no-cov]
+FAILED tests/unit/specfact_code_review/run/test_target_coverage.py::test_explicit_coverage_disable_leaves_evidence_incomplete[--cov --no-cov]
+FAILED tests/unit/specfact_code_review/run/test_target_coverage.py::test_native_no_report_control_does_not_disable_private_measurement
+FAILED tests/unit/specfact_code_review/run/test_target_coverage.py::test_native_failure_report_suppression_remains_incomplete
+============================== 6 failed in 0.88s ===============================

@@ -1,0 +1,209 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: /private/tmp/specfact-477-pytest-release
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 9 items
+
+tests/unit/specfact_code_review/run/test_runtime_trust.py FFFFFFFFF      [100%]
+
+=================================== FAILURES ===================================
+_____________ test_signed_public_trust_survives_offline_attachment _____________
+
+trust_case = namespace(source=PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-733/test_sig...t-733/test_signed_public_trust_survi0/cache'), mutation=<function trust_case_fixture.<locals>.<lambda> at 0x10a3f2980>)
+
+    def test_signed_public_trust_survives_offline_attachment(trust_case: SimpleNamespace) -> None:
+        prepared = _prepare(trust_case)
+        target = prepared.root / DESTINATION
+>       assert target.is_file(), "attached worker /etc lacks the signed public certificate bundle"
+E       AssertionError: attached worker /etc lacks the signed public certificate bundle
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-733/test_signed_public_trust_...i0/cache/0d0e1c1b662482ebc488d0fa4cde4772748d1ec4426cf8775746fcdf4dd76e55/worker-config/ssl/certs/ca-certificates.crt').is_file
+
+tests/unit/specfact_code_review/run/test_runtime_trust.py:58: AssertionError
+_______________ test_public_trust_change_invalidates_warm_cache ________________
+
+trust_case = namespace(source=PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-733/test_pub...t-733/test_public_trust_change_inval0/cache'), mutation=<function trust_case_fixture.<locals>.<lambda> at 0x10a3f2560>)
+
+    def test_public_trust_change_invalidates_warm_cache(trust_case: SimpleNamespace) -> None:
+        _prepare(trust_case)
+        trust_case.source.write_bytes(trust_case.payload + b"\n# changed signed fixture bundle\n")
+>       with pytest.raises(ProjectRuntimeError, match="offline_cache_miss"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ProjectRuntimeError
+
+tests/unit/specfact_code_review/run/test_runtime_trust.py:76: Failed
+______________ test_builder_cannot_replace_captured_public_trust _______________
+
+trust_case = namespace(source=PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-733/test_bui...ce_ca0/cache'), mutation=<function test_builder_cannot_replace_captured_public_trust.<locals>.<lambda> at 0x10a418720>)
+
+    def test_builder_cannot_replace_captured_public_trust(trust_case: SimpleNamespace) -> None:
+        trust_case.mutation = lambda _artifact: trust_case.source.write_bytes(b"builder modified fixture source")
+        prepared = _prepare(trust_case)
+>       assert (prepared.root / DESTINATION).is_file(), "public trust must be captured before building"
+E       AssertionError: public trust must be captured before building
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = (PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-733/test_builder_cannot_replace_ca0/cache/0d0e1c1b662482ebc488d0fa4cde4772748d1ec4426cf8775746fcdf4dd76e55') / 'worker-config/ssl/certs/ca-certificates.crt').is_file
+E        +      where PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-733/test_builder_cannot_replace_ca0/cache/0d0e1c1b662482ebc488d0fa4cde4772748d1ec4426cf8775746fcdf4dd76e55') = PreparedRuntime(root=PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-733/test...oject-runtime-layer-v2', 'worker_identity': 'sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'}).root
+
+tests/unit/specfact_code_review/run/test_runtime_trust.py:83: AssertionError
+______________ test_unverified_public_trust_is_rejected[missing] _______________
+
+trust_case = namespace(source=PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-733/test_unv...t-733/test_unverified_public_trust_i0/cache'), mutation=<function trust_case_fixture.<locals>.<lambda> at 0x10a4617a0>)
+violation = 'missing'
+
+    @pytest.mark.parametrize("violation", ["missing", "symlink", "private-key", "malformed", "oversized"])
+    def test_unverified_public_trust_is_rejected(trust_case: SimpleNamespace, violation: str) -> None:
+        source = trust_case.source
+        if violation == "missing":
+            source.unlink()
+        elif violation == "symlink":
+            destination = source.parent / "elsewhere.pem"
+            source.rename(destination)
+            source.symlink_to(destination)
+        else:
+            content = {
+                "private-key": trust_case.payload + b"\n-----BEGIN PRIVATE KEY-----\nsecret\n",
+                "malformed": b"not a certificate",
+                "oversized": b"x" * 2_000_001,
+            }[violation]
+            source.write_bytes(content)
+>       with pytest.raises(ProjectRuntimeError, match="project_runtime_public_trust"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ProjectRuntimeError
+
+tests/unit/specfact_code_review/run/test_runtime_trust.py:103: Failed
+______________ test_unverified_public_trust_is_rejected[symlink] _______________
+
+trust_case = namespace(source=PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-733/test_unv...t-733/test_unverified_public_trust_i1/cache'), mutation=<function trust_case_fixture.<locals>.<lambda> at 0x10a4622a0>)
+violation = 'symlink'
+
+    @pytest.mark.parametrize("violation", ["missing", "symlink", "private-key", "malformed", "oversized"])
+    def test_unverified_public_trust_is_rejected(trust_case: SimpleNamespace, violation: str) -> None:
+        source = trust_case.source
+        if violation == "missing":
+            source.unlink()
+        elif violation == "symlink":
+            destination = source.parent / "elsewhere.pem"
+            source.rename(destination)
+            source.symlink_to(destination)
+        else:
+            content = {
+                "private-key": trust_case.payload + b"\n-----BEGIN PRIVATE KEY-----\nsecret\n",
+                "malformed": b"not a certificate",
+                "oversized": b"x" * 2_000_001,
+            }[violation]
+            source.write_bytes(content)
+>       with pytest.raises(ProjectRuntimeError, match="project_runtime_public_trust"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ProjectRuntimeError
+
+tests/unit/specfact_code_review/run/test_runtime_trust.py:103: Failed
+____________ test_unverified_public_trust_is_rejected[private-key] _____________
+
+trust_case = namespace(source=PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-733/test_unv...t-733/test_unverified_public_trust_i2/cache'), mutation=<function trust_case_fixture.<locals>.<lambda> at 0x10a462610>)
+violation = 'private-key'
+
+    @pytest.mark.parametrize("violation", ["missing", "symlink", "private-key", "malformed", "oversized"])
+    def test_unverified_public_trust_is_rejected(trust_case: SimpleNamespace, violation: str) -> None:
+        source = trust_case.source
+        if violation == "missing":
+            source.unlink()
+        elif violation == "symlink":
+            destination = source.parent / "elsewhere.pem"
+            source.rename(destination)
+            source.symlink_to(destination)
+        else:
+            content = {
+                "private-key": trust_case.payload + b"\n-----BEGIN PRIVATE KEY-----\nsecret\n",
+                "malformed": b"not a certificate",
+                "oversized": b"x" * 2_000_001,
+            }[violation]
+            source.write_bytes(content)
+>       with pytest.raises(ProjectRuntimeError, match="project_runtime_public_trust"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ProjectRuntimeError
+
+tests/unit/specfact_code_review/run/test_runtime_trust.py:103: Failed
+_____________ test_unverified_public_trust_is_rejected[malformed] ______________
+
+trust_case = namespace(source=PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-733/test_unv...t-733/test_unverified_public_trust_i3/cache'), mutation=<function trust_case_fixture.<locals>.<lambda> at 0x10a462a30>)
+violation = 'malformed'
+
+    @pytest.mark.parametrize("violation", ["missing", "symlink", "private-key", "malformed", "oversized"])
+    def test_unverified_public_trust_is_rejected(trust_case: SimpleNamespace, violation: str) -> None:
+        source = trust_case.source
+        if violation == "missing":
+            source.unlink()
+        elif violation == "symlink":
+            destination = source.parent / "elsewhere.pem"
+            source.rename(destination)
+            source.symlink_to(destination)
+        else:
+            content = {
+                "private-key": trust_case.payload + b"\n-----BEGIN PRIVATE KEY-----\nsecret\n",
+                "malformed": b"not a certificate",
+                "oversized": b"x" * 2_000_001,
+            }[violation]
+            source.write_bytes(content)
+>       with pytest.raises(ProjectRuntimeError, match="project_runtime_public_trust"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ProjectRuntimeError
+
+tests/unit/specfact_code_review/run/test_runtime_trust.py:103: Failed
+_____________ test_unverified_public_trust_is_rejected[oversized] ______________
+
+trust_case = namespace(source=PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-733/test_unv...t-733/test_unverified_public_trust_i4/cache'), mutation=<function trust_case_fixture.<locals>.<lambda> at 0x10a461e80>)
+violation = 'oversized'
+
+    @pytest.mark.parametrize("violation", ["missing", "symlink", "private-key", "malformed", "oversized"])
+    def test_unverified_public_trust_is_rejected(trust_case: SimpleNamespace, violation: str) -> None:
+        source = trust_case.source
+        if violation == "missing":
+            source.unlink()
+        elif violation == "symlink":
+            destination = source.parent / "elsewhere.pem"
+            source.rename(destination)
+            source.symlink_to(destination)
+        else:
+            content = {
+                "private-key": trust_case.payload + b"\n-----BEGIN PRIVATE KEY-----\nsecret\n",
+                "malformed": b"not a certificate",
+                "oversized": b"x" * 2_000_001,
+            }[violation]
+            source.write_bytes(content)
+>       with pytest.raises(ProjectRuntimeError, match="project_runtime_public_trust"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ProjectRuntimeError
+
+tests/unit/specfact_code_review/run/test_runtime_trust.py:103: Failed
+_________ test_builder_certificate_destination_collision_fails_closed __________
+
+trust_case = namespace(source=PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-733/test_bui...e'), mutation=<function test_builder_certificate_destination_collision_fails_closed.<locals>.collision at 0x10a461850>)
+
+    def test_builder_certificate_destination_collision_fails_closed(trust_case: SimpleNamespace) -> None:
+        def collision(artifact):
+            destination = artifact / DESTINATION
+            destination.parent.mkdir(parents=True)
+            destination.write_bytes(b"builder-selected trust")
+
+        trust_case.mutation = collision
+>       with pytest.raises(ProjectRuntimeError, match="project_runtime_public_trust_collision"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ProjectRuntimeError
+
+tests/unit/specfact_code_review/run/test_runtime_trust.py:115: Failed
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_runtime_trust.py::test_signed_public_trust_survives_offline_attachment
+FAILED tests/unit/specfact_code_review/run/test_runtime_trust.py::test_public_trust_change_invalidates_warm_cache
+FAILED tests/unit/specfact_code_review/run/test_runtime_trust.py::test_builder_cannot_replace_captured_public_trust
+FAILED tests/unit/specfact_code_review/run/test_runtime_trust.py::test_unverified_public_trust_is_rejected[missing]
+FAILED tests/unit/specfact_code_review/run/test_runtime_trust.py::test_unverified_public_trust_is_rejected[symlink]
+FAILED tests/unit/specfact_code_review/run/test_runtime_trust.py::test_unverified_public_trust_is_rejected[private-key]
+FAILED tests/unit/specfact_code_review/run/test_runtime_trust.py::test_unverified_public_trust_is_rejected[malformed]
+FAILED tests/unit/specfact_code_review/run/test_runtime_trust.py::test_unverified_public_trust_is_rejected[oversized]
+FAILED tests/unit/specfact_code_review/run/test_runtime_trust.py::test_builder_certificate_destination_collision_fails_closed
+============================== 9 failed in 0.33s ===============================

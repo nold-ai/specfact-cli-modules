@@ -90,7 +90,8 @@ def test_builder_provides_vcs_metadata_tool_without_host_configuration(tmp_path:
     assert "GIT_CONFIG_NOSYSTEM" in command
 
 
-def test_python_patch_constraint_uses_signed_interpreter_version(tmp_path: Path) -> None:
+def test_python_patch_constraint_uses_signed_interpreter_version(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(runtime_builder, "capture_public_trust", lambda _root: b"synthetic public trust")
     plan = ProjectPlan(tmp_path, manager="pip", requires_python=">=3.12.1,<3.13")
     runtime = SimpleNamespace(environment_id="linux-x86_64-cp312", identity="sha256:" + "a" * 64)
     with pytest.raises(ProjectRuntimeError, match="offline_cache_miss"):
@@ -198,7 +199,8 @@ def test_alias_cannot_import_actual_custom_named_environment(tmp_path: Path) -> 
         copy_project(source, tmp_path / "copy", include_vcs=False)
 
 
-def test_pylint_dispatcher_change_invalidates_offline_runtime_reuse(tmp_path: Path, monkeypatch) -> None:
+def _assert_policy_change_invalidates_reuse(tmp_path: Path, monkeypatch, helper_name: str) -> None:
+    monkeypatch.setattr(runtime_builder, "capture_public_trust", lambda _root: b"synthetic public trust")
     helpers = tmp_path / "helpers"
     helpers.mkdir()
     for helper in Path(runtime_builder.__file__).parent.glob("*.py"):
@@ -231,11 +233,18 @@ def test_pylint_dispatcher_change_invalidates_offline_runtime_reuse(tmp_path: Pa
 
     monkeypatch.setattr(runtime_builder, "load_runtime", load_cached)
     prepare_runtime(plan, runtime=runtime, cache_root=cache, offline=True)
-    helper = helpers / "target_pylint.py"
+    helper = helpers / helper_name
     helper.write_bytes(helper.read_bytes() + b"\n# changed dispatcher fixture\n")
     with pytest.raises(ProjectRuntimeError, match="offline_cache_miss"):
         prepare_runtime(plan, runtime=runtime, cache_root=cache, offline=True)
     assert loaded == [cached_path / "project-runtime.json"]
     assert identities[0] == identities[1]
-    assert identities[2]["builder"]["target_pylint.py"] == runtime_builder.content_digest(helper.read_bytes())
+    assert identities[2]["builder"][helper_name] == runtime_builder.content_digest(helper.read_bytes())
     assert digest(identities[2]) != digest(identities[0])
+
+
+@pytest.mark.parametrize("helper_name", ["target_pylint.py", "runtime_compatibility.py"])
+def test_controller_policy_change_invalidates_offline_runtime_reuse(
+    tmp_path: Path, monkeypatch, helper_name: str
+) -> None:
+    _assert_policy_change_invalidates_reuse(tmp_path, monkeypatch, helper_name)

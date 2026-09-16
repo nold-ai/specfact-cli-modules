@@ -239,6 +239,7 @@ def _native_nested_wrapper(tmp_path, domain):
         *target_launch.DOMAIN_FILES.values(),
         "specfact_code_review/run/target_launch.py",
         "specfact_code_review/run/sitecustomize.py",
+        "specfact_code_review/run/target_coverage.py",
     }
     for relative in files:
         content = (source_root / relative).read_text()

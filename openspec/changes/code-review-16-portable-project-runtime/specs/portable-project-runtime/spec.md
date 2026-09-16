@@ -26,6 +26,19 @@ The system SHALL expose read-only runtime inspection with deterministic package-
 - **WHEN** inputs are discovered
 - **THEN** their bytes are bound to the plan and escaping or cyclic includes are rejected
 
+#### Scenario: Verified activation survives an immutable index snapshot
+- **GIVEN** a verified active repository environment and an independently materialized index or revision snapshot
+- **WHEN** automatic runtime discovery reviews that snapshot
+- **THEN** activation is verified against the controller-owned original repository while all dependency inputs, configuration and source identity come from the snapshot
+- **AND** explicit project configuration wins, unrelated or spoofed activation is ignored, and an active environment absent from the selected snapshot is diagnosed rather than substituted
+
+#### Scenario: Verified implicit Hatch default activation
+- **GIVEN** Hatch's implicit default environment exists while only custom environments are explicitly declared
+- **AND** the running interpreter has verified repository-local default activation
+- **WHEN** discovering the live project, an index snapshot or an immutable revision
+- **THEN** default is selected without requiring an explicit default table, using dependency bytes from the selected source
+- **AND** explicit environment-only configuration wins, unrelated activation remains invalid and absent named custom environments still fail
+
 ### Requirement: Prepare an isolated reproducible runtime
 
 The system SHALL automatically prepare or reuse a private runtime using the selected manager. The system SHALL preserve source files, lockfiles and existing environments, isolate executable build hooks, record resolved dependencies and native components, verify cached content, and support offline warm reuse. Unlocked resolution SHALL be recorded without changing the customer's lockfiles.
@@ -78,6 +91,13 @@ The system SHALL attach runtime evidence to explicit-file, full, worktree, index
 - **GIVEN** preparation fails
 - **WHEN** the review runs
 - **THEN** independent static members still execute and dependent members reference one actionable root diagnostic with incomplete evidence
+
+#### Scenario: Structured Semgrep failures retain bounded diagnostic context
+- **GIVEN** either required Semgrep pass returns a nonempty structured errors list
+- **WHEN** capsule review reports incomplete analysis
+- **THEN** its tool error retains the total error count and at most the first three errors' scalar type, code and message fields, with strings bounded to 512 characters, JSON-escaped controls and a 4000-character total bound
+- **AND** omitted errors are identified, arbitrary fields, nested objects and source snippets are excluded, and analysis remains UNKNOWN
+- **AND** diagnostic messages may contain reviewed-source text under the existing bounded-stderr policy; no universal secret-redaction claim is made
 
 ### Requirement: Observe ordinary customer pytest execution
 
@@ -134,6 +154,59 @@ The system SHALL preserve pytest configuration, source paths, plugins and select
 - **THEN** it SHALL retain the targeted pytest member identity, the original target execution record and an actionable configuration diagnostic naming the native exit code
 - **AND** it SHALL NOT invent a root or attempt outcome-path mapping for absent outcomes
 - **AND** otherwise usable observations with null, empty or non-string roots SHALL return an explicit incomplete-evidence diagnostic instead of an uncaught adapter exception
+
+#### Scenario: Reviewer instrumentation does not activate a native aggregate coverage gate
+- **GIVEN** the effective native pytest invocation does not enable pytest-cov and does not explicitly disable coverage
+- **WHEN** the capsule obtains required reviewer coverage evidence
+- **THEN** it SHALL use a separately identified reviewer-owned collector while preserving the native pytest exit and the configured coverage threshold value
+- **AND** it SHALL enforce the existing per-reviewed-source floor of the greater of 80 percent and the effective configured threshold
+- **AND** native Coverage source, source_pkgs, source_dirs, include and omit semantics SHALL remain authoritative; default scope may include only the snapshot and controller-verified installed directories when no such configuration is present
+- **AND** excluded or missing reviewed sources SHALL remain incomplete rather than receive synthesized coverage.
+
+#### Scenario: Explicit native coverage policy retains its outcome and report destinations
+- **GIVEN** native pytest configuration or arguments enable pytest-cov
+- **WHEN** the capsule observes coverage
+- **THEN** it SHALL preserve effective source, reset, configuration path, report destination, report-disable, threshold, precision, no-cov and no-cov-on-fail controls without appending overriding coverage options
+- **AND** private review evidence SHALL be exported separately through the finished native Coverage object without replacing requested reports
+- **AND** an actual native aggregate threshold failure SHALL remain a blocking coverage-policy finding with the observed total, threshold and precision rather than an unexplained missing-test failure
+- **AND** explicit coverage disabling or failure-driven report suppression SHALL leave required reviewer evidence incomplete.
+
+#### Scenario: Reviewer collection preserves distributed and subprocess evidence
+- **GIVEN** native pytest uses xdist or configured Coverage subprocess support
+- **WHEN** reviewer-only instrumentation is active
+- **THEN** the verified target-only plugin SHALL use the supported pytest-cov lifecycle and worker transfer without adding customer imports to the supervisor or double tracing an active native collector
+- **AND** the report SHALL retain instrumentation provenance, effective run/report configuration, and actual collection/execution outcomes
+- **AND** an unsupported plugin contract or missing worker coverage SHALL produce an actionable incomplete-evidence diagnostic.
+
+#### Scenario: Installed project source receives authenticated coverage attribution
+
+- **GIVEN** the native package manager installs a non-editable local project and its tests execute the installed package rather than the reviewed source path
+- **WHEN** the sealed controller prepares targeted coverage
+- **THEN** it SHALL preserve installed-package import precedence and use the sealed distribution's local origin and RECORD ownership to select installed coverage directories
+- **AND** it SHALL attribute an actual installed coverage row to a reviewed file only when the full package-relative path has one snapshot match and both files have identical verified content before and after execution
+- **AND** it SHALL retain the original native coverage paths and explicit attribution evidence without inventing executed lines or changing native pytest configuration
+- **AND** native low coverage and failing test outcomes SHALL remain failing evidence
+
+#### Scenario: Installed coverage cannot credit unrelated or changed source
+
+- **GIVEN** installed source differs from the snapshot, has ambiguous source or distribution ownership, invalid RECORD hashes, unsafe paths, or shares its only coverage directory with a foreign distribution
+- **WHEN** coverage is attributed to reviewed source
+- **THEN** affected files SHALL receive an actionable incomplete-evidence diagnostic and SHALL NOT receive guessed coverage
+- **AND** generated or transformed code SHALL retain its native runtime behavior without claiming line equivalence to different source
+- **AND** a current snapshot change or post-execution content mismatch SHALL invalidate earlier attribution
+- **AND** namespace ownership SHALL be checked without importing project packages into the controller
+- **AND** genuine directly executed snapshot coverage SHALL take precedence over any installed alias, while raw installed evidence remains available; automatically enumerated zero-execution snapshot rows SHALL NOT mask byte-verified installed execution
+
+#### Scenario: Native coverage aliases cannot prove execution origin
+
+- **GIVEN** native Coverage path aliases rewrite installed-package paths to snapshot paths and a selected installed file differs from its reviewed source
+- **WHEN** another owned selected file permits measuring that installed package directory
+- **THEN** the worker SHALL retain the native Coverage mapping of installed candidate paths alongside untouched raw coverage
+- **AND** the controller SHALL retain an actionable incomplete-origin diagnostic for the byte-different source even when its aliased report row has executed lines
+- **AND** byte-identical mappings SHALL be reverified before accepting aliased rows
+- **AND** unrelated alias groups SHALL NOT reject actual snapshot execution
+- **AND** native origin receipts SHALL cover every owned Python file in measured installed directories, including package-renamed files with no matching snapshot suffix
+- **AND** a rewritten source path without a controller-verified source correspondence SHALL remain incomplete instead of acquiring execution credit
 
 ### Requirement: Validate external repositories through released installation
 
@@ -611,6 +684,13 @@ The runtime SHALL select a concrete environment from the package manager's nativ
 - **AND** ordinary first-entry workers SHALL continue to clear the supervisor environment and establish the original isolation boundary
 - **AND** an environment marker alone SHALL NOT grant permission to reuse target context or bypass first-entry isolation
 
+#### Scenario: Native verification fixtures preserve supported analyzer syntax
+- **GIVEN** the pinned signed Semgrep engine rejects a valid Python fixture construct
+- **WHEN** an equivalent fixture setup is used for this repository's native verification
+- **THEN** every isolation assertion and callable parameter constraint remains intact
+- **AND** the exact engine failure and passing replacement are retained as fixture compatibility evidence
+- **AND** unsupported syntax in customer code still yields incomplete analysis rather than a suppressed error or a false PASS.
+
 ### Requirement: Pylint preserves attached namespace source roots
 
 The portable Pylint worker SHALL use already verified snapshot import paths as fallback source roots before native Pylint configuration parsing. It SHALL NOT infer import roots merely from analyzed file locations, add undeclared raw source over an installed package, or suppress missing-import diagnostics.
@@ -671,3 +751,87 @@ The portable Pylint worker SHALL use already verified snapshot import paths as f
 - **THEN** the trusted startup directory SHALL remain first and caller import-path entries SHALL retain their order and normal empty/relative path semantics inside the existing namespace
 - **AND** member analyzer imports SHALL remain sealed and host-only paths or supervisor state SHALL remain inaccessible
 - **AND** empty or omitted caller PYTHONPATH SHALL not weaken trusted startup or member-domain verification
+
+### Requirement: Declare compatible repository development analyzer versions
+This repository's Hatch development environment SHALL explicitly select its declared Pylint and basedpyright entry versions in its signed review toolchain. External customer dependency declarations and genuine runtime incompatibility checks SHALL remain unchanged.
+
+#### Scenario: Fresh developer resolution remains compatible
+- **GIVEN** the signed analyzer entries and an observed newer incompatible native development resolution
+- **WHEN** this repository selects its declared development analyzer versions
+- **THEN** production runtime compatibility validation accepts the declared selection for every signed Python ABI
+- **AND** the originally incompatible customer package versions remain rejected by the unchanged compatibility contract
+
+#### Scenario: BasedPyright preserves its actual sealed Node distribution
+- **GIVEN** the signed BasedPyright dependency is `nodejs-wheel-binaries` and supplies `nodejs_wheel`
+- **WHEN** project runtime compatibility and member import mounts are resolved
+- **THEN** a matching or absent project distribution preserves the sealed Node dependency graph, mount and import origin
+- **AND** an unequal project version produces an explicit BasedPyright incompatibility instead of a missing sealed import or silent substitution
+- **AND** changing the controller compatibility policy invalidates offline cache reuse even when the selected signed worker identity is unchanged
+- **AND** the obsolete `nodejs-wheel` distribution name does not impose a restriction on an unrelated customer package.
+
+### Requirement: Declare bounded target native tools
+
+Runtime preparation SHALL expose only explicitly declared supported native tools to target workers, preserving the sealed supervisor and the existing offline worker boundary. The initial supported capabilities are `git`, `uname`, and `sed`. Repository declarations use `[tool.specfact.code-review] native_tools`; an explicit project configuration overrides that declaration.
+
+#### Scenario: Declared native tools retain complete controller-owned identity
+- **GIVEN** a repository declares supported native tools
+- **WHEN** its runtime is prepared
+- **THEN** the controller captures the supported executables, required Git helpers, generated launchers, and their complete ELF library closure before a disposable builder can run
+- **AND** all captured bytes contribute to cache identity and recorded inventory
+- **AND** the controller installs the capture only after the builder exits, rejecting tool destination collisions before writing any tool payload
+- **AND** target workers use the private runtime PATH without adding host directories or copying an arbitrary host environment.
+
+#### Scenario: Unsupported or unavailable tools fail precisely
+- **GIVEN** an unknown tool, a missing supported executable or helper, or an incompatible native binary
+- **WHEN** discovery or preparation reaches that requirement
+- **THEN** it reports the exact unsupported or unavailable capability without guessing another executable from PATH
+- **AND** empty declarations add no tools.
+
+#### Scenario: Native tool inputs invalidate reuse and remain immutable during building
+- **GIVEN** an existing prepared runtime and changed native tool or transitive library bytes
+- **WHEN** preparation computes its cache key
+- **THEN** offline reuse fails for the changed identity
+- **AND** an isolated builder cannot replace captured controller-owned executables or libraries
+- **AND** the sealed target shell required by Git is verified as part of the selected capsule identity rather than supplied by a customer artifact.
+
+### Requirement: Sanitized VCS lookup retains declared target Git
+
+The controller's VCS metadata operations SHALL preserve all existing no-global/system-configuration, no-hooks, no-replacements, no-lazy-fetch and protocol restrictions. Within an existing verified read-only target-worker context, they SHALL use the fixed attached Git launcher only when the descriptor declares Git and its controller-generated inventory hash matches contained regular launcher bytes. Host execution SHALL retain the fixed system search path. Ambient PATH entries or forged environment markers SHALL NOT select project executables, and invalid declared target capabilities SHALL fail closed with a precise diagnostic.
+
+#### Scenario: Verified target metadata export uses the declared launcher
+- **GIVEN** an authenticated target-worker context with a declared and hash-verified Git launcher outside the system search path
+- **WHEN** isolated VCS metadata export executes with a sanitized child environment
+- **THEN** it uses that fixed absolute launcher while preserving all existing Git configuration and protocol restrictions
+- **AND** missing or tampered capability bytes fail explicitly rather than selecting an ambient executable
+
+#### Scenario: Ambient environment cannot redirect host VCS export
+- **GIVEN** ordinary host execution with hostile PATH entries or forged worker environment markers
+- **WHEN** VCS metadata export runs
+- **THEN** it retains fixed system lookup and never trusts those entries as attached project tools
+
+#### Scenario: Graft isolation is verified without ambient Git templates
+- **GIVEN** Git initialized a repository without system templates or an existing `.git/info` directory
+- **WHEN** the graft-isolation regression injects unbound ancestry metadata
+- **THEN** its fixture explicitly creates the metadata parent before writing grafts
+- **AND** the original assertions still prove source identity is unchanged, exported ancestry has both commits, and grafts are absent from the export
+- **AND** ordinary template-backed initialization exercises the same assertions.
+
+### Requirement: Target workers retain only signed public default trust data
+
+Automatic runtime preparation SHALL preserve the signed worker's public certificate trust bundle at the conventional target path `/etc/ssl/certs/ca-certificates.crt`, without copying host trust stores, credentials or arbitrary host configuration. The controller SHALL capture verified contained regular certificate bytes before disposable building, bind their identity to cache reuse and runtime inventory, and install them after validating builder output. Builder-created destination or symlink collisions SHALL fail closed. Target analysis SHALL remain offline; certificate availability grants no network capability.
+
+#### Scenario: Offline dependency initialization can read public default certificates
+- **GIVEN** an authenticated signed worker containing its public certificate bundle
+- **WHEN** an isolated project dependency initializes its TLS context during offline analysis
+- **THEN** the target's conventional certificate path contains the exact recorded signed public bytes
+- **AND** builder modifications cannot replace those bytes or redirect the destination
+
+### Requirement: The repository declares its runtime registry dependency
+
+This repository's selected Hatch review environment SHALL declare an immutable published SpecFact CLI version providing the registry APIs that its reviewed code imports. Hermetic runtime preparation SHALL acquire that declared dependency through Hatch, without copying an editable host checkout or suppressing genuine missing imports.
+
+#### Scenario: Declared core dependency supplies the actual registry API
+- **GIVEN** review code importing the SpecFact CLI module-discovery and installer APIs
+- **WHEN** the repository's Hatch default dependencies are inspected and prepared
+- **THEN** they explicitly admit the verified published core package and its actual registry API can be imported
+- **AND** the separate developer editable-checkout bootstrap does not substitute for this declaration

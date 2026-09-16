@@ -60,7 +60,22 @@ The `python` setting overrides `.python-version`; both are checked against `requ
 
 Poetry Python constraints are intersected with project `requires-python` before choosing a worker. PEP 440 ranges are supported; Poetry caret, tilde, union and table syntax currently produce an explicit unsupported-constraint diagnostic. Express the declaration as an equivalent PEP 440 range to proceed.
 
-Supported manager names are `pip`, `hatch`, `uv`, and `poetry`. Optional fields are `python`, `groups`, `extras`, `requirements`, `constraints`, `source_roots`, and `native_libraries`. Explicit `requirements` and `constraints` fields apply to `pip`; other managers reject these fields with a diagnostic rather than ignore them. Paths are repository-relative. Native libraries use ELF names such as `libodbc.so.2`; unavailable libraries are named in the preparation diagnostic. Hatch extras and dependencies belong in the selected native Hatch environment.
+Supported manager names are `pip`, `hatch`, `uv`, and `poetry`. Optional fields are `python`, `groups`, `extras`, `requirements`, `constraints`, `source_roots`, `native_libraries`, and `native_tools`. Explicit `requirements` and `constraints` fields apply to `pip`; other managers reject these fields with a diagnostic rather than ignore them. Paths are repository-relative. Native libraries use ELF names such as `libodbc.so.2`; unavailable libraries are named in the preparation diagnostic. Hatch extras and dependencies belong in the selected native Hatch environment.
+
+Repositories whose tests invoke external programs can explicitly declare the supported Linux capabilities `git`, `uname`, and `sed`:
+
+```toml
+[tool.specfact.code-review]
+native_tools = ["git", "uname", "sed"]
+```
+
+Alternatively, put this in an external `/tmp/review-runtime.toml` without editing the repository:
+
+```toml
+native_tools = ["git", "uname", "sed"]
+```
+
+An explicit `native_tools` field in `--project-config` overrides the repository declaration; a configuration without that field retains it. Preparation captures the declared executables, Git HTTP and local transport helpers, and their ELF library closure before dependency builds. Their hashes and generated launchers are recorded in the runtime inventory and cache identity. Tools are installed into the target runtime after the build; conflicting package-provided command names fail explicitly. Git uses the selected capsule's sealed `/bin/sh`. Other programs and Git transports requiring additional external clients, such as SSH, remain unsupported unless separately available through declared project dependencies; host PATH directories are never imported. Target execution remains offline even when Git HTTP helpers are present. Workers retain the signed capsule's public certificate bundle so dependencies can initialize TLS; host trust stores and credentials are not imported. Missing capabilities and incompatible native binaries produce preparation diagnostics.
 
 ```bash
 specfact code review runtime prepare --project-config /tmp/review-runtime.toml --json
@@ -104,3 +119,5 @@ Portable analysis uses a verified private source copy with local environments an
 
 
 Portable reviews retain skipped, XFAIL, and XPASS outcomes as non-passing test evidence, even when other tests pass. Each reviewed production Python source needs coverage evidence of at least 80 percent, or the effective project threshold when higher. A package directory used for pytest discovery does not exempt its production files from coverage. Missing coverage remains incomplete evidence.
+
+Coverage provenance distinguishes native pytest-cov requests from review-only measurement. When the repository does not request coverage, the review collects private evidence through the supported pytest-cov lifecycle without activating its dormant aggregate `fail_under` policy. The per-reviewed-file floor above still applies. Native `--cov`, `--cov-reset`, `--cov-config`, source/include/omit settings, report destinations, threshold and precision retain their effect; actual native aggregate failures remain blocking findings. The report records both configured and effective measurement scopes. Explicit `--no-cov`, blocked coverage plugins, `--no-cov-on-fail`, excluded sources, missing distributed-worker data and unsupported plugin contracts leave required evidence incomplete. Native report write failures remain visible rather than replacing the requested output. The current lifecycle contract supports pytest-cov7.0.0 and7.1.0; xdist and configured Coverage subprocess collection use its native worker lifecycle.

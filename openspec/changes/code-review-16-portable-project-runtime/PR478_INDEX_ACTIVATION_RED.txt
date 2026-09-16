@@ -1,0 +1,81 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: /private/tmp/specfact-477-pytest-release
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 5 items
+
+tests/unit/specfact_code_review/run/test_snapshot_activation.py F...F    [100%]
+
+=================================== FAILURES ===================================
+___________ test_index_activation_keeps_snapshot_dependency_identity ___________
+
+activated_repository = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-648/test_index_activation_keeps_sn0/project')
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-648/test_index_activation_keeps_sn0')
+
+    def test_index_activation_keeps_snapshot_dependency_identity(activated_repository: Path, tmp_path: Path) -> None:
+        """The actual cached review path selects activation without importing live inputs."""
+        (tmp_path / "snapshot").mkdir()
+        snapshot = runner._cached_analysis_snapshot([Path("app.py")], tmp_path / "snapshot")
+        assert snapshot is not None
+>       plan = discover_snapshot(snapshot.root, config_path=None, source_snapshot=snapshot)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+/private/tmp/specfact-477-pytest-release/tests/unit/specfact_code_review/run/test_snapshot_activation.py:51:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+/private/tmp/specfact-477-pytest-release/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+/private/tmp/specfact-477-pytest-release/packages/specfact-code-review/src/specfact_code_review/run/portable_snapshot.py:51: in discover_snapshot
+    plan = discover_project(root, config_path=config_path)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/private/tmp/specfact-477-pytest-release/.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+/private/tmp/specfact-477-pytest-release/packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:389: in discover_project
+    environment, groups = _selection(project, hatch, selection, manager)
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+project = {'project': {'name': 'customer'}, 'tool': {'hatch': {'envs': {'review': {'dependencies': ['requests==2.32.4']}, 'other': {}}}}}
+hatch = {}, values = {}, manager = 'hatch'
+
+    def _selection(
+        project: dict[str, Any], hatch: dict[str, Any], values: dict[str, Any], manager: str
+    ) -> tuple[str, tuple[str, ...]]:
+        """Select only a single declared environment/test group when no override exists."""
+        environment = values.get("environment", "default")
+        if manager == "hatch" and "environment" not in values:
+            environments = hatch.get("envs", project.get("tool", {}).get("hatch", {}).get("envs", {}))
+            if len(environments) > 1:
+>               raise ProjectRuntimeError(
+                    f"project_environment_ambiguous:{','.join(sorted(environments))}; "
+                    "select environment in --project-config"
+                )
+E               specfact_code_review.run.runtime_models.ProjectRuntimeError: project_environment_ambiguous:other,review; select environment in --project-config
+
+/private/tmp/specfact-477-pytest-release/packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:294: ProjectRuntimeError
+______________ test_removed_active_environment_is_not_substituted ______________
+
+activated_repository = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-648/test_removed_active_environmen0/project')
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-648/test_removed_active_environmen0')
+
+    def test_removed_active_environment_is_not_substituted(activated_repository: Path, tmp_path: Path) -> None:
+        """Each selected revision must contain the verified active environment itself."""
+        metadata = activated_repository / "pyproject.toml"
+        metadata.write_text('[project]\nname="customer"\n[tool.hatch.envs.other]\n')
+        _git(activated_repository, "add", "pyproject.toml")
+        metadata.write_text('[project]\nname="customer"\n[tool.hatch.envs.review]\n[tool.hatch.envs.other]\n')
+        (tmp_path / "snapshot").mkdir()
+        snapshot = runner._cached_analysis_snapshot([activated_repository / "app.py"], tmp_path / "snapshot")
+        assert snapshot is not None
+>       with pytest.raises(ProjectRuntimeError, match="project_active_environment_missing:review"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ProjectRuntimeError
+
+/private/tmp/specfact-477-pytest-release/tests/unit/specfact_code_review/run/test_snapshot_activation.py:97: Failed
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_snapshot_activation.py::test_index_activation_keeps_snapshot_dependency_identity
+FAILED tests/unit/specfact_code_review/run/test_snapshot_activation.py::test_removed_active_environment_is_not_substituted
+========================= 2 failed, 3 passed in 0.68s ==========================

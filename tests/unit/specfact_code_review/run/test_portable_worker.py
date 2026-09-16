@@ -1,12 +1,16 @@
 """Portable workers keep customer imports out of controller startup."""
 
 import json
+from collections.abc import Callable
 from pathlib import Path
 from types import SimpleNamespace
+from typing import Any
 
 import pytest
 
 from specfact_code_review.run import portable_worker
+from specfact_code_review.run.findings import ReviewFinding
+from specfact_code_review.run.installed_coverage import CoverageBridge
 from specfact_code_review.run.portable_worker import (
     preparation_failure_snapshot,
     select_test_paths,
@@ -249,3 +253,185 @@ def test_glob_testpaths_do_not_admit_excluded_environment(tmp_path: Path) -> Non
     plan = ProjectPlan(tmp_path, manager="pip", pytest_config={"testpaths": [".venv/*.py"]})
     with pytest.raises(ProjectRuntimeError, match="project_test_selection_empty"):
         select_test_paths(plan, [source], full=False)
+
+
+@pytest.fixture(name="observe_coverage_policy")
+def fixture_observe_coverage_policy(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> Callable[[dict[str, Any], int], list[ReviewFinding]]:
+    """Exercise the controller against serialized child evidence and a real exit status."""
+    monkeypatch.chdir(tmp_path)
+    observation_file = tmp_path / "pytest-observation.json"
+    monkeypatch.setattr(
+        portable_worker,
+        "Path",
+        lambda value: observation_file if value == "/opt/specfact/tmp/pytest-observation.json" else Path(value),
+    )
+    monkeypatch.setattr(
+        portable_worker, "_portable_pytest_command", lambda *_args: (CoverageBridge((), (), {}, {}), ["child"])
+    )
+
+    def observe(observation: dict[str, Any], exit_code: int) -> list[ReviewFinding]:
+        def complete(*_args: object, **_kwargs: object) -> SimpleNamespace:
+            observation_file.write_text(json.dumps(observation), encoding="utf-8")
+            return SimpleNamespace(returncode=exit_code)
+
+        monkeypatch.setattr(portable_worker.subprocess, "run", complete)
+        return portable_worker.run_portable_pytest([Path("test_app.py")], ("portable-pytest-v2", "{}"))
+
+    return observe
+
+
+def _coverage_observation(exit_code: int = 1) -> dict[str, Any]:
+    """Give the controller completed tests with independently failing native coverage."""
+    return {
+        "exit_code": exit_code,
+        "rootpath": str(Path.cwd()),
+        "collected": ["test_app.py::test_app"],
+        "records": [{"nodeid": "test_app.py::test_app", "phase": "call", "outcome": "passed"}],
+        "coverage": {"files": {"test_app.py": {}}},
+        "coverage_threshold": 80,
+        "coverage_policy": {
+            "mode": "native",
+            "threshold": 80,
+            "precision": 2,
+            "measured_total": 46.88,
+            "native_threshold_failed": True,
+        },
+    }
+
+
+def test_native_aggregate_coverage_failure_has_explicit_blocking_finding(observe_coverage_policy) -> None:
+    """A real native aggregate failure remains a failure even when every test passed."""
+    findings = observe_coverage_policy(_coverage_observation(), 1)
+    assert len(findings) == 1
+    finding = findings[0]
+    assert (finding.rule, finding.category, finding.severity) == ("TEST_COVERAGE_POLICY_FAILED", "testing", "error")
+    assert all(value in finding.message for value in ("46.88", "80", "precision=2"))
+
+
+@pytest.mark.parametrize("empty_records", [False, True])
+def test_native_coverage_failure_retains_incomplete_and_failed_test_evidence(
+    observe_coverage_policy, empty_records: bool
+) -> None:
+    """The aggregate finding supplements, rather than replaces, partial test evidence."""
+    observation = _coverage_observation()
+    observation["collection_errors"] = ["controlled collection failure"]
+    observation["records"] = (
+        [] if empty_records else [{"nodeid": "test_app.py::test_app", "phase": "call", "outcome": "failed"}]
+    )
+    findings = observe_coverage_policy(observation, 1)
+    assert "TEST_COVERAGE_POLICY_FAILED" in {row.rule for row in findings}
+    assert any("project_pytest_collection_error" in row.message for row in findings)
+    assert ("TEST_OUTCOME_NOT_PASS" in {row.rule for row in findings}) is not empty_records
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("mode", "unknown"),
+        ("threshold", True),
+        ("threshold", 101),
+        ("threshold", float("nan")),
+        ("precision", True),
+        ("precision", -1),
+        ("precision", 10),
+        ("measured_total", "46.88"),
+        ("measured_total", float("inf")),
+        ("measured_total", None),
+        ("native_threshold_failed", 1),
+        ("mode", "reviewer"),
+        ("mode", "disabled"),
+    ],
+)
+def test_malformed_or_contradictory_coverage_policy_is_actionable(observe_coverage_policy, field, value) -> None:
+    """Reject invalid evidence without attributing arbitrary nonzero exits to coverage."""
+    observation = _coverage_observation()
+    observation["coverage_policy"][field] = value
+    findings = observe_coverage_policy(observation, 1)
+    assert any("project_pytest_coverage_policy_invalid" in row.message for row in findings)
+    assert not any(row.rule == "TEST_COVERAGE_POLICY_FAILED" for row in findings)
+
+
+@pytest.mark.parametrize("policy", [None, [], {}, {"mode": "native"}])
+def test_incomplete_coverage_policy_shape_is_actionable(observe_coverage_policy, policy) -> None:
+    """A present but incomplete receipt cannot use the legacy missing-receipt path."""
+    observation = _coverage_observation()
+    observation["coverage_policy"] = policy
+    findings = observe_coverage_policy(observation, 1)
+    assert any("project_pytest_coverage_policy_invalid" in row.message for row in findings)
+
+
+def test_native_coverage_failure_cannot_contradict_successful_exit(observe_coverage_policy) -> None:
+    """A failed-policy receipt paired with exit zero must remain incomplete evidence."""
+    findings = observe_coverage_policy(_coverage_observation(0), 0)
+    assert any("project_pytest_coverage_policy_invalid" in row.message for row in findings)
+
+
+@pytest.mark.parametrize("mode", ["native", "reviewer", "disabled", "legacy"])
+@pytest.mark.parametrize("exit_code", [0, 1])
+def test_unfailed_coverage_policy_preserves_existing_exit_behavior(observe_coverage_policy, mode, exit_code) -> None:
+    """Neither reviewer collection nor an absent receipt explains an arbitrary exit one."""
+    observation = _coverage_observation(exit_code)
+    observation["coverage_policy"].update(mode=mode, measured_total=None, native_threshold_failed=False)
+    if mode == "legacy":
+        del observation["coverage_policy"]
+    findings = observe_coverage_policy(observation, exit_code)
+    assert not any(row.rule == "TEST_COVERAGE_POLICY_FAILED" for row in findings)
+    assert bool(findings) is bool(exit_code)
+    if exit_code:
+        assert findings[0].message == "project_pytest_failure_without_observed_test"
+
+
+@pytest.mark.parametrize(
+    "diagnostic",
+    [
+        "project_pytest_coverage_disabled:--no-cov; required reviewer evidence unavailable",
+        "project_pytest_coverage_xdist_unsupported:missing worker coverage",
+        "project_pytest_coverage_export_failed:configured report suppression",
+    ],
+)
+def test_specific_missing_coverage_diagnostic_preserves_other_failures(observe_coverage_policy, diagnostic) -> None:
+    """Keep the exact target remedy together with native policy and actual test failures."""
+    observation = _coverage_observation()
+    observation["coverage"] = {}
+    observation["coverage_diagnostic"] = diagnostic
+    observation["records"][0]["outcome"] = "failed"
+    findings = observe_coverage_policy(observation, 1)
+    assert any(row.message == diagnostic for row in findings)
+    assert {"TEST_COVERAGE_POLICY_FAILED", "TEST_OUTCOME_NOT_PASS"} <= {row.rule for row in findings}
+    assert not any("project_pytest_coverage_missing" in row.message for row in findings)
+
+
+@pytest.mark.parametrize("diagnostic", [None, False, 7, [], {"reason": "untrusted"}])
+def test_malformed_missing_coverage_diagnostic_is_not_stringified(observe_coverage_policy, diagnostic) -> None:
+    """Reject a malformed target diagnostic instead of formatting an arbitrary object."""
+    observation = _coverage_observation()
+    observation["coverage"] = {}
+    observation["coverage_diagnostic"] = diagnostic
+    findings = observe_coverage_policy(observation, 1)
+    assert any("project_pytest_coverage_diagnostic_invalid" in row.message for row in findings)
+
+
+@pytest.mark.parametrize("field", ["collection_errors", "internal_errors"])
+def test_collection_errors_precede_missing_coverage_diagnostic(observe_coverage_policy, field) -> None:
+    """Coverage reporting cannot hide earlier collection or plugin failures."""
+    observation = _coverage_observation()
+    observation["coverage"] = {}
+    observation["coverage_diagnostic"] = "controlled coverage diagnostic"
+    observation[field] = ["controlled collection or plugin failure"]
+    findings = observe_coverage_policy(observation, 1)
+    expected = "project_pytest_collection_error" if field == "collection_errors" else "project_pytest_internal_error"
+    assert any(expected in row.message for row in findings)
+    assert not any(row.message == observation["coverage_diagnostic"] for row in findings)
+
+
+@pytest.mark.parametrize("diagnostic", ["", "absent"])
+def test_empty_or_absent_missing_coverage_diagnostic_retains_legacy_remedy(observe_coverage_policy, diagnostic) -> None:
+    """Older observers and empty diagnostic strings retain the established coverage error."""
+    observation = _coverage_observation()
+    observation["coverage"] = {}
+    if diagnostic != "absent":
+        observation["coverage_diagnostic"] = diagnostic
+    findings = observe_coverage_policy(observation, 1)
+    assert any("project_pytest_coverage_missing" in row.message for row in findings)

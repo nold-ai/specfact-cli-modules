@@ -1,0 +1,140 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: /private/tmp/specfact-477-pytest-release
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, xdist-3.8.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 19 items
+
+tests/unit/specfact_code_review/run/test_target_coverage.py ............ [ 63%]
+....F.F                                                                  [100%]
+
+=================================== FAILURES ===================================
+______________ test_explicit_blocked_cov_plugin_stays_incomplete _______________
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-809/test_explicit_blocked_cov_plug0')
+
+    def test_explicit_blocked_cov_plugin_stays_incomplete(tmp_path):
+        completed, receipt = _run(_project(tmp_path), tmp_path, ["-p", "no:pytest_cov"])
+        assert completed.returncode == 0
+>       assert receipt["coverage"] == {}
+E       AssertionError: assert {'meta': {'fo...'75.00', ...}} == {}
+E
+E         Left contains 3 more items:
+E         {'files': {'app.py': {'classes': {'': {'excluded_lines': [],
+E                                                'executed_lines': [1, 2, 3],
+E                                                'missing_lines': [4],
+E                                                'start_line': 1,
+E                                                'summary': {'covered_lines': 3,...
+E
+E         ...Full output truncated (68 lines hidden), use '-vv' to show
+
+tests/unit/specfact_code_review/run/test_target_coverage.py:267: AssertionError
+______ test_verified_preload_does_not_break_strict_rewrite_warning_policy ______
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-809/test_verified_preload_does_not0')
+
+    def test_verified_preload_does_not_break_strict_rewrite_warning_policy(tmp_path):
+>       completed, receipt = _run(
+            _project(tmp_path), tmp_path, ['-W', 'error::pytest.PytestAssertRewriteWarning']
+        )
+
+tests/unit/specfact_code_review/run/test_target_coverage.py:282:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+source = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-809/test_verified_preload_does_not0/project')
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-809/test_verified_preload_does_not0')
+extra = ['-W', 'error::pytest.PytestAssertRewriteWarning'], startup = None
+
+    def _run(source, tmp_path, extra=(), *, startup=None):
+        output = tmp_path / "private.json"
+        arguments = tmp_path / "arguments.json"
+        arguments.write_text(json.dumps(extra))
+        completed = subprocess.run(
+            [sys.executable, "-c", _SCRIPT, str(_HELPER), str(source), str(output), str(arguments)],
+            cwd=source,
+            env={
+                **os.environ,
+                "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1",
+                "COVERAGE_FILE": str(tmp_path / ".coverage"),
+                **({"PYTHONPATH": str(startup)} if startup else {}),
+            },
+            text=True,
+            capture_output=True,
+            check=False,
+            timeout=60,
+        )
+        receipt = output.with_suffix(".receipt")
+>       assert receipt.is_file(), completed.stdout + completed.stderr
+E       AssertionError: Traceback (most recent call last):
+E           File "<string>", line 14, in <module>
+E             code = pytest.main(args)
+E           File "/private/tmp/specfact-477-pytest-release/.venv/lib/python3.14/site-packages/_pytest/config/__init__.py", line 201, in main
+E             return _main(args=args, plugins=plugins, prog="pytest.main()")
+E           File "/private/tmp/specfact-477-pytest-release/.venv/lib/python3.14/site-packages/_pytest/config/__init__.py", line 223, in _main
+E             config = _prepareconfig(new_args, plugins, prog=prog)
+E           File "/private/tmp/specfact-477-pytest-release/.venv/lib/python3.14/site-packages/_pytest/config/__init__.py", line 410, in _prepareconfig
+E             config: Config = pluginmanager.hook.pytest_cmdline_parse(
+E                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+E                 pluginmanager=pluginmanager, args=args
+E                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E             )
+E             ^
+E           File "/private/tmp/specfact-477-pytest-release/.venv/lib/python3.14/site-packages/pluggy/_hooks.py", line 512, in __call__
+E             return self._hookexec(self.name, self._hookimpls.copy(), kwargs, firstresult)
+E                    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           File "/private/tmp/specfact-477-pytest-release/.venv/lib/python3.14/site-packages/pluggy/_manager.py", line 120, in _hookexec
+E             return self._inner_hookexec(hook_name, methods, kwargs, firstresult)
+E                    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           File "/private/tmp/specfact-477-pytest-release/.venv/lib/python3.14/site-packages/pluggy/_callers.py", line 167, in _multicall
+E             raise exception
+E           File "/private/tmp/specfact-477-pytest-release/.venv/lib/python3.14/site-packages/pluggy/_callers.py", line 139, in _multicall
+E             teardown.throw(exception)
+E             ~~~~~~~~~~~~~~^^^^^^^^^^^
+E           File "/private/tmp/specfact-477-pytest-release/.venv/lib/python3.14/site-packages/_pytest/helpconfig.py", line 124, in pytest_cmdline_parse
+E             config = yield
+E                      ^^^^^
+E           File "/private/tmp/specfact-477-pytest-release/.venv/lib/python3.14/site-packages/pluggy/_callers.py", line 121, in _multicall
+E             res = hook_impl.function(*args)
+E           File "/private/tmp/specfact-477-pytest-release/.venv/lib/python3.14/site-packages/_pytest/config/__init__.py", line 1232, in pytest_cmdline_parse
+E             self.parse(args)
+E             ~~~~~~~~~~^^^^^^
+E           File "/private/tmp/specfact-477-pytest-release/.venv/lib/python3.14/site-packages/_pytest/config/__init__.py", line 1576, in parse
+E             self.pluginmanager.consider_preparse(args, exclude_only=False)
+E             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           File "/private/tmp/specfact-477-pytest-release/.venv/lib/python3.14/site-packages/_pytest/config/__init__.py", line 835, in consider_preparse
+E             self.consider_pluginarg(parg)
+E             ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+E           File "/private/tmp/specfact-477-pytest-release/.venv/lib/python3.14/site-packages/_pytest/config/__init__.py", line 864, in consider_pluginarg
+E             self.import_plugin(arg, consider_entry_points=True)
+E             ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           File "/private/tmp/specfact-477-pytest-release/.venv/lib/python3.14/site-packages/_pytest/config/__init__.py", line 904, in import_plugin
+E             self.rewrite_hook.mark_rewrite(importspec)
+E             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+E           File "/private/tmp/specfact-477-pytest-release/.venv/lib/python3.14/site-packages/_pytest/assertion/rewrite.py", line 277, in mark_rewrite
+E             self._warn_already_imported(name)
+E             ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+E           File "/private/tmp/specfact-477-pytest-release/.venv/lib/python3.14/site-packages/_pytest/assertion/rewrite.py", line 284, in _warn_already_imported
+E             self.config.issue_config_time_warning(
+E             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+E                 PytestAssertRewriteWarning(
+E                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E             ...<2 lines>...
+E                 stacklevel=5,
+E                 ^^^^^^^^^^^^^
+E             )
+E             ^
+E           File "/private/tmp/specfact-477-pytest-release/.venv/lib/python3.14/site-packages/_pytest/config/__init__.py", line 1654, in issue_config_time_warning
+E             warnings.warn(warning, stacklevel=stacklevel)
+E             ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E         pytest.PytestAssertRewriteWarning: Module already imported so cannot be rewritten; _specfact_target_coverage
+E
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-809/test_verified_preload_does_not0/private.receipt').is_file
+
+tests/unit/specfact_code_review/run/test_target_coverage.py:80: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_target_coverage.py::test_explicit_blocked_cov_plugin_stays_incomplete
+FAILED tests/unit/specfact_code_review/run/test_target_coverage.py::test_verified_preload_does_not_break_strict_rewrite_warning_policy
+========================= 2 failed, 17 passed in 3.22s =========================

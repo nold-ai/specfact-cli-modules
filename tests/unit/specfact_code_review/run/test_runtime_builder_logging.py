@@ -37,6 +37,7 @@ def _capture_subprocess(monkeypatch, *, timeout: bool = False):
 
 
 def _builder(tmp_path: Path, monkeypatch, script: str, *, timeout: bool = False):
+    monkeypatch.setattr(runtime_builder, "capture_public_trust", lambda _root: b"synthetic public trust")
     source = tmp_path / "source"
     source.mkdir()
     (source / "app.py").write_text("VALUE = 1\n")
@@ -54,16 +55,18 @@ def _builder(tmp_path: Path, monkeypatch, script: str, *, timeout: bool = False)
     monkeypatch.setattr(
         runtime_builder.sandbox, "_verified_bubblewrap_descriptor", lambda *_args: os.open(os.devnull, os.O_RDONLY)
     )
-    monkeypatch.setattr(
-        runtime_builder,
-        "builder_command",
-        lambda _runtime, *, staging, executable: [
+
+    def fixture_builder_command(_runtime, *, staging, executable):
+        # This subprocess fixture deliberately uses the host Python below.
+        del executable
+        return [
             sys.executable,
             "-c",
             "import os,sys,time; from pathlib import Path; staging=Path(sys.argv[1]); " + script,
             str(staging),
-        ],
-    )
+        ]
+
+    monkeypatch.setattr(runtime_builder, "builder_command", fixture_builder_command)
     captures = []
     native_log = runtime_builder.tempfile.NamedTemporaryFile
 

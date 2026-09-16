@@ -14,7 +14,7 @@ from packaging.utils import canonicalize_name
 
 MEMBER_DISTRIBUTIONS = {
     "pylint": ("pylint", frozenset({"pylint", "astroid"})),
-    "basedpyright": ("basedpyright", frozenset({"basedpyright", "nodejs-wheel"})),
+    "basedpyright": ("basedpyright", frozenset({"basedpyright", "nodejs-wheel-binaries"})),
     "contracts": ("crosshair-tool", frozenset({"crosshair-tool", "z3-solver"})),
 }
 

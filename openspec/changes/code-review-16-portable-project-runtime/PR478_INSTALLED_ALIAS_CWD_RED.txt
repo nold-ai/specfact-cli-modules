@@ -1,0 +1,36 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: /private/tmp/specfact-477-pytest-release
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 32 items / 31 deselected / 1 selected
+
+tests/unit/specfact_code_review/run/test_installed_coverage.py F         [100%]
+
+=================================== FAILURES ===================================
+_______ test_native_alias_uses_coverage_topdir_and_restores_customer_cwd _______
+
+aliased_project = namespace(snapshot=PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-593/test_n...plbft6h0000gn/T/pytest-of-dom/pytest-593/test_native_alias_uses_coverag0/runtime/site-packages/capsule_owned/good.py'))
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-593/test_native_alias_uses_coverag0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10936e3f0>
+
+    def test_native_alias_uses_coverage_topdir_and_restores_customer_cwd(aliased_project, tmp_path, monkeypatch):
+        project = aliased_project
+        elsewhere = tmp_path / "customer-cwd"
+        elsewhere.mkdir()
+        monkeypatch.chdir(elsewhere)
+        relocations = _native_relocations(project)
+>       assert Path(relocations[str(project.installed)]).resolve() == project.source.resolve()
+E       AssertionError: assert PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-593/test_native_alias_uses_coverag0/runtime/site-packages/capsule_owned/math.py') == PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-593/test_native_alias_uses_coverag0/snapshot/src/capsule_owned/math.py')
+E        +  where PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-593/test_native_alias_uses_coverag0/runtime/site-packages/capsule_owned/math.py') = resolve()
+E        +    where resolve = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-593/test_native_alias_uses_coverag0/runtime/site-packages/capsule_owned/math.py').resolve
+E        +      where PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-593/test_native_alias_uses_coverag0/runtime/site-packages/capsule_owned/math.py') = Path('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-593/test_native_alias_uses_coverag0/runtime/site-packages/capsule_owned/math.py')
+E        +  and   PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-593/test_native_alias_uses_coverag0/snapshot/src/capsule_owned/math.py') = resolve()
+E        +    where resolve = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-593/test_native_alias_uses_coverag0/snapshot/src/capsule_owned/math.py').resolve
+E        +      where PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-593/test_native_alias_uses_coverag0/snapshot/src/capsule_owned/math.py') = namespace(snapshot=PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-593/test_n...plbft6h0000gn/T/pytest-of-dom/pytest-593/test_native_alias_uses_coverag0/runtime/site-packages/capsule_owned/good.py')).source
+
+/private/tmp/specfact-477-pytest-release/tests/unit/specfact_code_review/run/test_installed_coverage.py:476: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_installed_coverage.py::test_native_alias_uses_coverage_topdir_and_restores_customer_cwd
+======================= 1 failed, 31 deselected in 0.23s =======================

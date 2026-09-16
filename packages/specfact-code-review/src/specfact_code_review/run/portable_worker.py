@@ -8,7 +8,7 @@ import json
 import os
 import shlex
 import subprocess
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from pathlib import Path
 from typing import Any
 
@@ -16,6 +16,11 @@ from icontract import ensure, require
 
 from specfact_code_review._review_utils import tool_error
 from specfact_code_review.run.findings import ReviewFinding
+from specfact_code_review.run.installed_coverage import (
+    CoverageBridge,
+    attribute_installed_coverage,
+    plan_installed_coverage,
+)
 from specfact_code_review.run.runtime_models import ProjectPlan, ProjectRuntimeError
 from specfact_code_review.run.runtime_sources import is_excluded_source
 from specfact_code_review.run.target_launch import target_command
@@ -161,6 +166,14 @@ def _validate_collection_errors(observation: dict[str, Any]) -> None:
         )
 
 
+def _missing_coverage_diagnostic(observation: dict[str, Any]) -> str:
+    """Preserve a specific worker remedy without coercing malformed diagnostic objects."""
+    diagnostic = observation.get("coverage_diagnostic", "")
+    if not isinstance(diagnostic, str):
+        return "project_pytest_coverage_diagnostic_invalid; inspect target_execution coverage_diagnostic"
+    return diagnostic or "project_pytest_coverage_missing; enable pytest-cov and remove --no-cov if configured"
+
+
 @require(lambda exit_code: isinstance(exit_code, int))
 def validate_observation(observation: dict[str, Any], exit_code: int) -> None:
     """Reject incomplete execution without discarding native pytest selection policy."""
@@ -184,9 +197,7 @@ def validate_observation(observation: dict[str, Any], exit_code: int) -> None:
     if exit_code not in {0, 1}:
         raise ProjectRuntimeError(f"project_pytest_configuration_or_collection_failed:exit={exit_code}")
     if not observation.get("coverage", {}).get("files"):
-        raise ProjectRuntimeError(
-            "project_pytest_coverage_missing; enable pytest-cov and remove --no-cov if configured"
-        )
+        raise ProjectRuntimeError(_missing_coverage_diagnostic(observation))
 
 
 def _nonpassing_observation_findings(records: list[dict[str, Any]], pytest_root: Path) -> list[ReviewFinding]:
@@ -215,6 +226,124 @@ def _nonpassing_observation_findings(records: list[dict[str, Any]], pytest_root:
     return findings
 
 
+def _coverage_percentage(value: object) -> bool:
+    """Accept only finite native percentages, excluding Boolean integer subclasses."""
+    return not isinstance(value, bool) and isinstance(value, int | float) and 0 <= value <= 100
+
+
+def _coverage_policy_fields(policy: dict[str, Any]) -> dict[str, bool]:
+    """Check the bounded native receipt's scalar types and percentage ranges."""
+    precision = policy.get("precision")
+    return {
+        "mode": policy.get("mode") in ("native", "reviewer", "disabled"),
+        "threshold": _coverage_percentage(policy.get("threshold")),
+        "precision": isinstance(precision, int) and not isinstance(precision, bool) and 0 <= precision <= 9,
+        "measured_total": "measured_total" in policy
+        and (policy["measured_total"] is None or _coverage_percentage(policy["measured_total"])),
+        "native_threshold_failed": isinstance(policy.get("native_threshold_failed"), bool),
+    }
+
+
+def _validate_coverage_policy(policy: object, exit_code: int) -> dict[str, Any]:
+    """Validate the native receipt without duplicating Coverage's rounding policy."""
+    if not isinstance(policy, dict):
+        raise ValueError("expected coverage_policy object")
+    if invalid := [field for field, valid in _coverage_policy_fields(policy).items() if not valid]:
+        raise ValueError(f"invalid fields: {','.join(invalid)}")
+    if policy["native_threshold_failed"] and (
+        policy["mode"] != "native" or policy["measured_total"] is None or exit_code != 1
+    ):
+        raise ValueError("failed native threshold requires native mode, measured total and pytest exit 1")
+    return policy
+
+
+def _coverage_policy_findings(observation: dict[str, Any], exit_code: int, anchor: Path) -> list[ReviewFinding]:
+    """Expose actual native aggregate failures separately from per-source review coverage."""
+    if "coverage_policy" not in observation:
+        return []
+    try:
+        policy = _validate_coverage_policy(observation["coverage_policy"], exit_code)
+    except ValueError as exc:
+        return [
+            tool_error(
+                tool="pytest",
+                file_path=anchor,
+                message=f"project_pytest_coverage_policy_invalid:{exc}; inspect target_execution coverage_policy",
+            )
+        ]
+    if not policy["native_threshold_failed"]:
+        return []
+    return [
+        ReviewFinding(
+            category="testing",
+            severity="error",
+            tool="pytest",
+            rule="TEST_COVERAGE_POLICY_FAILED",
+            file=str(anchor),
+            line=1,
+            message=(
+                f"Native aggregate coverage {policy['measured_total']}% failed its configured "
+                f"{policy['threshold']}% threshold (precision={policy['precision']}); "
+                "increase coverage to satisfy the repository's native policy."
+            ),
+            fixable=False,
+        )
+    ]
+
+
+def _installed_coverage_findings(
+    files: list[Path],
+    bridge: CoverageBridge,
+    observation: dict[str, Any],
+    evaluate: Callable[[list[Path], dict[str, Any]], list[ReviewFinding]],
+) -> list[ReviewFinding]:
+    """Retain native evidence and turn unavailable attribution into a named diagnostic."""
+    try:
+        coverage, attribution_errors = attribute_installed_coverage(
+            bridge,
+            observation["coverage"],
+            snapshot=Path(".").resolve(),
+            relocations=observation.get("coverage_relocations"),
+        )
+        if bridge.mappings or attribution_errors:
+            observation["coverage_attribution"] = {
+                "mappings": [
+                    {
+                        "source": str(row.source),
+                        "installed": str(row.installed),
+                        "sha256": row.digest,
+                        "distribution": row.distribution,
+                    }
+                    for row in bridge.mappings
+                ],
+                "diagnostics": attribution_errors,
+            }
+            Path("/opt/specfact/tmp/pytest-observation.json").write_text(json.dumps(observation), encoding="utf-8")
+        return evaluate(files, {**observation, "coverage": coverage, "coverage_attribution_errors": attribution_errors})
+    except (OSError, ValueError, TypeError, KeyError) as exc:
+        return [
+            tool_error(
+                tool="pytest",
+                file_path=files[0] if files else Path("."),
+                message=f"project_pytest_installed_coverage_unavailable:{exc}",
+            )
+        ]
+
+
+def _portable_pytest_command(files: list[Path], encoded: str) -> tuple[CoverageBridge, list[str]]:
+    """Bind native measurement inputs to controller-verified installed ownership."""
+    bridge = plan_installed_coverage(
+        files, snapshot=Path(".").resolve(), site_packages=Path("/opt/specfact/project-runtime/site-packages")
+    )
+    request = json.loads(encoded)
+    request["coverage_directories"] = [str(path) for path in bridge.directories]
+    request["coverage_candidates"] = sorted(
+        {path for paths in bridge.candidates.values() for path in paths} | set(bridge.measured_origins)
+    )
+    command = target_command("pytest-observe", [json.dumps(request)])
+    return bridge, command
+
+
 @ensure(lambda result: all(isinstance(finding, ReviewFinding) for finding in result))
 def run_portable_pytest(files: list[Path], adapter_argv: tuple[str, ...]) -> list[ReviewFinding]:
     """Parse actual child observations while leaving project plugins out of this process."""
@@ -224,27 +353,28 @@ def run_portable_pytest(files: list[Path], adapter_argv: tuple[str, ...]) -> lis
 
     from specfact_code_review.run.runner import evaluate_portable_pytest_coverage, resolve_portable_pytest_root
 
-    command = target_command("pytest-observe", [adapter_argv[1]])
     try:
+        bridge, command = _portable_pytest_command(files, adapter_argv[1])
         Path("/opt/specfact/tmp/pytest-observation.json").unlink(missing_ok=True)
         completed = subprocess.run(command, text=True, capture_output=True, check=False, timeout=1200)
         observation = json.loads(Path("/opt/specfact/tmp/pytest-observation.json").read_text(encoding="utf-8"))
         records = observation["records"]
+        policy_findings = _coverage_policy_findings(observation, completed.returncode, anchor)
         validation_error = ""
         try:
             validate_observation(observation, completed.returncode)
         except ProjectRuntimeError as exc:
             validation_error = str(exc)
         if validation_error and not records:
-            return [tool_error(tool="pytest", file_path=anchor, message=validation_error)]
+            return [*policy_findings, tool_error(tool="pytest", file_path=anchor, message=validation_error)]
         pytest_root = resolve_portable_pytest_root(observation)
-        findings = _nonpassing_observation_findings(records, pytest_root)
+        findings = [*policy_findings, *_nonpassing_observation_findings(records, pytest_root)]
     except (OSError, ValueError, KeyError, subprocess.SubprocessError) as exc:
         return [tool_error(tool="pytest", file_path=anchor, message=str(exc))]
     if validation_error:
         findings.append(tool_error(tool="pytest", file_path=anchor, message=validation_error))
     else:
-        findings.extend(evaluate_portable_pytest_coverage(files, observation))
+        findings.extend(_installed_coverage_findings(files, bridge, observation, evaluate_portable_pytest_coverage))
     if completed.returncode == 1 and not findings:
         return [tool_error(tool="pytest", file_path=anchor, message="project_pytest_failure_without_observed_test")]
     return findings

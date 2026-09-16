@@ -1,0 +1,183 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: /private/tmp/specfact-477-pytest-release
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 8 items
+
+tests/unit/specfact_code_review/run/test_target_coverage_bootstrap.py FF [ 25%]
+.FFFFF                                                                   [100%]
+
+=================================== FAILURES ===================================
+____ test_pytest_domain_loads_fixed_helper_in_actual_startup_routes[first] _____
+
+coverage_runtime = {'PROJECT': PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-770/test_pytest_d...ar/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-770/test_pytest_domain_loads_fixed0/builtin'), ...}
+route = 'first'
+
+    @pytest.mark.parametrize("route", ["first", "nested"])
+    def test_pytest_domain_loads_fixed_helper_in_actual_startup_routes(coverage_runtime, route):
+        if route == "first":
+            script = "sys.argv=['bootstrap','pytest-observe']; b['main']()"
+        else:
+            script = (
+                "import os;os.environ['SPECFACT_PROJECT_PYTHON']='1';"
+                f"runpy.run_path({str(coverage_runtime['HELPERS'] / 'sitecustomize.py')!r});"
+                "import _specfact_target_coverage as collector; print(collector.OWNER)"
+            )
+        result = _probe(coverage_runtime, script)
+        assert result.returncode == 0, result.stderr
+>       assert result.stdout.strip() == "verified-builtin"
+E       AssertionError: assert 'customer-collision' == 'verified-builtin'
+E
+E         - verified-builtin
+E         + customer-collision
+
+tests/unit/specfact_code_review/run/test_target_coverage_bootstrap.py:74: AssertionError
+____ test_pytest_domain_loads_fixed_helper_in_actual_startup_routes[nested] ____
+
+coverage_runtime = {'PROJECT': PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-770/test_pytest_d...ar/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-770/test_pytest_domain_loads_fixed1/builtin'), ...}
+route = 'nested'
+
+    @pytest.mark.parametrize("route", ["first", "nested"])
+    def test_pytest_domain_loads_fixed_helper_in_actual_startup_routes(coverage_runtime, route):
+        if route == "first":
+            script = "sys.argv=['bootstrap','pytest-observe']; b['main']()"
+        else:
+            script = (
+                "import os;os.environ['SPECFACT_PROJECT_PYTHON']='1';"
+                f"runpy.run_path({str(coverage_runtime['HELPERS'] / 'sitecustomize.py')!r});"
+                "import _specfact_target_coverage as collector; print(collector.OWNER)"
+            )
+        result = _probe(coverage_runtime, script)
+        assert result.returncode == 0, result.stderr
+>       assert result.stdout.strip() == "verified-builtin"
+E       AssertionError: assert 'customer-collision' == 'verified-builtin'
+E
+E         - verified-builtin
+E         + customer-collision
+
+tests/unit/specfact_code_review/run/test_target_coverage_bootstrap.py:74: AssertionError
+___________________ test_loader_reuses_only_its_owned_helper ___________________
+
+coverage_runtime = {'PROJECT': PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-770/test_loader_r...ar/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-770/test_loader_reuses_only_its_ow0/builtin'), ...}
+
+    def test_loader_reuses_only_its_owned_helper(coverage_runtime):
+        result = _probe(coverage_runtime, "load=b['_load_pytest_coverage']; print(load() is load())")
+>       assert result.returncode == 0, result.stderr
+E       AssertionError: Traceback (most recent call last):
+E           File "<string>", line 1, in <module>
+E             import runpy,sys; from pathlib import Path; b=runpy.run_path('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-770/test_loader_reuses_only_its_ow0/builtin/specfact_code_review/run/target_bootstrap.py'); load=b['_load_pytest_coverage']; print(load() is load())
+E                                                                                                                                                                                                                                                          ~^^^^^^^^^^^^^^^^^^^^^^^^^
+E         KeyError: '_load_pytest_coverage'
+E
+E       assert 1 == 0
+E        +  where 1 = CompletedProcess(args=['/private/tmp/specfact-477-pytest-release/.venv/bin/python', '-I', '-S', '-c', "import runpy,sy...                                                    ~^^^^^^^^^^^^^^^^^^^^^^^^^\nKeyError: \'_load_pytest_coverage\'\n').returncode
+
+tests/unit/specfact_code_review/run/test_target_coverage_bootstrap.py:85: AssertionError
+___ test_preloaded_coverage_alias_cannot_claim_builtin_ownership[different] ____
+
+coverage_runtime = {'PROJECT': PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-770/test_preloade...ar/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-770/test_preloaded_coverage_alias_0/builtin'), ...}
+forged_origin = 'different'
+
+    @pytest.mark.parametrize("forged_origin", ["different", "same"])
+    def test_preloaded_coverage_alias_cannot_claim_builtin_ownership(coverage_runtime, forged_origin):
+        path = coverage_runtime["HELPERS"] / "target_coverage.py" if forged_origin == "same" else Path("/customer/collector.py")
+        script = (
+            "import types,importlib.util; alias='_specfact_target_coverage'; fake=types.ModuleType(alias);"
+            f"fake.__file__={str(path)!r};fake.__spec__=importlib.util.spec_from_file_location(alias,{str(path)!r});"
+            "sys.modules[alias]=fake; b['_load_pytest_coverage']()"
+        )
+        result = _probe(coverage_runtime, script)
+        assert result.returncode != 0
+>       assert "project_pytest_coverage_helper_origin_mismatch" in result.stderr
+E       assert 'project_pytest_coverage_helper_origin_mismatch' in 'Traceback (most recent call last):\n  File "<string>", line 1, in <module>\n    import runpy,sys; from pathlib import...                                                     ~^^^^^^^^^^^^^^^^^^^^^^^^^\nKeyError: \'_load_pytest_coverage\'\n'
+E        +  where 'Traceback (most recent call last):\n  File "<string>", line 1, in <module>\n    import runpy,sys; from pathlib import...                                                     ~^^^^^^^^^^^^^^^^^^^^^^^^^\nKeyError: \'_load_pytest_coverage\'\n' = CompletedProcess(args=['/private/tmp/specfact-477-pytest-release/.venv/bin/python', '-I', '-S', '-c', "import runpy,sy...                                                    ~^^^^^^^^^^^^^^^^^^^^^^^^^\nKeyError: \'_load_pytest_coverage\'\n').stderr
+
+tests/unit/specfact_code_review/run/test_target_coverage_bootstrap.py:99: AssertionError
+______ test_preloaded_coverage_alias_cannot_claim_builtin_ownership[same] ______
+
+coverage_runtime = {'PROJECT': PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-770/test_preloade...ar/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-770/test_preloaded_coverage_alias_1/builtin'), ...}
+forged_origin = 'same'
+
+    @pytest.mark.parametrize("forged_origin", ["different", "same"])
+    def test_preloaded_coverage_alias_cannot_claim_builtin_ownership(coverage_runtime, forged_origin):
+        path = coverage_runtime["HELPERS"] / "target_coverage.py" if forged_origin == "same" else Path("/customer/collector.py")
+        script = (
+            "import types,importlib.util; alias='_specfact_target_coverage'; fake=types.ModuleType(alias);"
+            f"fake.__file__={str(path)!r};fake.__spec__=importlib.util.spec_from_file_location(alias,{str(path)!r});"
+            "sys.modules[alias]=fake; b['_load_pytest_coverage']()"
+        )
+        result = _probe(coverage_runtime, script)
+        assert result.returncode != 0
+>       assert "project_pytest_coverage_helper_origin_mismatch" in result.stderr
+E       assert 'project_pytest_coverage_helper_origin_mismatch' in 'Traceback (most recent call last):\n  File "<string>", line 1, in <module>\n    import runpy,sys; from pathlib import...                                                     ~^^^^^^^^^^^^^^^^^^^^^^^^^\nKeyError: \'_load_pytest_coverage\'\n'
+E        +  where 'Traceback (most recent call last):\n  File "<string>", line 1, in <module>\n    import runpy,sys; from pathlib import...                                                     ~^^^^^^^^^^^^^^^^^^^^^^^^^\nKeyError: \'_load_pytest_coverage\'\n' = CompletedProcess(args=['/private/tmp/specfact-477-pytest-release/.venv/bin/python', '-I', '-S', '-c', "import runpy,sy...                                                    ~^^^^^^^^^^^^^^^^^^^^^^^^^\nKeyError: \'_load_pytest_coverage\'\n').stderr
+
+tests/unit/specfact_code_review/run/test_target_coverage_bootstrap.py:99: AssertionError
+__________ test_failed_helper_load_does_not_leave_authenticated_alias __________
+
+coverage_runtime = {'PROJECT': PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-770/test_failed_h...ar/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-770/test_failed_helper_load_does_n0/builtin'), ...}
+
+    def test_failed_helper_load_does_not_leave_authenticated_alias(coverage_runtime):
+        (coverage_runtime["HELPERS"] / "target_coverage.py").write_text("raise RuntimeError('fixture failure')\n")
+        script = "\ntry:\n b['_load_pytest_coverage']()\nexcept RuntimeError:\n print('_specfact_target_coverage' in sys.modules)\n"
+        result = _probe(coverage_runtime, script)
+>       assert result.returncode == 0, result.stderr
+E       AssertionError: Traceback (most recent call last):
+E           File "<string>", line 3, in <module>
+E             b['_load_pytest_coverage']()
+E             ~^^^^^^^^^^^^^^^^^^^^^^^^^
+E         KeyError: '_load_pytest_coverage'
+E
+E       assert 1 == 0
+E        +  where 1 = CompletedProcess(args=['/private/tmp/specfact-477-pytest-release/.venv/bin/python', '-I', '-S', '-c', "import runpy,sy...n <module>\n    b[\'_load_pytest_coverage\']()\n    ~^^^^^^^^^^^^^^^^^^^^^^^^^\nKeyError: \'_load_pytest_coverage\'\n').returncode
+
+tests/unit/specfact_code_review/run/test_target_coverage_bootstrap.py:106: AssertionError
+____________ test_changed_collector_bytes_invalidate_runtime_cache _____________
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-770/test_changed_collector_bytes_i0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x109c56fd0>
+
+    def test_changed_collector_bytes_invalidate_runtime_cache(tmp_path, monkeypatch):
+        helpers = tmp_path / "helpers"
+        helpers.mkdir()
+        for path in Path(runtime_builder.__file__).parent.glob("*.py"):
+            (helpers / path.name).write_bytes(path.read_bytes())
+        helper = helpers / "target_coverage.py"
+        helper.write_text("POLICY = 1\n")
+        lock = Path("resources/contracts/pr-range-v1-toolchain-lock.json")
+        (tmp_path / lock).parent.mkdir(parents=True)
+        (tmp_path / lock).write_bytes((Path(runtime_builder.__file__).parents[1] / lock).read_bytes())
+        monkeypatch.setattr(runtime_builder, "__file__", str(helpers / "runtime_builder.py"))
+        monkeypatch.setattr(runtime_builder, "capture_public_trust", lambda _root: b"fixture trust")
+        monkeypatch.setattr(runtime_builder, "git_identity", lambda: "fixed-git")
+        plan = ProjectPlan(tmp_path, manager="pip")
+        worker = SimpleNamespace(environment_id="linux-x86_64-cp312", identity="sha256:" + "a" * 64)
+        identities = []
+        digest = runtime_builder.document_digest
+
+        def record_identity(value):
+            identities.append(value)
+            return digest(value)
+
+        monkeypatch.setattr(runtime_builder, "document_digest", record_identity)
+        for content in ("POLICY = 1\n", "POLICY = 2\n"):
+            helper.write_text(content)
+            with pytest.raises(ProjectRuntimeError, match="offline_cache_miss"):
+                runtime_builder.prepare_runtime(plan, runtime=worker, cache_root=tmp_path / "cache", offline=True)
+>       assert digest(identities[0]) != digest(identities[1])
+E       AssertionError: assert 'sha256:41cad88a938b82ca4ef5e5b270a58f68d3b6946ad4911857033a7a206c64fb10' != 'sha256:41cad88a938b82ca4ef5e5b270a58f68d3b6946ad4911857033a7a206c64fb10'
+E        +  where 'sha256:41cad88a938b82ca4ef5e5b270a58f68d3b6946ad4911857033a7a206c64fb10' = <function document_digest at 0x109c58eb0>({'project': 'sha256:dca79eb236050d6d0426f04822b5df9f672a9688d2e983ea0717134af043b89c', 'environment': 'linux-x86_64-cp... 'worker': 'sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', 'manager': ('pip==26.2.1',), ...})
+E        +  and   'sha256:41cad88a938b82ca4ef5e5b270a58f68d3b6946ad4911857033a7a206c64fb10' = <function document_digest at 0x109c58eb0>({'project': 'sha256:dca79eb236050d6d0426f04822b5df9f672a9688d2e983ea0717134af043b89c', 'environment': 'linux-x86_64-cp... 'worker': 'sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', 'manager': ('pip==26.2.1',), ...})
+
+tests/unit/specfact_code_review/run/test_target_coverage_bootstrap.py:137: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_target_coverage_bootstrap.py::test_pytest_domain_loads_fixed_helper_in_actual_startup_routes[first]
+FAILED tests/unit/specfact_code_review/run/test_target_coverage_bootstrap.py::test_pytest_domain_loads_fixed_helper_in_actual_startup_routes[nested]
+FAILED tests/unit/specfact_code_review/run/test_target_coverage_bootstrap.py::test_loader_reuses_only_its_owned_helper
+FAILED tests/unit/specfact_code_review/run/test_target_coverage_bootstrap.py::test_preloaded_coverage_alias_cannot_claim_builtin_ownership[different]
+FAILED tests/unit/specfact_code_review/run/test_target_coverage_bootstrap.py::test_preloaded_coverage_alias_cannot_claim_builtin_ownership[same]
+FAILED tests/unit/specfact_code_review/run/test_target_coverage_bootstrap.py::test_failed_helper_load_does_not_leave_authenticated_alias
+FAILED tests/unit/specfact_code_review/run/test_target_coverage_bootstrap.py::test_changed_collector_bytes_invalidate_runtime_cache
+========================= 7 failed, 1 passed in 0.65s ==========================

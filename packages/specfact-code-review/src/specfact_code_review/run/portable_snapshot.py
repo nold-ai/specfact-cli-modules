@@ -48,8 +48,8 @@ def project_runtime_requested(root: Path, options: Any) -> bool:
 @require(lambda root: root.is_dir())
 def discover_snapshot(root: Path, *, config_path: Path | None, source_snapshot: Any = None) -> ProjectPlan:
     """Attach selected VCS metadata without changing the immutable source tree."""
-    plan = discover_project(root, config_path=config_path)
     repository = getattr(source_snapshot, "repository", None)
+    plan = discover_project(root, config_path=config_path, activation_root=repository)
     if repository is None:
         return plan
     commit = getattr(source_snapshot, "vcs_commit", "") or source_snapshot.commit

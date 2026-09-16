@@ -1,0 +1,30 @@
+{
+  "source": "GitHub Actions run 35090737789, original unchanged hooks",
+  "authority": "failed-native-hook-evidence",
+  "acceptance": false,
+  "artifact_id": 10444661483,
+  "artifact_sha256": "aba4fcb81b9756574b0a0ac9d06f0e0a7bf9efc596f75fedfb86469bc34f714b",
+  "source_tree": "6785a630a52241acf70f97e856aeec89e75dc35b",
+  "block2_seconds": 284.0,
+  "collected": 1011,
+  "passing_calls": 1010,
+  "failed_records": [
+    {
+      "detail": "tmp_path = PosixPath('/opt/specfact/tmp/pytest/test_unbound_grafts_cannot_rem0')\n\n    def test_unbound_grafts_cannot_remove_selected_ancestry(tmp_path: Path) -> None:\n        root = tmp_path / \"source\"\n        _repository(root)\n        (root / \"app.py\").write_text(\"VALUE = 2\\n\")\n        selected = _commit_fixture(root, \"selected\")\n        before = vcs_context(root)\n>       (root / \".git/info/grafts\").write_text(selected + \"\\n\")\n\ntests/unit/specfact_code_review/run/test_runtime_vcs.py:474: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n../python/lib/python3.12/pathlib.py:1047: in write_text\n    with self.open(mode='w', encoding=encoding, errors=errors, newline=newline) as f:\n         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nself = PosixPath('/opt/specfact/tmp/pytest/test_unbound_grafts_cannot_rem0/source/.git/info/grafts')\nmode = 'w', buffering = -1, encoding = 'utf-8', errors = None, newline = None\n\n    def open(self, mode='r', buffering=-1, encoding=None,\n             errors=None, newline=None):\n        \"\"\"\n        Open the file pointed to by this path and return a file object, as\n        the built-in open() function does.\n        \"\"\"\n        if \"b\" not in mode:\n            encoding = io.text_encoding(encoding)\n>       return io.open(self, mode, buffering, encoding, errors, newline)\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       FileNotFoundError: [Errno 2] No such file or directory: '/opt/specfact/tmp/pytest/test_unbound_grafts_cannot_rem0/source/.git/info/grafts'\n\n../python/lib/python3.12/pathlib.py:1013: FileNotFoundError",
+      "nodeid": "tests/unit/specfact_code_review/run/test_runtime_vcs.py::test_unbound_grafts_cannot_remove_selected_ancestry",
+      "outcome": "failed",
+      "phase": "call",
+      "wasxfail": ""
+    }
+  ],
+  "semgrep_replay_errors": [
+    {
+      "code": 3,
+      "level": "warn",
+      "type": "Syntax error",
+      "message": "Syntax error at line /opt/specfact/snapshot/tests/unit/specfact_code_review/run/test_runtime_builder_logging.py:61:\n `,` was unexpected",
+      "path": "/opt/specfact/snapshot/tests/unit/specfact_code_review/run/test_runtime_builder_logging.py"
+    }
+  ],
+  "timing_diagnostic": "Not run: the original review completed and produced a report; no timeout budget change is justified."
+}

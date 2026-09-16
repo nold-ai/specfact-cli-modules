@@ -1,0 +1,142 @@
+{
+  "helper_sha256": "8a5e9484fe2568bc9c0ef6c074cdb456f5f6174cd113dfd00a4c43464ad4155e",
+  "harness": "tests/unit/specfact_code_review/run/test_target_coverage.py existing assertions invoked unchanged",
+  "versions": "coverage==7.16.1\nexecnet==2.1.2\niniconfig==2.3.0\npackaging==26.3\npluggy==1.6.0\nPygments==2.21.0\npytest==9.1.1\npytest-cov==7.0.0\npytest-xdist==3.8.0\n",
+  "results": [
+    {
+      "case": "reviewer_threshold",
+      "passed": true
+    },
+    {
+      "case": "native_threshold_and_report",
+      "passed": true
+    },
+    {
+      "case": "native_no_report",
+      "passed": true
+    },
+    {
+      "case": "reviewer_xdist",
+      "passed": true
+    },
+    {
+      "case": "native_xdist",
+      "passed": true
+    },
+    {
+      "case": "missing_worker_receipt",
+      "passed": true
+    },
+    {
+      "case": "subprocess_coverage",
+      "passed": true
+    }
+  ],
+  "commands": [
+    {
+      "command": [
+        "/private/tmp/specfact-pytest-cov700-validation/bin/python",
+        "-c",
+        "\nimport importlib.util, json, os, sys\nfrom pathlib import Path\nimport pytest\nhelper, snapshot, output, extra = map(Path, sys.argv[1:])\nargs = [\"-q\", \"-p\", \"pytest_cov\", *json.loads(extra.read_text()), \"tests\"]\nif helper.is_file():\n    spec = importlib.util.spec_from_file_location(\"_specfact_target_coverage\", helper)\n    module = importlib.util.module_from_spec(spec)\n    sys.modules[spec.name] = module\n    spec.loader.exec_module(module)\n    module.configure(snapshot=snapshot, output=output, directories=[])\n    args[0:0] = [\"-p\", spec.name]\n    code = pytest.main(args)\n    evidence = module.evidence()\nelse:\n    # Exact pre-change injection: a valued snapshot scope and replacing JSON report.\n    args[-1:-1] = [f\"--cov={snapshot}\", f\"--cov-report=json:{output}\"]\n    code = pytest.main(args)\n    evidence = {\"coverage\": json.loads(output.read_text()) if output.exists() else {},\n                \"coverage_policy\": {\"mode\": \"legacy-forced\", \"native_threshold_failed\": False}}\noutput.with_suffix(\".receipt\").write_text(json.dumps({\"exit_code\": int(code), **evidence}))\nraise SystemExit(int(code))\n",
+        "/private/tmp/specfact-477-pytest-release/packages/specfact-code-review/src/specfact_code_review/run/target_coverage.py",
+        "/private/tmp/specfact-pytest-cov700-evidence/reviewer_threshold/project",
+        "/private/tmp/specfact-pytest-cov700-evidence/reviewer_threshold/private.json",
+        "/private/tmp/specfact-pytest-cov700-evidence/reviewer_threshold/arguments.json"
+      ],
+      "cwd": "/private/tmp/specfact-pytest-cov700-evidence/reviewer_threshold/project",
+      "exit_code": 0,
+      "stdout": ".                                                                        [100%]\n1 passed in 0.01s\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/private/tmp/specfact-pytest-cov700-validation/bin/python",
+        "-c",
+        "\nimport importlib.util, json, os, sys\nfrom pathlib import Path\nimport pytest\nhelper, snapshot, output, extra = map(Path, sys.argv[1:])\nargs = [\"-q\", \"-p\", \"pytest_cov\", *json.loads(extra.read_text()), \"tests\"]\nif helper.is_file():\n    spec = importlib.util.spec_from_file_location(\"_specfact_target_coverage\", helper)\n    module = importlib.util.module_from_spec(spec)\n    sys.modules[spec.name] = module\n    spec.loader.exec_module(module)\n    module.configure(snapshot=snapshot, output=output, directories=[])\n    args[0:0] = [\"-p\", spec.name]\n    code = pytest.main(args)\n    evidence = module.evidence()\nelse:\n    # Exact pre-change injection: a valued snapshot scope and replacing JSON report.\n    args[-1:-1] = [f\"--cov={snapshot}\", f\"--cov-report=json:{output}\"]\n    code = pytest.main(args)\n    evidence = {\"coverage\": json.loads(output.read_text()) if output.exists() else {},\n                \"coverage_policy\": {\"mode\": \"legacy-forced\", \"native_threshold_failed\": False}}\noutput.with_suffix(\".receipt\").write_text(json.dumps({\"exit_code\": int(code), **evidence}))\nraise SystemExit(int(code))\n",
+        "/private/tmp/specfact-477-pytest-release/packages/specfact-code-review/src/specfact_code_review/run/target_coverage.py",
+        "/private/tmp/specfact-pytest-cov700-evidence/native_threshold_and_report/project",
+        "/private/tmp/specfact-pytest-cov700-evidence/native_threshold_and_report/private.json",
+        "/private/tmp/specfact-pytest-cov700-evidence/native_threshold_and_report/arguments.json"
+      ],
+      "cwd": "/private/tmp/specfact-pytest-cov700-evidence/native_threshold_and_report/project",
+      "exit_code": 1,
+      "stdout": ".\nERROR: Coverage failure: total of 75.00 is less than fail-under=95.00\n                                                                         [100%]\n================================ tests coverage ================================\n_______________ coverage: platform darwin, python 3.14.7-final-0 _______________\n\nCoverage JSON written to file customer.json\nFAIL Required test coverage of 95.0% not reached. Total coverage: 75.00%\n1 passed in 0.01s\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/private/tmp/specfact-pytest-cov700-validation/bin/python",
+        "-c",
+        "\nimport importlib.util, json, os, sys\nfrom pathlib import Path\nimport pytest\nhelper, snapshot, output, extra = map(Path, sys.argv[1:])\nargs = [\"-q\", \"-p\", \"pytest_cov\", *json.loads(extra.read_text()), \"tests\"]\nif helper.is_file():\n    spec = importlib.util.spec_from_file_location(\"_specfact_target_coverage\", helper)\n    module = importlib.util.module_from_spec(spec)\n    sys.modules[spec.name] = module\n    spec.loader.exec_module(module)\n    module.configure(snapshot=snapshot, output=output, directories=[])\n    args[0:0] = [\"-p\", spec.name]\n    code = pytest.main(args)\n    evidence = module.evidence()\nelse:\n    # Exact pre-change injection: a valued snapshot scope and replacing JSON report.\n    args[-1:-1] = [f\"--cov={snapshot}\", f\"--cov-report=json:{output}\"]\n    code = pytest.main(args)\n    evidence = {\"coverage\": json.loads(output.read_text()) if output.exists() else {},\n                \"coverage_policy\": {\"mode\": \"legacy-forced\", \"native_threshold_failed\": False}}\noutput.with_suffix(\".receipt\").write_text(json.dumps({\"exit_code\": int(code), **evidence}))\nraise SystemExit(int(code))\n",
+        "/private/tmp/specfact-477-pytest-release/packages/specfact-code-review/src/specfact_code_review/run/target_coverage.py",
+        "/private/tmp/specfact-pytest-cov700-evidence/native_no_report/project",
+        "/private/tmp/specfact-pytest-cov700-evidence/native_no_report/private.json",
+        "/private/tmp/specfact-pytest-cov700-evidence/native_no_report/arguments.json"
+      ],
+      "cwd": "/private/tmp/specfact-pytest-cov700-evidence/native_no_report/project",
+      "exit_code": 0,
+      "stdout": ".                                                                        [100%]\n1 passed in 0.01s\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/private/tmp/specfact-pytest-cov700-validation/bin/python",
+        "-c",
+        "\nimport importlib.util, json, os, sys\nfrom pathlib import Path\nimport pytest\nhelper, snapshot, output, extra = map(Path, sys.argv[1:])\nargs = [\"-q\", \"-p\", \"pytest_cov\", *json.loads(extra.read_text()), \"tests\"]\nif helper.is_file():\n    spec = importlib.util.spec_from_file_location(\"_specfact_target_coverage\", helper)\n    module = importlib.util.module_from_spec(spec)\n    sys.modules[spec.name] = module\n    spec.loader.exec_module(module)\n    module.configure(snapshot=snapshot, output=output, directories=[])\n    args[0:0] = [\"-p\", spec.name]\n    code = pytest.main(args)\n    evidence = module.evidence()\nelse:\n    # Exact pre-change injection: a valued snapshot scope and replacing JSON report.\n    args[-1:-1] = [f\"--cov={snapshot}\", f\"--cov-report=json:{output}\"]\n    code = pytest.main(args)\n    evidence = {\"coverage\": json.loads(output.read_text()) if output.exists() else {},\n                \"coverage_policy\": {\"mode\": \"legacy-forced\", \"native_threshold_failed\": False}}\noutput.with_suffix(\".receipt\").write_text(json.dumps({\"exit_code\": int(code), **evidence}))\nraise SystemExit(int(code))\n",
+        "/private/tmp/specfact-477-pytest-release/packages/specfact-code-review/src/specfact_code_review/run/target_coverage.py",
+        "/private/tmp/specfact-pytest-cov700-evidence/reviewer_xdist/project",
+        "/private/tmp/specfact-pytest-cov700-evidence/reviewer_xdist/private.json",
+        "/private/tmp/specfact-pytest-cov700-evidence/reviewer_xdist/arguments.json"
+      ],
+      "cwd": "/private/tmp/specfact-pytest-cov700-evidence/reviewer_xdist/project",
+      "exit_code": 0,
+      "stdout": "bringing up nodes...\nbringing up nodes...\n\n..                                                                       [100%]\n2 passed in 0.21s\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/private/tmp/specfact-pytest-cov700-validation/bin/python",
+        "-c",
+        "\nimport importlib.util, json, os, sys\nfrom pathlib import Path\nimport pytest\nhelper, snapshot, output, extra = map(Path, sys.argv[1:])\nargs = [\"-q\", \"-p\", \"pytest_cov\", *json.loads(extra.read_text()), \"tests\"]\nif helper.is_file():\n    spec = importlib.util.spec_from_file_location(\"_specfact_target_coverage\", helper)\n    module = importlib.util.module_from_spec(spec)\n    sys.modules[spec.name] = module\n    spec.loader.exec_module(module)\n    module.configure(snapshot=snapshot, output=output, directories=[])\n    args[0:0] = [\"-p\", spec.name]\n    code = pytest.main(args)\n    evidence = module.evidence()\nelse:\n    # Exact pre-change injection: a valued snapshot scope and replacing JSON report.\n    args[-1:-1] = [f\"--cov={snapshot}\", f\"--cov-report=json:{output}\"]\n    code = pytest.main(args)\n    evidence = {\"coverage\": json.loads(output.read_text()) if output.exists() else {},\n                \"coverage_policy\": {\"mode\": \"legacy-forced\", \"native_threshold_failed\": False}}\noutput.with_suffix(\".receipt\").write_text(json.dumps({\"exit_code\": int(code), **evidence}))\nraise SystemExit(int(code))\n",
+        "/private/tmp/specfact-477-pytest-release/packages/specfact-code-review/src/specfact_code_review/run/target_coverage.py",
+        "/private/tmp/specfact-pytest-cov700-evidence/native_xdist/project",
+        "/private/tmp/specfact-pytest-cov700-evidence/native_xdist/private.json",
+        "/private/tmp/specfact-pytest-cov700-evidence/native_xdist/arguments.json"
+      ],
+      "cwd": "/private/tmp/specfact-pytest-cov700-evidence/native_xdist/project",
+      "exit_code": 0,
+      "stdout": "bringing up nodes...\nbringing up nodes...\n\n..                                                                       [100%]\n================================ tests coverage ================================\n_______________ coverage: platform darwin, python 3.14.7-final-0 _______________\n\nName     Stmts   Miss    Cover\n------------------------------\napp.py       4      0  100.00%\n------------------------------\nTOTAL        4      0  100.00%\n2 passed in 0.21s\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/private/tmp/specfact-pytest-cov700-validation/bin/python",
+        "-c",
+        "\nimport importlib.util, json, os, sys\nfrom pathlib import Path\nimport pytest\nhelper, snapshot, output, extra = map(Path, sys.argv[1:])\nargs = [\"-q\", \"-p\", \"pytest_cov\", *json.loads(extra.read_text()), \"tests\"]\nif helper.is_file():\n    spec = importlib.util.spec_from_file_location(\"_specfact_target_coverage\", helper)\n    module = importlib.util.module_from_spec(spec)\n    sys.modules[spec.name] = module\n    spec.loader.exec_module(module)\n    module.configure(snapshot=snapshot, output=output, directories=[])\n    args[0:0] = [\"-p\", spec.name]\n    code = pytest.main(args)\n    evidence = module.evidence()\nelse:\n    # Exact pre-change injection: a valued snapshot scope and replacing JSON report.\n    args[-1:-1] = [f\"--cov={snapshot}\", f\"--cov-report=json:{output}\"]\n    code = pytest.main(args)\n    evidence = {\"coverage\": json.loads(output.read_text()) if output.exists() else {},\n                \"coverage_policy\": {\"mode\": \"legacy-forced\", \"native_threshold_failed\": False}}\noutput.with_suffix(\".receipt\").write_text(json.dumps({\"exit_code\": int(code), **evidence}))\nraise SystemExit(int(code))\n",
+        "/private/tmp/specfact-477-pytest-release/packages/specfact-code-review/src/specfact_code_review/run/target_coverage.py",
+        "/private/tmp/specfact-pytest-cov700-evidence/missing_worker_receipt/project",
+        "/private/tmp/specfact-pytest-cov700-evidence/missing_worker_receipt/private.json",
+        "/private/tmp/specfact-pytest-cov700-evidence/missing_worker_receipt/arguments.json"
+      ],
+      "cwd": "/private/tmp/specfact-pytest-cov700-evidence/missing_worker_receipt/project",
+      "exit_code": 0,
+      "stdout": "bringing up nodes...\nbringing up nodes...\n\n.                                                                        [100%]\n1 passed in 0.21s\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/private/tmp/specfact-pytest-cov700-validation/bin/python",
+        "-c",
+        "\nimport importlib.util, json, os, sys\nfrom pathlib import Path\nimport pytest\nhelper, snapshot, output, extra = map(Path, sys.argv[1:])\nargs = [\"-q\", \"-p\", \"pytest_cov\", *json.loads(extra.read_text()), \"tests\"]\nif helper.is_file():\n    spec = importlib.util.spec_from_file_location(\"_specfact_target_coverage\", helper)\n    module = importlib.util.module_from_spec(spec)\n    sys.modules[spec.name] = module\n    spec.loader.exec_module(module)\n    module.configure(snapshot=snapshot, output=output, directories=[])\n    args[0:0] = [\"-p\", spec.name]\n    code = pytest.main(args)\n    evidence = module.evidence()\nelse:\n    # Exact pre-change injection: a valued snapshot scope and replacing JSON report.\n    args[-1:-1] = [f\"--cov={snapshot}\", f\"--cov-report=json:{output}\"]\n    code = pytest.main(args)\n    evidence = {\"coverage\": json.loads(output.read_text()) if output.exists() else {},\n                \"coverage_policy\": {\"mode\": \"legacy-forced\", \"native_threshold_failed\": False}}\noutput.with_suffix(\".receipt\").write_text(json.dumps({\"exit_code\": int(code), **evidence}))\nraise SystemExit(int(code))\n",
+        "/private/tmp/specfact-477-pytest-release/packages/specfact-code-review/src/specfact_code_review/run/target_coverage.py",
+        "/private/tmp/specfact-pytest-cov700-evidence/subprocess_coverage/project",
+        "/private/tmp/specfact-pytest-cov700-evidence/subprocess_coverage/private.json",
+        "/private/tmp/specfact-pytest-cov700-evidence/subprocess_coverage/arguments.json"
+      ],
+      "cwd": "/private/tmp/specfact-pytest-cov700-evidence/subprocess_coverage/project",
+      "exit_code": 0,
+      "stdout": ".                                                                        [100%]\n1 passed in 0.06s\n",
+      "stderr": "/private/tmp/specfact-pytest-cov700-validation/lib/python3.14/site-packages/coverage/inorout.py:558: CoverageWarning: Module app was never imported. (module-not-imported); see https://coverage.readthedocs.io/en/7.16.1/messages.html#warning-module-not-imported\n  self.warn(f\"Module {pkg} was never imported.\", slug=\"module-not-imported\")\n/private/tmp/specfact-pytest-cov700-validation/lib/python3.14/site-packages/coverage/control.py:967: CoverageWarning: No data was collected. (no-data-collected); see https://coverage.readthedocs.io/en/7.16.1/messages.html#warning-no-data-collected\n  self._warn(\"No data was collected.\", slug=\"no-data-collected\")\n"
+    }
+  ]
+}

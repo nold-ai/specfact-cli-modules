@@ -4,16 +4,25 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
 from typer.testing import CliRunner
 
-from specfact_code_review.run import portable_snapshot, runner, runtime_builder, runtime_commands, runtime_vcs, scope
+from specfact_code_review.run import (
+    portable_snapshot,
+    runner,
+    runtime_builder,
+    runtime_commands,
+    runtime_vcs,
+    scope,
+    target_launch,
+)
 from specfact_code_review.run.portable_snapshot import discover_snapshot
 from specfact_code_review.run.runtime_builder import copy_project
 from specfact_code_review.run.runtime_discovery import discover_project
-from specfact_code_review.run.runtime_models import ProjectRuntimeError
+from specfact_code_review.run.runtime_models import ProjectRuntimeError, content_digest
 from specfact_code_review.run.runtime_sources import verify_inputs
 from specfact_code_review.run.runtime_vcs import copy_vcs_context, vcs_context
 
@@ -26,9 +35,10 @@ def _git(root: Path, *args: str) -> str:
     ).strip()
 
 
-def _repository(root: Path) -> None:
+def _repository(root: Path, *, empty_template: bool = False) -> None:
     root.mkdir()
-    _git(root, "init", "-q")
+    template_args = ("--template=",) if empty_template else ()
+    _git(root, "init", "-q", *template_args)
     (root / "app.py").write_text("VALUE = 1\n")
     _git(root, "add", "app.py")
     _git(
@@ -456,12 +466,14 @@ def test_missing_promisor_object_does_not_run_host_transport(tmp_path: Path) -> 
     assert not (copied / ".git").exists()
 
 
-def test_unbound_grafts_cannot_remove_selected_ancestry(tmp_path: Path) -> None:
+@pytest.mark.parametrize("empty_template", [False, True])
+def test_unbound_grafts_cannot_remove_selected_ancestry(tmp_path: Path, empty_template: bool) -> None:
     root = tmp_path / "source"
-    _repository(root)
+    _repository(root, empty_template=empty_template)
     (root / "app.py").write_text("VALUE = 2\n")
     selected = _commit_fixture(root, "selected")
     before = vcs_context(root)
+    (root / ".git/info").mkdir(exist_ok=True)
     (root / ".git/info/grafts").write_text(selected + "\n")
     assert vcs_context(root) == before
     copied = tmp_path / "copy"
@@ -595,3 +607,147 @@ def test_builder_requires_captured_git_origin_after_verification(
     finally:
         if snapshot is not None:
             shutil.rmtree(snapshot.root)
+
+
+@pytest.fixture(name="attached_vcs_git")
+def attached_vcs_git_fixture(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[str, Path]:
+    """Use real Git with a synthetic attested mount layout and empty system PATH."""
+    actual_git = shutil.which("git")
+    assert actual_git is not None
+    repository = tmp_path / "repository"
+    _repository(repository)
+    project = tmp_path / "attached"
+    launcher = project / "bin/git"
+    launcher.parent.mkdir(parents=True)
+    observed = tmp_path / "git-observation.json"
+    launcher.write_text(
+        f"#!{sys.executable}\nimport json,os,sys\n"
+        f"with open({str(observed)!r}, 'w') as stream: json.dump(dict(os.environ), stream)\n"
+        f"os.execv({actual_git!r}, [{actual_git!r}, *sys.argv[1:]])\n"
+    )
+    launcher.chmod(0o755)
+    descriptor = project / "project-runtime.json"
+    descriptor.write_text(
+        json.dumps(
+            {
+                "project": {"native_tools": ["git"]},
+                "inventory": {
+                    "native_tools": {
+                        "bin/git": {
+                            "source": "generated-controller-launcher",
+                            "sha256": content_digest(launcher.read_bytes()),
+                        }
+                    }
+                },
+            }
+        )
+    )
+    builtin = tmp_path / "builtin"
+    token = builtin / target_launch.DOMAIN_FILES["pytest-observe"]
+    token.parent.mkdir(parents=True)
+    token.write_text("trusted startup fixture\n")
+    context = tmp_path / "python-context"
+    os.link(token, context)
+    monkeypatch.setattr(target_launch, "PROJECT", project)
+    monkeypatch.setattr(target_launch, "BUILTIN", builtin)
+    monkeypatch.setattr(target_launch, "CONTEXT", context)
+    empty = tmp_path / "empty-system-bin"
+    empty.mkdir()
+    monkeypatch.setattr(runtime_vcs.os, "defpath", str(empty))
+    return {
+        "repository": repository,
+        "project": project,
+        "launcher": launcher,
+        "descriptor": descriptor,
+        "observed": observed,
+        "context": context,
+    }
+
+
+@pytest.mark.parametrize(
+    ("option", "expected"),
+    [
+        ("GIT_CONFIG_NOSYSTEM", "1"),
+        ("GIT_CONFIG_GLOBAL", "/dev/null"),
+        ("GIT_NO_REPLACE_OBJECTS", "1"),
+        ("GIT_GRAFT_FILE", os.devnull),
+        ("GIT_NO_LAZY_FETCH", "1"),
+        ("GIT_ALLOW_PROTOCOL", ""),
+        ("GIT_TERMINAL_PROMPT", "0"),
+    ],
+)
+def test_attached_vcs_git_survives_sanitized_path(
+    attached_vcs_git: dict[str, Path], option: str, expected: str
+) -> None:
+    """Metadata export uses declared Git while retaining each isolated configuration control."""
+    selected = vcs_context(attached_vcs_git["repository"])
+    assert len(selected["commit"]) == 40
+    environment = json.loads(attached_vcs_git["observed"].read_text())
+    assert environment["PATH"] == os.defpath
+    assert environment[option] == expected
+
+
+def _invalidate_attached_git(paths: dict[str, Path], descriptor: dict, invalid: str) -> None:
+    if invalid == "undeclared":
+        descriptor["project"]["native_tools"] = []
+        return
+    if invalid == "wrong-origin":
+        descriptor["inventory"]["native_tools"]["bin/git"]["source"] = "project"
+        return
+    if invalid == "wrong-digest":
+        descriptor["inventory"]["native_tools"]["bin/git"]["sha256"] = "sha256:" + "0" * 64
+        return
+    original = paths["launcher"].read_bytes()
+    paths["launcher"].unlink()
+    if invalid == "symlink":
+        escaped = paths["project"].parent / "escaped-git"
+        escaped.write_bytes(original)
+        paths["launcher"].symlink_to(escaped)
+
+
+@pytest.mark.parametrize("invalid", ["undeclared", "wrong-origin", "wrong-digest", "missing", "symlink"])
+def test_attached_vcs_rejects_unverified_git_launcher(attached_vcs_git: dict[str, Path], invalid: str) -> None:
+    """A verified worker cannot substitute an unrecorded or altered executable."""
+    paths = attached_vcs_git
+    descriptor = json.loads(paths["descriptor"].read_text())
+    _invalidate_attached_git(paths, descriptor, invalid)
+    paths["descriptor"].write_text(json.dumps(descriptor))
+    with pytest.raises(ProjectRuntimeError, match="project_git_attached_tool_invalid"):
+        vcs_context(paths["repository"])
+    assert not paths["observed"].exists()
+
+
+def test_host_vcs_ignores_ambient_path_and_forged_worker_markers(
+    attached_vcs_git: dict[str, Path], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An environment marker cannot select target Git outside the trusted context."""
+    paths = attached_vcs_git
+    paths["context"].unlink()
+    trusted = paths["project"].parent / "system-bin"
+    trusted.mkdir()
+    (trusted / "git").write_bytes(paths["launcher"].read_bytes())
+    (trusted / "git").chmod(0o755)
+    paths["launcher"].write_text("untrusted attached launcher")
+    hostile = paths["project"].parent / "hostile-bin"
+    hostile.mkdir()
+    (hostile / "git").write_text("#!/bin/sh\nexit 99\n")
+    (hostile / "git").chmod(0o755)
+    monkeypatch.setattr(runtime_vcs.os, "defpath", str(trusted))
+    monkeypatch.setenv("PATH", str(hostile))
+    monkeypatch.setenv("SPECFACT_TARGET_PYTEST", "1")
+    monkeypatch.setenv("GIT_CONFIG_GLOBAL", str(hostile / "config"))
+    assert len(vcs_context(paths["repository"])["commit"]) == 40
+    environment = json.loads(paths["observed"].read_text())
+    assert "SPECFACT_TARGET_PYTEST" not in environment
+    assert environment["GIT_CONFIG_GLOBAL"] == "/dev/null"
+
+
+def test_forged_worker_context_cannot_select_attached_git(attached_vcs_git: dict[str, Path]) -> None:
+    """A copied marker file is not the inherited read-only builtin inode."""
+    context = attached_vcs_git["context"]
+    text = context.read_text()
+    context.unlink()
+    context.write_text(text)
+    with pytest.raises(ProjectRuntimeError, match="project_git_attached_context_invalid"):
+        vcs_context(attached_vcs_git["repository"])
+    assert not attached_vcs_git["observed"].exists()

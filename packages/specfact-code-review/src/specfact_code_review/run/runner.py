@@ -6178,6 +6178,17 @@ def evaluate_portable_pytest_coverage(files: list[Path], observation: dict[str, 
         sources = _portable_coverage_sources(files, observation)
     except ValueError as exc:
         return [tool_error(tool="pytest", file_path=anchor, message=str(exc))]
+    attribution_errors = observation.get("coverage_attribution_errors", {})
+    for source in sources:
+        if diagnostic := attribution_errors.get(str(source.resolve())):
+            return [
+                tool_error(
+                    tool="pytest",
+                    file_path=source,
+                    message=f"project_pytest_installed_coverage:{diagnostic}:{source}; "
+                    "rebuild the runtime for this snapshot or declare the intended source environment",
+                )
+            ]
     findings, _coverage = _coverage_findings(
         sources,
         observation["coverage"],

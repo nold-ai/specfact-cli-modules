@@ -1,0 +1,145 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: /private/tmp/specfact-477-pytest-release
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 3 items
+
+tests/unit/specfact_code_review/run/test_runtime_compatibility.py FFF    [100%]
+
+=================================== FAILURES ===================================
+______ test_declared_development_tools_admit_compatible_signed_entries[0] ______
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-635/test_declared_development_tool0')
+environment_index = 0
+
+    @pytest.mark.parametrize("environment_index", [0, 1, 2])
+    def test_declared_development_tools_admit_compatible_signed_entries(tmp_path: Path, environment_index: int) -> None:
+        """Declared dev ranges must exclude the real incompatible native resolution."""
+        import json
+        import tomllib
+
+        from packaging.requirements import Requirement
+        from packaging.utils import canonicalize_name
+        from packaging.version import Version
+
+        root = Path(__file__).resolve().parents[4]
+        contract = root / "packages/specfact-code-review/src/specfact_code_review/resources/contracts"
+        environment = json.loads((contract / "pr-range-v1-toolchain-lock.json").read_text())["environments"][environment_index]
+        declared = {
+            str(canonicalize_name(requirement.name)): requirement
+            for value in tomllib.loads((root / "pyproject.toml").read_text())["tool"]["hatch"]["envs"]["default"]["dependencies"]
+            for requirement in (Requirement(value),)
+        }
+        observed_path = root / "openspec/changes/code-review-16-portable-project-runtime/PR478_NATIVE_ENVIRONMENT_PACKAGES.txt"
+        observed = dict(line.split("==", 1) for line in observed_path.read_text().splitlines() if "==" in line)
+        inventory = {"installed": []}
+        for component in environment["components"]:
+            name = component["normalized_name"]
+            if name not in {"pylint", "basedpyright"}:
+                continue
+            pinned = Version(component["version"])
+            assert declared[name].specifier.contains(pinned), f"Declared {name} excludes signed entry {pinned}"
+            candidates = (pinned, Version(observed[name]))
+            selected = max(version for version in candidates if declared[name].specifier.contains(version))
+            metadata = tmp_path / f"{name}-{pinned}.dist-info"
+            metadata.mkdir()
+            (metadata / "METADATA").write_text(f"Metadata-Version: 2.1\nName: {name}\nVersion: {pinned}\n")
+            inventory["installed"].append({"metadata": {"name": name, "version": str(selected)}})
+>       assert not analyzer_dependency_conflicts(inventory, tmp_path)
+E       AssertionError: assert not {'pylint': 'project_analyzer_dependency_incompatible:pylint: target=4.0.8, sealed entry=4.0.7', 'basedpyright': 'project_analyzer_dependency_incompatible:basedpyright: target=1.40.1, sealed entry=1.39.10'}
+E        +  where {'pylint': 'project_analyzer_dependency_incompatible:pylint: target=4.0.8, sealed entry=4.0.7', 'basedpyright': 'project_analyzer_dependency_incompatible:basedpyright: target=1.40.1, sealed entry=1.39.10'} = analyzer_dependency_conflicts({'installed': [{'metadata': {'name': 'basedpyright', 'version': '1.40.1'}}, {'metadata': {'name': 'pylint', 'version': '4.0.8'}}]}, PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-635/test_declared_development_tool0'))
+
+tests/unit/specfact_code_review/run/test_runtime_compatibility.py:77: AssertionError
+______ test_declared_development_tools_admit_compatible_signed_entries[1] ______
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-635/test_declared_development_tool1')
+environment_index = 1
+
+    @pytest.mark.parametrize("environment_index", [0, 1, 2])
+    def test_declared_development_tools_admit_compatible_signed_entries(tmp_path: Path, environment_index: int) -> None:
+        """Declared dev ranges must exclude the real incompatible native resolution."""
+        import json
+        import tomllib
+
+        from packaging.requirements import Requirement
+        from packaging.utils import canonicalize_name
+        from packaging.version import Version
+
+        root = Path(__file__).resolve().parents[4]
+        contract = root / "packages/specfact-code-review/src/specfact_code_review/resources/contracts"
+        environment = json.loads((contract / "pr-range-v1-toolchain-lock.json").read_text())["environments"][environment_index]
+        declared = {
+            str(canonicalize_name(requirement.name)): requirement
+            for value in tomllib.loads((root / "pyproject.toml").read_text())["tool"]["hatch"]["envs"]["default"]["dependencies"]
+            for requirement in (Requirement(value),)
+        }
+        observed_path = root / "openspec/changes/code-review-16-portable-project-runtime/PR478_NATIVE_ENVIRONMENT_PACKAGES.txt"
+        observed = dict(line.split("==", 1) for line in observed_path.read_text().splitlines() if "==" in line)
+        inventory = {"installed": []}
+        for component in environment["components"]:
+            name = component["normalized_name"]
+            if name not in {"pylint", "basedpyright"}:
+                continue
+            pinned = Version(component["version"])
+            assert declared[name].specifier.contains(pinned), f"Declared {name} excludes signed entry {pinned}"
+            candidates = (pinned, Version(observed[name]))
+            selected = max(version for version in candidates if declared[name].specifier.contains(version))
+            metadata = tmp_path / f"{name}-{pinned}.dist-info"
+            metadata.mkdir()
+            (metadata / "METADATA").write_text(f"Metadata-Version: 2.1\nName: {name}\nVersion: {pinned}\n")
+            inventory["installed"].append({"metadata": {"name": name, "version": str(selected)}})
+>       assert not analyzer_dependency_conflicts(inventory, tmp_path)
+E       AssertionError: assert not {'pylint': 'project_analyzer_dependency_incompatible:pylint: target=4.0.8, sealed entry=4.0.7', 'basedpyright': 'project_analyzer_dependency_incompatible:basedpyright: target=1.40.1, sealed entry=1.39.10'}
+E        +  where {'pylint': 'project_analyzer_dependency_incompatible:pylint: target=4.0.8, sealed entry=4.0.7', 'basedpyright': 'project_analyzer_dependency_incompatible:basedpyright: target=1.40.1, sealed entry=1.39.10'} = analyzer_dependency_conflicts({'installed': [{'metadata': {'name': 'basedpyright', 'version': '1.40.1'}}, {'metadata': {'name': 'pylint', 'version': '4.0.8'}}]}, PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-635/test_declared_development_tool1'))
+
+tests/unit/specfact_code_review/run/test_runtime_compatibility.py:77: AssertionError
+______ test_declared_development_tools_admit_compatible_signed_entries[2] ______
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-635/test_declared_development_tool2')
+environment_index = 2
+
+    @pytest.mark.parametrize("environment_index", [0, 1, 2])
+    def test_declared_development_tools_admit_compatible_signed_entries(tmp_path: Path, environment_index: int) -> None:
+        """Declared dev ranges must exclude the real incompatible native resolution."""
+        import json
+        import tomllib
+
+        from packaging.requirements import Requirement
+        from packaging.utils import canonicalize_name
+        from packaging.version import Version
+
+        root = Path(__file__).resolve().parents[4]
+        contract = root / "packages/specfact-code-review/src/specfact_code_review/resources/contracts"
+        environment = json.loads((contract / "pr-range-v1-toolchain-lock.json").read_text())["environments"][environment_index]
+        declared = {
+            str(canonicalize_name(requirement.name)): requirement
+            for value in tomllib.loads((root / "pyproject.toml").read_text())["tool"]["hatch"]["envs"]["default"]["dependencies"]
+            for requirement in (Requirement(value),)
+        }
+        observed_path = root / "openspec/changes/code-review-16-portable-project-runtime/PR478_NATIVE_ENVIRONMENT_PACKAGES.txt"
+        observed = dict(line.split("==", 1) for line in observed_path.read_text().splitlines() if "==" in line)
+        inventory = {"installed": []}
+        for component in environment["components"]:
+            name = component["normalized_name"]
+            if name not in {"pylint", "basedpyright"}:
+                continue
+            pinned = Version(component["version"])
+            assert declared[name].specifier.contains(pinned), f"Declared {name} excludes signed entry {pinned}"
+            candidates = (pinned, Version(observed[name]))
+            selected = max(version for version in candidates if declared[name].specifier.contains(version))
+            metadata = tmp_path / f"{name}-{pinned}.dist-info"
+            metadata.mkdir()
+            (metadata / "METADATA").write_text(f"Metadata-Version: 2.1\nName: {name}\nVersion: {pinned}\n")
+            inventory["installed"].append({"metadata": {"name": name, "version": str(selected)}})
+>       assert not analyzer_dependency_conflicts(inventory, tmp_path)
+E       AssertionError: assert not {'pylint': 'project_analyzer_dependency_incompatible:pylint: target=4.0.8, sealed entry=4.0.7', 'basedpyright': 'project_analyzer_dependency_incompatible:basedpyright: target=1.40.1, sealed entry=1.39.10'}
+E        +  where {'pylint': 'project_analyzer_dependency_incompatible:pylint: target=4.0.8, sealed entry=4.0.7', 'basedpyright': 'project_analyzer_dependency_incompatible:basedpyright: target=1.40.1, sealed entry=1.39.10'} = analyzer_dependency_conflicts({'installed': [{'metadata': {'name': 'basedpyright', 'version': '1.40.1'}}, {'metadata': {'name': 'pylint', 'version': '4.0.8'}}]}, PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-635/test_declared_development_tool2'))
+
+tests/unit/specfact_code_review/run/test_runtime_compatibility.py:77: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_runtime_compatibility.py::test_declared_development_tools_admit_compatible_signed_entries[0]
+FAILED tests/unit/specfact_code_review/run/test_runtime_compatibility.py::test_declared_development_tools_admit_compatible_signed_entries[1]
+FAILED tests/unit/specfact_code_review/run/test_runtime_compatibility.py::test_declared_development_tools_admit_compatible_signed_entries[2]
+============================== 3 failed in 0.22s ===============================

@@ -1,0 +1,226 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: /private/tmp/specfact-477-pytest-release
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 10 items
+
+tests/unit/specfact_code_review/run/test_runtime_tools.py FFFFFFFFFF     [100%]
+
+=================================== FAILURES ===================================
+_______ test_repository_declares_native_tools_without_manager_execution ________
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-687/test_repository_declares_nativ0')
+
+    def test_repository_declares_native_tools_without_manager_execution(tmp_path: Path) -> None:
+        (tmp_path / 'pyproject.toml').write_text(
+            '[project]\nname="sample"\nversion="1"\n'
+            '[tool.specfact.code-review]\nnative_tools=["git", "uname", "sed"]\n'
+        )
+        plan = discover_project(tmp_path)
+>       assert plan.native_tools == ('git', 'sed', 'uname')
+               ^^^^^^^^^^^^^^^^^
+E       AttributeError: 'ProjectPlan' object has no attribute 'native_tools'
+
+tests/unit/specfact_code_review/run/test_runtime_tools.py:17: AttributeError
+__________ test_explicit_native_tools_override_repository_declaration __________
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-687/test_explicit_native_tools_ove0')
+
+    def test_explicit_native_tools_override_repository_declaration(tmp_path: Path) -> None:
+        (tmp_path / 'pyproject.toml').write_text('[tool.specfact.code-review]\nnative_tools=["git"]\n')
+        config = tmp_path / 'review.toml'
+        config.write_text('native_tools=["uname"]\n')
+>       assert discover_project(tmp_path, config_path=config).native_tools == ('uname',)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/specfact_code_review/run/test_runtime_tools.py:25:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:396: in discover_project
+    values = _config(config_path)
+             ^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-687/test_explicit_native_tools_ove0/review.toml')
+
+    def _config(path: Path | None) -> dict[str, Any]:
+        if path is None:
+            return {}
+        if path.is_symlink() or not path.is_file():
+            raise ProjectRuntimeError("project_config_invalid: expected a regular TOML file")
+        values = _toml(path)
+        unknown = sorted(set(values) - _CONFIG_FIELDS)
+        if unknown:
+>           raise ProjectRuntimeError(f"project_config_unknown_fields:{','.join(unknown)}")
+E           specfact_code_review.run.runtime_models.ProjectRuntimeError: project_config_unknown_fields:native_tools
+
+packages/specfact-code-review/src/specfact_code_review/run/runtime_discovery.py:124: ProjectRuntimeError
+_______ test_unknown_native_capabilities_are_not_path_guesses[["curl"]] ________
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-687/test_unknown_native_capabiliti0')
+declaration = '["curl"]'
+
+    @pytest.mark.parametrize('declaration', ['["curl"]', '["/usr/bin/git"]', '"git"'])
+    def test_unknown_native_capabilities_are_not_path_guesses(tmp_path: Path, declaration: str) -> None:
+        (tmp_path / 'pyproject.toml').write_text(f'[tool.specfact.code-review]\nnative_tools={declaration}\n')
+>       with pytest.raises(ProjectRuntimeError, match='native_tools|native_tool_unsupported'):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ProjectRuntimeError
+
+tests/unit/specfact_code_review/run/test_runtime_tools.py:31: Failed
+___ test_unknown_native_capabilities_are_not_path_guesses[["/usr/bin/git"]] ____
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-687/test_unknown_native_capabiliti1')
+declaration = '["/usr/bin/git"]'
+
+    @pytest.mark.parametrize('declaration', ['["curl"]', '["/usr/bin/git"]', '"git"'])
+    def test_unknown_native_capabilities_are_not_path_guesses(tmp_path: Path, declaration: str) -> None:
+        (tmp_path / 'pyproject.toml').write_text(f'[tool.specfact.code-review]\nnative_tools={declaration}\n')
+>       with pytest.raises(ProjectRuntimeError, match='native_tools|native_tool_unsupported'):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ProjectRuntimeError
+
+tests/unit/specfact_code_review/run/test_runtime_tools.py:31: Failed
+_________ test_unknown_native_capabilities_are_not_path_guesses["git"] _________
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-687/test_unknown_native_capabiliti2')
+declaration = '"git"'
+
+    @pytest.mark.parametrize('declaration', ['["curl"]', '["/usr/bin/git"]', '"git"'])
+    def test_unknown_native_capabilities_are_not_path_guesses(tmp_path: Path, declaration: str) -> None:
+        (tmp_path / 'pyproject.toml').write_text(f'[tool.specfact.code-review]\nnative_tools={declaration}\n')
+>       with pytest.raises(ProjectRuntimeError, match='native_tools|native_tool_unsupported'):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ProjectRuntimeError
+
+tests/unit/specfact_code_review/run/test_runtime_tools.py:31: Failed
+_____________ test_capture_binds_launchers_executables_and_loader ______________
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-687/test_capture_binds_launchers_e0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10a946650>
+
+    def test_capture_binds_launchers_executables_and_loader(tmp_path: Path, monkeypatch) -> None:
+>       tools, system = _native_fixture(tmp_path, monkeypatch)
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/specfact_code_review/run/test_runtime_tools.py:54:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-687/test_capture_binds_launchers_e0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10a946650>
+
+    def _native_fixture(tmp_path: Path, monkeypatch):
+        """Use ELF fixtures without executing native code on the host."""
+        import struct
+>       from specfact_code_review.run import runtime_tools
+E       ImportError: cannot import name 'runtime_tools' from 'specfact_code_review.run' (/private/tmp/specfact-477-pytest-release/packages/specfact-code-review/src/specfact_code_review/run/__init__.py)
+
+tests/unit/specfact_code_review/run/test_runtime_tools.py:38: ImportError
+_______ test_builder_tool_collisions_fail_before_any_install[bin/uname] ________
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-687/test_builder_tool_collisions_f0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10a9469e0>
+collision = 'bin/uname'
+
+    @pytest.mark.parametrize('collision', ['bin/uname', 'native-tools/forged'])
+    def test_builder_tool_collisions_fail_before_any_install(tmp_path: Path, monkeypatch, collision: str) -> None:
+>       tools, _ = _native_fixture(tmp_path, monkeypatch)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/specfact_code_review/run/test_runtime_tools.py:70:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-687/test_builder_tool_collisions_f0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10a9469e0>
+
+    def _native_fixture(tmp_path: Path, monkeypatch):
+        """Use ELF fixtures without executing native code on the host."""
+        import struct
+>       from specfact_code_review.run import runtime_tools
+E       ImportError: cannot import name 'runtime_tools' from 'specfact_code_review.run' (/private/tmp/specfact-477-pytest-release/packages/specfact-code-review/src/specfact_code_review/run/__init__.py)
+
+tests/unit/specfact_code_review/run/test_runtime_tools.py:38: ImportError
+__ test_builder_tool_collisions_fail_before_any_install[native-tools/forged] ___
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-687/test_builder_tool_collisions_f1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10a8cbbf0>
+collision = 'native-tools/forged'
+
+    @pytest.mark.parametrize('collision', ['bin/uname', 'native-tools/forged'])
+    def test_builder_tool_collisions_fail_before_any_install(tmp_path: Path, monkeypatch, collision: str) -> None:
+>       tools, _ = _native_fixture(tmp_path, monkeypatch)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/specfact_code_review/run/test_runtime_tools.py:70:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-687/test_builder_tool_collisions_f1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10a8cbbf0>
+
+    def _native_fixture(tmp_path: Path, monkeypatch):
+        """Use ELF fixtures without executing native code on the host."""
+        import struct
+>       from specfact_code_review.run import runtime_tools
+E       ImportError: cannot import name 'runtime_tools' from 'specfact_code_review.run' (/private/tmp/specfact-477-pytest-release/packages/specfact-code-review/src/specfact_code_review/run/__init__.py)
+
+tests/unit/specfact_code_review/run/test_runtime_tools.py:38: ImportError
+________ test_missing_git_helper_is_actionable_not_an_ambient_fallback _________
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-687/test_missing_git_helper_is_act0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10a9e86b0>
+
+    def test_missing_git_helper_is_actionable_not_an_ambient_fallback(tmp_path: Path, monkeypatch) -> None:
+>       tools, system = _native_fixture(tmp_path, monkeypatch)
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/specfact_code_review/run/test_runtime_tools.py:83:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-687/test_missing_git_helper_is_act0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10a9e86b0>
+
+    def _native_fixture(tmp_path: Path, monkeypatch):
+        """Use ELF fixtures without executing native code on the host."""
+        import struct
+>       from specfact_code_review.run import runtime_tools
+E       ImportError: cannot import name 'runtime_tools' from 'specfact_code_review.run' (/private/tmp/specfact-477-pytest-release/packages/specfact-code-review/src/specfact_code_review/run/__init__.py)
+
+tests/unit/specfact_code_review/run/test_runtime_tools.py:38: ImportError
+_________________ test_empty_capture_reads_no_native_programs __________________
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-687/test_empty_capture_reads_no_na0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10a9e97b0>
+
+    def test_empty_capture_reads_no_native_programs(tmp_path: Path, monkeypatch) -> None:
+>       tools, _ = _native_fixture(tmp_path, monkeypatch)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/specfact_code_review/run/test_runtime_tools.py:90:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-687/test_empty_capture_reads_no_na0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10a9e97b0>
+
+    def _native_fixture(tmp_path: Path, monkeypatch):
+        """Use ELF fixtures without executing native code on the host."""
+        import struct
+>       from specfact_code_review.run import runtime_tools
+E       ImportError: cannot import name 'runtime_tools' from 'specfact_code_review.run' (/private/tmp/specfact-477-pytest-release/packages/specfact-code-review/src/specfact_code_review/run/__init__.py)
+
+tests/unit/specfact_code_review/run/test_runtime_tools.py:38: ImportError
+=========================== short test summary info ============================
+FAILED tests/unit/specfact_code_review/run/test_runtime_tools.py::test_repository_declares_native_tools_without_manager_execution
+FAILED tests/unit/specfact_code_review/run/test_runtime_tools.py::test_explicit_native_tools_override_repository_declaration
+FAILED tests/unit/specfact_code_review/run/test_runtime_tools.py::test_unknown_native_capabilities_are_not_path_guesses[["curl"]]
+FAILED tests/unit/specfact_code_review/run/test_runtime_tools.py::test_unknown_native_capabilities_are_not_path_guesses[["/usr/bin/git"]]
+FAILED tests/unit/specfact_code_review/run/test_runtime_tools.py::test_unknown_native_capabilities_are_not_path_guesses["git"]
+FAILED tests/unit/specfact_code_review/run/test_runtime_tools.py::test_capture_binds_launchers_executables_and_loader
+FAILED tests/unit/specfact_code_review/run/test_runtime_tools.py::test_builder_tool_collisions_fail_before_any_install[bin/uname]
+FAILED tests/unit/specfact_code_review/run/test_runtime_tools.py::test_builder_tool_collisions_fail_before_any_install[native-tools/forged]
+FAILED tests/unit/specfact_code_review/run/test_runtime_tools.py::test_missing_git_helper_is_actionable_not_an_ambient_fallback
+FAILED tests/unit/specfact_code_review/run/test_runtime_tools.py::test_empty_capture_reads_no_native_programs
+============================== 10 failed in 0.13s ==============================
