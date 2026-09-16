@@ -7,12 +7,12 @@ must be read together with the core repo change order in `nold-ai/specfact-cli`.
 
 | Bucket | Count | Location |
 |---|---:|---|
-| **Active-tree entries** | 23 | [`openspec/changes/`](changes/) |
+| **Active-tree entries** | 24 | [`openspec/changes/`](changes/) |
 | **Parking-lot entries** | 16 | [`openspec/parking-lot/`](parking-lot/) |
 | **Archived** | 50 | [`openspec/changes/archive/`](changes/archive/) |
 | **Abandoned history** | 1 | [`openspec/history/abandoned/`](history/abandoned/) |
 
-`openspec list` reflects all 23 direct active-tree entries. The closed R08
+`openspec list` reflects all 24 direct active-tree entries. The closed R08
 proposal is retained under non-canonical abandoned history, outside
 `openspec/changes/` and its completed-change archive; no unimplemented delta
 entered canonical specifications. Completed changes still use native OpenSpec
@@ -70,6 +70,7 @@ AI IDE, rerun, and compare improved evidence.
 | Change | Issue | Status | Dependencies |
 |---|---|---|---|
 | `code-review-16-portable-project-runtime` | [#473](https://github.com/nold-ai/specfact-cli-modules/issues/473) | Implementation authorized 2026-09-14; automatic customer runtime preparation and external corpus | No open prerequisites; blocks #472; #466/#459/#175 are baseline context |
+| `code-review-17-native-hook-transport` | [#473](https://github.com/nold-ai/specfact-cli-modules/issues/473) | Authorized Linux developer hook transport; preserves exact staged tree and unchanged controls | Supports PR478; does not replace native candidate/public acceptance |
 
 ## Customer Capsule Corrective Track
 

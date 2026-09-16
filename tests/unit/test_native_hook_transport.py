@@ -1,0 +1,263 @@
+"""Bounded native hook transport preserves exact source and developer evidence."""
+
+from __future__ import annotations
+
+import base64
+import gzip
+import hashlib
+import importlib.util
+import json
+import subprocess
+from pathlib import Path
+from types import ModuleType
+
+import pytest
+import yaml
+
+
+_SCRIPT = Path(__file__).resolve().parents[2] / "scripts/native_hook_transport.py"
+_ALLOWED = "packages/specfact-code-review/src/specfact_code_review/run/runner.py"
+
+
+def _transport() -> ModuleType:
+    assert _SCRIPT.is_file(), "native hook transport implementation is absent"
+    spec = importlib.util.spec_from_file_location("native_hook_transport", _SCRIPT)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def _git(repo: Path, *args: str) -> str:
+    return subprocess.run(
+        ["git", "-C", str(repo), *args], check=True, capture_output=True, text=True, timeout=10
+    ).stdout.strip()
+
+
+@pytest.fixture(name="snapshot")
+def snapshot_fixture(tmp_path: Path) -> tuple[Path, dict[str, str]]:
+    """Create a genuine Git patch and expected immutable tree."""
+    repo = tmp_path / "repository"
+    repo.mkdir()
+    _git(repo, "init", "-q")
+    _git(repo, "config", "user.name", "Transport test")
+    _git(repo, "config", "user.email", "transport@example.invalid")
+    source = repo / _ALLOWED
+    source.parent.mkdir(parents=True)
+    source.write_text("VALUE = 1\n", encoding="utf-8")
+    _git(repo, "add", ".")
+    _git(repo, "-c", "commit.gpgsign=false", "commit", "-qm", "fixture")
+    base = _git(repo, "rev-parse", "HEAD")
+    source.write_text("VALUE = 2\n", encoding="utf-8")
+    _git(repo, "add", ".")
+    tree = _git(repo, "write-tree")
+    patch = subprocess.run(
+        ["git", "-C", str(repo), "diff", "--cached", "--binary"],
+        check=True,
+        capture_output=True,
+        timeout=10,
+    ).stdout
+    _git(repo, "reset", "--hard", "HEAD")
+    return repo, {
+        "base": base,
+        "tree": tree,
+        "sha256": hashlib.sha256(patch).hexdigest(),
+        "patch": base64.b64encode(gzip.compress(patch, mtime=0)).decode("ascii"),
+    }
+
+
+def test_exact_tree_is_applied(snapshot: tuple[Path, dict[str, str]]) -> None:
+    """A genuine allowlisted patch yields exactly the declared index tree."""
+    repo, request = snapshot
+    result = _transport().prepare_snapshot(repo, request)
+    assert result["tree"] == request["tree"] == _git(repo, "write-tree")
+    assert result["paths"] == [_ALLOWED]
+
+
+@pytest.mark.parametrize("field", ["base", "tree", "sha256"])
+def test_identity_mismatch_rejected(snapshot: tuple[Path, dict[str, str]], field: str) -> None:
+    """No mismatched caller identity can lead to hook execution."""
+    repo, request = snapshot
+    request[field] = "0" * len(request[field])
+    with pytest.raises(ValueError, match=field):
+        _transport().prepare_snapshot(repo, request)
+
+
+@pytest.mark.parametrize("path", [".pre-commit-config.yaml", ".github/workflows/evil.yml", "../escape.py"])
+def test_control_or_escaping_path_rejected(snapshot: tuple[Path, dict[str, str]], path: str) -> None:
+    """Forbidden patch paths fail before Git applies customer bytes."""
+    repo, request = snapshot
+    patch = gzip.decompress(base64.b64decode(request["patch"])).replace(_ALLOWED.encode(), path.encode())
+    request["patch"] = base64.b64encode(gzip.compress(patch)).decode()
+    request["sha256"] = hashlib.sha256(patch).hexdigest()
+    with pytest.raises(ValueError, match="path"):
+        _transport().prepare_snapshot(repo, request)
+    assert not _git(repo, "status", "--porcelain")
+
+
+def test_oversized_patch_rejected(snapshot: tuple[Path, dict[str, str]]) -> None:
+    """Highly compressed expansion remains bounded before Git is invoked."""
+    repo, request = snapshot
+    patch = b"x" * 1_000_001
+    request["patch"] = base64.b64encode(gzip.compress(patch)).decode()
+    request["sha256"] = hashlib.sha256(patch).hexdigest()
+    with pytest.raises(ValueError, match="size"):
+        _transport().prepare_snapshot(repo, request)
+
+
+def test_nonregular_mode_rejected(snapshot: tuple[Path, dict[str, str]]) -> None:
+    """An allowlisted filename cannot introduce an executable or symlink."""
+    repo, request = snapshot
+    patch = gzip.decompress(base64.b64decode(request["patch"]))
+    patch = patch.replace(b"index ", b"old mode 100644\nnew mode 100755\nindex ", 1)
+    request["patch"] = base64.b64encode(gzip.compress(patch)).decode()
+    request["sha256"] = hashlib.sha256(patch).hexdigest()
+    with pytest.raises(ValueError, match="mode"):
+        _transport().prepare_snapshot(repo, request)
+
+
+def test_dirty_checkout_rejected(snapshot: tuple[Path, dict[str, str]]) -> None:
+    """A dirty base cannot silently contribute additional tested content."""
+    repo, request = snapshot
+    (repo / "unexpected.txt").write_text("not declared", encoding="utf-8")
+    with pytest.raises(ValueError, match="clean"):
+        _transport().prepare_snapshot(repo, request)
+
+
+def test_child_environment_excludes_authority_and_credentials() -> None:
+    """Child review is local developer evidence with an explicit allowlist."""
+    caller = {
+        "HOME": "/safe",
+        "PATH": "/safe/bin",
+        "GITHUB_ACTIONS": "true",
+        "GH_TOKEN": "secret",
+        "GITHUB_TOKEN": "secret",
+        "SPECFACT_CODE_REVIEW_ENFORCEMENT": "none",
+        "LD_PRELOAD": "evil",
+    }
+    child = _transport().hook_environment(caller)
+    assert child == {"HOME": "/safe", "PATH": "/safe/bin"}
+
+
+def test_default_customer_workflow_is_preserved() -> None:
+    """Only explicit snapshot mode selects the transport instead of the corpus."""
+    workflow = yaml.safe_load((_SCRIPT.parent.parent / ".github/workflows/capsule-customer-execution.yml").read_text())
+    assert workflow["jobs"]["customer"]["if"] == "${{ inputs.hook_snapshot == '' }}"
+    transport = workflow["jobs"]["native-hooks"]
+    assert transport["if"] == "${{ github.event_name == 'workflow_dispatch' && inputs.hook_snapshot != '' }}"
+    assert transport["timeout-minutes"] == 90
+    assert workflow["permissions"] == {"contents": "read"}
+
+
+def test_request_round_trip(snapshot: tuple[Path, dict[str, str]]) -> None:
+    """Request fields are JSON data, including compressed patch bytes."""
+    repo, request = snapshot
+    assert _transport().prepare_snapshot(repo, json.loads(json.dumps(request)))["tree"] == request["tree"]
+
+
+@pytest.mark.parametrize("exit_code", [0, 7])
+def test_hook_exit_and_authority_are_preserved(
+    snapshot: tuple[Path, dict[str, str]],
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    exit_code: int,
+) -> None:
+    """A real child process receives no credential or publisher context."""
+    repo, request = snapshot
+    transport = _transport()
+    receipt = transport.prepare_snapshot(repo, request)
+    evidence = tmp_path / "evidence"
+    evidence.mkdir()
+    interpreter = repo / ".venv/bin/python"
+    interpreter.parent.mkdir(parents=True)
+    interpreter.write_text(
+        '#!/bin/sh\n[ -z "${GH_TOKEN:-}" ] && [ -z "${GITHUB_ACTIONS:-}" ] || exit 99\n'
+        f'printf "%s\\n" "$*"\nexit {exit_code}\n',
+        encoding="utf-8",
+    )
+    interpreter.chmod(0o755)
+    monkeypatch.setenv("GH_TOKEN", "fixture-secret")
+    monkeypatch.setenv("GITHUB_ACTIONS", "true")
+    result = transport.execute_hooks(repo, evidence, receipt)
+    assert result == receipt["hook_exit"] == exit_code
+    assert "GITHUB_ACTIONS" in receipt["environment_removed"]
+    assert (evidence / "hooks.log").read_text().strip() == (
+        "-m pre_commit hook-impl --config=.pre-commit-config.yaml --hook-type=pre-commit --hook-dir=.git/hooks"
+    )
+
+
+def test_hook_source_mutation_fails(
+    snapshot: tuple[Path, dict[str, str]],
+    tmp_path: Path,
+) -> None:
+    """Even a successful hook cannot authorize a different worktree."""
+    repo, request = snapshot
+    transport = _transport()
+    receipt = transport.prepare_snapshot(repo, request)
+    evidence = tmp_path / "evidence"
+    evidence.mkdir()
+    interpreter = repo / ".venv/bin/python"
+    interpreter.parent.mkdir(parents=True)
+    interpreter.write_text(f'#!/bin/sh\nprintf "VALUE = 3\\n" > "{_ALLOWED}"\n', encoding="utf-8")
+    interpreter.chmod(0o755)
+    assert transport.execute_hooks(repo, evidence, receipt) == 1
+    assert receipt["hook_exit"] == 0
+    assert "modified tested source" in receipt["failure"]
+
+
+def test_receipt_binds_actual_outer_identity_and_report(
+    snapshot: tuple[Path, dict[str, str]],
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The CLI records actual authority and binds retained review bytes."""
+    repo, request = snapshot
+    request_path = tmp_path / "request.json"
+    request_path.write_text(json.dumps(request), encoding="utf-8")
+    evidence = tmp_path / "evidence"
+    interpreter = repo / ".venv/bin/python"
+    interpreter.parent.mkdir(parents=True)
+    interpreter.write_text(
+        "#!/bin/sh\n"
+        'case "$*" in *runtime*)\n'
+        'printf \'%s\' \'{"authority":"local_build","identity":"fixture-runtime"}\'\n'
+        "exit 0;; esac\n"
+        "mkdir -p .specfact\nprintf '{}' > .specfact/code-review.json\n",
+        encoding="utf-8",
+    )
+    interpreter.chmod(0o755)
+    # Ordinary bootstrap artifacts are ignored by the real repository too.
+    (repo / ".git/info/exclude").write_text(".venv/\n.specfact/\n", encoding="utf-8")
+    monkeypatch.setattr(
+        "sys.argv", [str(_SCRIPT), "--checkout", str(repo), "--request", str(request_path), "--evidence", str(evidence)]
+    )
+    monkeypatch.setenv("GITHUB_ACTIONS", "true")
+    monkeypatch.setenv("GITHUB_RUN_ID", "fixture-run")
+    assert _transport().main() == 0
+    receipt = json.loads((evidence / "receipt.json").read_text())
+    assert receipt["github"]["GITHUB_RUN_ID"] == "fixture-run"
+    assert receipt["github"]["GITHUB_ACTIONS"] == "true"
+    assert receipt["authority"] == "local-uncommitted-explicit-files"
+    assert receipt["tree_after"] == request["tree"]
+    assert receipt["review_sha256"] == hashlib.sha256((evidence / "code-review.json").read_bytes()).hexdigest()
+
+
+def test_bad_request_still_retains_failure_receipt(
+    snapshot: tuple[Path, dict[str, str]],
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Preparation failure is explicit evidence, never a missing success receipt."""
+    repo, request = snapshot
+    request["sha256"] = "0" * 64
+    request_path = tmp_path / "request.json"
+    request_path.write_text(json.dumps(request), encoding="utf-8")
+    evidence = tmp_path / "evidence"
+    monkeypatch.setattr(
+        "sys.argv", [str(_SCRIPT), "--checkout", str(repo), "--request", str(request_path), "--evidence", str(evidence)]
+    )
+    assert _transport().main() == 1
+    receipt = json.loads((evidence / "receipt.json").read_text())
+    assert receipt["exit_code"] == 1
+    assert "sha256 mismatch" in receipt["failure"]
+    assert "hook_exit" not in receipt

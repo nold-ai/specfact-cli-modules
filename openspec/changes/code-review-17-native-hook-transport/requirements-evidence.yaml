@@ -1,0 +1,40 @@
+schema_version: '2'
+requirements:
+  openspec:code-review-17-native-hook-transport:native-hook-transport:validate-the-exact-staged-snapshot-before-running-unchanged-hooks:
+    rationale: A native Linux result must describe exactly the allowlisted local staged tree.
+    stakeholder_refs:
+      - nold-ai/specfact-cli-modules#473
+    touchpoints:
+      - id: transport-validator
+        kind: config_file
+        locator: scripts/native_hook_transport.py
+    verification_cases:
+      - case_id: 473-hook-1
+        scenario_id: validate-the-exact-staged-snapshot-before-running-unchanged-hooks
+        method: test
+        intent: Apply a genuine Git patch and compare its immutable staged tree.
+        observable: test_exact_tree_is_applied and test_request_round_trip assert the actual index identity.
+      - case_id: 473-hook-2
+        scenario_id: validate-the-exact-staged-snapshot-before-running-unchanged-hooks
+        method: test
+        intent: Reject mismatched identities, controls, escaping paths, oversized content and nonregular modes.
+        observable: Focused identity, path, size, mode and dirty-checkout tests reject the request before hook execution.
+  openspec:code-review-17-native-hook-transport:native-hook-transport:preserve-real-execution-authority-and-hook-outcome:
+    rationale: Developer evidence cannot silently become publisher authority or a successful result after hook failure.
+    stakeholder_refs:
+      - nold-ai/specfact-cli-modules#473
+    touchpoints:
+      - id: native-workflow
+        kind: config_file
+        locator: .github/workflows/capsule-customer-execution.yml
+    verification_cases:
+      - case_id: 473-hook-3
+        scenario_id: preserve-real-execution-authority-and-hook-outcome
+        method: test
+        intent: Execute a real child, preserve its exit and reject hook source mutation.
+        observable: Child fixture exits are propagated, credentials and publisher variables are absent, mutations fail.
+      - case_id: 473-hook-4
+        scenario_id: preserve-real-execution-authority-and-hook-outcome
+        method: test
+        intent: Retain the normal customer corpus when no transport request is supplied.
+        observable: test_default_customer_workflow_is_preserved asserts opt-in selection, read-only permissions and timeout.

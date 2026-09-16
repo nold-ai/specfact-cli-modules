@@ -1,0 +1,330 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: /private/tmp/specfact-478-native-hook-transport
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 13 items
+
+tests/unit/test_native_hook_transport.py FFFFFFFFFFFFF                   [100%]
+
+=================================== FAILURES ===================================
+__________________________ test_exact_tree_is_applied __________________________
+
+snapshot = (PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-619/test_exact_tree_is_appli...wtHxjDwGwSKPJM+2Fv6DfgH9F5R7XpalNNMb/CoalXKQF3jaevKmaXgfWTgAGbPrOoWIK/UqrfVazdYCEmgCaxVej+fLCQ5ASv/uRn0AxcfK/28BAAA='})
+
+    def test_exact_tree_is_applied(snapshot: tuple[Path, dict[str, str]]) -> None:
+        """A genuine allowlisted patch yields exactly the declared index tree."""
+        repo, request = snapshot
+>       result = _transport().prepare_snapshot(repo, request)
+                 ^^^^^^^^^^^^
+
+tests/unit/test_native_hook_transport.py:68: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _transport() -> ModuleType:
+>       assert _SCRIPT.is_file(), "native hook transport implementation is absent"
+E       AssertionError: native hook transport implementation is absent
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/private/tmp/specfact-478-native-hook-transport/scripts/native_hook_transport.py').is_file
+
+tests/unit/test_native_hook_transport.py:22: AssertionError
+____________________ test_identity_mismatch_rejected[base] _____________________
+
+snapshot = (PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-619/test_identity_mismatch_r...wtHxjDwGwSKPJM+2Fv6DfgH9F5R7XpalNNMb/CoalXKQF3jaevKmaXgfWTgAGbPrOoWIK/UqrfVazdYCEmgCaxVej+fLCQ5ASv/uRn0AxcfK/28BAAA='})
+field = 'base'
+
+    @pytest.mark.parametrize("field", ["base", "tree", "sha256"])
+    def test_identity_mismatch_rejected(snapshot: tuple[Path, dict[str, str]], field: str) -> None:
+        """No mismatched caller identity can lead to hook execution."""
+        repo, request = snapshot
+        request[field] = "0" * len(request[field])
+        with pytest.raises(ValueError, match=field):
+>           _transport().prepare_snapshot(repo, request)
+            ^^^^^^^^^^^^
+
+tests/unit/test_native_hook_transport.py:79: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _transport() -> ModuleType:
+>       assert _SCRIPT.is_file(), "native hook transport implementation is absent"
+E       AssertionError: native hook transport implementation is absent
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/private/tmp/specfact-478-native-hook-transport/scripts/native_hook_transport.py').is_file
+
+tests/unit/test_native_hook_transport.py:22: AssertionError
+____________________ test_identity_mismatch_rejected[tree] _____________________
+
+snapshot = (PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-619/test_identity_mismatch_r...wtHxjDwGwSKPJM+2Fv6DfgH9F5R7XpalNNMb/CoalXKQF3jaevKmaXgfWTgAGbPrOoWIK/UqrfVazdYCEmgCaxVej+fLCQ5ASv/uRn0AxcfK/28BAAA='})
+field = 'tree'
+
+    @pytest.mark.parametrize("field", ["base", "tree", "sha256"])
+    def test_identity_mismatch_rejected(snapshot: tuple[Path, dict[str, str]], field: str) -> None:
+        """No mismatched caller identity can lead to hook execution."""
+        repo, request = snapshot
+        request[field] = "0" * len(request[field])
+        with pytest.raises(ValueError, match=field):
+>           _transport().prepare_snapshot(repo, request)
+            ^^^^^^^^^^^^
+
+tests/unit/test_native_hook_transport.py:79: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _transport() -> ModuleType:
+>       assert _SCRIPT.is_file(), "native hook transport implementation is absent"
+E       AssertionError: native hook transport implementation is absent
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/private/tmp/specfact-478-native-hook-transport/scripts/native_hook_transport.py').is_file
+
+tests/unit/test_native_hook_transport.py:22: AssertionError
+___________________ test_identity_mismatch_rejected[sha256] ____________________
+
+snapshot = (PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-619/test_identity_mismatch_r...wtHxjDwGwSKPJM+2Fv6DfgH9F5R7XpalNNMb/CoalXKQF3jaevKmaXgfWTgAGbPrOoWIK/UqrfVazdYCEmgCaxVej+fLCQ5ASv/uRn0AxcfK/28BAAA='})
+field = 'sha256'
+
+    @pytest.mark.parametrize("field", ["base", "tree", "sha256"])
+    def test_identity_mismatch_rejected(snapshot: tuple[Path, dict[str, str]], field: str) -> None:
+        """No mismatched caller identity can lead to hook execution."""
+        repo, request = snapshot
+        request[field] = "0" * len(request[field])
+        with pytest.raises(ValueError, match=field):
+>           _transport().prepare_snapshot(repo, request)
+            ^^^^^^^^^^^^
+
+tests/unit/test_native_hook_transport.py:79: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _transport() -> ModuleType:
+>       assert _SCRIPT.is_file(), "native hook transport implementation is absent"
+E       AssertionError: native hook transport implementation is absent
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/private/tmp/specfact-478-native-hook-transport/scripts/native_hook_transport.py').is_file
+
+tests/unit/test_native_hook_transport.py:22: AssertionError
+_______ test_control_or_escaping_path_rejected[.pre-commit-config.yaml] ________
+
+snapshot = (PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-619/test_control_or_escaping...fWwsYzUDA5OtVoiMtmDYueerSJpbs+WLqdroPkN7IG4VsimXN6IeokbvXDrVVFKGen/sOhKR7Ssx859zCBAFK0IguV/62xVnKPFP97QCCNKQUrsAAAA='})
+path = '.pre-commit-config.yaml'
+
+    @pytest.mark.parametrize("path", [".pre-commit-config.yaml", ".github/workflows/evil.yml", "../escape.py"])
+    def test_control_or_escaping_path_rejected(snapshot: tuple[Path, dict[str, str]], path: str) -> None:
+        """Forbidden patch paths fail before Git applies customer bytes."""
+        repo, request = snapshot
+        patch = gzip.decompress(base64.b64decode(request["patch"])).replace(_ALLOWED.encode(), path.encode())
+        request["patch"] = base64.b64encode(gzip.compress(patch)).decode()
+        request["sha256"] = hashlib.sha256(patch).hexdigest()
+        with pytest.raises(ValueError, match="path"):
+>           _transport().prepare_snapshot(repo, request)
+            ^^^^^^^^^^^^
+
+tests/unit/test_native_hook_transport.py:90: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _transport() -> ModuleType:
+>       assert _SCRIPT.is_file(), "native hook transport implementation is absent"
+E       AssertionError: native hook transport implementation is absent
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/private/tmp/specfact-478-native-hook-transport/scripts/native_hook_transport.py').is_file
+
+tests/unit/test_native_hook_transport.py:22: AssertionError
+______ test_control_or_escaping_path_rejected[.github/workflows/evil.yml] ______
+
+snapshot = (PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-619/test_control_or_escaping...moGBSbUUiBzrAwdrfjg9g53G27m0cbrb/KrNfC4NoROpXlN+I+g8aHDGxGWJOSaoc4thIBHpvomZ+3/vIQpWeE+yX293G6ygxH+d0RcI+1TIxwAAAA=='})
+path = '.github/workflows/evil.yml'
+
+    @pytest.mark.parametrize("path", [".pre-commit-config.yaml", ".github/workflows/evil.yml", "../escape.py"])
+    def test_control_or_escaping_path_rejected(snapshot: tuple[Path, dict[str, str]], path: str) -> None:
+        """Forbidden patch paths fail before Git applies customer bytes."""
+        repo, request = snapshot
+        patch = gzip.decompress(base64.b64decode(request["patch"])).replace(_ALLOWED.encode(), path.encode())
+        request["patch"] = base64.b64encode(gzip.compress(patch)).decode()
+        request["sha256"] = hashlib.sha256(patch).hexdigest()
+        with pytest.raises(ValueError, match="path"):
+>           _transport().prepare_snapshot(repo, request)
+            ^^^^^^^^^^^^
+
+tests/unit/test_native_hook_transport.py:90: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _transport() -> ModuleType:
+>       assert _SCRIPT.is_file(), "native hook transport implementation is absent"
+E       AssertionError: native hook transport implementation is absent
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/private/tmp/specfact-478-native-hook-transport/scripts/native_hook_transport.py').is_file
+
+tests/unit/test_native_hook_transport.py:22: AssertionError
+_____________ test_control_or_escaping_path_rejected[../escape.py] _____________
+
+snapshot = (PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-619/test_control_or_escaping...z/01ZxoSEOXtqxDFzYiZVEuByLseWBvVJu9x3bJuJ8KfUv2k/EWwPlhwqnEoMccEc+7RdSQit56Y+f7wHmJgg/ckr2lenhhhxBe29ANEzC19jwAAAA=='})
+path = '../escape.py'
+
+    @pytest.mark.parametrize("path", [".pre-commit-config.yaml", ".github/workflows/evil.yml", "../escape.py"])
+    def test_control_or_escaping_path_rejected(snapshot: tuple[Path, dict[str, str]], path: str) -> None:
+        """Forbidden patch paths fail before Git applies customer bytes."""
+        repo, request = snapshot
+        patch = gzip.decompress(base64.b64decode(request["patch"])).replace(_ALLOWED.encode(), path.encode())
+        request["patch"] = base64.b64encode(gzip.compress(patch)).decode()
+        request["sha256"] = hashlib.sha256(patch).hexdigest()
+        with pytest.raises(ValueError, match="path"):
+>           _transport().prepare_snapshot(repo, request)
+            ^^^^^^^^^^^^
+
+tests/unit/test_native_hook_transport.py:90: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _transport() -> ModuleType:
+>       assert _SCRIPT.is_file(), "native hook transport implementation is absent"
+E       AssertionError: native hook transport implementation is absent
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/private/tmp/specfact-478-native-hook-transport/scripts/native_hook_transport.py').is_file
+
+tests/unit/test_native_hook_transport.py:22: AssertionError
+________________________ test_oversized_patch_rejected _________________________
+
+snapshot = (PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-619/test_oversized_patch_rej...AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAtwZEwdX5QUIPAA=='})
+
+    def test_oversized_patch_rejected(snapshot: tuple[Path, dict[str, str]]) -> None:
+        """Highly compressed expansion remains bounded before Git is invoked."""
+        repo, request = snapshot
+        patch = b"x" * 1_000_001
+        request["patch"] = base64.b64encode(gzip.compress(patch)).decode()
+        request["sha256"] = hashlib.sha256(patch).hexdigest()
+        with pytest.raises(ValueError, match="size"):
+>           _transport().prepare_snapshot(repo, request)
+            ^^^^^^^^^^^^
+
+tests/unit/test_native_hook_transport.py:101: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _transport() -> ModuleType:
+>       assert _SCRIPT.is_file(), "native hook transport implementation is absent"
+E       AssertionError: native hook transport implementation is absent
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/private/tmp/specfact-478-native-hook-transport/scripts/native_hook_transport.py').is_file
+
+tests/unit/test_native_hook_transport.py:22: AssertionError
+________________________ test_nonregular_mode_rejected _________________________
+
+snapshot = (PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-619/test_nonregular_mode_rej...QD2B+g/SM06KnLLuA3aVGdHeHTx+FFRRbMtSRB6XvKsqEaLjN1hVWWWLLKO9JyY3txFxpT9CSrnWJ60BFUgFWgu8Hs+XExxACTnbjfgCa1IVhY8BAAA='})
+
+    def test_nonregular_mode_rejected(snapshot: tuple[Path, dict[str, str]]) -> None:
+        """An allowlisted filename cannot introduce an executable or symlink."""
+        repo, request = snapshot
+        patch = gzip.decompress(base64.b64decode(request["patch"]))
+        patch = patch.replace(b"index ", b"old mode 100644\nnew mode 100755\nindex ", 1)
+        request["patch"] = base64.b64encode(gzip.compress(patch)).decode()
+        request["sha256"] = hashlib.sha256(patch).hexdigest()
+        with pytest.raises(ValueError, match="mode"):
+>           _transport().prepare_snapshot(repo, request)
+            ^^^^^^^^^^^^
+
+tests/unit/test_native_hook_transport.py:112: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _transport() -> ModuleType:
+>       assert _SCRIPT.is_file(), "native hook transport implementation is absent"
+E       AssertionError: native hook transport implementation is absent
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/private/tmp/specfact-478-native-hook-transport/scripts/native_hook_transport.py').is_file
+
+tests/unit/test_native_hook_transport.py:22: AssertionError
+_________________________ test_dirty_checkout_rejected _________________________
+
+snapshot = (PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-619/test_dirty_checkout_reje...wtHxjDwGwSKPJM+2Fv6DfgH9F5R7XpalNNMb/CoalXKQF3jaevKmaXgfWTgAGbPrOoWIK/UqrfVazdYCEmgCaxVej+fLCQ5ASv/uRn0AxcfK/28BAAA='})
+
+    def test_dirty_checkout_rejected(snapshot: tuple[Path, dict[str, str]]) -> None:
+        """A dirty base cannot silently contribute additional tested content."""
+        repo, request = snapshot
+        (repo / "unexpected.txt").write_text("not declared", encoding="utf-8")
+        with pytest.raises(ValueError, match="clean"):
+>           _transport().prepare_snapshot(repo, request)
+            ^^^^^^^^^^^^
+
+tests/unit/test_native_hook_transport.py:120: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _transport() -> ModuleType:
+>       assert _SCRIPT.is_file(), "native hook transport implementation is absent"
+E       AssertionError: native hook transport implementation is absent
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/private/tmp/specfact-478-native-hook-transport/scripts/native_hook_transport.py').is_file
+
+tests/unit/test_native_hook_transport.py:22: AssertionError
+__________ test_child_environment_excludes_authority_and_credentials ___________
+
+    def test_child_environment_excludes_authority_and_credentials() -> None:
+        """Child review is local developer evidence with an explicit allowlist."""
+        caller = {"HOME": "/safe", "PATH": "/safe/bin", "GITHUB_ACTIONS": "true", "GH_TOKEN": "secret",
+                  "GITHUB_TOKEN": "secret", "SPECFACT_CODE_REVIEW_ENFORCEMENT": "none", "LD_PRELOAD": "evil"}
+>       child = _transport().hook_environment(caller)
+                ^^^^^^^^^^^^
+
+tests/unit/test_native_hook_transport.py:127: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _transport() -> ModuleType:
+>       assert _SCRIPT.is_file(), "native hook transport implementation is absent"
+E       AssertionError: native hook transport implementation is absent
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/private/tmp/specfact-478-native-hook-transport/scripts/native_hook_transport.py').is_file
+
+tests/unit/test_native_hook_transport.py:22: AssertionError
+_________________ test_default_customer_workflow_is_preserved __________________
+
+    def test_default_customer_workflow_is_preserved() -> None:
+        """Only explicit snapshot mode selects the transport instead of the corpus."""
+        import yaml
+    
+        workflow = yaml.safe_load((_SCRIPT.parent.parent / ".github/workflows/capsule-customer-execution.yml").read_text())
+>       assert workflow["jobs"]["customer"]["if"] == "${{ inputs.hook_snapshot == '' }}"
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       KeyError: 'if'
+
+tests/unit/test_native_hook_transport.py:136: KeyError
+___________________________ test_request_round_trip ____________________________
+
+snapshot = (PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-619/test_request_round_trip0...wtHxjDwGwSKPJM+2Fv6DfgH9F5R7XpalNNMb/CoalXKQF3jaevKmaXgfWTgAGbPrOoWIK/UqrfVazdYCEmgCaxVej+fLCQ5ASv/uRn0AxcfK/28BAAA='})
+
+    def test_request_round_trip(snapshot: tuple[Path, dict[str, str]]) -> None:
+        """Request fields are JSON data, including compressed patch bytes."""
+        repo, request = snapshot
+>       assert _transport().prepare_snapshot(repo, json.loads(json.dumps(request)))["tree"] == request["tree"]
+               ^^^^^^^^^^^^
+
+tests/unit/test_native_hook_transport.py:146: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _transport() -> ModuleType:
+>       assert _SCRIPT.is_file(), "native hook transport implementation is absent"
+E       AssertionError: native hook transport implementation is absent
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/private/tmp/specfact-478-native-hook-transport/scripts/native_hook_transport.py').is_file
+
+tests/unit/test_native_hook_transport.py:22: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/test_native_hook_transport.py::test_exact_tree_is_applied
+FAILED tests/unit/test_native_hook_transport.py::test_identity_mismatch_rejected[base]
+FAILED tests/unit/test_native_hook_transport.py::test_identity_mismatch_rejected[tree]
+FAILED tests/unit/test_native_hook_transport.py::test_identity_mismatch_rejected[sha256]
+FAILED tests/unit/test_native_hook_transport.py::test_control_or_escaping_path_rejected[.pre-commit-config.yaml]
+FAILED tests/unit/test_native_hook_transport.py::test_control_or_escaping_path_rejected[.github/workflows/evil.yml]
+FAILED tests/unit/test_native_hook_transport.py::test_control_or_escaping_path_rejected[../escape.py]
+FAILED tests/unit/test_native_hook_transport.py::test_oversized_patch_rejected
+FAILED tests/unit/test_native_hook_transport.py::test_nonregular_mode_rejected
+FAILED tests/unit/test_native_hook_transport.py::test_dirty_checkout_rejected
+FAILED tests/unit/test_native_hook_transport.py::test_child_environment_excludes_authority_and_credentials
+FAILED tests/unit/test_native_hook_transport.py::test_default_customer_workflow_is_preserved
+FAILED tests/unit/test_native_hook_transport.py::test_request_round_trip - As...
+============================== 13 failed in 1.26s ==============================
