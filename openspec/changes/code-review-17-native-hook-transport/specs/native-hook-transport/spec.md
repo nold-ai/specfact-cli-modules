@@ -13,6 +13,13 @@ The transport SHALL bind an allowlisted regular-file patch to its SHA256, immuta
 - **WHEN** the transport validates the request
 - **THEN** it fails before executing hooks
 
+#### Scenario: Signed control checkout carries an oversized inline payload
+- **GIVEN** an exact reviewed patch too large for the workflow input and the explicit `patch_source: control-checkout` request
+- **WHEN** transport reads its single fixed helper-adjacent `native_hook_snapshot.patch.gz.b64` file
+- **THEN** it requires a regular non-symlink file, bounds canonical ASCII base64 input to 1333336 bytes, decoded compressed input to 1000000 bytes and expansion to 1000000 bytes, and retains all digest, base, tree and path checks
+- **AND** no caller-selected path or URL, mixed inline/file request, or unknown selector is accepted
+- **AND** both storage forms retain transport mode, compressed digest and size, raw size, and the fixed relative file path when applicable in the receipt; the original inline request remains valid
+
 ### Requirement: Preserve real execution authority and hook outcome
 The transport SHALL execute every unchanged pre-commit stage in a credential-free child, retain real outer Actions identity and propagate nonzero exits or tracked and non-ignored untracked source mutation. Its receipt SHALL identify local explicit-file evidence and SHALL NOT grant protected PR range or customer release authority.
 

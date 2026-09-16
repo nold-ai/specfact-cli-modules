@@ -24,6 +24,11 @@ requirements:
         method: test
         intent: Permit only the exact reviewed analyzer pin replacements, Node dependency insertion and native-tools metadata insertion in pyproject.toml.
         observable: A real Git patch with just those replacements passes; one extra byte change fails before hooks.
+      - case_id: 473-hook-16
+        scenario_id: validate-the-exact-staged-snapshot-before-running-unchanged-hooks
+        method: test
+        intent: Carry larger reviewed patches only from the fixed signed control checkout while preserving exact identities and resource bounds.
+        observable: Real Git large-patch and legacy receipts pass; mixed selectors, nonregular files, encoded/decoded/expanded limits, noncanonical base64 and corrupt identity fail before application; the fixed data remains UTF-8-safe under the unchanged staged text diff.
   openspec:code-review-17-native-hook-transport:native-hook-transport:preserve-real-execution-authority-and-hook-outcome:
     rationale: Developer evidence cannot silently become publisher authority or a successful result after hook failure.
     stakeholder_refs:

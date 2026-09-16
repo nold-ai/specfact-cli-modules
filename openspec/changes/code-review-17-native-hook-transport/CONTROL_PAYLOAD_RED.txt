@@ -1,0 +1,131 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: /private/tmp/specfact-478-native-hook-transport
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.1.0, asyncio-1.4.0, anyio-4.15.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 49 items / 35 deselected / 14 selected
+
+tests/unit/test_native_hook_transport.py FF......FFF...                  [100%]
+
+=================================== FAILURES ===================================
+_____________________ test_control_checkout_large_snapshot _____________________
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-722/test_control_checkout_large_sn0')
+snapshot = (PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-722/test_control_checkout_la...wtHxjDwGwSKPJM+2Fv6DfgH9F5R7XpalNNMb/CoalXKQF3jaevKmaXgfWTgAGbPrOoWIK/UqrfVazdYCEmgCaxVej+fLCQ5ASv/uRn0AxcfK/28BAAA='})
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x109aa6c40>
+
+    def test_control_checkout_large_snapshot(tmp_path: Path, snapshot, monkeypatch: pytest.MonkeyPatch) -> None:
+        """A real patch beyond workflow input limits is authenticated and staged intact."""
+        repo, _ = snapshot
+        content = "\n".join(hashlib.sha256(str(index).encode()).hexdigest() for index in range(5000))
+        (repo / _ALLOWED).write_text(content + "\n")
+        _git(repo, "add", ".")
+        request = _request_for_staged_snapshot(repo)
+        assert len(request["patch"]) > 65_535
+        transport, payload, file_request = _control_request(tmp_path, request, monkeypatch)
+>       receipt = transport.prepare_snapshot(repo, file_request)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/test_native_hook_transport.py:515:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+.venv/lib/python3.14/site-packages/icontract/_checkers.py:834: in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+scripts/native_hook_transport.py:185: in prepare_snapshot
+    patch = _decode_request(request)
+            ^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+request = {'base': '355956dd7a73edff784a45a2ea3a7f612bff1e2b', 'tree': '34f85feb34ea9ee9308caa0460af6c36589e4877', 'sha256': 'e806e7dfb9fa3a44b957458d6b115e9aaf4f21b157dab8f9deb81599519a9f07', 'patch_source': 'control-checkout'}
+
+    def _decode_request(request: dict[str, str]) -> bytes:
+        if set(request) != {"base", "tree", "sha256", "patch"}:
+>           raise ValueError("request fields mismatch")
+E           ValueError: request fields mismatch
+
+scripts/native_hook_transport.py:128: ValueError
+________________________ test_inline_transport_receipt _________________________
+
+snapshot = (PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-722/test_inline_transport_re...wtHxjDwGwSKPJM+2Fv6DfgH9F5R7XpalNNMb/CoalXKQF3jaevKmaXgfWTgAGbPrOoWIK/UqrfVazdYCEmgCaxVej+fLCQ5ASv/uRn0AxcfK/28BAAA='})
+
+    def test_inline_transport_receipt(snapshot) -> None:
+        """Legacy payloads retain equivalent storage and size evidence."""
+        repo, request = snapshot
+        receipt = _transport().prepare_snapshot(repo, request)
+        compressed = base64.b64decode(request["patch"])
+>       assert receipt["patch_transport"] == {
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+            "mode": "inline-gzip", "compressed_sha256": hashlib.sha256(compressed).hexdigest(),
+            "compressed_bytes": len(compressed), "raw_bytes": len(gzip.decompress(compressed)),
+        }
+E       KeyError: 'patch_transport'
+
+tests/unit/test_native_hook_transport.py:530: KeyError
+_____________________ test_control_identity_refused[base] ______________________
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-722/test_control_identity_refused_0')
+snapshot = (PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-722/test_control_identity_re...wtHxjDwGwSKPJM+2Fv6DfgH9F5R7XpalNNMb/CoalXKQF3jaevKmaXgfWTgAGbPrOoWIK/UqrfVazdYCEmgCaxVej+fLCQ5ASv/uRn0AxcfK/28BAAA='})
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1098c0320>
+field = 'base'
+
+    @pytest.mark.parametrize("field", ["base", "tree", "sha256"])
+    def test_control_identity_refused(tmp_path: Path, snapshot, monkeypatch: pytest.MonkeyPatch, field: str) -> None:
+        """File transport preserves every existing source identity check."""
+        repo, request = snapshot
+        transport, _, file_request = _control_request(tmp_path, request, monkeypatch)
+        file_request[field] = "0" * len(file_request[field])
+>       with pytest.raises(ValueError, match=field):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AssertionError: Regex pattern did not match.
+E         Expected regex: 'base'
+E         Actual message: 'request fields mismatch'
+
+tests/unit/test_native_hook_transport.py:569: AssertionError
+_____________________ test_control_identity_refused[tree] ______________________
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-722/test_control_identity_refused_1')
+snapshot = (PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-722/test_control_identity_re...wtHxjDwGwSKPJM+2Fv6DfgH9F5R7XpalNNMb/CoalXKQF3jaevKmaXgfWTgAGbPrOoWIK/UqrfVazdYCEmgCaxVej+fLCQ5ASv/uRn0AxcfK/28BAAA='})
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1097ee990>
+field = 'tree'
+
+    @pytest.mark.parametrize("field", ["base", "tree", "sha256"])
+    def test_control_identity_refused(tmp_path: Path, snapshot, monkeypatch: pytest.MonkeyPatch, field: str) -> None:
+        """File transport preserves every existing source identity check."""
+        repo, request = snapshot
+        transport, _, file_request = _control_request(tmp_path, request, monkeypatch)
+        file_request[field] = "0" * len(file_request[field])
+>       with pytest.raises(ValueError, match=field):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AssertionError: Regex pattern did not match.
+E         Expected regex: 'tree'
+E         Actual message: 'request fields mismatch'
+
+tests/unit/test_native_hook_transport.py:569: AssertionError
+____________________ test_control_identity_refused[sha256] _____________________
+
+tmp_path = PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-722/test_control_identity_refused_2')
+snapshot = (PosixPath('/private/var/folders/ly/2wl4sfj179qfn8n46plbft6h0000gn/T/pytest-of-dom/pytest-722/test_control_identity_re...wtHxjDwGwSKPJM+2Fv6DfgH9F5R7XpalNNMb/CoalXKQF3jaevKmaXgfWTgAGbPrOoWIK/UqrfVazdYCEmgCaxVej+fLCQ5ASv/uRn0AxcfK/28BAAA='})
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10983e6d0>
+field = 'sha256'
+
+    @pytest.mark.parametrize("field", ["base", "tree", "sha256"])
+    def test_control_identity_refused(tmp_path: Path, snapshot, monkeypatch: pytest.MonkeyPatch, field: str) -> None:
+        """File transport preserves every existing source identity check."""
+        repo, request = snapshot
+        transport, _, file_request = _control_request(tmp_path, request, monkeypatch)
+        file_request[field] = "0" * len(file_request[field])
+>       with pytest.raises(ValueError, match=field):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AssertionError: Regex pattern did not match.
+E         Expected regex: 'sha256'
+E         Actual message: 'request fields mismatch'
+
+tests/unit/test_native_hook_transport.py:569: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/test_native_hook_transport.py::test_control_checkout_large_snapshot
+FAILED tests/unit/test_native_hook_transport.py::test_inline_transport_receipt
+FAILED tests/unit/test_native_hook_transport.py::test_control_identity_refused[base]
+FAILED tests/unit/test_native_hook_transport.py::test_control_identity_refused[tree]
+FAILED tests/unit/test_native_hook_transport.py::test_control_identity_refused[sha256]
+================== 5 failed, 9 passed, 35 deselected in 2.22s ==================

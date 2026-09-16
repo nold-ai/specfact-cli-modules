@@ -5,12 +5,14 @@ from __future__ import annotations
 
 import argparse
 import base64
+import binascii
 import gzip
 import hashlib
 import io
 import json
 import os
 import re
+import stat
 import subprocess
 import sys
 from pathlib import Path
@@ -108,6 +110,7 @@ _CONTEXT = (
     "GITHUB_JOB",
 )
 _MAX_PATCH = 1_000_000
+_MAX_ENCODED_PATCH = 4 * ((_MAX_PATCH + 2) // 3)
 
 
 def _git(repository: Path, *arguments: str, data: bytes | None = None) -> bytes:
@@ -123,22 +126,56 @@ def _git(repository: Path, *arguments: str, data: bytes | None = None) -> bytes:
     return result.stdout
 
 
-def _decode_request(request: dict[str, str]) -> bytes:
-    if set(request) != {"base", "tree", "sha256", "patch"}:
-        raise ValueError("request fields mismatch")
+def _control_patch() -> bytes:
+    """Read only the fixed regular data file beside the trusted control helper."""
+    path = Path(__file__).with_name("native_hook_snapshot.patch.gz.b64")
+    descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+    with os.fdopen(descriptor, "rb") as stream:
+        if not stat.S_ISREG(os.fstat(stream.fileno()).st_mode):
+            raise ValueError("control patch must be a regular file")
+        encoded = stream.read(_MAX_ENCODED_PATCH + 1)
+    if len(encoded) > _MAX_ENCODED_PATCH:
+        raise ValueError("encoded patch size exceeds limit")
+    try:
+        compressed = base64.b64decode(encoded, validate=True)
+    except binascii.Error as exc:
+        raise ValueError("invalid control patch base64") from exc
+    if len(compressed) > _MAX_PATCH:
+        raise ValueError("compressed patch size exceeds limit")
+    if base64.b64encode(compressed) != encoded:
+        raise ValueError("control patch base64 must be canonical")
+    return compressed
+
+
+def _compressed_patch(request: dict[str, str]) -> tuple[bytes, dict[str, object]]:
+    identity_fields = {"base", "tree", "sha256"}
+    if set(request) == identity_fields | {"patch"}:
+        if len(request["patch"]) > 60_000:
+            raise ValueError("compressed patch size exceeds limit")
+        compressed = base64.b64decode(request["patch"], validate=True)
+        metadata: dict[str, object] = {"mode": "inline-gzip"}
+    elif set(request) == identity_fields | {"patch_source"} and request["patch_source"] == "control-checkout":
+        compressed = _control_patch()
+        metadata = {"mode": "control-checkout", "path": "scripts/native_hook_snapshot.patch.gz.b64"}
+    else:
+        raise ValueError("request fields or patch source mismatch")
+    metadata.update(compressed_sha256=hashlib.sha256(compressed).hexdigest(), compressed_bytes=len(compressed))
+    return compressed, metadata
+
+
+def _decode_request(request: dict[str, str]) -> tuple[bytes, dict[str, object]]:
+    compressed, metadata = _compressed_patch(request)
     for field, size in (("base", 40), ("tree", 40), ("sha256", 64)):
         if re.fullmatch(rf"[0-9a-f]{{{size}}}", request[field]) is None:
             raise ValueError(f"invalid {field}")
-    if len(request["patch"]) > 60_000:
-        raise ValueError("compressed patch size exceeds limit")
-    compressed = base64.b64decode(request["patch"], validate=True)
     with gzip.GzipFile(fileobj=io.BytesIO(compressed)) as stream:
         patch = stream.read(_MAX_PATCH + 1)
     if len(patch) > _MAX_PATCH:
         raise ValueError("expanded patch size exceeds limit")
     if hashlib.sha256(patch).hexdigest() != request["sha256"]:
         raise ValueError("patch sha256 mismatch")
-    return patch
+    metadata["raw_bytes"] = len(patch)
+    return patch, metadata
 
 
 def _patch_paths(repository: Path, patch: bytes) -> list[str]:
@@ -182,7 +219,7 @@ def _verify_development_alignment(repository: Path, paths: list[str]) -> None:
 @ensure(lambda result: bool(result["tree"]) and bool(result["paths"]))
 def prepare_snapshot(repository: Path, request: dict[str, str]) -> dict[str, object]:
     """Validate and stage only the reviewed patch against its declared clean base."""
-    patch = _decode_request(request)
+    patch, transport = _decode_request(request)
     if _git(repository, "rev-parse", "HEAD").decode().strip() != request["base"]:
         raise ValueError("base mismatch")
     if _git(repository, "status", "--porcelain", "--untracked-files=all").strip():
@@ -198,7 +235,13 @@ def prepare_snapshot(repository: Path, request: dict[str, str]) -> dict[str, obj
     tree = _git(repository, "write-tree").decode().strip()
     if tree != request["tree"]:
         raise ValueError("tree mismatch")
-    return {"base": request["base"], "tree": tree, "sha256": request["sha256"], "paths": paths}
+    return {
+        "base": request["base"],
+        "tree": tree,
+        "sha256": request["sha256"],
+        "paths": paths,
+        "patch_transport": transport,
+    }
 
 
 @ensure(lambda result: set(result).issubset(_ENVIRONMENT))

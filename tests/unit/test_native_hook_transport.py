@@ -487,3 +487,139 @@ def test_basedpyright_replay_uses_real_hatch_activation(tmp_path: Path, monkeypa
         output["active"] == "default" and Path(output["venv"]).resolve() == (tmp_path / "hatch-environment").resolve()
     )
     assert output["token"] is None
+
+
+def _control_request(
+    tmp_path: Path, request: dict[str, str], monkeypatch: pytest.MonkeyPatch
+) -> tuple[ModuleType, Path, dict[str, str]]:
+    """Relocate the actual helper's control-owned data beside its fixed module path."""
+    transport = _transport()
+    controls = tmp_path / "controls/scripts"
+    controls.mkdir(parents=True)
+    monkeypatch.setattr(transport, "__file__", str(controls / "native_hook_transport.py"))
+    payload = controls / "native_hook_snapshot.patch.gz.b64"
+    payload.write_text(request["patch"], encoding="ascii")
+    return (
+        transport,
+        payload,
+        {**{key: value for key, value in request.items() if key != "patch"}, "patch_source": "control-checkout"},
+    )
+
+
+def test_control_checkout_large_snapshot(tmp_path: Path, snapshot, monkeypatch: pytest.MonkeyPatch) -> None:
+    """A real patch beyond workflow input limits is authenticated and staged intact."""
+    repo, _ = snapshot
+    content = "\n".join(hashlib.sha256(str(index).encode()).hexdigest() for index in range(5000))
+    (repo / _ALLOWED).write_text(content + "\n")
+    _git(repo, "add", ".")
+    request = _request_for_staged_snapshot(repo)
+    assert len(request["patch"]) > 65_535
+    transport, payload, file_request = _control_request(tmp_path, request, monkeypatch)
+    receipt = transport.prepare_snapshot(repo, file_request)
+    compressed = base64.b64decode(payload.read_bytes(), validate=True)
+    assert receipt["tree"] == request["tree"] == _git(repo, "write-tree")
+    assert receipt["patch_transport"] == {
+        "mode": "control-checkout",
+        "path": "scripts/native_hook_snapshot.patch.gz.b64",
+        "compressed_sha256": hashlib.sha256(compressed).hexdigest(),
+        "compressed_bytes": len(compressed),
+        "raw_bytes": len(gzip.decompress(compressed)),
+    }
+
+
+def test_inline_transport_receipt(snapshot) -> None:
+    """Legacy payloads retain equivalent storage and size evidence."""
+    repo, request = snapshot
+    receipt = _transport().prepare_snapshot(repo, request)
+    compressed = base64.b64decode(request["patch"])
+    assert receipt["patch_transport"] == {
+        "mode": "inline-gzip",
+        "compressed_sha256": hashlib.sha256(compressed).hexdigest(),
+        "compressed_bytes": len(compressed),
+        "raw_bytes": len(gzip.decompress(compressed)),
+    }
+
+
+@pytest.mark.parametrize("violation", ["symlink", "directory", "fifo", "compressed", "expanded", "corrupt"])
+def test_control_payload_refused(tmp_path: Path, snapshot, monkeypatch: pytest.MonkeyPatch, violation: str) -> None:
+    """Only a bounded regular compressed file can reach index mutation."""
+    repo, request = snapshot
+    transport, payload, file_request = _control_request(tmp_path, request, monkeypatch)
+    match violation:
+        case "symlink":
+            target = tmp_path / "elsewhere.gz"
+            payload.rename(target)
+            payload.symlink_to(target)
+        case "directory":
+            payload.unlink()
+            payload.mkdir()
+        case "fifo":
+            payload.unlink()
+            os.mkfifo(payload)
+        case "compressed":
+            payload.write_bytes(base64.b64encode(b"x" * 1_000_001))
+        case "expanded":
+            payload.write_bytes(base64.b64encode(gzip.compress(b"x" * 1_000_001)))
+        case "corrupt":
+            payload.write_bytes(base64.b64encode(b"not gzip"))
+    with pytest.raises((ValueError, OSError)):
+        transport.prepare_snapshot(repo, file_request)
+    assert not _git(repo, "status", "--porcelain")
+
+
+@pytest.mark.parametrize("field", ["base", "tree", "sha256"])
+def test_control_identity_refused(tmp_path: Path, snapshot, monkeypatch: pytest.MonkeyPatch, field: str) -> None:
+    """File transport preserves every existing source identity check."""
+    repo, request = snapshot
+    transport, _, file_request = _control_request(tmp_path, request, monkeypatch)
+    file_request[field] = "0" * len(file_request[field])
+    with pytest.raises(ValueError, match=field):
+        transport.prepare_snapshot(repo, file_request)
+
+
+@pytest.mark.parametrize("extra", [{"patch": ""}, {"patch_source": "https://example.invalid/data"}, {"path": "/tmp/x"}])
+def test_control_selector_refused(
+    tmp_path: Path, snapshot, monkeypatch: pytest.MonkeyPatch, extra: dict[str, str]
+) -> None:
+    """No mixed format or caller-provided path/URL broadens the fixed source."""
+    repo, request = snapshot
+    transport, _, file_request = _control_request(tmp_path, request, monkeypatch)
+    with pytest.raises(ValueError):
+        transport.prepare_snapshot(repo, {**file_request, **extra})
+    assert not _git(repo, "status", "--porcelain")
+
+
+def test_control_payload_is_staged_text_safe(tmp_path: Path, snapshot, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The unchanged hook's forced text diff can decode the fixed payload as UTF-8."""
+    _, request = snapshot
+    _, payload, _ = _control_request(tmp_path, request, monkeypatch)
+    control_root = payload.parent.parent
+    _git(control_root, "init", "-q")
+    _git(control_root, "add", ".")
+    text_diff = _git(control_root, "diff", "--cached", "--text")
+    assert payload.read_text(encoding="ascii") in text_diff
+    assert base64.b64decode(payload.read_bytes(), validate=True) == base64.b64decode(request["patch"])
+
+
+@pytest.mark.parametrize(
+    ("content", "reason"),
+    [
+        (b"A" * 1_333_337, "encoded patch size"),
+        (base64.b64encode(b"x" * 1_000_001), "compressed patch size"),
+        (b"invalid!", "base64"),
+        (b"\xff", "base64"),
+        (b"Zh==", "canonical"),
+        (b"Zg==\n", "base64"),
+    ],
+    ids=["encoded-cap", "compressed-cap", "invalid-alphabet", "non-ascii", "padding-bits", "newline"],
+)
+def test_control_encoded_payload_refused(
+    tmp_path: Path, snapshot, monkeypatch: pytest.MonkeyPatch, content: bytes, reason: str
+) -> None:
+    """Encoded and compressed bounds are independent; encoding must be canonical ASCII."""
+    repo, request = snapshot
+    transport, payload, file_request = _control_request(tmp_path, request, monkeypatch)
+    payload.write_bytes(content)
+    with pytest.raises(ValueError, match=reason):
+        transport.prepare_snapshot(repo, file_request)
+    assert not _git(repo, "status", "--porcelain")

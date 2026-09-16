@@ -1,0 +1,41 @@
+Actual unchanged normal commit hook failure with binary gzip payload. No commit created.
+
+                     ~~~~^^^^^^^^^^^^^^
+  File "/private/tmp/specfact-478-native-hook-transport/.venv/lib/python3.14/site-packages/icontract/_checkers.py", line 834, in wrapper
+    result = func(*args, **kwargs)
+  File "/private/tmp/specfact-478-native-hook-transport/scripts/pre_commit_code_review.py", line 596, in main
+    summary_ok, _error_count, ci_exit_code = _print_review_findings_summary(repo_root, enforcement=enforcement)
+                                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/private/tmp/specfact-478-native-hook-transport/scripts/pre_commit_code_review.py", line 507, in _print_review_findings_summary
+    ci_exit_code, blocking_changed_findings = _enforced_exit_code(
+                                              ~~~~~~~~~~~~~~~~~~~^
+        repo_root, findings_raw, enforcement=enforcement, raw_ci_exit_code=raw_ci_exit_code
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/private/tmp/specfact-478-native-hook-transport/scripts/pre_commit_code_review.py", line 441, in _enforced_exit_code
+    blockers, changed_line_evidence_available = _changed_line_blockers(repo_root, findings_raw)
+                                                ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/private/tmp/specfact-478-native-hook-transport/scripts/pre_commit_code_review.py", line 423, in _changed_line_blockers
+    changed_lines = _staged_changed_lines(repo_root)
+  File "/private/tmp/specfact-478-native-hook-transport/scripts/pre_commit_code_review.py", line 326, in _staged_changed_lines
+    completed = subprocess.run(
+        [
+    ...<15 lines>...
+        env={key: value for key, value in os.environ.items() if key not in _GIT_REPOSITORY_REDIRECT_ENV_VARS},
+    )
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/subprocess.py", line 557, in run
+    stdout, stderr = process.communicate(input, timeout=timeout)
+                     ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/subprocess.py", line 1221, in communicate
+    stdout, stderr = self._communicate(input, endtime, timeout)
+                     ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/subprocess.py", line 2194, in _communicate
+    stdout = self._translate_newlines(stdout,
+                                      self.stdout.encoding,
+                                      self.stdout.errors)
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/subprocess.py", line 1099, in _translate_newlines
+    data = data.decode(encoding, errors)
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0x8b in position 14569: invalid start byte
+❌ Block 2 — stage 2/3: code review gate failed
+💡 Fix blocking review findings or run: hatch run python scripts/pre_commit_code_review.py <paths>
