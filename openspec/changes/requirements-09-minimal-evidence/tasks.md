@@ -5,14 +5,15 @@ Planning only. Implementation has not started. Brief validation notes and CI art
 ## 1. Readiness
 
 - [ ] 1.1 Create a fresh issue-linked worktree from current dev; verify #481 hierarchy, ownership and paired #740 scope.
-- [ ] 1.2 Revalidate current schema/reconciliation and shipped core interfaces; supersede R07 without reopening #368 or R08.
+- [ ] 1.2 Revalidate current schema/reconciliation and shipped core interfaces; reconcile and retire mixed shipped/superseded R07 artifacts without promoting unimplemented deltas or reopening #368/R08. R07 has no separate implementation queue.
 - [ ] 1.3 Define the supported v3/v2 migration and signed release handoff without a circular core dependency.
+- [ ] 1.4 Before behavior tests/code, update and review module contributor governance, agent/template and pre-commit guidance for the owner-authorized MEB migration; coordinate with core #740. Remote policy cutover remains coordinated after verification.
 
 ## 2. Tests before code
 
 - [ ] 2.1 Add focused cases for current passing results without RED; missing, malformed, empty, duplicate, failed, errored or skipped selected outcomes; observe the relevant failures before code changes.
 - [ ] 2.2 Add cases for optional mapping and unassessed coverage, explicit legacy semantics, malformed-v3 rejection and independent Code Review verdicts.
-- [ ] 2.3 Retain parser/resource bounds and ensure local report inputs cannot manufacture protected CI authority.
+- [ ] 2.3 Add passing-selector cases with wrong/missing plan identity/digest, canonical selector identity/set, source revision/tree, environment and supplied mapping digest; require non-passing results. Retain parser/resource bounds and ensure local report inputs cannot manufacture protected CI authority.
 
 ## 3. Implementation
 

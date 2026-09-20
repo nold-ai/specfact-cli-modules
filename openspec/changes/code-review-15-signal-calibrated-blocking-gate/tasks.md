@@ -10,14 +10,14 @@ This owner-requested planning amendment supersedes conflicting development-workf
 
 - [x] 1.1 Create `feature/code-review-15-signal-calibrated-blocking-gate` from modules `dev` in the required sibling worktree.
 - [x] 1.2 Create public issue [#417](https://github.com/nold-ai/specfact-cli-modules/issues/417) and verify parent #163, labels, assignee, User Story type, SpecFact CLI/Todo project metadata, and all five native blocked-by relationships from live GitHub.
-- [ ] 1.3 Verify C14 and its paired protected core adoption are released with the signed schema 1.6 identity.
+- [ ] 1.3 Revalidate the already-shipped C14 schema 1.6 signed producer and compatible release identity; verify the still-pending protected core adoption #680 is released. Closed modules #416 is historical, not unfinished work.
 - [ ] 1.4 Verify policy-02 and governance-02 expose the signed policy and authenticated exception contracts consumed here.
 - [ ] 1.5 If any readiness item is missing or in progress elsewhere, stop production implementation and retain planning/test design only.
 
 ## 2. Spec and compatibility freeze
 
 - [x] 2.1 Add proposal, design, task plan, and delta specs for schema 1.7, verdict mapping, calibration, identity/dedup, and suppressions.
-- [x] 2.2 Add the paired core change and cross-link both `CHANGE_ORDER.md` files.
+- [x] 2.2 Add the paired core C15 change #679 and planning cross-links in both `CHANGE_ORDER.md` files. This records planning only, not runtime adoption. C15 remains #417 -> #679; the separate MEB migration is #481 -> core #740.
 - [ ] 2.3 Freeze the schema 1.7 producer/consumer matrix, signed calibration profile, and suppression grammar/resource digests.
 - [x] 2.4 Update the internal wiki source page and rebuild the graph.
 - [x] 2.5 Run `openspec validate code-review-15-signal-calibrated-blocking-gate --strict`.
@@ -45,8 +45,8 @@ This owner-requested planning amendment supersedes conflicting development-workf
 ## 5. Dogfood, measurement, and delivery
 
 - [ ] 5.1 Run full shadow reviews on modules and core; classify and remediate every effective error or add an approved time-bound exception.
-- [ ] 5.2 Repeat the frozen 40-PR replay and n=150 stratified adjudication with seed 20260819, including at least 30 human-reviewed error cases.
-- [ ] 5.3 Require weighted error precision >=80%, Wilson 95% lower bound >=70%, and at least 40 adjudicated errors before blocking activation.
+- [ ] 5.2 Repeat the frozen 40-PR replay and n=150 stratified adjudication with seed 20260819, including at least 40 distinct human-adjudicated error findings in that sample. These are the error population used by both task 5.3 precision metrics, not an additional separately collected sample.
+- [ ] 5.3 Require weighted error precision >=80%, Wilson 95% lower bound >=70%, and at least 40 adjudicated errors from the task 5.2 sample before blocking activation; use that same error subset with the audit's specified weighting/confidence method.
 - [ ] 5.4 Keep shadow mode and recalibrate if the measurement target is missed.
 - [ ] 5.5 Update bundle docs, bump the module minor version, regenerate/check signed resources, and verify exact core compatibility.
 - [ ] 5.6 Run format, type-check, lint, yaml, signature, contract, smart/full tests, independent static analysis, and fresh SpecFact review evidence.

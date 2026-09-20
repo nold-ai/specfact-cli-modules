@@ -4,14 +4,13 @@ Recovered from uncommitted planning files on `feature/code-review-15-signal-cali
 
 # Change Validation
 
-## Repository reality
+## Repository reality — 2026-09-20
 
-- Modules `dev` currently emits report schemas through 1.5.
-- C14 plans schema 1.6 and owns identity/differential contracts, but its internal
-  governance record marks implementation blocked on missing public readiness.
-- Policy-02 and governance-02 remain proposal-stage authorities.
-- Therefore C15 production code and failing tests against schema 1.7 are not yet
-  valid implementation work.
+- Current runner code emits schema 1.6 (`packages/specfact-code-review/src/specfact_code_review/run/runner.py`).
+- Modules C14 #416 shipped and is closed; its proposal awaits archival reconciliation. Its implementation is not an open prerequisite.
+- Protected core C14 adoption #680 remains distinct and pending; verify its release and the compatible signed module pair before C15 implementation.
+- Policy-02 and governance-02 remain prerequisite authorities to revalidate.
+- C15 is the schema 1.6 -> 1.7 migration owned by #417 and paired core #679. Requirements policy #481 -> core #740 does not replace this sequence.
 
 ## Decision
 

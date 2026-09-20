@@ -26,9 +26,10 @@ This change follows `code-review-14-scope-truth-and-differential-enforcement`
 differential lifecycle, and protected-consumer boundary. It SHALL NOT implement
 parallel scope or continuity logic. Production implementation is blocked until:
 
-- C14 issue [#416](https://github.com/nold-ai/specfact-cli-modules/issues/416)
-  completes its implementation and signed handoff;
-- the signed C14 module release and paired protected core adoption are shipped;
+- the already-shipped C14 schema 1.6 producer is verified as an exact signed,
+  compatible baseline; issue [#416](https://github.com/nold-ai/specfact-cli-modules/issues/416)
+  is closed, not an unfinished implementation blocker;
+- the still-pending paired protected core C14 adoption #680 is released;
 - `policy-02-packs-and-modes` provides the signed severity/mode authority; and
 - `governance-02-exception-management` provides the authenticated, time-bound
   exception contract.
@@ -108,6 +109,7 @@ already assigned to the parked Copilot test-generation change.
 - **GitHub Issue**: [#417](https://github.com/nold-ai/specfact-cli-modules/issues/417)
 - **Issue URL**: <https://github.com/nold-ai/specfact-cli-modules/issues/417>
 - **Repository**: nold-ai/specfact-cli-modules
-- **Last Synced Status**: GitHub metadata verified; blocked on prerequisite delivery
+- **Last Synced Status**: planning; modules C14 shipped/closed; pending protected core adoption and policy/exception prerequisites must be revalidated before implementation (2026-09-20)
 - **Parent Feature**: [#163](https://github.com/nold-ai/specfact-cli-modules/issues/163)
 - **Paired Core Change**: [nold-ai/specfact-cli#679](https://github.com/nold-ai/specfact-cli/issues/679) / `cli-val-07-code-review-gate-adoption`
+- **Separate delivery-policy migration**: modules #481 -> core #740 changes Requirements evidence policy; it does not replace C15 #417/#679 or add a C15 release prerequisite.

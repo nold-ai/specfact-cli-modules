@@ -34,9 +34,8 @@ Planning artifacts only. No runtime source, tests, schemas, versions, signatures
 ## Dependencies
 
 - Parent: modules [#163](https://github.com/nold-ai/specfact-cli-modules/issues/163), under epic #162.
-- Direct blockers: layout correction [#459](https://github.com/nold-ai/specfact-cli-modules/issues/459), released checkpoint/conformance [#434](https://github.com/nold-ai/specfact-cli-modules/issues/434), and core C15 adoption [#679](https://github.com/nold-ai/specfact-cli/issues/679).
-- Transitive sequence: core #682 -> modules #431 -> core #680 -> core #683 -> modules #432; modules #432 plus core #684 -> modules #434.
-- Modules #432 plus existing policy/profile/exception prerequisites -> modules C15 #417 -> core #679. Core #679 retains its existing policy/profile/exception blockers.
+- Direct prerequisites: verified layout correction [#459](https://github.com/nold-ai/specfact-cli-modules/issues/459) and released core C15 adoption [#679](https://github.com/nold-ai/specfact-cli/issues/679). Optional checkpoint/conformance #434 is required for neither native implementation/release nor ordinary native review.
+- C15 retains C14 protected adoption and its policy/profile/exception prerequisites: modules #417 -> core #679. The optional #431/#432/#434 assurance chain is separate.
 - Core means nold-ai/specfact-cli; modules means nold-ai/specfact-cli-modules. Preserve existing edges; do not duplicate transitive blockers.
 - Harness adapters #433 are downstream of #434 and are not prerequisites for native execution.
 

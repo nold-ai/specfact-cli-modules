@@ -6,7 +6,7 @@ Requirements SHALL default to current reconciliation from supplied current plan 
 
 #### Scenario: Fresh current results pass without history
 
-- **GIVEN** every selected acceptance test occurs exactly once and passes at the supplied current source context
+- **GIVEN** every canonical selected acceptance test occurs exactly once and passes, and execution metadata matches the submitted current plan and source identities
 - **WHEN** current reconciliation runs without historical artifacts
 - **THEN** current execution passes and chronology remains not evaluated
 - **AND** no full correctness or complete coverage claim is inferred.
@@ -17,6 +17,32 @@ Requirements SHALL default to current reconciliation from supplied current plan 
 - **WHEN** current reconciliation runs
 - **THEN** acceptance proof remains non-passing with actionable diagnostics
 - **AND** parser and resource bounds remain enforced.
+
+### Requirement: Passing Results Are Bound to the Current Request
+
+Reconciliation SHALL compare supplied execution metadata against the submitted
+current plan identity/digest, exact canonical selector set, source revision/tree
+and execution environment identity. When scenario associations are supplied,
+their mapping digest SHALL also match. JUnit cases SHALL carry the canonical
+`specfact.selector` identity; display names or class names alone SHALL NOT prove
+a selected result. Missing, ambiguous or mismatched required identity SHALL
+remain non-passing even when the displayed tests pass. These are current-run
+consistency checks, not frozen development mappings or history requirements.
+Core SHALL remain responsible for authenticating protected execution provenance;
+matching local metadata alone SHALL NOT grant CI authority.
+
+#### Scenario: Passing selectors belong to another plan or source
+
+- **GIVEN** passing JUnit selectors but a different plan digest, source revision/tree, environment or supplied mapping digest
+- **WHEN** reconciliation compares execution metadata with the current request
+- **THEN** current execution remains non-passing with the mismatched identity identified
+- **AND** matching test names cannot substitute for the required binding.
+
+#### Scenario: Canonical identity or binding is missing
+
+- **GIVEN** passing outcomes without required execution metadata or canonical selector identity
+- **WHEN** current reconciliation runs
+- **THEN** observations may remain diagnostic context but cannot establish a passing current-execution claim.
 
 ### Requirement: Optional Associations Preserve Honest Coverage
 

@@ -40,7 +40,7 @@ Core contracts alone cannot stop an agent from implementing a stale or internall
 
 - Parent Feature: modules [#163](https://github.com/nold-ai/specfact-cli-modules/issues/163), under Epic [#162](https://github.com/nold-ai/specfact-cli-modules/issues/162).
 - Blocked by core `preflight-01-design-contract-core`.
-- Blocks core C14 adoption issue [nold-ai/specfact-cli#680](https://github.com/nold-ai/specfact-cli/issues/680).
+- Blocks optional core dogfood #683, which also requires independently delivered C14 #680. This runtime does not block C14 adoption.
 - Consumes, without duplicating, architecture, governance evidence, traceability, and native OpenSpec/Spec Kit import inputs.
 
 ## Explicit Non-Goals

@@ -9,7 +9,7 @@ Useful current test results should not require immutable development history. Th
 - Make `current` reconciliation the default, using the current plan and JUnit without retained RED or approval receipts.
 - Separate schema v3 `current_execution` and `red_green_chronology`; preserve explicit v2/legacy semantics.
 - Keep scenario mapping optional for ordinary test-result context; unmapped requirements coverage remains not evaluated.
-- Preserve exact selected outcomes, resource/parser bounds, offline operation and independent Code Review verdicts.
+- Preserve canonical selected outcomes and current plan/source/environment bindings, resource/parser bounds, offline operation and independent Code Review verdicts. Optional mapping binds its digest only when supplied.
 - Supersede the unimplemented R07 correction. Closed #368 remains history and R08 #414 remains abandoned.
 
 ## Capabilities
