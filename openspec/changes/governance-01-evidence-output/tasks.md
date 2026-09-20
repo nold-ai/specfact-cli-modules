@@ -2,7 +2,7 @@
 
 ## Scope rescope — 2026-09-20
 
-Emit lean current-run results and references to existing CI artifacts. Historical chronology is optional and separately labeled; no transcripts, approval receipts, or duplicate proof execution by default. This broader emitter feature is not a blocker for https://github.com/nold-ai/specfact-cli-modules/issues/481.
+Emit lean current-run results and references to existing CI artifacts. Historical chronology is optional and separately labeled; no transcripts, approval receipts, or duplicate proof execution by default. This broader emitter feature is not a blocker for <https://github.com/nold-ai/specfact-cli-modules/issues/481>.
 
 This owner-requested planning amendment supersedes conflicting default-workflow and dependency wording below; runtime behavior is unchanged. [Replacement policy](../requirements-09-minimal-evidence/proposal.md).
 
@@ -36,3 +36,8 @@ This owner-requested planning amendment supersedes conflicting default-workflow 
 
 - [ ] 5.1 Update `openspec/CHANGE_ORDER.md` status/dependency notes if implementation sequencing changed.
 - [ ] 5.2 Open a PR from `feature/governance-01-evidence-output` to `dev` with spec/test/code/docs evidence.
+
+## Current-evidence boundary acceptance
+
+- [ ] Test current-only verification without history, incomplete mappings alongside passing tests, and independent failed producer gates; retain producer statuses and references.
+- [ ] Verify native archival preserves the normative boundaries and adds serialization requirements without replacing producer-owned validation or policy requirements.
