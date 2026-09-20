@@ -8,7 +8,7 @@ This owner-requested planning amendment supersedes conflicting default-workflow 
 
 ### Requirement: Deterministic pre-implementation loop
 
-The stable module SHALL execute a stateful pre-implementation loop that discovers a change, captures exact inputs, runs required validators, presents findings, accepts only user-authorized refinement, reruns after changes, records explicit approval, and verifies the resulting seal before implementation. It SHALL retain regression evidence for every accepted dogfood defect that affected snapshotting, validation, review, refinement, approval, sealing, or verification.
+When optional preflight assurance is explicitly selected, the stable module SHALL execute a stateful pre-implementation loop that discovers a change, captures exact inputs, runs required validators, presents findings, accepts only user-authorized refinement, reruns after changes, records explicit approval, and verifies the resulting seal before implementation. It SHALL retain regression evidence for every accepted dogfood defect that affected snapshotting, validation, review, refinement, approval, sealing, or verification.
 
 #### Scenario: Ready change is approved and sealed
 

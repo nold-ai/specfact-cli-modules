@@ -1,5 +1,20 @@
 # Planning Validation
 
+## Current dependency readback — 2026-09-20
+
+Live GitHub native relationships match the lean rescope: #460 is blocked by
+modules #459 (closed) and core #679 (open), with no #434 edge. Core #680 is
+blocked by modules #459 and #466 (both closed), with no #431 edge. No dependency
+mutation was needed in this review; the earlier rescope already removed the
+optional edges. Issue #460's old body dependency list has now been reconciled
+with those native relationships. C15 and compatible layout/release verification
+remain required; optional preflight does not gate native execution.
+
+The records below describe their dated historical snapshots, not current
+dependency authority or fresh test results.
+
+## Historical planning validation — 2026-09-06
+
 - Checked: 2026-09-06T22:17:24+02:00 (Europe/Berlin).
 - Planning base: modules origin/dev commit 5772621922d0913cc8685e8bfddb7fa0c6364bcc.
 - Issue: nold-ai/specfact-cli-modules#460; open and Todo.
