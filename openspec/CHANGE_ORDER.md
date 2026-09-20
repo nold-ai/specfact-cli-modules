@@ -94,14 +94,15 @@ AI IDE, rerun, and compare improved evidence.
 
 | Change | GitHub issue | Positioning | Dependencies |
 |---|---|---|---|
-| `code-review-capsule-customer-execution` | [#466](https://github.com/nold-ai/specfact-cli-modules/issues/466) | Implementation authorized 2026-09-12; candidate repair and dogfooding gate merged via #467; release review follow-up in progress: validate signed capsule execution as a non-root customer on hosted Ubuntu 24.04 for Python 3.11/3.12/3.13; validate the public release later | No open prerequisites; blocks core [#680](https://github.com/nold-ai/specfact-cli/issues/680); completed #416/#459 are baseline context |
+| `code-review-capsule-customer-execution` | [#466](https://github.com/nold-ai/specfact-cli-modules/issues/466) | Closed completed; implementation #467, registry publication #468 and main release #469 merged. Retained for reconciliation and native archival, not continuing implementation. | Shipped baseline for core [#680](https://github.com/nold-ai/specfact-cli/issues/680); completed #416/#459 are baseline context |
 
 This bounded bugfix is independent of completed C14 bookkeeping and native-platform
 issue #460. Reproduction, candidate repair and dogfooding merged through PR #467; canonical
-registry publication merged through #468. Release PR #469 and its review fixes
-remain in progress, with #466 open/In Progress. Public-main signed module
-acceptance and final release validation remain pending; old immutable artifacts
-are preserved.
+registry publication merged through #468. Live readback on 2026-09-20 confirms
+main release PR #469 merged on 2026-09-13 and #466 closed as completed that day.
+The remaining local artifacts require reconciliation and native archival; they
+do not authorize more implementation or signal concurrent work. Historical
+release evidence and immutable artifacts remain preserved.
 
 ## Completed-Issue Reconciliation
 

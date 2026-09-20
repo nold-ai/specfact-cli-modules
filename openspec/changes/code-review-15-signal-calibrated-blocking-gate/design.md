@@ -92,6 +92,18 @@ not emit when a method is decorated `override`/`abstractmethod`, matches a
 resolved base/ABC/Protocol member, or has an unresolved base hierarchy. Only a
 proven-unconstrained callable may recommend making the parameter required.
 
+## Simplify enforcement compatibility
+
+C15 explicitly replaces the canonical simplify-enforce rule that blocked every
+unresolved safe-mechanical recommendation. Info/warning recommendations remain
+visible and fixable but do not block. The blocking count includes only applicable
+open unwaived effective errors; required uncertainty remains separately UNKNOWN
+and non-passing. Guidance categories do
+not promote severity or waive real errors. Guided queue output and deterministic
+safe-only rewrites remain unchanged. The explicit removed-old/added-replacement review-run requirements carry
+this transition through native archival; runtime/tests migrate during C15
+implementation, not this planning PR.
+
 ## Rollout
 
 Ship the signed module first in shadow-compatible mode, then ship the pinned
