@@ -26,6 +26,10 @@ Planning only. Later implementation changes Requirements report/reconciliation a
 
 Use existing shipped core interfaces; coordinate any necessary extension with #740 without a circular release dependency. Publish the signed module before core adopts it. Explicit legacy red/final callers retain their stricter contracts. Rollback restores a compatible signed module/core pair; current-only evidence can never become chronology by inference.
 
+## Workflow consumer alignment
+
+The downstream `workflow-01-turn-orchestration` consumes these current claims without requiring prior local receipts, changing producer verdicts or promoting local state to protected CI authority. Its separate executor does not widen this reconciler. Modules #481 blocks workflow modules #483; the workflow is not an upstream dependency of R09.
+
 ## Source Tracking
 
 <!-- source_repo: nold-ai/specfact-cli-modules -->
