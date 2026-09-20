@@ -7,4 +7,8 @@ implementation or new historical proof collection is authorized here.
 
 ## Remaining disposition
 
-- [ ] Reconcile shipped canonical obligations and superseded unimplemented deltas through #481, paired with core #740/#662. Preserve historical evidence and use the repository-approved retirement workflow without promoting unimplemented deltas or marking them complete.
+- [ ] Reconcile shipped canonical obligations and superseded unimplemented deltas
+  through #481, paired with core #740. Core #662 is the historical R07 pairing,
+  not the replacement implementation owner. Preserve historical evidence and use
+  the repository-approved retirement workflow without promoting unimplemented
+  deltas or marking them complete.
