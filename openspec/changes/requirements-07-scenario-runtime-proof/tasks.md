@@ -1,5 +1,9 @@
 # Tasks: Separate Current Execution from Historical Chronology
 
+## Superseded planning — 2026-09-20
+
+The unimplemented current-run correction transfers to [#481](https://github.com/nold-ai/specfact-cli-modules/issues/481) and `requirements-09-minimal-evidence`. Do not implement this historical task list independently or wait for abandoned R08. Closed #368 remains historical; shipped behavior is unchanged.
+
 ## 0. Planning-only correction
 
 - [x] 0.1 Define independent `current_execution` and `red_green_chronology` claims.

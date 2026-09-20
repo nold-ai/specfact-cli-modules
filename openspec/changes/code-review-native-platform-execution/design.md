@@ -1,5 +1,11 @@
 # Design: Native Local Code Review Across macOS Linux and Windows
 
+## Scope rescope — 2026-09-20
+
+Remove the prerequisite on optional checkpoint/conformance #434. Preserve layout compatibility and core C15 prerequisites, native platform acceptance tests, and signed artifacts. Ordinary native review must not require preflight, a seal, or historical RED proof.
+
+This owner-requested planning amendment supersedes conflicting default-workflow and dependency wording below; runtime behavior is unchanged. [Replacement policy](../requirements-09-minimal-evidence/proposal.md).
+
 ## Product boundary
 
 The developer or agent invokes the normal CLI in its native project environment on macOS, Linux, or Windows. Local invocation does not require GitHub, an agent vendor, Docker, WSL, a Linux VM, or OS/CPU emulation. An ordinary virtual environment is permitted; it does not abstract away the host OS. OS-native isolation is allowed.

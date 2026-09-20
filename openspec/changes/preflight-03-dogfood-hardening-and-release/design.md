@@ -1,3 +1,9 @@
+## Scope rescope — 2026-09-20
+
+Seal, checkpoint, frozen mapping, successor approval, and historical RED/GREEN requirements in this issue apply only when an explicitly selected assurance policy requests them. They are not prerequisites for ordinary implementation, Code Review, release promotion, skill installation, or generated instructions. Keep the internal optional-feature dependency chain and source/signature integrity. Missing optional chronology is not a failed current-execution claim. No runtime policy changes in this planning update. Remove the outgoing prerequisite imposed on modules C15 #417; preserve prerequisites #431/core #683 and consumers core #684/modules #434.
+
+This owner-requested planning amendment supersedes conflicting default-workflow and dependency wording below; runtime behavior is unchanged. [Replacement policy](../requirements-09-minimal-evidence/proposal.md).
+
 ## Context
 
 This is the first release-authorized phase. It begins only after the paired core dogfood change produces a go decision and an evidence-backed hardening ledger. The change closes the gap between an unpublished working prototype and a stable, signed module contract that downstream installers and C15 can trust.

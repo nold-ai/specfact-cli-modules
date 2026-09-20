@@ -1,5 +1,11 @@
 # Tasks: Native Local Code Review Across macOS Linux and Windows
 
+## Scope rescope — 2026-09-20
+
+Remove the prerequisite on optional checkpoint/conformance #434. Preserve layout compatibility and core C15 prerequisites, native platform acceptance tests, and signed artifacts. Ordinary native review must not require preflight, a seal, or historical RED proof.
+
+This owner-requested planning amendment supersedes conflicting default-workflow and dependency wording below; runtime behavior is unchanged. [Replacement policy](../requirements-09-minimal-evidence/proposal.md).
+
 ## TDD / SDD order (enforced)
 
 Future behavior work follows worktree -> current approved spec -> tests -> recorded failing evidence -> implementation -> passing evidence -> quality gates -> implementation PR. Do not implement production code until the mapped tests have run and failing-before evidence exists. All tasks below are future implementation tasks; this planning delivery does not complete them.

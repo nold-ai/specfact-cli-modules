@@ -1,5 +1,11 @@
 # Change: Evidence-Backed Preflight Hardening and Stable Publication
 
+## Scope rescope — 2026-09-20
+
+Seal, checkpoint, frozen mapping, successor approval, and historical RED/GREEN requirements in this issue apply only when an explicitly selected assurance policy requests them. They are not prerequisites for ordinary implementation, Code Review, release promotion, skill installation, or generated instructions. Keep the internal optional-feature dependency chain and source/signature integrity. Missing optional chronology is not a failed current-execution claim. No runtime policy changes in this planning update. Remove the outgoing prerequisite imposed on modules C15 #417; preserve prerequisites #431/core #683 and consumers core #684/modules #434.
+
+This owner-requested planning amendment supersedes conflicting default-workflow and dependency wording below; runtime behavior is unchanged. [Replacement policy](../requirements-09-minimal-evidence/proposal.md).
+
 ## Why
 
 The unpublished preflight runtime must not become a stable module or a dependency of C15 based only on proposal confidence. It needs fixes and regression coverage derived from the core C14 dogfood evidence, followed by the repository's signed publication and compatibility proof.

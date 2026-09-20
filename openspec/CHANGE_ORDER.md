@@ -3,11 +3,30 @@
 This document is the modules-side source of truth for active OpenSpec work. It
 must be read together with the core repo change order in `nold-ai/specfact-cli`.
 
+## Minimal-evidence rescope (2026-09-20)
+
+The paired `requirements-09-minimal-evidence` owns the default policy correction:
+[core #740](https://github.com/nold-ai/specfact-cli/issues/740) and [modules #481](https://github.com/nold-ai/specfact-cli-modules/issues/481). Implementation order is signed modules
+current-run contract -> core adoption/pilot -> coordinated organization/repository
+cutover. Existing corrected R07 is superseded planning, not an additional prerequisite.
+R08 remains abandoned. Runtime and branch rules have not changed in this planning update.
+
+Optional preflight keeps core #682 -> modules #431, then core #683 after both
+modules #431 and independently delivered C14 #680 -> modules #432 -> core #684/modules #434.
+Remove default dependencies C14 #680 <- #431, C15 #417 <- #432, generic skills
+core #251 <- #434, and native execution #460 <- #434. Optional adapters #433 require
+both #434 and core #253 explicitly. C14/C15 retain their actual producer, layout,
+policy/profile/exception and release prerequisites. No full-chain graph or preflight
+release blocks the new MEB stories. This section supersedes contradictory historical
+ordering prose below; individual affected proposals carry the same scope amendment.
+
+Core #680/#679 and modules #417 were recovered from uncommitted planning-only feature worktrees into local `dev` and the R09 planning worktrees on 2026-09-20. Remote integration remains pending. All three remain planned; no implementation was imported. Modules C14 #416 shipped and is closed, but its existing proposal remains unarchived on dev; it is distinct from core C14 adoption #680.
+
 ## Status Snapshot
 
 | Bucket | Count | Location |
 |---|---:|---|
-| **Active-tree entries** | 23 | [`openspec/changes/`](changes/) |
+| **Active-tree entries** | 26 | [`openspec/changes/`](changes/) |
 | **Parking-lot entries** | 16 | [`openspec/parking-lot/`](parking-lot/) |
 | **Archived** | 50 | [`openspec/changes/archive/`](changes/archive/) |
 | **Abandoned history** | 1 | [`openspec/history/abandoned/`](history/abandoned/) |
@@ -146,6 +165,14 @@ core #679. Native issue #460 records only its three direct blockers; it does not
 add redundant transitive edges. Harness adapters #433 are not a prerequisite.
 The layout bug cannot depend on C15 without creating a cycle through core #680.
 Existing pending changes retain their scope and ordering.
+
+## Recovered C15 planning
+
+`code-review-15-signal-calibrated-blocking-gate` / #417 was recovered into local dev from its proposal-only feature worktree; it remains planned and retains the real C14/profile/policy/exception prerequisites. Remote integration remains pending. Modules C14 #416 shipped but its existing proposal remains unarchived.
+
+## Lean current-run delivery
+
+`requirements-09-minimal-evidence` / #481 supersedes the R07 correction and publishes the signed current-run contract before core #740 adopts it. Optional preflight and the full validation graph do not block delivery.
 
 ## Active Tracks
 

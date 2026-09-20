@@ -1,5 +1,11 @@
 # Tasks: validation-02-full-chain-engine
 
+## Scope rescope — 2026-09-20
+
+Consume independent current_execution and optional chronology without inflating test results into full requirement coverage. The full validation graph is not a prerequisite for https://github.com/nold-ai/specfact-cli-modules/issues/481 or ordinary current-run validation.
+
+This owner-requested planning amendment supersedes conflicting default-workflow and dependency wording below; runtime behavior is unchanged. [Replacement policy](../requirements-09-minimal-evidence/proposal.md).
+
 ## 1. Branch and dependency guardrails
 
 - [ ] 1.1 Recheck GitHub Project metadata using a token with project-field access before scoped implementation starts.

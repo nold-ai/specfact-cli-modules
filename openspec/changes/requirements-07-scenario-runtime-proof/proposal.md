@@ -1,5 +1,9 @@
 # Change: Separate Current-Run Scenario Evidence from Historical TDD Chronology
 
+## Superseded planning — 2026-09-20
+
+The unimplemented current-run correction transfers to [#481](https://github.com/nold-ai/specfact-cli-modules/issues/481) and `requirements-09-minimal-evidence`. Do not implement this historical task list independently or wait for abandoned R08. Closed #368 remains historical; shipped behavior is unchanged.
+
 ## Why
 
 The Requirements module currently places current execution and historical failing-first proof on one maturity ladder. Final reconciliation consequently requires prior-red or legacy-ledger evidence even when the bounded question is only whether exact mapped selectors passed in the current run.

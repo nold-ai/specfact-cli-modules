@@ -1,5 +1,11 @@
 # Tasks: preflight-04-harness-adapters
 
+## Scope rescope — 2026-09-20
+
+Seal, checkpoint, frozen mapping, successor approval, and historical RED/GREEN requirements in this issue apply only when an explicitly selected assurance policy requests them. They are not prerequisites for ordinary implementation, Code Review, release promotion, skill installation, or generated instructions. Keep the internal optional-feature dependency chain and source/signature integrity. Missing optional chronology is not a failed current-execution claim. No runtime policy changes in this planning update. Preserve core #253 and add #434 as a direct native prerequisite; generic installer #251 no longer provides that dependency transitively. Harness adapters remain optional.
+
+This owner-requested planning amendment supersedes conflicting default-workflow and dependency wording below; runtime behavior is unchanged. [Replacement policy](../requirements-09-minimal-evidence/proposal.md).
+
 All tasks below are future implementation and external integration work. This planning change completes none of them and creates no plugin, skill, pack, or `TDD_EVIDENCE.md`.
 
 ## 1. Dedicated session, worktree, and readiness

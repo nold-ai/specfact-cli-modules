@@ -1,5 +1,11 @@
 # Tasks: preflight-05-implementation-conformance (modules runtime)
 
+## Scope rescope — 2026-09-20
+
+Seal, checkpoint, frozen mapping, successor approval, and historical RED/GREEN requirements in this issue apply only when an explicitly selected assurance policy requests them. They are not prerequisites for ordinary implementation, Code Review, release promotion, skill installation, or generated instructions. Keep the internal optional-feature dependency chain and source/signature integrity. Missing optional chronology is not a failed current-execution claim. No runtime policy changes in this planning update. Remove outgoing prerequisites on core #251 and modules #460. Optional harness adapters #433 continue to require this signed release explicitly.
+
+This owner-requested planning amendment supersedes conflicting default-workflow and dependency wording below; runtime behavior is unchanged. [Replacement policy](../requirements-09-minimal-evidence/proposal.md).
+
 All tasks below are future implementation work. This planning change completes none of them and creates no generated evidence or `TDD_EVIDENCE.md`.
 
 ## 1. Dedicated session, worktree, and readiness

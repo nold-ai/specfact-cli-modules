@@ -1,5 +1,11 @@
 # Change: Plug-and-Play Preflight Harness Adapters
 
+## Scope rescope — 2026-09-20
+
+Seal, checkpoint, frozen mapping, successor approval, and historical RED/GREEN requirements in this issue apply only when an explicitly selected assurance policy requests them. They are not prerequisites for ordinary implementation, Code Review, release promotion, skill installation, or generated instructions. Keep the internal optional-feature dependency chain and source/signature integrity. Missing optional chronology is not a failed current-execution claim. No runtime policy changes in this planning update. Preserve core #253 and add #434 as a direct native prerequisite; generic installer #251 no longer provides that dependency transitively. Harness adapters remain optional.
+
+This owner-requested planning amendment supersedes conflicting default-workflow and dependency wording below; runtime behavior is unchanged. [Replacement policy](../requirements-09-minimal-evidence/proposal.md).
+
 ## Why
 
 The stable preflight workflow should be installable in compatible agent harnesses without copying validator logic or maintaining divergent workflow prose. Codex, Everything Claude Code (ECC), and hatch3r are the first integration targets because they already expose skills, commands or plugins, and cross-harness instruction surfaces with different packaging conventions.
