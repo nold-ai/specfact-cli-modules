@@ -46,3 +46,7 @@ current dependency graph or replace implementation-time verification.
 ## Decision
 
 The proposal is ready for review and a planning-only PR. Adapter implementation and external integration remain explicitly unstarted.
+
+## Planning review follow-up — 2026-09-20
+
+Readiness now explicitly verifies both native blockers, core #253 and modules #434. Strict OpenSpec and scoped Markdown/whitespace pass; no adapter implementation is claimed.

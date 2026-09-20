@@ -23,3 +23,7 @@ Recovered from uncommitted planning files on `feature/code-review-15-signal-cali
 The OpenSpec artifacts may be reviewed and validated now. Production tests/code,
 module version/signature changes, dogfood enforcement, and core adoption remain
 blocked until tasks 1.2-1.4 are satisfied.
+
+## Planning review follow-up — 2026-09-20
+
+Corrected the future validation placeholder to the C15 delivery pair modules #417/core #679. Strict OpenSpec and scoped Markdown/whitespace pass; no test execution or implementation is claimed.

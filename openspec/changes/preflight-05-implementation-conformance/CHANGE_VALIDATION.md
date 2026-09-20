@@ -47,3 +47,7 @@ current dependency graph or replace implementation-time verification.
 ## Decision
 
 The proposal is ready for review and a planning-only PR. Checkpoint, pre-commit, bounded workflow, publication, and final conformance runtime work remain explicitly unstarted.
+
+## Planning review follow-up — 2026-09-20
+
+PF05M-010 inspection intent now matches signed #434 plus independent core #253 before optional #433; it no longer reinstates the removed #434 -> generic installer dependency. YAML parses, strict OpenSpec and scoped Markdown/whitespace pass; no historical execution record was rewritten.
