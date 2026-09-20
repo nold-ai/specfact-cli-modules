@@ -37,7 +37,7 @@ The stable preflight workflow should be installable in compatible agent harnesse
 ## Dependencies
 
 - Parent Feature: modules [#163](https://github.com/nold-ai/specfact-cli-modules/issues/163).
-- Blocked by core `ai-integration-03-instruction-files` [#253](https://github.com/nold-ai/specfact-cli/issues/253), which is blocked by #251 and the signed modules #434 handoff.
+- Blocked by independently delivered core `ai-integration-03-instruction-files` [#253](https://github.com/nold-ai/specfact-cli/issues/253), which consumes generic #251, and directly by the signed modules #434 handoff. #434 does not block #251 or #253.
 - Consumes the signed #434 module identity and both separately named workflow identities/digests from modules `preflight-05-implementation-conformance`; no feature-branch asset may be packaged.
 - hatch3r support is additionally blocked until the selected release contains and documents a supported third-party distribution/extension mechanism. A separately accepted upstream change is insufficient until it is merged, released, and documented in that selected release.
 

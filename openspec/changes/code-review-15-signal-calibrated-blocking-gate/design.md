@@ -96,5 +96,17 @@ proven-unconstrained callable may recommend making the parameter required.
 
 Ship the signed module first in shadow-compatible mode, then ship the pinned
 core consumer. Dogfood both repositories in shadow, remediate or approve every
-error, and activate blocking only after the frozen precision audit passes.
-Rollback changes only the policy mode to shadow.
+error, and activate blocking only after a reviewed public calibration method and
+its acceptance criteria pass. Rollback changes only the policy mode to shadow.
+
+No reproducible frozen audit method or corpus has been recovered. The earlier
+40-PR replay, n=150 stratified sample, seed 20260819, at least 40 adjudicated
+errors, weighted precision >=80% and Wilson 95% lower bound >=70% are proposed
+design targets, not an executable activation rule. Task 5.2 must resolve the
+sampling unit, weights/estimand and compatible confidence construction before
+sampling; a Wilson calculation on weighted stratified observations is not
+specified or implicitly approved here. Public corpus references and a compact
+calculation procedure suffice; raw CI transcripts or a new evidence service do
+not. Keep shadow until the method is reviewed and its finalized criteria pass.
+This one calibration exercise governs C15 blocking activation and relevant
+rule/policy changes, not ordinary PR delivery or the independent R09 migration.

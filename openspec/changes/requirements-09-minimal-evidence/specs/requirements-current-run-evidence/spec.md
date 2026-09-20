@@ -2,11 +2,11 @@
 
 ### Requirement: Current Execution Is the Lean Default
 
-Requirements SHALL default to current reconciliation from supplied current plan and JUnit inputs without historical RED, frozen mapping approvals or seals. It SHALL report current execution and chronology as independent claims and SHALL NOT execute Git, pytest or network operations.
+Requirements SHALL default to current reconciliation from supplied current plan and JUnit inputs without historical RED, frozen mapping approvals or seals. It SHALL report current execution and chronology as independent claims and SHALL NOT execute Git, pytest or network operations. Required selected acceptance cases SHALL pass ordinarily, with no expected-failure metadata: XFAIL and XPASS, including a passed outcome with an empty `wasxfail` marker, SHALL remain non-passing acceptance proof. The existing test invocation must preserve that distinction in its output; no second evidence-only test run is required.
 
 #### Scenario: Fresh current results pass without history
 
-- **GIVEN** every canonical selected acceptance test occurs exactly once and passes, and execution metadata matches the submitted current plan and source identities
+- **GIVEN** every canonical selected acceptance test occurs exactly once and passes ordinarily without expected-failure metadata, and execution metadata matches the submitted current plan and source identities
 - **WHEN** current reconciliation runs without historical artifacts
 - **THEN** current execution passes and chronology remains not evaluated
 - **AND** no full correctness or complete coverage claim is inferred.
@@ -17,6 +17,12 @@ Requirements SHALL default to current reconciliation from supplied current plan 
 - **WHEN** current reconciliation runs
 - **THEN** acceptance proof remains non-passing with actionable diagnostics
 - **AND** parser and resource bounds remain enforced.
+
+#### Scenario: Expected failure unexpectedly passes
+
+- **GIVEN** a selected case reports XPASS or a passed outcome with `wasxfail`/xfail metadata, including an empty marker
+- **WHEN** current reconciliation runs under either strict or non-strict expected-failure configuration
+- **THEN** selected acceptance proof remains non-passing, even if the overall test command exits zero.
 
 ### Requirement: Passing Results Are Bound to the Current Request
 

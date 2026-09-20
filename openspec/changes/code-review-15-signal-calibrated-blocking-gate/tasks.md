@@ -45,8 +45,8 @@ This owner-requested planning amendment supersedes conflicting development-workf
 ## 5. Dogfood, measurement, and delivery
 
 - [ ] 5.1 Run full shadow reviews on modules and core; classify and remediate every effective error or add an approved time-bound exception.
-- [ ] 5.2 Repeat the frozen 40-PR replay and n=150 stratified adjudication with seed 20260819, including at least 40 distinct human-adjudicated error findings in that sample. These are the error population used by both task 5.3 precision metrics, not an additional separately collected sample.
-- [ ] 5.3 Require weighted error precision >=80%, Wilson 95% lower bound >=70%, and at least 40 adjudicated errors from the task 5.2 sample before blocking activation; use that same error subset with the audit's specified weighting/confidence method.
+- [ ] 5.2 Before collecting activation-calibration observations, publish and review the bounded method in the public change: immutable corpus references, sampling frame/unit, strata/quotas and selection algorithm/seed, adjudication labels and disagreement handling, precision estimand/weights, and a statistically justified interval calculation. Resolve the proposed targets in the design; no frozen audit or valid weighted-Wilson construction is presently established.
+- [ ] 5.3 Execute that reviewed method using existing review outputs and one adjudicated sample; activate blocking only if its finalized precision/confidence and minimum-sample criteria pass. Keep shadow while method or results are incomplete. Repeat calibration for relevant rule/policy changes, not ordinary PR delivery; do not add a per-PR proof ledger.
 - [ ] 5.4 Keep shadow mode and recalibrate if the measurement target is missed.
 - [ ] 5.5 Update bundle docs, bump the module minor version, regenerate/check signed resources, and verify exact core compatibility.
 - [ ] 5.6 Run format, type-check, lint, yaml, signature, contract, smart/full tests, independent static analysis, and fresh SpecFact review evidence.
