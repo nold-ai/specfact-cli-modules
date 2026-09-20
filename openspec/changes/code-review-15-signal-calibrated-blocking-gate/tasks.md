@@ -24,7 +24,7 @@ This owner-requested planning amendment supersedes conflicting development-workf
 
 ## 3. Tests first
 
-- [ ] 3.1 Add report/scorer tests for score-independent verdicts, info neutrality, fixable-error blocking, shadow truth, and UNKNOWN fail-closed behavior. Replace the legacy simplify-enforce regression with advisory safe-mechanical exit-zero/count-zero, effective-error and uncertainty blocking cases; retain guided output and safe-only rewrite coverage.
+- [ ] 3.1 Add report/scorer tests for score-independent verdicts, info neutrality, fixable-error blocking, shadow truth, and UNKNOWN fail-closed behavior. Replace the legacy simplify-enforce regression with advisory safe-mechanical exit-zero/count-zero, effective-error and uncertainty blocking cases; retain guided output and safe-only rewrite coverage. Migrate the general legacy score-failure/default-mode cases, verify shadow/JSON/bug-hunt parity, and cover effective-severity level filtering without authority loss.
 - [ ] 3.2 Add D1 tests for opt-in scope and every excluded callable class.
 - [ ] 3.3 Add D2 tests for override, ABC, Protocol, resolved base, unresolved base, and unconstrained functions.
 - [ ] 3.4 Add D3 tests for symbol/span reconciliation, ambiguity, exact same-invocation coalescing, occurrence multiplicity, and cross-tool preservation.

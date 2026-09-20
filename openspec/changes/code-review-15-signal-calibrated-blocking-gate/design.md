@@ -25,6 +25,17 @@ For non-shadow enforcement, FAIL and UNKNOWN exit one. Shadow always exits zero
 without rewriting aggregate truth. `overall_verdict` is a compatibility
 projection and score is never an input.
 
+## Legacy command compatibility
+
+The explicit remove/add delta for command modes retires the general pre-C15
+legacy-exit promise, not the flags or report fields. Default enforce and shadow
+truth remain; scores/counts cannot resurrect a failure for advisory-only input.
+Level filtering uses policy-resolved effective severity for presentation and
+does not override aggregate authority or conceal required uncertainty. Invalid
+argument combinations still fail normally. The canonical command audit found no
+other score/count-based exit promises beyond these and simplify enforcement,
+whose separate replacement remains in the same delta.
+
 ## Schema 1.7
 
 Each finding retains analyzer-native severity and adds effective severity,
