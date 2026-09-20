@@ -26,7 +26,7 @@ None. This is a corrective extension of existing capsule behavior.
 - `review-run-command`: Non-root customer execution, truthful failure diagnostics, private runtime writes, and actual analyzer coverage.
 - `code-review-tool-dependencies`: Anonymous acquisition, deterministic verified materialization, namespace prerequisites, and release-installed validation.
 
-The delta requirements apply to the current signed capsule path. They do not reactivate historical host-PATH provisioning or missing-tool skip semantics in older canonical specifications. Completed C14 contracts remain reference context; this change is independent implementation authority after acceptance.
+The delta requirements apply to the current signed capsule path. They do not reactivate historical host-PATH provisioning or missing-tool skip semantics in older canonical specifications. Completed C14 contracts remain reference context; this correction was independently authorized and is now retained for reconciliation, not further implementation authority.
 
 ## Historical implementation impact
 

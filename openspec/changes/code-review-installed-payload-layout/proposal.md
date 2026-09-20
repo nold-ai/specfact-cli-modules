@@ -18,7 +18,7 @@ A normal signed Code Review installation places Python code under src/specfact_c
 
 ### Modified Capabilities
 
-None in this planning delivery. Future implementation must reconcile these obligations with the then-current review contracts before modifying a public interface.
+None in the historical planning delivery. Its implementation instruction was to reconcile these obligations with the then-current review contracts before modifying a public interface; completed delivery is recorded below.
 
 ## Current delivery
 
