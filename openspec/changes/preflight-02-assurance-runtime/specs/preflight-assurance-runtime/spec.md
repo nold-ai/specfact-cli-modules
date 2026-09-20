@@ -26,11 +26,11 @@ When optional preflight assurance is explicitly selected, the module SHALL execu
 
 ### Requirement: Read-only default
 
-When optional preflight assurance is explicitly selected, the preflight command SHALL inspect and render without modifying change artifacts or project state unless an explicit write operation is authorized.
+Every `specfact preflight run <change-id>` invocation SHALL inspect and render without modifying change artifacts or project state unless an explicit write operation is authorized, regardless of assurance-policy selection.
 
 #### Scenario: Default review finds stale tasks
 
-- **GIVEN** an OpenSpec change contains stale tasks
+- **GIVEN** an OpenSpec change contains stale tasks, with or without selected assurance policy
 - **WHEN** `specfact preflight run <change-id>` executes without `--write`
 - **THEN** it returns structured findings and suggested source-owned refinements
 - **AND** no OpenSpec, source, GitHub, or project artifact is changed.
@@ -123,7 +123,7 @@ When optional preflight assurance is explicitly selected, the initial runtime SH
 
 ### Requirement: Human and JSON rendering parity
 
-When optional preflight assurance is explicitly selected, the CLI SHALL derive human and JSON output from the same normalized validation result.
+Every preflight invocation SHALL derive human and JSON output from the same normalized validation result, including when optional assurance is not selected.
 
 #### Scenario: Renderer outputs are compared
 
@@ -134,11 +134,11 @@ When optional preflight assurance is explicitly selected, the CLI SHALL derive h
 
 ### Requirement: Persisted approval artifacts
 
-When optional preflight assurance is explicitly selected, only during an explicitly authorized approval write MAY the runtime atomically persist working copies of the normalized contract, validation result, seal, and lineage-tip response under an ignored project-local, change-specific path; that path SHALL NOT be the canonical cross-checkout approval authority by itself. Seal-aware repository policy SHALL identify a rollback-resistant canonical approval source that is either tracked with governed repository state and anchored to policy-authorized protected base/history outside candidate control, or independently attested by an authenticated append-only/monotonic authority. Either source SHALL be immutable and shareable with a fresh clone or protected consumer and SHALL permit rejection of an older internally valid seal/tip restoration. During that explicitly authorized approval write, the runtime SHALL atomically persist the normalized contract, validation result, seal, canonical lineage-tip record, and their source bindings to the canonical source. The tip SHALL bind the repository, change, and lineage identities, latest seal digest and monotonic sequence, complete predecessor-chain digest, registry/source identity, protected-history or independent-monotonic anchor, and update authority. A successor approval SHALL advance the complete canonical set exactly once; an ancestor seal SHALL NOT remain representable as the current tip. A read-only preflight run SHALL write no local, project, or shared state.
+Regardless of assurance-policy selection, any persistence SHALL require explicit write authorization and atomic complete writes; partial output SHALL NOT establish a valid approval. Only during an explicitly authorized approval write MAY the runtime atomically persist working copies of the normalized contract, validation result, seal, and lineage-tip response under an ignored project-local, change-specific path; that path SHALL NOT be the canonical cross-checkout approval authority by itself. When optional seal-aware assurance is selected, its repository policy SHALL identify a rollback-resistant canonical approval source that is either tracked with governed repository state and anchored to policy-authorized protected base/history outside candidate control, or independently attested by an authenticated append-only/monotonic authority. Either source SHALL be immutable and shareable with a fresh clone or protected consumer and SHALL permit rejection of an older internally valid seal/tip restoration. During that explicitly authorized approval write, the runtime SHALL atomically persist the normalized contract, validation result, seal, canonical lineage-tip record, and their source bindings to the canonical source. The tip SHALL bind the repository, change, and lineage identities, latest seal digest and monotonic sequence, complete predecessor-chain digest, registry/source identity, protected-history or independent-monotonic anchor, and update authority. A successor approval SHALL advance the complete canonical set exactly once; an ancestor seal SHALL NOT remain representable as the current tip. A read-only preflight run SHALL write no local, project, or shared state.
 
 #### Scenario: Persistence is interrupted
 
-- **GIVEN** one requested approval artifact cannot be written or verified
+- **GIVEN** an explicitly authorized persistence request, regardless of assurance-policy selection, and one requested approval artifact cannot be written or verified
 - **WHEN** persistence runs
 - **THEN** no partial set is treated as a valid approved contract
 - **AND** the runtime reports a non-ready persistence result.

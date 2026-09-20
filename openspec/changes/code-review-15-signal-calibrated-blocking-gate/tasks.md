@@ -9,7 +9,7 @@ This owner-requested planning amendment supersedes conflicting development-workf
 ## 1. Worktree and readiness
 
 - [x] 1.1 Create `feature/code-review-15-signal-calibrated-blocking-gate` from modules `dev` in the required sibling worktree.
-- [x] 1.2 Create public issue [#417](https://github.com/nold-ai/specfact-cli-modules/issues/417) and verify parent #163, labels, assignee, User Story type, SpecFact CLI/Todo project metadata, and all five native blocked-by relationships from live GitHub.
+- [ ] 1.2 Reverify existing issue [#417](https://github.com/nold-ai/specfact-cli-modules/issues/417), parent #163, labels, assignee, type, project status and current native blockers before implementation. The 2026-09-20 readback has four open prerequisites (modules #158/#167 and core #248/#680); closed modules #416 and core #237 remain historical baseline relationships. Optional #432 is not a prerequisite.
 - [ ] 1.3 Revalidate the already-shipped C14 schema 1.6 signed producer and compatible release identity; verify the still-pending protected core adoption #680 is released. Closed modules #416 is historical, not unfinished work.
 - [ ] 1.4 Verify policy-02 and governance-02 expose the signed policy and authenticated exception contracts consumed here.
 - [ ] 1.5 If any readiness item is missing or in progress elsewhere, stop production implementation and retain planning/test design only.

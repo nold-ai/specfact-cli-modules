@@ -316,7 +316,7 @@ When optional checkpoint/conformance assurance is explicitly selected, the modul
 
 ### Requirement: Human and JSON parity with optional persistence
 
-When optional checkpoint/conformance assurance is explicitly selected, human and JSON renderers SHALL derive from one normalized result, and explicit persistence SHALL atomically retain the complete snapshot/result without modifying the original contract or seal.
+For every checkpoint/conformance invocation, human and JSON renderers SHALL derive from one normalized result. Regardless of assurance-policy selection, persistence SHALL require explicit write authorization and atomically retain the complete snapshot/result without modifying the original contract or seal.
 
 #### Scenario: Persistence or rendering is incomplete
 

@@ -26,7 +26,7 @@ Planning only. Implementation has not started. Brief validation notes and CI art
 ## 4. Verify and deliver
 
 - [ ] 4.1 Run focused and applicable full tests, lint/type/contracts, independent review, strict OpenSpec validation and signing/publication checks; reference existing CI artifacts.
-- [ ] 4.2 Verify the supported installed core/module combination and coordinate signed handoff to #740 through the canonical publication process.
+- [ ] 4.2 Verify the supported installed core/module candidate and prepare the signed release handoff for #740; publish only after the implementation PR merges through the canonical process.
 - [ ] 4.3 Prepare the issue-linked implementation PR to dev with concise validation and rollback notes; push and open it.
 
 After integration, publish through the canonical signed release process, reconcile superseded planning, archive completed changes with `openspec archive`, and remove the implementation worktree only after merge.
