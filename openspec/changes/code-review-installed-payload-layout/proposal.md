@@ -22,7 +22,7 @@ None in this planning delivery. Future implementation must reconcile these oblig
 
 ## Current delivery
 
-Implementation PR #462 merged to dev; Code Review 0.49.77 was published by registry PR #463. See TDD_EVIDENCE.md for verified artifact details. Final issue acceptance and canonical archive remain pending.
+Implementation PR #462 merged to dev; Code Review 0.49.77 was published by registry PR #463. See TDD_EVIDENCE.md for verified artifact details. Issue [#459](https://github.com/nold-ai/specfact-cli-modules/issues/459) closed as completed on 2026-09-07 and its project status is Done (read back 2026-09-21 Europe/Berlin). Earlier open/pending-acceptance notes are historical. Reconcile the existing evidence before native OpenSpec archival; closure alone is not new release-acceptance evidence.
 
 ## Historical planning impact (PR #461)
 
@@ -53,5 +53,5 @@ No production implementation, runtime tests, release actions, implementation com
 <!-- source_repo: nold-ai/specfact-cli-modules -->
 - **GitHub Issue**: #459
 - **Issue URL**: <https://github.com/nold-ai/specfact-cli-modules/issues/459>
-- **Last Synced Status**: implementation merged to dev; 0.49.77 published; issue open pending final acceptance
+- **Last Synced Status**: Closed completed; project Done (read back 2026-09-21 Europe/Berlin); implementation merged to dev and 0.49.77 published; archive reconciliation remains separate
 - **Sanitized**: true
