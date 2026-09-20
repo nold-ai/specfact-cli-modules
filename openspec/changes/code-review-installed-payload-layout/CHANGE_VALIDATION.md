@@ -1,6 +1,13 @@
 # Change Validation
 
-## Current lifecycle (2026-09-07, Europe/Berlin)
+## Current dependency disposition — 2026-09-20
+
+Issue #459 is closed completed. Core #680 retains shipped #459/#466 baselines
+and does not require optional #431. Native #460 requires verified #459 and
+core #679, not optional #434. The dated lifecycle and dependency snapshots below
+are historical observations, not instructions to restore removed blockers.
+
+## Historical lifecycle (2026-09-07, Europe/Berlin)
 
 Implementation PR [#462](https://github.com/nold-ai/specfact-cli-modules/pull/462)
 merged to `dev` at `2cf1899e3ac502bb7a5ddc9eae57899152c9d08d` on
@@ -46,7 +53,7 @@ promoted to verified lifecycle evidence.
   No analyzer PASS or synthetic code-review JSON is claimed.
 - `git diff --cached --check`: passed.
 
-## Metadata and dependency review
+## Historical metadata and dependency review — 2026-09-06
 
 Both issues have assignee djm81, parent feature #163, required labels, the
 SpecFact CLI project, Todo status, and no milestone. Issue #459 has type Bug;

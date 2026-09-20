@@ -54,7 +54,7 @@ Publication is blocked until the selected registry and installer expose a suppor
 - **Overfitting to C14:** Require generalized rules plus a bounded independent regression corpus.
 - **Compatibility overclaim:** Pin only tested identities and retain explicit matrix evidence.
 - **Signed asset drift:** Run filesystem-payload signature verification with version-bump enforcement before publication.
-- **Downstream race:** Publish immutable handoff identities before unblocking core #684 or C15. Modules #434 consumes this handoff plus core #684 before #251/#253/#433 can proceed.
+- **Downstream race:** Publish immutable handoff identities before optional core #684/modules #434 adoption. Adapters #433 require signed #434 plus independently delivered core #253. C15 and generic #251/#253 do not wait for optional preflight publication.
 
 ## Migration and Rollback
 

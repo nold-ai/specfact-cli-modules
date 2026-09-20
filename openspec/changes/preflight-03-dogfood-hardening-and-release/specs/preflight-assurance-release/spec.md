@@ -87,14 +87,21 @@ The stable release SHALL advertise a dependency-backed bounded core range. Its i
 
 ### Requirement: Signed publication handoff
 
-Downstream stories SHALL receive the immutable published module version, artifact digest, signature identity, registry identity, compatible core identity, signed canonical workflow version/digest, delegated CLI identity, and completed regression result.
+Consumers of the optional preflight release SHALL receive the immutable published module version, artifact digest, signature identity, registry identity, compatible core identity, signed canonical workflow version/digest, delegated CLI identity, and completed regression result. This handoff SHALL gate only adoption of these optional assets; generic installation/instructions #251/#253 and C15 SHALL NOT require this release to implement or ship.
 
 #### Scenario: Downstream adoption starts from a feature build
 
 - **GIVEN** only an unpublished branch artifact exists
-- **WHEN** #251, preflight conformance, adapters, or C15 checks readiness
-- **THEN** the dependency remains unresolved
+- **WHEN** optional preflight conformance or an adapter checks readiness to consume that preflight asset
+- **THEN** its optional-asset dependency remains unresolved
 - **AND** feature-branch output cannot satisfy the stable handoff.
+
+#### Scenario: Independent delivery has no preflight release
+
+- **GIVEN** generic installation/instructions #251/#253 or C15 satisfy their own prerequisites but no stable preflight release exists
+- **WHEN** their implementation or release readiness is evaluated
+- **THEN** this optional publication handoff SHALL NOT block them
+- **AND** any later installation of a preflight asset still verifies its signed identity.
 
 ### Requirement: Release rollback
 

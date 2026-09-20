@@ -8,7 +8,7 @@ This owner-requested planning amendment supersedes conflicting default-workflow 
 
 ## Why
 
-The unpublished preflight runtime must not become a stable module or a dependency of C15 based only on proposal confidence. It needs fixes and regression coverage derived from the core C14 dogfood evidence, followed by the repository's signed publication and compatibility proof.
+The unpublished preflight runtime must not become a stable module based only on proposal confidence. Its optional release is not a C15 prerequisite. It needs fixes and regression coverage derived from the core C14 dogfood evidence, followed by the repository's signed publication and compatibility proof.
 
 ## What Changes
 

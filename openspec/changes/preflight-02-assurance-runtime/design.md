@@ -69,7 +69,7 @@ The module-owned `specfact-preflight` skill defines when to invoke the runtime, 
 
 ### 5. Instruction layering
 
-General AGENTS.md/OpenSpec/Spec Kit instructions should contain only the gate: select a change, run the installed preflight workflow, require a valid current seal, and stop on blocking/unknown/stale results. Detailed loop content remains in the module-owned skill. Core #251 later discovers/installs/exports that skill, and core #253 later generates the small harness instruction reference.
+When applicable policy selects preflight assurance, compact AGENTS.md/OpenSpec/Spec Kit references invoke the installed workflow, require a current seal and stop on blocking/unknown/stale results. Ordinary instructions use current validation without that gate. Detailed optional loop content remains module-owned. Independently delivered core #251/#253 may discover/export the signed asset or reference it once available; their own delivery does not wait for preflight.
 
 ### 6. Assurance language
 

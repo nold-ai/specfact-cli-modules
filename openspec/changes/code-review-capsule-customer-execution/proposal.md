@@ -32,10 +32,10 @@ If signed payloads change later, bump `packages/specfact-code-review/module-pack
 
 ## Dependencies
 
-- Issue [#466](https://github.com/nold-ai/specfact-cli-modules/issues/466), type Bug, assignee djm81, project SpecFact CLI, status In Progress (claimed by this implementation session), no milestone.
+- Issue [#466](https://github.com/nold-ai/specfact-cli-modules/issues/466) is closed completed (read back 2026-09-20); the implementation-session details describe historical delivery, not new implementation authority.
 - Native parent Feature [#163](https://github.com/nold-ai/specfact-cli-modules/issues/163), under Epic #162.
 - No open prerequisites; completed #416 and #459 are related baseline evidence.
-- Blocks [core #680](https://github.com/nold-ai/specfact-cli/issues/680); preserve its existing #431 and completed #459 dependencies.
+- Shipped #466 and #459 remain baseline dependencies of [core #680](https://github.com/nold-ai/specfact-cli/issues/680). Optional preflight #431 is not a #680 prerequisite and must not be restored by this historical correction.
 - Native-platform #460 is related downstream work; no redundant transitive blocker is added. Native support, C15, and Requirements behavior are outside this correction.
 
 ## Acceptance Criteria
