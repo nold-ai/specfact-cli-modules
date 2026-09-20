@@ -20,10 +20,10 @@ Modules add `current` as the default reconciliation stage; explicit legacy `red`
 
 Core #740 owns execution, trusted enforcement and coordinated organization policy. This story owns module contracts, command/help documentation, compatibility and signed publication. The module compares execution metadata with the submitted current plan identity/digest, canonical selector set, source revision/tree and environment; a supplied scenario mapping also binds its digest. Missing or mismatched binding is non-passing. Canonical `specfact.selector` identities are required for selected JUnit cases. These consistency checks use current inputs, not frozen authoring history. Core authenticates execution provenance; matching local declarations alone grant no CI authority. Validate the supported existing core interface before release. No new profile framework, service, approval protocol or runtime executor is introduced.
 
-## Workflow consumer boundary
-
-The paired `workflow-01-turn-orchestration` ([core #742](https://github.com/nold-ai/specfact-cli/issues/742), [modules #483](https://github.com/nold-ai/specfact-cli-modules/issues/483)) consumes current evidence without adding required session history. Standalone verification and ordinary CI need no previous workflow receipt. Operational receipts retain independent producer outcomes and cannot establish chronology or protected CI authority. The separate workflow executor may run configured checks; the R09 reconciler remains pure and performs no Git, test or network operations. Modules #481 supplies the contract consumed by workflow #483; R09 delivery does not wait for that downstream consumer. Core #740 keeps its own enforcement/policy cutover.
-
 ## Execution-unit selection
 
 Exactly once is per canonical selector within the current selected candidate/environment/logical suite-or-shard/job-attempt unit, not globally across the matrix. Core derives the required unit set and current designated attempts from trusted CI metadata; each unit must satisfy its expected selector set. Do not cherry-pick older passing attempts when the current designated attempt is pending, failed, cancelled or unavailable. Ambiguous selection or duplicates inside one unit remain non-passing. Modules only compares supplied unit identities alongside the existing plan/source/environment binding. Reuse existing CI metadata and outputs; no historical transcript, extra suite or new approval protocol is introduced.
+
+## Current-run consumer boundary
+
+Current reconciliation requires no prior session receipt and preserves independent producer outcomes. Local progress cannot establish chronology or protected CI authority. Executors remain outside the pure Requirements reconciler, which performs no Git, test or network operations.

@@ -15,7 +15,7 @@ Planning only. Implementation has not started. Brief validation notes and CI art
 - [ ] 2.2 Add cases for optional mapping and unassessed coverage, explicit legacy semantics, malformed-v3 rejection and independent Code Review verdicts; add separate matrix-unit, designated-retry and duplicate-within-unit cases.
 - [ ] 2.3 Add passing-selector cases with wrong/missing plan identity/digest, canonical selector identity/set, source revision/tree, environment and supplied mapping digest; require non-passing results. Retain parser/resource bounds and ensure local report inputs cannot manufacture protected CI authority.
 
-- [ ] 2.4 Add consumer-boundary cases for fresh-session current reconciliation, rejected local authority and independent failed/unknown producer results; keep workflow #483 downstream and executor I/O outside this reconciler.
+- [ ] 2.4 Add consumer-boundary cases for fresh-session current reconciliation, rejected local authority and independent failed/unknown producer results; keep executor I/O outside this reconciler.
 
 ## 3. Implementation
 
