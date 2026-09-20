@@ -12,7 +12,7 @@ Planning only. Implementation has not started. Brief validation notes and CI art
 ## 2. Tests before code
 
 - [ ] 2.1 Add focused cases for current passing results without RED; missing, malformed, empty, duplicate, failed, errored, skipped, XFAIL or XPASS selected outcomes (strict/non-strict and empty expected-failure markers); observe the relevant failures before code changes.
-- [ ] 2.2 Add cases for optional mapping and unassessed coverage, explicit legacy semantics, malformed-v3 rejection and independent Code Review verdicts; add separate matrix-unit, designated-retry and duplicate-within-unit cases.
+- [ ] 2.2 Add cases for optional mapping and unassessed coverage, explicit legacy semantics, malformed-v3 rejection and independent Code Review verdicts; add separate matrix-unit, designated-retry, duplicate-within-unit and canonical eight-field execution-unit cases (mismatched IDs, display-name substitution, missing/extra fields and invalid slot types).
 - [ ] 2.3 Add passing-selector cases with wrong/missing plan identity/digest, canonical selector identity/set, source revision/tree, environment and supplied mapping digest; require non-passing results. Retain parser/resource bounds and ensure local report inputs cannot manufacture protected CI authority.
 
 - [ ] 2.4 Add consumer-boundary cases for fresh-session current reconciliation, rejected local authority and independent failed/unknown producer results; keep executor I/O outside this reconciler.
