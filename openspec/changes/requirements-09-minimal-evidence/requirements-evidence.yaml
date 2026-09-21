@@ -1,0 +1,90 @@
+# Planning-only mapping for the existing planned-maturity gate.
+schema_version: '2'
+requirements:
+  openspec:requirements-09-minimal-evidence:requirements-current-run-evidence:current-execution-is-the-lean-default:
+    rationale: Reuse current test output without historical proof bureaucracy.
+    touchpoints: &id001
+      - id: requirements-current-run-evidence-spec
+        kind: config_file
+        locator: openspec/changes/requirements-09-minimal-evidence/specs/requirements-current-run-evidence/spec.md
+    verification_cases:
+      - case_id: requirements-current-run-evidence-current-execution-is-the-lean-default-inspection
+        scenario_id: current-execution-is-the-lean-default
+        method: inspection
+        intent: Inspect the declared requirement, scenarios and any replacement migration for consistency with the
+          approved planning scope.
+        observable: Current-run scenarios accept complete ordinary passes without history and reject missing results,
+          XFAIL and XPASS including empty expected-failure markers. This is planned inspection, not runtime execution
+          or implementation proof.
+  ? openspec:requirements-09-minimal-evidence:requirements-current-run-evidence:passing-results-are-bound-to-the-current-request
+  : rationale: Prevent stale or mismatched passing output from satisfying a current request.
+    touchpoints: *id001
+    verification_cases:
+      - case_id: requirements-current-run-evidence-passing-results-are-bound-to-the-current-request-inspection
+        scenario_id: passing-results-are-bound-to-the-current-request
+        method: inspection
+        intent: Inspect the declared requirement, scenarios and any replacement migration for consistency with the
+          approved planning scope.
+        observable: Binding scenarios reject mismatched plans, selectors, source, environment and supplied mapping
+          identity; local metadata never grants protected CI authority. This is planned inspection, not runtime
+          execution or implementation proof.
+  openspec:requirements-09-minimal-evidence:requirements-current-run-evidence:optional-associations-preserve-honest-coverage:
+    rationale: Make scenario associations optional without overstating coverage.
+    touchpoints: *id001
+    verification_cases:
+      - case_id: requirements-current-run-evidence-optional-associations-preserve-honest-coverage-inspection
+        scenario_id: optional-associations-preserve-honest-coverage
+        method: inspection
+        intent: Inspect the declared requirement, scenarios and any replacement migration for consistency with the
+          approved planning scope.
+        observable: The no-mapping scenario reports requirement coverage as not evaluated and preserves ordinary
+          skips separately from selected acceptance outcomes. This is planned inspection, not runtime execution
+          or implementation proof.
+  openspec:requirements-09-minimal-evidence:requirements-current-run-evidence:versioned-claims-retain-legacy-meaning:
+    rationale: Introduce lean claims without silently weakening legacy callers.
+    touchpoints: *id001
+    verification_cases:
+      - case_id: requirements-current-run-evidence-versioned-claims-retain-legacy-meaning-inspection
+        scenario_id: versioned-claims-retain-legacy-meaning
+        method: inspection
+        intent: Inspect the declared requirement, scenarios and any replacement migration for consistency with the
+          approved planning scope.
+        observable: Versioning scenarios preserve explicit historical proof requirements and reject malformed v3
+          rather than falling back to legacy parsing. This is planned inspection, not runtime execution or implementation
+          proof.
+  ? openspec:requirements-09-minimal-evidence:requirements-current-run-evidence:context-does-not-override-independent-authority
+  : rationale: Keep test success from replacing independent review judgment.
+    touchpoints: *id001
+    verification_cases:
+      - case_id: requirements-current-run-evidence-context-does-not-override-independent-authority-inspection
+        scenario_id: context-does-not-override-independent-authority
+        method: inspection
+        intent: Inspect the declared requirement, scenarios and any replacement migration for consistency with the
+          approved planning scope.
+        observable: The conflicting-producer scenario retains review failure despite passing current tests and does
+          not promote local context to protected authority. This is planned inspection, not runtime execution or
+          implementation proof.
+  openspec:requirements-09-minimal-evidence:requirements-current-run-evidence:workflow-state-is-not-delivery-evidence:
+    rationale: Keep ordinary reconciliation usable without session receipts.
+    touchpoints: *id001
+    verification_cases:
+      - case_id: requirements-current-run-evidence-workflow-state-is-not-delivery-evidence-inspection
+        scenario_id: workflow-state-is-not-delivery-evidence
+        method: inspection
+        intent: Inspect the declared requirement, scenarios and any replacement migration for consistency with the
+          approved planning scope.
+        observable: Workflow scenarios allow fresh-checkout reconciliation and reject local success receipts as
+          substitutes for independent producer results. This is planned inspection, not runtime execution or implementation
+          proof.
+  ? openspec:requirements-09-minimal-evidence:requirements-current-run-evidence:acceptance-uniqueness-is-per-selected-execution-unit
+  : rationale: Handle matrix lanes and retries without duplicate or stale acceptance.
+    touchpoints: *id001
+    verification_cases:
+      - case_id: requirements-current-run-evidence-acceptance-uniqueness-is-per-selected-execution-unit-inspection
+        scenario_id: acceptance-uniqueness-is-per-selected-execution-unit
+        method: inspection
+        intent: Inspect the declared requirement, scenarios and any replacement migration for consistency with the
+          approved planning scope.
+        observable: Unit scenarios require complete exact selector sets per selected unit, reject duplicate/stale
+          attempts and compare the shared typed identity tuple without granting local CI authority. This is planned
+          inspection, not runtime execution or implementation proof.

@@ -1,0 +1,149 @@
+# Planning-only mapping for the existing planned-maturity gate.
+schema_version: '2'
+requirements:
+  openspec:code-review-15-signal-calibrated-blocking-gate:code-review-policy-profile:signed-signal-calibrated-review-policy:
+    rationale: Prevent analyzer noise from becoming an unintended blocker.
+    touchpoints:
+      - id: code-review-policy-profile-spec
+        kind: config_file
+        locator: openspec/changes/code-review-15-signal-calibrated-blocking-gate/specs/code-review-policy-profile/spec.md
+    verification_cases:
+      - case_id: code-review-policy-profile-signed-signal-calibrated-review-policy-inspection
+        scenario_id: signed-signal-calibrated-review-policy
+        method: inspection
+        intent: Inspect the declared requirement, scenarios and any replacement migration for consistency with the
+          approved planning scope.
+        observable: Policy scenarios bind effective severity to signed policy identity, calibrated thresholds, context,
+          allowlists and ambiguity handling. This is planned inspection, not runtime execution or implementation
+          proof.
+  ? openspec:code-review-15-signal-calibrated-blocking-gate:code-review-suppression-evidence:auditable-approved-review-suppression
+  : rationale: Allow authorized exceptions without candidate self-approval.
+    touchpoints:
+      - id: code-review-suppression-evidence-spec
+        kind: config_file
+        locator: openspec/changes/code-review-15-signal-calibrated-blocking-gate/specs/code-review-suppression-evidence/spec.md
+    verification_cases:
+      - case_id: code-review-suppression-evidence-auditable-approved-review-suppression-inspection
+        scenario_id: auditable-approved-review-suppression
+        method: inspection
+        intent: Inspect the declared requirement, scenarios and any replacement migration for consistency with the
+          approved planning scope.
+        observable: Suppression scenarios retain directive evidence and require authenticated, scoped, unexpired
+          exceptions before waiving errors. This is planned inspection, not runtime execution or implementation
+          proof.
+  ? openspec:code-review-15-signal-calibrated-blocking-gate:review-finding-model:schema-1-7-finding-policy-and-occurrence-evidence
+  : rationale: Preserve trustworthy finding identity while calibrating severity.
+    touchpoints:
+      - id: review-finding-model-spec
+        kind: config_file
+        locator: openspec/changes/code-review-15-signal-calibrated-blocking-gate/specs/review-finding-model/spec.md
+    verification_cases:
+      - case_id: review-finding-model-schema-1-7-finding-policy-and-occurrence-evidence-inspection
+        scenario_id: schema-1-7-finding-policy-and-occurrence-evidence
+        method: inspection
+        intent: Inspect the declared requirement, scenarios and any replacement migration for consistency with the
+          approved planning scope.
+        observable: Finding scenarios separate raw/effective severity, retain policy and occurrence evidence, and
+          reject ambiguous attribution or unsafe deduplication. This is planned inspection, not runtime execution
+          or implementation proof.
+  openspec:code-review-15-signal-calibrated-blocking-gate:review-run-command:severity-driven-review-enforcement:
+    rationale: Make real errors and uncertainty determine enforcement.
+    touchpoints: &id001
+      - id: review-run-command-spec
+        kind: config_file
+        locator: openspec/changes/code-review-15-signal-calibrated-blocking-gate/specs/review-run-command/spec.md
+    verification_cases:
+      - case_id: review-run-command-severity-driven-review-enforcement-inspection
+        scenario_id: severity-driven-review-enforcement
+        method: inspection
+        intent: Inspect the declared requirement, scenarios and any replacement migration for consistency with the
+          approved planning scope.
+        observable: Enforcement scenarios block applicable errors and uncertainty, keep advisory scores non-blocking,
+          and preserve truth in shadow mode. This is planned inspection, not runtime execution or implementation
+          proof.
+  ? openspec:code-review-15-signal-calibrated-blocking-gate:review-run-command:review-run-supports-severity-driven-simplify-focus
+  : rationale: Retain useful simplification advice without advice-only blockers.
+    touchpoints: *id001
+    verification_cases:
+      - case_id: review-run-command-review-run-supports-severity-driven-simplify-focus-inspection
+        scenario_id: review-run-supports-severity-driven-simplify-focus
+        method: inspection
+        intent: Inspect the declared requirement, scenarios and any replacement migration for consistency with the
+          approved planning scope.
+        observable: Simplify scenarios preserve guided queues and safe-only rewrites while using the shared effective-error/uncertainty
+          predicate. This is planned inspection, not runtime execution or implementation proof.
+  openspec:code-review-15-signal-calibrated-blocking-gate:review-run-command:review-modes-use-severity-driven-exits:
+    rationale: Preserve command compatibility without retaining obsolete score gates.
+    touchpoints: *id001
+    verification_cases:
+      - case_id: review-run-command-review-modes-use-severity-driven-exits-inspection
+        scenario_id: review-modes-use-severity-driven-exits
+        method: inspection
+        intent: Inspect the declared requirement, scenarios and any replacement migration for consistency with the
+          approved planning scope.
+        observable: Mode scenarios preserve default enforce, shadow truth, JSON parity and bug-hunt composition
+          while retiring score-based advisory failures. This is planned inspection, not runtime execution or implementation
+          proof.
+  openspec:code-review-15-signal-calibrated-blocking-gate:review-run-command:review-run-supports-simplify-focus:
+    rationale: Retire the legacy guidance-kind blocking contract explicitly.
+    touchpoints: *id001
+    verification_cases:
+      - case_id: review-run-command-review-run-supports-simplify-focus-inspection
+        scenario_id: review-run-supports-simplify-focus
+        method: inspection
+        intent: Inspect the declared requirement, scenarios and any replacement migration for consistency with the
+          approved planning scope.
+        observable: The removal reason and migration name the severity-driven simplify replacement and preserve
+          guided queues and deterministic safe-only rewrites. This is planned inspection, not runtime execution
+          or implementation proof.
+  openspec:code-review-15-signal-calibrated-blocking-gate:review-run-command:mode-shadow-and-mode-enforce:
+    rationale: Retire legacy exit preservation that conflicts with C15.
+    touchpoints: *id001
+    verification_cases:
+      - case_id: review-run-command-mode-shadow-and-mode-enforce-inspection
+        scenario_id: mode-shadow-and-mode-enforce
+        method: inspection
+        intent: Inspect the declared requirement, scenarios and any replacement migration for consistency with the
+          approved planning scope.
+        observable: The removal reason and migration replace score-based exits while retaining flags, default enforce,
+          shadow truth and legacy report fields. This is planned inspection, not runtime execution or implementation
+          proof.
+  openspec:code-review-15-signal-calibrated-blocking-gate:review-run-command:level-error-and-level-warning:
+    rationale: Keep display filtering separate from enforcement authority.
+    touchpoints: *id001
+    verification_cases:
+      - case_id: review-run-command-level-error-and-level-warning-inspection
+        scenario_id: level-error-and-level-warning
+        method: inspection
+        intent: Inspect the declared requirement, scenarios and any replacement migration for consistency with the
+          approved planning scope.
+        observable: Level scenarios filter by effective severity, retain raw context and prevent display filters
+          from suppressing aggregate errors or required uncertainty. This is planned inspection, not runtime execution
+          or implementation proof.
+  ? openspec:code-review-15-signal-calibrated-blocking-gate:review-tool-calibration:contract-applicability-is-explicit-and-semantic
+  : rationale: Avoid reporting meaningless missing-contract defects.
+    touchpoints: &id002
+      - id: review-tool-calibration-spec
+        kind: config_file
+        locator: openspec/changes/code-review-15-signal-calibrated-blocking-gate/specs/review-tool-calibration/spec.md
+    verification_cases:
+      - case_id: review-tool-calibration-contract-applicability-is-explicit-and-semantic-inspection
+        scenario_id: contract-applicability-is-explicit-and-semantic
+        method: inspection
+        intent: Inspect the declared requirement, scenarios and any replacement migration for consistency with the
+          approved planning scope.
+        observable: Applicability scenarios exclude inapplicable callables and keep opted-in concrete-boundary advice
+          within the declared severity policy. This is planned inspection, not runtime execution or implementation
+          proof.
+  ? openspec:code-review-15-signal-calibrated-blocking-gate:review-tool-calibration:optional-parameter-advice-preserves-interface-contracts
+  : rationale: Avoid suggestions that break constrained signatures.
+    touchpoints: *id002
+    verification_cases:
+      - case_id: review-tool-calibration-optional-parameter-advice-preserves-interface-contracts-inspection
+        scenario_id: optional-parameter-advice-preserves-interface-contracts
+        method: inspection
+        intent: Inspect the declared requirement, scenarios and any replacement migration for consistency with the
+          approved planning scope.
+        observable: Parameter scenarios preserve constrained or unresolved interfaces and permit advisory removal
+          only when signature freedom is proven. This is planned inspection, not runtime execution or implementation
+          proof.
