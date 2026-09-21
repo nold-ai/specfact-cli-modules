@@ -37,6 +37,10 @@ changes without creating runtime behavior.
 
 ## Shared Rules
 
+The preflight, seal, checkpoint and conformance rules below apply only when
+that optional assurance policy is explicitly selected. They do not add gates
+to ordinary MEB delivery or generic skill/instruction installation.
+
 - Architecture-01, governance-01, traceability, and native OpenSpec/Spec Kit
   import remain upstream inputs; preflight must not redefine their payloads.
 - The signed module skill is the canonical workflow source. General AGENTS.md,
@@ -59,6 +63,13 @@ changes without creating runtime behavior.
 
 ## Delivery Sequence
 
-`core #682 -> modules #431 -> core C14 #680/#683 -> modules #432 -> core #684 -> modules #434 -> core #251 -> core #253 -> modules #433`.
-Modules C15 `#417` -> core C15 #679 remains an independent signal-calibration
-branch after stable #432. Existing policy/exception blockers remain in force.
+Optional preflight follows core #682 -> modules #431, then core #683 after
+both #431 and independently delivered core C14 #680 -> modules #432 ->
+core #684 -> modules #434. Optional adapters #433 require both signed #434
+and independently delivered core #253.
+
+Generic skills/instructions core #251 -> #253 and signal calibration modules
+C15 #417 -> core C15 #679 do not wait for optional #432/#434. C15 retains
+protected C14 adoption and existing policy/profile/exception prerequisites.
+The separate MEB migration remains signed modules #481 -> core #740 adoption
+and coordinated policy cutover.

@@ -1,5 +1,11 @@
 # Design: Native Local Code Review Across macOS Linux and Windows
 
+## Scope rescope — 2026-09-20
+
+Remove the prerequisite on optional checkpoint/conformance #434. Preserve layout compatibility and core C15 prerequisites, native platform acceptance tests, and signed artifacts. Ordinary native review must not require preflight, a seal, or historical RED proof.
+
+This owner-requested planning amendment supersedes conflicting default-workflow and dependency wording below; runtime behavior is unchanged. [Replacement policy](../requirements-09-minimal-evidence/proposal.md).
+
 ## Product boundary
 
 The developer or agent invokes the normal CLI in its native project environment on macOS, Linux, or Windows. Local invocation does not require GitHub, an agent vendor, Docker, WSL, a Linux VM, or OS/CPU emulation. An ordinary virtual environment is permitted; it does not abstract away the host OS. OS-native isolation is allowed.
@@ -34,9 +40,9 @@ Approve a common behavioral capability contract and platform-specific attestatio
 
 ## Baseline gate and evidence lifecycle
 
-Implementation is deferred until #459 is corrected, #434 is published with install readback, and core #679 has adopted the released C15 module #417. Pin exact core/module versions, commits, signed artifacts, policy/profile, and available preflight/checkpoint/conformance identities. Reassess this proposal using that baseline, refine material scope/interfaces with user review, and obtain the required current approval/seal before production edits.
+Implementation requires the verified #459 layout correction and released core #679 adoption of C15 #417. Pin the relevant core/module, signed artifact and policy/profile identities and revalidate native interfaces against that baseline. Optional #434, preflight, seals and checkpoints are not implementation or release prerequisites. Material design changes still require review.
 
-Before implementation, map requirements and risks to native tests and record failing evidence. During implementation, use the released checkpoint surface and record every meaningful change. At completion, use final conformance and native OS/architecture runners, then verify published installation. A changed baseline or release artifact invalidates affected evidence.
+Before implementation, specify relevant native tests and observe meaningful failures. Reference current-run results from native OS/architecture runners and verify published installation. Keep concise validation notes and existing CI artifacts; no historical ledger or checkpoint transcript is required. A changed baseline or release artifact requires revalidation of affected results. Explicit optional assurance policy retains its own guarantees when selected.
 
 ## Compatibility and release
 

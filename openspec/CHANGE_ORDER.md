@@ -3,16 +3,35 @@
 This document is the modules-side source of truth for active OpenSpec work. It
 must be read together with the core repo change order in `nold-ai/specfact-cli`.
 
+## Minimal-evidence rescope (2026-09-20)
+
+The paired `requirements-09-minimal-evidence` owns the default policy correction:
+[core #740](https://github.com/nold-ai/specfact-cli/issues/740) and [modules #481](https://github.com/nold-ai/specfact-cli-modules/issues/481). Implementation order is signed modules
+current-run contract -> core adoption/pilot -> coordinated organization/repository
+cutover. Existing corrected R07 is superseded planning, not an additional prerequisite.
+R08 remains abandoned. Runtime and branch rules have not changed in this planning update.
+
+Optional preflight keeps core #682 -> modules #431, then core #683 after both
+modules #431 and independently delivered C14 #680 -> modules #432 -> core #684/modules #434.
+Remove default dependencies C14 #680 <- #431, C15 #417 <- #432, generic skills
+core #251 <- #434, and native execution #460 <- #434. Optional adapters #433 require
+both #434 and core #253 explicitly. C14/C15 retain their actual producer, layout,
+policy/profile/exception and release prerequisites. No full-chain graph or preflight
+release blocks the new MEB stories. This section supersedes contradictory historical
+ordering prose below; individual affected proposals carry the same scope amendment.
+
+Core #680/#679 and modules #417 were recovered from uncommitted planning-only feature worktrees into local `dev` and the R09 planning worktrees on 2026-09-20. Remote integration remains pending. All three remain planned; no implementation was imported. Modules C14 #416 shipped and is closed, but its existing proposal remains unarchived on dev; it is distinct from core C14 adoption #680.
+
 ## Status Snapshot
 
 | Bucket | Count | Location |
 |---|---:|---|
-| **Active-tree entries** | 23 | [`openspec/changes/`](changes/) |
+| **Active-tree entries** | 26 | [`openspec/changes/`](changes/) |
 | **Parking-lot entries** | 16 | [`openspec/parking-lot/`](parking-lot/) |
 | **Archived** | 50 | [`openspec/changes/archive/`](changes/archive/) |
 | **Abandoned history** | 1 | [`openspec/history/abandoned/`](history/abandoned/) |
 
-`openspec list` reflects all 23 direct active-tree entries. The closed R08
+`openspec list` reflects all 26 direct active-tree entries (verified 2026-09-20). The closed R08
 proposal is retained under non-canonical abandoned history, outside
 `openspec/changes/` and its completed-change archive; no unimplemented delta
 entered canonical specifications. Completed changes still use native OpenSpec
@@ -75,14 +94,15 @@ AI IDE, rerun, and compare improved evidence.
 
 | Change | GitHub issue | Positioning | Dependencies |
 |---|---|---|---|
-| `code-review-capsule-customer-execution` | [#466](https://github.com/nold-ai/specfact-cli-modules/issues/466) | Implementation authorized 2026-09-12; candidate repair and dogfooding gate merged via #467; release review follow-up in progress: validate signed capsule execution as a non-root customer on hosted Ubuntu 24.04 for Python 3.11/3.12/3.13; validate the public release later | No open prerequisites; blocks core [#680](https://github.com/nold-ai/specfact-cli/issues/680); completed #416/#459 are baseline context |
+| `code-review-capsule-customer-execution` | [#466](https://github.com/nold-ai/specfact-cli-modules/issues/466) | Closed completed; implementation #467, registry publication #468 and main release #469 merged. Retained for reconciliation and native archival, not continuing implementation. | Shipped baseline for core [#680](https://github.com/nold-ai/specfact-cli/issues/680); completed #416/#459 are baseline context |
 
 This bounded bugfix is independent of completed C14 bookkeeping and native-platform
 issue #460. Reproduction, candidate repair and dogfooding merged through PR #467; canonical
-registry publication merged through #468. Release PR #469 and its review fixes
-remain in progress, with #466 open/In Progress. Public-main signed module
-acceptance and final release validation remain pending; old immutable artifacts
-are preserved.
+registry publication merged through #468. Live readback on 2026-09-20 confirms
+main release PR #469 merged on 2026-09-13 and #466 closed as completed that day.
+The remaining local artifacts require reconciliation and native archival; they
+do not authorize more implementation or signal concurrent work. Historical
+release evidence and immutable artifacts remain preserved.
 
 ## Completed-Issue Reconciliation
 
@@ -92,6 +112,7 @@ and finalization. Their closed GitHub issues are not implementation authority.
 | Order | Change folder | GitHub # | Positioning | Blocked by |
 |---:|---|---|---|---|
 | 1 | `code-review-14-scope-truth-and-differential-enforcement` | [#416](https://github.com/nold-ai/specfact-cli-modules/issues/416) | Closed completed; reconcile outstanding local bookkeeping before native archival. No further C14 implementation scope is authorized. | none |
+| 2 | `code-review-installed-payload-layout` | [#459](https://github.com/nold-ai/specfact-cli-modules/issues/459) | Closed completed on 2026-09-07; implementation #462 merged and 0.49.77 published through #463. Retained for evidence reconciliation and native archival; shipped baseline for core #680 and native #460. | none |
 
 The immutable C14 compatibility smoke establishes core 0.55.1 as the minimum: lightweight tag `v0.55.1`, full commit `b1e517e60e669eaba15a18ecfa83ef5a9df65276`, and full tree `47984be5434d7ae65ed6908bf525a32053290337`. Runtime metadata therefore uses `>=0.55.1,<1.0.0`: the ceiling is required because recursive installation includes Codebase and Requirements modules whose current manifests reject core 1.x. Current paired-core validation exercises compatible versions above the minimum; a routine compatible core update within the dependency graph does not require a module metadata release. Remove the ceiling only after widening and validating the required dependency graph. This correction supersedes C14's exact-only admission wording without changing its frozen provenance identities or historical evidence.
 
@@ -122,30 +143,42 @@ Security records under the repository security policy.
 |---:|---|---|---|---|
 | 1 | `archive/2026-08-23-ci-01-workflow-dispatch-core-ref-trust` | [#422](https://github.com/nold-ai/specfact-cli-modules/pull/422) | Shipped and archived: preserve paired feature-branch validation for non-manual events while restricting manual paired-core execution to literal `main` or `dev` refs | ancestry sync PR [#421](https://github.com/nold-ai/specfact-cli-modules/pull/421) |
 
-## Planned C14 Correction and Native Local Execution
+## Planned Native Local Execution
 
-These two changes are planning-only proposals. Their planning PR may merge to
-`dev` while implementation remains pending; neither issue is closed or archived
-by that PR. GitHub metadata was verified on 2026-09-06.
+Native execution #460 remains planned. The layout correction #459, originally
+proposed alongside it in planning PR #461, is now closed completed and listed
+under Completed-Issue Reconciliation above (read back 2026-09-21 Europe/Berlin).
+Its historical planning status does not make layout implementation pending.
 
 | Change | Issue | Implementation dependencies |
 |---|---|---|
-| `code-review-installed-payload-layout` | [#459](https://github.com/nold-ai/specfact-cli-modules/issues/459) | No open prerequisite; corrects completed C14 #416 and blocks core #680 |
-| `code-review-native-platform-execution` | [#460](https://github.com/nold-ai/specfact-cli-modules/issues/460) | Layout #459, released checkpoint/conformance #434, and released core C15 #679 |
+| `code-review-native-platform-execution` | [#460](https://github.com/nold-ai/specfact-cli-modules/issues/460) | Verified layout #459 and released core C15 #679; no optional #434 prerequisite |
 
 Native execution means the ordinary local CLI runs directly on macOS, Linux,
 and Windows with explicit x64/ARM64 coverage. Docker, WSL, VMs, and emulation
 are not prerequisites. OS-native sandboxing is permitted. Final platform design
 and implementation must be reassessed against the exact released prerequisite
-and C15 baseline using preflight, checkpoints, and final conformance evidence.
+and C15 baseline using relevant native tests and current-run results. Optional
+preflight, checkpoints and seals are not implementation/release prerequisites.
 
-The prerequisite chain remains core #682 -> modules #431 -> core #680 ->
-core #683 -> modules #432; modules #432 plus core #684 -> modules #434; modules #432
-plus existing policy/profile/exception prerequisites -> modules #417 ->
-core #679. Native issue #460 records only its three direct blockers; it does not
-add redundant transitive edges. Harness adapters #433 are not a prerequisite.
-The layout bug cannot depend on C15 without creating a cycle through core #680.
-Existing pending changes retain their scope and ordering.
+C15 retains its C14 and policy/profile/exception prerequisites, followed by
+modules #417 -> core #679. Native #460 consumes verified layout #459 and core
+adoption #679. The separate optional preflight chain and harness adapters do not
+block native implementation or release. Layout cannot depend on C15 without
+creating a cycle through core #680.
+
+## Recovered C15 planning
+
+`code-review-15-signal-calibrated-blocking-gate` / #417 was recovered into local dev from its proposal-only feature worktree; it remains planned and retains the real C14/profile/policy/exception prerequisites. Remote integration remains pending. Modules C14 #416 shipped but its existing proposal remains unarchived.
+
+## Lean current-run delivery
+
+`requirements-09-minimal-evidence` / #481 supersedes the R07 correction and publishes the signed current-run contract before core #740 adopts it. Optional preflight and the full validation graph do not block delivery.
+
+R07 is retained for historical/canonical-spec reconciliation only. Its former
+implementation queue is superseded; it is not an active delivery item. R09 owns
+replacement implementation and the later disposition of mixed shipped and
+unimplemented R07 artifacts without promoting obsolete deltas.
 
 ## Active Tracks
 
@@ -188,7 +221,7 @@ and adapters reference it without duplicating Python checks.
 | 3 | `requirements-04-upstream-source-readiness` | [#346](https://github.com/nold-ai/specfact-cli-modules/issues/346) | Reject incomplete or policy-invalid native OpenSpec and Spec Kit sources before requirement evidence persistence | core [#648](https://github.com/nold-ai/specfact-cli/issues/648) |
 | 4 | `requirements-05-dogfood-evidence-gate` | [#352](https://github.com/nold-ai/specfact-cli-modules/issues/352) | CI evidence adapter that reports green/red requirement-source validity and traceability evidence; not test-execution proof | requirements-04 shipped; existing Requirements runtime |
 | 5 | `requirements-06-evidence-enforcement` | [#361](https://github.com/nold-ai/specfact-cli-modules/issues/361) | Reusable Requirements evidence command plus staged pre-commit enforcement and CI parity | [#352](https://github.com/nold-ai/specfact-cli-modules/issues/352); paired core [#657](https://github.com/nold-ai/specfact-cli/issues/657) |
-| 6 | `requirements-07-scenario-runtime-proof` | [#368](https://github.com/nold-ai/specfact-cli-modules/issues/368) | Plan exact selectors and reconcile current-run JUnit independently from historical chronology | requirements-06; paired corrected core R07 |
+| 6 | `requirements-09-minimal-evidence` | [#481](https://github.com/nold-ai/specfact-cli-modules/issues/481) | Current-run reconciliation with separate chronology; signed module before core #740 adoption | shipped core interfaces; no optional preflight dependency |
 | 8 | `architecture-01-solution-layer` | [#164](https://github.com/nold-ai/specfact-cli-modules/issues/164) | Architecture-boundary validation input | core architecture-boundary contracts |
 | 9 | `sync-01-unified-kernel` | [#157](https://github.com/nold-ai/specfact-cli-modules/issues/157) | Preview/apply safety only where validation adapters need it | project/runtime safety specs |
 | Parked | `requirements-03-backlog-sync` | [#166](https://github.com/nold-ai/specfact-cli-modules/issues/166) | Read-first backlog drift evidence; no write-back critical path. Deprioritized 2026-07-13 behind openspec-01 | requirements-02, sync-01 |
@@ -230,20 +263,20 @@ ceremony rather than validation evidence:
 
 ## Implementation Waves
 
-### Preflight Assurance Sequence - Mandatory Dependency Gate
+### Optional Preflight Assurance Sequence
 
 1. Core contract [#682](https://github.com/nold-ai/specfact-cli/issues/682).
 2. Unpublished modules runtime [#431](https://github.com/nold-ai/specfact-cli-modules/issues/431).
-3. Core C14 adoption [#680](https://github.com/nold-ai/specfact-cli/issues/680).
+3. Independently delivered core C14 adoption [#680](https://github.com/nold-ai/specfact-cli/issues/680), without a preflight prerequisite.
 4. Core C14 dogfood/readiness [#683](https://github.com/nold-ai/specfact-cli/issues/683).
 5. Evidence-backed modules hardening and stable publication [#432](https://github.com/nold-ai/specfact-cli-modules/issues/432).
 6. Core implementation-assurance contracts [#684](https://github.com/nold-ai/specfact-cli/issues/684).
 7. Modules checkpoint/conformance runtime, dogfood, signing, and publication [#434](https://github.com/nold-ai/specfact-cli-modules/issues/434).
-8. Shared skill installation #251 -> generated instructions #253 -> adapters #433. Modules C15 #417 -> core C15 #679 may proceed independently after stable #432.
+8. Optional adapters #433 consume both signed #434 and independently delivered core #253. Generic #251 -> #253 and C15 #417 -> core #679 do not wait for #432/#434.
 
 Modules C15 #417 keeps its existing policy and exception blockers (#158,
-core #248, and modules #167) plus the stable preflight release. Existing native
-C14/history edges remain preserved. Every implementation change starts in a
+core #248, and modules #167) and protected C14 adoption. Optional preflight
+release is not a C15 prerequisite. Every implementation change starts in a
 dedicated issue-linked worktree and session.
 
 ### Wave 1 - Cleanup and Scope Alignment
@@ -272,7 +305,7 @@ dedicated issue-linked worktree and session.
 - `requirements-04-upstream-source-readiness` (blocked on paired core source-readiness contract)
 - `requirements-05-dogfood-evidence-gate`
 - `requirements-06-evidence-enforcement` (after requirements-05 archival/release evidence)
-- `requirements-07-scenario-runtime-proof` (current-run reconciliation correction after requirements-06)
+- `requirements-09-minimal-evidence` (signed current-run correction before core #740 adoption)
 - abandoned-history `requirements-08-bounded-red-green-proof` is superseded and non-canonical; no replay implementation or specification promotion occurred
 - `architecture-01-solution-layer`
 - `sync-01-unified-kernel`

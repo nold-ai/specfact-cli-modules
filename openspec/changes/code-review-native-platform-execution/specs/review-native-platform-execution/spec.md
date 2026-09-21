@@ -1,5 +1,11 @@
 # Specification: review-native-platform-execution
 
+## Scope rescope — 2026-09-20
+
+Remove the prerequisite on optional checkpoint/conformance #434. Preserve layout compatibility and core C15 prerequisites, native platform acceptance tests, and signed artifacts. Ordinary native review must not require preflight, a seal, or historical RED proof.
+
+This owner-requested planning amendment supersedes conflicting default-workflow and dependency wording below; runtime behavior is unchanged. [Replacement policy](../../../requirements-09-minimal-evidence/proposal.md).
+
 ## ADDED Requirements
 
 ### Requirement: Native local execution
@@ -98,11 +104,11 @@ Native runtimes SHALL preserve full-module-directory checksum/signature verifica
 
 ### Requirement: Released baseline implementation gate
 
-Native production implementation SHALL wait for the layout correction released checkpoint/conformance runtime and released core C15 adoption and SHALL be reassessed against their exact identities.
+Native production implementation SHALL require the verified layout correction and released core C15 adoption and SHALL be reassessed against their exact identities. Optional checkpoint/conformance #434 SHALL NOT block implementation, release or ordinary native review.
 
 #### Scenario: Prerequisite remains incomplete
 
-- **GIVEN** one of modules #459 modules #434 or core #679 is not complete with required release evidence
+- **GIVEN** either the modules #459 correction or core #679 is not complete with required release evidence
 - **WHEN** an agent prepares to implement native execution
 - **THEN** it stops before production changes while planning artifacts may still merge to dev
 
@@ -110,7 +116,8 @@ Native production implementation SHALL wait for the layout correction released c
 
 - **GIVEN** the prerequisite releases are verified and pinned
 - **WHEN** native implementation is prepared performed and finalized
-- **THEN** approved design and failing-first tests precede code checkpoints verify progress and final conformance verifies the resulting exact candidate
+- **THEN** reviewed design and relevant failing tests precede code, current native test results verify the candidate, and published installation is checked
+- **AND** absent optional preflight, seals or checkpoints do not block this lifecycle
 
 ### Requirement: Dependency source admission
 

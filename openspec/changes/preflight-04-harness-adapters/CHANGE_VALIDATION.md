@@ -19,8 +19,9 @@
 ## Dependency Review
 
 - Parent Feature: modules [#163](https://github.com/nold-ai/specfact-cli-modules/issues/163).
-- Required delivery order: signed modules checkpoint/conformance identity #434,
-  then core #251 and #253, then this adapter change #433.
+- Current rescope (2026-09-20): this adapter change #433 requires both signed
+  modules checkpoint/conformance identity #434 and independently delivered
+  core #253 (which consumes #251). #434 does not block #251 or #253.
 - Adapter implementation remains blocked until the completed #251 contract binds
   verifier, module, artifact, signed manifest, registry, signer/trust root, core,
   installed inventory, and both role-specific workflow mappings to the exact
@@ -31,7 +32,10 @@
 - GitHub readback verified User Story type, parent #163, project `SpecFact CLI` / `Todo`, assignee `djm81`, and the required labels.
 - External upstream issues/PRs are future separately authorized work and do not exist yet.
 
-## Validation Record
+## Historical Validation Record
+
+The dated checks below are historical observations; they do not approve the
+current dependency graph or replace implementation-time verification.
 
 - `openspec status --change preflight-04-harness-adapters --json`: PASS on 2026-08-25; all required proposal artifacts reported complete.
 - `openspec validate preflight-04-harness-adapters --strict`: PASS on 2026-08-25.
@@ -42,3 +46,7 @@
 ## Decision
 
 The proposal is ready for review and a planning-only PR. Adapter implementation and external integration remain explicitly unstarted.
+
+## Planning review follow-up — 2026-09-20
+
+Readiness now explicitly verifies both native blockers, core #253 and modules #434. Strict OpenSpec and scoped Markdown/whitespace pass; no adapter implementation is claimed.

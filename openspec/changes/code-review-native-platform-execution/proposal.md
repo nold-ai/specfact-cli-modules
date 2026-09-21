@@ -1,5 +1,11 @@
 # Change: Native Local Code Review Across macOS Linux and Windows
 
+## Scope rescope — 2026-09-20
+
+Remove the prerequisite on optional checkpoint/conformance #434. Preserve layout compatibility and core C15 prerequisites, native platform acceptance tests, and signed artifacts. Ordinary native review must not require preflight, a seal, or historical RED proof.
+
+This owner-requested planning amendment supersedes conflicting default-workflow and dependency wording below; runtime behavior is unchanged. [Replacement policy](../requirements-09-minimal-evidence/proposal.md).
+
 ## Why
 
 SpecFact's primary use is a local-first CLI invoked by developers and agentic AI independently of their OS. C14's immutable execution path is currently Linux x86-64 specific even though several pinned analyzers already ship native macOS and Windows builds. Native ARM64 Linux images alone would not satisfy this product requirement.
@@ -28,9 +34,8 @@ Planning artifacts only. No runtime source, tests, schemas, versions, signatures
 ## Dependencies
 
 - Parent: modules [#163](https://github.com/nold-ai/specfact-cli-modules/issues/163), under epic #162.
-- Direct blockers: layout correction [#459](https://github.com/nold-ai/specfact-cli-modules/issues/459), released checkpoint/conformance [#434](https://github.com/nold-ai/specfact-cli-modules/issues/434), and core C15 adoption [#679](https://github.com/nold-ai/specfact-cli/issues/679).
-- Transitive sequence: core #682 -> modules #431 -> core #680 -> core #683 -> modules #432; modules #432 plus core #684 -> modules #434.
-- Modules #432 plus existing policy/profile/exception prerequisites -> modules C15 #417 -> core #679. Core #679 retains its existing policy/profile/exception blockers.
+- Direct prerequisites: verified layout correction [#459](https://github.com/nold-ai/specfact-cli-modules/issues/459) and released core C15 adoption [#679](https://github.com/nold-ai/specfact-cli/issues/679). Optional checkpoint/conformance #434 is required for neither native implementation/release nor ordinary native review.
+- C15 retains C14 protected adoption and its policy/profile/exception prerequisites: modules #417 -> core #679. The optional #431/#432/#434 assurance chain is separate.
 - Core means nold-ai/specfact-cli; modules means nold-ai/specfact-cli-modules. Preserve existing edges; do not duplicate transitive blockers.
 - Harness adapters #433 are downstream of #434 and are not prerequisites for native execution.
 

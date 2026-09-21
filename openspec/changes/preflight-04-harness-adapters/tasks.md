@@ -1,11 +1,17 @@
 # Tasks: preflight-04-harness-adapters
 
+## Scope rescope — 2026-09-20
+
+Seal, checkpoint, frozen mapping, successor approval, and historical RED/GREEN requirements in this issue apply only when an explicitly selected assurance policy requests them. They are not prerequisites for ordinary implementation, Code Review, release promotion, skill installation, or generated instructions. Keep the internal optional-feature dependency chain and source/signature integrity. Missing optional chronology is not a failed current-execution claim. No runtime policy changes in this planning update. Preserve core #253 and add #434 as a direct native prerequisite; generic installer #251 no longer provides that dependency transitively. Harness adapters remain optional.
+
+This owner-requested planning amendment supersedes conflicting default-workflow and dependency wording below; runtime behavior is unchanged. [Replacement policy](../requirements-09-minimal-evidence/proposal.md).
+
 All tasks below are future implementation and external integration work. This planning change completes none of them and creates no plugin, skill, pack, or `TDD_EVIDENCE.md`.
 
 ## 1. Dedicated session, worktree, and readiness
 
 - [ ] 1.1 In a dedicated issue-linked session, create `feature/preflight-04-harness-adapters` from current `origin/dev` in a new modules worktree before any implementation edit.
-- [ ] 1.2 Refresh hierarchy metadata and verify this issue is `Todo`, correctly parented/labeled/assigned, blocked by core #253, and not concurrently `In Progress`.
+- [ ] 1.2 Refresh hierarchy metadata and verify this issue is `Todo`, correctly parented/labeled/assigned, natively blocked by both core #253 and modules #434 (read back each relationship), and not concurrently `In Progress`.
 - [ ] 1.3 Verify the exact signed #434 module and preflight/implementation-check workflow identities, a completed core #251 `verified-install-result-v1` contract bound to installed bytes and the requested descriptor, the completed #253 contract, and current Codex/ECC/hatch3r contribution and packaging rules. The #251 result must bind every verifier, module, artifact, manifest, registry, signer/trust-root, core, installed-inventory, and role-specific workflow identity/digest field required by the specification. Stop all adapter work if that result contract is absent or incomplete. For hatch3r, require the selected release to contain and document a supported distribution/extension surface; an upstream contribution qualifies only after it is merged, included in that release, and documented there. Stop hatch3r work otherwise.
 
 ## 2. Adapter specs and failing-first tests

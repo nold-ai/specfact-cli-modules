@@ -14,17 +14,20 @@
 
 - Modules owns worktree/index checkpoint and immutable-range conformance execution, Git/pytest/review evidence import, caching, remediation packets, bounded agent workflow, pre-commit integration, rendering, persistence, signing, and publication.
 - Paired core owns snapshot kinds, obligation mapping, finding/result, authority, and pure verifier interfaces.
-- The work follows stable preflight publication and precedes #251/#253/#433. It packages no external harness adapter and does not alter C15 semantics.
+- The work follows stable preflight publication and precedes optional adapters #433. Generic #251/#253 and native #460 remain independent. It packages no external harness adapter and does not alter C15 semantics.
 
 ## Dependency Review
 
 - Parent Feature: modules [#163](https://github.com/nold-ai/specfact-cli-modules/issues/163).
 - Native blockers to verify: stable modules [#432](https://github.com/nold-ai/specfact-cli-modules/issues/432) and paired core [#684](https://github.com/nold-ai/specfact-cli/issues/684).
-- Native downstream to add: core [#251](https://github.com/nold-ai/specfact-cli/issues/251), followed by #253 and modules #433.
-- Delivery ordering records core #682 -> modules #431 -> core #680/#683 -> modules #432 -> core #684 -> modules #434 -> core #251/#253 -> modules #433; exact released identities must be read back again before implementation.
+- Current downstream (2026-09-20): optional modules #433 directly consumes signed #434 plus independently delivered core #253; do not recreate outgoing blockers on generic #251/#253 or native #460.
+- Optional ordering: core #682 -> modules #431; core #683 requires #431 and independent C14 #680, then modules #432 -> core #684/modules #434. Exact released identities and native relationships must be read back before implementation.
 - GitHub readback verified User Story type, parent #163, project `SpecFact CLI` / `Todo`, assignee `djm81`, and the required labels.
 
-## Validation Record
+## Historical Validation Record
+
+The dated checks below are historical observations; they do not approve the
+current dependency graph or replace implementation-time verification.
 
 - `openspec status --change preflight-05-implementation-conformance --json`: PASS on 2026-08-25; all required proposal artifacts reported complete.
 - `openspec validate preflight-05-implementation-conformance --strict`: PASS on 2026-08-25.
@@ -44,3 +47,7 @@
 ## Decision
 
 The proposal is ready for review and a planning-only PR. Checkpoint, pre-commit, bounded workflow, publication, and final conformance runtime work remain explicitly unstarted.
+
+## Planning review follow-up — 2026-09-20
+
+PF05M-010 inspection intent now matches signed #434 plus independent core #253 before optional #433; it no longer reinstates the removed #434 -> generic installer dependency. YAML parses, strict OpenSpec and scoped Markdown/whitespace pass; no historical execution record was rewritten.
