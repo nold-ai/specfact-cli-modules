@@ -302,3 +302,8 @@ requirements:
       method: inspection
       intent: "Inspect planned acceptance: Candidate numeric fields omit digits or history disagrees with layers."
       observable: "Required numeric fields contain digits and present history matches layer cardinality. Planned maturity only; this is not release acceptance."
+    - case_id: 460-8-21
+      scenario_id: signed-customer-release-acceptance
+      method: inspection
+      intent: "Inspect planned acceptance: Candidate TAR header padding contains hidden bytes."
+      observable: "Raw ordinary TAR header tail padding is zero. Planned maturity only; this is not release acceptance."

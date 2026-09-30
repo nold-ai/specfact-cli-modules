@@ -294,6 +294,8 @@ def test_cli_local_only_json(tmp_path: Path, case: tuple[str, int]) -> None:
 
 
 FRAMING_CASES = (
+    "header-tail:500",
+    "header-tail:511",
     "numeric-empty:nul",
     "numeric-empty:space",
     *(f"numeric:{name}" for name in ("mode", "uid", "gid", "size", "mtime", "checksum", "major", "minor")),
@@ -320,6 +322,12 @@ FRAMING_CASES = (
 
 def malformed_tar(data: bytes, change: str) -> bytes:
     """Inject physical framing faults while preserving OCI descriptor consistency."""
+    if change.startswith("header-tail:"):
+        header = bytearray(data[:512])
+        header[int(change.split(":")[1])] = 1
+        header[148:156] = b"        "
+        header[148:156] = f"{sum(header):06o}\0 ".encode()
+        return bytes(header) + data[512:]
     if change.startswith("numeric-empty:"):
         header = bytearray(data[:512])
         header[108:116] = (b"\0" if change.endswith("nul") else b" ") * 8

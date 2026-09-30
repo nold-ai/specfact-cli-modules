@@ -76,6 +76,8 @@ def _ordinary_header(header: bytes) -> tarfile.TarInfo:
     """Validate a checksum-bearing header before any extension processing."""
     if header[257:265] not in (b"ustar\0" + b"00", b"ustar  \0"):
         raise ValueError("unsupported TAR magic/version")
+    if any(header[500:512]):
+        raise ValueError("nonzero TAR header tail padding")
     _numeric_header_fields(header)
     member = tarfile.TarInfo.frombuf(header, "utf-8", "strict")
     if member.type not in (tarfile.REGTYPE, tarfile.AREGTYPE, tarfile.DIRTYPE):

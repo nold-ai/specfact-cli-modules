@@ -59,7 +59,8 @@ permission modes are not an acceptance claim.
 
 Only ordinary ustar (`ustar-NUL`/`00`) or GNU (`ustar-space`/`space-NUL`)
 file/directory TAR headers with complete framing, two zero end
-blocks and zero trailing padding are accepted; extended and sparse headers are
+blocks and zero trailing padding are accepted; the unused final twelve bytes of
+each ordinary header must also be zero; extended and sparse headers are
 unsupported. Numeric fields require unsigned octal text with NUL/space padding;
 signed, base-256 and hidden post-terminator bytes are rejected. Required numeric
 fields must contain an octal digit; unused device fields may be padding-only.

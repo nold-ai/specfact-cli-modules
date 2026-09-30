@@ -299,3 +299,8 @@ Support SHALL be claimed only after a canonical signed publication passes fresh 
 
 - **WHEN** a required TAR numeric field contains only padding or present non-null OCI history has a non-empty-layer count different from rootfs diff IDs
 - **THEN** verification MUST reject the candidate; unused device-number fields may remain padding-only for ordinary files/directories, and absent/null history remains valid
+
+#### Scenario: Candidate TAR header padding contains hidden bytes
+
+- **WHEN** an ordinary outer or layer TAR header contains nonzero bytes in its unused final twelve bytes
+- **THEN** verification MUST reject the raw header before normalized TAR fields are accepted
