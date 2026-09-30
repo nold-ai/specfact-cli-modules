@@ -124,3 +124,5 @@ YAML, bundle imports, module signatures and 28 contract tests passed. The manual
 released SpecFact review command executed but returned FAIL/UNKNOWN because the
 native capsule is unsupported; zero findings is not clean-review evidence. The
 normal staged-file hook and protected Linux CI remain separate review gates.
+
+Final smart-test suite: 3338 passed, one Linux-only skip (209.65 seconds), including all 15 observer tests. Normal commit hooks passed, including the staged explicit-files review and 28 contract tests. This hook result does not replace the unsupported native capsule review or protected PR assurance. Final independent native audit: all 53 recorded process identities absent.
