@@ -117,9 +117,14 @@ def _unique_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
     return result
 
 
+def _reject_constant(value: str) -> None:
+    """Reject Python extensions that are not valid JSON numeric values."""
+    raise ValueError(f"invalid JSON constant: {value}")
+
+
 def _json(data: bytes) -> dict[str, Any]:
     """Decode JSON metadata with duplicate-key rejection."""
-    return _object(json.loads(data, object_pairs_hook=_unique_object))
+    return _object(json.loads(data, object_pairs_hook=_unique_object, parse_constant=_reject_constant))
 
 
 def _single(value: object) -> object:

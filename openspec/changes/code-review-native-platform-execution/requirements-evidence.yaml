@@ -242,3 +242,8 @@ requirements:
       method: inspection
       intent: "Inspect planned acceptance: Candidate TAR framing is malformed."
       observable: "Malformed framing and unsupported extension headers fail closed through API and CLI. Planned maturity only; local parser evidence does not establish release acceptance."
+    - case_id: 460-8-9
+      scenario_id: signed-customer-release-acceptance
+      method: inspection
+      intent: "Inspect planned acceptance: Candidate metadata includes non-JSON constants."
+      observable: "Non-JSON numeric constants fail closed even in unused fields. Planned maturity only; local parser evidence does not establish release acceptance."

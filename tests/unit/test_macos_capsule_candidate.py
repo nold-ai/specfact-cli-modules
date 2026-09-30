@@ -86,6 +86,8 @@ def candidate_config(raw: bytes, change: str) -> Any:
     config: Any = {"os": "darwin", "architecture": "arm64", "rootfs": {"type": "layers", "diff_ids": [digest(raw)]}}
     if change in ("linux", "amd64"):
         config["os" if change == "linux" else "architecture"] = change
+    if change in ("NaN", "Infinity", "-Infinity"):
+        config["unused"] = float(change)
     if change == "diffid":
         config["rootfs"]["diff_ids"] = [digest(b"wrong")]
     if change == "config-type":
@@ -210,6 +212,9 @@ def test_valid_candidate_is_never_production_evidence(api: Any, tmp_path: Path) 
         "index-version-type",
         "outer-duplicate",
         "outer-link",
+        "NaN",
+        "Infinity",
+        "-Infinity",
         "outer-extra",
         "outer-blob",
         "outer-directory",
@@ -245,7 +250,7 @@ def test_malformed_gzip_is_value_error(api: Any, tmp_path: Path) -> None:
         api.verify_candidate(archive, expected)
 
 
-@pytest.mark.parametrize("case", [("", 0), ("linux", 1)], ids=["-0", "linux-1"])
+@pytest.mark.parametrize("case", [("", 0), ("linux", 1), ("NaN", 1), ("Infinity", 1), ("-Infinity", 1)])
 def test_cli_local_only_json(tmp_path: Path, case: tuple[str, int]) -> None:
     """Check real CLI exit codes and local-only JSON evidence."""
     change, code = case

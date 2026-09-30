@@ -239,3 +239,8 @@ Support SHALL be claimed only after a canonical signed publication passes fresh 
 
 - **WHEN** an outer archive or payload layer has malformed or truncated headers, incomplete end markers, nonzero trailing data, or unsupported extension headers
 - **THEN** verification MUST reject it through ValueError and the CLI MUST report failure JSON rather than a traceback
+
+#### Scenario: Candidate metadata includes non-JSON constants
+
+- **WHEN** candidate metadata contains NaN, Infinity or -Infinity, including unused fields
+- **THEN** verification MUST reject it as invalid JSON through both API and CLI
