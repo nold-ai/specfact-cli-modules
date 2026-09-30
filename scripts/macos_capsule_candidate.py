@@ -164,6 +164,8 @@ def _blob(files: dict[str, tuple[bytes, int]], value: object, media: str) -> byt
     """Resolve a descriptor only after validating type, size and digest."""
     descriptor = _object(value)
     _validate_schema(descriptor, "descriptor")
+    if "data" in descriptor:
+        raise ValueError("embedded descriptor data is unsupported")
     identity, size = descriptor.get("digest"), descriptor.get("size")
     if not isinstance(identity, str) or not re.fullmatch(r"sha256:[0-9a-f]{64}", identity):
         raise ValueError("invalid descriptor digest")
@@ -208,6 +210,8 @@ def _manifest(files: dict[str, tuple[bytes, int]]) -> bytes:
         raise ValueError("unsupported OCI layout")
     index = _json(files["index.json"][0])
     _validate_schema(index, "index")
+    if "subject" in index:
+        raise ValueError("index subjects are unsupported")
     descriptor = _object(_single(index.get("manifests")))
     if (
         not _integer(index.get("schemaVersion"))
@@ -227,6 +231,8 @@ def _config(files: dict[str, tuple[bytes, int]], manifest: dict[str, Any]) -> by
     ):
         raise ValueError("unsupported OCI manifest")
     _validate_schema(manifest, "manifest")
+    if "subject" in manifest:
+        raise ValueError("manifest subjects are unsupported")
     config_data = _blob(files, manifest.get("config"), CONFIG_TYPE)
     config = _json(config_data)
     if config.get("os") != "darwin" or config.get("architecture") != "arm64":

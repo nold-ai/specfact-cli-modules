@@ -269,3 +269,8 @@ Support SHALL be claimed only after a canonical signed publication passes fresh 
 
 - **WHEN** an index, manifest or referenced descriptor contains malformed known fields such as annotations, URLs, artifact type or subject
 - **THEN** verification MUST reject it using pinned offline OCI schemas before accepting the candidate, including nested descriptor fields
+
+#### Scenario: Candidate introduces unsupported alternative content references
+
+- **WHEN** any selected descriptor includes embedded data, or the index or manifest includes a subject descriptor
+- **THEN** the bounded verifier MUST reject the candidate; this profile accepts only the three externally stored manifest/config/layer blobs and does not support embedded data or subject graphs

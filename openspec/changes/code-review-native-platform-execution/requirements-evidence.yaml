@@ -272,3 +272,8 @@ requirements:
       method: inspection
       intent: "Inspect planned acceptance: Candidate index manifest or descriptor violates known field schemas."
       observable: "Malformed known fields in index, manifest and descriptors fail pinned offline schema validation. Planned maturity only; this does not establish native release acceptance."
+    - case_id: 460-8-15
+      scenario_id: signed-customer-release-acceptance
+      method: inspection
+      intent: "Inspect planned acceptance: Candidate introduces unsupported alternative content references."
+      observable: "Embedded descriptor data and index/manifest subjects are rejected explicitly by the fixed three-blob profile. Planned maturity only; this does not establish release acceptance."

@@ -596,3 +596,46 @@ def test_accept_document_annotations(api: Any, tmp_path: Path, target: str) -> N
     """Retain valid optional annotations across the OCI graph."""
     archive, expected = candidate(tmp_path, f'document:{target}:{{"annotations":{{"x":"y"}}}}')
     assert api.verify_candidate(archive, expected)["status"] == "PASS"
+
+
+@pytest.mark.parametrize(
+    "target,patch",
+    [
+        (target, {"data": data})
+        for target in ("manifest-descriptor", "config-descriptor", "layer-descriptor")
+        for data in ("IQ==", "")
+    ]
+    + [
+        (
+            target,
+            {
+                "subject": {
+                    "mediaType": "application/vnd.oci.image.manifest.v1+json",
+                    "digest": "sha256:" + "0" * 64,
+                    "size": 1,
+                }
+            },
+        )
+        for target in ("index", "manifest")
+    ],
+)
+@pytest.mark.parametrize("interface", ["api", "cli"])
+def test_reject_alternative_references(
+    api: Any, tmp_path: Path, target: str, patch: dict[str, Any], interface: str
+) -> None:
+    """Reject embedded bytes and dangling subjects outside the fixed graph."""
+    archive, expected = candidate(tmp_path, f"document:{target}:" + json.dumps(patch))
+    if interface == "api":
+        with pytest.raises(ValueError):
+            api.verify_candidate(archive, expected)
+        return
+    script = Path(__file__).parents[2] / "scripts/macos_capsule_candidate.py"
+    process = subprocess.run(
+        [sys.executable, str(script), str(archive), "--expected-payload", str(expected)],
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=10,
+    )
+    assert process.returncode == 1
+    assert json.loads(process.stderr)["status"] == "FAIL"

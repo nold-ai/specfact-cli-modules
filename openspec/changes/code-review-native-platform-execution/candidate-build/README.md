@@ -72,7 +72,8 @@ non-UTF-8 metadata and duplicate JSON keys fail closed. Image configuration, ind
 fields and formats are checked against the locally stored OCI v1.1.1 schemas
 (`scripts/schemas/`), using the explicitly declared Hatch JSON Schema dependency;
 no remote schema is resolved. Outer files must be exactly
-`oci-layout`, `index.json` and the three referenced blobs; only optional `blobs`
+`oci-layout`, `index.json` and the three referenced blobs. Embedded descriptor
+`data` and index/manifest `subject` fields are unsupported and rejected; only optional `blobs`
 and `blobs/sha256` parent directory headers are allowed. Malformed inputs yield
 `ValueError` through the Python API or exit 1 with failure JSON through the CLI.
 
