@@ -87,6 +87,8 @@ def candidate_config(raw: bytes, change: str) -> Any:
     config: Any = {"os": "darwin", "architecture": "arm64", "rootfs": {"type": "layers", "diff_ids": [digest(raw)]}}
     if change in ("linux", "amd64"):
         config["os" if change == "linux" else "architecture"] = change
+    if change.startswith("schema:"):
+        config.update(json.loads(change.removeprefix("schema:")))
     if change in ("NaN", "Infinity", "-Infinity"):
         config["unused"] = float(change)
     if change == "diffid":
@@ -254,7 +256,19 @@ def test_malformed_gzip_is_value_error(api: Any, tmp_path: Path) -> None:
         api.verify_candidate(archive, expected)
 
 
-@pytest.mark.parametrize("case", [("", 0), ("linux", 1), ("NaN", 1), ("Infinity", 1), ("-Infinity", 1)])
+@pytest.mark.parametrize(
+    "case",
+    [
+        ("", 0),
+        ("linux", 1),
+        ("NaN", 1),
+        ("Infinity", 1),
+        ("-Infinity", 1),
+        ('schema:{"config":[]}', 1),
+        ('schema:{"history":{}}', 1),
+        ('schema:{"created":"invalid"}', 1),
+    ],
+)
 def test_cli_local_only_json(tmp_path: Path, case: tuple[str, int]) -> None:
     """Check real CLI exit codes and local-only JSON evidence."""
     change, code = case
@@ -493,3 +507,51 @@ def tar_path_padding(data: bytes, field: str) -> bytes:
     header[148:156] = b"        "
     header[148:156] = f"{sum(header):06o}\0 ".encode()
     return bytes(header) + data[512:]
+
+
+@pytest.mark.parametrize(
+    "patch",
+    [
+        {"config": []},
+        {"history": {}},
+        {"history": [False]},
+        {"config": {"Env": [False]}},
+        {"config": {"Labels": {"x": 1}}},
+        {"config": {"Volumes": {"x": []}}},
+        {"config": {"Entrypoint": {}}},
+        {"config": {"Cmd": [1]}},
+        {"config": {"User": False}},
+        {"config": {"WorkingDir": []}},
+        {"config": {"ArgsEscaped": 1}},
+        {"config": {"ExposedPorts": {"80/tcp": []}}},
+        {"created": "not-a-date"},
+        {"author": []},
+        {"variant": False},
+        {"os.version": []},
+        {"os.features": [1]},
+        {"history": [{"empty_layer": 1}]},
+        {"history": [{"created": "invalid"}]},
+    ],
+)
+def test_reject_config_schema(api: Any, tmp_path: Path, patch: dict[str, Any]) -> None:
+    """Reject malformed known fields even with consistent blob descriptors."""
+    archive, expected = candidate(tmp_path, "schema:" + json.dumps(patch))
+    with pytest.raises(ValueError):
+        api.verify_candidate(archive, expected)
+
+
+def test_accept_config_schema_optional_values(api: Any, tmp_path: Path) -> None:
+    """Accept valid nullable runtime options and typed history metadata."""
+    patch = {
+        "config": {
+            "Entrypoint": None,
+            "Cmd": None,
+            "Volumes": None,
+            "Labels": None,
+            "Env": ["X=y"],
+            "ArgsEscaped": False,
+        },
+        "history": [{"created": "2026-09-30T00:00:00Z", "empty_layer": False}],
+    }
+    archive, expected = candidate(tmp_path, "schema:" + json.dumps(patch))
+    assert api.verify_candidate(archive, expected)["status"] == "PASS"

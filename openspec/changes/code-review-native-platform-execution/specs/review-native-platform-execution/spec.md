@@ -259,3 +259,8 @@ Support SHALL be claimed only after a canonical signed publication passes fresh 
 
 - **WHEN** a checksum-valid header has an unknown magic/version combination
 - **THEN** verification MUST reject it through API and CLI; only ordinary ustar (ustar-NUL/00) and GNU (ustar-space/space-NUL) headers are supported by this bounded tool
+
+#### Scenario: Candidate image configuration violates known field schemas
+
+- **WHEN** a candidate contains malformed known image configuration fields, including nested config and history entries
+- **THEN** verification MUST reject it against the pinned OCI image configuration schema with format checks before reporting success; schema resolution MUST be local and offline

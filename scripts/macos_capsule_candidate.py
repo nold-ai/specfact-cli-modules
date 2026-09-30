@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any, TypeGuard
 
 from icontract import ensure
+from jsonschema import Draft4Validator, FormatChecker, ValidationError
 
 
 MAX_ARCHIVE_BYTES = 32 * 1024 * 1024
@@ -227,7 +228,18 @@ def _config(files: dict[str, tuple[bytes, int]], manifest: dict[str, Any]) -> by
     config = _json(config_data)
     if config.get("os") != "darwin" or config.get("architecture") != "arm64":
         raise ValueError("config must describe darwin/arm64")
+    _validate_config_schema(config)
     return config_data
+
+
+def _validate_config_schema(config: dict[str, Any]) -> None:
+    """Validate known OCI fields and formats against an offline pinned schema."""
+    path = Path(__file__).with_name("schemas") / "oci-config-v1.1.1.json"
+    schema = _json(path.read_bytes())
+    try:
+        Draft4Validator(schema, format_checker=FormatChecker()).validate(config)
+    except ValidationError as exc:
+        raise ValueError(f"invalid OCI configuration: {exc.message}") from exc
 
 
 def _layer_bytes(layer: bytes, config: dict[str, Any]) -> bytes:

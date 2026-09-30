@@ -262,3 +262,8 @@ requirements:
       method: inspection
       intent: "Inspect planned acceptance: Candidate TAR format identifier is unsupported."
       observable: "Unknown magic/version combinations fail closed despite valid checksums. Planned maturity only; local format validation does not establish release acceptance."
+    - case_id: 460-8-13
+      scenario_id: signed-customer-release-acceptance
+      method: inspection
+      intent: "Inspect planned acceptance: Candidate image configuration violates known field schemas."
+      observable: "Known configuration fields and formats are validated against a pinned local OCI schema without remote resolution. Planned maturity only; schema validation does not establish release acceptance."
