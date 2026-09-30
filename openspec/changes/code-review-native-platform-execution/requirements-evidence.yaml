@@ -48,6 +48,11 @@ requirements:
       method: inspection
       intent: "Inspect planned acceptance: Startup cannot bypass confinement."
       observable: "untrusted code cannot execute before the required boundary is active or use inherited access to bypass it; allowed Apple system libraries are explicitly distinguished from prohibited ambient dependencies. Planned maturity only; future native execution evidence is required by FEASIBILITY.md and tasks.md; no runtime pass is claimed."
+    - case_id: 460-2-5
+      scenario_id: native-isolation-capability-evidence
+      method: inspection
+      intent: "Inspect planned acceptance: Native XPC boundary candidate must prove descendant cleanup."
+      observable: "A reproducible no-admin ARM64 harness rejects surviving descendants or incomplete observation; native negative evidence does not approve a release."
   openspec:code-review-native-platform-execution:review-native-platform-execution:portable-review-semantics:
     rationale: Define macOS ARM64 acceptance without claiming unexecuted runtime proof.
     stakeholder_refs:

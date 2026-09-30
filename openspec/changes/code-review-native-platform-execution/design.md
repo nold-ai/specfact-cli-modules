@@ -74,3 +74,19 @@ Accessed 2026-09-30; packaging availability is not execution or admission proof.
 - [Semgrep metadata](https://pypi.org/pypi/semgrep/1.144.0/json)
 - [CrossHair metadata](https://pypi.org/pypi/crosshair-tool/0.0.109/json)
 - [Z3 metadata](https://pypi.org/pypi/z3-solver/5.1.0.0/json)
+
+## XPC lifecycle follow-up (experimental)
+
+The no-admin follow-up uses a trusted native launcher and an application-scoped
+App Sandbox XPC service. A fixed bundled C fixture inherits the service sandbox;
+customer commands and runtime selection are not exposed. Version-one requests
+start a single fixture per connection or cancel it. XPC carries an explicitly
+passed output descriptor; other inherited descriptors are closed at spawn.
+
+An independent host observer measures process birth identity, executable path,
+readiness and completion. Process-group termination is a tested candidate action,
+not a claim of descendant ownership. A detached survivor rejects this design.
+The five-second bound and 100-repeat admission threshold are experimental defaults;
+positive admission also requires a mechanism review and the remaining feasibility
+groups. Ordinary-user installation and the existing subprocess contract remain
+mandatory. No publication follows from fixture execution.

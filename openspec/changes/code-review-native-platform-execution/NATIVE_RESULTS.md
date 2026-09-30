@@ -82,3 +82,7 @@ Raw JSON commands, outputs, source/stored digests and local paths are retained u
 Evidence validation: strict OpenSpec validation, structural Markdown checks (existing MD013/MD060 exclusions), Git whitespace checks, JSON parsing and stored SHA-256 digest checks passed. Production quality/acceptance gates were not run or claimed passing; the native baseline remains UNKNOWN. These changes record bounded feasibility and candidate tooling; they do not approve a production backend.
 
 Next: resolve the lifecycle and dependency admission failures, complete the remaining proof groups, and approve the bounded production design. Keep #460 open and do not archive the change.
+
+## Native XPC follow-up
+
+The checked-in native XPC experiment ran on 2026-10-01 Europe/Berlin: two positive controls passed and all sixteen detached lifecycle cases failed, with empty final cleanup audits. See [XPC boundary results](XPC_BOUNDARY_RESULTS.md). The candidate is rejected; production remains NO-GO.
