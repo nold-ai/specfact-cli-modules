@@ -16,6 +16,7 @@ The owner approved macOS ARM64 as the first new platform and separate native del
 - Separate provisioning, preparation, launch, isolation, observation and cleanup from portable review logic; include Mach-O/dyld and relocatable user-owned paths.
 - Require isolation and dependency feasibility before bounded production-design approval. Seatbelt and App Sandbox are candidates, not approved backends.
 - Require signed customer-installation acceptance, native positive/negative tests and Linux regressions before advertising support.
+- Deliver bounded local candidate tooling: COPY-only Docker assembly, strict OCI/TAR/JSON verification against an operator-owned payload, regression tests and reviewed native feasibility results. This tooling never executes or publishes an archive and always rejects production eligibility.
 
 ## Capabilities
 
@@ -25,7 +26,7 @@ The owner approved macOS ARM64 as the first new platform and separate native del
 
 ### Modified Capabilities
 
-None in this planning delivery. Any future platform evidence or consumer interface must be explicitly versioned and compatibility-tested.
+No released runtime capability changes in this feasibility delivery. Any future platform evidence or consumer interface must be explicitly versioned and compatibility-tested.
 
 ## Dependencies
 
@@ -40,16 +41,16 @@ The complete native closure must satisfy dependency policy. BasedPyright 1.39.10
 - Issue, dependency edges, proposal, design, scenarios, tasks, evidence mapping and change order agree on macOS ARM64 first and independent C15 delivery.
 - The feasibility milestone has executable proof obligations, explicit failure/stop conditions and a production approval gate.
 - CPython 3.11–3.13 is a candidate matrix; minimum macOS version and actual supported combinations are frozen only from passing native evidence.
-- Planning validation passes without claiming analyzer execution, native support or released artifacts.
+- Planning and candidate-tool validation pass; measured native experiments are recorded separately and never imply native support or released artifacts.
 - Future release acceptance covers the full required analyzer set, external project corpus, isolation, integrity, lifecycle, distribution and Linux regressions.
 
 ## Impact and Non-Goals
 
-This delivery changes planning artifacts and issue scope only. No runtime code, tests, signed payloads, versions, registry entries or support claims change. Keep #460 open/Todo after the planning PR. Production implementation, publication and OpenSpec archival remain future gated tasks. No unsandboxed, Homebrew, Rosetta or development-host fallback establishes capsule support.
+This delivery includes the scope revision, native feasibility results, a local COPY-only Docker fixture, the bounded `scripts/macos_capsule_candidate.py` verifier and its regression tests. Measured lifecycle failures keep production architecture approval blocked. Production runtime code, signed payloads, module versions, registry entries and support claims remain unchanged. Keep #460 open/Todo after this feasibility PR. Production implementation, publication and OpenSpec archival remain future gated tasks. No unsandboxed, Homebrew, Rosetta or development-host fallback establishes capsule support.
 
 ## Source Tracking
 
 <!-- source_repo: nold-ai/specfact-cli-modules -->
 - **GitHub Issue**: [#460](https://github.com/nold-ai/specfact-cli-modules/issues/460)
-- **Last Synced Status**: open / Todo; planning revision, 2026-09-30 Europe/Berlin
+- **Last Synced Status**: open / Todo; planning and feasibility revision, 2026-09-30 Europe/Berlin
 - **Sanitized**: true

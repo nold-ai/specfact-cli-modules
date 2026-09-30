@@ -38,4 +38,4 @@
 - [ ] Publish immutable signed macOS artifacts and compatible module/core changes through canonical release tooling.
 - [ ] Repeat fresh ordinary-user customer installation, cold/offline warm matrix and Linux regressions against published identities.
 - [ ] Document only proven combinations and rollback; close #460 only after acceptance.
-- [ ] After actual implementation merge and acceptance, run openspec archive code-review-native-platform-execution; never archive this planning-only revision.
+- [ ] After actual implementation merge and acceptance, run openspec archive code-review-native-platform-execution; never archive this planning and feasibility revision.
