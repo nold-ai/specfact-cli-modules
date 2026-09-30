@@ -217,3 +217,15 @@ Support SHALL be claimed only after a canonical signed publication passes fresh 
 - **GIVEN** a macOS candidate or publication is evaluated
 - **WHEN** the existing Linux customer matrix and cross-platform fixtures run
 - **THEN** Linux remains supported with historical identities intact; a faulty macOS publication can be withdrawn or superseded without disabling Linux or deleting evidence
+
+#### Scenario: Local Docker assembly preserves native identity
+
+- **GIVEN** an experimental payload already built on native macOS ARM64
+- **WHEN** Docker performs COPY-only assembly and exports an OCI candidate locally
+- **THEN** the image config retains darwin/arm64, payload digests round-trip unchanged, and the candidate is explicitly experimental; container execution is not counted as native acceptance
+
+#### Scenario: Candidate cannot be promoted without native proof
+
+- **GIVEN** a locally assembled candidate lacks approved lifecycle, dependency, signing or customer-installation evidence for its final digest
+- **WHEN** GHCR production promotion is considered
+- **THEN** publication remains blocked; green packaging checks alone do not grant eligibility and no Linux artifact identity is reused

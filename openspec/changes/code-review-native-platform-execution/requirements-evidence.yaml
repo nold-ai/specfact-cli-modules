@@ -222,3 +222,13 @@ requirements:
       method: inspection
       intent: "Inspect planned acceptance: Linux regression and rollback."
       observable: "Linux remains supported with historical identities intact; a faulty macOS publication can be withdrawn or superseded without disabling Linux or deleting evidence. Planned maturity only; future native execution evidence is required by FEASIBILITY.md and tasks.md; no runtime pass is claimed."
+    - case_id: 460-8-5
+      scenario_id: signed-customer-release-acceptance
+      method: inspection
+      intent: "Inspect planned acceptance: Local Docker assembly preserves native identity."
+      observable: "COPY-only candidate assembly retains darwin/arm64 and exact payload digests without claiming native execution or production eligibility. Planned maturity only; local experiments do not establish release acceptance."
+    - case_id: 460-8-6
+      scenario_id: signed-customer-release-acceptance
+      method: inspection
+      intent: "Inspect planned acceptance: Candidate cannot be promoted without native proof."
+      observable: "Missing lifecycle, dependency, signing or installation proof blocks production promotion despite green packaging checks. Planned maturity only; publication remains gated."

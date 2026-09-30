@@ -48,6 +48,12 @@ Specify versioned platform evidence and paired core scope only where real compat
 
 Run native macOS ARM64 customer acceptance for each advertised OS/Python combination, plus the existing Linux customer matrix. Record whether CI infrastructure is virtualized independently of the application's no-VM runtime requirement; require native ARM64 processes and a physical-Mac smoke, never emulated execution as native evidence.
 
+## Local Docker assembly and GHCR promotion
+
+Docker Desktop runs Linux containers on macOS. Use it only for COPY-only packaging of a payload already built and tested on native macOS; Docker execution is not Darwin acceptance. A local candidate export must retain `darwin/arm64` OCI config identity, payload digests and explicit experimental status. Do not alter historical Linux image identities. Candidate tooling must not push or grant production eligibility.
+
+Protected GHCR promotion requires the final signed/notarized payload, complete admitted dependency closure, native acceptance and Linux regressions, and all mandatory repository gates. Bind acceptance and provenance to the exact final distributed digest. A successful Docker export or green packaging PR alone is insufficient. The production publisher must reject missing or stale proof. Signing credentials belong only in the protected release environment, never the Docker context or PR builds.
+
 ## Delivery and rollback
 
 This revision delivers the scope and feasibility contract only. The next milestone produces actual measured results, freezes OS support/backend/dependencies/signing/limits, and obtains bounded production-design approval. Then focused failing-first tests, implementation, Linux/native acceptance and canonical signed publication follow. Repeat customer installation after publication before closing #460 or archiving.

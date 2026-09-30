@@ -1,4 +1,12 @@
-# Current planning revision — 2026-09-30
+# Native feasibility follow-up — 2026-09-30
+
+Branch: `codex/macos-arm64-capsule-feasibility`, based on the planning revision below. [Native results](NATIVE_RESULTS.md) supersede the earlier no-execution status. The follow-up records real native positive/negative tests, bounded Docker candidate tooling and remaining acceptance failures. Production runtime selection, signatures, module versions and published artifacts remain unchanged.
+
+The unresolved planning review annotations about TDD evidence recording and mandatory production quality gates are addressed explicitly in tasks.md. Docker assembly is separated from native execution/signing and protected GHCR promotion in design.md and the acceptance scenarios. Green tooling checks do not imply capsule acceptance.
+
+Current verifier TDD and local quality results are recorded in [TDD_EVIDENCE.md](TDD_EVIDENCE.md). The reviewed summary excludes raw local execution transcripts. No production acceptance or GHCR promotion is claimed.
+
+## Earlier planning revision — 2026-09-30
 
 - Branch: `codex/macos-arm64-capsule-plan`, based on remote dev `b683c2cf5a23244b29c41f21309d4ff3b9764b8d`.
 - Owner-approved scope: dedicated macOS ARM64 capsule; Linux x86-64 regression; other platforms deferred.

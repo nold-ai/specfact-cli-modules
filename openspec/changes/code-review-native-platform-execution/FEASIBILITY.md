@@ -2,7 +2,7 @@
 
 ## Status and decision rule
 
-Planned, 2026-09-30 Europe/Berlin. No native prototype, runtime test, backend approval or support claim is recorded here. This document is the execution contract for the next milestone.
+Partially executed on native ARM64 macOS, 2026-09-30 Europe/Berlin. See [native experiment results](NATIVE_RESULTS.md) and the recorded evidence. Initial launch, confinement and analyzer experiments ran; the complete gate has not passed. No backend approval or production support claim follows from these results. This document remains the execution contract for the outstanding milestone.
 
 Run harmless fixtures on native ARM64 macOS under an ordinary user. Compare a minimal signed Seatbelt helper and an App Sandbox alternative. Record exact OS build, hardware/process architecture, Python ABI, core/module/runtime/artifact/policy identities, command, expected outcome, observed outcome and diagnostic. Negative cases require a successful positive control; parser/startup failure is not confinement proof.
 
