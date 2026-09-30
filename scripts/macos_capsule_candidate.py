@@ -48,6 +48,14 @@ def _path(name: str) -> str:
     return name
 
 
+def _raw_header_path(header: bytes, directory: bool) -> str:
+    """Validate raw name and prefix fields before TarInfo can strip slashes."""
+    name = header[:100].split(b"\0", 1)[0].decode("utf-8", "strict")
+    prefix = header[345:500].split(b"\0", 1)[0].decode("utf-8", "strict")
+    name = _path(name.removesuffix("/") if directory else name)
+    return _path(prefix) + "/" + name if prefix else name
+
+
 def _ordinary_header(header: bytes) -> tarfile.TarInfo:
     """Validate a checksum-bearing header before any extension processing."""
     member = tarfile.TarInfo.frombuf(header, "utf-8", "strict")
@@ -55,6 +63,8 @@ def _ordinary_header(header: bytes) -> tarfile.TarInfo:
         raise ValueError("TAR extensions, sparse, links and special files are forbidden")
     if member.size < 0 or member.size > MAX_ARCHIVE_BYTES or (member.isdir() and member.size):
         raise ValueError("invalid TAR member size")
+    if _raw_header_path(header, member.isdir()) != member.name:
+        raise ValueError("TAR path normalization is forbidden")
     return member
 
 
@@ -124,7 +134,9 @@ def _reject_constant(value: str) -> None:
 
 def _json(data: bytes) -> dict[str, Any]:
     """Decode JSON metadata with duplicate-key rejection."""
-    return _object(json.loads(data, object_pairs_hook=_unique_object, parse_constant=_reject_constant))
+    return _object(
+        json.loads(data.decode("utf-8", "strict"), object_pairs_hook=_unique_object, parse_constant=_reject_constant)
+    )
 
 
 def _single(value: object) -> object:

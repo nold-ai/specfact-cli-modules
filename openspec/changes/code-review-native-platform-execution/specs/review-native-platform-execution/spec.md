@@ -244,3 +244,8 @@ Support SHALL be claimed only after a canonical signed publication passes fresh 
 
 - **WHEN** candidate metadata contains NaN, Infinity or -Infinity, including unused fields
 - **THEN** verification MUST reject it as invalid JSON through both API and CLI
+
+#### Scenario: Candidate metadata encoding or raw paths are noncanonical
+
+- **WHEN** any OCI metadata uses UTF-16/32 or a raw directory header has redundant trailing slashes before TAR decoding normalizes it
+- **THEN** verification MUST reject it through API and CLI; metadata requires strict UTF-8 and raw paths are validated before normalization

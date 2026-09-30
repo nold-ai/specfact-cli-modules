@@ -247,3 +247,8 @@ requirements:
       method: inspection
       intent: "Inspect planned acceptance: Candidate metadata includes non-JSON constants."
       observable: "Non-JSON numeric constants fail closed even in unused fields. Planned maturity only; local parser evidence does not establish release acceptance."
+    - case_id: 460-8-10
+      scenario_id: signed-customer-release-acceptance
+      method: inspection
+      intent: "Inspect planned acceptance: Candidate metadata encoding or raw paths are noncanonical."
+      observable: "Non-UTF-8 metadata and noncanonical raw directory paths fail closed before normalization. Planned maturity only; parser checks do not establish native release acceptance."

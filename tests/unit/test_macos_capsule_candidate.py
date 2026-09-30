@@ -49,7 +49,7 @@ def tar_bytes(entries: list[tuple[str, bytes, bytes, int]]) -> bytes:
 def candidate_layers(expected: Path, change: str) -> tuple[bytes, bytes]:
     """Create a payload layer and inject the selected negative case."""
     entries = [
-        ("proof", b"", tarfile.DIRTYPE, 0o755),
+        ({"layer-slash": "proof//"}.get(change, "proof"), b"", tarfile.DIRTYPE, 0o755),
         ("proof/hello", (expected / "hello").read_bytes(), tarfile.REGTYPE, 0o755),
     ]
     if change == "payload":
@@ -132,8 +132,8 @@ def candidate_index(manifest_desc: dict[str, Any], change: str) -> Any:
 def candidate_outer(blobs: dict[str, bytes], index: Any, change: str) -> bytes:
     """Package referenced blobs and optional invalid outer records."""
     outer = [
-        ("oci-layout", b'{"imageLayoutVersion":"1.0.0"}', tarfile.REGTYPE, 0o644),
-        ("index.json", json.dumps(index).encode(), tarfile.REGTYPE, 0o644),
+        ("oci-layout", candidate_metadata({"imageLayoutVersion": "1.0.0"}, "layout", change), tarfile.REGTYPE, 0o644),
+        ("index.json", candidate_metadata(index, "index", change), tarfile.REGTYPE, 0o644),
     ]
     outer.extend((name, data, tarfile.REGTYPE, 0o644) for name, data in blobs.items())
     if change == "outer-duplicate":
@@ -141,6 +141,7 @@ def candidate_outer(blobs: dict[str, bytes], index: Any, change: str) -> bytes:
     if change == "outer-link":
         outer.append(("other", b"", tarfile.SYMTYPE, 0o644))
     extra_entries = {
+        "outer-slash": ("blobs//", b"", tarfile.DIRTYPE, 0o755),
         "outer-extra": ("unchecked", b"extra", tarfile.REGTYPE, 0o644),
         "outer-blob": ("blobs/sha256/" + "0" * 64, b"extra", tarfile.REGTYPE, 0o644),
         "outer-directory": ("unchecked", b"", tarfile.DIRTYPE, 0o755),
@@ -161,10 +162,12 @@ def candidate(tmp_path: Path, change: str = "") -> tuple[Path, Path]:
     blobs: dict[str, bytes] = {}
     config = candidate_config(raw, change)
     layer_desc = candidate_descriptor(blobs, layer, "application/vnd.oci.image.layer.v1.tar+gzip")
-    config_desc = candidate_descriptor(blobs, json.dumps(config).encode(), "application/vnd.oci.image.config.v1+json")
+    config_desc = candidate_descriptor(
+        blobs, candidate_metadata(config, "config", change), "application/vnd.oci.image.config.v1+json"
+    )
     manifest = candidate_manifest(blobs, layer_desc, config_desc, change)
     manifest_desc = candidate_descriptor(
-        blobs, json.dumps(manifest).encode(), "application/vnd.oci.image.manifest.v1+json"
+        blobs, candidate_metadata(manifest, "manifest", change), "application/vnd.oci.image.manifest.v1+json"
     )
     index = candidate_index(manifest_desc, change)
     path = tmp_path / "candidate.tar"
@@ -353,3 +356,38 @@ def test_malformed_tar_cli(tmp_path: Path, location: str, change: str) -> None:
     result = json.loads(process.stderr)
     assert result["status"] == "FAIL"
     assert result["production_eligible"] is False
+
+
+def candidate_metadata(value: Any, field: str, change: str) -> bytes:
+    """Encode one metadata record while keeping all descriptor hashes consistent."""
+    encoding = change.rsplit(":", 1)[1] if change.startswith(f"metadata:{field}:") else "utf-8"
+    return json.dumps(value).encode(encoding)
+
+
+@pytest.mark.parametrize(
+    "change",
+    ["layer-slash", "outer-slash"]
+    + [
+        f"metadata:{field}:{encoding}"
+        for field in ("layout", "index", "manifest", "config")
+        for encoding in ("utf-16", "utf-32")
+    ],
+)
+@pytest.mark.parametrize("interface", ["api", "cli"])
+def test_reject_raw_paths_and_metadata_encoding(api: Any, tmp_path: Path, change: str, interface: str) -> None:
+    """Reject inputs that permissive TAR/JSON decoders would normalize or detect."""
+    archive, expected = candidate(tmp_path, change)
+    if interface == "api":
+        with pytest.raises(ValueError):
+            api.verify_candidate(archive, expected)
+        return
+    script = Path(__file__).parents[2] / "scripts/macos_capsule_candidate.py"
+    process = subprocess.run(
+        [sys.executable, str(script), str(archive), "--expected-payload", str(expected)],
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=10,
+    )
+    assert process.returncode == 1
+    assert json.loads(process.stderr)["status"] == "FAIL"
