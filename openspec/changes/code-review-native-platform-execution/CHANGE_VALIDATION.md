@@ -4,6 +4,8 @@ Branch: `codex/macos-arm64-capsule-feasibility`, based on the planning revision 
 
 The unresolved planning review annotations about TDD evidence recording and mandatory production quality gates are addressed explicitly in tasks.md. Docker assembly is separated from native execution/signing and protected GHCR promotion in design.md and the acceptance scenarios. Green tooling checks do not imply capsule acceptance.
 
+PR #486 annotation 4147374695 also corrected the design delivery sequence: measured experiments and candidate tooling are delivered; unresolved feasibility and production approval remain future gates.
+
 PR #486 review corrected proposal scope to include the delivered candidate verifier/tests and measured feasibility work while retaining the production gate.
 
 Current verifier TDD and local quality results are recorded in [TDD_EVIDENCE.md](TDD_EVIDENCE.md). The reviewed summary excludes raw local execution transcripts. No production acceptance or GHCR promotion is claimed.

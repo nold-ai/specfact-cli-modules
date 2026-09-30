@@ -56,7 +56,9 @@ Protected GHCR promotion requires the final signed/notarized payload, complete a
 
 ## Delivery and rollback
 
-This revision delivers the scope and feasibility contract only. The next milestone produces actual measured results, freezes OS support/backend/dependencies/signing/limits, and obtains bounded production-design approval. Then focused failing-first tests, implementation, Linux/native acceptance and canonical signed publication follow. Repeat customer installation after publication before closing #460 or archiving.
+This revision delivers the scoped feasibility contract, measured native experiments in [NATIVE_RESULTS.md](NATIVE_RESULTS.md), and bounded local candidate tooling: a COPY-only Docker fixture, strict OCI verifier and regression tests. The experiments establish partial launch/confinement/analyzer and packaging evidence; the tested descendant-lifecycle designs fail the required contract, so production backend approval remains blocked.
+
+The next milestone must resolve the outstanding lifecycle and dependency-closure gaps, complete the remaining proof obligations in [FEASIBILITY.md](FEASIBILITY.md), and freeze supported OS builds, backend, admitted dependencies, signing approach and limits from passing evidence before obtaining bounded production-design approval. Production implementation with focused failing-first tests, Linux/native acceptance and canonical signed publication follows that approval. Repeat customer installation after publication before closing #460 or archiving.
 
 A failing mandatory feasibility case blocks production. Retain results and revise the design explicitly; do not silently downgrade the contract. Withdraw or supersede a faulty macOS publication while preserving Linux support, historical signatures and diagnostic evidence. Effort remains unestimated until feasibility establishes a workable backend.
 
