@@ -1,4 +1,34 @@
-# Planning Validation
+# Native feasibility follow-up — 2026-09-30
+
+Branch: `codex/macos-arm64-capsule-feasibility`, based on the planning revision below. [Native results](NATIVE_RESULTS.md) supersede the earlier no-execution status. The follow-up records real native positive/negative tests, bounded Docker candidate tooling and remaining acceptance failures. Production runtime selection, signatures, module versions and published artifacts remain unchanged.
+
+The unresolved planning review annotations about TDD evidence recording and mandatory production quality gates are addressed explicitly in tasks.md. Docker assembly is separated from native execution/signing and protected GHCR promotion in design.md and the acceptance scenarios. Green tooling checks do not imply capsule acceptance.
+
+PR #486 annotation 4147374695 also corrected the design delivery sequence: measured experiments and candidate tooling are delivered; unresolved feasibility and production approval remain future gates.
+
+PR #486 review corrected proposal scope to include the delivered candidate verifier/tests and measured feasibility work while retaining the production gate.
+
+Current verifier TDD and local quality results are recorded in [TDD_EVIDENCE.md](TDD_EVIDENCE.md). The reviewed summary excludes raw local execution transcripts. No production acceptance or GHCR promotion is claimed.
+
+## Earlier planning revision — 2026-09-30
+
+- Branch: `codex/macos-arm64-capsule-plan`, based on remote dev `b683c2cf5a23244b29c41f21309d4ff3b9764b8d`.
+- Owner-approved scope: dedicated macOS ARM64 capsule; Linux x86-64 regression; other platforms deferred.
+- GitHub #460 renamed and rewritten; readback remains open / Todo. Removed only the blocked-by edge to core #679 (issue id 5197266316); retained closed layout #459. Other C15 relationships unchanged.
+- Production remains gated on measured feasibility, admitted dependency closure and bounded design approval. No native support, prototype result or release is claimed.
+- Updated proposal/design/tasks/scenarios/evidence mapping and CHANGE_ORDER; added FEASIBILITY.md.
+- `openspec validate code-review-native-platform-execution --strict`: passed.
+- Planned Requirements gate with CI's project/requirements PYTHONPATH and explicit output/summary paths: one source passed, zero failed/skipped; observed maturity planned; implementation evidence not-yet-available.
+- Structural Markdown checks passed with existing MD013/MD060 exclusions; Ruff check and format --check passed (1,362 files unchanged).
+- Manifest/YAML and bundle import checks passed. Full payload/signature/version-baseline verification passed for all seven modules using the core public key.
+- Staged SpecFact review helper explicitly skipped OpenSpec Markdown with no Python targets. No analyzer PASS or synthetic runtime report is claimed.
+- Whitespace check passed. Production tests, native prototypes and platform acceptance were not run for this planning-only revision.
+
+Bootstrap notes: the initial evidence command lacked CI module paths, then exposed the existing helper's None-summary type restriction. Re-running with CI paths and explicit summary passed. These are invocation corrections, not runtime fixes. The local editable core used for planning validation is not native release compatibility evidence.
+
+The records below describe historical planning revisions. Their old scope and dependency statements are superseded by the 2026-09-30 proposal/specification and live issue readback.
+
+## Historical planning validation
 
 ## Current dependency readback — 2026-09-20
 
