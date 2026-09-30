@@ -21,6 +21,7 @@ from jsonschema import Draft4Validator, FormatChecker, ValidationError
 MAX_ARCHIVE_BYTES = 32 * 1024 * 1024
 MAX_LAYER_BYTES = 16 * 1024 * 1024
 MAX_MEMBERS = 256
+INDEX_TYPE = "application/vnd.oci.image.index.v1+json"
 MANIFEST_TYPE = "application/vnd.oci.image.manifest.v1+json"
 CONFIG_TYPE = "application/vnd.oci.image.config.v1+json"
 LAYER_TYPE = "application/vnd.oci.image.layer.v1.tar+gzip"
@@ -216,6 +217,7 @@ def _manifest(files: dict[str, tuple[bytes, int]]) -> bytes:
     if (
         not _integer(index.get("schemaVersion"))
         or index.get("schemaVersion") != 2
+        or index.get("mediaType", INDEX_TYPE) != INDEX_TYPE
         or descriptor.get("platform") != {"os": "darwin", "architecture": "arm64"}
     ):
         raise ValueError("index must describe darwin/arm64")

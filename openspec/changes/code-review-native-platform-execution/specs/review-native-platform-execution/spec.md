@@ -274,3 +274,8 @@ Support SHALL be claimed only after a canonical signed publication passes fresh 
 
 - **WHEN** any selected descriptor includes embedded data, or the index or manifest includes a subject descriptor
 - **THEN** the bounded verifier MUST reject the candidate; this profile accepts only the three externally stored manifest/config/layer blobs and does not support embedded data or subject graphs
+
+#### Scenario: Candidate index declares a contradictory media type
+
+- **WHEN** index.json includes an optional mediaType other than application/vnd.oci.image.index.v1+json
+- **THEN** verification MUST reject it; the canonical value and omission remain accepted

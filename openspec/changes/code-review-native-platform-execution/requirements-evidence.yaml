@@ -277,3 +277,8 @@ requirements:
       method: inspection
       intent: "Inspect planned acceptance: Candidate introduces unsupported alternative content references."
       observable: "Embedded descriptor data and index/manifest subjects are rejected explicitly by the fixed three-blob profile. Planned maturity only; this does not establish release acceptance."
+    - case_id: 460-8-16
+      scenario_id: signed-customer-release-acceptance
+      method: inspection
+      intent: "Inspect planned acceptance: Candidate index declares a contradictory media type."
+      observable: "Index mediaType, when present, must identify an OCI index. Planned maturity only; this does not establish release acceptance."

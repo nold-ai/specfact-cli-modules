@@ -639,3 +639,34 @@ def test_reject_alternative_references(
     )
     assert process.returncode == 1
     assert json.loads(process.stderr)["status"] == "FAIL"
+
+
+@pytest.mark.parametrize(
+    "media_type,valid",
+    [
+        ("text/plain", False),
+        ("application/vnd.oci.image.manifest.v1+json", False),
+        ("application/vnd.oci.image.index.v1+json", True),
+    ],
+)
+@pytest.mark.parametrize("interface", ["api", "cli"])
+def test_index_media_identity(api: Any, tmp_path: Path, media_type: str, valid: bool, interface: str) -> None:
+    """Require any declared index media type to agree with the document identity."""
+    archive, expected = candidate(tmp_path, "document:index:" + json.dumps({"mediaType": media_type}))
+    if interface == "api":
+        if valid:
+            assert api.verify_candidate(archive, expected)["status"] == "PASS"
+        else:
+            with pytest.raises(ValueError):
+                api.verify_candidate(archive, expected)
+        return
+    script = Path(__file__).parents[2] / "scripts/macos_capsule_candidate.py"
+    process = subprocess.run(
+        [sys.executable, str(script), str(archive), "--expected-payload", str(expected)],
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=10,
+    )
+    assert process.returncode == (0 if valid else 1)
+    assert json.loads(process.stdout if valid else process.stderr)["status"] == ("PASS" if valid else "FAIL")
