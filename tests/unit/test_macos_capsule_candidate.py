@@ -294,6 +294,7 @@ def test_cli_local_only_json(tmp_path: Path, case: tuple[str, int]) -> None:
 
 
 FRAMING_CASES = (
+    *(f"numeric:{name}" for name in ("mode", "uid", "gid", "size", "mtime", "checksum", "major", "minor")),
     "path-padding:name",
     "path-padding:prefix",
     "format:unknown",
@@ -317,6 +318,8 @@ FRAMING_CASES = (
 
 def malformed_tar(data: bytes, change: str) -> bytes:
     """Inject physical framing faults while preserving OCI descriptor consistency."""
+    if change.startswith("numeric:"):
+        return tar_numeric_garbage(data, change.split(":", 1)[1])
     if change.startswith("path-padding:"):
         return tar_path_padding(data, change.split(":", 1)[1])
     if change.startswith("format:"):
@@ -717,3 +720,28 @@ def test_reject_expected_hardlink(api: Any, tmp_path: Path, interface: str) -> N
     )
     assert process.returncode == 1
     assert json.loads(process.stderr)["status"] == "FAIL"
+
+
+def tar_numeric_garbage(data: bytes, field: str) -> bytes:
+    """Append ignored garbage to numeric fields while keeping checksum valid."""
+    bounds = {
+        "mode": (100, 108),
+        "uid": (108, 116),
+        "gid": (116, 124),
+        "size": (124, 136),
+        "mtime": (136, 148),
+        "checksum": (148, 156),
+        "major": (329, 337),
+        "minor": (337, 345),
+    }
+    start, end = bounds[field]
+    header = bytearray(data[:512])
+    value = int(bytes(header[start:end]).strip(b"\0 ") or b"0", 8)
+    if field == "mtime":
+        value = 0
+    encoded = f"{value:o}".encode() + b"\0"
+    header[start:end] = encoded.ljust(end - start, b"!")
+    header[148:156] = b"        "
+    suffix = b"\0!" if field == "checksum" else b"\0 "
+    header[148:156] = f"{sum(header):06o}".encode() + suffix
+    return bytes(header) + data[512:]

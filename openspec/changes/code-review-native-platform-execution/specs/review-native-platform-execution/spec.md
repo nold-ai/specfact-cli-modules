@@ -289,3 +289,8 @@ Support SHALL be claimed only after a canonical signed publication passes fresh 
 
 - **WHEN** an expected regular file has more than one filesystem link, including an alias outside the expected tree
 - **THEN** verification MUST reject it before reading its bytes rather than treating it as an independent regular file; this check does not claim race-free filesystem sealing
+
+#### Scenario: Candidate numeric TAR fields contain hidden garbage
+
+- **WHEN** mode, UID, GID, size, modification time, checksum or device-number fields contain bytes outside unsigned octal text and NUL/space padding
+- **THEN** verification MUST reject the raw header before normalized TAR values are accepted; signed and base-256 numeric extensions are outside this bounded profile

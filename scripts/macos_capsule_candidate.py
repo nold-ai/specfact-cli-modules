@@ -64,10 +64,18 @@ def _raw_header_path(header: bytes, directory: bool) -> str:
     return _path(prefix) + "/" + name if prefix else name
 
 
+def _numeric_header_fields(header: bytes) -> None:
+    """Accept only unsigned octal numbers with NUL or space padding."""
+    for start, end in ((100, 108), (108, 116), (116, 124), (124, 136), (136, 148), (148, 156), (329, 337), (337, 345)):
+        if re.fullmatch(rb" *[0-7]*[\0 ]*", header[start:end]) is None:
+            raise ValueError("invalid TAR numeric field")
+
+
 def _ordinary_header(header: bytes) -> tarfile.TarInfo:
     """Validate a checksum-bearing header before any extension processing."""
     if header[257:265] not in (b"ustar\0" + b"00", b"ustar  \0"):
         raise ValueError("unsupported TAR magic/version")
+    _numeric_header_fields(header)
     member = tarfile.TarInfo.frombuf(header, "utf-8", "strict")
     if member.type not in (tarfile.REGTYPE, tarfile.AREGTYPE, tarfile.DIRTYPE):
         raise ValueError("TAR extensions, sparse, links and special files are forbidden")

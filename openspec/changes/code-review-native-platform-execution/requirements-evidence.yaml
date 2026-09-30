@@ -292,3 +292,8 @@ requirements:
       method: inspection
       intent: "Inspect planned acceptance: Expected payload contains hard-link aliases."
       observable: "Expected regular files require a single link before reading; aliases are rejected without claiming TOCTOU sealing. Planned maturity only; this does not establish release acceptance."
+    - case_id: 460-8-19
+      scenario_id: signed-customer-release-acceptance
+      method: inspection
+      intent: "Inspect planned acceptance: Candidate numeric TAR fields contain hidden garbage."
+      observable: "Raw numeric fields require unsigned octal text and valid padding; hidden garbage and numeric extensions are rejected. Planned maturity only; this is not release acceptance."

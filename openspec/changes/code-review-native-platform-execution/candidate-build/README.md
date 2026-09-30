@@ -60,7 +60,8 @@ permission modes are not an acceptance claim.
 Only ordinary ustar (`ustar-NUL`/`00`) or GNU (`ustar-space`/`space-NUL`)
 file/directory TAR headers with complete framing, two zero end
 blocks and zero trailing padding are accepted; extended and sparse headers are
-unsupported. Gzip flags and optional header CRC are validated; truncation,
+unsupported. Numeric fields require unsigned octal text with NUL/space padding;
+signed, base-256 and hidden post-terminator bytes are rejected. Gzip flags and optional header CRC are validated; truncation,
 concatenated members and any trailing bytes are rejected. The outer OCI tar must
 contain one manifest and one single-member gzip layer. The layer must contain a
 `/proof` tree matching the operator-provided expected payload exactly. Limits are
