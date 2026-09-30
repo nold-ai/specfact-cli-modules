@@ -4,7 +4,8 @@ Experimental feasibility tooling only. No publication command, runtime selection
 trusted native evidence, dependency admission or production eligibility is provided.
 The verifier never extracts or executes archive contents. Its expected payload is
 operator input, not an authenticated dependency closure. Keep this operator-owned
-tree immutable throughout comparison. Filesystem reads are not a TOCTOU-resistant
+tree immutable throughout comparison. Expected regular files must have exactly
+one filesystem link; hard-link aliases inside or outside the tree are rejected. Filesystem reads are not a TOCTOU-resistant
 seal; concurrent substitution is outside this feasibility tool's authority. Native provenance remains
 an unverified operator claim even when packaging passes.
 

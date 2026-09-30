@@ -186,14 +186,15 @@ def _expected(root: Path) -> tuple[dict[str, tuple[bytes, int]], set[str]]:
     directories = {"proof"}
     total = 0
     for path in root.rglob("*"):
-        mode = path.lstat().st_mode
+        metadata = path.lstat()
+        mode = metadata.st_mode
         name = _path("proof/" + path.relative_to(root).as_posix())
         if len(files) + len(directories) >= MAX_MEMBERS:
             raise ValueError("expected tree member limit exceeded")
         if stat.S_ISDIR(mode):
             directories.add(name)
             continue
-        if not stat.S_ISREG(mode):
+        if not stat.S_ISREG(mode) or metadata.st_nlink != 1:
             raise ValueError("expected payload contains a link or special file")
         payload = _bounded_file(path)
         total += len(payload)

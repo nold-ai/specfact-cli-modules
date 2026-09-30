@@ -695,3 +695,25 @@ def test_reject_unmatched_map_keys(api: Any, tmp_path: Path, key: str, target: s
     archive, expected = candidate(tmp_path, change)
     with pytest.raises(ValueError):
         api.verify_candidate(archive, expected)
+
+
+@pytest.mark.parametrize("interface", ["api", "cli"])
+def test_reject_expected_hardlink(api: Any, tmp_path: Path, interface: str) -> None:
+    """Reject an expected file whose inode is also reachable outside the tree."""
+    archive, expected = candidate(tmp_path)
+    (tmp_path / "outside-alias").hardlink_to(expected / "hello")
+    assert (expected / "hello").stat().st_nlink == 2
+    if interface == "api":
+        with pytest.raises(ValueError):
+            api.verify_candidate(archive, expected)
+        return
+    script = Path(__file__).parents[2] / "scripts/macos_capsule_candidate.py"
+    process = subprocess.run(
+        [sys.executable, str(script), str(archive), "--expected-payload", str(expected)],
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=10,
+    )
+    assert process.returncode == 1
+    assert json.loads(process.stderr)["status"] == "FAIL"

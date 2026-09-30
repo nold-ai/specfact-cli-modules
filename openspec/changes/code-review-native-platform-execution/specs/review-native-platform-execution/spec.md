@@ -284,3 +284,8 @@ Support SHALL be claimed only after a canonical signed publication passes fresh 
 
 - **WHEN** annotations or configuration maps contain keys not matched by their schema property pattern, including empty or newline-only names
 - **THEN** the bounded verifier MUST reject those keys rather than letting values bypass map validation
+
+#### Scenario: Expected payload contains hard-link aliases
+
+- **WHEN** an expected regular file has more than one filesystem link, including an alias outside the expected tree
+- **THEN** verification MUST reject it before reading its bytes rather than treating it as an independent regular file; this check does not claim race-free filesystem sealing
