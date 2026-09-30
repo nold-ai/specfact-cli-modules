@@ -1,6 +1,8 @@
 # Tasks: Customer Capsule Execution
 
-Implementation authorized on 2026-09-12 Europe/Berlin in the existing dedicated worktree and PR #467. Release acceptance remains pending. Behavior work follows spec → mapped tests → actual failing evidence → production repair → passing evidence. Planning checks are recorded separately in CHANGE_VALIDATION.md.
+Current disposition (2026-09-21 Europe/Berlin): #466 is closed completed and project Done. The checklist below preserves the 2026-09-12/13 implementation-session record, including its unchecked items and then-pending acceptance. It is not a live instruction to resume implementation, publish again, or reopen the issue. Reconcile existing delivery evidence before native OpenSpec archival; neither issue closure nor this status correction proves unchecked acceptance items.
+
+Historical implementation authorization: 2026-09-12 Europe/Berlin, dedicated worktree and PR #467. Behavior work followed spec → mapped tests → actual failing evidence → production repair → passing evidence. Planning checks are recorded separately in CHANGE_VALIDATION.md.
 
 ## 1. Revalidate implementation readiness
 
@@ -32,7 +34,7 @@ Implementation authorized on 2026-09-12 Europe/Berlin in the existing dedicated 
 - [x] 4.3 Run required formatting, typing, lint, YAML/import, contract/smart/full-test gates and strict OpenSpec validation for the touched scope.
 - [x] 4.4 Generate fresh SpecFact review JSON with --bug-hunt and appropriate scope/enforcement; remediate every finding or document a rare approved exception, and record exact commands/timestamps.
 
-## 5. Publish and accept later
+## 5. Historical publication and acceptance checklist
 
 - [x] 5.1 Update customer troubleshooting docs and affected published links; retain non-root setup, identity diagnostics and recovery guidance.
 - [ ] 5.2 Publish changed OCI assets under new immutable identities and update current lock/resource bindings, patch version, module signatures and registry consistently through canonical tooling; preserve historical checkpoints and payloads.
@@ -40,4 +42,4 @@ Implementation authorized on 2026-09-12 Europe/Berlin in the existing dedicated 
 - [ ] 5.4 Repeat the full customer matrix against the actual public signed release with cold and verified warm caches; close #466 only after all required coverage and expected outcomes pass.
 - [ ] 5.5 After implementation, merge and release acceptance, finalize with openspec archive code-review-capsule-customer-execution and update change order. Retain rollback/recovery evidence.
 
-Candidate evidence: signed-head run 34725587532 passed all three customer ABIs; see CUSTOMER_CI_EVIDENCE.json. Public baseline installation was verified as 0.49.77 before candidate substitution. The corrected module is not yet a public release. Original workplace cp312 digest stage and literal /var/opt/specfact path remain unidentified; no invented reproduction is claimed. Complete conditional project-runtime acceptance and public-release/merge/archive gates remain pending where unchecked.
+Historical candidate checkpoint (2026-09-13): signed-head run 34725587532 passed all three customer ABIs; see CUSTOMER_CI_EVIDENCE.json. Public baseline installation was verified as 0.49.77 before candidate substitution. At that checkpoint, the corrected module was not yet a public release. Original workplace cp312 digest stage and literal /var/opt/specfact path remain unidentified; no invented reproduction is claimed. The unchecked entries preserve that checkpoint’s unresolved acceptance and lifecycle bookkeeping; they do not assert current pending delivery.

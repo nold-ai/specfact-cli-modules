@@ -11,3 +11,9 @@ Native metadata is User Story, djm81, enhancement/openspec/change-proposal, Spec
 Normal hooks on the same combined planning artifacts rejected Requirements with unsupported-sidecar-schema. The existing owner-authorized local planning-only Block2 exception is retained for separation commits; it does not change runtime, protected CI or remote policy and is not a passing Requirements/review claim. Other applicable hooks and scoped documentation checks must pass. Workflow receipts remain disposable local progress, separate from Requirements, ReviewReport and governance envelopes.
 
 Separated branch base: `0828bdbc669569e7603ca84522e72452d400b525` on `codex/lean-requirements-evidence`. Proposal scope is limited to this change and the workflow sections of INTEGRATION/CHANGE_ORDER.
+
+## Base refresh — 2026-10-01 Europe/Berlin
+
+PR #482 is merged. The workflow planning branch now incorporates current dev at a6243c0b (including #486), and PR #484 targets dev directly. The merge was conflict-free and retains the workflow-only scope against dev. Runtime prerequisites and unchecked implementation tasks remain unchanged. Historical validation and exceptions above describe the original planning commits; this refresh uses normal hooks.
+
+The normal Requirements hook reproduced unsupported-sidecar-schema for this proposal. This refresh adds a schema-v2 planned-inspection mapping for its nine existing requirements; it changes no runtime acceptance or signed producer prerequisite and uses no hook bypass.

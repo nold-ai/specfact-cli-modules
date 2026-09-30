@@ -25,6 +25,17 @@ For non-shadow enforcement, FAIL and UNKNOWN exit one. Shadow always exits zero
 without rewriting aggregate truth. `overall_verdict` is a compatibility
 projection and score is never an input.
 
+## Legacy command compatibility
+
+The explicit remove/add delta for command modes retires the general pre-C15
+legacy-exit promise, not the flags or report fields. Default enforce and shadow
+truth remain; scores/counts cannot resurrect a failure for advisory-only input.
+Level filtering uses policy-resolved effective severity for presentation and
+does not override aggregate authority or conceal required uncertainty. Invalid
+argument combinations still fail normally. The canonical command audit found no
+other score/count-based exit promises beyond these and simplify enforcement,
+whose separate replacement remains in the same delta.
+
 ## Schema 1.7
 
 Each finding retains analyzer-native severity and adds effective severity,
@@ -91,6 +102,18 @@ The optional-parameter rule indexes explicit project class hierarchies. It does
 not emit when a method is decorated `override`/`abstractmethod`, matches a
 resolved base/ABC/Protocol member, or has an unresolved base hierarchy. Only a
 proven-unconstrained callable may recommend making the parameter required.
+
+## Simplify enforcement compatibility
+
+C15 explicitly replaces the canonical simplify-enforce rule that blocked every
+unresolved safe-mechanical recommendation. Info/warning recommendations remain
+visible and fixable but do not block. The blocking count includes only applicable
+open unwaived effective errors; required uncertainty remains separately UNKNOWN
+and non-passing. Guidance categories do
+not promote severity or waive real errors. Guided queue output and deterministic
+safe-only rewrites remain unchanged. The explicit removed-old/added-replacement review-run requirements carry
+this transition through native archival; runtime/tests migrate during C15
+implementation, not this planning PR.
 
 ## Rollout
 

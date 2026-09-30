@@ -102,14 +102,15 @@ AI IDE, rerun, and compare improved evidence.
 
 | Change | GitHub issue | Positioning | Dependencies |
 |---|---|---|---|
-| `code-review-capsule-customer-execution` | [#466](https://github.com/nold-ai/specfact-cli-modules/issues/466) | Implementation authorized 2026-09-12; candidate repair and dogfooding gate merged via #467; release review follow-up in progress: validate signed capsule execution as a non-root customer on hosted Ubuntu 24.04 for Python 3.11/3.12/3.13; validate the public release later | No open prerequisites; blocks core [#680](https://github.com/nold-ai/specfact-cli/issues/680); completed #416/#459 are baseline context |
+| `code-review-capsule-customer-execution` | [#466](https://github.com/nold-ai/specfact-cli-modules/issues/466) | Closed completed; implementation #467, registry publication #468 and main release #469 merged. Retained for reconciliation and native archival, not continuing implementation. | Shipped baseline for core [#680](https://github.com/nold-ai/specfact-cli/issues/680); completed #416/#459 are baseline context |
 
 This bounded bugfix is independent of completed C14 bookkeeping and native-platform
 issue #460. Reproduction, candidate repair and dogfooding merged through PR #467; canonical
-registry publication merged through #468. Release PR #469 and its review fixes
-remain in progress, with #466 open/In Progress. Public-main signed module
-acceptance and final release validation remain pending; old immutable artifacts
-are preserved.
+registry publication merged through #468. Live readback on 2026-09-20 confirms
+main release PR #469 merged on 2026-09-13 and #466 closed as completed that day.
+The remaining local artifacts require reconciliation and native archival; they
+do not authorize more implementation or signal concurrent work. Historical
+release evidence and immutable artifacts remain preserved.
 
 ## Completed-Issue Reconciliation
 
@@ -119,6 +120,7 @@ and finalization. Their closed GitHub issues are not implementation authority.
 | Order | Change folder | GitHub # | Positioning | Blocked by |
 |---:|---|---|---|---|
 | 1 | `code-review-14-scope-truth-and-differential-enforcement` | [#416](https://github.com/nold-ai/specfact-cli-modules/issues/416) | Closed completed; reconcile outstanding local bookkeeping before native archival. No further C14 implementation scope is authorized. | none |
+| 2 | `code-review-installed-payload-layout` | [#459](https://github.com/nold-ai/specfact-cli-modules/issues/459) | Closed completed on 2026-09-07; implementation #462 merged and 0.49.77 published through #463. Retained for evidence reconciliation and native archival; shipped baseline for core #680 and native #460. | none |
 
 The immutable C14 compatibility smoke establishes core 0.55.1 as the minimum: lightweight tag `v0.55.1`, full commit `b1e517e60e669eaba15a18ecfa83ef5a9df65276`, and full tree `47984be5434d7ae65ed6908bf525a32053290337`. Runtime metadata therefore uses `>=0.55.1,<1.0.0`: the ceiling is required because recursive installation includes Codebase and Requirements modules whose current manifests reject core 1.x. Current paired-core validation exercises compatible versions above the minimum; a routine compatible core update within the dependency graph does not require a module metadata release. Remove the ceiling only after widening and validating the required dependency graph. This correction supersedes C14's exact-only admission wording without changing its frozen provenance identities or historical evidence.
 
@@ -149,29 +151,29 @@ Security records under the repository security policy.
 |---:|---|---|---|---|
 | 1 | `archive/2026-08-23-ci-01-workflow-dispatch-core-ref-trust` | [#422](https://github.com/nold-ai/specfact-cli-modules/pull/422) | Shipped and archived: preserve paired feature-branch validation for non-manual events while restricting manual paired-core execution to literal `main` or `dev` refs | ancestry sync PR [#421](https://github.com/nold-ai/specfact-cli-modules/pull/421) |
 
-## Planned C14 Correction and Native Local Execution
+## Planned macOS ARM64 Capsule
 
-These two changes are planning-only proposals. Their planning PR may merge to
-`dev` while implementation remains pending; neither issue is closed or archived
-by that PR. GitHub metadata was verified on 2026-09-06.
+Owner-approved revision on 2026-09-30 (Europe/Berlin): #460 delivers macOS ARM64
+first, with Linux x86-64 regression coverage. Windows, Intel macOS and Linux
+ARM64 are deferred, not implicitly supported or required for this delivery.
 
 | Change | Issue | Implementation dependencies |
 |---|---|---|
-| `code-review-installed-payload-layout` | [#459](https://github.com/nold-ai/specfact-cli-modules/issues/459) | No open prerequisite; corrects completed C14 #416 and blocks core #680 |
-| `code-review-native-platform-execution` | [#460](https://github.com/nold-ai/specfact-cli-modules/issues/460) | Verified layout #459 and released core C15 #679; no optional #434 prerequisite |
+| `code-review-native-platform-execution` | [#460](https://github.com/nold-ai/specfact-cli-modules/issues/460) | Verified layout #459 and released #473 / Code Review 0.50.1 baseline; native isolation/dependency feasibility and bounded design approval; no blanket C15 or optional #434 prerequisite |
 
-Native execution means the ordinary local CLI runs directly on macOS, Linux,
-and Windows with explicit x64/ARM64 coverage. Docker, WSL, VMs, and emulation
-are not prerequisites. OS-native sandboxing is permitted. Final platform design
-and implementation must be reassessed against the exact released prerequisite
-and C15 baseline using relevant native tests and current-run results. Optional
-preflight, checkpoints and seals are not implementation/release prerequisites.
+Preserve the selected released review semantics and signed identities. Core #679/modules #417 are separately scheduled; an actual native consumer
+incompatibility requires explicit paired scope and compatibility evidence.
+The existing C15 dependency chain is unchanged by removing its blanket edge
+into #460. Optional preflight, seals and historical RED ledgers do not block
+native delivery.
 
-C15 retains its C14 and policy/profile/exception prerequisites, followed by
-modules #417 -> core #679. Native #460 consumes verified layout #459 and core
-adoption #679. The separate optional preflight chain and harness adapters do not
-block native implementation or release. Layout cannot depend on C15 without
-creating a cycle through core #680.
+Planning defines the contract in the change's FEASIBILITY.md and scenario
+specification; it does not prove native runtime support. Production remains
+gated on measured isolation, dependency admission, signing and platform
+feasibility. Customer acceptance includes native project preparation,
+Mach-O/dyld dependencies, all required analyzers, fresh signed installation,
+cold/offline reuse and Linux regression coverage. Close/archive only after
+production publication and acceptance.
 
 ## Recovered C15 planning
 
