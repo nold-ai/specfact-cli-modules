@@ -35,3 +35,7 @@ The checked-in [candidate guide](candidate-build/README.md) was reproduced separ
 Local raw JSON and its source/stored SHA-256 manifest are retained in ignored `.specfact/macos-feasibility/raw-evidence/`. Local scratch retains prototype sources and transcripts. This public summary intentionally contains no raw local execution trace. A fresh production candidate still needs an executable native acceptance suite, admitted dependency closure, signing identity and customer-installation proof bound to its final digest.
 
 The host signing-identity check found zero valid identities. No Developer ID signature, notarization, GHCR production promotion or native capsule support is established. The baseline released CLI remains `unsupported_controller_platform` with UNKNOWN evidence.
+
+## Native XPC follow-up
+
+The checked-in native XPC experiment ran on 2026-10-01 Europe/Berlin: two positive controls passed and all sixteen detached lifecycle cases failed, with empty final cleanup audits. See [XPC boundary results](XPC_BOUNDARY_RESULTS.md). The candidate is rejected; production remains NO-GO.

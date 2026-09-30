@@ -50,6 +50,14 @@ Production backend approval SHALL follow harmless native feasibility tests of a 
 - **WHEN** the helper starts and loads project code or a native extension
 - **THEN** untrusted code cannot execute before the required boundary is active or use inherited access to bypass it; allowed Apple system libraries are explicitly distinguished from prohibited ambient dependencies
 
+#### Scenario: Native XPC boundary candidate must prove descendant cleanup
+
+- **WHEN** an ordinary-user ARM64 application runs bounded fixtures through an embedded XPC service
+- **THEN** native acceptance MUST include normal subprocesses, detachment, cancellation, timeout, client death and service death with an independent observer
+- **AND** any survivor after five seconds, missing receipt or emergency cleanup MUST reject the candidate, without enabling production selection
+- **AND** repetition counts, architecture, build/profile identity, exact failure and observer cleanup MUST be recorded; 100 repetitions per lifecycle race are required before positive admission
+- **AND** no privileged helper, process polling or cooperative PID report may substitute for a mechanism establishing descendant ownership
+
 ### Requirement: Portable review semantics
 
 The macOS backend SHALL preserve the exact released baseline's scope, findings, differential classification and verdict/exit semantics. C15 delivery is independent. New platform evidence SHALL have explicitly versioned producer/consumer compatibility, and local evidence SHALL NOT acquire protected PR authority by declaring an identity.

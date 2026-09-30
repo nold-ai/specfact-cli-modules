@@ -39,3 +39,10 @@
 - [ ] Repeat fresh ordinary-user customer installation, cold/offline warm matrix and Linux regressions against published identities.
 - [ ] Document only proven combinations and rollback; close #460 only after acceptance.
 - [ ] After actual implementation merge and acceptance, run openspec archive code-review-native-platform-execution; never archive this planning and feasibility revision.
+
+## 5. No-admin XPC execution-boundary follow-up
+
+- [x] Check in a native app/XPC/fixture harness and independent observer with negative controls.
+- [x] Reproduce lifecycle failures before candidate implementation; test the physical ARM64 Mac.
+- [x] Reject the candidate on any surviving descendant; require mechanism review and 100 race repetitions before positive admission.
+- [ ] Preserve production gating; add project-runtime integration only after lifecycle admission.

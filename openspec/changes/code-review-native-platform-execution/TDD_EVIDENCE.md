@@ -108,3 +108,21 @@ Annotation 4149326593 was reproduced after specifying zero header-tail padding: 
 ## PR #486 ancillary TAR text-field padding correction
 
 Annotation 4149448126 was reproduced after specifying ancillary text-field validation: twelve API/CLI failures for checksum-valid hidden post-terminator bytes in link name, owner name and group name, in both outer and layer headers. All three fields now use the shared strict UTF-8/zero-padding decoder before TarInfo parsing. All 309 focused tests pass on native Python 3.11 and 3.14; the actual Docker-exported candidate still passes with production eligibility false.
+
+## Native XPC boundary follow-up
+
+The specification preceded four failing tests for the absent runner. The previous
+tracing negative control reproduced six descendant survivors with an empty final
+18-PID audit. Observer hardening added failing-first readiness and receipt/error
+cases; all 15 focused tests now pass. The final native run had 18 ready cases:
+two positive controls passed, all sixteen detached lifecycle cases failed and
+all emergency-cleanup audits were empty. See XPC_BOUNDARY_RESULTS.md.
+
+Full repository suite: 3335 passed, one Linux-only skip (209.11 seconds), before
+the last three observer tests; those passed in the focused suite. Format, type/lint,
+YAML, bundle imports, module signatures and 28 contract tests passed. The manual
+released SpecFact review command executed but returned FAIL/UNKNOWN because the
+native capsule is unsupported; zero findings is not clean-review evidence. The
+normal staged-file hook and protected Linux CI remain separate review gates.
+
+Final smart-test suite: 3338 passed, one Linux-only skip (209.65 seconds), including all 15 observer tests. Normal commit hooks passed, including the staged explicit-files review and 28 contract tests. This hook result does not replace the unsupported native capsule review or protected PR assurance. Final independent native audit: all 53 recorded process identities absent.
