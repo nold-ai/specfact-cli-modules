@@ -1,51 +1,68 @@
-# Design: Native Local Code Review Across macOS Linux and Windows
+# Design: Dedicated macOS ARM64 Code Review Capsule
 
-## Scope rescope — 2026-09-20
+## Baseline and product boundary
 
-Remove the prerequisite on optional checkpoint/conformance #434. Preserve layout compatibility and core C15 prerequisites, native platform acceptance tests, and signed artifacts. Ordinary native review must not require preflight, a seal, or historical RED proof.
+The ordinary `specfact code review run` and existing runtime inspect/prepare commands select the backend automatically. This delivery targets macOS ARM64; Linux x86-64 remains the regression baseline. Windows, Intel macOS and Linux ARM64 are deferred. No Docker, WSL, VM, Rosetta or CPU emulation is a customer runtime prerequisite.
 
-This owner-requested planning amendment supersedes conflicting default-workflow and dependency wording below; runtime behavior is unchanged. [Replacement policy](../requirements-09-minimal-evidence/proposal.md).
+Start feasibility from the released Code Review 0.50.1 / #473 implementation and verified #459 layout correction; record exact compatible core/module versions, commits, signatures and policies. Preserve released scope, findings, differential classification and status/exit behavior. C15 #417/core #679 is independently scheduled, not a prerequisite. New native producer/consumer interfaces require explicit versioning and compatibility tests; old protected consumers must reject unknown evidence instead of interpreting it as Linux identity or protected PR authority.
 
-## Product boundary
+## Architecture boundary
 
-The developer or agent invokes the normal CLI in its native project environment on macOS, Linux, or Windows. Local invocation does not require GitHub, an agent vendor, Docker, WSL, a Linux VM, or OS/CPU emulation. An ordinary virtual environment is permitted; it does not abstract away the host OS. OS-native isolation is allowed.
+Keep portable review logic shared. Introduce a bounded platform backend responsible for capabilities, native provisioning, path layout, preparation, launch, observation, cleanup and result identity. Exact interfaces are frozen after feasibility; this revision does not approve public CLI/schema changes.
 
-Target architecture coverage is x64 and ARM64 for each OS. Before implementation, publish a matrix of OS versions, Python ABIs, analyzers, runtime artifacts, and isolation capabilities. Missing native dependency coverage is an explicit unresolved requirement, never permission to substitute emulation or claim support. Exact minimum OS versions and production backends are deliberately unapproved until prerequisite baseline reassessment.
+The existing Linux implementation uses Bubblewrap, ELF descriptors, /proc observation, ptrace and /opt/specfact mounts. macOS cannot reuse those claims. Its project-runtime path must inventory Mach-O slices, dylib dependencies and dyld load origins, account for Apple system libraries/shared caches, and use relocatable paths under user-owned storage. Never require writes to system roots or silently source libraries from Homebrew.
 
-## Current coupling and feasibility evidence
+Carry forward #473's manager discovery, source locks, worker separation, pytest plugins and coverage. Acquisition, build backends, package-manager hooks and project preparation are executable trust boundaries too. Specify narrowly scoped acquisition network access and credential handling separately from network-denied analysis. Keep sealed controller/analyzer imports distinct from project code and extensions. Preserve genuine project incompatibilities and independent static results without turning missing required evidence into PASS.
 
-C14 hardcodes Linux x86-64 environment IDs, native Bubblewrap descriptors, /proc mapping/file-descriptor observation, Linux ptrace, and capsule/project-runtime paths. The runner, toolchain, sandbox, locks, project-runtime provenance, and protected consumers must be assessed together; merely allowing another platform name is insufficient.
+## Isolation feasibility before production
 
-PyPI metadata checked 2026-09-06 shows native macOS ARM64 and Windows x64 wheels for Semgrep 1.144.0, CrossHair 0.0.109, and Z3 5.1.0.0. This proves artifact availability only, not dependency-policy admission. CrossHair 0.0.109 lacks Linux ARM64 wheels; Z3 5.1.0.0 uses manylinux_2_38 for Linux ARM64. Recheck the complete dependency closure and build provenance after baseline release.
+Evaluate a minimal signed Seatbelt helper and an App Sandbox alternative using the same harmless allow/deny fixtures in [FEASIBILITY.md](FEASIBILITY.md). Neither mechanism is approved by availability or signatures. Do not reuse the earlier failed sandbox profile parse as evidence.
 
-The `nodejs-wheel-binaries` 24.16.0 PyPI distribution also has macOS ARM64 and Windows x64 wheels, but it is **rejected feasibility evidence**, not an admissible native dependency source. The wheel evidence describes that distribution only; it does not establish approval of upstream Node.js release archives or any replacement.
+Prove confinement before untrusted Python, plugins, build hooks or native-library initializers run. Account for inherited file descriptors, IPC handles, dyld injection and system-library initialization. Define a macOS-specific observation contract; do not claim Linux's static-ELF or /proc proof on macOS.
 
-Primary references: [Semgrep native platforms](https://semgrep.dev/blog/2025/five-considerations-when-building-cross-platform-tools-for-windows-and-macos/), [CrossHair artifacts](https://pypi.org/project/crosshair-tool/0.0.109/#files), [Z3 artifacts](https://pypi.org/project/z3-solver/5.1.0.0/#files), [Rejected Node binary wheel artifacts](https://pypi.org/project/nodejs-wheel-binaries/24.16.0/#files), and [platform tag meaning](https://packaging.python.org/en/latest/specifications/platform-compatibility-tags/). Accessed 2026-09-06.
+Prove allowed reads/writes separately from denied host access; deny undeclared network and IPC access. Test detached descendants, timeout/cancellation/controller failure, concurrent runs and resource bounds. Process-group cleanup alone is insufficient proof. Freeze numeric limits and supported OS builds from measurements; inability to enforce a required boundary blocks the backend rather than weakening it silently.
 
-## Dependency source admission
+Seatbelt profiles are an undocumented third-party interface with compatibility risk. App Sandbox's supported entitlement/inheritance model is an alternative to investigate, not proof of arbitrary project-runtime support. Document backend choice, rejected alternatives, maintenance risks and stop conditions before production approval.
 
-Core's [dependency policy at released commit d579970](https://github.com/nold-ai/specfact-cli/blob/d579970565530c3fd7b98bad4de90cf874c2a99d/scripts/check_dependency_trust_exceptions.py) explicitly prohibits `nodejs-wheel-binaries` in the dependency-trust register and frozen locks; an ordinary trust exception cannot authorize it. Checked 2026-09-06. The shipped modules C14 specification nevertheless names it in the isolated signed analyzer lock. The core check does not establish enforcement over that separate module lock, and its historical inclusion does not grandfather admission into the future native closure.
+## Native artifacts, policy and cache identity
 
-Exclude this package from the proposed native closure. Before approving implementation, reassess the released core/module dependency policies, audit the complete native dependency closure, and select a policy-admissible native Node distribution or build source with verified provenance. No replacement source is approved by this plan. If a proposed source requires changing a prohibition, a separate explicit policy change must be reviewed and accepted first; signing or adding an exception record cannot bypass the prohibition. An unresolved policy conflict blocks native design approval and production implementation.
+Use separate signed macOS runtime artifacts and a signed manifest binding artifact digests, extracted payload/root manifest, OS, ARM64 architecture, Python ABI, complete dependency closure, released dependency-policy identity and backend/profile version. Include those bindings in cache identity. Preserve full-module signature/checksum coverage for module-shipped files.
 
-The future native contract SHALL enforce dependency-source admission independently of artifact integrity, both during provisioning and before launch/offline reuse against the selected approved policy identity. A correctly signed but prohibited dependency fails closed before analyzer execution. Reconcile the inherited C14 lock requirement through explicitly versioned native contracts and coordinated core scope after baseline reassessment; any replacement requires fresh artifact/closure/cache identities and conformance evidence. This planning PR does not rewrite the shipped C14 specification, signed lock, or core policy and does not claim to remediate the historical discrepancy.
+Verify acquisition/extraction and every launch, including offline reuse. Reject missing, partial, stale, mixed, corrupted or unbound caches. Atomic publication and concurrency controls must prevent partial reuse. Prove protection against substitution between verification and execution, including symlinks and redirected library paths. Freeze the concrete enforcement mechanism only after the race fixtures pass.
 
-## Architecture decisions deferred to the released baseline
+Retain immutable historical Linux artifacts. Never reuse their identities for macOS. Final artifact hashes must describe the final distributed bytes after applicable signing/notarization processing; maintain upstream provenance separately when packaging modifies files.
 
-Keep Git scope, policy selection, differential classification, C15 enforcement/waiver semantics, and machine-readable output portable. Define a bounded backend interface for capabilities, verified provisioning, launch, observation, cleanup, and result identity. Preserve the existing full-module-directory checksum/signature boundary for native files shipped in the module. Separately provisioned runtime caches require an approved signed lock/manifest binding every artifact digest, applicable layer digest, installed payload/root manifest, OS/architecture/Python ABI, dependency closure, an immutable released core/module policy digest or commit covered by the runtime signature, and cache identity including that policy identity. Verify the artifact and extracted payload against those bindings during provisioning and revalidate the selected installed payload/root before every launch, including offline reuse. Reject a signed policy-identity mismatch before dependency admission or analyzer launch. Reject unbound, stale, partial, mixed-version, or platform/ABI-mismatched caches; successful module verification alone does not authorize an external cached binary. Exact descriptor formats and backend mechanisms remain subject to released-baseline design approval. Never use ambient dependencies as an unreported substitute for pinned evidence.
+## Dependency closure admission
 
-Evaluate Linux Bubblewrap, a signed native macOS sandbox helper, and Windows AppContainer/process lifecycle controls with harmless conformance fixtures. These are candidates, not approved implementations. [Apple App Sandbox](https://developer.apple.com/documentation/security/protecting-user-data-with-app-sandbox) and [Microsoft AppContainer](https://learn.microsoft.com/en-us/windows/win32/secauthz/appcontainer-isolation) describe native primitives; neither establishes parity with C14's Linux-specific contract by itself. Accessed 2026-09-06.
+The inherited Linux lock contains `nodejs-wheel-binaries`, prohibited by current core policy. BasedPyright 1.39.10 directly declares `nodejs-wheel-binaries>=20.13.1`. A Node executable swap, `--no-deps`, historical signature or ordinary trust exception cannot resolve this conflict.
 
-Approve a common behavioral capability contract and platform-specific attestation details after native prototypes prove filesystem/network policy, process-tree cleanup, resource bounds, load-path integrity, and unattended operation. Record limits honestly; sanitized environment variables alone are not OS isolation. Missing, incompatible, or unverifiable required isolation capabilities or analyzers block execution before analyzer launch and retain explicit incomplete-evidence reporting under the approved status/exit contract. No unsupported capability or omitted required analyzer can become PASS through fallback.
+Audit all direct/transitive Python and native dependencies, build inputs, licenses, interpreter origins and platform tags. Review an admissible distribution/build and any necessary BasedPyright metadata change with matching provenance and compatibility tests. Upstream Node archives are a candidate source only; none is preapproved. A policy prohibition change, if needed, requires separate explicit approval. Correctly signed prohibited dependencies fail admission before provisioning/launch, including offline reuse.
 
-## Baseline gate and evidence lifecycle
+Metadata read on 2026-09-30 confirms macOS ARM64 artifacts for Semgrep 1.144.0, CrossHair 0.0.109 (including CPython 3.11–3.13), and Z3 5.1.0.0. The Z3 ARM64 wheel advertises macOS 13.0; that is one dependency's artifact tag, not a supported product OS floor or complete closure proof.
 
-Implementation requires the verified #459 layout correction and released core #679 adoption of C15 #417. Pin the relevant core/module, signed artifact and policy/profile identities and revalidate native interfaces against that baseline. Optional #434, preflight, seals and checkpoints are not implementation or release prerequisites. Material design changes still require review.
+## Distribution and compatibility
 
-Before implementation, specify relevant native tests and observe meaningful failures. Reference current-run results from native OS/architecture runners and verify published installation. Keep concise validation notes and existing CI artifacts; no historical ledger or checkpoint transcript is required. A changed baseline or release artifact requires revalidation of affected results. Explicit optional assurance policy retains its own guarantees when selected.
+Verify applicable Apple signing, notarization, quarantine, entitlements and third-party extension loading through actual customer installation. Review library-validation exceptions narrowly for the target worker; never disable host protections or broaden the trusted control domain simply to make an extension load.
 
-## Compatibility and release
+Specify versioned platform evidence and paired core scope only where real compatibility tests demand it. Preserve local-versus-protected authority boundaries and released verdict semantics without claiming future C15 guarantees.
 
-Do not rewrite historical C14 schemas, profiles, or checkpoint digests. Any new portable profile/report/runtime identity contract must be explicitly versioned and paired with core consumer scope before coding. Preserve C15 authoritative status/exit semantics and the distinction between local evidence and protected CI promotion.
+Run native macOS ARM64 customer acceptance for each advertised OS/Python combination, plus the existing Linux customer matrix. Record whether CI infrastructure is virtualized independently of the application's no-VM runtime requirement; require native ARM64 processes and a physical-Mac smoke, never emulated execution as native evidence.
 
-A future release requires verified native artifacts, complete dependency identities, appropriate semver/core compatibility, canonical signing/registry publication, and install readback. Roll out only proven platform combinations; unproven combinations remain open acceptance gaps. Withhold or revert a faulty platform publication without relabeling historical Linux evidence. No runtime, schema, version, registry, or support claim changes in this planning PR.
+## Delivery and rollback
+
+This revision delivers the scope and feasibility contract only. The next milestone produces actual measured results, freezes OS support/backend/dependencies/signing/limits, and obtains bounded production-design approval. Then focused failing-first tests, implementation, Linux/native acceptance and canonical signed publication follow. Repeat customer installation after publication before closing #460 or archiving.
+
+A failing mandatory feasibility case blocks production. Retain results and revise the design explicitly; do not silently downgrade the contract. Withdraw or supersede a faulty macOS publication while preserving Linux support, historical signatures and diagnostic evidence. Effort remains unestimated until feasibility establishes a workable backend.
+
+## Sources
+
+Accessed 2026-09-30; packaging availability is not execution or admission proof.
+
+- [Apple helper inheritance](https://developer.apple.com/documentation/xcode/embedding-a-helper-tool-in-a-sandboxed-app)
+- [Apple DTS on custom sandbox profiles](https://developer.apple.com/forums/thread/661939)
+- [Chromium macOS sandbox design](https://chromium.googlesource.com/chromium/src/+/main/sandbox/mac/seatbelt_sandbox_design.md)
+- [Apple library validation](https://developer.apple.com/documentation/bundleresources/entitlements/com.apple.security.cs.disable-library-validation)
+- [BasedPyright metadata](https://pypi.org/pypi/basedpyright/1.39.10/json)
+- [Semgrep metadata](https://pypi.org/pypi/semgrep/1.144.0/json)
+- [CrossHair metadata](https://pypi.org/pypi/crosshair-tool/0.0.109/json)
+- [Z3 metadata](https://pypi.org/pypi/z3-solver/5.1.0.0/json)

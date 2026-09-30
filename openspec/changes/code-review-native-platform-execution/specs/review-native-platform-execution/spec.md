@@ -1,142 +1,219 @@
 # Specification: review-native-platform-execution
 
-## Scope rescope — 2026-09-20
+## Scope revision — 2026-09-30
 
-Remove the prerequisite on optional checkpoint/conformance #434. Preserve layout compatibility and core C15 prerequisites, native platform acceptance tests, and signed artifacts. Ordinary native review must not require preflight, a seal, or historical RED proof.
-
-This owner-requested planning amendment supersedes conflicting default-workflow and dependency wording below; runtime behavior is unchanged. [Replacement policy](../../../requirements-09-minimal-evidence/proposal.md).
+Owner-approved macOS ARM64 first delivery. This replaces the prior cross-platform/C15 prerequisite scope; deferred platforms remain unsupported by this change. Current maturity is planned.
 
 ## ADDED Requirements
 
 ### Requirement: Native local execution
 
-Code Review SHALL execute directly on the user's macOS Linux or Windows host without an OS or CPU emulation dependency.
+Code Review SHALL add a dedicated macOS ARM64 capsule while preserving Linux x86-64 execution. The ordinary review and runtime inspect/prepare commands SHALL select the approved platform backend automatically. CPython 3.11–3.13 is the candidate ABI matrix; only tested macOS versions and native ARM64 runtime closures may be published. Windows, Intel macOS and Linux ARM64 are deferred, not acceptance obligations of this delivery.
 
 #### Scenario: Agent invokes the native CLI
 
-- **GIVEN** a supported OS and architecture with verified native runtime artifacts provisioned
-- **WHEN** a developer or agent invokes the ordinary review command locally
-- **THEN** review executes on that OS without Docker WSL VM or emulation and produces agent-readable results independently of GitHub
+- **GIVEN** a signed supported macOS ARM64 installation
+- **WHEN** an ordinary user runs review or runtime inspect/prepare
+- **THEN** the selected runtime executes natively without sudo, Docker, WSL, a VM, Rosetta or CPU emulation; diagnostics and reports identify the actual OS, architecture, ABI and backend
 
 #### Scenario: Architecture is not silently substituted
 
-- **GIVEN** a requested x64 or ARM64 OS combination lacks a required native artifact
-- **WHEN** runtime support is assessed or execution is requested
-- **THEN** the missing support remains explicit and no emulated substitute is advertised as native
+- **GIVEN** a required interpreter, executable or library lacks a compatible ARM64 slice or the host OS is unvalidated
+- **WHEN** runtime preparation or execution is requested
+- **THEN** execution fails with an actionable unsupported diagnostic; no Homebrew, emulated or development-host fallback satisfies capsule acceptance
 
 ### Requirement: Native isolation capability evidence
 
-Each native backend SHALL enforce and report its approved isolation capabilities without falsely claiming Linux-specific observations on another OS.
+Production backend approval SHALL follow harmless native feasibility tests of a minimal signed Seatbelt helper and an App Sandbox alternative against the same capability contract. Neither candidate is preapproved. Mandatory boundaries SHALL cover filesystem reads/writes, network and IPC access, inherited descriptors, startup/load-path integrity, resource limits and complete child-process lifecycle. Exact mechanisms, OS support and numeric limits SHALL be frozen from measured results before production implementation.
 
 #### Scenario: Isolation and cleanup are proven
 
-- **GIVEN** a backend selected for native execution
-- **WHEN** filesystem and network policy child-process cleanup resource bounds and load-path integrity are exercised
-- **THEN** native tests prove the approved capability contract and results identify the backend OS architecture and runtime
+- **GIVEN** a candidate helper and independently observable allow/deny fixtures
+- **WHEN** tests exercise authorized reads/writes and prohibited host reads/writes, outbound and listening network operations, inherited descriptors and child processes
+- **THEN** allowed operations succeed and denied operations fail for the intended policy reason; helper startup or parser failure is not successful confinement evidence
 
 #### Scenario: Required capability is unavailable
 
-- **GIVEN** an isolation capability or required analyzer is missing incompatible or unverifiable
-- **WHEN** provisioning or analyzer execution is requested
-- **THEN** it rejects execution before analyzer launch and reports explicit incomplete evidence according to the approved status/exit contract; provisioning cannot authorize weakened isolation or omitted required analyzers
+- **GIVEN** a required isolation capability or analyzer is missing, incompatible or unverifiable
+- **WHEN** launch readiness is evaluated
+- **THEN** the runtime rejects analyzer launch and reports incomplete evidence under the released status/exit contract without weakening isolation
+
+#### Scenario: Cancellation and descendants are bounded
+
+- **GIVEN** a worker forks, creates a new session or attempts to leave the initial process group
+- **WHEN** timeout, user cancellation or controller failure occurs
+- **THEN** all governed descendants terminate within the frozen cleanup bound; fixtures independently check survivors and resource ceilings rather than treating killpg alone as proof
+
+#### Scenario: Startup cannot bypass confinement
+
+- **GIVEN** a fixture supplies loader injection variables, inherited open files or unauthorized IPC handles
+- **WHEN** the helper starts and loads project code or a native extension
+- **THEN** untrusted code cannot execute before the required boundary is active or use inherited access to bypass it; allowed Apple system libraries are explicitly distinguished from prohibited ambient dependencies
 
 ### Requirement: Portable review semantics
 
-Native execution SHALL preserve the released scope differential and C15 authoritative enforcement contracts while recording platform-dependent behavior honestly.
+The macOS backend SHALL preserve the exact released baseline's scope, findings, differential classification and verdict/exit semantics. C15 delivery is independent. New platform evidence SHALL have explicitly versioned producer/consumer compatibility, and local evidence SHALL NOT acquire protected PR authority by declaring an identity.
 
 #### Scenario: Portable fixture classification
 
-- **GIVEN** the same portable fixture and equivalent approved analyzer and policy versions on each supported platform
-- **WHEN** native review evaluates introduced fixed and unchanged findings
-- **THEN** classification and authoritative status/exit semantics agree without promoting local evidence to protected CI authority
+- **GIVEN** equivalent approved analyzer/policy versions and portable clean/defective fixtures on Linux and macOS
+- **WHEN** all required analyzer members execute
+- **THEN** introduced, fixed and unchanged findings and authoritative status/exit results agree; skipped, empty or UNKNOWN required evidence cannot pass acceptance
 
 #### Scenario: OS dependent project tests
 
-- **GIVEN** project dependencies or tests have intentional OS-specific behavior
-- **WHEN** native validation evaluates the project
-- **THEN** results retain their actual platform identity and observed outcomes rather than claiming identical runtime behavior
+- **GIVEN** a project intentionally behaves differently on macOS and Linux
+- **WHEN** its native test slice runs
+- **THEN** reports preserve the actual platform and outcomes without forcing cross-platform equality or relabeling genuine failures
+
+#### Scenario: Older protected consumer receives native evidence
+
+- **GIVEN** a consumer has not approved the native report/runtime contract
+- **WHEN** it receives macOS evidence
+- **THEN** it rejects unsupported evidence explicitly rather than interpreting it as historical Linux or protected PR assurance
 
 ### Requirement: Verified provisioning and offline reuse
 
-Native runtimes SHALL preserve full-module-directory checksum/signature verification for module-shipped files. External runtimes SHALL use a separately approved signed lock/manifest binding artifact digests, applicable layer digests, installed payload/root manifests, OS/architecture/Python ABI, dependency closure, an immutable released core/module policy digest or commit covered by the runtime signature, and cache identity including that policy identity. Provisioning SHALL verify artifact and extracted payload integrity; every launch, including offline reuse, SHALL revalidate the selected payload/root and selected approved policy identity against the signed bindings before dependency admission or analyzer execution. Unbound, stale, partial, mixed, or mismatched caches SHALL fail closed before analyzer execution.
+Module-shipped files SHALL retain full-module signature/checksum verification. External native runtimes SHALL have an approved signed manifest binding artifact and installed-payload digests, OS, architecture, ABI, complete dependency closure, released policy identity and backend/profile version. Cache identity SHALL include those bindings. Provisioning, extraction and each launch including offline reuse SHALL verify the selected payload and admission policy, and prevent substitution between verification and use.
 
 #### Scenario: Cached native runtime
 
-- **GIVEN** a complete verified native runtime cache for the active OS architecture and Python ABI
-- **WHEN** review runs without network access
-- **THEN** it revalidates the selected runtime payload/root against the approved signed bindings, uses that runtime, and records its identity without unreported host dependency fallback
+- **GIVEN** a complete approved cache for the selected OS, ABI and policy
+- **WHEN** review runs offline
+- **THEN** it revalidates the payload and uses only the bound runtime while recording its identity
 
 #### Scenario: Invalid native artifact
 
-- **GIVEN** a runtime or dependency has mismatched integrity incompatible ABI or unavailable native code
-- **WHEN** provisioning or execution is requested
-- **THEN** the runtime fails closed with an actionable diagnostic and does not use emulation
+- **GIVEN** a helper, interpreter or native library is modified, incompatible or unsigned contrary to the approved policy
+- **WHEN** provisioning or launch validates the runtime
+- **THEN** execution fails before untrusted analyzer or project code runs
 
 #### Scenario: Module-shipped native artifact changes
 
-- **GIVEN** a native file covered by the full-module checksum/signature has changed
-- **WHEN** module payload verification is performed before launch
-- **THEN** verification fails and no analyzer executes; verification is not narrowed to only the Python package
+- **GIVEN** a module-shipped helper or resource changes
+- **WHEN** module integrity is verified
+- **THEN** verification fails without narrowing the full-module boundary to Python files
 
 #### Scenario: External cache has no approved binding
 
-- **GIVEN** a cached native artifact is outside the module directory and has no approved signed lock/manifest binding
-- **WHEN** provisioning or offline reuse is requested
-- **THEN** it fails closed before analyzer execution even when module verification succeeds
+- **GIVEN** an external runtime is not covered by its approved signed manifest
+- **WHEN** first use or offline reuse is attempted
+- **THEN** it is rejected even if the module signature itself verifies
 
 #### Scenario: Stale external cache identity
 
-- **GIVEN** a cached runtime matches an earlier approved lock but not the currently selected runtime or approved policy identity
-- **WHEN** review prepares to launch from that cache
-- **THEN** the stale cache is rejected before analyzer execution
+- **GIVEN** a cache belongs to an earlier runtime or policy/backend identity
+- **WHEN** the current selection is launched
+- **THEN** the stale identity is rejected before admission or execution
 
 #### Scenario: Partial external runtime cache
 
-- **GIVEN** a selected cache lacks a file or dependency required by its signed installed payload/root manifest
-- **WHEN** provisioning or offline reuse verifies the selected runtime
-- **THEN** the incomplete cache is rejected before analyzer execution
+- **GIVEN** preparation is interrupted or two preparations overlap
+- **WHEN** a consumer examines the resulting cache
+- **THEN** partial output never becomes reusable; publication is atomic and concurrent preparations cannot mix payloads
 
 #### Scenario: Mixed external runtime cache
 
-- **GIVEN** cached files come from different versions platforms or Python ABIs despite individual artifact digests being valid
-- **WHEN** the complete runtime is checked against the approved signed lock and dependency closure
-- **THEN** the mixed cache is rejected before analyzer execution
+- **GIVEN** files mix versions, architectures or Python ABIs
+- **WHEN** the selected payload is verified
+- **THEN** the mixed closure is rejected despite individual valid file hashes
+
+#### Scenario: Verification to launch substitution
+
+- **GIVEN** an adversarial fixture replaces or redirects a verified payload before use
+- **WHEN** the helper opens or executes it
+- **THEN** the replacement cannot execute and the runtime reports integrity failure; the approved design records how this is enforced on macOS
 
 ### Requirement: Released baseline implementation gate
 
-Native production implementation SHALL require the verified layout correction and released core C15 adoption and SHALL be reassessed against their exact identities. Optional checkpoint/conformance #434 SHALL NOT block implementation, release or ordinary native review.
+Native work SHALL use a verified released baseline incorporating layout correction #459 and portable project runtimes #473 (Code Review 0.50.1 as the initial review baseline). Core #679 and modules #417 SHALL NOT be blanket prerequisites. Actual consumer incompatibilities SHALL require explicit paired scope. Production implementation SHALL remain gated on approved isolation/dependency feasibility results and a bounded design. Optional #434, preflight, seals and historical RED ledgers SHALL NOT be prerequisites.
 
 #### Scenario: Prerequisite remains incomplete
 
-- **GIVEN** either the modules #459 correction or core #679 is not complete with required release evidence
-- **WHEN** an agent prepares to implement native execution
-- **THEN** it stops before production changes while planning artifacts may still merge to dev
+- **GIVEN** native confinement, dependency admission or required consumer compatibility is unresolved
+- **WHEN** production implementation is prepared
+- **THEN** it stops at the feasibility gate while planning and bounded feasibility work may proceed
+
+#### Scenario: C15 remains unreleased
+
+- **GIVEN** the selected released review contract and native consumer compatibility are established
+- **WHEN** native readiness is assessed
+- **THEN** open C15 issues alone do not block delivery and native work does not implement or claim C15 semantics
 
 #### Scenario: Baseline drives the full lifecycle
 
-- **GIVEN** the prerequisite releases are verified and pinned
-- **WHEN** native implementation is prepared performed and finalized
-- **THEN** reviewed design and relevant failing tests precede code, current native test results verify the candidate, and published installation is checked
-- **AND** absent optional preflight, seals or checkpoints do not block this lifecycle
+- **GIVEN** the released identities and feasibility report are verified
+- **WHEN** production design is approved and implemented
+- **THEN** focused failing-first tests precede code, current native and Linux regression results verify the candidate, and signed published installation is read back
 
 ### Requirement: Dependency source admission
 
-The native dependency closure SHALL comply with the approved core/module dependency policy independently of signed artifact integrity. Under the current core prohibition, `nodejs-wheel-binaries` SHALL be excluded; its historical presence in the C14 analyzer lock SHALL NOT authorize native admission. Unresolved policy conflicts SHALL block implementation-design approval. Provisioning and every launch, including offline reuse, SHALL verify source admission against the selected approved policy identity and reject prohibited dependencies before analyzer execution. Replacement sources SHALL require provenance review, versioned contracts, fresh artifact/closure/cache identities, and conformance evidence; no replacement is approved by this planning delivery.
+The full native closure SHALL satisfy released dependency policy independently of signature validity. nodejs-wheel-binaries remains prohibited; BasedPyright 1.39.10's direct requirement on that distribution SHALL be resolved explicitly rather than hidden by swapping a Node executable or using --no-deps. Replacement distributions/builds SHALL have reviewed provenance, licenses, metadata and compatibility, with fresh signed identities. No replacement is approved by this planning revision.
 
 #### Scenario: Signed dependency is prohibited
 
-- **GIVEN** a native runtime contains a dependency prohibited by the selected approved policy even though its signed artifact and payload checks pass
-- **WHEN** provisioning or launch including offline reuse evaluates the runtime
-- **THEN** admission fails closed with a policy diagnostic before analyzer execution and an ordinary exception record cannot override the prohibition
+- **GIVEN** a correctly signed runtime includes a prohibited dependency
+- **WHEN** provisioning or offline launch checks admission
+- **THEN** it fails before execution; signatures and ordinary trust exceptions cannot override the prohibition
 
 #### Scenario: Inherited C14 lock conflicts with policy
 
-- **GIVEN** the released C14 analyzer lock includes nodejs-wheel-binaries and the approved core policy still prohibits it
-- **WHEN** the native implementation design and dependency closure are assessed
-- **THEN** that source remains rejected and design approval is blocked until a policy-admissible replacement is specified or a separate explicit policy change is accepted; historical signatures provide no exemption
+- **GIVEN** the historical Linux lock and BasedPyright metadata reference nodejs-wheel-binaries
+- **WHEN** the native dependency graph is audited
+- **THEN** design approval remains blocked until a compliant complete closure or separately approved policy change exists; old signatures confer no exemption
 
 #### Scenario: Policy-admissible replacement is verified
 
-- **GIVEN** a replacement source and complete native closure have approved provenance and policy admission with versioned contracts and fresh signed artifact closure and cache identities
-- **WHEN** provisioning and launch validate admission and all integrity isolation and platform requirements
-- **THEN** the native runtime may execute with its policy and artifact identities recorded and the superseded cache cannot satisfy the new identity
+- **GIVEN** a reviewed replacement and complete transitive/native closure have new approved identities
+- **WHEN** all admission, integrity and platform tests pass
+- **THEN** native execution may proceed without satisfying the new selection from a superseded cache
+
+### Requirement: Native project runtime preparation
+
+The macOS backend SHALL carry forward pip/pip-tools, Hatch, uv and Poetry discovery, source selection, pytest plugins and coverage from #473. Acquisition, build hooks, preparation and analysis SHALL each have explicit trust, filesystem, process and network boundaries. Mach-O/dyld dependency handling SHALL replace Linux ELF assumptions for macOS. The trusted control domain SHALL remain separate from project code and extensions.
+
+#### Scenario: Native extension and plugin execute
+
+- **GIVEN** a pinned external project contains an ARM64 extension, pytest plugin and coverage configuration
+- **WHEN** its declared manager prepares the runtime and the real test slice executes
+- **THEN** Mach-O slices, dylib dependencies, relocatable paths and load origins are checked and actual collection/execution succeeds without changing project pins
+
+#### Scenario: Preparation hook attempts host access
+
+- **GIVEN** a build backend or package-manager hook attempts unauthorized filesystem, credential, process or network access
+- **WHEN** preparation runs with its declared acquisition policy
+- **THEN** the attempt is denied; acquisition credentials and host state are not exposed to project execution, and analysis remains network-denied
+
+#### Scenario: Project runtime is incompatible
+
+- **GIVEN** a required extension or library has no admitted native build
+- **WHEN** preparation analyzes the project
+- **THEN** it reports the root incompatibility honestly, preserves independent static evidence where supported, and never converts incomplete required evidence to PASS
+
+### Requirement: Signed customer release acceptance
+
+Support SHALL be claimed only after a canonical signed publication passes fresh ordinary-user installation on every advertised macOS/ABI combination and Linux regression acceptance. Distribution SHALL verify applicable Apple code signing, notarization, quarantine and third-party library loading through the real install route. Candidate/source-tree results SHALL NOT substitute for public release evidence.
+
+#### Scenario: Customer installs the published capsule
+
+- **GIVEN** a fresh user-owned installation without publisher credentials, signature bypasses or development links
+- **WHEN** the official module acquires its native runtime and runs clean/defective fixtures and pinned external projects
+- **THEN** all required analyzers and real tests execute with expected exits; cold acquisition and offline warm reuse pass on the supported matrix
+
+#### Scenario: Customer filesystem differs
+
+- **GIVEN** a repository/cache uses spaces, Unicode, default case-insensitive APFS, symlinks or restricted permissions
+- **WHEN** ordinary review and interrupted/concurrent preparation run
+- **THEN** paths cannot escape declared boundaries, valid layouts work and unsupported layouts produce actionable diagnostics without source mutation
+
+#### Scenario: Apple distribution and loading controls apply
+
+- **GIVEN** the final helper/runtime has been packaged and signed in the approved order
+- **WHEN** a fresh customer installation launches with normal platform protections and loads project extensions
+- **THEN** applicable signing/notarization/quarantine checks and the approved library-loading policy pass without disabling host protections; final payload hashes match the shipped signed manifest
+
+#### Scenario: Linux regression and rollback
+
+- **GIVEN** a macOS candidate or publication is evaluated
+- **WHEN** the existing Linux customer matrix and cross-platform fixtures run
+- **THEN** Linux remains supported with historical identities intact; a faulty macOS publication can be withdrawn or superseded without disabling Linux or deleting evidence

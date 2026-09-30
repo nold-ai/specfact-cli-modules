@@ -1,4 +1,22 @@
-# Planning Validation
+# Current planning revision — 2026-09-30
+
+- Branch: `codex/macos-arm64-capsule-plan`, based on remote dev `b683c2cf5a23244b29c41f21309d4ff3b9764b8d`.
+- Owner-approved scope: dedicated macOS ARM64 capsule; Linux x86-64 regression; other platforms deferred.
+- GitHub #460 renamed and rewritten; readback remains open / Todo. Removed only the blocked-by edge to core #679 (issue id 5197266316); retained closed layout #459. Other C15 relationships unchanged.
+- Production remains gated on measured feasibility, admitted dependency closure and bounded design approval. No native support, prototype result or release is claimed.
+- Updated proposal/design/tasks/scenarios/evidence mapping and CHANGE_ORDER; added FEASIBILITY.md.
+- `openspec validate code-review-native-platform-execution --strict`: passed.
+- Planned Requirements gate with CI's project/requirements PYTHONPATH and explicit output/summary paths: one source passed, zero failed/skipped; observed maturity planned; implementation evidence not-yet-available.
+- Structural Markdown checks passed with existing MD013/MD060 exclusions; Ruff check and format --check passed (1,362 files unchanged).
+- Manifest/YAML and bundle import checks passed. Full payload/signature/version-baseline verification passed for all seven modules using the core public key.
+- Staged SpecFact review helper explicitly skipped OpenSpec Markdown with no Python targets. No analyzer PASS or synthetic runtime report is claimed.
+- Whitespace check passed. Production tests, native prototypes and platform acceptance were not run for this planning-only revision.
+
+Bootstrap notes: the initial evidence command lacked CI module paths, then exposed the existing helper's None-summary type restriction. Re-running with CI paths and explicit summary passed. These are invocation corrections, not runtime fixes. The local editable core used for planning validation is not native release compatibility evidence.
+
+The records below describe historical planning revisions. Their old scope and dependency statements are superseded by the 2026-09-30 proposal/specification and live issue readback.
+
+## Historical planning validation
 
 ## Current dependency readback — 2026-09-20
 

@@ -1,7 +1,7 @@
 schema_version: '2'
 requirements:
   openspec:code-review-native-platform-execution:review-native-platform-execution:native-local-execution:
-    rationale: Make the future behavior and its acceptance evidence reviewable before implementation.
+    rationale: Define macOS ARM64 acceptance without claiming unexecuted runtime proof.
     stakeholder_refs:
     - nold-ai/specfact-cli-modules#460
     touchpoints:
@@ -12,17 +12,15 @@ requirements:
     - case_id: 460-1-1
       scenario_id: native-local-execution
       method: inspection
-      intent: 'Inspect the planned scenario: Agent invokes the native CLI.'
-      observable: The source requirement and Given/When/Then scenario are present and validate at planned
-        maturity; no runtime test execution or implementation is claimed.
+      intent: "Inspect planned acceptance: Agent invokes the native CLI."
+      observable: "the selected runtime executes natively without sudo, Docker, WSL, a VM, Rosetta or CPU emulation; diagnostics and reports identify the actual OS, architecture, ABI and backend. Planned maturity only; future native execution evidence is required by FEASIBILITY.md and tasks.md; no runtime pass is claimed."
     - case_id: 460-1-2
       scenario_id: native-local-execution
       method: inspection
-      intent: 'Inspect the planned scenario: Architecture is not silently substituted.'
-      observable: The source requirement and Given/When/Then scenario are present and validate at planned
-        maturity; no runtime test execution or implementation is claimed.
+      intent: "Inspect planned acceptance: Architecture is not silently substituted."
+      observable: "execution fails with an actionable unsupported diagnostic; no Homebrew, emulated or development-host fallback satisfies capsule acceptance. Planned maturity only; future native execution evidence is required by FEASIBILITY.md and tasks.md; no runtime pass is claimed."
   openspec:code-review-native-platform-execution:review-native-platform-execution:native-isolation-capability-evidence:
-    rationale: Make the future behavior and its acceptance evidence reviewable before implementation.
+    rationale: Define macOS ARM64 acceptance without claiming unexecuted runtime proof.
     stakeholder_refs:
     - nold-ai/specfact-cli-modules#460
     touchpoints:
@@ -33,17 +31,25 @@ requirements:
     - case_id: 460-2-1
       scenario_id: native-isolation-capability-evidence
       method: inspection
-      intent: 'Inspect the planned scenario: Isolation and cleanup are proven.'
-      observable: The source requirement and Given/When/Then scenario are present and validate at planned
-        maturity; no runtime test execution or implementation is claimed.
+      intent: "Inspect planned acceptance: Isolation and cleanup are proven."
+      observable: "allowed operations succeed and denied operations fail for the intended policy reason; helper startup or parser failure is not successful confinement evidence. Planned maturity only; future native execution evidence is required by FEASIBILITY.md and tasks.md; no runtime pass is claimed."
     - case_id: 460-2-2
       scenario_id: native-isolation-capability-evidence
       method: inspection
-      intent: 'Inspect the planned scenario: Required capability is unavailable.'
-      observable: The source requirement and Given/When/Then scenario are present and validate at planned
-        maturity; no runtime test execution or implementation is claimed.
+      intent: "Inspect planned acceptance: Required capability is unavailable."
+      observable: "the runtime rejects analyzer launch and reports incomplete evidence under the released status/exit contract without weakening isolation. Planned maturity only; future native execution evidence is required by FEASIBILITY.md and tasks.md; no runtime pass is claimed."
+    - case_id: 460-2-3
+      scenario_id: native-isolation-capability-evidence
+      method: inspection
+      intent: "Inspect planned acceptance: Cancellation and descendants are bounded."
+      observable: "all governed descendants terminate within the frozen cleanup bound; fixtures independently check survivors and resource ceilings rather than treating killpg alone as proof. Planned maturity only; future native execution evidence is required by FEASIBILITY.md and tasks.md; no runtime pass is claimed."
+    - case_id: 460-2-4
+      scenario_id: native-isolation-capability-evidence
+      method: inspection
+      intent: "Inspect planned acceptance: Startup cannot bypass confinement."
+      observable: "untrusted code cannot execute before the required boundary is active or use inherited access to bypass it; allowed Apple system libraries are explicitly distinguished from prohibited ambient dependencies. Planned maturity only; future native execution evidence is required by FEASIBILITY.md and tasks.md; no runtime pass is claimed."
   openspec:code-review-native-platform-execution:review-native-platform-execution:portable-review-semantics:
-    rationale: Make the future behavior and its acceptance evidence reviewable before implementation.
+    rationale: Define macOS ARM64 acceptance without claiming unexecuted runtime proof.
     stakeholder_refs:
     - nold-ai/specfact-cli-modules#460
     touchpoints:
@@ -54,17 +60,20 @@ requirements:
     - case_id: 460-3-1
       scenario_id: portable-review-semantics
       method: inspection
-      intent: 'Inspect the planned scenario: Portable fixture classification.'
-      observable: The source requirement and Given/When/Then scenario are present and validate at planned
-        maturity; no runtime test execution or implementation is claimed.
+      intent: "Inspect planned acceptance: Portable fixture classification."
+      observable: "introduced, fixed and unchanged findings and authoritative status/exit results agree; skipped, empty or UNKNOWN required evidence cannot pass acceptance. Planned maturity only; future native execution evidence is required by FEASIBILITY.md and tasks.md; no runtime pass is claimed."
     - case_id: 460-3-2
       scenario_id: portable-review-semantics
       method: inspection
-      intent: 'Inspect the planned scenario: OS dependent project tests.'
-      observable: The source requirement and Given/When/Then scenario are present and validate at planned
-        maturity; no runtime test execution or implementation is claimed.
+      intent: "Inspect planned acceptance: OS dependent project tests."
+      observable: "reports preserve the actual platform and outcomes without forcing cross-platform equality or relabeling genuine failures. Planned maturity only; future native execution evidence is required by FEASIBILITY.md and tasks.md; no runtime pass is claimed."
+    - case_id: 460-3-3
+      scenario_id: portable-review-semantics
+      method: inspection
+      intent: "Inspect planned acceptance: Older protected consumer receives native evidence."
+      observable: "it rejects unsupported evidence explicitly rather than interpreting it as historical Linux or protected PR assurance. Planned maturity only; future native execution evidence is required by FEASIBILITY.md and tasks.md; no runtime pass is claimed."
   openspec:code-review-native-platform-execution:review-native-platform-execution:verified-provisioning-and-offline-reuse:
-    rationale: Make the future behavior and its acceptance evidence reviewable before implementation.
+    rationale: Define macOS ARM64 acceptance without claiming unexecuted runtime proof.
     stakeholder_refs:
     - nold-ai/specfact-cli-modules#460
     touchpoints:
@@ -75,51 +84,45 @@ requirements:
     - case_id: 460-4-1
       scenario_id: verified-provisioning-and-offline-reuse
       method: inspection
-      intent: 'Inspect the planned scenario: Cached native runtime.'
-      observable: The source requirement and Given/When/Then scenario are present and validate at planned
-        maturity; no runtime test execution or implementation is claimed.
+      intent: "Inspect planned acceptance: Cached native runtime."
+      observable: "it revalidates the payload and uses only the bound runtime while recording its identity. Planned maturity only; future native execution evidence is required by FEASIBILITY.md and tasks.md; no runtime pass is claimed."
     - case_id: 460-4-2
       scenario_id: verified-provisioning-and-offline-reuse
       method: inspection
-      intent: 'Inspect the planned scenario: Invalid native artifact.'
-      observable: The source requirement and Given/When/Then scenario are present and validate at planned
-        maturity; no runtime test execution or implementation is claimed.
+      intent: "Inspect planned acceptance: Invalid native artifact."
+      observable: "execution fails before untrusted analyzer or project code runs. Planned maturity only; future native execution evidence is required by FEASIBILITY.md and tasks.md; no runtime pass is claimed."
     - case_id: 460-4-3
       scenario_id: verified-provisioning-and-offline-reuse
       method: inspection
-      intent: 'Inspect the planned scenario: Module-shipped native artifact changes.'
-      observable: 'The planned contract requires: verification fails and no analyzer executes; verification
-        is not narrowed to only the Python package. Planned maturity only; no runtime test execution or
-        implementation is claimed.'
+      intent: "Inspect planned acceptance: Module-shipped native artifact changes."
+      observable: "verification fails without narrowing the full-module boundary to Python files. Planned maturity only; future native execution evidence is required by FEASIBILITY.md and tasks.md; no runtime pass is claimed."
     - case_id: 460-4-4
       scenario_id: verified-provisioning-and-offline-reuse
       method: inspection
-      intent: 'Inspect the planned scenario: External cache has no approved binding.'
-      observable: 'The planned contract requires: it fails closed before analyzer execution even when
-        module verification succeeds. Planned maturity only; no runtime test execution or implementation
-        is claimed.'
+      intent: "Inspect planned acceptance: External cache has no approved binding."
+      observable: "it is rejected even if the module signature itself verifies. Planned maturity only; future native execution evidence is required by FEASIBILITY.md and tasks.md; no runtime pass is claimed."
     - case_id: 460-4-5
       scenario_id: verified-provisioning-and-offline-reuse
       method: inspection
-      intent: 'Inspect the planned scenario: Stale external cache identity.'
-      observable: 'The planned contract requires: a cache whose runtime or policy identity does not match the currently selected
-        approved runtime or policy identity is rejected before dependency admission or analyzer launch,
-        including offline reuse.
-        Planned maturity only; no runtime test execution or implementation is claimed.'
+      intent: "Inspect planned acceptance: Stale external cache identity."
+      observable: "the stale identity is rejected before admission or execution. Planned maturity only; future native execution evidence is required by FEASIBILITY.md and tasks.md; no runtime pass is claimed."
     - case_id: 460-4-6
       scenario_id: verified-provisioning-and-offline-reuse
       method: inspection
-      intent: 'Inspect the planned scenario: Partial external runtime cache.'
-      observable: 'The planned contract requires: the incomplete cache is rejected before analyzer execution.
-        Planned maturity only; no runtime test execution or implementation is claimed.'
+      intent: "Inspect planned acceptance: Partial external runtime cache."
+      observable: "partial output never becomes reusable; publication is atomic and concurrent preparations cannot mix payloads. Planned maturity only; future native execution evidence is required by FEASIBILITY.md and tasks.md; no runtime pass is claimed."
     - case_id: 460-4-7
       scenario_id: verified-provisioning-and-offline-reuse
       method: inspection
-      intent: 'Inspect the planned scenario: Mixed external runtime cache.'
-      observable: 'The planned contract requires: the mixed cache is rejected before analyzer execution.
-        Planned maturity only; no runtime test execution or implementation is claimed.'
+      intent: "Inspect planned acceptance: Mixed external runtime cache."
+      observable: "the mixed closure is rejected despite individual valid file hashes. Planned maturity only; future native execution evidence is required by FEASIBILITY.md and tasks.md; no runtime pass is claimed."
+    - case_id: 460-4-8
+      scenario_id: verified-provisioning-and-offline-reuse
+      method: inspection
+      intent: "Inspect planned acceptance: Verification to launch substitution."
+      observable: "the replacement cannot execute and the runtime reports integrity failure; the approved design records how this is enforced on macOS. Planned maturity only; future native execution evidence is required by FEASIBILITY.md and tasks.md; no runtime pass is claimed."
   openspec:code-review-native-platform-execution:review-native-platform-execution:released-baseline-implementation-gate:
-    rationale: Make the future behavior and its acceptance evidence reviewable before implementation.
+    rationale: Define macOS ARM64 acceptance without claiming unexecuted runtime proof.
     stakeholder_refs:
     - nold-ai/specfact-cli-modules#460
     touchpoints:
@@ -130,18 +133,20 @@ requirements:
     - case_id: 460-5-1
       scenario_id: released-baseline-implementation-gate
       method: inspection
-      intent: 'Inspect the planned scenario: Prerequisite remains incomplete.'
-      observable: The source requirement and Given/When/Then scenario are present and validate at planned
-        maturity; no runtime test execution or implementation is claimed.
+      intent: "Inspect planned acceptance: Prerequisite remains incomplete."
+      observable: "it stops at the feasibility gate while planning and bounded feasibility work may proceed. Planned maturity only; future native execution evidence is required by FEASIBILITY.md and tasks.md; no runtime pass is claimed."
     - case_id: 460-5-2
       scenario_id: released-baseline-implementation-gate
       method: inspection
-      intent: 'Inspect the planned scenario: Baseline drives the full lifecycle.'
-      observable: The source requirement and Given/When/Then scenario are present and validate at planned
-        maturity; no runtime test execution or implementation is claimed.
+      intent: "Inspect planned acceptance: C15 remains unreleased."
+      observable: "open C15 issues alone do not block delivery and native work does not implement or claim C15 semantics. Planned maturity only; future native execution evidence is required by FEASIBILITY.md and tasks.md; no runtime pass is claimed."
+    - case_id: 460-5-3
+      scenario_id: released-baseline-implementation-gate
+      method: inspection
+      intent: "Inspect planned acceptance: Baseline drives the full lifecycle."
+      observable: "focused failing-first tests precede code, current native and Linux regression results verify the candidate, and signed published installation is read back. Planned maturity only; future native execution evidence is required by FEASIBILITY.md and tasks.md; no runtime pass is claimed."
   openspec:code-review-native-platform-execution:review-native-platform-execution:dependency-source-admission:
-    rationale: Separate native dependency-policy admission from artifact integrity and prevent historical
-      C14 lock entries from bypassing current prohibitions.
+    rationale: Define macOS ARM64 acceptance without claiming unexecuted runtime proof.
     stakeholder_refs:
     - nold-ai/specfact-cli-modules#460
     touchpoints:
@@ -152,18 +157,68 @@ requirements:
     - case_id: 460-6-1
       scenario_id: dependency-source-admission
       method: inspection
-      intent: 'Inspect the planned scenario: Signed dependency is prohibited.'
-      observable: The source requirement and Given/When/Then scenario define the policy-admission gate
-        and validate at planned maturity; no runtime test execution or implementation is claimed.
+      intent: "Inspect planned acceptance: Signed dependency is prohibited."
+      observable: "it fails before execution; signatures and ordinary trust exceptions cannot override the prohibition. Planned maturity only; future native execution evidence is required by FEASIBILITY.md and tasks.md; no runtime pass is claimed."
     - case_id: 460-6-2
       scenario_id: dependency-source-admission
       method: inspection
-      intent: 'Inspect the planned scenario: Inherited C14 lock conflicts with policy.'
-      observable: The source requirement and Given/When/Then scenario define the policy-admission gate
-        and validate at planned maturity; no runtime test execution or implementation is claimed.
+      intent: "Inspect planned acceptance: Inherited C14 lock conflicts with policy."
+      observable: "design approval remains blocked until a compliant complete closure or separately approved policy change exists; old signatures confer no exemption. Planned maturity only; future native execution evidence is required by FEASIBILITY.md and tasks.md; no runtime pass is claimed."
     - case_id: 460-6-3
       scenario_id: dependency-source-admission
       method: inspection
-      intent: 'Inspect the planned scenario: Policy-admissible replacement is verified.'
-      observable: The source requirement and Given/When/Then scenario define the policy-admission gate
-        and validate at planned maturity; no runtime test execution or implementation is claimed.
+      intent: "Inspect planned acceptance: Policy-admissible replacement is verified."
+      observable: "native execution may proceed without satisfying the new selection from a superseded cache. Planned maturity only; future native execution evidence is required by FEASIBILITY.md and tasks.md; no runtime pass is claimed."
+  openspec:code-review-native-platform-execution:review-native-platform-execution:native-project-runtime-preparation:
+    rationale: Define macOS ARM64 acceptance without claiming unexecuted runtime proof.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#460
+    touchpoints:
+    - id: openspec-source-spec
+      kind: config_file
+      locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
+    verification_cases:
+    - case_id: 460-7-1
+      scenario_id: native-project-runtime-preparation
+      method: inspection
+      intent: "Inspect planned acceptance: Native extension and plugin execute."
+      observable: "Mach-O slices, dylib dependencies, relocatable paths and load origins are checked and actual collection/execution succeeds without changing project pins. Planned maturity only; future native execution evidence is required by FEASIBILITY.md and tasks.md; no runtime pass is claimed."
+    - case_id: 460-7-2
+      scenario_id: native-project-runtime-preparation
+      method: inspection
+      intent: "Inspect planned acceptance: Preparation hook attempts host access."
+      observable: "the attempt is denied; acquisition credentials and host state are not exposed to project execution, and analysis remains network-denied. Planned maturity only; future native execution evidence is required by FEASIBILITY.md and tasks.md; no runtime pass is claimed."
+    - case_id: 460-7-3
+      scenario_id: native-project-runtime-preparation
+      method: inspection
+      intent: "Inspect planned acceptance: Project runtime is incompatible."
+      observable: "it reports the root incompatibility honestly, preserves independent static evidence where supported, and never converts incomplete required evidence to PASS. Planned maturity only; future native execution evidence is required by FEASIBILITY.md and tasks.md; no runtime pass is claimed."
+  openspec:code-review-native-platform-execution:review-native-platform-execution:signed-customer-release-acceptance:
+    rationale: Define macOS ARM64 acceptance without claiming unexecuted runtime proof.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#460
+    touchpoints:
+    - id: openspec-source-spec
+      kind: config_file
+      locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
+    verification_cases:
+    - case_id: 460-8-1
+      scenario_id: signed-customer-release-acceptance
+      method: inspection
+      intent: "Inspect planned acceptance: Customer installs the published capsule."
+      observable: "all required analyzers and real tests execute with expected exits; cold acquisition and offline warm reuse pass on the supported matrix. Planned maturity only; future native execution evidence is required by FEASIBILITY.md and tasks.md; no runtime pass is claimed."
+    - case_id: 460-8-2
+      scenario_id: signed-customer-release-acceptance
+      method: inspection
+      intent: "Inspect planned acceptance: Customer filesystem differs."
+      observable: "paths cannot escape declared boundaries, valid layouts work and unsupported layouts produce actionable diagnostics without source mutation. Planned maturity only; future native execution evidence is required by FEASIBILITY.md and tasks.md; no runtime pass is claimed."
+    - case_id: 460-8-3
+      scenario_id: signed-customer-release-acceptance
+      method: inspection
+      intent: "Inspect planned acceptance: Apple distribution and loading controls apply."
+      observable: "applicable signing/notarization/quarantine checks and the approved library-loading policy pass without disabling host protections; final payload hashes match the shipped signed manifest. Planned maturity only; future native execution evidence is required by FEASIBILITY.md and tasks.md; no runtime pass is claimed."
+    - case_id: 460-8-4
+      scenario_id: signed-customer-release-acceptance
+      method: inspection
+      intent: "Inspect planned acceptance: Linux regression and rollback."
+      observable: "Linux remains supported with historical identities intact; a faulty macOS publication can be withdrawn or superseded without disabling Linux or deleting evidence. Planned maturity only; future native execution evidence is required by FEASIBILITY.md and tasks.md; no runtime pass is claimed."
