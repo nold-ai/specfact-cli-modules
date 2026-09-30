@@ -127,6 +127,13 @@ def candidate_outer(blobs: dict[str, bytes], index: Any, change: str) -> bytes:
         outer.append(outer[1])
     if change == "outer-link":
         outer.append(("other", b"", tarfile.SYMTYPE, 0o644))
+    extra_entries = {
+        "outer-extra": ("unchecked", b"extra", tarfile.REGTYPE, 0o644),
+        "outer-blob": ("blobs/sha256/" + "0" * 64, b"extra", tarfile.REGTYPE, 0o644),
+        "outer-directory": ("unchecked", b"", tarfile.DIRTYPE, 0o755),
+    }
+    if change in extra_entries:
+        outer.append(extra_entries[change])
     return tar_bytes(outer)
 
 
@@ -189,6 +196,9 @@ def test_valid_candidate_is_never_production_evidence(api: Any, tmp_path: Path) 
         "index-version-type",
         "outer-duplicate",
         "outer-link",
+        "outer-extra",
+        "outer-blob",
+        "outer-directory",
     ],
 )
 def test_reject_invalid_candidate(api: Any, tmp_path: Path, change: str) -> None:

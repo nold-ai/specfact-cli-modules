@@ -61,7 +61,9 @@ Only an uncompressed OCI tar containing one manifest, one gzip layer and the
 32 MiB for archive/input reads and cumulative tar contents, 16 MiB for decompressed
 layer/expected payload, and 256 members per tree/archive. This is a tiny proof tool,
 not a full runtime packager. Links, special/sparse files, duplicate member names,
-noncanonical paths and duplicate JSON keys fail closed. Malformed inputs yield
+noncanonical paths and duplicate JSON keys fail closed. Outer files must be exactly
+`oci-layout`, `index.json` and the three referenced blobs; only optional `blobs`
+and `blobs/sha256` parent directory headers are allowed. Malformed inputs yield
 `ValueError` through the Python API or exit 1 with failure JSON through the CLI.
 
 No archive is extracted, no payload is launched, and no signing assertion is

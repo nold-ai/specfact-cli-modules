@@ -181,11 +181,14 @@ def _layer_bytes(layer: bytes, config: dict[str, Any]) -> bytes:
 
 
 def _inspect(archive: Path, expected: Path) -> dict[str, object]:
-    files, _ = _tar(_bounded_file(archive))
+    files, directories = _tar(_bounded_file(archive))
     manifest_data = _manifest(files)
     manifest = _json(manifest_data)
     config_data = _config(files, manifest)
     layer = _blob(files, _single(manifest.get("layers")), LAYER_TYPE)
+    referenced = {"blobs/sha256/" + _digest(data)[7:] for data in (manifest_data, config_data, layer)}
+    if set(files) != {"oci-layout", "index.json"} | referenced or not directories <= {"blobs", "blobs/sha256"}:
+        raise ValueError("unreferenced OCI archive entries")
     raw = _layer_bytes(layer, _json(config_data))
     observed = _tar(raw)
     if observed != _expected(expected):

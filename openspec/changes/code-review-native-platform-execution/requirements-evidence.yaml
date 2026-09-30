@@ -232,3 +232,8 @@ requirements:
       method: inspection
       intent: "Inspect planned acceptance: Candidate cannot be promoted without native proof."
       observable: "Missing lifecycle, dependency, signing or installation proof blocks production promotion despite green packaging checks. Planned maturity only; publication remains gated."
+    - case_id: 460-8-7
+      scenario_id: signed-customer-release-acceptance
+      method: inspection
+      intent: "Inspect planned acceptance: Candidate outer archive contains unchecked entries."
+      observable: "Unreferenced files, blobs and unexpected directories are rejected even if the referenced graph matches. Planned maturity only; local verifier tests do not establish native release acceptance."

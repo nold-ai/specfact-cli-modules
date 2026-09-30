@@ -229,3 +229,8 @@ Support SHALL be claimed only after a canonical signed publication passes fresh 
 - **GIVEN** a locally assembled candidate lacks approved lifecycle, dependency, signing or customer-installation evidence for its final digest
 - **WHEN** GHCR production promotion is considered
 - **THEN** publication remains blocked; green packaging checks alone do not grant eligibility and no Linux artifact identity is reused
+
+#### Scenario: Candidate outer archive contains unchecked entries
+
+- **WHEN** a local candidate includes an unreferenced blob, extra regular file, or unexpected directory outside the referenced OCI graph
+- **THEN** verification MUST reject it even when every referenced digest and expected payload matches
