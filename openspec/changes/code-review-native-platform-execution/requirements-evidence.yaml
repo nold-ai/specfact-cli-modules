@@ -297,3 +297,8 @@ requirements:
       method: inspection
       intent: "Inspect planned acceptance: Candidate numeric TAR fields contain hidden garbage."
       observable: "Raw numeric fields require unsigned octal text and valid padding; hidden garbage and numeric extensions are rejected. Planned maturity only; this is not release acceptance."
+    - case_id: 460-8-20
+      scenario_id: signed-customer-release-acceptance
+      method: inspection
+      intent: "Inspect planned acceptance: Candidate numeric fields omit digits or history disagrees with layers."
+      observable: "Required numeric fields contain digits and present history matches layer cardinality. Planned maturity only; this is not release acceptance."

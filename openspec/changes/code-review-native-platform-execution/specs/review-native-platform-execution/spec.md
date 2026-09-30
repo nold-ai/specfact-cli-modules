@@ -294,3 +294,8 @@ Support SHALL be claimed only after a canonical signed publication passes fresh 
 
 - **WHEN** mode, UID, GID, size, modification time, checksum or device-number fields contain bytes outside unsigned octal text and NUL/space padding
 - **THEN** verification MUST reject the raw header before normalized TAR values are accepted; signed and base-256 numeric extensions are outside this bounded profile
+
+#### Scenario: Candidate numeric fields omit digits or history disagrees with layers
+
+- **WHEN** a required TAR numeric field contains only padding or present non-null OCI history has a non-empty-layer count different from rootfs diff IDs
+- **THEN** verification MUST reject the candidate; unused device-number fields may remain padding-only for ordinary files/directories, and absent/null history remains valid

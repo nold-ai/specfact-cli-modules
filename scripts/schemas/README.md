@@ -27,3 +27,5 @@ Local profile hardening: every `patternProperties` map also sets
 `additionalProperties: false`. This rejects keys unmatched by the upstream
 pattern (including empty/newline-only names) so map values cannot bypass their
 type checks. This deliberate restriction is additional to the upstream schema.
+
+The local config schema accepts null history as equivalent to absence, following the optional-field rule in [OCI v1.1.1 config.md](https://github.com/opencontainers/image-spec/blob/v1.1.1/config.md#properties) (accessed 2026-09-30). The verifier separately checks present history against rootfs layer cardinality.

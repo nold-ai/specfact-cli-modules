@@ -294,6 +294,8 @@ def test_cli_local_only_json(tmp_path: Path, case: tuple[str, int]) -> None:
 
 
 FRAMING_CASES = (
+    "numeric-empty:nul",
+    "numeric-empty:space",
     *(f"numeric:{name}" for name in ("mode", "uid", "gid", "size", "mtime", "checksum", "major", "minor")),
     "path-padding:name",
     "path-padding:prefix",
@@ -318,6 +320,12 @@ FRAMING_CASES = (
 
 def malformed_tar(data: bytes, change: str) -> bytes:
     """Inject physical framing faults while preserving OCI descriptor consistency."""
+    if change.startswith("numeric-empty:"):
+        header = bytearray(data[:512])
+        header[108:116] = (b"\0" if change.endswith("nul") else b" ") * 8
+        header[148:156] = b"        "
+        header[148:156] = f"{sum(header):06o}\0 ".encode()
+        return bytes(header) + data[512:]
     if change.startswith("numeric:"):
         return tar_numeric_garbage(data, change.split(":", 1)[1])
     if change.startswith("path-padding:"):
@@ -745,3 +753,18 @@ def tar_numeric_garbage(data: bytes, field: str) -> bytes:
     suffix = b"\0!" if field == "checksum" else b"\0 "
     header[148:156] = f"{sum(header):06o}".encode() + suffix
     return bytes(header) + data[512:]
+
+
+@pytest.mark.parametrize("history", [[], [{"empty_layer": True}], [{}, {}]])
+def test_history_layer_mismatch(api: Any, tmp_path: Path, history: list[dict[str, Any]]) -> None:
+    """Reject schema-valid history that cannot describe the single layer."""
+    archive, expected = candidate(tmp_path, "schema:" + json.dumps({"history": history}))
+    with pytest.raises(ValueError):
+        api.verify_candidate(archive, expected)
+
+
+@pytest.mark.parametrize("history", [None, [{}], [{"empty_layer": True}, {}]])
+def test_history_layer_match(api: Any, tmp_path: Path, history: Any) -> None:
+    """Accept absent-equivalent history and a single non-empty history item."""
+    archive, expected = candidate(tmp_path, "schema:" + json.dumps({"history": history}))
+    assert api.verify_candidate(archive, expected)["status"] == "PASS"

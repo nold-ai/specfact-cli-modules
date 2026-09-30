@@ -67,7 +67,8 @@ def _raw_header_path(header: bytes, directory: bool) -> str:
 def _numeric_header_fields(header: bytes) -> None:
     """Accept only unsigned octal numbers with NUL or space padding."""
     for start, end in ((100, 108), (108, 116), (116, 124), (124, 136), (136, 148), (148, 156), (329, 337), (337, 345)):
-        if re.fullmatch(rb" *[0-7]*[\0 ]*", header[start:end]) is None:
+        pattern = rb" *[0-7]+[\0 ]*" if start < 329 else rb" *[0-7]*[\0 ]*"
+        if re.fullmatch(pattern, header[start:end]) is None:
             raise ValueError("invalid TAR numeric field")
 
 
@@ -249,6 +250,11 @@ def _config(files: dict[str, tuple[bytes, int]], manifest: dict[str, Any]) -> by
     if config.get("os") != "darwin" or config.get("architecture") != "arm64":
         raise ValueError("config must describe darwin/arm64")
     _validate_schema(config, "config")
+    history = config.get("history")
+    if history is not None and sum(not item.get("empty_layer", False) for item in history) != len(
+        config["rootfs"]["diff_ids"]
+    ):
+        raise ValueError("history/layer count mismatch")
     return config_data
 
 
