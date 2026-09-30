@@ -28,7 +28,7 @@ The final tracing experiment covered three creation methods with/without descend
 
 Buildx 0.37.1 / BuildKit 0.33.0 on the local Linux ARM64 Docker daemon exported a COPY-only `FROM scratch` OCI artifact with actual index/config `darwin/arm64`. Descriptor size/digest, layer diff ID, native bytes and executable file mode checks passed. The extracted proof executable retained its ad-hoc signature and printed Darwin/ARM64 when run natively.
 
-The checked-in [candidate guide](candidate-build/README.md) was reproduced separately. Its archive passed `scripts/macos_capsule_candidate.py`; manifest/config digests matched the Docker export receipt. The verifier's focused suite has 32 passing cases and always reports `production_eligible=false`. This verifies tiny-fixture assembly, not the complete capsule. No registry push occurred.
+The checked-in [candidate guide](candidate-build/README.md) was reproduced separately. Its archive passed `scripts/macos_capsule_candidate.py`; manifest/config digests matched the Docker export receipt. The initial verifier suite passed 32 cases. After the review regressions through `adf2e65e`, all 154 focused cases pass on native CPython 3.11 and 3.14, as recorded in [TDD_EVIDENCE.md](TDD_EVIDENCE.md). Successful verifier output always reports `production_eligible=false`. This verifies tiny-fixture assembly, not the complete capsule. No registry push occurred.
 
 ## Evidence handling
 
