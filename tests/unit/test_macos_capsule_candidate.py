@@ -275,6 +275,8 @@ def test_cli_local_only_json(tmp_path: Path, case: tuple[str, int]) -> None:
 
 
 FRAMING_CASES = (
+    "path-padding:name",
+    "path-padding:prefix",
     "format:unknown",
     "format:ustar-version",
     "format:gnu-version",
@@ -296,6 +298,8 @@ FRAMING_CASES = (
 
 def malformed_tar(data: bytes, change: str) -> bytes:
     """Inject physical framing faults while preserving OCI descriptor consistency."""
+    if change.startswith("path-padding:"):
+        return tar_path_padding(data, change.split(":", 1)[1])
     if change.startswith("format:"):
         return tar_format(data, change.split(":", 1)[1])
     offset = 0
@@ -478,3 +482,14 @@ def test_supported_tar_format(api: Any, tmp_path: Path, location: str, format_na
     """Accept both explicitly supported ordinary TAR format identifiers."""
     archive, expected = candidate(tmp_path, f"{location}-framing:format:{format_name}")
     assert api.verify_candidate(archive, expected)["status"] == "PASS"
+
+
+def tar_path_padding(data: bytes, field: str) -> bytes:
+    """Hide nonzero path bytes after the first terminator and repair checksum."""
+    start, end = (0, 100) if field == "name" else (345, 500)
+    header = bytearray(data[:512])
+    value = bytes(header[start:end]).split(b"\0", 1)[0] + b"\0../escape"
+    header[start:end] = value.ljust(end - start, b"\0")
+    header[148:156] = b"        "
+    header[148:156] = f"{sum(header):06o}\0 ".encode()
+    return bytes(header) + data[512:]

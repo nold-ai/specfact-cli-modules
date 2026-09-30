@@ -247,7 +247,7 @@ Support SHALL be claimed only after a canonical signed publication passes fresh 
 
 #### Scenario: Candidate metadata encoding or raw paths are noncanonical
 
-- **WHEN** any OCI metadata uses UTF-16/32 or a raw directory header has redundant trailing slashes before TAR decoding normalizes it
+- **WHEN** any OCI metadata uses UTF-16/32 or a raw directory header has redundant trailing slashes before TAR decoding normalizes it, or a name/prefix field contains nonzero bytes after its first NUL terminator
 - **THEN** verification MUST reject it through API and CLI; metadata requires strict UTF-8 and raw paths are validated before normalization
 
 #### Scenario: Candidate gzip framing is malformed

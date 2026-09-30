@@ -46,10 +46,18 @@ def _path(name: str) -> str:
     return name
 
 
+def _tar_path_field(field: bytes) -> str:
+    """Decode a path field only when all bytes after its terminator are zero."""
+    value, _, padding = field.partition(b"\0")
+    if any(padding):
+        raise ValueError("nonzero TAR path field padding")
+    return value.decode("utf-8", "strict")
+
+
 def _raw_header_path(header: bytes, directory: bool) -> str:
     """Validate raw name and prefix fields before TarInfo can strip slashes."""
-    name = header[:100].split(b"\0", 1)[0].decode("utf-8", "strict")
-    prefix = header[345:500].split(b"\0", 1)[0].decode("utf-8", "strict")
+    name = _tar_path_field(header[:100])
+    prefix = _tar_path_field(header[345:500])
     name = _path(name.removesuffix("/") if directory else name)
     return _path(prefix) + "/" + name if prefix else name
 
