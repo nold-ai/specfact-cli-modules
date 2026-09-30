@@ -60,7 +60,8 @@
             ".{1,}": {
               "type": "string"
             }
-          }
+          },
+          "additionalProperties": false
         }
       },
       "required": [
@@ -134,7 +135,8 @@
               ".{1,}": {
                 "type": "string"
               }
-            }
+            },
+            "additionalProperties": false
           }
         }
       }
@@ -145,7 +147,8 @@
         ".{1,}": {
           "type": "string"
         }
-      }
+      },
+      "additionalProperties": false
     }
   },
   "required": [

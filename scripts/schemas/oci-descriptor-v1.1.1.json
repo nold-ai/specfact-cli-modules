@@ -41,7 +41,8 @@
         ".{1,}": {
           "type": "string"
         }
-      }
+      },
+      "additionalProperties": false
     }
   },
   "required": [

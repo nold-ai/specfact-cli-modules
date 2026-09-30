@@ -279,3 +279,8 @@ Support SHALL be claimed only after a canonical signed publication passes fresh 
 
 - **WHEN** index.json includes an optional mediaType other than application/vnd.oci.image.index.v1+json
 - **THEN** verification MUST reject it; the canonical value and omission remain accepted
+
+#### Scenario: Candidate map keys bypass value validation
+
+- **WHEN** annotations or configuration maps contain keys not matched by their schema property pattern, including empty or newline-only names
+- **THEN** the bounded verifier MUST reject those keys rather than letting values bypass map validation

@@ -670,3 +670,28 @@ def test_index_media_identity(api: Any, tmp_path: Path, media_type: str, valid: 
     )
     assert process.returncode == (0 if valid else 1)
     assert json.loads(process.stdout if valid else process.stderr)["status"] == ("PASS" if valid else "FAIL")
+
+
+@pytest.mark.parametrize("key", ["", "\n"])
+@pytest.mark.parametrize(
+    "target",
+    [
+        "index",
+        "manifest",
+        "manifest-descriptor",
+        "config-descriptor",
+        "layer-descriptor",
+        "Labels",
+        "Volumes",
+        "ExposedPorts",
+    ],
+)
+def test_reject_unmatched_map_keys(api: Any, tmp_path: Path, key: str, target: str) -> None:
+    """Reject map entries that would escape the upstream property pattern."""
+    if target in ("Labels", "Volumes", "ExposedPorts"):
+        change = "schema:" + json.dumps({"config": {target: {key: 1}}})
+    else:
+        change = f"document:{target}:" + json.dumps({"annotations": {key: 1}})
+    archive, expected = candidate(tmp_path, change)
+    with pytest.raises(ValueError):
+        api.verify_candidate(archive, expected)

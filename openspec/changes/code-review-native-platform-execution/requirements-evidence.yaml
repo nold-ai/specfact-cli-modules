@@ -282,3 +282,8 @@ requirements:
       method: inspection
       intent: "Inspect planned acceptance: Candidate index declares a contradictory media type."
       observable: "Index mediaType, when present, must identify an OCI index. Planned maturity only; this does not establish release acceptance."
+    - case_id: 460-8-17
+      scenario_id: signed-customer-release-acceptance
+      method: inspection
+      intent: "Inspect planned acceptance: Candidate map keys bypass value validation."
+      observable: "Unmatched map keys are rejected across annotations and configuration maps. Planned maturity only; this does not establish release acceptance."

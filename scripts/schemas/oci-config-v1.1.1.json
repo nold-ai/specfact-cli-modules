@@ -159,7 +159,8 @@
         ".{1,}": {
           "type": "object"
         }
-      }
+      },
+      "additionalProperties": false
     },
     "mapStringString": {
       "type": "object",
@@ -167,7 +168,8 @@
         ".{1,}": {
           "type": "string"
         }
-      }
+      },
+      "additionalProperties": false
     }
   }
 }

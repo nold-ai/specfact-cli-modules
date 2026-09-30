@@ -71,7 +71,8 @@ noncanonical raw header paths (including nonzero bytes after path-field NUL term
 non-UTF-8 metadata and duplicate JSON keys fail closed. Image configuration, index, manifest and descriptor
 fields and formats are checked against the locally stored OCI v1.1.1 schemas
 (`scripts/schemas/`), using the explicitly declared Hatch JSON Schema dependency;
-no remote schema is resolved. A declared index `mediaType` must be
+no remote schema is resolved. Map keys unmatched by the schema property pattern
+(including empty/newline-only names) are explicitly rejected. A declared index `mediaType` must be
 `application/vnd.oci.image.index.v1+json`; omission is accepted. Outer files must be exactly
 `oci-layout`, `index.json` and the three referenced blobs. Embedded descriptor
 `data` and index/manifest `subject` fields are unsupported and rejected; only optional `blobs`
