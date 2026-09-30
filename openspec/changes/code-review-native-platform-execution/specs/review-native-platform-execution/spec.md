@@ -234,3 +234,8 @@ Support SHALL be claimed only after a canonical signed publication passes fresh 
 
 - **WHEN** a local candidate includes an unreferenced blob, extra regular file, or unexpected directory outside the referenced OCI graph
 - **THEN** verification MUST reject it even when every referenced digest and expected payload matches
+
+#### Scenario: Candidate TAR framing is malformed
+
+- **WHEN** an outer archive or payload layer has malformed or truncated headers, incomplete end markers, nonzero trailing data, or unsupported extension headers
+- **THEN** verification MUST reject it through ValueError and the CLI MUST report failure JSON rather than a traceback

@@ -56,11 +56,14 @@ permission modes are not an acceptance claim.
 
 ## Deliberate bounds and failure behavior
 
-Only an uncompressed OCI tar containing one manifest, one gzip layer and the
+Only ordinary file/directory TAR headers with complete framing, two zero end
+blocks and zero trailing padding are accepted; extended and sparse headers are
+unsupported. The uncompressed OCI tar must contain one manifest, one gzip layer and the
 `/proof` tree is accepted. Limits are
 32 MiB for archive/input reads and cumulative tar contents, 16 MiB for decompressed
 layer/expected payload, and 256 members per tree/archive. This is a tiny proof tool,
-not a full runtime packager. Links, special/sparse files, duplicate member names,
+not a full runtime packager. Links, special/sparse files, malformed/truncated framing, nonzero trailing data,
+duplicate member names,
 noncanonical paths and duplicate JSON keys fail closed. Outer files must be exactly
 `oci-layout`, `index.json` and the three referenced blobs; only optional `blobs`
 and `blobs/sha256` parent directory headers are allowed. Malformed inputs yield
