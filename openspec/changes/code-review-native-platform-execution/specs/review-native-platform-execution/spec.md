@@ -304,3 +304,8 @@ Support SHALL be claimed only after a canonical signed publication passes fresh 
 
 - **WHEN** an ordinary outer or layer TAR header contains nonzero bytes in its unused final twelve bytes
 - **THEN** verification MUST reject the raw header before normalized TAR fields are accepted
+
+#### Scenario: Candidate TAR ancillary text fields hide bytes
+
+- **WHEN** a link-name, owner-name or group-name field contains nonzero padding after its first NUL terminator
+- **THEN** verification MUST reject the raw field before TAR parsing, using the same strict UTF-8 and zero-padding rules as path fields

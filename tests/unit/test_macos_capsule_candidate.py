@@ -299,6 +299,9 @@ FRAMING_CASES = (
     "numeric-empty:nul",
     "numeric-empty:space",
     *(f"numeric:{name}" for name in ("mode", "uid", "gid", "size", "mtime", "checksum", "major", "minor")),
+    "path-padding:linkname",
+    "path-padding:uname",
+    "path-padding:gname",
     "path-padding:name",
     "path-padding:prefix",
     "format:unknown",
@@ -524,7 +527,13 @@ def test_supported_tar_format(api: Any, tmp_path: Path, location: str, format_na
 
 def tar_path_padding(data: bytes, field: str) -> bytes:
     """Hide nonzero path bytes after the first terminator and repair checksum."""
-    start, end = (0, 100) if field == "name" else (345, 500)
+    start, end = {
+        "name": (0, 100),
+        "prefix": (345, 500),
+        "linkname": (157, 257),
+        "uname": (265, 297),
+        "gname": (297, 329),
+    }[field]
     header = bytearray(data[:512])
     value = bytes(header[start:end]).split(b"\0", 1)[0] + b"\0../escape"
     header[start:end] = value.ljust(end - start, b"\0")

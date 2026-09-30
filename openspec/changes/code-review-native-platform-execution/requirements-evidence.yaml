@@ -307,3 +307,8 @@ requirements:
       method: inspection
       intent: "Inspect planned acceptance: Candidate TAR header padding contains hidden bytes."
       observable: "Raw ordinary TAR header tail padding is zero. Planned maturity only; this is not release acceptance."
+    - case_id: 460-8-22
+      scenario_id: signed-customer-release-acceptance
+      method: inspection
+      intent: "Inspect planned acceptance: Candidate TAR ancillary text fields hide bytes."
+      observable: "All raw textual TAR fields require strict UTF-8 and zero post-terminator padding. Planned maturity only; this is not release acceptance."

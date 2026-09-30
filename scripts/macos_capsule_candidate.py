@@ -48,18 +48,18 @@ def _path(name: str) -> str:
     return name
 
 
-def _tar_path_field(field: bytes) -> str:
-    """Decode a path field only when all bytes after its terminator are zero."""
+def _tar_text_field(field: bytes) -> str:
+    """Decode a text field only when all bytes after its terminator are zero."""
     value, _, padding = field.partition(b"\0")
     if any(padding):
-        raise ValueError("nonzero TAR path field padding")
+        raise ValueError("nonzero TAR text field padding")
     return value.decode("utf-8", "strict")
 
 
 def _raw_header_path(header: bytes, directory: bool) -> str:
     """Validate raw name and prefix fields before TarInfo can strip slashes."""
-    name = _tar_path_field(header[:100])
-    prefix = _tar_path_field(header[345:500])
+    name = _tar_text_field(header[:100])
+    prefix = _tar_text_field(header[345:500])
     name = _path(name.removesuffix("/") if directory else name)
     return _path(prefix) + "/" + name if prefix else name
 
@@ -78,6 +78,8 @@ def _ordinary_header(header: bytes) -> tarfile.TarInfo:
         raise ValueError("unsupported TAR magic/version")
     if any(header[500:512]):
         raise ValueError("nonzero TAR header tail padding")
+    for start, end in ((157, 257), (265, 297), (297, 329)):
+        _tar_text_field(header[start:end])
     _numeric_header_fields(header)
     member = tarfile.TarInfo.frombuf(header, "utf-8", "strict")
     if member.type not in (tarfile.REGTYPE, tarfile.AREGTYPE, tarfile.DIRTYPE):
