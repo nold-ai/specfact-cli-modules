@@ -68,8 +68,8 @@ layer/expected payload, and 256 members per tree/archive. This is a tiny proof t
 not a full runtime packager. Links, special/sparse files, malformed/truncated framing, nonzero trailing data,
 duplicate member names,
 noncanonical raw header paths (including nonzero bytes after path-field NUL terminators),
-non-UTF-8 metadata and duplicate JSON keys fail closed. Image configuration
-fields and formats are checked against the locally stored OCI v1.1.1 schema
+non-UTF-8 metadata and duplicate JSON keys fail closed. Image configuration, index, manifest and descriptor
+fields and formats are checked against the locally stored OCI v1.1.1 schemas
 (`scripts/schemas/`), using the explicitly declared Hatch JSON Schema dependency;
 no remote schema is resolved. Outer files must be exactly
 `oci-layout`, `index.json` and the three referenced blobs; only optional `blobs`

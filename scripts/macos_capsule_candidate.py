@@ -163,6 +163,7 @@ def _integer(value: object) -> TypeGuard[int]:
 def _blob(files: dict[str, tuple[bytes, int]], value: object, media: str) -> bytes:
     """Resolve a descriptor only after validating type, size and digest."""
     descriptor = _object(value)
+    _validate_schema(descriptor, "descriptor")
     identity, size = descriptor.get("digest"), descriptor.get("size")
     if not isinstance(identity, str) or not re.fullmatch(r"sha256:[0-9a-f]{64}", identity):
         raise ValueError("invalid descriptor digest")
@@ -206,6 +207,7 @@ def _manifest(files: dict[str, tuple[bytes, int]]) -> bytes:
     if _json(files["oci-layout"][0]) != {"imageLayoutVersion": "1.0.0"}:
         raise ValueError("unsupported OCI layout")
     index = _json(files["index.json"][0])
+    _validate_schema(index, "index")
     descriptor = _object(_single(index.get("manifests")))
     if (
         not _integer(index.get("schemaVersion"))
@@ -224,22 +226,23 @@ def _config(files: dict[str, tuple[bytes, int]], manifest: dict[str, Any]) -> by
         or manifest.get("mediaType") != MANIFEST_TYPE
     ):
         raise ValueError("unsupported OCI manifest")
+    _validate_schema(manifest, "manifest")
     config_data = _blob(files, manifest.get("config"), CONFIG_TYPE)
     config = _json(config_data)
     if config.get("os") != "darwin" or config.get("architecture") != "arm64":
         raise ValueError("config must describe darwin/arm64")
-    _validate_config_schema(config)
+    _validate_schema(config, "config")
     return config_data
 
 
-def _validate_config_schema(config: dict[str, Any]) -> None:
+def _validate_schema(document: dict[str, Any], kind: str) -> None:
     """Validate known OCI fields and formats against an offline pinned schema."""
-    path = Path(__file__).with_name("schemas") / "oci-config-v1.1.1.json"
+    path = Path(__file__).with_name("schemas") / f"oci-{kind}-v1.1.1.json"
     schema = _json(path.read_bytes())
     try:
-        Draft4Validator(schema, format_checker=FormatChecker()).validate(config)
+        Draft4Validator(schema, format_checker=FormatChecker()).validate(document)
     except ValidationError as exc:
-        raise ValueError(f"invalid OCI configuration: {exc.message}") from exc
+        raise ValueError(f"invalid OCI {kind}: {exc.message}") from exc
 
 
 def _layer_bytes(layer: bytes, config: dict[str, Any]) -> bytes:

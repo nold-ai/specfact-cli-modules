@@ -264,3 +264,8 @@ Support SHALL be claimed only after a canonical signed publication passes fresh 
 
 - **WHEN** a candidate contains malformed known image configuration fields, including nested config and history entries
 - **THEN** verification MUST reject it against the pinned OCI image configuration schema with format checks before reporting success; schema resolution MUST be local and offline
+
+#### Scenario: Candidate index manifest or descriptor violates known field schemas
+
+- **WHEN** an index, manifest or referenced descriptor contains malformed known fields such as annotations, URLs, artifact type or subject
+- **THEN** verification MUST reject it using pinned offline OCI schemas before accepting the candidate, including nested descriptor fields

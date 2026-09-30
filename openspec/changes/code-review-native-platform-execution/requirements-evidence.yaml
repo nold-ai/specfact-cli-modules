@@ -267,3 +267,8 @@ requirements:
       method: inspection
       intent: "Inspect planned acceptance: Candidate image configuration violates known field schemas."
       observable: "Known configuration fields and formats are validated against a pinned local OCI schema without remote resolution. Planned maturity only; schema validation does not establish release acceptance."
+    - case_id: 460-8-14
+      scenario_id: signed-customer-release-acceptance
+      method: inspection
+      intent: "Inspect planned acceptance: Candidate index manifest or descriptor violates known field schemas."
+      observable: "Malformed known fields in index, manifest and descriptors fail pinned offline schema validation. Planned maturity only; this does not establish native release acceptance."

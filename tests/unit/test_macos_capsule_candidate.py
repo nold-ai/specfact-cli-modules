@@ -108,6 +108,8 @@ def candidate_manifest(
         layer_desc["size"] = True
     if change == "corrupt":
         blobs["blobs/sha256/" + layer_desc["digest"].split(":")[1]] = b"corrupted"
+    patch_document(config_desc, "config-descriptor", change)
+    patch_document(layer_desc, "layer-descriptor", change)
     manifest = {
         "schemaVersion": 2,
         "mediaType": "application/vnd.oci.image.manifest.v1+json",
@@ -118,17 +120,20 @@ def candidate_manifest(
         manifest["schemaVersion"] = 2.0
     if change == "layers-type":
         manifest["layers"] = {}
+    patch_document(manifest, "manifest", change)
     return manifest
 
 
 def candidate_index(manifest_desc: dict[str, Any], change: str) -> Any:
     """Build a single-platform index with optional invalid metadata."""
     manifest_desc["platform"] = {"os": "linux" if change == "index-platform" else "darwin", "architecture": "arm64"}
+    patch_document(manifest_desc, "manifest-descriptor", change)
     index: Any = {"schemaVersion": 2, "manifests": [manifest_desc]}
     if change == "index-version-type":
         index["schemaVersion"] = 2.0
     if change == "index-type":
         index = []
+    patch_document(index, "index", change)
     return index
 
 
@@ -554,4 +559,40 @@ def test_accept_config_schema_optional_values(api: Any, tmp_path: Path) -> None:
         "history": [{"created": "2026-09-30T00:00:00Z", "empty_layer": False}],
     }
     archive, expected = candidate(tmp_path, "schema:" + json.dumps(patch))
+    assert api.verify_candidate(archive, expected)["status"] == "PASS"
+
+
+def patch_document(value: Any, target: str, change: str) -> None:
+    """Mutate metadata before enclosing descriptors are computed."""
+    prefix = f"document:{target}:"
+    if change.startswith(prefix):
+        value.update(json.loads(change.removeprefix(prefix)))
+
+
+@pytest.mark.parametrize(
+    "target", ["index", "manifest", "manifest-descriptor", "config-descriptor", "layer-descriptor"]
+)
+@pytest.mark.parametrize("patch", [{"annotations": []}, {"annotations": {"x": 1}}, {"artifactType": 3}])
+def test_reject_document_schema(api: Any, tmp_path: Path, target: str, patch: dict[str, Any]) -> None:
+    """Reject malformed known metadata throughout the referenced graph."""
+    archive, expected = candidate(tmp_path, f"document:{target}:" + json.dumps(patch))
+    with pytest.raises(ValueError):
+        api.verify_candidate(archive, expected)
+
+
+@pytest.mark.parametrize("target", ["manifest-descriptor", "config-descriptor", "layer-descriptor"])
+@pytest.mark.parametrize("patch", [{"urls": [1]}, {"data": 1}])
+def test_reject_descriptor_schema(api: Any, tmp_path: Path, target: str, patch: dict[str, Any]) -> None:
+    """Validate optional descriptor fields for every referenced payload."""
+    archive, expected = candidate(tmp_path, f"document:{target}:" + json.dumps(patch))
+    with pytest.raises(ValueError):
+        api.verify_candidate(archive, expected)
+
+
+@pytest.mark.parametrize(
+    "target", ["index", "manifest", "manifest-descriptor", "config-descriptor", "layer-descriptor"]
+)
+def test_accept_document_annotations(api: Any, tmp_path: Path, target: str) -> None:
+    """Retain valid optional annotations across the OCI graph."""
+    archive, expected = candidate(tmp_path, f'document:{target}:{{"annotations":{{"x":"y"}}}}')
     assert api.verify_candidate(archive, expected)["status"] == "PASS"
