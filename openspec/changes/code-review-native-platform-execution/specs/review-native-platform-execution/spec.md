@@ -249,3 +249,8 @@ Support SHALL be claimed only after a canonical signed publication passes fresh 
 
 - **WHEN** any OCI metadata uses UTF-16/32 or a raw directory header has redundant trailing slashes before TAR decoding normalizes it
 - **THEN** verification MUST reject it through API and CLI; metadata requires strict UTF-8 and raw paths are validated before normalization
+
+#### Scenario: Candidate gzip framing is malformed
+
+- **WHEN** a layer has reserved gzip flags, an incorrect optional header CRC, truncation, concatenated streams or trailing data
+- **THEN** verification MUST reject it through API and CLI while retaining decompression bounds; a valid optional header CRC remains accepted

@@ -58,7 +58,8 @@ permission modes are not an acceptance claim.
 
 Only ordinary file/directory TAR headers with complete framing, two zero end
 blocks and zero trailing padding are accepted; extended and sparse headers are
-unsupported. The uncompressed OCI tar must contain one manifest, one gzip layer and the
+unsupported. Gzip flags and optional header CRC are validated; truncation,
+concatenated members and any trailing bytes are rejected. The uncompressed OCI tar must contain one manifest, one single-member gzip layer and the
 `/proof` tree is accepted. Limits are
 32 MiB for archive/input reads and cumulative tar contents, 16 MiB for decompressed
 layer/expected payload, and 256 members per tree/archive. This is a tiny proof tool,

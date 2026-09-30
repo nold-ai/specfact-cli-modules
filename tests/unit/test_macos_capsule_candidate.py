@@ -10,6 +10,7 @@ import json
 import subprocess
 import sys
 import tarfile
+import zlib
 from pathlib import Path
 from typing import Any
 
@@ -68,7 +69,7 @@ def candidate_layers(expected: Path, change: str) -> tuple[bytes, bytes]:
     raw = tar_bytes(entries)
     if change.startswith("layer-framing:"):
         raw = malformed_tar(raw, change.split(":", 1)[1])
-    layer = gzip.compress(raw, mtime=0)
+    layer = candidate_gzip(raw, change)
     if change == "invalid-deflate":
         layer = bytes.fromhex("1f8b0800000000000000") + b"\xff" * 16
     return raw, layer
@@ -391,3 +392,58 @@ def test_reject_raw_paths_and_metadata_encoding(api: Any, tmp_path: Path, change
     )
     assert process.returncode == 1
     assert json.loads(process.stderr)["status"] == "FAIL"
+
+
+def candidate_gzip(raw: bytes, change: str) -> bytes:
+    """Mutate gzip framing independently of the TAR and recompute OCI hashes."""
+    layer = gzip.compress(raw, mtime=0)
+    if change.startswith("gzip-flag:"):
+        return layer[:3] + bytes([int(change.split(":")[1])]) + layer[4:]
+    if change in ("gzip-crc-valid", "gzip-crc-invalid"):
+        header = layer[:3] + b"\x02" + layer[4:10]
+        crc = zlib.crc32(header) & 0xFFFF
+        crc ^= int(change == "gzip-crc-invalid")
+        return header + crc.to_bytes(2, "little") + layer[10:]
+    suffix = {"gzip-concatenated": gzip.compress(b"", mtime=0), "gzip-trailing": b"junk", "gzip-zero": b"\0"}
+    if change == "gzip-truncated":
+        return layer[:-1]
+    return layer + suffix.get(change, b"")
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        "gzip-flag:32",
+        "gzip-flag:64",
+        "gzip-flag:128",
+        "gzip-crc-invalid",
+        "gzip-concatenated",
+        "gzip-trailing",
+        "gzip-zero",
+        "gzip-truncated",
+    ],
+)
+@pytest.mark.parametrize("interface", ["api", "cli"])
+def test_reject_gzip_framing(api: Any, tmp_path: Path, change: str, interface: str) -> None:
+    """Reject malformed gzip despite matching descriptors and unchanged TAR bytes."""
+    archive, expected = candidate(tmp_path, change)
+    if interface == "api":
+        with pytest.raises(ValueError):
+            api.verify_candidate(archive, expected)
+        return
+    script = Path(__file__).parents[2] / "scripts/macos_capsule_candidate.py"
+    process = subprocess.run(
+        [sys.executable, str(script), str(archive), "--expected-payload", str(expected)],
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=10,
+    )
+    assert process.returncode == 1
+    assert json.loads(process.stderr)["status"] == "FAIL"
+
+
+def test_valid_gzip_header_crc(api: Any, tmp_path: Path) -> None:
+    """Accept a correctly checksummed optional gzip header."""
+    archive, expected = candidate(tmp_path, "gzip-crc-valid")
+    assert api.verify_candidate(archive, expected)["status"] == "PASS"

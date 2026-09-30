@@ -3,9 +3,7 @@
 from __future__ import annotations
 
 import argparse
-import gzip
 import hashlib
-import io
 import json
 import re
 import stat
@@ -224,10 +222,12 @@ def _config(files: dict[str, tuple[bytes, int]], manifest: dict[str, Any]) -> by
 
 def _layer_bytes(layer: bytes, config: dict[str, Any]) -> bytes:
     """Bound decompression and verify the uncompressed layer digest."""
-    with gzip.GzipFile(fileobj=io.BytesIO(layer)) as compressed:
-        raw = compressed.read(MAX_LAYER_BYTES + 1)
+    decoder = zlib.decompressobj(wbits=31)
+    raw = decoder.decompress(layer, MAX_LAYER_BYTES + 1)
     if len(raw) > MAX_LAYER_BYTES:
         raise ValueError("decompressed layer byte limit exceeded")
+    if not decoder.eof or decoder.unused_data or decoder.unconsumed_tail:
+        raise ValueError("invalid single-member gzip framing")
     rootfs = _object(config.get("rootfs"))
     if rootfs.get("type") != "layers" or rootfs.get("diff_ids") != [_digest(raw)]:
         raise ValueError("layer diff_id mismatch")
