@@ -56,11 +56,13 @@ permission modes are not an acceptance claim.
 
 ## Deliberate bounds and failure behavior
 
-Only ordinary file/directory TAR headers with complete framing, two zero end
+Only ordinary ustar (`ustar-NUL`/`00`) or GNU (`ustar-space`/`space-NUL`)
+file/directory TAR headers with complete framing, two zero end
 blocks and zero trailing padding are accepted; extended and sparse headers are
 unsupported. Gzip flags and optional header CRC are validated; truncation,
-concatenated members and any trailing bytes are rejected. The uncompressed OCI tar must contain one manifest, one single-member gzip layer and the
-`/proof` tree is accepted. Limits are
+concatenated members and any trailing bytes are rejected. The outer OCI tar must
+contain one manifest and one single-member gzip layer. The layer must contain a
+`/proof` tree matching the operator-provided expected payload exactly. Limits are
 32 MiB for archive/input reads and cumulative tar contents, 16 MiB for decompressed
 layer/expected payload, and 256 members per tree/archive. This is a tiny proof tool,
 not a full runtime packager. Links, special/sparse files, malformed/truncated framing, nonzero trailing data,

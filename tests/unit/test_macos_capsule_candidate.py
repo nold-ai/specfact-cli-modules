@@ -275,6 +275,10 @@ def test_cli_local_only_json(tmp_path: Path, case: tuple[str, int]) -> None:
 
 
 FRAMING_CASES = (
+    "format:unknown",
+    "format:ustar-version",
+    "format:gnu-version",
+    "format:v7",
     "invalid-header",
     "trailing-data",
     "one-zero",
@@ -292,6 +296,8 @@ FRAMING_CASES = (
 
 def malformed_tar(data: bytes, change: str) -> bytes:
     """Inject physical framing faults while preserving OCI descriptor consistency."""
+    if change.startswith("format:"):
+        return tar_format(data, change.split(":", 1)[1])
     offset = 0
     while any(data[offset : offset + 512]):
         member = tarfile.TarInfo.frombuf(data[offset : offset + 512], "utf-8", "strict")
@@ -446,4 +452,29 @@ def test_reject_gzip_framing(api: Any, tmp_path: Path, change: str, interface: s
 def test_valid_gzip_header_crc(api: Any, tmp_path: Path) -> None:
     """Accept a correctly checksummed optional gzip header."""
     archive, expected = candidate(tmp_path, "gzip-crc-valid")
+    assert api.verify_candidate(archive, expected)["status"] == "PASS"
+
+
+def tar_format(data: bytes, case: str) -> bytes:
+    """Set a physical magic/version pair and repair its checksum."""
+    identifiers = {
+        "unknown": b"BADMAG!!",
+        "ustar-version": b"ustar\0!!",
+        "gnu-version": b"ustar !!",
+        "v7": bytes(8),
+        "ustar": b"ustar\0" + b"00",
+        "gnu": b"ustar  \0",
+    }
+    header = bytearray(data[:512])
+    header[257:265] = identifiers[case]
+    header[148:156] = b"        "
+    header[148:156] = f"{sum(header):06o}\0 ".encode()
+    return bytes(header) + data[512:]
+
+
+@pytest.mark.parametrize("format_name", ["ustar", "gnu"])
+@pytest.mark.parametrize("location", ["outer", "layer"])
+def test_supported_tar_format(api: Any, tmp_path: Path, location: str, format_name: str) -> None:
+    """Accept both explicitly supported ordinary TAR format identifiers."""
+    archive, expected = candidate(tmp_path, f"{location}-framing:format:{format_name}")
     assert api.verify_candidate(archive, expected)["status"] == "PASS"

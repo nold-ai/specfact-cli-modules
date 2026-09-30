@@ -254,3 +254,8 @@ Support SHALL be claimed only after a canonical signed publication passes fresh 
 
 - **WHEN** a layer has reserved gzip flags, an incorrect optional header CRC, truncation, concatenated streams or trailing data
 - **THEN** verification MUST reject it through API and CLI while retaining decompression bounds; a valid optional header CRC remains accepted
+
+#### Scenario: Candidate TAR format identifier is unsupported
+
+- **WHEN** a checksum-valid header has an unknown magic/version combination
+- **THEN** verification MUST reject it through API and CLI; only ordinary ustar (ustar-NUL/00) and GNU (ustar-space/space-NUL) headers are supported by this bounded tool

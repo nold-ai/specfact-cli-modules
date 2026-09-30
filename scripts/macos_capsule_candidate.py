@@ -56,6 +56,8 @@ def _raw_header_path(header: bytes, directory: bool) -> str:
 
 def _ordinary_header(header: bytes) -> tarfile.TarInfo:
     """Validate a checksum-bearing header before any extension processing."""
+    if header[257:265] not in (b"ustar\0" + b"00", b"ustar  \0"):
+        raise ValueError("unsupported TAR magic/version")
     member = tarfile.TarInfo.frombuf(header, "utf-8", "strict")
     if member.type not in (tarfile.REGTYPE, tarfile.AREGTYPE, tarfile.DIRTYPE):
         raise ValueError("TAR extensions, sparse, links and special files are forbidden")

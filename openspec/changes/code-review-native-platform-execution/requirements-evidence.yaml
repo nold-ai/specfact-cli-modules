@@ -257,3 +257,8 @@ requirements:
       method: inspection
       intent: "Inspect planned acceptance: Candidate gzip framing is malformed."
       observable: "Strict single-member gzip framing rejects invalid flags, header CRC, truncation and trailing streams without weakening decompression bounds. Planned maturity only; this is not release acceptance."
+    - case_id: 460-8-12
+      scenario_id: signed-customer-release-acceptance
+      method: inspection
+      intent: "Inspect planned acceptance: Candidate TAR format identifier is unsupported."
+      observable: "Unknown magic/version combinations fail closed despite valid checksums. Planned maturity only; local format validation does not establish release acceptance."
