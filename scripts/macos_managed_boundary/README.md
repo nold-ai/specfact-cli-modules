@@ -1,7 +1,7 @@
-# Managed macOS boundary prerequisites
+# Managed macOS boundary experiments and prerequisites
 
-This directory contains prerequisite checks, not a broker implementation or
-boundary proof. Production selection remains disabled. The current acceptance
+This directory contains prerequisite checks, fixed-fixture startup and control
+brokers, a sealed Semgrep bootstrap and an independent observer. These are not a production backend. Production selection remains disabled. The current acceptance
 contract is [native delivery](../../openspec/changes/code-review-native-platform-execution/design.md).
 
 ## Initial distribution (default)
@@ -59,6 +59,40 @@ acceptance does not approve differently signed bytes.
 Unit tests use synthetic command results and prove routing and rejection behavior
 only. No caller-supplied receipt grants production eligibility. Independent
 five-second survivor checks and 100 repetitions of each startup/lifecycle race
-remain mandatory. The creation-to-tracing ownership gap must be resolved before
-analyzer integration; withholding project execution does not prove cleanup of an
-untraced bootstrap after broker death.
+remain mandatory. The fixed-bootstrap creation-to-tracing subset now passes on the physical Mac;
+full platform/boundary admission remains mandatory before production integration.
+Withholding project execution alone never proves pre-trace cleanup.
+
+## Native startup proof (maintainers)
+
+```sh
+hatch run python scripts/macos_managed_boundary/startup.py \
+  --repetitions 100 --out .specfact/native-compat/startup-confinement-100.json
+```
+
+This compiles and ad-hoc signs fixed ARM64 fixtures using maintainer build tools.
+It creates temporary ordinary-user GUI launchd jobs; it installs no LaunchAgent.
+LaunchOnlyOnce job removal and independent worker disappearance are checked before
+harness cleanup. No arbitrary project code or commands are accepted. The deny-default
+fixture policy is not the eventual analyzer/project profile. All receipts retain
+production_approved=false and signed_boundary_verified=false, even after 100
+repetitions. [Measured results and remaining gates](../../openspec/changes/code-review-native-platform-execution/STARTUP_BOUNDARY_RESULTS.md).
+
+## Native private control and sealed analyzer proof (maintainers)
+
+```sh
+hatch run python scripts/macos_managed_boundary/control.py \
+  --repetitions 100 --out .specfact/native-compat/control-proof.json
+hatch run python scripts/macos_managed_boundary/analyzer.py
+```
+
+The control protocol takes bounded fixture operations and broker handles only,
+with real peer audit-token and private-capability authentication. The analyzer
+command takes no customer input: it verifies the pinned local native core and
+seven bundled libraries, then runs four clean/defective fixtures inside tracing
+and a separate deny-default profile. It requires the previously prepared local
+Semgrep candidate; it does not silently acquire host tools. Approved loader
+directory/ancestor metadata and exact dylib grants preserve forbidden host-file,
+process, descriptor and network controls. This is two actual analyzer members,
+not proof of all ten inside the boundary or the project-manager corpus.
+Receipts remain experimental and cannot enable production selection/publication.

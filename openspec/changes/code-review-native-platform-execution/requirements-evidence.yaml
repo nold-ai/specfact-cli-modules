@@ -341,6 +341,21 @@ requirements:
       method: inspection
       intent: 'Inspect planned acceptance: Broker dies during startup or execution.'
       observable: "No unconfined project code runs across startup, tracing, confinement or exec; independent observation finds no governed survivor after five seconds following broker/CLI death, timeout or cancellation, including concurrent requests, with 100 repetitions per lifecycle race. Planned inspection only; signed runtime and publication acceptance remain unproven."
+    - case_id: 460-9-4
+      scenario_id: managed-native-process-boundary
+      method: inspection
+      intent: 'Inspect planned acceptance: Fixed trusted bootstrap owns the pre-trace interval.'
+      observable: "Default-signal fixed trusted startup plus kernel tracing must remove governed workers and invocation jobs within five seconds, independently observed with 100 repetitions per transition and negative controls. STARTUP_BOUNDARY_RESULTS.md records a local physical-host subset; it does not establish the complete signed boundary, supported matrix or publication acceptance."
+    - case_id: 460-9-5
+      scenario_id: managed-native-process-boundary
+      method: inspection
+      intent: 'Inspect planned acceptance: Private control protocol preserves authority and terminal status.'
+      observable: "CONTROL_BOUNDARY_CONTRACT.md specifies private authenticated bounded requests, owned handles, preserved terminal status and independently observed lifecycle gates excluding competing cleanup. Local fixed-fixture evidence does not approve production artifacts, the OS matrix or manager adapters."
+    - case_id: 460-9-6
+      scenario_id: managed-native-process-boundary
+      method: inspection
+      intent: 'Inspect planned acceptance: Sealed analyzer executes with exact native inputs.'
+      observable: "SEALED_ANALYZER_CONTRACT.md requires actual clean/defect scans with the pinned native core, exact verified dylibs, deny-default negative controls and exercised-policy receipt binding. Two native members are not the all-ten-analyzer or customer-installation acceptance."
   openspec:code-review-native-platform-execution:review-native-platform-execution:initial-distribution-managed-boundary-gate:
     rationale: Owner-approved managed-process delivery; executable signed acceptance is still required.
     stakeholder_refs:

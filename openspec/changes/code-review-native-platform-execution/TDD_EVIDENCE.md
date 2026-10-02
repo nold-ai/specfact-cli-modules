@@ -183,3 +183,137 @@ returned exit 1 / **FAIL**, assurance **UNKNOWN**, with
 `unsupported_controller_platform`. That remaining native-backend limitation is
 not repaired or waived by the signing split. No boundary worker, independent-Mac
 installation, merge or GHCR publication was performed by this revision.
+
+## Native managed startup and confinement — 2026-10-02 (Europe/Berlin)
+
+STARTUP_BOUNDARY_CONTRACT.md preceded new tests and native fixtures. Focused
+missing-implementation RED: 10 import errors. Repetition/transition RED: 2 failed,
+10 passed. Independent tracing/confinement expansion RED: 12 failed, 11 passed.
+After implementation, 23 focused unit cases pass. Native positive-control failures
+(SDK vfork/descriptor API mismatch, raw-fork ABI and unavailable raw vfork) were
+corrected or explicitly separated before enforcing denial acceptance. Two accidental
+full-suite invocations were cancelled; they are not claimed as verification.
+
+Actual local ad-hoc/hardened ARM64 experiments passed five startup stages 100
+times, then all six stages including deny-default confinement 100 times (600 races).
+The observer confirms kernel trace flags, birth/parent and session transitions;
+negative running control survives five seconds. Initial suspended negative and
+SIGTERM-ignoring untraced controls are retained as failed attribution/ownership
+controls. See STARTUP_BOUNDARY_RESULTS.md for measured limits. No production
+capsule or supported-OS matrix pass follows from this subset.
+
+Independent review found five actionable P2 harness races. Regression RED: five
+failed, 28 passed; GREEN after fixes and added audit-token timing checks: 35
+startup tests. Native final rerun: 100×6 transitions passed, both native stale
+pid-version tokens rejected without killing the original fixtures. The Semgrep
+parity sidecar has 18 unit cases; combined focus is 53 passed. It records a real
+invalid-rule/frontend mismatch rather than claiming complete native parity.
+
+
+## Native control, sealed analysis and source-binding follow-up (2026-10-03)
+
+The private broker now supports bounded authenticated fixture launch/wait/signal/
+cancel requests. Sealed actual native Semgrep executes both module rule packs
+inside the traced deny-default profile. Initial dyld/profile failures were kept
+as failures and repaired with exact pinned library/path grants and forbidden
+host-read controls; no host execution fallback was used.
+
+Independent review additionally found suppressed runtime SIGTRAP, cancellation
+reason overwrite at timeout, EOF attribution to a competing worker timer and
+source/policy digest rereads. The actual C terminal-reason tests failed two cases
+before the fix and passed all three afterwards. The traced exec/SIGTRAP fixture
+failed with a suppressed signal before the broker fix and now terminates with
+signal 5. Analyzer provenance regression RED: three failures, one existing
+profile case passed; GREEN with startup snapshot regressions: 62 passed, one
+explicit native-only case skipped.
+
+Actual ARM64 startup final captured-input rerun: 100 repetitions of all six
+transitions passed (600 races), max observed cleanup 0.0103 seconds. The four
+sealed clean/defective cases also passed, with spaces/Unicode fixture paths and
+negative profile probes. Final control repetition acceptance is tracked
+separately in CONTROL_BOUNDARY_CONTRACT.md; historical success cannot stand in
+for proof after review corrections.
+
+The serial repository test rerun before the last provenance additions passed
+3,570 tests with two platform/explicit-native skips. Subsequent final gates must
+identify their own counts and executed revision. No experiment receipt approves
+production selection, publication or a module version change.
+
+Final control source-snapshot acceptance passed 1,219 records (100×12 lifecycle
+cases plus 19 protocol controls) after the corrected native-clock/EOF proof.
+The source mutation regression recorded seven failed assertions before the fix;
+the owned native control suite then passed all 21 tests without skips. Bounded
+failure snapshots now retain observations and request history before cleanup,
+without authority bytes. The historical cancellation/wait failure did not recur
+but its cause is unproven; this is not represented as a diagnosed C regression.
+See CONTROL_BOUNDARY_CONTRACT.md for exact executable/source identities.
+
+After the final standard-import/compiler-helper refactor, the actual native
+focused suite passed all 105 cases (no skips), including traced runtime trap,
+C terminal-reason expiry, control protocol and withheld-EOF negative. The
+source/profile-bound 600-race startup suite was repeated successfully; its final
+max observed cleanup was 0.0153 seconds. All four sealed analyzer cases passed
+again. Planned requirement evidence and both strict OpenSpec validations pass.
+
+The final public native capsule command was executed with staged inputs and
+exited 1: FAIL/UNKNOWN, unsupported_controller_platform for all ten members.
+This remains a production-integration requirement, not a passing review. The
+parent helper advisory returned PASS_WITH_ADVISORY with only the documented
+stdlib MISSING_ICONTRACT exception. Independent review-agent's final startup,
+control and sealed-analyzer scope returned no findings.
+
+A smart-test run made during remaining tree edits failed the existing
+unchanged-blocker assurance test (pre_enforcement_evidence_outcome absent):
+3,587 passed, one failed, eight skips and 26 passed subtests. The runner binds
+all Git-visible paths, so final verification must use a frozen worktree; the
+failed run is retained and cannot count as a pass.
+
+The Semgrep sidecar review found the same post-run source-reread defect. A
+regression failed before changing its smoke import to a captured-source loader
+and removing the unsupported controller-source identity claim; the sidecar
+suite then passed all 19 cases. Test-only import, resource-lifetime, fixture
+name and complexity findings from staged review were corrected without global
+rule changes. The existing assurance case passes alone (13.57 seconds); full
+frozen-tree gates below remain authoritative.
+
+ARM64 macOS 14/15/26 CI is configured in code-review-macos-boundary.yml for
+serial 100-round startup/control suites. Exact OS/build and ordinary GUI
+launchd gates fail closed. No secrets, paid credentials, raw-log uploads or
+publication permissions are introduced. Configuration validation passes;
+hosted executed evidence remains pending a PR run.
+
+CI review corrections: actual embedded-function tests recorded three failures
+(one valid positive passed) for omitted normal/runtime-trap controls and starting
+control after startup's hard timeout. The workflow now requires both controls
+exactly once and stops before any second suite after a timeout. These are
+behavioral tests of the actual workflow functions, not mirrored YAML checks.
+
+Independent review-agent re-reviewed the corrected sidecar, tests and CI
+functions with no findings. Staged source review has only the documented
+stdlib MISSING_ICONTRACT exception (83 warnings, zero other findings). The new
+CI test initially exposed a missing PyYAML dependency in the isolated CrossHair
+review environment; installing the already-declared PyYAML 6.0.3 there repairs
+that tool-environment gap without changing module/runtime dependency policy.
+
+
+## Final frozen-tree verification (2026-10-03, Europe/Berlin)
+
+- Native focused suite: 110 passed, no skips (actual C timer, traced trap,
+  private control subset, withheld-EOF negative and CI behavior tests included).
+- Smart suite: 3,593 passed, eight skips, 26 passed subtests (267.11 seconds).
+- Full suite: 3,593 passed, eight skips, 26 passed subtests (270.79 seconds).
+- Skips: one Linux proc contract and seven explicit-native tests; all seven
+  explicit-native cases ran in the passing native focused suite above.
+- Four sealed native Semgrep clean/defect cases passed on final helper bytes.
+- Final staged Code Review: PASS_WITH_ADVISORY, 83 documented stdlib
+  MISSING_ICONTRACT warnings, no other findings.
+- Script-specific BasedPyright: zero errors, warnings and notes; repository
+  format/type/lint, manifests/imports/signatures, 28 contracts, strict OpenSpec
+  for both changes, planned evidence mappings and actionlint passed.
+- Independent review-agent: no findings after native, sidecar and CI fixes.
+
+The previous assurance failure did not recur in either frozen-tree suite.
+No production native runtime/public command, OS matrix or independent-install
+acceptance is claimed. Public capsule-required native review still returns
+FAIL/UNKNOWN unsupported_controller_platform. Hosted matrix results must be
+recorded from the actual PR; these checks do not authorize merge/publication.

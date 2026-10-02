@@ -153,6 +153,10 @@ Security records under the repository security policy.
 
 ## Native macOS ARM64 Capsule — managed-process revision
 
+Physical-host startup, private-control and two sealed-analyzer fixture checkpoints
+are implemented under the same change; they are partial native evidence, not
+production delivery or supported-matrix approval. See its managed boundary status.
+
 Owner-approved revisions on 2026-09-30 and 2026-10-02 (Europe/Berlin): #460 delivers macOS ARM64
 first, with managed processes, automatic first-use native runtime acquisition and Linux x86-64 regression coverage. Windows, Intel macOS and Linux
 ARM64 are deferred, not implicitly supported or required for this delivery.

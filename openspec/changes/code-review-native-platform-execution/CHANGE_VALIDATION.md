@@ -165,5 +165,6 @@ Prerequisite routing has focused RED/GREEN and actual local command evidence.
 Repository gates and independent review passed; exact test counts, initial smart
 failures followed by successful serial reruns, the documented bootstrap advisory
 exception and actual unsupported native capsule result are in TDD_EVIDENCE.md.
-The source-derived startup gap and default-protection independent installation
-remain mandatory future gates. Neither active change is ready to archive.
+The original source-derived startup counterexample now has a passing fixed-
+bootstrap physical-host mechanism; complete matrix/startup/escape/resource and
+default-protection independent installation remain mandatory future gates. Neither active change is ready to archive.

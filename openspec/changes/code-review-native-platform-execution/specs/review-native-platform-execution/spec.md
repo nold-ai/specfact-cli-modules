@@ -340,6 +340,24 @@ The macOS ARM64 backend SHALL use broker-owned direct workers, each traced and c
 - **THEN** no unconfined project code runs and independent observation finds no surviving governed worker after five seconds
 - **AND** 100 repetitions of each lifecycle race are required before admission
 
+#### Scenario: Fixed trusted bootstrap owns the pre-trace interval
+
+- **GIVEN** an initial-distribution fixed bootstrap with default unblocked termination signals and no customer code or process-group changes before tracing
+- **WHEN** its broker dies while it is suspended or running before tracing, trace-stopped, resumed, across exec or confined
+- **THEN** independent birth/tracing observation and positive/negative controls establish five-second cleanup and invocation-job removal with 100 repetitions per tested transition; a launchd-only group claim does not approve arbitrary untraced workers or replace the remaining complete boundary and OS-matrix acceptance
+
+#### Scenario: Private control protocol preserves authority and terminal status
+
+- **GIVEN** an invocation-scoped broker with a verified CLI peer and private capability
+- **WHEN** a caller sends launch, wait, signal or cancellation requests, loses its connection or supplies malformed/foreign authority
+- **THEN** bounded versioned requests affect only broker-assigned owned handles; incomplete frames and connection loss fail closed, terminal signals and accepted cancellation reasons are preserved, and independent lifecycle proof excludes competing timer/fallback cleanup
+
+#### Scenario: Sealed analyzer executes with exact native inputs
+
+- **GIVEN** the pinned native Semgrep core, reviewed rule packs and exact verified dylib closure
+- **WHEN** the traced bootstrap runs clean and defective fixed fixtures under its versioned deny-default analyzer profile
+- **THEN** both actual rule-pack members execute with expected outputs and exits while unauthorized host reads, descriptors, spawning, network and broker signals remain denied; snapshots bind the exercised policy to the receipt, which cannot approve the complete capsule from this subset
+
 ### Requirement: Initial-distribution managed boundary gate
 
 The managed candidate SHALL prove its boundary using the exact initial distribution configuration: build-time ad-hoc signatures for our native components, verified upstream signatures where applicable and SpecFact-signed manifests covering final payload bytes. Hardened-runtime settings and narrow reviewed entitlements SHALL be recorded and tested with tracing and confinement. Missing Apple Developer ID credentials or notarization SHALL NOT block compilation, native execution, shipment or canonical GHCR publication. Invalid native signatures, corrupt payloads, failed confinement, missing boundary evidence, caller-asserted receipts and unit-test mocks SHALL NOT establish native acceptance. Optional Apple credential preflight SHALL NOT be an initial-release dependency. #460 SHALL block optional #488, never the reverse.

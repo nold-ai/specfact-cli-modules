@@ -1,7 +1,8 @@
 # Managed boundary implementation checkpoint
 
 Recorded 2026-10-02 (Europe/Berlin). **Production integration remains blocked.**
-The owner-approved managed-process scope is retained; no requirement
+The local fixed-fixture startup and confinement prototype is implemented; see
+[STARTUP_BOUNDARY_RESULTS.md](STARTUP_BOUNDARY_RESULTS.md). The owner-approved managed-process scope is retained; no requirement
 for isolation, integrity or lifecycle has been relaxed and no native support
 release is claimed. Apple distribution requirements were explicitly deferred.
 
@@ -31,7 +32,7 @@ native results on CPython 3.11–3.13; see
 an admitted runtime. No module payload, version, signature or registry identity
 was changed.
 
-## Startup ownership gap found during implementation review
+## Historical startup ownership gap found during implementation review
 
 The proposed sequence `spawn -> bootstrap PT_TRACE_ME -> confinement -> project
 exec` does not itself establish cleanup ownership from process creation. A child
@@ -64,7 +65,7 @@ that remains required before any positive admission. The conclusion is rejection
 of this sequence as sufficient proof, not proof that every native architecture is
 impossible.
 
-## Conditions for resuming boundary implementation
+## Original conditions for resuming boundary implementation
 
 1. Identify an execution/cleanup ownership mechanism covering the interval from
    worker creation through tracing, including broker death before bootstrap code
@@ -85,7 +86,7 @@ this checkpoint. The completed capability still requires its minor version bump,
 manifest/signature/registry changes, full acceptance and PR review loop. This
 checkpoint must not be presented as that delivery or archived as complete.
 
-## Unproven startup-only follow-up
+## Startup-only follow-up: now measured on the physical host
 
 A source/documentation check on 2026-10-02 identified an alternative to investigate,
 not an approved mechanism: an invocation-scoped user launchd job may own cleanup
@@ -100,6 +101,22 @@ execute only fixed trusted code; after admission, the existing tracing/confineme
 contract must still hold. It also requires proof of ordinary-user registration,
 no unwanted restart or persistent job, authenticated CLI connection, cleanup
 within five seconds and all initial-distribution startup races on each supported OS. The manual
-does not guarantee that bound or establish those properties. No launchd job was
-registered; no initial-distribution boundary proof has yet been obtained.
-The architecture and production status remain unchanged pending that evidence.
+does not guarantee that bound or establish those properties. The follow-up has now been executed with temporary jobs and independent
+positive/negative controls: 100 repetitions of each of six startup stages pass on
+macOS 27.0.1 build 26A434. See [the results and limits](STARTUP_BOUNDARY_RESULTS.md).
+Full boundary admission and production integration remain incomplete.
+
+## Executable control and sealed analyzer checkpoint — 2026-10-03
+
+The physical-host startup subset resolves the original creation-to-tracing
+counterexample for fixed trusted bootstraps. The authenticated broker control
+fixture now implements launch, wait, signal, cancel and event-driven connection
+loss; [CONTROL_BOUNDARY_CONTRACT.md](CONTROL_BOUNDARY_CONTRACT.md) preserves measured
+results, review corrections and limits. The kernel-traced deny-default bootstrap
+also executes the actual pinned Semgrep core with both rule packs on clean and
+defective fixtures. See [SEALED_ANALYZER_CONTRACT.md](SEALED_ANALYZER_CONTRACT.md).
+Neither is a production backend, complete artifact, supported matrix, project
+manager adapter or independent-Mac installation proof. These successful subsets
+do not enable the public native command or approve publication. Paid Apple
+identity remains optional; OS-specific private Seatbelt compatibility requires
+measured acceptance, not a new blanket prerequisite that Apple publish the API.

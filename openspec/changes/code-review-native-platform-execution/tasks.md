@@ -52,10 +52,14 @@
 - [x] Record managed processes and automatic first-use acquisition; retain historical failures.
 - [x] Synchronize #460 and planned requirement evidence with the approved revision.
 - [x] Implement fail-closed optional Apple signing preflight with focused RED/GREEN tests; credential availability is not boundary acceptance.
-- [ ] Resolve the creation-to-tracing ownership gap recorded in MANAGED_BOUNDARY_STATUS.md without relaxing startup cleanup.
-- [ ] Implement a fixed-fixture native broker/bootstrap with tests before implementation.
+- [x] Prove fixed-bootstrap creation-to-tracing ownership on the physical host without relaxing startup cleanup; matrix and complete admission remain separate gates.
+- [x] Implement a fixed-fixture native broker/bootstrap with tests before implementation.
+- [x] Pass 100 repetitions of six startup stages on the physical ARM64 host, with independent tracing/birth observation and deny-default native probes; retain matrix and full-lifecycle gates.
+- [x] Implement private bounded broker launch/wait/signal/cancel fixtures and exercise CLI death, malformed requests, timeouts and concurrent invocations on the physical host; retain full boundary admission below.
+- [x] Execute both pinned Semgrep rule packs against clean/defective fixtures inside the traced deny-default boundary with exact native dependency grants.
 - [ ] Verify exact initial-distribution native signatures, hardened-runtime settings and narrow entitlements before boundary acceptance; Apple credentials are not required.
-- [ ] Pass independent signed lifecycle/startup/escape/resource proof and 100 race repetitions.
+- [x] Pass private fixture control/lifecycle acceptance on the physical host: 100 repetitions of 12 cases plus 19 protocol checks, with native-clock EOF attribution and exact source snapshots.
+- [ ] Pass complete signed boundary admission, including tracing/IPC/loader escapes, hard resource limits and the supported OS matrix.
 - [ ] Integrate managed Python/multiprocessing and pinned native-tool adapters without weakening the kernel boundary.
 - [ ] Pass every required analyzer and existing pip/Hatch/uv/Poetry corpus; preserve unsupported-operation diagnostics.
 - [ ] Admit Node/npm, Semgrep and Z3 closure, Mach-O loading, signed caches and versioned evidence.
@@ -87,3 +91,9 @@ items do not complete production tasks in sections 3, 4 or 6.
 
 Paid enrollment, Apple certificate management, notary credentials, notarization,
 applicable stapling and certificate renewal/revocation belong only to #488.
+
+
+### Hosted fixed-boundary acceptance
+
+- [x] Configure explicit ARM64 macOS 14/15/26 CI with exact OS/build, ordinary-user GUI launchd, serial 100-round startup/control, sanitized summaries and no release permissions.
+- [ ] Record actual PR merge SHA, platform identity and passing hosted suite results; resolve runner availability without dropping mandatory coverage.

@@ -105,3 +105,16 @@ The earlier feasibility delivery included the scope revision, native feasibility
 - **GitHub Issue**: [#460](https://github.com/nold-ai/specfact-cli-modules/issues/460)
 - **Last Synced Status**: open / Todo; signing scope split, 2026-10-02 Europe/Berlin
 - **Sanitized**: true
+
+## Native implementation checkpoint — 2026-10-03 (Europe/Berlin)
+
+Actual physical-host work now includes fixed-bootstrap launchd/tracing ownership,
+a private bounded broker control protocol and both sealed Semgrep rule-pack
+analyzers. Startup proof passes 100 repetitions of six stages; control proof
+retains historical results and review corrections separately. Native clean and
+defective Semgrep fixtures execute with denied host/descriptor/process/network
+controls and exact dependency grants. MANAGED_BOUNDARY_STATUS.md links measured
+contracts and current limits. The public native command, all-ten-analyzer managed
+integration, four-manager corpus, immutable runtime delivery and independent-Mac
+installation still require implementation/admission; this checkpoint does not
+claim those capabilities or justify a module release bump.

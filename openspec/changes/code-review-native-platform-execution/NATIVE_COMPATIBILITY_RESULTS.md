@@ -145,7 +145,11 @@ acceptance. Do not archive #460 or claim native support from this checkpoint.
 The repository's host review heuristic reports `MISSING_ICONTRACT` for public
 functions in `scripts/macos_managed_boundary/preflight.py`,
 `scripts/native_analyzer_smoke.py`, `scripts/native_node_package.py`,
-`scripts/native_runtime_inventory.py` and `scripts/native_z3_wheel.py`.
+`scripts/native_runtime_inventory.py`, `scripts/native_z3_wheel.py` and
+`scripts/macos_managed_boundary/startup.py`,
+`scripts/macos_managed_boundary/control.py`,
+`scripts/macos_managed_boundary/analyzer.py` and
+`scripts/native_semgrep_parity.py`.
 This checkpoint records a narrow exception for that rule on those standalone
 maintainer entrypoints and helpers only. These are not shipped module APIs.
 Acquisition, verification, inventory and preflight intentionally use only the

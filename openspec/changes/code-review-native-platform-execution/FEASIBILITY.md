@@ -52,8 +52,10 @@ Production integration, version 0.51.0 (or next available minor), registry and
 publication changes follow the gate and complete acceptance, not this revision.
 
 Implementation checkpoint: [MANAGED_BOUNDARY_STATUS.md](MANAGED_BOUNDARY_STATUS.md)
-records the unresolved creation-to-tracing ownership gap and optional Apple
-credential tool. The candidate has not passed admission.
+preserves the historical creation-to-tracing gap and optional Apple credential
+tool. STARTUP_BOUNDARY_RESULTS.md records the passing physical-host subset;
+CONTROL_BOUNDARY_CONTRACT.md and SEALED_ANALYZER_CONTRACT.md carry the executable
+private control and analyzer checkpoints. Complete admission remains unproven.
 
 ## Status and decision rule
 

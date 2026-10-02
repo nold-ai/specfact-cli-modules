@@ -1,0 +1,268 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+name: macOS native boundary fixtures
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/code-review-macos-boundary.yml
+      - scripts/macos_managed_boundary/**
+      - tests/unit/test_macos_managed_*.py
+      - tests/unit/test_macos_control_timers.py
+      - tests/unit/test_macos_boundary_ci_receipts.py
+      - openspec/changes/code-review-native-platform-execution/**
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: macos-boundary-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  native-boundary:
+    name: boundary (${{ matrix.runner }}, ARM64)
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        # Official ARM64 labels and image OS/builds accessed 2026-10-03.
+        # Sources and macOS 14 retirement are recorded in NATIVE_BOUNDARY_CI.md.
+        # Labels float: reject image drift rather than silently widening evidence.
+        include:
+          - runner: macos-14
+            os-version: "14.8.9"
+            os-build: "23J631"
+          - runner: macos-15
+            os-version: "15.7.9"
+            os-build: "24G830"
+          - runner: macos-26
+            os-version: "26.6.2"
+            os-build: "25G83"
+    defaults:
+      run:
+        shell: bash
+    env:
+      EXPECTED_RUNNER: ${{ matrix.runner }}
+      EXPECTED_OS_VERSION: ${{ matrix.os-version }}
+      EXPECTED_OS_BUILD: ${{ matrix.os-build }}
+      PYTHONDONTWRITEBYTECODE: "1"
+    steps:
+      - name: Checkout PR merge tree without retained credentials
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          persist-credentials: false
+      - name: Select stdlib helper Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.13"
+          architecture: arm64
+      - name: Assert exact native platform and ordinary-user GUI launchd domain
+        id: platform
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import platform
+          import re
+          import subprocess
+          import sys
+          from pathlib import Path
+
+          def read(args):
+              return subprocess.run(
+                  args, check=True, capture_output=True, text=True, timeout=10
+              ).stdout.strip()
+
+          try:
+              os.umask(0o077)
+              assert sys.version_info[:2] == (3, 13)
+              assert platform.system() == "Darwin"
+              assert os.environ["RUNNER_ARCH"] == "ARM64"
+              assert platform.machine() == read(["/usr/bin/uname", "-m"]) == "arm64"
+              assert read(["/usr/sbin/sysctl", "-n", "hw.optional.arm64"]) == "1"
+              translated = subprocess.run(
+                  ["/usr/sbin/sysctl", "-in", "sysctl.proc_translated"],
+                  capture_output=True, text=True, timeout=10,
+              )
+              assert translated.returncode in (0, 1)
+              assert translated.stdout.strip() in ("", "0")
+              assert os.getuid() != 0
+              version = read(["/usr/bin/sw_vers", "-productVersion"])
+              build = read(["/usr/bin/sw_vers", "-buildVersion"])
+              assert version == os.environ["EXPECTED_OS_VERSION"]
+              assert build == os.environ["EXPECTED_OS_BUILD"]
+              assert build == read(["/usr/sbin/sysctl", "-n", "kern.osversion"])
+              assert Path(read(["/usr/bin/xcrun", "--find", "clang"])).is_file()
+              assert Path("/usr/bin/codesign").is_file()
+              # No sudo, synthetic GUI session, skip or weaker launchd fallback.
+              read(["/bin/launchctl", "print", f"gui/{os.getuid()}"])
+              image = os.environ.get("ImageVersion", "")
+              assert re.fullmatch(r"[0-9.]+", image)
+              root = Path(os.environ["RUNNER_TEMP"]) / "specfact-macos-boundary"
+              root.mkdir(mode=0o700, exist_ok=False)
+              context = {
+                  "runner": os.environ["EXPECTED_RUNNER"],
+                  "architecture": "arm64", "os_version": version, "os_build": build,
+                  "image_version": image, "python": platform.python_version(),
+                  "gui_launchd_available": True,
+              }
+              (root / "platform.json").write_text(json.dumps(context))
+              print(json.dumps(context, sort_keys=True))
+          except Exception:
+              message = "Native platform/tool/GUI launchd preflight failed; no acceptance."
+              print(message)
+              with Path(os.environ["GITHUB_STEP_SUMMARY"]).open("a") as summary:
+                  summary.write(message + "\n")
+              raise SystemExit(1)
+          PY
+      - name: Run startup then control at 100 repetitions each
+        # One foreground process runs both suites serially; no retries.
+        run: |
+          python - <<'PY'
+          import collections
+          import hashlib
+          import json
+          import os
+          import subprocess
+          import sys
+          from pathlib import Path
+
+          STARTUP_RACES = (
+              "suspended", "pretrace", "trace-stopped", "traced", "exec", "confined",
+          )
+          CONTROL_RACES = (
+              "cancel", "timeout", "signal", "eof-pretrace", "eof-trace-stopped",
+              "eof-running", "eof-wait", "eof-partial", "partial-timeout",
+              "broker-kill", "cli-kill-wait", "isolation",
+          )
+          PROTOCOL_CASES = (
+              "output-status", "version", "opcode", "reserved", "foreign-handle",
+              "fixture-mode", "host-pid", "signal-selector", "timeout-bound",
+              "unused-field", "fragmentation", "worker-limit", "oversize",
+              "undersize", "authentication", "peer-pid", "peer-pidversion",
+              "term-ignored", "runtime-trap",
+          )
+          SOURCE = Path("scripts/macos_managed_boundary")
+
+          def sha256(path):
+              return hashlib.sha256(path.read_bytes()).hexdigest()
+
+          def checked_receipt(name, report, context):
+              assert report["schema_version"] == f"specfact-managed-{name}-experiment-v1"
+              assert report["architecture"] == "arm64"
+              assert report["os_build"] == context["os_build"]
+              assert report["repetitions"] == 100
+              assert report[f"{name}_subset_passed"] is True
+              assert report["repetition_gate_passed"] is True
+              assert report["production_approved"] is False
+              assert report["signed_boundary_verified"] is False
+              assert report["signing_mode"] == "ad-hoc"
+              assert report["hardened_runtime"] is True
+              trials = report["trials"]
+              assert trials and all(trial.get("passed") is True for trial in trials)
+              races = STARTUP_RACES if name == "startup" else CONTROL_RACES
+              field = "mode" if name == "startup" else "case"
+              counts = collections.Counter(
+                  trial[field] for trial in trials
+                  if not trial.get("abandon_process_group")
+              )
+              expected = {race: 100 for race in races}
+              assert {race: counts[race] for race in races} == expected
+              count_field = "completed_races" if name == "startup" else "completed_lifecycle_cases"
+              assert report[count_field] == expected
+              if name == "startup":
+                  assert all(counts[mode] == 1 for mode in ("normal", "runtime-trap"))
+                  assert report["probe_control"]["passed"] is True
+                  negative = [trial for trial in trials if trial.get("abandon_process_group")]
+                  assert len(negative) == 1 and negative[0]["survived"] is True
+                  assert report["profile_sha256"] == sha256(SOURCE / "fixture.sb")
+              else:
+                  assert all(counts[case] == 1 for case in PROTOCOL_CASES)
+              sources = {
+                  "broker": f"{name}_broker.c", "worker": f"{name}_worker.c",
+                  "observer": "startup_observe.c",
+              }
+              artifacts = report["artifacts"]
+              assert len(artifacts) == 3
+              assert {item["name"] for item in artifacts} == set(sources)
+              digests = {}
+              for item in artifacts:
+                  assert item["source_sha256"] == sha256(SOURCE / sources[item["name"]])
+                  assert "flags=0x10002(adhoc,runtime)" in item["signing"]
+                  assert "Signature=adhoc" in item["signing"]
+                  assert len(item["sha256"]) == 64
+                  assert all(char in "0123456789abcdef" for char in item["sha256"])
+                  digests[item["name"]] = {
+                      "source_sha256": item["source_sha256"], "binary_sha256": item["sha256"],
+                  }
+              # Explicit allowlist: no identities, capabilities, paths, status output or errors.
+              checks = {
+                  "suite": name, "result": "passed", **context,
+                  "completed_races": expected, "repetition_gate_passed": True,
+                  "signing_mode": "ad-hoc", "hardened_runtime": True,
+                  "production_approved": False, "signed_boundary_verified": False,
+                  "helper_sha256": sha256(SOURCE / f"{name}.py"),
+                  "artifacts": digests,
+              }
+              if name == "startup":
+                  checks["profile_sha256"] = report["profile_sha256"]
+              else:
+                  checks["protocol_checks"] = len(PROTOCOL_CASES)
+              return checks
+
+          def run_suite(name, root, context):
+              receipt_path = root / f"{name}.json"
+              log_path = root / f"{name}.log"
+              category = "helper_failed"
+              try:
+                  with log_path.open("wb") as log:
+                      process = subprocess.run(
+                          [sys.executable, "-B", str(SOURCE / f"{name}.py"),
+                           "--repetitions", "100", "--out", str(receipt_path)],
+                          stdout=log, stderr=subprocess.STDOUT, timeout=720,
+                      )
+                  if process.returncode == 0:
+                      category = "receipt_gate_failed"
+                      return checked_receipt(name, json.loads(receipt_path.read_text()), context)
+              except subprocess.TimeoutExpired:
+                  category = "helper_timeout"
+              except Exception:
+                  category = "receipt_or_execution_failed"
+              finally:
+                  # Raw receipts/logs are never printed or uploaded, including on failure.
+                  receipt_path.unlink(missing_ok=True)
+                  log_path.unlink(missing_ok=True)
+              return {
+                  "suite": name, "result": "failed", "category": category,
+                  "production_approved": False, "signed_boundary_verified": False,
+              }
+
+          def main():
+              os.umask(0o077)
+              root = Path(os.environ["RUNNER_TEMP"]) / "specfact-macos-boundary"
+              context = json.loads((root / "platform.json").read_text())
+              passed = True
+              with Path(os.environ["GITHUB_STEP_SUMMARY"]).open("a") as summary:
+                  summary.write("Bounded startup/control fixtures; production flags remain false.\n\n")
+                  summary.write("| Suite | Result | Check SHA-256 |\n| --- | --- | --- |\n")
+                  for name in ("startup", "control"):
+                      print(f"Starting {name}: 100 repetitions, serial, 720-second ceiling.", flush=True)
+                      checks = run_suite(name, root, context)
+                      digest = hashlib.sha256(
+                          json.dumps(checks, sort_keys=True, separators=(",", ":")).encode()
+                      ).hexdigest()
+                      print(json.dumps({**checks, "check_sha256": digest}, sort_keys=True), flush=True)
+                      summary.write(f"| {name} | {checks['result']} | `{digest}` |\n")
+                      summary.flush()
+                      passed = passed and checks["result"] == "passed"
+                      if checks.get("category") == "helper_timeout":
+                          summary.write("Hard timeout: no further suite may start on this VM.\n")
+                          return 1
+                  summary.write("\nCI fixture evidence only; no runtime/install admission.\n")
+              return 0 if passed else 1
+
+          raise SystemExit(main())
+          PY
