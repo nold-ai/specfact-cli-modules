@@ -42,7 +42,7 @@ requirements:
       scenario_id: native-isolation-capability-evidence
       method: inspection
       intent: "Inspect planned acceptance: Cancellation and descendants are bounded."
-      observable: "all governed descendants terminate within the frozen cleanup bound; fixtures independently check survivors and resource ceilings rather than treating killpg alone as proof. Planned maturity only; future native execution evidence is required by FEASIBILITY.md and tasks.md; no runtime pass is claimed."
+      observable: "under the managed revision, the kernel denies worker-created descendants and all broker-managed workers terminate within five seconds; each lifecycle race requires 100 repetitions with independent survivor and resource checks rather than killpg alone. Planned maturity only; future native execution evidence is required by FEASIBILITY.md and tasks.md; no runtime pass is claimed."
     - case_id: 460-2-4
       scenario_id: native-isolation-capability-evidence
       method: inspection
@@ -52,7 +52,7 @@ requirements:
       scenario_id: native-isolation-capability-evidence
       method: inspection
       intent: "Inspect planned acceptance: Native XPC boundary candidate must prove descendant cleanup."
-      observable: "A reproducible no-admin ARM64 harness rejects surviving descendants or incomplete observation; native negative evidence does not approve a release."
+      observable: "Historical XPC evidence is retained: the no-admin ARM64 harness rejected surviving descendants and does not approve a release. The approved managed-process revision supersedes unrestricted subprocess compatibility; current acceptance is mapped in 460-9-1 through 460-10-2."
   openspec:code-review-native-platform-execution:review-native-platform-execution:portable-review-semantics:
     rationale: Define macOS ARM64 acceptance without claiming unexecuted runtime proof.
     stakeholder_refs:
@@ -317,3 +317,65 @@ requirements:
       method: inspection
       intent: "Inspect planned acceptance: Candidate TAR ancillary text fields hide bytes."
       observable: "All raw textual TAR fields require strict UTF-8 and zero post-terminator padding. Planned maturity only; this is not release acceptance."
+  openspec:code-review-native-platform-execution:review-native-platform-execution:managed-native-process-boundary:
+    rationale: Owner-approved managed-process delivery; executable signed acceptance is still required.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#460
+    touchpoints:
+    - id: openspec-source-spec
+      kind: config_file
+      locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
+    verification_cases:
+    - case_id: 460-9-1
+      scenario_id: managed-native-process-boundary
+      method: inspection
+      intent: 'Inspect planned acceptance: Managed subprocess completes.'
+      observable: "The broker launches a separately confined direct worker through a bounded private channel and returns output, status and lifecycle; all ten analyzers and the pip/Hatch/uv/Poetry corpus remain first-release requirements. Planned inspection only; signed runtime and publication acceptance remain unproven."
+    - case_id: 460-9-2
+      scenario_id: managed-native-process-boundary
+      method: inspection
+      intent: 'Inspect planned acceptance: Worker bypasses compatibility adapter.'
+      observable: "The kernel denies direct fork/vfork/posix_spawn, process-creation syscalls and unauthorized tracing, signals or IPC; unsupported behavior yields actionable incomplete evidence, never host fallback or PASS with missing required evidence. Planned inspection only; signed runtime and publication acceptance remain unproven."
+    - case_id: 460-9-3
+      scenario_id: managed-native-process-boundary
+      method: inspection
+      intent: 'Inspect planned acceptance: Broker dies during startup or execution.'
+      observable: "No unconfined project code runs across startup, tracing, confinement or exec; independent observation finds no governed survivor after five seconds following broker/CLI death, timeout or cancellation, including concurrent requests, with 100 repetitions per lifecycle race. Planned inspection only; signed runtime and publication acceptance remain unproven."
+  openspec:code-review-native-platform-execution:review-native-platform-execution:release-signed-managed-boundary-gate:
+    rationale: Owner-approved managed-process delivery; executable signed acceptance is still required.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#460
+    touchpoints:
+    - id: openspec-source-spec
+      kind: config_file
+      locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
+    verification_cases:
+    - case_id: 460-10-1
+      scenario_id: release-signed-managed-boundary-gate
+      method: inspection
+      intent: 'Inspect planned acceptance: Signing prerequisites are unavailable.'
+      observable: "Missing Developer ID identity or notarization configuration blocks preflight before compiling or executing a substitute candidate; ad-hoc signing, skipped checks, caller-asserted receipts and mocks cannot establish native acceptance. Planned inspection only; signed runtime and publication acceptance remain unproven."
+    - case_id: 460-10-2
+      scenario_id: release-signed-managed-boundary-gate
+      method: inspection
+      intent: 'Inspect planned acceptance: Signed boundary is incompatible.'
+      observable: "Developer ID signing, hardened runtime, approved entitlements, tracing, confinement and notarization must work together; a failure rejects the candidate before production integration, without unsigned or process-polling substitution. Planned inspection only; signed runtime and publication acceptance remain unproven."
+  openspec:code-review-native-platform-execution:review-native-platform-execution:automatic-native-runtime-acquisition:
+    rationale: Owner-approved managed-process delivery; executable signed acceptance is still required.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#460
+    touchpoints:
+    - id: openspec-source-spec
+      kind: config_file
+      locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
+    verification_cases:
+    - case_id: 460-11-1
+      scenario_id: automatic-native-runtime-acquisition
+      method: inspection
+      intent: 'Inspect planned acceptance: First invocation and offline reuse.'
+      observable: "The ordinary command downloads and verifies a prebuilt signed Darwin ARM64 runtime with progress, atomically publishes its bound cache and revalidates offline reuse; no Docker, VM, Homebrew, Xcode, sudo or separately installed daemon is required. Planned inspection only; signed runtime and publication acceptance remain unproven."
+    - case_id: 460-11-2
+      scenario_id: automatic-native-runtime-acquisition
+      method: inspection
+      intent: 'Inspect planned acceptance: Native evidence reaches an older consumer.'
+      observable: "A consumer lacking the versioned native execution contract rejects the evidence instead of assigning Linux identity or protected authority. Planned inspection only; signed runtime and publication acceptance remain unproven."

@@ -1,5 +1,44 @@
 # Design: Dedicated macOS ARM64 Code Review Capsule
 
+## Managed-process revision — 2026-10-02 (Europe/Berlin)
+
+The owner approved a managed-process contract for native macOS ARM64. This
+supersedes unrestricted project subprocess compatibility; earlier failed
+experiments remain historical evidence, not implementation of this revision.
+This approved scope is normative for the current milestone; historical Seatbelt,
+App Sandbox and XPC experiments neither mandate unrestricted subprocess support
+nor establish acceptance of the managed candidate.
+The first release still requires all ten analyzers and the pip, Hatch, uv and
+Poetry corpus, plugins, coverage and compatible ARM64 extension imports.
+
+The normal command automatically downloads and verifies a prebuilt signed
+runtime on first use, shows progress and subsequently reuses verified caches
+offline. Customers need no Docker, VM, Homebrew, Xcode, sudo or separately
+installed daemon. Unsupported process behavior produces actionable incomplete
+evidence, never host execution or PASS with missing required evidence.
+
+The candidate must use an invocation-scoped native broker that owns every
+worker directly. Each worker must establish tracing and a versioned Seatbelt
+policy before project code runs. Kernel restrictions must deny direct
+fork/vfork/posix_spawn and tracing/IPC escapes; compatibility adapters must
+request bounded launches through private inherited channels. Python interception is not the security boundary. Acquisition,
+build/preparation, sealed analyzers and project execution remain separate domains.
+
+The first milestone is release-signed boundary proof: Developer ID, hardened
+runtime, tracing and notarization must work together. No ad-hoc fallback is an
+admission result. Independently observe every startup transition, broker/CLI
+death, timeout, cancellation and concurrent requests, with no survivor after
+five seconds and 100 repetitions per lifecycle race. Missing credentials block
+signed execution before a substitute candidate is compiled or run; failed signed
+tracing or confinement rejects this candidate. The five-second bound and 100
+repetitions per lifecycle race are mandatory admission gates, not tunable defaults.
+Production integration, version 0.51.0 (or next available minor), registry and
+publication changes follow the gate and complete acceptance, not this revision.
+
+Implementation checkpoint: [MANAGED_BOUNDARY_STATUS.md](MANAGED_BOUNDARY_STATUS.md)
+records the unresolved creation-to-tracing ownership gap and signing prerequisite
+tool. The candidate has not passed admission.
+
 ## Baseline and product boundary
 
 The ordinary `specfact code review run` and existing runtime inspect/prepare commands select the backend automatically. This delivery targets macOS ARM64; Linux x86-64 remains the regression baseline. Windows, Intel macOS and Linux ARM64 are deferred. No Docker, WSL, VM, Rosetta or CPU emulation is a customer runtime prerequisite.
@@ -16,13 +55,13 @@ Carry forward #473's manager discovery, source locks, worker separation, pytest 
 
 ## Isolation feasibility before production
 
-Evaluate a minimal signed Seatbelt helper and an App Sandbox alternative using the same harmless allow/deny fixtures in [FEASIBILITY.md](FEASIBILITY.md). Neither mechanism is approved by availability or signatures. Do not reuse the earlier failed sandbox profile parse as evidence.
+Evaluate the release-signed managed broker against the harmless allow/deny fixtures in [FEASIBILITY.md](FEASIBILITY.md). The earlier minimal Seatbelt helper, App Sandbox and XPC comparisons remain historical experiments; they are not parallel implementation requirements for this revision. Preserve their parser and lifecycle failures as negative evidence, never as proof that the managed candidate passes.
 
 Prove confinement before untrusted Python, plugins, build hooks or native-library initializers run. Account for inherited file descriptors, IPC handles, dyld injection and system-library initialization. Define a macOS-specific observation contract; do not claim Linux's static-ELF or /proc proof on macOS.
 
-Prove allowed reads/writes separately from denied host access; deny undeclared network and IPC access. Test detached descendants, timeout/cancellation/controller failure, concurrent runs and resource bounds. Process-group cleanup alone is insufficient proof. Freeze numeric limits and supported OS builds from measurements; inability to enforce a required boundary blocks the backend rather than weakening it silently.
+Prove allowed reads/writes separately from denied host access; deny undeclared network and IPC access. Test denied direct creation/detachment attempts and broker-managed workers across timeout/cancellation/controller failure, concurrent runs and resource bounds. Process-group cleanup alone is insufficient proof. Enforce no survivors after five seconds and 100 repetitions per lifecycle race; freeze remaining resource limits and supported OS builds from measurements; inability to enforce a required boundary blocks the backend rather than weakening it silently.
 
-Seatbelt profiles are an undocumented third-party interface with compatibility risk. App Sandbox's supported entitlement/inheritance model is an alternative to investigate, not proof of arbitrary project-runtime support. Document backend choice, rejected alternatives, maintenance risks and stop conditions before production approval.
+Seatbelt profiles are an undocumented third-party interface with compatibility risk. App Sandbox's entitlement/inheritance model was a historical alternative, not proof of arbitrary project-runtime support or the approved managed boundary. Document backend choice, rejected alternatives, maintenance risks and stop conditions before production approval.
 
 ## Native artifacts, policy and cache identity
 
@@ -56,9 +95,9 @@ Protected GHCR promotion requires the final signed/notarized payload, complete a
 
 ## Delivery and rollback
 
-This revision delivers the scoped feasibility contract, measured native experiments in [NATIVE_RESULTS.md](NATIVE_RESULTS.md), and bounded local candidate tooling: a COPY-only Docker fixture, strict OCI verifier and regression tests. The experiments establish partial launch/confinement/analyzer and packaging evidence; the tested descendant-lifecycle designs fail the required contract, so production backend approval remains blocked.
+The earlier feasibility delivery provided the scoped contract, measured native experiments in [NATIVE_RESULTS.md](NATIVE_RESULTS.md), and bounded local candidate tooling: a COPY-only Docker fixture, strict OCI verifier and regression tests. The experiments establish partial launch/confinement/analyzer and packaging evidence; the tested descendant-lifecycle designs fail the required contract, so production backend approval remains blocked.
 
-The next milestone must resolve the outstanding lifecycle and dependency-closure gaps, complete the remaining proof obligations in [FEASIBILITY.md](FEASIBILITY.md), and freeze supported OS builds, backend, admitted dependencies, signing approach and limits from passing evidence before obtaining bounded production-design approval. Production implementation with focused failing-first tests, Linux/native acceptance and canonical signed publication follows that approval. Repeat customer installation after publication before closing #460 or archiving.
+The current approved milestone must first prove the release-signed managed boundary. It must then resolve the outstanding lifecycle and dependency-closure gaps, complete the remaining proof obligations in [FEASIBILITY.md](FEASIBILITY.md), and freeze supported OS builds, backend, admitted dependencies, signing approach and limits from passing evidence before obtaining bounded production-design approval. Production implementation with focused failing-first tests, Linux/native acceptance and canonical signed publication follows that approval. Repeat customer installation after publication before closing #460 or archiving.
 
 A failing mandatory feasibility case blocks production. Retain results and revise the design explicitly; do not silently downgrade the contract. Withdraw or supersede a faulty macOS publication while preserving Linux support, historical signatures and diagnostic evidence. Effort remains unestimated until feasibility establishes a workable backend.
 
@@ -75,9 +114,9 @@ Accessed 2026-09-30; packaging availability is not execution or admission proof.
 - [CrossHair metadata](https://pypi.org/pypi/crosshair-tool/0.0.109/json)
 - [Z3 metadata](https://pypi.org/pypi/z3-solver/5.1.0.0/json)
 
-## XPC lifecycle follow-up (experimental)
+## Historical XPC lifecycle follow-up (rejected candidate)
 
-The no-admin follow-up uses a trusted native launcher and an application-scoped
+The no-admin follow-up used a trusted native launcher and an application-scoped
 App Sandbox XPC service. A fixed bundled C fixture inherits the service sandbox;
 customer commands and runtime selection are not exposed. Version-one requests
 start a single fixture per connection or cancel it. XPC carries an explicitly
@@ -86,7 +125,9 @@ passed output descriptor; other inherited descriptors are closed at spawn.
 An independent host observer measures process birth identity, executable path,
 readiness and completion. Process-group termination is a tested candidate action,
 not a claim of descendant ownership. A detached survivor rejects this design.
-The five-second bound and 100-repeat admission threshold are experimental defaults;
+The experiment failed its lifecycle contract: two positive controls passed and
+all sixteen detached lifecycle cases failed, as recorded in
+[XPC_BOUNDARY_RESULTS.md](XPC_BOUNDARY_RESULTS.md). The five-second bound and
+100 repetitions per lifecycle race remain mandatory for the managed candidate;
 positive admission also requires a mechanism review and the remaining feasibility
-groups. Ordinary-user installation and the existing subprocess contract remain
-mandatory. No publication follows from fixture execution.
+groups. Ordinary-user installation remains mandatory. The unrestricted subprocess contract in this historical experiment is superseded by the managed-process revision above. No publication follows from fixture execution.

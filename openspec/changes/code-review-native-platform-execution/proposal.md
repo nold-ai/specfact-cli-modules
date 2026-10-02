@@ -1,5 +1,40 @@
 # Change: Dedicated macOS ARM64 Code Review Capsule
 
+## Managed-process revision — 2026-10-02 (Europe/Berlin)
+
+The owner approved a managed-process contract for native macOS ARM64. This
+supersedes unrestricted project subprocess compatibility; earlier failed
+experiments remain historical evidence, not implementation of this revision.
+This approved scope is normative for the current milestone; historical Seatbelt,
+App Sandbox and XPC experiments neither mandate unrestricted subprocess support
+nor establish acceptance of the managed candidate.
+The first release still requires all ten analyzers and the pip, Hatch, uv and
+Poetry corpus, plugins, coverage and compatible ARM64 extension imports.
+
+The normal command automatically downloads and verifies a prebuilt signed
+runtime on first use, shows progress and subsequently reuses verified caches
+offline. Customers need no Docker, VM, Homebrew, Xcode, sudo or separately
+installed daemon. Unsupported process behavior produces actionable incomplete
+evidence, never host execution or PASS with missing required evidence.
+
+The candidate must use an invocation-scoped native broker that owns every
+worker directly. Each worker must establish tracing and a versioned Seatbelt
+policy before project code runs. Kernel restrictions must deny direct
+fork/vfork/posix_spawn and tracing/IPC escapes; compatibility adapters must
+request bounded launches through private inherited channels. Python interception is not the security boundary. Acquisition,
+build/preparation, sealed analyzers and project execution remain separate domains.
+
+The first milestone is release-signed boundary proof: Developer ID, hardened
+runtime, tracing and notarization must work together. No ad-hoc fallback is an
+admission result. Independently observe every startup transition, broker/CLI
+death, timeout, cancellation and concurrent requests, with no survivor after
+five seconds and 100 repetitions per lifecycle race. Missing credentials block
+signed execution before a substitute candidate is compiled or run; failed signed
+tracing or confinement rejects this candidate. The five-second bound and 100
+repetitions per lifecycle race are mandatory admission gates, not tunable defaults.
+Production integration, version 0.51.0 (or next available minor), registry and
+publication changes follow the gate and complete acceptance, not this revision.
+
 ## Why
 
 Mac developers need the ordinary Code Review workflow to execute reliably on their native host. The released Linux x86-64 capsule cannot provide that support by changing platform detection: its launcher, observation, filesystem layout and project native-library inventory are Linux-specific.
@@ -14,9 +49,9 @@ The owner approved macOS ARM64 as the first new platform and separate native del
 - Plan dedicated signed macOS ARM64 artifacts, cache identities and platform evidence while preserving released review semantics and historical Linux artifacts.
 - Rebase on Code Review 0.50.1 and completed portable project-runtime #473, including pip/pip-tools, Hatch, uv, Poetry, project workers, native extensions, plugins and coverage.
 - Separate provisioning, preparation, launch, isolation, observation and cleanup from portable review logic; include Mach-O/dyld and relocatable user-owned paths.
-- Require isolation and dependency feasibility before bounded production-design approval. Seatbelt and App Sandbox are candidates, not approved backends.
+- Require release-signed managed-broker boundary proof as the first milestone, then complete isolation and dependency feasibility before bounded production-design approval. Historical Seatbelt/App Sandbox/XPC experiments remain evidence of rejected or incomplete approaches, not alternative current milestones.
 - Require signed customer-installation acceptance, native positive/negative tests and Linux regressions before advertising support.
-- Deliver bounded local candidate tooling: COPY-only Docker assembly, strict OCI/TAR/JSON verification against an operator-owned payload, regression tests and reviewed native feasibility results. This tooling never executes or publishes an archive and always rejects production eligibility.
+- Retain the earlier bounded local candidate tooling: COPY-only Docker assembly, strict OCI/TAR/JSON verification against an operator-owned payload, regression tests and reviewed native feasibility results. This tooling never executes or publishes an archive and always rejects production eligibility; it does not satisfy the managed-process milestone.
 
 ## Capabilities
 
@@ -42,11 +77,11 @@ The complete native closure must satisfy dependency policy. BasedPyright 1.39.10
 - The feasibility milestone has executable proof obligations, explicit failure/stop conditions and a production approval gate.
 - CPython 3.11–3.13 is a candidate matrix; minimum macOS version and actual supported combinations are frozen only from passing native evidence.
 - Planning and candidate-tool validation pass; measured native experiments are recorded separately and never imply native support or released artifacts.
-- Future release acceptance covers the full required analyzer set, external project corpus, isolation, integrity, lifecycle, distribution and Linux regressions.
+- First-release acceptance requires all ten analyzers and the pip/pip-tools, Hatch, uv and Poetry corpus, including plugins, coverage and compatible ARM64 extension imports, plus isolation, integrity, lifecycle, signed distribution and Linux regressions. Unsupported process diagnostics cannot excuse a missing required corpus result.
 
 ## Impact and Non-Goals
 
-This delivery includes the scope revision, native feasibility results, a local COPY-only Docker fixture, the bounded `scripts/macos_capsule_candidate.py` verifier and its regression tests. Measured lifecycle failures keep production architecture approval blocked. Production runtime code, signed payloads, module versions, registry entries and support claims remain unchanged. Keep #460 open/Todo after this feasibility PR. Production implementation, publication and OpenSpec archival remain future gated tasks. No unsandboxed, Homebrew, Rosetta or development-host fallback establishes capsule support.
+The earlier feasibility delivery included the scope revision, native feasibility results, a local COPY-only Docker fixture, the bounded `scripts/macos_capsule_candidate.py` verifier and its regression tests. Measured lifecycle failures keep production architecture approval blocked. Production runtime code, signed payloads, module versions, registry entries and support claims remain unchanged. Keep #460 open through feasibility; the recorded Todo status is historical metadata, not a fresh issue-status check. Production implementation, publication and OpenSpec archival remain future gated tasks. No unsandboxed, Homebrew, Rosetta or development-host fallback establishes capsule support.
 
 ## Source Tracking
 

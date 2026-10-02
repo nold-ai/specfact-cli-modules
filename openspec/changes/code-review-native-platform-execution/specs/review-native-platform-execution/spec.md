@@ -2,7 +2,7 @@
 
 ## Scope revision — 2026-09-30
 
-Owner-approved macOS ARM64 first delivery. This replaces the prior cross-platform/C15 prerequisite scope; deferred platforms remain unsupported by this change. Current maturity is planned.
+Owner-approved macOS ARM64 first delivery. This replaces the prior cross-platform/C15 prerequisite scope; deferred platforms remain unsupported by this change. The owner-approved managed-process revision of 2026-10-02 supersedes unrestricted subprocess compatibility. Production remains gated on signed feasibility.
 
 ## ADDED Requirements
 
@@ -24,7 +24,7 @@ Code Review SHALL add a dedicated macOS ARM64 capsule while preserving Linux x86
 
 ### Requirement: Native isolation capability evidence
 
-Production backend approval SHALL follow harmless native feasibility tests of a minimal signed Seatbelt helper and an App Sandbox alternative against the same capability contract. Neither candidate is preapproved. Mandatory boundaries SHALL cover filesystem reads/writes, network and IPC access, inherited descriptors, startup/load-path integrity, resource limits and complete child-process lifecycle. Exact mechanisms, OS support and numeric limits SHALL be frozen from measured results before production implementation.
+Production backend approval SHALL follow harmless native feasibility tests of the release-signed managed broker/bootstrap against the capability contract. Earlier Seatbelt, App Sandbox and XPC experiments remain historical evidence; they are not alternate admission routes. The managed candidate is not preapproved. Mandatory boundaries SHALL cover filesystem reads/writes, network and IPC access, inherited descriptors, startup/load-path integrity, resource limits and complete child-process lifecycle. Exact mechanisms, OS support and numeric limits SHALL be frozen from measured results before production implementation.
 
 #### Scenario: Isolation and cleanup are proven
 
@@ -40,9 +40,9 @@ Production backend approval SHALL follow harmless native feasibility tests of a 
 
 #### Scenario: Cancellation and descendants are bounded
 
-- **GIVEN** a worker forks, creates a new session or attempts to leave the initial process group
+- **GIVEN** a managed worker requests child execution or attempts forbidden direct creation, session changes or process-group escape
 - **WHEN** timeout, user cancellation or controller failure occurs
-- **THEN** all governed descendants terminate within the frozen cleanup bound; fixtures independently check survivors and resource ceilings rather than treating killpg alone as proof
+- **THEN** all governed workers terminate within five seconds; fixtures independently check survivors and resource ceilings rather than treating killpg alone as proof
 
 #### Scenario: Startup cannot bypass confinement
 
@@ -52,7 +52,8 @@ Production backend approval SHALL follow harmless native feasibility tests of a 
 
 #### Scenario: Native XPC boundary candidate must prove descendant cleanup
 
-- **WHEN** an ordinary-user ARM64 application runs bounded fixtures through an embedded XPC service
+- **GIVEN** the historical XPC candidate is retained as rejected feasibility evidence
+- **WHEN** its ordinary-user ARM64 application runs bounded fixtures through an embedded XPC service
 - **THEN** native acceptance MUST include normal subprocesses, detachment, cancellation, timeout, client death and service death with an independent observer
 - **AND** any survivor after five seconds, missing receipt or emergency cleanup MUST reject the candidate, without enabling production selection
 - **AND** repetition counts, architecture, build/profile identity, exact failure and observer cleanup MUST be recorded; 100 repetitions per lifecycle race are required before positive admission
@@ -317,3 +318,52 @@ Support SHALL be claimed only after a canonical signed publication passes fresh 
 
 - **WHEN** a link-name, owner-name or group-name field contains nonzero padding after its first NUL terminator
 - **THEN** verification MUST reject the raw field before TAR parsing, using the same strict UTF-8 and zero-padding rules as path fields
+
+### Requirement: Managed native process boundary
+
+The macOS ARM64 backend SHALL use broker-owned direct workers, each traced and confined before untrusted execution. Worker-created descendants SHALL be denied by the kernel; compatibility adapters SHALL request managed launches instead. This replaces unrestricted project subprocess compatibility. Broker requests SHALL be bounded, versioned and tied to private invocation channels and broker-owned handles, never arbitrary host PIDs or self-granted permissions.
+
+#### Scenario: Managed subprocess completes
+
+- **WHEN** an admitted Python or pinned native-tool adapter requests an allowed child operation
+- **THEN** the broker launches a separately confined direct worker and returns its output, status and lifecycle through the managed channel
+- **AND** all ten analyzers and the existing pip/Hatch/uv/Poetry acceptance corpus remain release requirements
+
+#### Scenario: Worker bypasses compatibility adapter
+
+- **WHEN** project code calls fork, vfork, posix_spawn, direct process-creation syscalls or unauthorized tracing, signals or IPC
+- **THEN** the OS denies the operation; unsupported behavior is incomplete evidence and never triggers host fallback
+
+#### Scenario: Broker dies during startup or execution
+
+- **WHEN** the broker or CLI dies before tracing, during confinement, across exec or while workers are running
+- **THEN** no unconfined project code runs and independent observation finds no surviving governed worker after five seconds
+- **AND** 100 repetitions of each lifecycle race are required before admission
+
+### Requirement: Release-signed managed boundary gate
+
+The managed candidate SHALL require a Developer ID Application identity, hardened runtime, approved entitlement set and successful notarization before native boundary execution is treated as acceptance. Missing identity or credentials SHALL fail preflight before candidate execution. Ad-hoc signing, skipped signature checks, caller-asserted receipts and unit-test mocks SHALL NOT establish native acceptance.
+
+#### Scenario: Signing prerequisites are unavailable
+
+- **WHEN** no matching Developer ID identity or notarization configuration is available
+- **THEN** the gate returns a specific blocked diagnostic without compiling or executing a substitute candidate or granting production eligibility
+
+#### Scenario: Signed boundary is incompatible
+
+- **WHEN** tracing, confinement, entitlements or notarization fails on the release candidate
+- **THEN** the candidate is rejected before production integration; neither unsigned execution nor process polling replaces the failed mechanism
+
+### Requirement: Automatic native runtime acquisition
+
+The existing review command SHALL automatically acquire a prebuilt signed Darwin ARM64 runtime on first use and show progress. It SHALL verify platform, ABI, policy/backend identity and payload digests, publish caches atomically and verify offline reuse. Customer execution SHALL require no Docker, VM, Homebrew, Xcode, administrator privilege or separately installed daemon.
+
+#### Scenario: First invocation and offline reuse
+
+- **WHEN** the ordinary command runs with an empty cache and later with a verified warm cache offline
+- **THEN** it first downloads and verifies the native runtime and later reuses exactly the admitted payload without additional customer setup
+
+#### Scenario: Native evidence reaches an older consumer
+
+- **WHEN** a consumer does not support the versioned native execution contract
+- **THEN** it rejects that evidence rather than assigning a Linux identity or protected authority

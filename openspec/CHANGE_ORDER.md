@@ -151,10 +151,10 @@ Security records under the repository security policy.
 |---:|---|---|---|---|
 | 1 | `archive/2026-08-23-ci-01-workflow-dispatch-core-ref-trust` | [#422](https://github.com/nold-ai/specfact-cli-modules/pull/422) | Shipped and archived: preserve paired feature-branch validation for non-manual events while restricting manual paired-core execution to literal `main` or `dev` refs | ancestry sync PR [#421](https://github.com/nold-ai/specfact-cli-modules/pull/421) |
 
-## Planned macOS ARM64 Capsule
+## Native macOS ARM64 Capsule — managed-process revision
 
-Owner-approved revision on 2026-09-30 (Europe/Berlin): #460 delivers macOS ARM64
-first, with Linux x86-64 regression coverage. Windows, Intel macOS and Linux
+Owner-approved revisions on 2026-09-30 and 2026-10-02 (Europe/Berlin): #460 delivers macOS ARM64
+first, with managed processes, automatic first-use native runtime acquisition and Linux x86-64 regression coverage. Windows, Intel macOS and Linux
 ARM64 are deferred, not implicitly supported or required for this delivery.
 
 | Change | Issue | Implementation dependencies |
