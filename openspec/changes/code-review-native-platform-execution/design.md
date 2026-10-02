@@ -1,5 +1,17 @@
 # Design: Dedicated macOS ARM64 Code Review Capsule
 
+## Distribution-signing split — 2026-10-02 (Europe/Berlin)
+
+This owner-approved revision supersedes the earlier Developer-ID-first milestone.
+Optional [#488](https://github.com/nold-ai/specfact-cli-modules/issues/488) /
+[`code-review-macos-developer-id-distribution`](../code-review-macos-developer-id-distribution/proposal.md)
+is blocked by #460; it does not block this change, shipment or publication.
+"Signed runtime" in this change means native signatures plus an authenticated
+SpecFact payload manifest, not a mandatory Apple publisher identity. Preserve
+historical experiments as evidence, without treating their old signing policy as
+current acceptance. Sandbox, dependency, lifecycle and real-installation gates
+remain mandatory. Apple credentials do not solve the startup ownership gap.
+
 ## Managed-process revision — 2026-10-02 (Europe/Berlin)
 
 The owner approved a managed-process contract for native macOS ARM64. This
@@ -24,20 +36,24 @@ fork/vfork/posix_spawn and tracing/IPC escapes; compatibility adapters must
 request bounded launches through private inherited channels. Python interception is not the security boundary. Acquisition,
 build/preparation, sealed analyzers and project execution remain separate domains.
 
-The first milestone is release-signed boundary proof: Developer ID, hardened
-runtime, tracing and notarization must work together. No ad-hoc fallback is an
-admission result. Independently observe every startup transition, broker/CLI
-death, timeout, cancellation and concurrent requests, with no survivor after
-five seconds and 100 repetitions per lifecycle race. Missing credentials block
-signed execution before a substitute candidate is compiled or run; failed signed
-tracing or confinement rejects this candidate. The five-second bound and 100
-repetitions per lifecycle race are mandatory admission gates, not tunable defaults.
+The first milestone is boundary proof using the exact initial distribution
+configuration: build-time ad-hoc signatures for our native components, verified
+upstream signatures where applicable, and SpecFact-signed manifests covering the
+final payload bytes. Record and test hardened-runtime settings, narrow reviewed
+entitlements, tracing and confinement together. Paid Developer ID membership and
+notarization are optional follow-up work; missing Apple credentials do not block
+compilation, execution, shipment or canonical GHCR publication.
+Independently observe every startup transition, broker/CLI death, timeout,
+cancellation and concurrent requests, with no survivor after five seconds and
+100 repetitions per lifecycle race. Invalid native signatures, failed tracing or
+confinement, or missing mandatory evidence reject the candidate. These lifecycle
+bounds are mandatory admission gates, not tunable defaults.
 Production integration, version 0.51.0 (or next available minor), registry and
 publication changes follow the gate and complete acceptance, not this revision.
 
 Implementation checkpoint: [MANAGED_BOUNDARY_STATUS.md](MANAGED_BOUNDARY_STATUS.md)
-records the unresolved creation-to-tracing ownership gap and signing prerequisite
-tool. The candidate has not passed admission.
+records the unresolved creation-to-tracing ownership gap and optional Apple
+credential tool. The candidate has not passed admission.
 
 ## Baseline and product boundary
 
@@ -55,7 +71,7 @@ Carry forward #473's manager discovery, source locks, worker separation, pytest 
 
 ## Isolation feasibility before production
 
-Evaluate the release-signed managed broker against the harmless allow/deny fixtures in [FEASIBILITY.md](FEASIBILITY.md). The earlier minimal Seatbelt helper, App Sandbox and XPC comparisons remain historical experiments; they are not parallel implementation requirements for this revision. Preserve their parser and lifecycle failures as negative evidence, never as proof that the managed candidate passes.
+Evaluate the initial-distribution managed broker against the harmless allow/deny fixtures in [FEASIBILITY.md](FEASIBILITY.md). The earlier minimal Seatbelt helper, App Sandbox and XPC comparisons remain historical experiments; they are not parallel implementation requirements for this revision. Preserve their parser and lifecycle failures as negative evidence, never as proof that the managed candidate passes.
 
 Prove confinement before untrusted Python, plugins, build hooks or native-library initializers run. Account for inherited file descriptors, IPC handles, dyld injection and system-library initialization. Define a macOS-specific observation contract; do not claim Linux's static-ELF or /proc proof on macOS.
 
@@ -81,7 +97,7 @@ Metadata read on 2026-09-30 confirms macOS ARM64 artifacts for Semgrep 1.144.0, 
 
 ## Distribution and compatibility
 
-Verify applicable Apple signing, notarization, quarantine, entitlements and third-party extension loading through actual customer installation. Review library-validation exceptions narrowly for the target worker; never disable host protections or broaden the trusted control domain simply to make an extension load.
+Verify native signatures, quarantine, hardened-runtime settings, entitlements and third-party extension loading through actual ordinary-user installation on a separate ARM64 Mac or clean independent macOS environment. The default-protection CLI/GHCR route must work without customer signing or build tools. Do not strip quarantine, disable Gatekeeper or require security overrides; a concrete incompatibility is a failed acceptance case. Apple Developer ID and notarization are deferred to #488. Review library-validation exceptions narrowly for the target worker; never disable host protections or broaden the trusted control domain simply to make an extension load.
 
 Specify versioned platform evidence and paired core scope only where real compatibility tests demand it. Preserve local-versus-protected authority boundaries and released verdict semantics without claiming future C15 guarantees.
 
@@ -91,13 +107,13 @@ Run native macOS ARM64 customer acceptance for each advertised OS/Python combina
 
 Docker Desktop runs Linux containers on macOS. Use it only for COPY-only packaging of a payload already built and tested on native macOS; Docker execution is not Darwin acceptance. A local candidate export must retain `darwin/arm64` OCI config identity, payload digests and explicit experimental status. Do not alter historical Linux image identities. Candidate tooling must not push or grant production eligibility.
 
-Protected GHCR promotion requires the final signed/notarized payload, complete admitted dependency closure, native acceptance and Linux regressions, and all mandatory repository gates. Bind acceptance and provenance to the exact final distributed digest. A successful Docker export or green packaging PR alone is insufficient. The production publisher must reject missing or stale proof. Signing credentials belong only in the protected release environment, never the Docker context or PR builds.
+Protected GHCR promotion requires the exact final initial-distribution payload with valid native signatures and a SpecFact-signed manifest, complete admitted dependency closure, native acceptance and Linux regressions, and all mandatory repository gates. Bind acceptance and provenance to the exact final distributed digest. A successful Docker export or green packaging PR alone is insufficient. The production publisher must reject missing or stale proof. SpecFact manifest-signing credentials belong only in the protected release environment, never the Docker context or PR builds. Apple credentials are not required for this initial publication; their protected integration belongs to #488.
 
 ## Delivery and rollback
 
 The earlier feasibility delivery provided the scoped contract, measured native experiments in [NATIVE_RESULTS.md](NATIVE_RESULTS.md), and bounded local candidate tooling: a COPY-only Docker fixture, strict OCI verifier and regression tests. The experiments establish partial launch/confinement/analyzer and packaging evidence; the tested descendant-lifecycle designs fail the required contract, so production backend approval remains blocked.
 
-The current approved milestone must first prove the release-signed managed boundary. It must then resolve the outstanding lifecycle and dependency-closure gaps, complete the remaining proof obligations in [FEASIBILITY.md](FEASIBILITY.md), and freeze supported OS builds, backend, admitted dependencies, signing approach and limits from passing evidence before obtaining bounded production-design approval. Production implementation with focused failing-first tests, Linux/native acceptance and canonical signed publication follows that approval. Repeat customer installation after publication before closing #460 or archiving.
+The current approved milestone must first prove the initial-distribution managed boundary. It must then resolve the outstanding lifecycle and dependency-closure gaps, complete the remaining proof obligations in [FEASIBILITY.md](FEASIBILITY.md), and freeze supported OS builds, backend, admitted dependencies, signing approach and limits from passing evidence before obtaining bounded production-design approval. Production implementation with focused failing-first tests, Linux/native acceptance and canonical signed publication follows that approval. Repeat customer installation after publication before closing #460 or archiving.
 
 A failing mandatory feasibility case blocks production. Retain results and revise the design explicitly; do not silently downgrade the contract. Withdraw or supersede a faulty macOS publication while preserving Linux support, historical signatures and diagnostic evidence. Effort remains unestimated until feasibility establishes a workable backend.
 
@@ -131,3 +147,16 @@ all sixteen detached lifecycle cases failed, as recorded in
 100 repetitions per lifecycle race remain mandatory for the managed candidate;
 positive admission also requires a mechanism review and the remaining feasibility
 groups. Ordinary-user installation remains mandatory. The unrestricted subprocess contract in this historical experiment is superseded by the managed-process revision above. No publication follows from fixture execution.
+
+## Distinct trust evidence
+
+Versioned runtime inspection/evidence must distinguish SpecFact manifest
+authentication, per-component native signing mode, notarization status and
+boundary verification. An ad-hoc signature is not authenticated Apple publisher
+identity. Credential availability, signature verification and notarization never
+alone confer boundary acceptance or production eligibility. Existing Apple
+credential preflight is optional and cannot be called as an initial-release gate.
+
+Apple documentation inspected 2026-10-02: [ARM64 ad-hoc signing](https://support.apple.com/guide/security/rosetta-2-on-a-mac-with-apple-silicon-secebb113be1/web)
+and [trusted execution](https://developer.apple.com/forums/thread/706442).
+Their guidance does not prove our cross-machine installation route.

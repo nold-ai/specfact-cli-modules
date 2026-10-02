@@ -1,51 +1,64 @@
-# Managed macOS boundary milestone
+# Managed macOS boundary prerequisites
 
-This directory currently contains **maintainer prerequisite checks only**. It is
-not a runtime, broker implementation, signed boundary proof or customer setup
-procedure. Production selection remains disabled. The approved contract and
-acceptance tasks live in
-[`code-review-native-platform-execution`](../../openspec/changes/code-review-native-platform-execution/design.md).
+This directory contains prerequisite checks, not a broker implementation or
+boundary proof. Production selection remains disabled. The current acceptance
+contract is [native delivery](../../openspec/changes/code-review-native-platform-execution/design.md).
 
-## Check release-signing prerequisites
+## Initial distribution (default)
 
-On an ARM64 Mac configured for maintainer builds:
+```sh
+python scripts/macos_managed_boundary/preflight.py
+```
+
+On native ARM64 macOS this checks availability of the system code-signing tool
+without accessing the keychain or a notary service. Exit 0 and
+`initial_prerequisites_available` mean only these prerequisites are present.
+`signed_boundary_verified` and `production_approved` always remain false.
+This result verifies no artifact, signature, hardened-runtime behavior or sandbox.
+A corrupt payload, invalid native signature or missing boundary proof must still
+fail the eventual admission gate.
+
+The intended initial distribution uses build-time ad-hoc native signatures,
+verified upstream signatures where applicable and SpecFact-signed manifests
+covering final payload bytes. Hardened-runtime settings and narrow reviewed
+entitlements must be tested with tracing and confinement. Developers require no
+Apple account, local re-signing, compiler or Xcode. Paid Apple credentials and
+notarization do not block initial implementation, shipment or canonical GHCR
+publication. The actual independent-Mac CLI/GHCR route must pass with default
+protections; do not strip quarantine, disable Gatekeeper or require security
+overrides to satisfy acceptance.
+
+## Optional Apple follow-up
+
+[#488](https://github.com/nold-ai/specfact-cli-modules/issues/488) /
+[`code-review-macos-developer-id-distribution`](../../openspec/changes/code-review-macos-developer-id-distribution/proposal.md)
+is blocked by #460 and remains optional and unscheduled. Its explicit check is:
 
 ```sh
 python scripts/macos_managed_boundary/preflight.py \
+  --signing-mode developer-id \
   --identity '<Developer ID Application certificate SHA-1>' \
   --team '<Apple Developer Team ID>' \
   --notary-profile '<existing notarytool keychain profile>'
 ```
 
 Only public certificate identifiers and a keychain profile name are accepted;
-never supply private keys, certificate passwords or Apple credentials in these
-arguments. Maintainers configure their signing key and notarization profile
-through their approved credential-management process. Customers need none of
-these credentials, a compiler, Xcode, or this script.
+never supply private keys or passwords. Apple credential arguments require the
+explicit mode. This retains the fail-closed certificate/team validation and
+bounded read-only `notarytool history` probe. Exit 2 means this optional check is
+blocked; it cannot block initial delivery. Exit 0 / `credentials_available`
+proves neither private-key access, team association nor artifact acceptance.
 
-The preflight reads valid signing identities and authenticates a read-only
-`notarytool history` request. It prints a redacted JSON prerequisite receipt and
-exits 2 when blocked. It does not compile, sign, submit, download or execute a
-candidate. Exit 0 means only that these credential probes succeeded. A successful
-probe does not prove private-key signing access, team association of the notary
-profile, entitlement acceptance, artifact notarization, or runtime compatibility.
-Those checks belong to the actual signed artifact pipeline.
-
-Before any acceptance run, that pipeline must sign the broker/bootstrap with
-Developer ID and hardened runtime, verify exact identity and entitlements, obtain
-and validate notarization for the final bundle, and bind observer results to its
-final digest and OS build. No receipt supplied by a caller can waive those steps.
-No ad-hoc fallback is provided here.
+Developer ID signing, notarization and applicable stapling require protected
+maintainer credentials and fresh exact-artifact boundary/loading/installation
+acceptance. Customers need none of those credentials. Successful initial ad-hoc
+acceptance does not approve differently signed bytes.
 
 ## Evidence limits
 
-Unit tests use synthetic command results and exercise rejection paths, including
-missing/ad-hoc identities, wrong certificate class/team, notary failures and
-malformed responses. They do not run a worker or prove tracing/confinement. The
-independent five-second survivor checks and 100 repetitions of each startup and
-lifecycle race remain mandatory before production integration.
-
-The creation-to-tracing interval is a separate design obligation: withholding
-untrusted execution is not proof that an untraced bootstrap disappears after
-broker death. Do not proceed to analyzer integration while ownership during that
-interval is unresolved.
+Unit tests use synthetic command results and prove routing and rejection behavior
+only. No caller-supplied receipt grants production eligibility. Independent
+five-second survivor checks and 100 repetitions of each startup/lifecycle race
+remain mandatory. The creation-to-tracing ownership gap must be resolved before
+analyzer integration; withholding project execution does not prove cleanup of an
+untraced bootstrap after broker death.

@@ -221,7 +221,7 @@ requirements:
       scenario_id: signed-customer-release-acceptance
       method: inspection
       intent: "Inspect planned acceptance: Apple distribution and loading controls apply."
-      observable: "applicable signing/notarization/quarantine checks and the approved library-loading policy pass without disabling host protections; final payload hashes match the shipped signed manifest. Planned maturity only; future native execution evidence is required by FEASIBILITY.md and tasks.md; no runtime pass is claimed."
+      observable: "initial-distribution native-signature/quarantine checks and the approved hardening/library-loading policy pass without disabling host protections; final payload hashes match the shipped signed manifest. Planned maturity only; future native execution evidence is required by FEASIBILITY.md and tasks.md; no runtime pass is claimed."
     - case_id: 460-8-4
       scenario_id: signed-customer-release-acceptance
       method: inspection
@@ -341,7 +341,7 @@ requirements:
       method: inspection
       intent: 'Inspect planned acceptance: Broker dies during startup or execution.'
       observable: "No unconfined project code runs across startup, tracing, confinement or exec; independent observation finds no governed survivor after five seconds following broker/CLI death, timeout or cancellation, including concurrent requests, with 100 repetitions per lifecycle race. Planned inspection only; signed runtime and publication acceptance remain unproven."
-  openspec:code-review-native-platform-execution:review-native-platform-execution:release-signed-managed-boundary-gate:
+  openspec:code-review-native-platform-execution:review-native-platform-execution:initial-distribution-managed-boundary-gate:
     rationale: Owner-approved managed-process delivery; executable signed acceptance is still required.
     stakeholder_refs:
     - nold-ai/specfact-cli-modules#460
@@ -351,15 +351,40 @@ requirements:
       locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
     verification_cases:
     - case_id: 460-10-1
-      scenario_id: release-signed-managed-boundary-gate
+      scenario_id: initial-distribution-managed-boundary-gate
       method: inspection
-      intent: 'Inspect planned acceptance: Signing prerequisites are unavailable.'
-      observable: "Missing Developer ID identity or notarization configuration blocks preflight before compiling or executing a substitute candidate; ad-hoc signing, skipped checks, caller-asserted receipts and mocks cannot establish native acceptance. Planned inspection only; signed runtime and publication acceptance remain unproven."
+      intent: 'Inspect planned acceptance: Apple credentials are unavailable.'
+      observable: "Missing Apple credentials do not block initial-distribution preparation/testing, shipment or canonical publication and do not trigger credential probes. Native signatures, authenticated payloads and independent boundary proof remain required; prerequisite results alone never grant eligibility. Planned inspection only; signed runtime and publication acceptance remain unproven."
     - case_id: 460-10-2
-      scenario_id: release-signed-managed-boundary-gate
+      scenario_id: initial-distribution-managed-boundary-gate
       method: inspection
-      intent: 'Inspect planned acceptance: Signed boundary is incompatible.'
-      observable: "Developer ID signing, hardened runtime, approved entitlements, tracing, confinement and notarization must work together; a failure rejects the candidate before production integration, without unsigned or process-polling substitution. Planned inspection only; signed runtime and publication acceptance remain unproven."
+      intent: 'Inspect planned acceptance: Initial-distribution boundary is incompatible.'
+      observable: "Exact initial-distribution native signatures, hardened-runtime settings, narrow entitlements, tracing and confinement must work together; a failure rejects the candidate before production integration, without unsigned or process-polling substitution. Planned inspection only; signed runtime and publication acceptance remain unproven."
+    - case_id: 460-10-3
+      scenario_id: initial-distribution-managed-boundary-gate
+      method: inspection
+      intent: 'Inspect planned acceptance: Integrity or proof is missing.'
+      observable: 'Corrupt payloads, invalid native signatures and absent independent boundary evidence reject admission even with Apple credentials. Planned only; runtime proof remains unavailable.'
+  openspec:code-review-native-platform-execution:review-native-platform-execution:distinct-native-trust-evidence:
+    rationale: Keep artifact authentication, native signatures, Apple trust and sandbox proof distinct.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#460
+    - nold-ai/specfact-cli-modules#488
+    touchpoints:
+    - id: openspec-source-spec
+      kind: config_file
+      locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
+    verification_cases:
+    - case_id: 460-12-1
+      scenario_id: distinct-native-trust-evidence
+      method: inspection
+      intent: 'Inspect planned acceptance: Initial native trust is inspected.'
+      observable: 'Versioned inspection distinguishes manifest authentication, per-component native signing mode, notarization status and independent boundary verification. Ad-hoc signing does not claim Apple publisher trust. Planned only; runtime proof remains unavailable.'
+    - case_id: 460-12-2
+      scenario_id: distinct-native-trust-evidence
+      method: inspection
+      intent: 'Inspect planned acceptance: Default-protection installation is blocked.'
+      observable: 'Independent-Mac actual CLI/GHCR installation must pass under an ordinary user with default protections and no Apple credentials, re-signing or build tools. Host-protection failures remain explicit; no quarantine stripping, Gatekeeper disabling or security overrides. Planned only; installation remains unproven.'
   openspec:code-review-native-platform-execution:review-native-platform-execution:automatic-native-runtime-acquisition:
     rationale: Owner-approved managed-process delivery; executable signed acceptance is still required.
     stakeholder_refs:

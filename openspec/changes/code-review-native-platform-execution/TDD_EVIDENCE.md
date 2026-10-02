@@ -126,3 +126,60 @@ native capsule is unsupported; zero findings is not clean-review evidence. The
 normal staged-file hook and protected Linux CI remain separate review gates.
 
 Final smart-test suite: 3338 passed, one Linux-only skip (209.65 seconds), including all 15 observer tests. Normal commit hooks passed, including the staged explicit-files review and 28 contract tests. This hook result does not replace the unsupported native capsule review or protected PR assurance. Final independent native audit: all 53 recorded process identities absent.
+
+## Optional Apple distribution split — 2026-10-02 (Europe/Berlin)
+
+The owner approved replacing Developer-ID-first admission with exact initial
+ad-hoc distribution acceptance. Updated the normative proposal/design/feasibility,
+scenarios, planned mappings, tasks, status and change order before modifying tests
+or preflight. Created optional OpenSpec `code-review-macos-developer-id-distribution`
+and public story #488; verified parent #163, SpecFact CLI project/Todo, no milestone,
+#488 blocked by #460, #460 blocking #488, and #460 still blocked only by completed
+#459. Updated #460's current scope while preserving superseded historical evidence.
+
+Added five prerequisite-routing cases before implementation. Focused execution
+reported **5 failed, 21 passed**: no initial checker/Path import/mode existed.
+Implemented default initial checks without keychain/notary probes and explicit
+optional Developer ID mode. Re-run: **26 passed**. The optional Apple checker keeps
+its original fail-closed certificate/team/notary checks. Default initial checks
+only verify native host and system signing-tool availability; they inspect no
+artifact and grant no signature, boundary or publication acceptance.
+
+Actual local default preflight returned exit 0 / `initial_prerequisites_available`,
+`signing_mode=ad-hoc`, `signed_boundary_verified=false`, `production_approved=false`.
+Explicit `--signing-mode developer-id` without credentials returned exit 2 / blocked.
+Neither command launched a worker or contacted a notary service.
+
+Strict OpenSpec validation passed for both changes. Staged Requirements evidence
+passed for both sources at **planned** maturity; implementation evidence remains
+**not-yet-available**. Format, type-check, lint, YAML, bundle imports and full-payload
+signature/version gates passed; seven module manifests remain unchanged. No module
+version bump is warranted by this prerequisite/scope change; the completed native
+capability still requires its minor bump and full final-artifact acceptance.
+
+Raw RED logs and review/test reports remain ignored or outside the repository.
+This revision does not resolve the creation-to-tracing ownership gap, implement a
+native capsule backend or prove installation on another Mac. Those requirements
+remain mandatory. Neither OpenSpec change is complete or ready to archive.
+
+Final scope-split verification: 28 contracts passed; full suite **3,490 passed,
+one Linux-only skip**; serial smart-test **3,490 passed, one Linux-only skip,
+five subtests passed**. The first smart run had two failures in unchanged runner
+assurance tests while other checks were active. One isolated test passed, then
+both the serial full suite and serial smart rerun passed. The cause was not
+established; no runner code, expectations or security gate was weakened.
+
+The independent read-only review-agent reviewed the complete scope-split patch
+and new optional change: **No findings**. Explicit-files maintainer Code Review
+with the existing isolated CrossHair/pytest environment returned
+**PASS_WITH_ADVISORY**: seven MISSING_ICONTRACT warnings on the standard-library
+preflight helpers, covered by the existing narrow bootstrap exception in
+NATIVE_COMPATIBILITY_RESULTS.md. No other warnings remained. The initial ambient
+CrossHair interpreter could not import pytest; using the admitted isolated review
+tools resolved that environment warning.
+
+Actual public native `specfact code review run --enforcement changed --bug-hunt`
+returned exit 1 / **FAIL**, assurance **UNKNOWN**, with
+`unsupported_controller_platform`. That remaining native-backend limitation is
+not repaired or waived by the signing split. No boundary worker, independent-Mac
+installation, merge or GHCR publication was performed by this revision.

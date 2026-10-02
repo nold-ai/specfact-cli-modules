@@ -24,7 +24,7 @@ Code Review SHALL add a dedicated macOS ARM64 capsule while preserving Linux x86
 
 ### Requirement: Native isolation capability evidence
 
-Production backend approval SHALL follow harmless native feasibility tests of the release-signed managed broker/bootstrap against the capability contract. Earlier Seatbelt, App Sandbox and XPC experiments remain historical evidence; they are not alternate admission routes. The managed candidate is not preapproved. Mandatory boundaries SHALL cover filesystem reads/writes, network and IPC access, inherited descriptors, startup/load-path integrity, resource limits and complete child-process lifecycle. Exact mechanisms, OS support and numeric limits SHALL be frozen from measured results before production implementation.
+Production backend approval SHALL follow harmless native feasibility tests of the initial-distribution managed broker/bootstrap against the capability contract. Earlier Seatbelt, App Sandbox and XPC experiments remain historical evidence; they are not alternate admission routes. The managed candidate is not preapproved. Mandatory boundaries SHALL cover filesystem reads/writes, network and IPC access, inherited descriptors, startup/load-path integrity, resource limits and complete child-process lifecycle. Exact mechanisms, OS support and numeric limits SHALL be frozen from measured results before production implementation.
 
 #### Scenario: Isolation and cleanup are proven
 
@@ -201,7 +201,7 @@ The macOS backend SHALL carry forward pip/pip-tools, Hatch, uv and Poetry discov
 
 ### Requirement: Signed customer release acceptance
 
-Support SHALL be claimed only after a canonical signed publication passes fresh ordinary-user installation on every advertised macOS/ABI combination and Linux regression acceptance. Distribution SHALL verify applicable Apple code signing, notarization, quarantine and third-party library loading through the real install route. Candidate/source-tree results SHALL NOT substitute for public release evidence.
+Support SHALL be claimed only after a canonical signed publication passes fresh ordinary-user installation on every advertised macOS/ABI combination and Linux regression acceptance. Distribution SHALL verify native signatures, quarantine, hardened-runtime/entitlement settings and third-party library loading through the real install route. Developer ID and notarization SHALL be optional #488 follow-up work, not initial-release prerequisites. Candidate/source-tree results SHALL NOT substitute for public release evidence.
 
 #### Scenario: Customer installs the published capsule
 
@@ -219,7 +219,7 @@ Support SHALL be claimed only after a canonical signed publication passes fresh 
 
 - **GIVEN** the final helper/runtime has been packaged and signed in the approved order
 - **WHEN** a fresh customer installation launches with normal platform protections and loads project extensions
-- **THEN** applicable signing/notarization/quarantine checks and the approved library-loading policy pass without disabling host protections; final payload hashes match the shipped signed manifest
+- **THEN** initial-distribution native-signature/quarantine checks and the approved hardening/library-loading policy pass without disabling host protections; final payload hashes match the shipped signed manifest
 
 #### Scenario: Linux regression and rollback
 
@@ -340,19 +340,39 @@ The macOS ARM64 backend SHALL use broker-owned direct workers, each traced and c
 - **THEN** no unconfined project code runs and independent observation finds no surviving governed worker after five seconds
 - **AND** 100 repetitions of each lifecycle race are required before admission
 
-### Requirement: Release-signed managed boundary gate
+### Requirement: Initial-distribution managed boundary gate
 
-The managed candidate SHALL require a Developer ID Application identity, hardened runtime, approved entitlement set and successful notarization before native boundary execution is treated as acceptance. Missing identity or credentials SHALL fail preflight before candidate execution. Ad-hoc signing, skipped signature checks, caller-asserted receipts and unit-test mocks SHALL NOT establish native acceptance.
+The managed candidate SHALL prove its boundary using the exact initial distribution configuration: build-time ad-hoc signatures for our native components, verified upstream signatures where applicable and SpecFact-signed manifests covering final payload bytes. Hardened-runtime settings and narrow reviewed entitlements SHALL be recorded and tested with tracing and confinement. Missing Apple Developer ID credentials or notarization SHALL NOT block compilation, native execution, shipment or canonical GHCR publication. Invalid native signatures, corrupt payloads, failed confinement, missing boundary evidence, caller-asserted receipts and unit-test mocks SHALL NOT establish native acceptance. Optional Apple credential preflight SHALL NOT be an initial-release dependency. #460 SHALL block optional #488, never the reverse.
 
-#### Scenario: Signing prerequisites are unavailable
+#### Scenario: Apple credentials are unavailable
 
-- **WHEN** no matching Developer ID identity or notarization configuration is available
-- **THEN** the gate returns a specific blocked diagnostic without compiling or executing a substitute candidate or granting production eligibility
+- **WHEN** no Developer ID identity or notarization configuration is available
+- **THEN** initial-distribution preparation and boundary testing may proceed without Apple credential probes
+- **AND** this prerequisite result alone grants no boundary acceptance or production eligibility
 
-#### Scenario: Signed boundary is incompatible
+#### Scenario: Initial-distribution boundary is incompatible
 
-- **WHEN** tracing, confinement, entitlements or notarization fails on the release candidate
+- **WHEN** native signatures, tracing, confinement, hardening or entitlements fail on the exact candidate
 - **THEN** the candidate is rejected before production integration; neither unsigned execution nor process polling replaces the failed mechanism
+
+#### Scenario: Integrity or proof is missing
+
+- **WHEN** the payload is corrupt, its native signatures are invalid or required independent boundary evidence is absent
+- **THEN** admission rejects the candidate even if Apple credentials are available
+
+### Requirement: Distinct native trust evidence
+
+Versioned inspection and evidence SHALL distinguish SpecFact manifest authentication, per-component native signing mode, notarization status and independent boundary verification. Ad-hoc signing SHALL NOT be reported as authenticated Apple publisher identity. Initial customer installation SHALL pass on a separate ARM64 Mac or clean independent macOS environment through the real CLI/GHCR route under an ordinary user with default protections; customers SHALL require no Apple credentials, local re-signing or build tools. Quarantine SHALL NOT be stripped, Gatekeeper SHALL NOT be disabled and security overrides SHALL NOT satisfy automatic installation acceptance.
+
+#### Scenario: Initial native trust is inspected
+
+- **WHEN** a verified initial-distribution runtime uses ad-hoc native signatures and has no notarization
+- **THEN** inspection distinguishes these facts from manifest authentication and boundary verification without claiming Apple publisher trust
+
+#### Scenario: Default-protection installation is blocked
+
+- **WHEN** the actual independent-Mac CLI/GHCR route is blocked by quarantine or another host protection
+- **THEN** installation acceptance fails with the concrete incompatibility rather than bypassing the protection or claiming support
 
 ### Requirement: Automatic native runtime acquisition
 

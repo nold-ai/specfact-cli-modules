@@ -1,4 +1,4 @@
-"""Check maintainer signing prerequisites; never build, execute or admit a runtime."""
+"""Check native prerequisites or optional Apple credentials; never admit a runtime."""
 
 from __future__ import annotations
 
@@ -8,6 +8,7 @@ import platform
 import re
 import subprocess
 import sys
+from pathlib import Path
 from typing import Any
 
 
@@ -86,16 +87,37 @@ def preflight(identity: str, team: str, notary_profile: str) -> dict[str, Any]:
     )
 
 
+def initial_preflight() -> dict[str, Any]:
+    """Check initial native prerequisites without probing Apple credentials."""
+    if platform.system() != "Darwin" or platform.machine() != "arm64":
+        return receipt("blocked", "Run initial-distribution boundary tests on native ARM64 macOS.")
+    if not Path("/usr/bin/codesign").is_file():
+        return receipt("blocked", "The system native code-signing tool is unavailable.")
+    result = receipt(
+        "initial_prerequisites_available",
+        "Native prerequisite checks passed only. Final native signatures, authenticated "
+        "payloads, hardening, independent boundary proof and installation acceptance remain required.",
+    )
+    result["signing_mode"] = "ad-hoc"
+    return result
+
+
 def main() -> int:
     """Print a redacted prerequisite receipt with a nonzero blocked exit status."""
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--signing-mode", choices=("initial", "developer-id"), default="initial")
     parser.add_argument("--identity", default="", help="Developer ID Application certificate SHA-1, not a private key")
     parser.add_argument("--team", default="", help="Apple Developer Team ID")
     parser.add_argument("--notary-profile", default="", help="Existing notarytool keychain profile name")
     args = parser.parse_args()
-    result = preflight(args.identity, args.team, args.notary_profile)
+    if args.signing_mode == "initial":
+        if args.identity or args.team or args.notary_profile:
+            parser.error("Apple credential arguments require --signing-mode developer-id")
+        result = initial_preflight()
+    else:
+        result = preflight(args.identity, args.team, args.notary_profile)
     sys.stdout.write(json.dumps(result, sort_keys=True, indent=2) + "\n")
-    return 0 if result["status"] == "credentials_available" else 2
+    return 0 if result["status"] in {"credentials_available", "initial_prerequisites_available"} else 2
 
 
 if __name__ == "__main__":

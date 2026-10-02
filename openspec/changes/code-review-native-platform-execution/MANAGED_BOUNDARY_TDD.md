@@ -5,6 +5,10 @@ Worktree branch: `codex/macos-native-capsule-runtime`.
 Scope: approved specification revision and maintainer signing preflight, not a
 production backend or signed boundary implementation.
 
+The Developer-ID-first milestone recorded below is historical. The owner-approved
+2026-10-02 signing split makes that utility optional; current acceptance is in
+FEASIBILITY.md and the new scope-split evidence in TDD_EVIDENCE.md.
+
 ## Specification before tests
 
 Updated proposal, design, feasibility, scenarios, tasks, requirement mapping and

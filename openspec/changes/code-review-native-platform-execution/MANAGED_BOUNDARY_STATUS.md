@@ -1,10 +1,23 @@
 # Managed boundary implementation checkpoint
 
 Recorded 2026-10-02 (Europe/Berlin). **Production integration remains blocked.**
-The owner-approved managed-process scope is retained; no acceptance requirement
-has been relaxed and no native support release is claimed.
+The owner-approved managed-process scope is retained; no requirement
+for isolation, integrity or lifecycle has been relaxed and no native support
+release is claimed. Apple distribution requirements were explicitly deferred.
 
-## Implemented prerequisite
+## Distribution-signing split — 2026-10-02 (Europe/Berlin)
+
+This owner-approved revision supersedes the earlier Developer-ID-first milestone.
+Optional [#488](https://github.com/nold-ai/specfact-cli-modules/issues/488) /
+[`code-review-macos-developer-id-distribution`](../code-review-macos-developer-id-distribution/proposal.md)
+is blocked by #460; it does not block this change, shipment or publication.
+"Signed runtime" in this change means native signatures plus an authenticated
+SpecFact payload manifest, not a mandatory Apple publisher identity. Preserve
+historical experiments as evidence, without treating their old signing policy as
+current acceptance. Sandbox, dependency, lifecycle and real-installation gates
+remain mandatory. Apple credentials do not solve the startup ownership gap.
+
+## Optional Apple prerequisite utility
 
 `scripts/macos_managed_boundary/preflight.py` checks explicit maintainer signing
 configuration, valid Developer ID Application identity and notarization profile
@@ -59,13 +72,14 @@ impossible.
    success cannot alone prove removal of an unscheduled/suspended worker.
 2. Keep the pre-trace broker-death case mandatory in independent survivor testing.
    A source review is not a substitute for the required signed execution proof.
-3. Provide the maintainer release-signing configuration. Verify signing access,
-   hardened runtime, entitlement compatibility and actual artifact notarization;
-   credential availability is only a prerequisite.
+3. Verify the exact initial-distribution native signatures, hardened-runtime
+   settings and narrow entitlements against final payload bytes. Apple credentials
+   and notarization belong to optional #488; they do not block this milestone.
 4. Pass the complete boundary suite, five-second limit and 100 repetitions of each
    lifecycle race before integrating adapters, analyzers or runtime provisioning.
 
-No unsigned prototype is substituted for this gate. No production broker, managed
+Ad-hoc signed initial-distribution builds are admitted only after the complete
+boundary suite passes; unsigned execution never substitutes for valid signatures. No production broker, managed
 adapter, automatic runtime downloader or signed macOS artifact is implemented in
 this checkpoint. The completed capability still requires its minor version bump,
 manifest/signature/registry changes, full acceptance and PR review loop. This
@@ -85,7 +99,7 @@ The hypothesis requires every pre-trace bootstrap to remain in that group and
 execute only fixed trusted code; after admission, the existing tracing/confinement
 contract must still hold. It also requires proof of ordinary-user registration,
 no unwanted restart or persistent job, authenticated CLI connection, cleanup
-within five seconds and all signed startup races on each supported OS. The manual
+within five seconds and all initial-distribution startup races on each supported OS. The manual
 does not guarantee that bound or establish those properties. No launchd job was
-registered and no unsigned boundary prototype was substituted for signed proof.
+registered; no initial-distribution boundary proof has yet been obtained.
 The architecture and production status remain unchanged pending that evidence.

@@ -152,3 +152,18 @@ offline reuse rejects mismatch before dependency admission or analyzer launch.
 The design and existing stale-cache scenario agree. These are planning-contract
 clarifications only: prerequisite release/design approval gates remain in place,
 no backend, policy replacement, or native platform support is implemented.
+
+## Optional Apple distribution scope — 2026-10-02
+
+Both native and optional Apple OpenSpec changes pass strict validation. Staged
+Requirements evidence passes for two sources at planned maturity; no executable
+runtime evidence is claimed. GitHub readback confirms optional #488 shares
+parent #163/project SpecFact CLI, remains Todo with no milestone and is blocked
+by #460, without a reverse edge. #460 retains its completed #459 dependency.
+
+Prerequisite routing has focused RED/GREEN and actual local command evidence.
+Repository gates and independent review passed; exact test counts, initial smart
+failures followed by successful serial reruns, the documented bootstrap advisory
+exception and actual unsupported native capsule result are in TDD_EVIDENCE.md.
+The source-derived startup gap and default-protection independent installation
+remain mandatory future gates. Neither active change is ready to archive.

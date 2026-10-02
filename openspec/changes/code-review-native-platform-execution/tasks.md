@@ -15,7 +15,7 @@
 - [ ] Verify exact released core/module, layout #459, portable runtime #473, signed policy/artifact and consumer identities.
 - [ ] Enumerate candidate macOS builds and CPython 3.11–3.13; identify native runners and physical-Mac smoke.
 - [ ] Audit complete ARM64 Python/native/build dependency closure and resolve BasedPyright/Node prohibition without metadata or signature bypass.
-- [ ] Evaluate the release-signed managed broker/bootstrap against every FEASIBILITY.md proof group with positive controls; preserve earlier alternatives as historical evidence.
+- [ ] Evaluate the initial-distribution managed broker/bootstrap against every FEASIBILITY.md proof group with positive controls; preserve earlier alternatives as historical evidence.
 - [ ] Prove preparation/build-hook boundaries, Mach-O/dyld/native extension behavior, plugins and coverage.
 - [ ] Record isolation, startup, race, lifecycle, resource, cache and distribution results; freeze limits and support matrix only from proof.
 - [ ] Resolve named consumer incompatibilities through bounded paired scope; do not wait for C15 solely by issue association.
@@ -51,10 +51,10 @@
 
 - [x] Record managed processes and automatic first-use acquisition; retain historical failures.
 - [x] Synchronize #460 and planned requirement evidence with the approved revision.
-- [x] Implement fail-closed maintainer signing preflight with focused RED/GREEN tests; credential availability is not boundary acceptance.
+- [x] Implement fail-closed optional Apple signing preflight with focused RED/GREEN tests; credential availability is not boundary acceptance.
 - [ ] Resolve the creation-to-tracing ownership gap recorded in MANAGED_BOUNDARY_STATUS.md without relaxing startup cleanup.
 - [ ] Implement a fixed-fixture native broker/bootstrap with tests before implementation.
-- [ ] Verify Developer ID identity, hardened runtime and notarization before any boundary launch.
+- [ ] Verify exact initial-distribution native signatures, hardened-runtime settings and narrow entitlements before boundary acceptance; Apple credentials are not required.
 - [ ] Pass independent signed lifecycle/startup/escape/resource proof and 100 race repetitions.
 - [ ] Integrate managed Python/multiprocessing and pinned native-tool adapters without weakening the kernel boundary.
 - [ ] Pass every required analyzer and existing pip/Hatch/uv/Poetry corpus; preserve unsupported-operation diagnostics.
@@ -76,3 +76,14 @@
 
 See NATIVE_COMPATIBILITY_RESULTS.md for exact scope, versions and evidence. These
 items do not complete production tasks in sections 3, 4 or 6.
+
+## 8. Optional Apple distribution split (owner approved 2026-10-02)
+
+- [x] Replace Developer-ID-first admission with exact initial-distribution acceptance; retain every security/lifecycle gate.
+- [x] Create optional #488 and `code-review-macos-developer-id-distribution`; #460 blocks the follow-up, never the reverse.
+- [x] Route default prerequisite checks without Apple credential probes; retain explicit optional Apple checks and test proof limits.
+- [x] Validate both changes, planned evidence mappings, issue dependency readback and relevant repository gates.
+- [ ] Prove cold/offline installation on a separate Mac or clean independent macOS environment with default protections; never require quarantine stripping or security overrides.
+
+Paid enrollment, Apple certificate management, notary credentials, notarization,
+applicable stapling and certificate renewal/revocation belong only to #488.

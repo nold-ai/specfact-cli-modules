@@ -1,5 +1,17 @@
 # Change: Dedicated macOS ARM64 Code Review Capsule
 
+## Distribution-signing split — 2026-10-02 (Europe/Berlin)
+
+This owner-approved revision supersedes the earlier Developer-ID-first milestone.
+Optional [#488](https://github.com/nold-ai/specfact-cli-modules/issues/488) /
+[`code-review-macos-developer-id-distribution`](../code-review-macos-developer-id-distribution/proposal.md)
+is blocked by #460; it does not block this change, shipment or publication.
+"Signed runtime" in this change means native signatures plus an authenticated
+SpecFact payload manifest, not a mandatory Apple publisher identity. Preserve
+historical experiments as evidence, without treating their old signing policy as
+current acceptance. Sandbox, dependency, lifecycle and real-installation gates
+remain mandatory. Apple credentials do not solve the startup ownership gap.
+
 ## Managed-process revision — 2026-10-02 (Europe/Berlin)
 
 The owner approved a managed-process contract for native macOS ARM64. This
@@ -24,14 +36,18 @@ fork/vfork/posix_spawn and tracing/IPC escapes; compatibility adapters must
 request bounded launches through private inherited channels. Python interception is not the security boundary. Acquisition,
 build/preparation, sealed analyzers and project execution remain separate domains.
 
-The first milestone is release-signed boundary proof: Developer ID, hardened
-runtime, tracing and notarization must work together. No ad-hoc fallback is an
-admission result. Independently observe every startup transition, broker/CLI
-death, timeout, cancellation and concurrent requests, with no survivor after
-five seconds and 100 repetitions per lifecycle race. Missing credentials block
-signed execution before a substitute candidate is compiled or run; failed signed
-tracing or confinement rejects this candidate. The five-second bound and 100
-repetitions per lifecycle race are mandatory admission gates, not tunable defaults.
+The first milestone is boundary proof using the exact initial distribution
+configuration: build-time ad-hoc signatures for our native components, verified
+upstream signatures where applicable, and SpecFact-signed manifests covering the
+final payload bytes. Record and test hardened-runtime settings, narrow reviewed
+entitlements, tracing and confinement together. Paid Developer ID membership and
+notarization are optional follow-up work; missing Apple credentials do not block
+compilation, execution, shipment or canonical GHCR publication.
+Independently observe every startup transition, broker/CLI death, timeout,
+cancellation and concurrent requests, with no survivor after five seconds and
+100 repetitions per lifecycle race. Invalid native signatures, failed tracing or
+confinement, or missing mandatory evidence reject the candidate. These lifecycle
+bounds are mandatory admission gates, not tunable defaults.
 Production integration, version 0.51.0 (or next available minor), registry and
 publication changes follow the gate and complete acceptance, not this revision.
 
@@ -49,7 +65,7 @@ The owner approved macOS ARM64 as the first new platform and separate native del
 - Plan dedicated signed macOS ARM64 artifacts, cache identities and platform evidence while preserving released review semantics and historical Linux artifacts.
 - Rebase on Code Review 0.50.1 and completed portable project-runtime #473, including pip/pip-tools, Hatch, uv, Poetry, project workers, native extensions, plugins and coverage.
 - Separate provisioning, preparation, launch, isolation, observation and cleanup from portable review logic; include Mach-O/dyld and relocatable user-owned paths.
-- Require release-signed managed-broker boundary proof as the first milestone, then complete isolation and dependency feasibility before bounded production-design approval. Historical Seatbelt/App Sandbox/XPC experiments remain evidence of rejected or incomplete approaches, not alternative current milestones.
+- Require initial-distribution managed-broker boundary proof as the first milestone, then complete isolation and dependency feasibility before bounded production-design approval. Historical Seatbelt/App Sandbox/XPC experiments remain evidence of rejected or incomplete approaches, not alternative current milestones.
 - Require signed customer-installation acceptance, native positive/negative tests and Linux regressions before advertising support.
 - Retain the earlier bounded local candidate tooling: COPY-only Docker assembly, strict OCI/TAR/JSON verification against an operator-owned payload, regression tests and reviewed native feasibility results. This tooling never executes or publishes an archive and always rejects production eligibility; it does not satisfy the managed-process milestone.
 
@@ -87,5 +103,5 @@ The earlier feasibility delivery included the scope revision, native feasibility
 
 <!-- source_repo: nold-ai/specfact-cli-modules -->
 - **GitHub Issue**: [#460](https://github.com/nold-ai/specfact-cli-modules/issues/460)
-- **Last Synced Status**: open / Todo; planning and feasibility revision, 2026-09-30 Europe/Berlin
+- **Last Synced Status**: open / Todo; signing scope split, 2026-10-02 Europe/Berlin
 - **Sanitized**: true

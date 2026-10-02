@@ -132,3 +132,44 @@ def test_unsupported_host_does_not_access_keychain(signing, monkeypatch):
     monkeypatch.setattr(signing.platform, "system", lambda: "Linux")
     monkeypatch.setattr(signing.subprocess, "run", lambda *_args, **_kwargs: pytest.fail("keychain access"))
     assert signing.preflight(FINGERPRINT, TEAM, "release")["status"] == "blocked"
+
+
+def test_default_cli_needs_no_apple_credentials(signing, monkeypatch, capsys):
+    """Initial checks must not access the keychain or notary service."""
+    monkeypatch.setattr(signing.platform, "system", lambda: "Darwin")
+    monkeypatch.setattr(signing.platform, "machine", lambda: "arm64")
+    monkeypatch.setattr(signing.Path, "is_file", lambda _path: True)
+    monkeypatch.setattr(signing.sys, "argv", ["preflight.py"])
+    monkeypatch.setattr(signing.subprocess, "run", lambda *_args, **_kwargs: pytest.fail("Apple credential probe"))
+    assert signing.main() == 0
+    receipt = json.loads(capsys.readouterr().out)
+    assert receipt["status"] == "initial_prerequisites_available"
+    assert receipt["signing_mode"] == "ad-hoc"
+    assert receipt["production_approved"] is False
+    assert receipt["signed_boundary_verified"] is False
+
+
+@pytest.mark.parametrize(
+    "system,machine,tool", [("Linux", "arm64", True), ("Darwin", "x86_64", True), ("Darwin", "arm64", False)]
+)
+def test_initial_checks_reject_missing_native_prerequisites(signing, monkeypatch, system, machine, tool):
+    """Removing Apple requirements must preserve actual native prerequisites."""
+    monkeypatch.setattr(signing.platform, "system", lambda: system)
+    monkeypatch.setattr(signing.platform, "machine", lambda: machine)
+    monkeypatch.setattr(signing.Path, "is_file", lambda _path: tool)
+    receipt = signing.initial_preflight()
+    assert receipt["status"] == "blocked"
+    assert receipt["production_approved"] is False
+    assert receipt["signed_boundary_verified"] is False
+
+
+def test_explicit_apple_cli_keeps_missing_credentials_blocked(signing, monkeypatch, capsys):
+    """The optional Apple mode remains fail closed without affecting initial mode."""
+    monkeypatch.setattr(signing.platform, "system", lambda: "Darwin")
+    monkeypatch.setattr(signing.platform, "machine", lambda: "arm64")
+    monkeypatch.setattr(signing.sys, "argv", ["preflight.py", "--signing-mode", "developer-id"])
+    monkeypatch.setattr(signing.subprocess, "run", lambda *_args, **_kwargs: pytest.fail("unexpected credential probe"))
+    assert signing.main() == 2
+    receipt = json.loads(capsys.readouterr().out)
+    assert receipt["status"] == "blocked"
+    assert receipt["production_approved"] is False

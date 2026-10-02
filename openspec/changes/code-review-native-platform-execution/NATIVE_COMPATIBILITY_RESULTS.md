@@ -132,7 +132,7 @@ The native public `specfact code review run` backend is not enabled. The signed
 broker/bootstrap still lacks proven creation-to-tracing cleanup ownership, as
 recorded in MANAGED_BOUNDARY_STATUS.md. No unconfined customer execution fallback
 was added. Signed lifecycle proof, managed adapters, all four real-project manager
-suites, acquisition/cache integration, final artifact signing/notarization,
+suites, acquisition/cache integration, final native signatures and authenticated payload manifests,
 macOS 14/15/26 and Linux acceptance remain required. The physical macOS 27 result
 does not establish support on those other releases.
 
@@ -191,3 +191,6 @@ Review returned PASS_WITH_ADVISORY with only the 48 documented MISSING_ICONTRACT
 advisories and no changed-line blockers. Independent review-agent re-reviewed
 all refactored scripts with no actionable findings. The public capsule-required
 native command remains FAIL/UNKNOWN; this is not a release-ready native capsule.
+
+Developer ID and notarization are optional #488 follow-up work following the
+2026-10-02 distribution-signing split; their absence is not a current blocker.
