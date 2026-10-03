@@ -352,6 +352,13 @@ The macOS ARM64 backend SHALL use broker-owned direct workers, each traced and c
 - **WHEN** a caller sends launch, wait, signal or cancellation requests, loses its connection or supplies malformed/foreign authority
 - **THEN** bounded versioned requests affect only broker-assigned owned handles; incomplete frames and connection loss fail closed, terminal signals and accepted cancellation reasons are preserved, and independent lifecycle proof excludes competing timer/fallback cleanup
 
+#### Scenario: Owned Mach signal exceptions complete without BSD wakeup dependence
+
+- **GIVEN** a fixed signed worker whose exception endpoint is installed by the broker before spawn, then establishes PT_TRACE_ME and PT_SIGEXC before its initial stop
+- **WHEN** initial stops, terminal signals, cancellation or broker death occur
+- **THEN** bounded kernel-origin exception messages are admitted only for the registered direct child and its thread; only the initial SIGSTOP is suppressed, runtime signals retain their meaning, and terminal wait status remains distinct from exception replies
+- **AND** exact ad-hoc hardened builds, five-second independent cleanup, 100 repetitions and the entire hosted matrix remain required; malformed or foreign exceptions fail closed and no BSD transport fallback establishes acceptance
+
 #### Scenario: Sealed analyzer executes with exact native inputs
 
 - **GIVEN** the pinned native Semgrep core, reviewed rule packs and exact verified dylib closure

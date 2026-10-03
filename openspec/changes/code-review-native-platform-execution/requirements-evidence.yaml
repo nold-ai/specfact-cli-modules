@@ -351,6 +351,11 @@ requirements:
       method: inspection
       intent: 'Inspect planned acceptance: Private control protocol preserves authority and terminal status.'
       observable: "CONTROL_BOUNDARY_CONTRACT.md specifies private authenticated bounded requests, owned handles, preserved terminal status and independently observed lifecycle gates excluding competing cleanup. Local fixed-fixture evidence does not approve production artifacts, the OS matrix or manager adapters."
+    - case_id: 460-9-7
+      scenario_id: managed-native-process-boundary
+      method: inspection
+      intent: 'Inspect planned acceptance: Owned Mach signal exceptions complete without BSD wakeup dependence.'
+      observable: "MACH_SIGNAL_CONTRACT.md requires pre-spawn exception endpoints, kernel-origin owned task/thread admission, initial-stop-only suppression, preserved terminal signals and independent five-second/100-round cleanup. Generated SDK provenance and actual hosted results remain necessary; mocked admission checks do not approve production."
     - case_id: 460-9-6
       scenario_id: managed-native-process-boundary
       method: inspection

@@ -162,3 +162,13 @@ credential preflight is optional and cannot be called as an initial-release gate
 Apple documentation inspected 2026-10-02: [ARM64 ad-hoc signing](https://support.apple.com/guide/security/rosetta-2-on-a-mac-with-apple-silicon-secebb113be1/web)
 and [trusted execution](https://developer.apple.com/forums/thread/706442).
 Their guidance does not prove our cross-machine installation route.
+
+## Owned Mach signal stop experiment (2026-10-03)
+
+See MACH_SIGNAL_CONTRACT.md. Current-head 78b58bca hosted completion fails on
+macOS 14, 15 and 26; bounded reconciliation has not demonstrated a fix. The
+control fixture now evaluates pre-spawn owned exception endpoints and PT_SIGEXC
+with SDK MIG decoding. BSD unit mocks retain historical transition checks only;
+they are not a runtime fallback or proof of the Mach transport. Startup/analyzer
+fixtures retain their separate evidence. Exact signed hosted acceptance remains
+mandatory before any support claim.

@@ -590,3 +590,13 @@ protocol behavior and deadlines are unchanged.
 Focused scenarios: complete wait recording before send; failed send retaining
 its attempt; raw and ordinary history bounded to 64; controller integration for
 complete waits; partial frames omitted from both history and worker-state output.
+
+## Owned Mach signal stop experiment (2026-10-03)
+
+See MACH_SIGNAL_CONTRACT.md. Current-head 78b58bca hosted completion fails on
+macOS 14, 15 and 26; bounded reconciliation has not demonstrated a fix. The
+control fixture now evaluates pre-spawn owned exception endpoints and PT_SIGEXC
+with SDK MIG decoding. BSD unit mocks retain historical transition checks only;
+they are not a runtime fallback or proof of the Mach transport. Startup/analyzer
+fixtures retain their separate evidence. Exact signed hosted acceptance remains
+mandatory before any support claim.

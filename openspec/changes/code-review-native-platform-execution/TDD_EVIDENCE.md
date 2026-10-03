@@ -571,3 +571,95 @@ Final frozen-source validation of this correction:
 The exact cause of the earlier hosted cancellation stalls remains unproven.
 The bounded completion contract is demonstrated separately; this local proof
 does not approve the supported OS matrix or production capsule integration.
+
+## Owned Mach signal transport — 2026-10-03
+
+The preceding completion revision did not fix hosted run 37092073540:
+macOS 14, 15 and 26 all failed during request-wait. Preserve those failures;
+the kernel cause remains unproven. MACH_SIGNAL_CONTRACT.md and the native
+scenario/mapping were added before tests or implementation.
+
+RED: eight missing native admission-fixture errors in
+/private/tmp/specfact-mach-red.log; SDK build helper had 15 missing-helper
+errors in /private/tmp/mach-build-red.txt. GREEN: eight signed native admission
+checks and 18 SDK-build/provenance tests. These mocks cannot approve runtime
+acceptance. Generated callback ABI was actually compiled with the selected SDK.
+
+The control broker now installs private EXC_SOFTWARE ports through spawn
+attributes before worker execution. The fixed worker establishes PT_TRACE_ME
+and PT_SIGEXC before its initial stop. SDK MIG decoding requires kernel sender
+provenance, the registered child task and a member thread. Initial SIGSTOP alone
+is suppressed; runtime signals use PT_THUPDATE and terminal wait status stays
+separate. Held initial replies remain owned until cancellation or broker death.
+BSD compile-time mocks retain historical transition tests only; no runtime
+fallback is available. Capture hashes of the top-level SDK defs, generated
+server/headers and both owned includes; transitive SDK headers remain resolved
+through the selected SDK and are not claimed as a fully snapshotted closure.
+
+Actual exact ad-hoc hardened build on Mac17,9, macOS 27.0.1 build 26A434,
+ARM64, empty entitlements: 1,219 checks passed (12 lifecycle cases x 100 plus
+19 protocol checks). Every repetition gate passed; maximum independent
+observation was 1.160949 seconds, below five seconds. Receipt stays ignored:
+.specfact/native-compat/pr489-mach-control-100.json, SHA256
+e6d27d80b00a709edc1173eede80de00204aa5f059cf8e4f0763bf475d9a32a4.
+Log /private/tmp/specfact-mach-control-100.log stays local.
+
+Focused native suite: 256 passed in 17.34 seconds. An additional held-stop
+cancellation test initially used the running-worker observation mode and failed
+on its missing-output marker; selecting the existing held-stop observation mode
+produced 47/47 control tests passing in 14.53 seconds, including that new case.
+No mechanism or acceptance bound was weakened.
+
+Independent exact review-agent security/defect review of the entire uncommitted
+Mach slice reported No findings, with medium confidence and hosted/production
+evidence gaps retained. Format, types, lint, YAML/import checks, all seven
+module signatures, 28 contract tests, strict validation of both changes,
+Markdown and actionlint passed. Full repository results and current-head hosted
+acceptance are recorded separately below after completion.
+
+This is a fixed-fixture boundary checkpoint, not production enablement. The
+public command, all-ten sealed analyzers, four-manager corpus, complete escape
+and resource proofs, registry/customer installation and final artifact admission
+remain pending. Code Review remains 0.50.1; no signed module payload changed.
+No merge or GHCR publication. Rollback restores the experimental control
+transport and retains this failure history; it grants no BSD fallback support.
+
+Serial smart-test: 3,716 passed, 34 skipped and 63 subtests passed in 271.20
+seconds. Native opt-ins above exercise the newly skipped native cases. The
+existing Linux descriptor proof still requires Linux.
+
+Serial full test: 3,716 passed, 34 skipped and 63 subtests passed in 271.46
+seconds (/private/tmp/specfact-mach-full.log). Smart/full suites were serialized;
+no analyzer-cache writers overlapped them. Planned requirements-evidence
+mapping passed and intentionally reports implementation evidence not yet
+available for the complete change.
+
+The actual public capsule command was also rerun: `hatch run specfact code
+review run --enforcement changed --bug-hunt --json --out .specfact/code-review.json`.
+It produced FAIL/UNKNOWN with unsupported_controller_platform for every
+required analyzer. The ignored report is preserved separately as
+.specfact/native-compat/pr489-mach-public-capsule-unsupported.json. This is
+an explicit production limitation, not a passed native capsule gate. The
+normal staged-file repository quality review remains a separate check.
+
+The first host quality review found CC17 and six non-contract warnings in the
+build helpers/tests. Cohesive helper extraction reduced prepare complexity
+from 17 to 2 and removed all non-contract findings. The exact commands,
+callback ABI, phase/provenance contracts and leaf C sources are unchanged.
+Final native focus: 257 passed in 18.77 seconds, including held-stop
+cancellation. Final independent review-agent again reported No findings.
+
+A concurrent lint/cache writer invalidated one manual review snapshot; that
+FAIL/UNKNOWN is not counted as quality acceptance. The serial explicit-file
+review with --enforcement changed --bug-hunt returned PASS_WITH_ADVISORY,
+33 MISSING_ICONTRACT findings only and zero blocking/clean-code findings. The
+existing narrow standalone standard-library experiment exception in
+NATIVE_COMPATIBILITY_RESULTS.md applies to these build helpers as well; it
+grants no runtime or capsule acceptance. Markdown checks passed with MD013
+excluded for historical long evidence lines; the new contract passes defaults.
+
+Final post-refactor serial gates: smart-test 3,716 passed, 34 skipped and
+63 subtests passed in 267.52 seconds; full test the same counts in 271.69
+seconds. Logs /private/tmp/specfact-mach-final-smart.log and
+/private/tmp/specfact-mach-final-full.log remain local. No quality/cache writers
+overlapped these final suites. Final lint/types passed after refactoring.

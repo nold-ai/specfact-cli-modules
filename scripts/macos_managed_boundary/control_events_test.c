@@ -3,6 +3,7 @@
  * evidence. No policy change or payload/status/authority data in these snapshots.
  * Include the real broker; no child is spawned or host PID signalled by this test. */
 #include <setjmp.h>
+#define CONTROL_BSD_TEST 1
 #define FIXED_WORKER "/unused-fixed-worker"
 #define WORKER_REQUIREMENT "false"
 #define main broker_fixture_main

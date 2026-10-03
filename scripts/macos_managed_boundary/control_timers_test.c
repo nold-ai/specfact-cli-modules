@@ -1,4 +1,5 @@
 /* Deterministic request/timer logic; mock signaling never targets host PIDs. */
+#define CONTROL_BSD_TEST 1
 #define FIXED_WORKER "/unused-fixed-worker"
 #define WORKER_REQUIREMENT "false"
 #define main broker_fixture_main

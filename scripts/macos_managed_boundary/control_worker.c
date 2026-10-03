@@ -62,7 +62,7 @@ int main(int argc, char **argv) {
     int mode = argv[1][0] - '0';
     if (!mode) return probes(0);
     if (mode == 3) { for (;;) pause(); } /* launchd-owned trusted pretrace */
-    if (ptrace(PT_TRACE_ME, 0, NULL, 0) || raise(SIGSTOP)) return 3;
+    if (ptrace(PT_TRACE_ME, 0, NULL, 0) || ptrace(PT_SIGEXC, 0, NULL, 0) || raise(SIGSTOP)) return 3;
     /* Only traced code can leave the launchd group or ignore termination. */
     if (mode == 2 && (setsid() < 0 || signal(SIGTERM, SIG_IGN) == SIG_ERR)) return 4;
     int result = confine();

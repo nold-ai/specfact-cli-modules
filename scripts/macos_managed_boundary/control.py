@@ -77,6 +77,8 @@ def startup_module(helper: str = "startup") -> Any:
 STARTUP = startup_module()
 SOCKET = startup_module("control_socket")
 STATE = startup_module("control_state")
+BUILD = startup_module("control_build")
+MACH = startup_module("control_mach_build")
 
 
 class FrameFields(NamedTuple):
@@ -845,73 +847,8 @@ def verify_native_clock() -> dict[str, Any]:
 
 
 def build(root: Path) -> tuple[Path, Path, list[dict[str, Any]]]:
-    """Compile private source snapshots and bind receipts to their captured bytes."""
-    root.chmod(0o700)
-    (root / "clock-verification.json").write_text(json.dumps(verify_native_clock(), indent=2) + "\n")
-    inventory: list[dict[str, Any]] = []
-    worker = root / "control-worker"
-    observer = root / "control-observer"
-    broker = root / "control-broker"
-    worker_hash = ""
-    for name, code, target in (
-        ("worker", SOURCE / "control_worker.c", worker),
-        ("observer", SOURCE / "startup_observe.c", observer),
-        ("broker", SOURCE / "control_broker.c", broker),
-    ):
-        snapshot = code.read_bytes()
-        compiled_source = root / f"source-{name}.c"
-        compiled_source.write_bytes(snapshot)
-        compiled_source.chmod(0o444)
-        args = [
-            "/usr/bin/xcrun",
-            "clang",
-            "-arch",
-            "arm64",
-            "-Wall",
-            "-Wextra",
-            "-Werror",
-            str(compiled_source),
-            "-o",
-            str(target),
-        ]
-        if name == "broker":
-            args += [
-                f'-DFIXED_WORKER="{worker}"',
-                f'-DWORKER_REQUIREMENT="cdhash H\\"{worker_hash}\\""',
-                "-framework",
-                "Security",
-                "-framework",
-                "CoreFoundation",
-            ]
-        STARTUP.command(args)
-        STARTUP.command(["/usr/bin/codesign", "--force", "--sign", "-", "--options", "runtime", str(target)])
-        STARTUP.command(["/usr/bin/codesign", "--verify", "--strict", str(target)])
-        details = STARTUP.command(["/usr/bin/codesign", "--display", "--verbose=4", str(target)]).stderr
-        require(
-            "flags=0x10002(adhoc,runtime)" in details and "Signature=adhoc" in details,
-            "unexpected signature configuration",
-        )
-        entitlements = STARTUP.command(["/usr/bin/codesign", "--display", "--entitlements", ":-", str(target)])
-        require(not entitlements.stdout.strip(), "fixture has unexpected entitlements")
-        if name == "worker":
-            worker_hash = next(line.split("=", 1)[1] for line in details.splitlines() if line.startswith("CDHash="))
-            require(
-                len(worker_hash) == 40 and all(value in "0123456789abcdef" for value in worker_hash),
-                "bad worker CDHash",
-            )
-        inventory.append(
-            {
-                "name": name,
-                "path": str(target),
-                "source_sha256": hashlib.sha256(snapshot).hexdigest(),
-                "sha256": hashlib.sha256(target.read_bytes()).hexdigest(),
-                "signing": details,
-                "entitlements": entitlements.stdout,
-            }
-        )
-    positive = STARTUP.command([str(worker), "0"])
-    require("control-positive-ok" in positive.stdout, "unsandboxed native positive probes missing")
-    return broker, observer, inventory
+    """Compile captured fixture and SDK inputs; no production admission."""
+    return BUILD.build(root, SOURCE, BUILD.BuildTools(STARTUP.command, verify_native_clock, require, MACH.prepare))
 
 
 def run_trials(

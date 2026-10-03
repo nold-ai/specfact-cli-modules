@@ -174,6 +174,10 @@ static void result(int index, const char *state) {
     queue(response);
 }
 
+#ifndef CONTROL_BSD_TEST
+#include "control_mach.inc"
+#endif
+
 static void launch(int mode, unsigned int timeout) {
     if (worker_count == WORKERS) { reject("worker-limit"); return; }
     if (!signed_worker()) { reject("signature"); return; }
@@ -187,6 +191,9 @@ static void launch(int mode, unsigned int timeout) {
         posix_spawn_file_actions_addopen(&actions, 0, "/dev/null", O_RDONLY, 0) ||
         posix_spawn_file_actions_adddup2(&actions, stream[1], 1) ||
         posix_spawn_file_actions_adddup2(&actions, stream[1], 2)) die();
+    #ifndef CONTROL_BSD_TEST
+    exception_spawn(&attributes, worker_count);
+    #endif
     char fixture[] = {(char)('0' + mode), 0};
     char *args[] = {FIXED_WORKER, fixture, NULL};
     char *environment[] = {"PATH=/usr/bin:/bin", "LANG=C", NULL};
@@ -258,6 +265,9 @@ static void request(void) {
     else {
         /* No reuse race: this is the broker's own child, never reaped yet. */
         if (kill(item->pid, opcode == 4 ? SIGKILL : (int)argument) && errno != ESRCH) die();
+        #ifndef CONTROL_BSD_TEST
+        release_held(index);
+        #endif
         item->reason = opcode == 4 ? "cancel" : "signal";
         if (opcode == 4 || argument == SIGKILL) item->deadline = session_deadline;
         result(index, "signalled");
@@ -290,6 +300,10 @@ static void reap(void) {
         if (pid < 0) die();
         if (!pid) continue;
         if (WIFSTOPPED(status)) {
+            #ifndef CONTROL_BSD_TEST
+            /* Mach RPC alone resumes signal stops; never race it with PT_CONTINUE. */
+            continue;
+            #else
             int stopped = WSTOPSIG(status);
             int initial_stop = !item->traced;
             if (!item->traced) {
@@ -300,6 +314,7 @@ static void reap(void) {
             }
             if (ptrace(PT_CONTINUE, item->pid, (caddr_t)1,
                 initial_stop ? 0 : stopped)) die();
+            #endif
         } else {
             item->status = status;
             item->reaped = 1;
@@ -326,6 +341,9 @@ static double expire_workers(double current, double deadline) {
         if (item->reaped) continue;
         if (current >= item->deadline) {
             if (kill(item->pid, SIGKILL) && errno != ESRCH) die();
+            #ifndef CONTROL_BSD_TEST
+            release_held(i);
+            #endif
             item->reason = "timeout";
             item->deadline = session_deadline; /* one signal, then wait for SIGCHLD */
         }
@@ -347,6 +365,9 @@ static void loop(int listener) {
     session_deadline = now() + 30;
     double accept_deadline = now() + 5;
     for (;;) {
+        #ifndef CONTROL_BSD_TEST
+        exceptions();
+        #endif
         reap();
         double current = now(), deadline = session_deadline;
         if (current >= session_deadline || (client < 0 && current >= accept_deadline) ||

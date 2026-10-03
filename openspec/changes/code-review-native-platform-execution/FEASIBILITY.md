@@ -68,7 +68,7 @@ CPython 3.11–3.13 is the candidate matrix. Enumerate available macOS builds be
 ## Required proof groups
 
 | Group | Positive control | Negative/adverse cases | Required decision evidence |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | Launch and loading | Signed helper starts native interpreter and admitted extension | Missing helper, x64-only binary, dyld injection, pre-confinement initializer, inherited FD/IPC access | Confinement active before untrusted code; explicit Apple system-library allowance and actual load origins |
 | Filesystem and network | Declared input read and private output write succeed | Host secret canaries, writes outside roots, symlink redirection, outbound/listening sockets, inherited sockets and undeclared IPC | Denial attributable to policy; source and sealed payload unchanged |
 | Lifecycle and bounds | Broker-managed direct workers complete | Every startup transition, broker/CLI death, timeout, cancel, concurrent requests, direct fork/vfork/posix_spawn and detachment attempts, resource exhaustion | Kernel denies worker-created descendants; independent observation finds no survivor after five seconds; 100 repetitions per lifecycle race and enforced resource limits |
@@ -88,3 +88,13 @@ CPython 3.11–3.13 is the candidate matrix. Enumerate available macOS builds be
 - Record all group results and outstanding failures. A required failure or unresolved capability means no production approval; retain evidence and propose a reviewed correction.
 - Approve a bounded production design only after required feasibility groups pass. Final analyzer corpus and public signed-installation acceptance must be repeated on the production candidate/publication.
 - Use current-run results and concise notes. Planned requirements inspection is not executable proof, and no historical RED ledger or optional seal is required.
+
+## Owned Mach signal stop experiment (2026-10-03)
+
+See MACH_SIGNAL_CONTRACT.md. Current-head 78b58bca hosted completion fails on
+macOS 14, 15 and 26; bounded reconciliation has not demonstrated a fix. The
+control fixture now evaluates pre-spawn owned exception endpoints and PT_SIGEXC
+with SDK MIG decoding. BSD unit mocks retain historical transition checks only;
+they are not a runtime fallback or proof of the Mach transport. Startup/analyzer
+fixtures retain their separate evidence. Exact signed hosted acceptance remains
+mandatory before any support claim.

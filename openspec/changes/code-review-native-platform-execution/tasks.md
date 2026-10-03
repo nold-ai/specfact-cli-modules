@@ -92,8 +92,12 @@ items do not complete production tasks in sections 3, 4 or 6.
 Paid enrollment, Apple certificate management, notary credentials, notarization,
 applicable stapling and certificate renewal/revocation belong only to #488.
 
-
 ### Hosted fixed-boundary acceptance
 
 - [x] Configure explicit ARM64 macOS 14/15/26 CI with exact OS/build, ordinary-user GUI launchd, serial 100-round startup/control, sanitized summaries and no release permissions.
 - [ ] Record actual PR merge SHA, platform identity and passing hosted suite results; resolve runner availability without dropping mandatory coverage.
+
+### Owned Mach signal exception candidate
+
+- [x] Replace the control-fixture BSD stop transport with bounded owned Mach exception handling; capture exact SDK/generated source provenance.
+- [ ] Prove native signal semantics, startup holds and broker-death cleanup against exact ad-hoc hardened builds; retain all hosted failures and require 100 repetitions on each candidate OS.

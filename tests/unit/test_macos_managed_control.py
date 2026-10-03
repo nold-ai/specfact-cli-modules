@@ -656,6 +656,8 @@ class BuildProvenanceTests(_ControlTestCase):
             originals = {}
             reads = {}
             compiled = {}
+            for name in ("control_mach.inc", "control_mach_policy.h"):
+                (source / name).write_bytes(b"captured include")
             for name in ("control_worker.c", "startup_observe.c", "control_broker.c"):
                 path = source / name
                 originals[path] = name.encode() + b" initial source"
@@ -684,6 +686,7 @@ class BuildProvenanceTests(_ControlTestCase):
             with (
                 patch.object(self.control, "SOURCE", source),
                 patch.object(self.control, "verify_native_clock", return_value={}),
+                patch.object(self.control.MACH, "prepare", return_value=([], [])),
                 patch.object(self.control.STARTUP, "command", side_effect=command),
                 patch.object(Path, "read_bytes", counted_read),
             ):
@@ -730,6 +733,21 @@ class NativeControlTests(_ControlTestCase):
             held.close()
 
     @unittest.skipUnless(os.environ.get("SPECFACT_NATIVE_CONTROL") == "1", "explicit native fixture run")
+    def test_held_initial_exception_can_be_cancelled(self):
+        with tempfile.TemporaryDirectory(dir="/private/tmp", prefix="sf-control-held-") as temporary:
+            root = Path(temporary).resolve()
+            broker, observer, _inventory = self.control.build(root)
+            with self.control.Invocation(broker, observer, root) as invocation:
+                client = invocation.connect()
+                launched = client.launch(4)
+                invocation.capture_worker(launched, 4)
+                self.assertTrue(client.request(4, handle=launched["handle"])["ok"])
+                result = client.request(2, handle=launched["handle"])
+                self.assertEqual(result["signal"], 9)
+                self.assertEqual(result["reason"], "cancel")
+                self.assertEqual(result["exit"], -1)
+
+    @unittest.skipUnless(os.environ.get("SPECFACT_NATIVE_CONTROL") == "1", "explicit native fixture run")
     def test_actual_runtime_trap_preserves_signal(self):
         with tempfile.TemporaryDirectory(dir="/private/tmp", prefix="sf-control-trap-") as temporary:
             root = Path(temporary).resolve()
@@ -748,7 +766,9 @@ class NativeControlTests(_ControlTestCase):
             root = Path(temporary).resolve()
             broker, observer, inventory = self.control.build(root)
             trials = self.control.run_trials(broker, observer, root, 1)
-            self.assertTrue(inventory)
+            broker_inputs = next(item for item in inventory if item["name"] == "broker")
+            self.assertEqual(broker_inputs["signal_transport"], "mach-exception-v1")
+            self.assertEqual(len(broker_inputs["build_inputs"]), 6)
             self.assertTrue(all(item["passed"] for item in trials), trials)
             self.assertEqual(
                 set(self.control.LIFECYCLE_CASES),
