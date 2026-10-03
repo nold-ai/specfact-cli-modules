@@ -3,6 +3,7 @@
 #include "mach_exc_server.h"
 #include "control_mach_policy.h"
 #include "control_mach_reply.h"
+#include "control_exec_policy.h"
 
 static mach_port_t exception_ports[WORKERS];
 static int exception_owner = -1;
@@ -22,6 +23,46 @@ static int owned_thread(mach_port_t task, mach_port_t thread) {
     return found && count <= 16; /* Fixed fixtures, never arbitrary customer threads. */
 }
 
+/* Query the stopped owned process, never a pathname or client-selected PID. */
+static OSStatus code_requirement(SecCodeRef code, CFStringRef text) {
+    SecRequirementRef requirement = NULL;
+    OSStatus result = SecRequirementCreateWithString(text, kSecCSDefaultFlags, &requirement);
+    if (!result) result = SecCodeCheckValidity(code, kSecCSDefaultFlags, requirement);
+    if (requirement) CFRelease(requirement);
+    return result;
+}
+
+static int running_image(pid_t pid) {
+    CFNumberRef number = CFNumberCreate(NULL, kCFNumberIntType, &pid);
+    if (!number) die();
+    const void *keys[] = {kSecGuestAttributePid}, *values[] = {number};
+    CFDictionaryRef attributes = CFDictionaryCreate(NULL, keys, values, 1,
+        &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
+    CFRelease(number);
+    if (!attributes) die();
+    SecCodeRef code = NULL;
+    OSStatus result = SecCodeCopyGuestWithAttributes(NULL, attributes, kSecCSDefaultFlags, &code);
+    CFRelease(attributes);
+    if (result || !code) die();
+    result = code_requirement(code, CFSTR(TARGET_REQUIREMENT));
+    int image = result == errSecSuccess;
+    if (result == errSecCSReqFailed)
+        result = code_requirement(code, CFSTR(WORKER_REQUIREMENT));
+    CFRelease(code);
+    if (result) die(); /* Invalid, missing and foreign identities are not ordinary traps. */
+    return image;
+}
+
+static int exec_intent(int mode) {
+    return mode == 6 || mode == 7 || mode == 8 || mode == 10 || mode == 11 || mode == 12;
+}
+
+static uint64_t exec_timestamp(void) {
+    struct timespec value;
+    if (clock_gettime(CLOCK_MONOTONIC, &value)) die();
+    return (uint64_t)value.tv_sec * 1000000000ULL + (uint64_t)value.tv_nsec;
+}
+
 kern_return_t catch_mach_exception_raise(mach_port_t port, mach_port_t thread,
     mach_port_t task, exception_type_t exception, mach_exception_data_t code,
     mach_msg_type_number_t count, audit_token_t token) {
@@ -36,15 +77,26 @@ kern_return_t catch_mach_exception_raise(mach_port_t port, mach_port_t thread,
     if (initial && code[1] != SIGSTOP) die();
     item->traced = 1;
     if (initial) { printf("{\"trace\":%d}\n", item->pid); fflush(stdout); }
+    int admitted = 0;
+    if (!initial && exec_intent(item->mode) && !item->exec_admitted && code[1] == SIGTRAP) {
+        enum exec_action action = exec_transition(1, item->exec_admitted, (int)code[1], running_image(pid));
+        if (action == EXEC_REJECT) die();
+        if (action == EXEC_ADMIT) {
+            item->exec_admitted = admitted = 1;
+            printf("{\"exec\":%d,\"verified_ns\":%llu,\"held\":%s}\n", item->pid,
+                (unsigned long long)exec_timestamp(), item->mode == 11 ? "true" : "false");
+            fflush(stdout);
+        }
+    }
     mach_port_deallocate(mach_task_self(), task);
-    if (initial && item->mode == 4) {
+    if ((initial && item->mode == 4) || (admitted && item->mode == 11)) {
         if (held_threads[index]) die();
         held_threads[index] = thread;
         exception_owner = index;
         return MIG_NO_REPLY; /* Preserve the kernel RPC until cancellation/death. */
     }
     if (ptrace(PT_THUPDATE, item->pid, (caddr_t)(uintptr_t)thread,
-        initial ? 0 : (int)code[1])) die();
+        initial || admitted ? 0 : (int)code[1])) die();
     mach_port_deallocate(mach_task_self(), thread);
     return KERN_SUCCESS;
 }
@@ -83,7 +135,7 @@ static void release_held(int index) {
     if (!held_threads[index]) return;
     if (ptrace(PT_THUPDATE, workers[index].pid,
         (caddr_t)(uintptr_t)held_threads[index], 0)) die();
-    /* The validated initial RPC reply has no complex rights. */
+    /* The validated held RPC reply has no complex rights. */
     send_reply(&held_replies[index].Head);
     mach_port_deallocate(mach_task_self(), held_threads[index]);
     held_threads[index] = MACH_PORT_NULL;

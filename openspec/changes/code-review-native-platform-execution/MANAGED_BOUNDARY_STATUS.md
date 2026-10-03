@@ -1,6 +1,6 @@
 # Managed boundary implementation checkpoint
 
-Recorded 2026-10-02 (Europe/Berlin). **Production integration remains blocked.**
+Recorded 2026-10-03 (Europe/Berlin). **Production integration remains blocked.**
 The local fixed-fixture startup and confinement prototype is implemented; see
 [STARTUP_BOUNDARY_RESULTS.md](STARTUP_BOUNDARY_RESULTS.md). The owner-approved managed-process scope is retained; no requirement
 for isolation, integrity or lifecycle has been relaxed and no native support
@@ -120,3 +120,13 @@ manager adapter or independent-Mac installation proof. These successful subsets
 do not enable the public native command or approve publication. Paid Apple
 identity remains optional; OS-specific private Seatbelt compatibility requires
 measured acceptance, not a new blanket prerequisite that Apple publish the API.
+
+## Image-bound handoff checkpoint — 2026-10-03
+
+The broker now verifies a stopped direct worker's dynamic signed replacement
+identity before releasing its one-use exec trap. A real fixed C target runs with
+inherited confinement; genuine bootstrap/target traps, second exec and substituted
+targets remain rejected. All 19 physical lifecycle cases passed 100 repetitions,
+including the verified replacement stop and target entry, plus 25 protocol checks.
+See EXEC_BOUNDARY_CONTRACT.md and TDD_EVIDENCE.md. New hosted acceptance remains
+pending; this does not yet enable a CPython/analyzer/project runtime or shipment.

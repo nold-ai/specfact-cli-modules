@@ -769,3 +769,88 @@ passed 3,767 tests, 40 skips and 67 subtests. All native-only skips for the
 touched startup/control scope were separately executed in the focused suite.
 Historical failed evidence is retained; fresh hosted acceptance remains pending.
 No production capsule, module version bump, merge or publication is claimed.
+
+## Image-bound executable handoff — 2026-10-03
+
+The bd173218 checkpoint passed startup and control on all three hosted ARM64
+versions (run 37099551157). CodeRabbit completed actual review through that
+head with no actionable comments; this was fixed-fixture acceptance only.
+
+Before the new implementation, a private exact ad-hoc hardened witness proved
+that confined exec into a signed fixed target died with SIGTRAP 5 before
+`target-entry`, while both unsandboxed positive controls succeeded. Three
+bounded trials retained source, final bytes, native signatures and independent
+absence in /private/tmp/mach-exec-witness-20261003-a/safe-receipt.json; no raw
+runtime evidence was uploaded. EXEC_BOUNDARY_CONTRACT.md was written first.
+
+RED: seven new policy cases lacked their native fixture; initializer-ordering
+acceptance failed because the verifier did not yet exist. GREEN policy:
+20 signed native policy/reply cases pass. The new controller additionally
+requires actual image-stop evidence before target initializers, genuine traps,
+failed exec, a second replacement, altered-target rejection and six distinct
+exec lifecycle races. Full signed physical/matrix proof is still pending.
+
+The initial real handoff tests reached dynamic verification but then exited
+with SIGABRT 6 before initialization. The macOS 27 crash stack ended in dyld
+libignition. Granting file-read access to the exact root directory, as in the
+existing sealed-analyzer profile, made both native tests pass while host-read,
+network and fork denials remained effective. This establishes the tested grant's
+behavior; the crash stack alone does not prove the underlying denied syscall.
+No root descendant, all-/System or Data-volume alias grant was added.
+
+GREEN native image/signal/lifecycle tests: 3 passed in 5.78 seconds. Corrupt and
+validly signed wrong-image targets both reject before spawn. The full affected
+explicit-native suite passed 343 tests without skips in 28.04 seconds. The old
+seven-input inventory assertion first failed and was updated to require eight,
+including the captured image-policy header. Independent exact review-agent
+review and final incremental review: No findings, medium confidence. Remaining
+proof gaps include live Security lookup/unknown-image failures and durable
+per-lifecycle image-stop markers; these are not claimed as complete admission.
+
+Fresh physical ad-hoc hardened acceptance on Mac17,9, ARM64 macOS 27.0.1 build
+26A434: 1,925/1,925 records passed (19 lifecycle cases x 100 plus 25 protocol
+controls), maximum independent cleanup observation 1.166803 seconds. The full
+run took 693.785 seconds, within the unchanged 720-second CI helper ceiling.
+Private ignored receipt .specfact/native-compat/pr489-exec-control-100.json:
+1,425,607 bytes, SHA-256
+0d181667616179d44002a784c205979207cc06f82184473d73a61955a152ed6b.
+The strict v2 hosted receipt validator accepted this actual receipt, including
+four artifact/source bindings, shared probes, eight broker inputs, two target
+substitutions and all new handoff/lifecycle results. Production flags stay false.
+
+Repository smart/full suites passed serially with tracked files frozen: each
+3,876 passed, 49 skipped and 87 subtests; smart 270.88 seconds, full 276.78
+seconds. The touched native skips were explicitly exercised separately. Format,
+types/lint (10/10), YAML/imports, seven unchanged module signatures, 28 contracts,
+actionlint, strict validation of both linked changes and planned evidence mapping
+pass. The initial signature command lacked its public key configuration; the
+established repository verification key resolved that prerequisite, with no
+payload changes. Fresh hosted matrix and actual current-head GitHub review remain
+required before checkpoint completion. Full #460 delivery remains unfinished.
+
+Final review corrections: the extracted receipt checker initially produced
+complexity/style findings and the controller's new observation loop exposed
+optional-value typing errors. Cohesive validation functions, explicit fail-closed
+None handling and smaller test cases resolve every non-contract finding.
+A real Python -O subprocess accepted an empty receipt before the new optimization
+guard; afterward the guard rejects before jobs or admission. Independent review
+confirmed both -O and -OO rejection with no native jobs. All 170 receipt tests
+and the actual 1,925-record receipt remain accepted in normal mode.
+
+Final serial explicit-file SpecFact --enforcement changed --bug-hunt:
+PASS_WITH_ADVISORY, exactly 44 MISSING_ICONTRACT advisories, zero other findings
+or clean-code regressions. The existing narrow exception covers these private
+stdlib-only experiment/CI helpers: adding an icontract dependency would violate
+the dependency-free hosted proof; runtime checks and failing-first tests remain
+mandatory. A separate narrow R1732 suppression documents unittest.enterContext's
+actual teardown ownership; it does not suppress production resource cleanup.
+Final independent exact review-agent and incremental reviews: No findings,
+medium confidence; hosted acceptance and the recorded remaining proof gaps persist.
+
+After all review fixes, the explicit native startup/control/receipt suite passed
+386 tests with no skips in 30.17 seconds. Final frozen serial smart and full
+suites each passed 3,879 tests, 49 skipped and 87 subtests; smart 267.38 seconds,
+full 273.37 seconds. Native skips for the touched scope were exercised separately.
+No native C, signing or sandbox-policy changes were made after the 100-round
+physical proof; the Python verification refactor was rechecked against its receipt.
+No full native module enablement, merge, publication or #460 completion is claimed.

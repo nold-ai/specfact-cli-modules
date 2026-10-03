@@ -43,3 +43,20 @@ def test_exception_admission_is_owned_and_bounded(signed_mach_binary, scenario):
 @pytest.mark.parametrize("scenario", ["success", "invalid-destination", "timeout", "interrupted", "invalid-right"])
 def test_owned_reply_failure_disposes_before_continuation_or_fail_closed(signed_mach_binary, scenario):
     subprocess.run([str(signed_mach_binary), scenario], check=True, timeout=10)
+
+
+@pytest.mark.parametrize("signed_mach_binary", ["control_exec_test.c"], indirect=True)
+@pytest.mark.parametrize(
+    "scenario",
+    [
+        "admit-image",
+        "genuine-bootstrap-trap",
+        "genuine-target-trap",
+        "no-exec-intent",
+        "wrong-image",
+        "wrong-signal",
+        "duplicate-handoff",
+    ],
+)
+def test_only_one_image_bound_handoff_can_suppress_a_trap(signed_mach_binary, scenario):
+    subprocess.run([str(signed_mach_binary), scenario], check=True, timeout=10)

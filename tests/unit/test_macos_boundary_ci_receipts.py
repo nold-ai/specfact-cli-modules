@@ -6,6 +6,8 @@ import ast
 import importlib.machinery
 import importlib.util
 import json
+import subprocess
+import sys
 from pathlib import Path
 from types import CodeType
 
@@ -31,10 +33,8 @@ class _WorkflowDefinitionsLoader(importlib.machinery.SourceFileLoader):
 
 @pytest.fixture(name="boundary_ci")
 def fixture_boundary_ci():
-    workflow = yaml.safe_load((ROOT / ".github/workflows/code-review-macos-boundary.yml").read_text())
-    code = workflow["jobs"]["native-boundary"]["steps"][-1]["run"]
-    tree = ast.parse(code.split("python - <<'PY'\n", 1)[1].rsplit("\nPY", 1)[0])
-    tree.body = [node for node in tree.body if not isinstance(node, ast.Raise)]
+    tree = ast.parse((ROOT / "scripts/check_macos_boundary_ci_receipts.py").read_text())
+    tree.body = [node for node in tree.body if not isinstance(node, ast.If)]
     loader = _WorkflowDefinitionsLoader(tree)
     spec = importlib.util.spec_from_file_location(loader.name, loader.path, loader=loader)
     assert spec
@@ -351,3 +351,344 @@ def test_socket_state_consumer_never_borrows_nested_or_receipt_evidence(boundary
     (tmp_path / "control.json").write_text(json.dumps({"bootstrap_socket_state": "directory_invalid"}))
     result = boundary_ci["failure_summary"]("control", tmp_path / "control.json", tmp_path / "control.log")
     assert "bootstrap_socket_state" not in result
+
+
+_EXPECTED_CASE_NAMES = {
+    "lifecycle": "exec-cancel exec-eof exec-broker-kill exec-cancel-held exec-eof-held exec-broker-kill-held",
+    "protocol": "exec-status exec-runtime-trap exec-bootstrap-trap exec-failed exec-second-image exec-modified-target",
+    "broker_inputs": (
+        "mach-exception-defs mach_exc_server.c mach_exc_server.h mach_exc_user.h "
+        "control_mach.inc control_mach_policy.h control_mach_reply.h control_exec_policy.h"
+    ),
+}
+EXEC_LIFECYCLE = tuple(_EXPECTED_CASE_NAMES["lifecycle"].split())
+EXEC_PROTOCOL = tuple(_EXPECTED_CASE_NAMES["protocol"].split())
+BROKER_INPUTS = tuple(_EXPECTED_CASE_NAMES["broker_inputs"].split())
+
+
+def _control_input(boundary_ci, name):
+    """Capture repository inputs while supplying fixed generated SDK byte hashes."""
+    path = boundary_ci["SOURCE"] / name
+    return {"name": name, "sha256": boundary_ci["sha256"](path) if path.exists() else "1" * 64}
+
+
+def _control_artifact(boundary_ci, name, source):
+    """Build one valid role-specific signed artifact fixture."""
+    item = {
+        "name": name,
+        "source_sha256": boundary_ci["sha256"](boundary_ci["SOURCE"] / source),
+        "sha256": "0" * 64,
+        "signing": "flags=0x10002(adhoc,runtime)\nSignature=adhoc\nCDHash=" + "a" * 40,
+        "entitlements": "",
+    }
+    inputs = {"broker": BROKER_INPUTS, "worker": ("control_probes.h",), "target": ("control_probes.h",)}
+    if name in inputs:
+        item["build_inputs"] = [_control_input(boundary_ci, filename) for filename in inputs[name]]
+    if name == "broker":
+        item["signal_transport"] = "mach-exception-v1"
+    return item
+
+
+def _cancel_status(held):
+    """Represent the native wait result after cancellation of an exec fixture."""
+    return {
+        "state": "exited",
+        "exit": -1,
+        "signal": 9,
+        "reason": "cancel",
+        "traced": True,
+        "output": "" if held else "target-denials-ok",
+    }
+
+
+def _exec_lifecycle_fields(case):
+    """Supply complete independent birth, tracing and bounded removal observations."""
+    held, cancel = case.endswith("-held"), "cancel" in case
+    return {
+        "worker_identity": {
+            "pid": 400,
+            "ppid": 300,
+            "pgid": 300 if held else 400,
+            "flags": 2,
+            "start_sec": 123,
+            "start_usec": 456,
+        },
+        "observation_seconds": 0.2,
+        "job_removed": None if cancel else True,
+        "native_proof_deadline_ns": None if cancel else 200,
+        "status": _cancel_status(held) if cancel else None,
+    }
+
+
+def _exec_protocol_output(case, admitted):
+    """Return fixed target markers for admitted images and failed exec."""
+    output = "target-initializer-ns=101\ntarget-entry\ntarget-denials-ok\n" if admitted else "exec-failed"
+    if case == "exec-second-image":
+        output += "target-second-exec\n"
+    return output
+
+
+def _exec_protocol_fields(case):
+    """Supply native handoff markers and actual exit or trap outcomes."""
+    if case == "exec-modified-target":
+        return {"response": {"ok": False, "error": "signature"}, "substitutions_checked": 2}
+    admitted = case in ("exec-status", "exec-runtime-trap", "exec-second-image")
+    exit_status = {"exec-status": (37, 0), "exec-failed": (38, 0)}.get(case, (-1, 5))
+    return {
+        "image_stop": {"exec": 400, "verified_ns": 100, "held": False} if admitted else None,
+        "status": {
+            "state": "exited",
+            "traced": True,
+            "output": _exec_protocol_output(case, admitted),
+            "exit": exit_status[0],
+            "signal": exit_status[1],
+        },
+    }
+
+
+def _control_trial(case):
+    """Attach exec evidence only to the matching lifecycle or protocol fixture."""
+    trial = {"case": case, "passed": True}
+    if case in EXEC_LIFECYCLE:
+        trial.update(_exec_lifecycle_fields(case))
+    elif case in EXEC_PROTOCOL:
+        trial.update(_exec_protocol_fields(case))
+    return trial
+
+
+@pytest.fixture(name="control_receipt")
+def fixture_control_receipt(boundary_ci, startup_receipt):
+    """Build a complete v2 receipt with the exact native artifact and trial closure."""
+    races = tuple(dict.fromkeys(boundary_ci["CONTROL_RACES"] + EXEC_LIFECYCLE))
+    protocol = tuple(dict.fromkeys(boundary_ci["PROTOCOL_CASES"] + EXEC_PROTOCOL))
+    sources = {
+        "broker": "control_broker.c",
+        "worker": "control_worker.c",
+        "observer": "startup_observe.c",
+        "target": "control_target.c",
+    }
+    return {
+        **startup_receipt,
+        "schema_version": "specfact-managed-control-experiment-v2",
+        "control_subset_passed": True,
+        "trials": [_control_trial(case) for case in races for _ in range(100)]
+        + [_control_trial(case) for case in protocol],
+        "completed_lifecycle_cases": dict.fromkeys(races, 100),
+        "artifacts": [_control_artifact(boundary_ci, name, source) for name, source in sources.items()],
+    }
+
+
+def test_complete_control_v2_receipt_is_accepted(boundary_ci, control_receipt):
+    checks = boundary_ci["checked_receipt"]("control", control_receipt, {"os_build": "26A434"})
+    assert checks["result"] == "passed"
+    assert checks["protocol_checks"] == 25
+    assert len(checks["completed_races"]) == 19
+    assert set(checks["artifacts"]) == {"broker", "worker", "observer", "target"}
+
+
+@pytest.mark.parametrize("case", EXEC_LIFECYCLE + EXEC_PROTOCOL)
+def test_missing_exec_case_is_rejected(boundary_ci, control_receipt, case):
+    control_receipt["trials"] = [item for item in control_receipt["trials"] if item["case"] != case]
+    with pytest.raises((AssertionError, KeyError, ValueError)):
+        boundary_ci["checked_receipt"]("control", control_receipt, {"os_build": "26A434"})
+
+
+@pytest.mark.parametrize("case", EXEC_LIFECYCLE)
+def test_exec_lifecycle_requires_100_actual_trials(boundary_ci, control_receipt, case):
+    control_receipt["trials"].remove(next(item for item in control_receipt["trials"] if item["case"] == case))
+    with pytest.raises((AssertionError, KeyError, ValueError)):
+        boundary_ci["checked_receipt"]("control", control_receipt, {"os_build": "26A434"})
+
+
+@pytest.mark.parametrize("name", ["broker", "worker", "target"])
+def test_missing_snapshot_inputs_are_rejected(boundary_ci, control_receipt, name):
+    next(item for item in control_receipt["artifacts"] if item["name"] == name).pop("build_inputs")
+    with pytest.raises((AssertionError, KeyError, ValueError)):
+        boundary_ci["checked_receipt"]("control", control_receipt, {"os_build": "26A434"})
+
+
+@pytest.mark.parametrize("name", ["broker", "worker", "target"])
+def test_stale_captured_header_is_rejected(boundary_ci, control_receipt, name):
+    artifact = next(item for item in control_receipt["artifacts"] if item["name"] == name)
+    artifact["build_inputs"][-1]["sha256"] = "f" * 64
+    with pytest.raises((AssertionError, KeyError, ValueError)):
+        boundary_ci["checked_receipt"]("control", control_receipt, {"os_build": "26A434"})
+
+
+def test_old_control_receipt_cannot_admit_handoff(boundary_ci, control_receipt):
+    control_receipt["schema_version"] = "specfact-managed-control-experiment-v1"
+    control_receipt["artifacts"] = [item for item in control_receipt["artifacts"] if item["name"] != "target"]
+    control_receipt["trials"] = [item for item in control_receipt["trials"] if not item["case"].startswith("exec-")]
+    control_receipt["completed_lifecycle_cases"] = {
+        case: 100 for case in boundary_ci["CONTROL_RACES"] if not case.startswith("exec-")
+    }
+    with pytest.raises((AssertionError, KeyError, ValueError)):
+        boundary_ci["checked_receipt"]("control", control_receipt, {"os_build": "26A434"})
+
+
+@pytest.mark.parametrize("case", ["exec-status", "exec-runtime-trap", "exec-second-image"])
+@pytest.mark.parametrize(
+    "marker",
+    [None, {}, {"exec": 400, "verified_ns": True, "held": False}, {"exec": 400, "verified_ns": 100, "held": True}],
+)
+def test_missing_or_malformed_image_stop_is_rejected(boundary_ci, control_receipt, case, marker):
+    next(item for item in control_receipt["trials"] if item["case"] == case)["image_stop"] = marker
+    with pytest.raises((AssertionError, KeyError, ValueError, TypeError)):
+        boundary_ci["checked_receipt"]("control", control_receipt, {"os_build": "26A434"})
+
+
+@pytest.mark.parametrize(
+    "output",
+    [
+        "target-entry\ntarget-denials-ok",
+        "target-initializer-ns=99\ntarget-entry\ntarget-denials-ok",
+        "target-initializer-ns=101\ntarget-initializer-ns=102\ntarget-entry\ntarget-denials-ok",
+        "target-initializer-ns=101\ntarget-entry\ntarget-entry\ntarget-denials-ok",
+        "target-initializer-ns=101\ntarget-entry",
+        "target-initializer-ns=101\ntarget-entry\ntarget-denials-ok\ntarget-trap-was-suppressed",
+    ],
+)
+def test_incomplete_or_misordered_target_evidence_is_rejected(boundary_ci, control_receipt, output):
+    next(item for item in control_receipt["trials"] if item["case"] == "exec-status")["status"]["output"] = output
+    with pytest.raises((AssertionError, KeyError, ValueError)):
+        boundary_ci["checked_receipt"]("control", control_receipt, {"os_build": "26A434"})
+
+
+@pytest.mark.parametrize("case", EXEC_PROTOCOL[:-1])
+def test_wrong_exec_wait_status_is_rejected(boundary_ci, control_receipt, case):
+    next(item for item in control_receipt["trials"] if item["case"] == case)["status"]["signal"] = 9
+    with pytest.raises((AssertionError, KeyError, ValueError)):
+        boundary_ci["checked_receipt"]("control", control_receipt, {"os_build": "26A434"})
+
+
+@pytest.mark.parametrize("seconds", [5.001, float("nan"), float("inf"), -1, True, None])
+def test_exec_lifecycle_removal_bound_is_mandatory(boundary_ci, control_receipt, seconds):
+    next(item for item in control_receipt["trials"] if item["case"] == "exec-eof")["observation_seconds"] = seconds
+    with pytest.raises((AssertionError, KeyError, ValueError, TypeError)):
+        boundary_ci["checked_receipt"]("control", control_receipt, {"os_build": "26A434"})
+
+
+@pytest.mark.parametrize("field", ["pid", "ppid", "pgid", "flags", "start_sec", "start_usec"])
+def test_exec_lifecycle_requires_kernel_birth_and_ownership_fields(boundary_ci, control_receipt, field):
+    next(item for item in control_receipt["trials"] if item["case"] == "exec-eof")["worker_identity"].pop(field)
+    with pytest.raises((AssertionError, KeyError, ValueError)):
+        boundary_ci["checked_receipt"]("control", control_receipt, {"os_build": "26A434"})
+
+
+@pytest.mark.parametrize("flag", ["production_approved", "signed_boundary_verified"])
+def test_control_production_flags_cannot_be_true(boundary_ci, control_receipt, flag):
+    control_receipt[flag] = True
+    with pytest.raises((AssertionError, KeyError, ValueError)):
+        boundary_ci["checked_receipt"]("control", control_receipt, {"os_build": "26A434"})
+
+
+def test_control_summary_uses_only_digests_and_fixed_checks(boundary_ci, control_receipt):
+    for artifact in control_receipt["artifacts"]:
+        artifact["path"] = "/secret/98765"
+        artifact["extra"] = "secret"
+        for item in artifact.get("build_inputs", []):
+            item["path"] = "/secret/98765"
+    checks = boundary_ci["checked_receipt"]("control", control_receipt, {"os_build": "26A434"})
+    assert not any(
+        value in json.dumps(checks)
+        for value in ("secret", "98765", "image_stop", "verified_ns", "target-entry", "CDHash")
+    )
+    for artifact in control_receipt["artifacts"]:
+        assert checks["artifacts"][artifact["name"]]["binary_sha256"] == artifact["sha256"]
+        if artifact.get("build_inputs"):
+            assert checks["artifacts"][artifact["name"]]["build_inputs"] == {
+                item["name"]: item["sha256"] for item in artifact["build_inputs"]
+            }
+
+
+@pytest.mark.parametrize("name", ["broker", "worker", "observer", "target"])
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("sha256", "not-a-digest"),
+        ("source_sha256", "f" * 64),
+        ("signing", "Signature=adhoc"),
+        ("entitlements", "<plist>unexpected grants</plist>"),
+    ],
+)
+def test_control_artifact_integrity_is_mandatory(boundary_ci, control_receipt, name, field, value):
+    next(item for item in control_receipt["artifacts"] if item["name"] == name)[field] = value
+    with pytest.raises((AssertionError, KeyError, ValueError)):
+        boundary_ci["checked_receipt"]("control", control_receipt, {"os_build": "26A434"})
+
+
+@pytest.mark.parametrize("change", ["missing-target", "extra-artifact", "duplicate-input", "extra-input"])
+def test_control_artifact_allowance_is_exact(boundary_ci, control_receipt, change):
+    artifacts = control_receipt["artifacts"]
+    if change == "missing-target":
+        control_receipt["artifacts"] = [item for item in artifacts if item["name"] != "target"]
+    elif change == "extra-artifact":
+        artifacts.append({**artifacts[0], "name": "unapproved"})
+    else:
+        inputs = next(item for item in artifacts if item["name"] == "broker")["build_inputs"]
+        if change == "duplicate-input":
+            inputs[-1] = inputs[0].copy()
+        else:
+            inputs.append({"name": "unapproved.h", "sha256": "f" * 64})
+    with pytest.raises((AssertionError, KeyError, ValueError)):
+        boundary_ci["checked_receipt"]("control", control_receipt, {"os_build": "26A434"})
+
+
+@pytest.mark.parametrize("case", EXEC_LIFECYCLE + EXEC_PROTOCOL)
+def test_new_failure_cases_publish_only_allowlisted_categories(boundary_ci, tmp_path, case):
+    (tmp_path / "control.log").write_text(
+        json.dumps(
+            {
+                "failed_case": case,
+                "failure_origin": True,
+                "failure_phase": "marker-exec",
+                "image_stop": {"exec": 98765, "verified_ns": 98765, "held": True},
+                "output": "/secret",
+                "audit_token": [98765],
+            }
+        )
+        + "\n"
+    )
+    (tmp_path / "control.json").write_text(json.dumps({"failure": "RuntimeError: /secret", "trials": []}))
+    result = boundary_ci["failure_summary"]("control", tmp_path / "control.json", tmp_path / "control.log")
+    assert result["failed_case"] == case
+    assert result["failure_phase"] == "marker-exec"
+    assert not any(value in json.dumps(result) for value in ("secret", "98765", "image_stop", "audit_token"))
+
+
+def test_workflow_runs_tested_checker_without_upload_steps():
+    workflow = yaml.safe_load((ROOT / ".github/workflows/code-review-macos-boundary.yml").read_text())
+    steps = workflow["jobs"]["native-boundary"]["steps"]
+    assert steps[-1]["run"].strip() == "python -B scripts/check_macos_boundary_ci_receipts.py"
+    assert not any("upload-artifact" in step.get("uses", "") for step in steps)
+    assert workflow["permissions"] == {"contents": "read"}
+
+
+@pytest.mark.parametrize("count", [None, 0, 1, 3, True, False, 2.0, "2"])
+def test_modified_target_requires_exactly_two_substitutions(boundary_ci, control_receipt, count):
+    trial = next(item for item in control_receipt["trials"] if item["case"] == "exec-modified-target")
+    if count is None:
+        trial.pop("substitutions_checked")
+    else:
+        trial["substitutions_checked"] = count
+    with pytest.raises((AssertionError, KeyError, ValueError)):
+        boundary_ci["checked_receipt"]("control", control_receipt, {"os_build": "26A434"})
+
+
+def test_optimized_python_cannot_admit_empty_evidence():
+    """Optimization must not turn removed assertions into successful admission."""
+    command = (
+        "import importlib.util, sys; "
+        "spec = importlib.util.spec_from_file_location('receipt', sys.argv[1]); "
+        "module = importlib.util.module_from_spec(spec); spec.loader.exec_module(module); "
+        "module.checked_receipt('control', {'trials': [], 'artifacts': []}, {'os_build': 'test'})"
+    )
+    result = subprocess.run(
+        [sys.executable, "-O", "-c", command, str(ROOT / "scripts/check_macos_boundary_ci_receipts.py")],
+        capture_output=True,
+        text=True,
+        timeout=5,
+        check=False,
+    )
+    assert result.returncode != 0
+    assert "requires enabled assertions" in result.stderr

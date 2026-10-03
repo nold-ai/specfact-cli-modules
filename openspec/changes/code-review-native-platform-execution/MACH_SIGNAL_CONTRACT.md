@@ -3,7 +3,7 @@
 Status: experimental replacement for the control fixture BSD stop transport.
 No production admission; startup and analyzer fixtures retain separate acceptance.
 
-Current-head 78b58bca hosted run 37092073540 failed on all macOS 14, 15 and 26
+Historical head 78b58bca hosted run 37092073540 failed on all macOS 14, 15 and 26
 workers during completion. Bounded waitpid reconciliation did not establish a
 fix. The kernel cause is unproven. Retain these failures as historical evidence.
 
@@ -13,7 +13,7 @@ before its initial stop. The broker remains the direct tracing parent; launchd
 continues to own the pre-trace bootstrap interval. Generated SDK MIG decoding
 must validate bounded messages and kernel sender provenance, registered task
 identity and thread membership. No customer-selected task/thread rights enter
-this interface. Initial SIGSTOP alone is suppressed; later signals are forwarded
+this interface. Initial SIGSTOP is suppressed. The image handoff extension in EXEC_BOUNDARY_CONTRACT.md may additionally suppress exactly one dynamically verified replacement trap for an explicit fixed target. All other signals are forwarded
 using PT_THUPDATE before the exception reply. A deliberately held initial stop
 must remain held until broker death. Terminal wait status is reaped separately,
 never inferred from a reply. Malformed/foreign messages terminate the invocation.

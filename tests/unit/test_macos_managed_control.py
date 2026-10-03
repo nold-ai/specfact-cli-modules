@@ -15,6 +15,7 @@ import tempfile
 import unittest
 from contextlib import ExitStack
 from functools import partial
+from itertools import product
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -696,60 +697,200 @@ class ControlFailureOwnershipTests(_ControlTestCase):
 
 
 class BuildProvenanceTests(_ControlTestCase):
+    def setUp(self):
+        super().setUp()
+        # unittest retains this context until teardown, including failed setup/tests.
+        directory = Path(self.enterContext(tempfile.TemporaryDirectory()))  # pylint: disable=consider-using-with
+        self.source = directory / "originals"
+        self.source.mkdir()
+        self.root = directory / "build"
+        self.root.mkdir()
+        self.originals = {}
+        self.reads = {}
+        self.compiled = {}
+        self.build_attempt = 0
+        self.commands = []
+        self.hashes = {"target": "b" * 40, "worker": "a" * 40, "observer": "c" * 40, "broker": "d" * 40}
+        self.cdhash_lines = {}
+        self.positive_output = {"target": "target-positive-ok", "worker": "control-positive-ok"}
+        self.positive_status = {"target": 0, "worker": 0}
+        for name in (
+            "control_probes.h",
+            "control_exec_policy.h",
+            "control_mach.inc",
+            "control_mach_policy.h",
+            "control_mach_reply.h",
+            "control_target.c",
+            "control_worker.c",
+            "startup_observe.c",
+            "control_broker.c",
+        ):
+            path = self.source / name
+            self.originals[path] = name.encode() + b" initial source"
+            path.write_bytes(self.originals[path])
+            self.reads[path] = 0
+        self.read_bytes = Path.read_bytes
+
+    def _counted_read(self, path):
+        if path in self.reads:
+            self.reads[path] += 1
+        return self.read_bytes(path)
+
+    def _prepare(self, root, _command):
+        inputs = []
+        for name in ("mach_exc.defs", "mach_exc_server.c", "mach_exc_server.h", "mach_exc_user.h"):
+            data = name.encode()
+            captured = root / name
+            captured.write_bytes(data)
+            captured.chmod(0o444)
+            inputs.append(
+                {
+                    "name": "mach-exception-defs" if name == "mach_exc.defs" else name,
+                    "sha256": hashlib.sha256(data).hexdigest(),
+                    "path": str(captured),
+                }
+            )
+        return [f"-I{root}", str(root / "mach_exc_server.c")], inputs
+
+    def _command(self, args):
+        self.commands.append(args.copy())
+        if args[0] == "/usr/bin/xcrun":
+            compiler_input = Path(args[args.index("-o") - 1])
+            target = Path(args[args.index("-o") + 1])
+            initial = self.read_bytes(compiler_input)
+            original = next(path for path, value in self.originals.items() if value == initial)
+            self.compiled[target.name.removeprefix("control-")] = (compiler_input, initial)
+            original.write_bytes(b"changed concurrently after compiler input was captured")
+            if target.name == "control-target":
+                (self.source / "control_probes.h").write_bytes(b"changed shared header after first compile")
+            target.write_bytes(b"mock signed binary " + target.name.encode())
+        name = Path(args[-1]).name.removeprefix("control-")
+        lines = self.cdhash_lines.get(name, [self.hashes.get(name, "a" * 40)])
+        details = "flags=0x10002(adhoc,runtime)\nSignature=adhoc\n" + "\n".join("CDHash=" + value for value in lines)
+        if len(args) == 2 and args[1] == "0":
+            name = Path(args[0]).name.removeprefix("control-")
+            return SimpleNamespace(stdout=self.positive_output[name], stderr="", returncode=self.positive_status[name])
+        return SimpleNamespace(stdout="", stderr=details, returncode=0)
+
+    def _build(self):
+        for path, data in self.originals.items():
+            path.write_bytes(data)
+        self.build_attempt += 1
+        self.root = self.root.parent / f"build-{self.build_attempt}"
+        self.root.mkdir()
+        with (
+            patch.object(self.control, "SOURCE", self.source),
+            patch.object(self.control, "verify_native_clock", return_value={}),
+            patch.object(self.control.MACH, "prepare", side_effect=self._prepare),
+            patch.object(self.control.STARTUP, "command", side_effect=self._command),
+            patch.object(Path, "read_bytes", autospec=True, side_effect=self._counted_read),
+        ):
+            return self.control.build(self.root)
+
     def test_repository_change_during_compile_cannot_change_source_receipt(self):
-        with tempfile.TemporaryDirectory() as temporary:
-            directory = Path(temporary)
-            source = directory / "originals"
-            source.mkdir()
-            root = directory / "build"
-            root.mkdir()
-            originals = {}
-            reads = {}
-            compiled = {}
-            for name in ("control_mach.inc", "control_mach_policy.h", "control_mach_reply.h"):
-                (source / name).write_bytes(b"captured include")
-            for name in ("control_worker.c", "startup_observe.c", "control_broker.c"):
-                path = source / name
-                originals[path] = name.encode() + b" initial source"
-                path.write_bytes(originals[path])
-                reads[path] = 0
-            read_bytes = Path.read_bytes
+        _broker, _observer, inventory = self._build()
+        for item in inventory:
+            compiler_input, initial = self.compiled[item["name"]]
+            with self.subTest(component=item["name"], property="private-snapshot"):
+                self.assertEqual(compiler_input.parent, self.root)
+                self.assertEqual(compiler_input.stat().st_mode & 0o777, 0o444)
+            with self.subTest(component=item["name"], property="compiled-source-digest"):
+                self.assertEqual(item["source_sha256"], hashlib.sha256(initial).hexdigest())
+        self.assertEqual(set(self.reads.values()), {1})
+        self.assertEqual(self.root.stat().st_mode & 0o777, 0o700)
 
-            def counted_read(path):
-                if path in reads:
-                    reads[path] += 1
-                return read_bytes(path)
+    def test_four_artifact_closure_binds_target_and_shared_header_before_worker(self):
+        broker, observer, inventory = self._build()
+        self.assertEqual(broker, self.root / "control-broker")
+        self.assertEqual(observer, self.root / "control-observer")
+        self.assertEqual([item["name"] for item in inventory], ["target", "worker", "observer", "broker"])
+        compiles = [args for args in self.commands if args[0] == "/usr/bin/xcrun"]
+        self.assertEqual(
+            [Path(args[args.index("-o") + 1]).name for args in compiles],
+            ["control-target", "control-worker", "control-observer", "control-broker"],
+        )
+        target_signed = next(
+            i
+            for i, args in enumerate(self.commands)
+            if "--verify" in args and args[-1] == str(self.root / "control-target")
+        )
+        self.assertLess(target_signed, self.commands.index(compiles[1]))
+        self.assertIn("-DFIXED_TARGET=" + json.dumps(str(self.root / "control-target")), compiles[1])
 
-            def command(args):
-                if args[0] == "/usr/bin/xcrun":
-                    compiler_input = Path(args[args.index("-o") - 1])
-                    target = Path(args[args.index("-o") + 1])
-                    # Select this build's source without relying on the snapshot naming convention.
-                    initial = read_bytes(compiler_input)
-                    original = next(path for path, value in originals.items() if value == initial)
-                    compiled[target.name.removeprefix("control-")] = (compiler_input, initial)
-                    original.write_bytes(b"changed concurrently after compiler input was captured")
-                    target.write_bytes(b"mock signed binary")
-                details = "flags=0x10002(adhoc,runtime)\nSignature=adhoc\nCDHash=" + "a" * 40
-                return SimpleNamespace(stdout="control-positive-ok" if len(args) == 2 else "", stderr=details)
+    def test_shared_probes_are_captured_once_for_both_images(self):
+        _broker, _observer, inventory = self._build()
+        compiles = [args for args in self.commands if args[0] == "/usr/bin/xcrun"]
+        for component in inventory[:2]:
+            with self.subTest(component=component["name"]):
+                inputs = component["build_inputs"]
+                self.assertEqual(len(inputs), 1)
+                self.assertEqual(inputs[0]["name"], "control_probes.h")
+                captured = Path(inputs[0]["path"])
+                self.assertEqual(captured, self.root / "control_probes.h")
+                self.assertEqual(captured.stat().st_mode & 0o777, 0o444)
+                self.assertEqual(captured.read_bytes(), self.originals[self.source / "control_probes.h"])
+                self.assertEqual(inputs[0]["sha256"], hashlib.sha256(captured.read_bytes()).hexdigest())
+                self.assertIn(f"-I{self.root}", compiles[0 if component["name"] == "target" else 1])
 
+    def test_broker_binds_both_identities_and_captured_policy(self):
+        _broker, _observer, inventory = self._build()
+        compiles = [args for args in self.commands if args[0] == "/usr/bin/xcrun"]
+        self.assertIn("-DFIXED_TARGET=" + json.dumps(str(self.root / "control-target")), compiles[-1])
+        self.assertIn("-DFIXED_WORKER=" + json.dumps(str(self.root / "control-worker")), compiles[-1])
+        for name in ("target", "worker"):
+            requirement = 'cdhash H"' + self.hashes[name] + '"'
+            self.assertIn("-D" + name.upper() + "_REQUIREMENT=" + json.dumps(requirement), compiles[-1])
+        broker_item = inventory[-1]
+        self.assertEqual(broker_item["signal_transport"], "mach-exception-v1")
+        self.assertEqual(len(broker_item["build_inputs"]), 8)
+        self.assertEqual(
+            {item["name"] for item in broker_item["build_inputs"]},
+            {
+                "mach-exception-defs",
+                "mach_exc_server.c",
+                "mach_exc_server.h",
+                "mach_exc_user.h",
+                "control_mach.inc",
+                "control_mach_policy.h",
+                "control_mach_reply.h",
+                "control_exec_policy.h",
+            },
+        )
+        policy = next(item for item in broker_item["build_inputs"] if item["name"] == "control_exec_policy.h")
+        self.assertEqual(Path(policy["path"]).read_bytes(), self.originals[self.source / "control_exec_policy.h"])
+        self.assertEqual(policy["sha256"], hashlib.sha256(Path(policy["path"]).read_bytes()).hexdigest())
+        self.assertEqual(Path(policy["path"]).stat().st_mode & 0o777, 0o444)
+        self.assertIn([str(self.root / "control-target"), "0"], self.commands)
+        self.assertIn([str(self.root / "control-worker"), "0"], self.commands)
+
+    def test_bad_or_ambiguous_target_and_worker_hashes_stop_before_broker_compile(self):
+        invalid = ([], ["a" * 39], ["g" * 40], ["A" * 40], ["a" * 40, "b" * 40])
+        for name, lines in product(("target", "worker"), invalid):
+            self.cdhash_lines = {name: lines}
+            self.commands.clear()
             with (
-                patch.object(self.control, "SOURCE", source),
-                patch.object(self.control, "verify_native_clock", return_value={}),
-                patch.object(self.control.MACH, "prepare", return_value=([], [])),
-                patch.object(self.control.STARTUP, "command", side_effect=command),
-                patch.object(Path, "read_bytes", counted_read),
+                self.subTest(component=name, lines=lines),
+                self.assertRaisesRegex(RuntimeError, "bad " + name + " CDHash"),
             ):
-                _broker, _observer, inventory = self.control.build(root)
-            for item in inventory:
-                compiler_input, initial = compiled[item["name"]]
-                with self.subTest(component=item["name"], property="private-snapshot"):
-                    self.assertEqual(compiler_input.parent, root)
-                    self.assertEqual(compiler_input.stat().st_mode & 0o777, 0o444)
-                with self.subTest(component=item["name"], property="compiled-source-digest"):
-                    self.assertEqual(item["source_sha256"], hashlib.sha256(initial).hexdigest())
-            self.assertEqual(set(reads.values()), {1})
-            self.assertEqual(root.stat().st_mode & 0o777, 0o700)
+                self._build()
+            compiles = [args for args in self.commands if args[0] == "/usr/bin/xcrun"]
+            self.assertNotIn(str(self.root / "control-broker"), [args[args.index("-o") + 1] for args in compiles])
+            if name == "target":
+                self.assertEqual(len(compiles), 1)
+
+    def test_positive_controls_require_success_and_exact_marker(self):
+        for name, variant in product(("target", "worker"), ("empty", "prefix", "status")):
+            marker = self.positive_output[name]
+            output = {"empty": "", "prefix": "prefix-" + marker, "status": marker}[variant]
+            status = 3 if variant == "status" else 0
+            self.positive_output[name], self.positive_status[name] = output, status
+            with (
+                self.subTest(component=name, output=output, status=status),
+                self.assertRaisesRegex(RuntimeError, name + " positive probes missing"),
+            ):
+                self._build()
+            self.positive_output = {"target": "target-positive-ok", "worker": "control-positive-ok"}
+            self.positive_status = {"target": 0, "worker": 0}
 
 
 class NativeControlTests(_ControlTestCase):
@@ -829,7 +970,8 @@ class NativeControlTests(_ControlTestCase):
             trials = self.control.run_trials(broker, observer, root, 1)
             broker_inputs = next(item for item in inventory if item["name"] == "broker")
             self.assertEqual(broker_inputs["signal_transport"], "mach-exception-v1")
-            self.assertEqual(len(broker_inputs["build_inputs"]), 7)
+            self.assertEqual(len(broker_inputs["build_inputs"]), 8)
+            self.assertIn("control_exec_policy.h", {item["name"] for item in broker_inputs["build_inputs"]})
             self.assertTrue(all(item["passed"] for item in trials), trials)
             self.assertEqual(
                 set(self.control.LIFECYCLE_CASES),

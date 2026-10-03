@@ -86,11 +86,11 @@ A superseding run cancels the previous run; cancellation provides no acceptance.
 The existing helpers retain their five-second survivor/job-removal gates and
 native deadline exclusion. The wrapper requires successful exit **and**
 `repetition_gate_passed=true`, exact `repetitions=100`, 100 actual passing
-records for each of the six startup races and twelve control lifecycle cases,
-and all nineteen control protocol checks. It requires the normal-completion and
+records for each of the six startup races and nineteen control lifecycle cases,
+and all twenty-five control protocol checks. It requires the normal-completion and
 runtime-trap controls exactly once. It checks both subset flags, the
 startup positive and surviving negative controls, native architecture/build,
-fixture source snapshot digests, three signed binary digests per suite and
+fixture source snapshot digests, three startup and four control signed binary digests and
 ad-hoc/hardened signing details. It rejects incomplete receipts and requires
 `production_approved=false` and `signed_boundary_verified=false`.
 Job ceilings do not replace or relax fixture deadlines.
@@ -128,8 +128,9 @@ artifact-bound acceptance and independent physical-Mac installation proof.
 The existing [startup contract](STARTUP_BOUNDARY_CONTRACT.md),
 [control contract](CONTROL_BOUNDARY_CONTRACT.md), native fixture tests and
 [TDD evidence](TDD_EVIDENCE.md) supply the preceding behavior specification and
-fixture proof. This change adds CI configuration and receipt enforcement only;
-it does not modify helper behavior or add tests that merely mirror YAML.
+fixture proof. The original CI slice added configuration and receipt enforcement. Subsequent
+control transport and executable-handoff slices change helper behavior and add
+actual native positive, negative and lifecycle tests.
 
 Targeted local validation completed 2026-10-03 (Europe/Berlin):
 
@@ -300,3 +301,16 @@ run remains evidence; it cannot become a pass through later successful runs.
 These fixture results keep production_approved=false and
 signed_boundary_verified=false. Complete escape/resource, analyzer/manager,
 artifact and customer-installation proof is still outstanding.
+
+## Image handoff extension — 2026-10-03
+
+The preceding bd173218 checkpoint passed all three hosted images in run
+37099551157, with actual CodeRabbit completion through that head. This does not
+approve the new image handoff. Control receipts are now v2 and require four
+signed artifacts (bootstrap worker, target, broker, observer), captured shared
+probes, eight broker inputs and actual image-stop/initializer/trap results.
+They require six additional exec lifecycle cases at 100 repetitions each.
+Startup receipts remain v1. The extracted stdlib receipt checker preserves the
+same 720-second/30-minute ceilings, private raw evidence and false production
+flags. The physical full control run passed in 693.785 seconds; fresh hosted
+results are pending. Exact helper/fixture changes require a new hosted attempt.

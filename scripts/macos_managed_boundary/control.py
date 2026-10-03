@@ -21,6 +21,7 @@ import time
 import uuid
 from collections import Counter
 from contextvars import ContextVar
+from functools import partial
 from pathlib import Path
 from typing import Any, NamedTuple
 
@@ -33,7 +34,7 @@ _CASE_NAMES = {
     ),
     "failure": (
         "unknown bootstrap-observe-caller bootstrap-authority bootstrap-register bootstrap-socket "
-        "marker-broker marker-trace marker-output observe-worker observe-removal isolation-peer-authority "
+        "marker-broker marker-trace marker-output marker-exec observe-worker observe-removal isolation-peer-authority "
         "isolation-extra-connection cleanup"
     ),
     "protocol": (
@@ -42,8 +43,6 @@ _CASE_NAMES = {
         "peer-pidversion term-ignored runtime-trap"
     ),
 }
-LIFECYCLE_CASES = tuple(_CASE_NAMES["lifecycle"].split())
-PROTOCOL_CASES = tuple(_CASE_NAMES["protocol"].split())
 REQUEST_FAILURE_PHASES = dict(
     enumerate(("request-authenticate", "request-launch", "request-wait", "request-signal", "request-cancel"))
 )
@@ -89,6 +88,10 @@ SOCKET = startup_module("control_socket")
 STATE = startup_module("control_state")
 BUILD = startup_module("control_build")
 MACH = startup_module("control_mach_build")
+EXEC = startup_module("control_exec")
+EXEC_LIFECYCLE_CASES, EXEC_PROTOCOL_CASES = EXEC.LIFECYCLE_CASES, EXEC.PROTOCOL_CASES
+LIFECYCLE_CASES = (*_CASE_NAMES["lifecycle"].split(), *EXEC_LIFECYCLE_CASES)
+PROTOCOL_CASES = (*_CASE_NAMES["protocol"].split(), *EXEC_PROTOCOL_CASES)
 
 
 class FrameFields(NamedTuple):
@@ -295,7 +298,10 @@ class Invocation:
     def wait_event(self, field: str, pid: int | None = None) -> dict[str, Any]:
         """Read-only observation of fixture markers; never cleanup enforcement."""
         _activate_operation(
-            self, {"broker": "marker-broker", "trace": "marker-trace", "output": "marker-output"}.get(field, "unknown")
+            self,
+            {"broker": "marker-broker", "trace": "marker-trace", "output": "marker-output", "exec": "marker-exec"}.get(
+                field, "unknown"
+            ),
         )
         deadline = time.monotonic() + 3
         while time.monotonic() < deadline:
@@ -312,19 +318,28 @@ class Invocation:
     def capture_worker(self, launched: dict[str, Any], mode: int = 2) -> dict[str, Any]:
         """Validate the original kernel identity before injecting lifecycle faults."""
         pid = launched["pid"]
-        if mode == 4:
+        if mode in (10, 11):
+            marker = self.wait_event("exec", pid)
+            require(marker.get("held") is (mode == 11), "unexpected replacement hold")
+        elif mode == 4:
             self.wait_event("trace", pid)
         elif mode != 3:
             self.wait_event("output", pid)
         _activate_operation(self, "observe-worker")
         identity = STARTUP.observe(self.observer, pid)
-        require(identity is not None, "worker vanished before capture")
+        if mode == 10:
+            deadline = time.monotonic() + 3
+            while identity is not None and identity["pgid"] != pid and time.monotonic() < deadline:
+                time.sleep(0.005)
+                identity = STARTUP.observe(self.observer, pid)
+        if identity is None:
+            raise RuntimeError("worker vanished before capture")
         self.identities.append(identity)
         require(identity["ppid"] == self.identities[0]["pid"], "worker not direct broker child")
         require(bool(identity["flags"] & 2) == (mode != 3), "unexpected tracing flag")
-        if mode in (3, 4):
+        if mode in (3, 4, 11):
             require(identity["pgid"] == self.identities[0]["pgid"], "trusted startup left launchd group")
-        elif mode == 2:
+        elif mode in (2, 10):
             require(identity["pgid"] == pid, "traced hold fixture did not leave group")
         return identity
 
@@ -499,7 +514,7 @@ def _prepare_wait(client: Client, handle: int, case: str) -> None:
 
 def _finish_worker(client: Client, handle: int, case: str) -> dict[str, Any]:
     """Validate signal/cancel/timeout status independently of survivor observation."""
-    if case in ("cancel", "cancel-held-stop"):
+    if case in ("cancel", "cancel-held-stop", "exec-cancel", "exec-cancel-held"):
         require(client.request(4, handle=handle)["ok"], "cancel rejected")
     elif case == "signal":
         require(client.request(3, handle=handle, argument=9)["ok"], "signal rejected")
@@ -507,10 +522,14 @@ def _finish_worker(client: Client, handle: int, case: str) -> dict[str, Any]:
     require(
         status["state"] == "exited"
         and status["signal"] == 9
-        and status["reason"] == ("cancel" if case == "cancel-held-stop" else case),
+        and status["reason"] == ("cancel" if "cancel" in case else case),
         f"unexpected status {status}",
     )
-    if case != "cancel-held-stop":
+    if case == "exec-cancel":
+        require("target-denials-ok" in status["output"], "replacement confinement probes missing")
+    elif case == "exec-cancel-held":
+        require("target-initializer-ns=" not in status["output"], "held replacement initialized")
+    elif case != "cancel-held-stop":
         require("control-denials-ok" in status["output"], "native deny-default probes missing")
     return status
 
@@ -520,10 +539,10 @@ def _trigger_lifecycle(
 ) -> tuple[float, dict[str, Any] | None]:
     """Keep fault issuance and its measurement start together."""
     started = time.monotonic()
-    if case.startswith("eof-"):
+    if case.startswith("eof-") or case in ("exec-eof", "exec-eof-held"):
         client.close()
         return started, None
-    if case == "broker-kill":
+    if case in ("broker-kill", "exec-broker-kill", "exec-broker-kill-held"):
         issued = STARTUP.signal_fixture(invocation.observer, invocation.identities[0])
         require(issued is not None, "broker exited before injection")
         return issued[0], None
@@ -539,6 +558,8 @@ def lifecycle_trial(broker: Path, observer: Path, root: Path, case: str) -> dict
     if case == "isolation":
         return isolation_trial(broker, observer, root)
     mode = {"eof-pretrace": 3, "eof-trace-stopped": 4, "cancel-held-stop": 4}.get(case, 2)
+    if case in EXEC_LIFECYCLE_CASES:
+        mode = 11 if case.endswith("-held") else 10
     timeout = 500 if case == "timeout" else 5000
     with Invocation(broker, observer, root) as invocation:
         invocation.case = case
@@ -546,7 +567,7 @@ def lifecycle_trial(broker: Path, observer: Path, root: Path, case: str) -> dict
         launched = client.launch(mode, timeout)
         identity = invocation.capture_worker(launched, mode)
         _prepare_wait(client, launched["handle"], case)
-        job = case.startswith("eof-") or case in ("partial-timeout", "broker-kill")
+        job = case.startswith(("eof-", "exec-eof", "exec-broker-kill")) or case in ("partial-timeout", "broker-kill")
         deadline = cleanup_deadline(launched) if job else None
         started, status = _trigger_lifecycle(invocation, client, launched["handle"], case)
         result = observe_absence(invocation, identity, started, job=job, native_deadline_ns=deadline)
@@ -695,6 +716,12 @@ def runtime_trap_trial(broker: Path, observer: Path, root: Path) -> dict[str, An
         return {"case": "runtime-trap", "passed": True, "status": status}
 
 
+verify_exec_status = partial(EXEC.verify_status, require=require)
+
+
+exec_trials = partial(EXEC.trials, tools=EXEC.ExecTools(Invocation, require, _event_from_file))
+
+
 def _output_protocol_trials(broker: Path, observer: Path, root: Path) -> list[dict[str, Any]]:
     """Prove native output, rejection, fragmentation and retained handle limits."""
     trials: list[dict[str, Any]] = []
@@ -833,7 +860,7 @@ def _term_ignored_trials(broker: Path, observer: Path, root: Path) -> list[dict[
 
 def protocol_trials(broker: Path, observer: Path, root: Path) -> list[dict[str, Any]]:
     """Actual negative requests must reject while fixed positive execution works."""
-    trials = [runtime_trap_trial(broker, observer, root)]
+    trials = [runtime_trap_trial(broker, observer, root), *exec_trials(broker, observer, root)]
     for check in (
         _output_protocol_trials,
         _frame_size_trials,
@@ -906,7 +933,7 @@ def receipt(repetitions: int, trials: list[dict[str, Any]]) -> dict[str, Any]:
     protocol = set(PROTOCOL_CASES).issubset(successes)
     passed = protocol and bool(trials) and all(item.get("passed") is True for item in trials)
     return {
-        "schema_version": "specfact-managed-control-experiment-v1",
+        "schema_version": "specfact-managed-control-experiment-v2",
         "completed_lifecycle_cases": counts,
         "control_subset_passed": passed and _counts_complete(counts, 1),
         "repetition_gate_passed": passed and repetitions >= 100 and _counts_complete(counts, 100),

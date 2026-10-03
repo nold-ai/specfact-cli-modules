@@ -26,6 +26,17 @@
 #ifndef WORKER_REQUIREMENT
 #error "Build requires a pinned worker CDHash requirement"
 #endif
+#ifndef CONTROL_BSD_TEST
+#ifndef FIXED_TARGET
+#error "Build requires a fixed signed replacement target"
+#endif
+#ifndef TARGET_REQUIREMENT
+#error "Build requires a pinned target CDHash requirement"
+#endif
+#define MAX_FIXTURE 12
+#else
+#define MAX_FIXTURE 5
+#endif
 #define WORKERS 8
 #define PAYLOAD 52
 #define OUTPUT 1024
@@ -35,7 +46,7 @@ struct worker {
     pid_t pid;
     uint64_t handle;
     double deadline;
-    int mode, fd, reaped, status, traced, wait_accepted;
+    int mode, fd, reaped, status, traced, wait_accepted, exec_admitted;
     const char *reason;
     char output[OUTPUT + 1];
     size_t used;
@@ -114,19 +125,23 @@ static int peer(int fd) {
     return pid == (pid_t)expected.val[5] && !memcmp(&token, &expected, sizeof(token));
 }
 
-static int signed_worker(void) {
-    CFURLRef url = CFURLCreateFromFileSystemRepresentation(NULL, (const UInt8 *)FIXED_WORKER,
-        strlen(FIXED_WORKER), false);
+static int signed_path(const char *path, CFStringRef expected) {
+    CFURLRef url = CFURLCreateFromFileSystemRepresentation(NULL, (const UInt8 *)path,
+        strlen(path), false);
     SecStaticCodeRef code = NULL;
     SecRequirementRef requirement = NULL;
     if (!url) return 0;
     OSStatus result = SecStaticCodeCreateWithPath(url, kSecCSDefaultFlags, &code);
-    if (!result) result = SecRequirementCreateWithString(CFSTR(WORKER_REQUIREMENT), kSecCSDefaultFlags, &requirement);
+    if (!result) result = SecRequirementCreateWithString(expected, kSecCSDefaultFlags, &requirement);
     if (!result) result = SecStaticCodeCheckValidity(code, kSecCSStrictValidate, requirement);
     if (requirement) CFRelease(requirement);
     if (code) CFRelease(code);
     CFRelease(url);
     return result == errSecSuccess;
+}
+
+static int signed_worker(void) {
+    return signed_path(FIXED_WORKER, CFSTR(WORKER_REQUIREMENT));
 }
 
 static void queue(const char *json) {
@@ -181,6 +196,9 @@ static void result(int index, const char *state) {
 static void launch(int mode, unsigned int timeout) {
     if (worker_count == WORKERS) { reject("worker-limit"); return; }
     if (!signed_worker()) { reject("signature"); return; }
+    #ifndef CONTROL_BSD_TEST
+    if (mode >= 6 && !signed_path(FIXED_TARGET, CFSTR(TARGET_REQUIREMENT))) { reject("signature"); return; }
+    #endif
     int stream[2];
     if (pipe(stream)) die();
     nonblocking(stream[0]);
@@ -194,7 +212,8 @@ static void launch(int mode, unsigned int timeout) {
     #ifndef CONTROL_BSD_TEST
     exception_spawn(&attributes, worker_count);
     #endif
-    char fixture[] = {(char)('0' + mode), 0};
+    char fixture[3];
+    if (snprintf(fixture, sizeof(fixture), "%d", mode) <= 0) die();
     char *args[] = {FIXED_WORKER, fixture, NULL};
     char *environment[] = {"PATH=/usr/bin:/bin", "LANG=C", NULL};
     struct worker *item = &workers[worker_count];
@@ -244,7 +263,7 @@ static void request(void) {
         return;
     }
     if (opcode == 1) {
-        if (handle || argument < 1 || argument > 5 || timeout < 50 || timeout > 5000) { reject("arguments"); return; }
+        if (handle || argument < 1 || argument > MAX_FIXTURE || timeout < 50 || timeout > 5000) { reject("arguments"); return; }
         launch((int)argument, timeout);
         return;
     }

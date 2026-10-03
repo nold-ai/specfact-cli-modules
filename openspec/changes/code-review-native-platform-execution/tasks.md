@@ -101,3 +101,11 @@ applicable stapling and certificate renewal/revocation belong only to #488.
 
 - [x] Replace the control-fixture BSD stop transport with bounded owned Mach exception handling; capture exact SDK/generated source provenance.
 - [ ] Prove native signal semantics, startup holds and broker-death cleanup against exact ad-hoc hardened builds; retain all hosted failures and require 100 repetitions on each candidate OS.
+
+### Image-bound executable handoff
+
+- [x] Record the real signed confined Mach exec failure and specify one-use dynamic image admission before implementation.
+- [x] Prove replacement-before-initializer ordering, inherited confinement, genuine traps, failed exec, substituted targets and second-image rejection on the physical Mac; hosted proof remains below.
+- [ ] Pass 100 repetitions of cancellation, connection loss and broker death both at the verified replacement stop and after target entry on the physical Mac and macOS 14/15/26.
+- [x] Bind four final signed fixture artifacts, shared headers, dynamic requirements and image-stop evidence to the revised experimental receipt; old receipts cannot approve the new handoff.
+- [ ] Integrate actual admitted interpreter/analyzer execution only after this subset and the remaining full boundary gates pass.

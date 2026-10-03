@@ -355,7 +355,12 @@ requirements:
       scenario_id: managed-native-process-boundary
       method: inspection
       intent: 'Inspect planned acceptance: Owned Mach signal exceptions complete without BSD wakeup dependence.'
-      observable: "MACH_SIGNAL_CONTRACT.md requires pre-spawn exception endpoints, kernel-origin owned task/thread admission, initial-stop-only suppression, preserved terminal signals and independent five-second/100-round cleanup. Generated SDK provenance and actual hosted results remain necessary; mocked admission checks do not approve production."
+      observable: "MACH_SIGNAL_CONTRACT.md requires pre-spawn exception endpoints, kernel-origin owned task/thread admission, initial-stop and explicitly verified one-use image handoff suppression, preserved terminal signals and independent five-second/100-round cleanup. Generated SDK provenance and actual hosted results remain necessary; mocked admission checks do not approve production."
+    - case_id: 460-9-8
+      scenario_id: managed-native-process-boundary
+      method: inspection
+      intent: 'Inspect planned acceptance: Replacement image is verified before initialization.'
+      observable: "EXEC_BOUNDARY_CONTRACT.md requires public dynamic Security identity validation before initializers, one-use admission, real trap and second-image negatives, four signed artifact/source bindings and 100 repetitions of six exec lifecycle transitions per OS. Fixed-image evidence does not establish interpreter, full capsule or installation support."
     - case_id: 460-9-6
       scenario_id: managed-native-process-boundary
       method: inspection

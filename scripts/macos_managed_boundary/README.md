@@ -96,3 +96,14 @@ directory/ancestor metadata and exact dylib grants preserve forbidden host-file,
 process, descriptor and network controls. This is two actual analyzer members,
 not proof of all ten inside the boundary or the project-manager corpus.
 Receipts remain experimental and cannot enable production selection/publication.
+
+## Fixed image handoff acceptance
+
+The control experiment now verifies the signed replacement's dynamic code identity
+at the kernel-owned exec stop, before target initializers. Its v2 receipt includes
+four signed artifacts, shared probes and SDK/MIG inputs. It tests genuine traps,
+failed/second exec, corrupt and validly signed wrong targets, inherited confinement,
+and cancellation/connection loss/broker death both at the held replacement stop
+and after entry. All 19 lifecycle cases require 100 repetitions plus 25 protocol
+checks. Initial-distribution signing and false production flags remain unchanged.
+This is a fixed C target, not the production interpreter or all-ten-analyzer runtime.

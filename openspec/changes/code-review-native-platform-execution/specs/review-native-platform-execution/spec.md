@@ -356,8 +356,16 @@ The macOS ARM64 backend SHALL use broker-owned direct workers, each traced and c
 
 - **GIVEN** a fixed signed worker whose exception endpoint is installed by the broker before spawn, then establishes PT_TRACE_ME and PT_SIGEXC before its initial stop
 - **WHEN** initial stops, terminal signals, cancellation or broker death occur
-- **THEN** bounded kernel-origin exception messages are admitted only for the registered direct child and its thread; only the initial SIGSTOP is suppressed, runtime signals retain their meaning, and terminal wait status remains distinct from exception replies
+- **THEN** bounded kernel-origin exception messages are admitted only for the registered direct child and its thread; only the initial SIGSTOP and an explicitly requested, independently verified one-use image handoff trap are suppressed, runtime signals retain their meaning, and terminal wait status remains distinct from exception replies
 - **AND** exact ad-hoc hardened builds, five-second independent cleanup, 100 repetitions and the entire hosted matrix remain required; malformed or foreign exceptions fail closed and no BSD transport fallback establishes acceptance
+
+#### Scenario: Replacement image is verified before initialization
+
+- **GIVEN** a fixed native bootstrap with active tracing and confinement and one broker-declared replacement identity
+- **WHEN** the kernel stops its directly owned worker across exec
+- **THEN** public dynamic Security validation must match the expected final signed replacement image before any target initializer; bootstrap traps, subsequent target traps and second replacements retain their real signal semantics
+- **AND** the exact profile, shared source inputs and four signed fixture artifacts are bound to versioned evidence; cancellation, CLI connection loss and broker death at the verified exec stop and after entry require independent five-second observation and 100 repetitions each on every candidate OS
+- **AND** this fixed-image subset does not admit CPython, analyzer adapters, project-manager workflows or customer installation
 
 #### Scenario: Sealed analyzer executes with exact native inputs
 
