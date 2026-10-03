@@ -211,7 +211,13 @@ def job_config(label: str, broker: Path, directory: Path) -> dict[str, Any]:
         "LaunchOnlyOnce": True,
         "AbandonProcessGroup": False,
         "ExitTimeOut": 1,
-        "Sockets": {"control": {"SockPathName": str(directory / "control.sock"), "SockPathMode": 0o600}},
+        "Sockets": {
+            "control": {
+                "SockPathName": str(directory / "control.sock"),
+                "SockPathMode": 0o600,
+                "SockPathOwner": os.getuid(),
+            }
+        },
         "StandardOutPath": str(directory / "events"),
         "StandardErrorPath": str(directory / "errors"),
         "WorkingDirectory": str(directory),

@@ -494,8 +494,11 @@ After one successful launchctl bootstrap, the Python fixture SHALL observe socke
 readiness for at most three seconds against one original monotonic deadline.
 Every observation SHALL use lstat: the invocation directory must be an owned
 0700 directory, and the endpoint must be an owned Unix socket with mode 0600.
-Symlinks, non-sockets and wrong UID fail closed immediately; an absent socket or
-an owned socket with a different mode may be observed again until that deadline.
+Symlinks and non-sockets fail closed immediately. An absent socket, pending
+mode or pending endpoint ownership may be observed again until that deadline;
+none is usable until both the invoking UID and mode 0600 are observed. The
+private directory must remain owned throughout. SockPathOwner SHALL explicitly
+request the invoking UID from launchd; no controller chown is permitted.
 Directory validation failures and unexpected filesystem errors are terminal.
 A ready observation completing at or after the deadline SHALL fail, including a
 late 0600 transition. Sleeps are capped by the remaining budget. Bootstrap is
@@ -618,3 +621,23 @@ the original owning failure at bootstrap-socket. Missing/foreign/malformed
 values SHALL be omitted. No bootstrap retry, permission repair or new native
 acceptance is implied. Existing deadlines and all signature/lifecycle gates
 remain unchanged.
+
+## Explicit launchd socket ownership — 2026-10-03
+
+Head b44a4afa run 37098070225 passed startup on macOS 14 but failed control
+after 22 complete rounds with socket_owner_invalid. This is actual owner
+mismatch evidence; its numerical owner and whether it was transient remain
+unobserved. The earlier immediate endpoint-owner rejection is superseded:
+request SockPathOwner=the invoking UID and observe readiness within the original
+three-second deadline. Never connect before an owned 0600 socket is observed.
+A permanently foreign owner remains failure with socket_owner_invalid; a late
+owned transition remains failure. Type/symlink/private-directory violations
+remain immediate failures. No permission repair or bootstrap retry.
+
+The installed macOS 27 SDK and host launchd.plist(5) document SockPathOwner
+as the user ID that should own the domain socket (accessed 2026-10-03).
+This field does not prove the exact timing of hosted ownership changes.
+Require failing-before tests for explicit owner configuration, an owner/mode
+transition, permanently foreign ownership and transition at the deadline; then
+repeat the signed local and hosted acceptance without changing source security
+permissions, cleanup bounds or production flags.

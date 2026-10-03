@@ -275,3 +275,28 @@ The native workflow's pinned actions are updated to official
 were read at those exact revisions on 2026-10-03; both use Node 24. This resolves
 the hosted Node 20 deprecation annotations. Checkout still retains no credentials;
 permissions, native Python selection and acceptance gates are unchanged.
+
+## Owned Mach transport hosted results — 2026-10-03
+
+Run [37098070225](https://github.com/nold-ai/specfact-cli-modules/actions/runs/37098070225),
+head b44a4afabcf8fa43b50703b4eb30d5dfeea555db, passed all 600 startup
+races on all three ARM64 images. macOS 15.7.9 build 24G830 and macOS 26.6.2
+build 25G83 each passed all 1,319 control records: 13 lifecycle cases x 100
+plus 19 protocol controls. This includes held-stop cancellation. Their
+sanitized control check SHA-256 values are respectively:
+
+- cfd8001760144e9f6c523fb7238c067d5bc0bbcda0e81c75fbe9a26522e2348a
+- 3af90699b8aa3c13294ed0f2ebceb5398beb9ea282d087639abd8041d5e8e170
+
+macOS 14.8.9 build 23J631 failed bootstrap-socket with socket_owner_invalid
+after 22 complete control rounds; its sanitized failure check SHA-256 is
+4ca4a5c127c3e5ecb1093a2781b779949766430626048cb6441f13cb83562025.
+Actual numerical UID and whether ownership was transient were not exported.
+The next correction explicitly requests SockPathOwner and keeps the original
+three-second budget while waiting for owned 0600 readiness. No unsafe socket
+is admitted. Fresh complete matrix acceptance remains necessary. This failed
+run remains evidence; it cannot become a pass through later successful runs.
+
+These fixture results keep production_approved=false and
+signed_boundary_verified=false. Complete escape/resource, analyzer/manager,
+artifact and customer-installation proof is still outstanding.

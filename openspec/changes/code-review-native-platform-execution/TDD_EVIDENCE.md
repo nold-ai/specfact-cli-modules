@@ -730,3 +730,42 @@ in the 311-test explicit native suite. The explicit-file host review has
 No other findings or clean-code regressions remain. YAML/import boundaries,
 seven unchanged module signatures, actionlint, strict validation of both
 linked changes and Markdown (historical line-length exemption only) pass.
+
+## Explicit launchd socket owner — 2026-10-03
+
+Hosted head b44a4afa passed all startup races and full control on macOS 15/26;
+macOS 14 failed bootstrap-socket with socket_owner_invalid after 22 complete
+rounds. The public fixed-category diagnostic established owner mismatch, not
+the numerical UID or transition timing. The contract was revised first to
+request documented SockPathOwner=the invoking UID and observe ownership/mode
+within the original three-second deadline. No unsafe endpoint is usable and
+no chmod/chown, bootstrap retry or deadline extension was introduced.
+
+RED before implementation: seven failures, 45 passed, five native skips and
+45 passing subtests, covering missing owner configuration and readiness
+transitions. GREEN explicit native focused suite: 213 passed, 49 passing
+subtests, no skips, in 20.73 seconds. Independent exact review-agent
+security/defect review: No findings, medium confidence; hosted ownership timing
+and fresh signed acceptance were still pending at review time. Final serial
+SpecFact explicit-file --enforcement changed --bug-hunt host review:
+PASS_WITH_ADVISORY, 32 MISSING_ICONTRACT advisories covered by the existing
+standalone stdlib experiment exception, no other findings or clean-code
+regressions. Types/lint, YAML/imports, seven unchanged module signatures and
+strict change validation pass. C/signing/lifecycle remain unchanged.
+
+Fresh exact ad-hoc hardened physical run: 1,319/1,319 records passed, every
+one of 13 lifecycle cases at 100 repetitions, maximum independent observation
+1.167821 seconds. Ignored receipt
+.specfact/native-compat/pr489-socket-owner-control-100.json SHA-256:
+5c7970a2e49809b7607837e2eed0a6835831c32d3625f0408f322583d43095b1.
+
+The first smart run returned UNKNOWN rather than FAIL in one existing mocked
+capsule verdict test while tracked evidence documents were being updated.
+The exact isolated test passed in 13.73 seconds; no verdict code was changed.
+Concurrent workspace mutation is a hypothesis supported by the existing
+snapshot guard, not a reproduced root-cause trace. With tracked files frozen
+and no overlapping analyzer-cache writes, serial smart and full suites each
+passed 3,767 tests, 40 skips and 67 subtests. All native-only skips for the
+touched startup/control scope were separately executed in the focused suite.
+Historical failed evidence is retained; fresh hosted acceptance remains pending.
+No production capsule, module version bump, merge or publication is claimed.

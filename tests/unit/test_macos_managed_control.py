@@ -62,6 +62,7 @@ class ControlContractTests(_ControlTestCase):
         self.assertFalse(config["AbandonProcessGroup"])
         self.assertTrue(config["LaunchOnlyOnce"])
         self.assertEqual(config["Sockets"]["control"]["SockPathMode"], 0o600)
+        self.assertEqual(config["Sockets"]["control"]["SockPathOwner"], os.getuid())
         self.assertEqual(config["Sockets"]["control"]["SockPathName"], "/private/control.sock")
         self.assertEqual(config["ProgramArguments"], ["/broker", "/private/authority"])
         self.assertNotIn("worker", json.dumps(config))
@@ -261,13 +262,51 @@ class SocketReadinessTests(_ControlTestCase):
         with self.assertRaisesRegex(RuntimeError, "socket readiness deadline"):
             self._observe([(13.1, stat.S_IFSOCK | 0o600, None)])
 
-    def test_wrong_owner_fails_without_waiting_even_before_chmod(self):
+    def test_foreign_socket_owner_must_become_owned_before_ready(self):
+        for mode in (0o600, 0o666):
+            with self.subTest(mode=oct(mode)):
+                calls, sleeps = self._observe(
+                    [
+                        (10.0, stat.S_IFSOCK | mode, os.getuid() + 1),
+                        (10.5, stat.S_IFSOCK | 0o600, None),
+                    ]
+                )
+                self.assertEqual(calls, 4)
+                self.assertEqual(len(sleeps), 1)
+
+    def test_foreign_owner_and_mode_share_original_deadline(self):
+        calls, sleeps = self._observe(
+            [
+                (10.0, stat.S_IFSOCK | 0o666, os.getuid() + 1),
+                (11.0, stat.S_IFSOCK | 0o666, None),
+                (12.9, stat.S_IFSOCK | 0o600, None),
+            ]
+        )
+        self.assertEqual(calls, 6)
+        self.assertEqual(len(sleeps), 2)
+
+    def test_permanently_foreign_owner_is_never_ready(self):
         for mode in (0o600, 0o666):
             with (
                 self.subTest(mode=oct(mode)),
-                self.assertRaisesRegex(RuntimeError, "socket type/owner"),
+                self.assertRaisesRegex(RuntimeError, "socket readiness deadline") as caught,
             ):
-                self._observe([(10.0, stat.S_IFSOCK | mode, os.getuid() + 1)])
+                self._observe(
+                    [
+                        (10.0, stat.S_IFSOCK | mode, os.getuid() + 1),
+                        (12.999, stat.S_IFSOCK | mode, os.getuid() + 1),
+                    ]
+                )
+            self.assertEqual(caught.exception.__dict__.get("_native_socket_state"), "socket_owner_invalid")
+
+    def test_owner_transition_at_deadline_is_not_admitted(self):
+        with self.assertRaisesRegex(RuntimeError, "socket readiness deadline"):
+            self._observe(
+                [
+                    (10.0, stat.S_IFSOCK | 0o600, os.getuid() + 1),
+                    (13.0, stat.S_IFSOCK | 0o600, None),
+                ]
+            )
 
     def test_non_socket_and_symlink_fail_closed(self):
         for kind in (stat.S_IFREG, stat.S_IFDIR, stat.S_IFIFO, stat.S_IFLNK):

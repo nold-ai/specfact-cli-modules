@@ -15,7 +15,7 @@ def _failure(message: str, state: str) -> RuntimeError:
 
 
 def _socket_state(path: Path, uid: int) -> str:
-    """Observe only a category; absence and pending mode share the same budget."""
+    """Observe a category; binding, owner and mode share one readiness budget."""
     try:
         info = path.lstat()
     except FileNotFoundError:
@@ -23,7 +23,7 @@ def _socket_state(path: Path, uid: int) -> str:
     if not stat.S_ISSOCK(info.st_mode):
         raise _failure("private socket type/owner failed", "socket_type_invalid")
     if info.st_uid != uid:
-        raise _failure("private socket type/owner failed", "socket_owner_invalid")
+        return "socket_owner_invalid"  # Never ready; launchd may still be assigning ownership.
     return "private" if stat.S_IMODE(info.st_mode) == 0o600 else "socket_mode_pending"
 
 
