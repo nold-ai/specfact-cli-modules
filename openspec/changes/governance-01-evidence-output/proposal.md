@@ -1,5 +1,11 @@
 # Change: Runtime Evidence Output for CI and AI Handoff
 
+## Owner-approved agentic SDLC amendment — 2026-10-04
+
+Add a bounded optional export using in-toto Statement v1 and SCAI v0.3 to bind a digest-addressed evidence bundle and the original native reports. Preserve independent statuses, producer authority, uncertainty and limitations in authoritative native JSON; neither SARIF nor an attestation is a replacement report. Signing authenticates origin/integrity, not claim correctness. Reuse existing CI signing/verification infrastructure: no new signer, store or predicate-standardization dependency. Test tampered bundle, mismatched subject/digest and unauthorized signer rejection. Summary/SARIF interoperability may consume native producer reports without requiring the full envelope, #170/#171 graph/index or seals; export does not block #481/#740/#483.
+
+This planning amendment supersedes conflicting scope and prerequisite wording below. It changes no runtime behavior and completes no implementation task. See [roadmap](../../AGENTIC_SDLC_ROADMAP.md).
+
 ## Scope rescope — 2026-09-20
 
 Emit lean current-run results and references to existing CI artifacts. Historical chronology is optional and separately labeled; no transcripts, approval receipts, or duplicate proof execution by default. This broader emitter feature is not a blocker for https://github.com/nold-ai/specfact-cli-modules/issues/481.
@@ -51,3 +57,7 @@ for CI, docs, and AI IDE remediation loops.
 - **Core Counterpart**: nold-ai/specfact-cli#247
 - **Last Synced Status**: proposed
 - **Sanitized**: false
+
+## Planning validation
+
+See [AGENTIC_SDLC_VALIDATION.md](../../AGENTIC_SDLC_VALIDATION.md) for actual proposal checks and the explicit Python-only analyzer applicability exception. Runtime review and release tasks remain pending.

@@ -1,0 +1,47 @@
+schema_version: '2'
+requirements:
+  openspec:validation-03-outcome-calibration:validation-outcome-calibration:exploratory-outcome-pilot:
+    rationale: Make the approved planning requirement reviewable without claiming runtime evidence.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#493
+    touchpoints:
+    - id: validation-outcome-calibration-spec
+      kind: config_file
+      locator: openspec/changes/validation-03-outcome-calibration/specs/validation-outcome-calibration/spec.md
+    verification_cases:
+    - case_id: exploratory-outcome-pilot-inspection
+      scenario_id: exploratory-outcome-pilot
+      method: inspection
+      intent: Inspect Exploratory outcome pilot and all its acceptance scenarios.
+      observable: Strict OpenSpec validation retains the requirement and scenarios. Planning inspection only; tests,
+        implementation and signed producer acceptance remain pending.
+  ? openspec:validation-03-outcome-calibration:validation-outcome-calibration:separate-outcome-units-and-unavailable-measurements
+  : rationale: Make the approved planning requirement reviewable without claiming runtime evidence.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#493
+    touchpoints:
+    - id: validation-outcome-calibration-spec
+      kind: config_file
+      locator: openspec/changes/validation-03-outcome-calibration/specs/validation-outcome-calibration/spec.md
+    verification_cases:
+    - case_id: separate-outcome-units-and-unavailable-measurements-inspection
+      scenario_id: separate-outcome-units-and-unavailable-measurements
+      method: inspection
+      intent: Inspect Separate outcome units and unavailable measurements and all its acceptance scenarios.
+      observable: Strict OpenSpec validation retains the requirement and scenarios. Planning inspection only; tests,
+        implementation and signed producer acceptance remain pending.
+  openspec:validation-03-outcome-calibration:validation-outcome-calibration:uncertainty-and-operational-sample-gates:
+    rationale: Make the approved planning requirement reviewable without claiming runtime evidence.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#493
+    touchpoints:
+    - id: validation-outcome-calibration-spec
+      kind: config_file
+      locator: openspec/changes/validation-03-outcome-calibration/specs/validation-outcome-calibration/spec.md
+    verification_cases:
+    - case_id: uncertainty-and-operational-sample-gates-inspection
+      scenario_id: uncertainty-and-operational-sample-gates
+      method: inspection
+      intent: Inspect Uncertainty and operational sample gates and all its acceptance scenarios.
+      observable: Strict OpenSpec validation retains the requirement and scenarios. Planning inspection only; tests,
+        implementation and signed producer acceptance remain pending.

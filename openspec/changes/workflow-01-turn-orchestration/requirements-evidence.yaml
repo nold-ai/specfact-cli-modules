@@ -144,3 +144,18 @@ requirements:
       observable: THEN the combination is rejected as not ready with an actionable diagnostic THEN the compatibility prerequisite
         is satisfied for that exact combination Planned inspection only; implementation and signed producer acceptance remain
         pending.
+  openspec:workflow-01-turn-orchestration:turn-workflow-orchestration:optional-context-and-advisory-producer-feedback:
+    rationale: Make the approved planning requirement reviewable without claiming runtime evidence.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#483
+    touchpoints:
+    - id: turn-workflow-orchestration-spec
+      kind: config_file
+      locator: openspec/changes/workflow-01-turn-orchestration/specs/turn-workflow-orchestration/spec.md
+    verification_cases:
+    - case_id: optional-context-and-advisory-producer-feedback-inspection
+      scenario_id: optional-context-and-advisory-producer-feedback
+      method: inspection
+      intent: Inspect Optional context and advisory producer feedback and all its acceptance scenarios.
+      observable: Strict OpenSpec validation retains the requirement and scenarios. Planning inspection only; tests,
+        implementation and signed producer acceptance remain pending.

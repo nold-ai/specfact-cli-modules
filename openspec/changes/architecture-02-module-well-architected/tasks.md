@@ -25,3 +25,9 @@
 - [ ] 4.3 Run `hatch run specfact code review run --json --out .specfact/code-review.json --scope full`, remediate every finding, and record the command plus timestamp in `TDD_EVIDENCE.md`.
 - [ ] 4.4 Run `openspec validate architecture-02-module-well-architected --strict`.
 - [ ] 4.5 Open the modules PR to `dev`, cross-link the paired core architecture change, and note any deferred analyzer providers as follow-up issues.
+
+## Agentic SDLC follow-up acceptance
+
+- [ ] Verify the 2026-10-04 approved scope against live issue/release readiness before implementation.
+- [ ] Derive negative tests from the amendment scenarios before behavior edits; implement analyzer additions only through the owning released contracts.
+- [ ] Preserve independent producer status, optional context/assurance and existing lean release dependencies; document exact versions and rollback.

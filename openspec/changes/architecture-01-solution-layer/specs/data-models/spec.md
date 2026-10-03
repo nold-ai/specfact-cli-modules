@@ -1,7 +1,7 @@
-## MODIFIED Requirements
+## ADDED Requirements
 
-### Requirement: Data Models
-The system SHALL extend project-level models with an architecture namespace linked to requirements.
+### Requirement: Architecture Namespace Consumer
+The modules runtime SHALL consume the released optional core architecture namespace linked to requirements without defining a competing project model.
 
 #### Scenario: Architecture model references requirement IDs
 - **GIVEN** a solution architecture artifact

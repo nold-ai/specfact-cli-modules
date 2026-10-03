@@ -1,5 +1,11 @@
 # Architecture Well-Architected Module Design
 
+## Owner-approved agentic SDLC amendment — 2026-10-04
+
+Keep the architecture-01 delivery plus one complete real usage cycle prerequisite. The first Python analyzer slice consumes Import Linter outputs for declared dependency rules instead of building an import-graph engine. Associate original rule/configuration/tool/source-snapshot identities and findings with approved boundary/component/ADR records. A planted forbidden dependency must be detected; unavailable or incomplete extraction stays UNKNOWN. Broader runtime tracing, predictive graph analysis and polyglot analyzers require demonstrated need. Determine core_compatibility from actually delivered contracts and installed-pair tests; a reserved >=1.0.0 range is not evidence that 1.0-only APIs are necessary.
+
+This planning amendment supersedes conflicting scope and prerequisite wording below. It changes no runtime behavior and completes no implementation task. See [roadmap](../../AGENTIC_SDLC_ROADMAP.md).
+
 ## Context
 
 Architecture governance spans both shared contracts in `specfact-cli` and executable repository analysis in `specfact-cli-modules`. This change defines the module bundle that inspects dependency boundaries, interface changes, and ADR traceability while mapping results into the paired core architecture review model.
