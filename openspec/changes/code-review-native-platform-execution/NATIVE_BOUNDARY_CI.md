@@ -159,8 +159,9 @@ Git-visible files is not final assurance evidence. Broad gates and independent
 review are not claimed by this scoped validation.
 
 Required next evidence: the PR run URL, tested merge SHA, all three job results,
-recorded OS/build/image/Python identities, GUI preflight result, six-by-100 and
-twelve-by-100 counts, nineteen protocol checks and sanitized check digests.
+recorded OS/build/image/Python identities, GUI preflight result, six-by-100 startup
+and nineteen-by-100 control lifecycle counts, twenty-five protocol checks, four
+control signed-artifact digests and sanitized check digests.
 **Complete hosted boundary acceptance: failed on the first run.** Do not mark
 the supported-matrix or full native admission task complete from startup proof.
 
@@ -314,3 +315,26 @@ Startup receipts remain v1. The extracted stdlib receipt checker preserves the
 same 720-second/30-minute ceilings, private raw evidence and false production
 flags. The physical full control run passed in 693.785 seconds; fresh hosted
 results are pending. Exact helper/fixture changes require a new hosted attempt.
+
+### Hosted image-bound handoff result
+
+Run [37106053209](https://github.com/nold-ai/specfact-cli-modules/actions/runs/37106053209),
+at head f7af791678e768b8d1786864fe871c3ae0f5ca10 and PR merge tree
+bbc31a0da933c3378feb1d8ba03be7605b0ce277, passed all three native rows on
+2026-10-03 (Europe/Berlin). Each row passed six startup stages x 100 and all
+19 control lifecycle cases x 100 plus 25 protocol controls. The exact pinned
+OS/builds were 14.8.9/23J631, 15.7.9/24G830 and 26.6.2/25G83. No limit,
+repetition, signing, privacy or false-production requirement was relaxed.
+
+Published sanitized check SHA-256 digests (startup, then control):
+
+- macOS 14: 7f24e1ad3c74642675b70173df562aa6122f8491c275e0d5238fa7dcee98d1e9;
+  acf9aff9638e1ebe41b394b225c8e66666bf5ff1a0b72dd90e71d62bc50631e4.
+- macOS 15: 494cd0621c758168ec19e4c89a109b7f8ff318642207c57de814f350f65aaa23;
+  760cde93887c6b99892566e44578c0a1431aed202ef94b9f2be80140c1352603.
+- macOS 26: 04173ab8060a395bb11eafd04b10ec9d7480471c59d1d4e8d74ea358247f02c2;
+  28a142d80f90934042ab2b2783cf1f0ebe8ec22d4848eccfd6ca0de5cc965042.
+
+This supersedes the pending hosted result for this fixed-image subset only.
+Full native admission, interpreter integration and customer shipment remain
+unproven. Subsequent implementation changes require fresh exact-head acceptance.

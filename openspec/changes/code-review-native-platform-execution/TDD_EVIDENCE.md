@@ -854,3 +854,20 @@ full 273.37 seconds. Native skips for the touched scope were exercised separatel
 No native C, signing or sandbox-policy changes were made after the 100-round
 physical proof; the Python verification refactor was rechecked against its receipt.
 No full native module enablement, merge, publication or #460 completion is claimed.
+
+### Hosted handoff and review correction
+
+On 2026-10-03 (Europe/Berlin), native ARM64 macOS 14/15/26 run 37106053209
+passed the complete startup/v2-control fixture suites at f7af7916; each row
+passed 600 startup trials and 1,925 control checks. Exact platform, merge-tree
+and sanitized check identities are recorded in NATIVE_BOUNDARY_CI.md.
+CodeRabbit actually reviewed f7af791678e768b8d1786864fe871c3ae0f5ca10 at
+09:33 Europe/Berlin (review 5399554719, run a00857b1-f317-4105-8b13-c461187ba150).
+Its one outside-diff minor finding identified a stale required-evidence checklist
+still using the old twelve-by-100/nineteen counts. Independently comparing that
+checklist with the v2 checker confirmed the issue. The checklist now requires
+nineteen-by-100 lifecycle cases, twenty-five protocol checks and four control
+signed-artifact digests. This is a documentation correction; no native source,
+profile, signing configuration or receipt behavior changed. Strict OpenSpec,
+Markdown and whitespace checks pass. Normal commit hooks remain required.
+No full native capsule enablement, shipment or #460 completion is claimed.
