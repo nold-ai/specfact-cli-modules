@@ -39,3 +39,11 @@ The host signing-identity check found zero valid identities. No Developer ID sig
 ## Native XPC follow-up
 
 The checked-in native XPC experiment ran on 2026-10-01 Europe/Berlin: two positive controls passed and all sixteen detached lifecycle cases failed, with empty final cleanup audits. See [XPC boundary results](XPC_BOUNDARY_RESULTS.md). The candidate is rejected; production remains NO-GO.
+
+## Distribution scope readback — 2026-10-02
+
+The owner deferred paid Apple identity/notarization to optional #488, which is
+blocked by issue #460. The historical zero-identity result no longer blocks initial delivery.
+Ad-hoc native signatures plus SpecFact-signed manifests remain required, along
+with exact-distribution sandbox/lifecycle and separate-Mac installation proof.
+No new boundary or installation pass is established by this scope correction.

@@ -42,7 +42,7 @@ requirements:
       scenario_id: native-isolation-capability-evidence
       method: inspection
       intent: "Inspect planned acceptance: Cancellation and descendants are bounded."
-      observable: "all governed descendants terminate within the frozen cleanup bound; fixtures independently check survivors and resource ceilings rather than treating killpg alone as proof. Planned maturity only; future native execution evidence is required by FEASIBILITY.md and tasks.md; no runtime pass is claimed."
+      observable: "under the managed revision, the kernel denies worker-created descendants and all broker-managed workers terminate within five seconds; each lifecycle race requires 100 repetitions with independent survivor and resource checks rather than killpg alone. Planned maturity only; future native execution evidence is required by FEASIBILITY.md and tasks.md; no runtime pass is claimed."
     - case_id: 460-2-4
       scenario_id: native-isolation-capability-evidence
       method: inspection
@@ -52,7 +52,7 @@ requirements:
       scenario_id: native-isolation-capability-evidence
       method: inspection
       intent: "Inspect planned acceptance: Native XPC boundary candidate must prove descendant cleanup."
-      observable: "A reproducible no-admin ARM64 harness rejects surviving descendants or incomplete observation; native negative evidence does not approve a release."
+      observable: "Historical XPC evidence is retained: the no-admin ARM64 harness rejected surviving descendants and does not approve a release. The approved managed-process revision supersedes unrestricted subprocess compatibility; current acceptance is mapped in 460-9-1 through 460-10-2."
   openspec:code-review-native-platform-execution:review-native-platform-execution:portable-review-semantics:
     rationale: Define macOS ARM64 acceptance without claiming unexecuted runtime proof.
     stakeholder_refs:
@@ -221,7 +221,7 @@ requirements:
       scenario_id: signed-customer-release-acceptance
       method: inspection
       intent: "Inspect planned acceptance: Apple distribution and loading controls apply."
-      observable: "applicable signing/notarization/quarantine checks and the approved library-loading policy pass without disabling host protections; final payload hashes match the shipped signed manifest. Planned maturity only; future native execution evidence is required by FEASIBILITY.md and tasks.md; no runtime pass is claimed."
+      observable: "initial-distribution native-signature/quarantine checks and the approved hardening/library-loading policy pass without disabling host protections; final payload hashes match the shipped signed manifest. Planned maturity only; future native execution evidence is required by FEASIBILITY.md and tasks.md; no runtime pass is claimed."
     - case_id: 460-8-4
       scenario_id: signed-customer-release-acceptance
       method: inspection
@@ -317,3 +317,115 @@ requirements:
       method: inspection
       intent: "Inspect planned acceptance: Candidate TAR ancillary text fields hide bytes."
       observable: "All raw textual TAR fields require strict UTF-8 and zero post-terminator padding. Planned maturity only; this is not release acceptance."
+  openspec:code-review-native-platform-execution:review-native-platform-execution:managed-native-process-boundary:
+    rationale: Owner-approved managed-process delivery; executable signed acceptance is still required.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#460
+    touchpoints:
+    - id: openspec-source-spec
+      kind: config_file
+      locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
+    verification_cases:
+    - case_id: 460-9-1
+      scenario_id: managed-native-process-boundary
+      method: inspection
+      intent: 'Inspect planned acceptance: Managed subprocess completes.'
+      observable: "The broker launches a separately confined direct worker through a bounded private channel and returns output, status and lifecycle; all ten analyzers and the pip/Hatch/uv/Poetry corpus remain first-release requirements. Planned inspection only; signed runtime and publication acceptance remain unproven."
+    - case_id: 460-9-2
+      scenario_id: managed-native-process-boundary
+      method: inspection
+      intent: 'Inspect planned acceptance: Worker bypasses compatibility adapter.'
+      observable: "The kernel denies direct fork/vfork/posix_spawn, process-creation syscalls and unauthorized tracing, signals or IPC; unsupported behavior yields actionable incomplete evidence, never host fallback or PASS with missing required evidence. Planned inspection only; signed runtime and publication acceptance remain unproven."
+    - case_id: 460-9-3
+      scenario_id: managed-native-process-boundary
+      method: inspection
+      intent: 'Inspect planned acceptance: Broker dies during startup or execution.'
+      observable: "No unconfined project code runs across startup, tracing, confinement or exec; independent observation finds no governed survivor after five seconds following broker/CLI death, timeout or cancellation, including concurrent requests, with 100 repetitions per lifecycle race. Planned inspection only; signed runtime and publication acceptance remain unproven."
+    - case_id: 460-9-4
+      scenario_id: managed-native-process-boundary
+      method: inspection
+      intent: 'Inspect planned acceptance: Fixed trusted bootstrap owns the pre-trace interval.'
+      observable: "Default-signal fixed trusted startup plus kernel tracing must remove governed workers and invocation jobs within five seconds, independently observed with 100 repetitions per transition and negative controls. STARTUP_BOUNDARY_RESULTS.md records a local physical-host subset; it does not establish the complete signed boundary, supported matrix or publication acceptance."
+    - case_id: 460-9-5
+      scenario_id: managed-native-process-boundary
+      method: inspection
+      intent: 'Inspect planned acceptance: Private control protocol preserves authority and terminal status.'
+      observable: "CONTROL_BOUNDARY_CONTRACT.md specifies private authenticated bounded requests, owned handles, preserved terminal status and independently observed lifecycle gates excluding competing cleanup. Sanitized original-owner socket readiness categories aid startup diagnosis without changing its budget. Local fixed-fixture evidence does not approve production artifacts, the OS matrix or manager adapters."
+    - case_id: 460-9-7
+      scenario_id: managed-native-process-boundary
+      method: inspection
+      intent: 'Inspect planned acceptance: Owned Mach signal exceptions complete without BSD wakeup dependence.'
+      observable: "MACH_SIGNAL_CONTRACT.md requires pre-spawn exception endpoints, kernel-origin owned task/thread admission, initial-stop and explicitly verified one-use image handoff suppression, preserved terminal signals and independent five-second/100-round cleanup. Generated SDK provenance and actual hosted results remain necessary; mocked admission checks do not approve production."
+    - case_id: 460-9-8
+      scenario_id: managed-native-process-boundary
+      method: inspection
+      intent: 'Inspect planned acceptance: Replacement image is verified before initialization.'
+      observable: "EXEC_BOUNDARY_CONTRACT.md requires public dynamic Security identity validation before initializers, one-use admission, real trap and second-image negatives, four signed artifact/source bindings and 100 repetitions of six exec lifecycle transitions per OS. Fixed-image evidence does not establish interpreter, full capsule or installation support."
+    - case_id: 460-9-6
+      scenario_id: managed-native-process-boundary
+      method: inspection
+      intent: 'Inspect planned acceptance: Sealed analyzer executes with exact native inputs.'
+      observable: "SEALED_ANALYZER_CONTRACT.md requires actual clean/defect scans with the pinned native core, exact verified dylibs, deny-default negative controls and exercised-policy receipt binding. Two native members are not the all-ten-analyzer or customer-installation acceptance."
+  openspec:code-review-native-platform-execution:review-native-platform-execution:initial-distribution-managed-boundary-gate:
+    rationale: Owner-approved managed-process delivery; executable signed acceptance is still required.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#460
+    touchpoints:
+    - id: openspec-source-spec
+      kind: config_file
+      locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
+    verification_cases:
+    - case_id: 460-10-1
+      scenario_id: initial-distribution-managed-boundary-gate
+      method: inspection
+      intent: 'Inspect planned acceptance: Apple credentials are unavailable.'
+      observable: "Missing Apple credentials do not block initial-distribution preparation/testing, shipment or canonical publication and do not trigger credential probes. Native signatures, authenticated payloads and independent boundary proof remain required; prerequisite results alone never grant eligibility. Planned inspection only; signed runtime and publication acceptance remain unproven."
+    - case_id: 460-10-2
+      scenario_id: initial-distribution-managed-boundary-gate
+      method: inspection
+      intent: 'Inspect planned acceptance: Initial-distribution boundary is incompatible.'
+      observable: "Exact initial-distribution native signatures, hardened-runtime settings, narrow entitlements, tracing and confinement must work together; a failure rejects the candidate before production integration, without unsigned or process-polling substitution. Planned inspection only; signed runtime and publication acceptance remain unproven."
+    - case_id: 460-10-3
+      scenario_id: initial-distribution-managed-boundary-gate
+      method: inspection
+      intent: 'Inspect planned acceptance: Integrity or proof is missing.'
+      observable: 'Corrupt payloads, invalid native signatures and absent independent boundary evidence reject admission even with Apple credentials. Planned only; runtime proof remains unavailable.'
+  openspec:code-review-native-platform-execution:review-native-platform-execution:distinct-native-trust-evidence:
+    rationale: Keep artifact authentication, native signatures, Apple trust and sandbox proof distinct.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#460
+    - nold-ai/specfact-cli-modules#488
+    touchpoints:
+    - id: openspec-source-spec
+      kind: config_file
+      locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
+    verification_cases:
+    - case_id: 460-12-1
+      scenario_id: distinct-native-trust-evidence
+      method: inspection
+      intent: 'Inspect planned acceptance: Initial native trust is inspected.'
+      observable: 'Versioned inspection distinguishes manifest authentication, per-component native signing mode, notarization status and independent boundary verification. Ad-hoc signing does not claim Apple publisher trust. Planned only; runtime proof remains unavailable.'
+    - case_id: 460-12-2
+      scenario_id: distinct-native-trust-evidence
+      method: inspection
+      intent: 'Inspect planned acceptance: Default-protection installation is blocked.'
+      observable: 'Independent-Mac actual CLI/GHCR installation must pass under an ordinary user with default protections and no Apple credentials, re-signing or build tools. Host-protection failures remain explicit; no quarantine stripping, Gatekeeper disabling or security overrides. Planned only; installation remains unproven.'
+  openspec:code-review-native-platform-execution:review-native-platform-execution:automatic-native-runtime-acquisition:
+    rationale: Owner-approved managed-process delivery; executable signed acceptance is still required.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#460
+    touchpoints:
+    - id: openspec-source-spec
+      kind: config_file
+      locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
+    verification_cases:
+    - case_id: 460-11-1
+      scenario_id: automatic-native-runtime-acquisition
+      method: inspection
+      intent: 'Inspect planned acceptance: First invocation and offline reuse.'
+      observable: "The ordinary command downloads and verifies a prebuilt signed Darwin ARM64 runtime with progress, atomically publishes its bound cache and revalidates offline reuse; no Docker, VM, Homebrew, Xcode, sudo or separately installed daemon is required. Planned inspection only; signed runtime and publication acceptance remain unproven."
+    - case_id: 460-11-2
+      scenario_id: automatic-native-runtime-acquisition
+      method: inspection
+      intent: 'Inspect planned acceptance: Native evidence reaches an older consumer.'
+      observable: "A consumer lacking the versioned native execution contract rejects the evidence instead of assigning Linux identity or protected authority. Planned inspection only; signed runtime and publication acceptance remain unproven."

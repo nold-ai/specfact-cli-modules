@@ -151,21 +151,30 @@ Security records under the repository security policy.
 |---:|---|---|---|---|
 | 1 | `archive/2026-08-23-ci-01-workflow-dispatch-core-ref-trust` | [#422](https://github.com/nold-ai/specfact-cli-modules/pull/422) | Shipped and archived: preserve paired feature-branch validation for non-manual events while restricting manual paired-core execution to literal `main` or `dev` refs | ancestry sync PR [#421](https://github.com/nold-ai/specfact-cli-modules/pull/421) |
 
-## Planned macOS ARM64 Capsule
+## Native macOS ARM64 Capsule — managed-process revision
 
-Owner-approved revision on 2026-09-30 (Europe/Berlin): #460 delivers macOS ARM64
-first, with Linux x86-64 regression coverage. Windows, Intel macOS and Linux
+Physical-host startup, private-control and two sealed-analyzer fixture checkpoints
+are implemented under the same change; they are partial native evidence, not
+production delivery or supported-matrix approval. See its managed boundary status.
+
+Owner-approved revisions on 2026-09-30 and 2026-10-02 (Europe/Berlin): #460 delivers macOS ARM64
+first, with managed processes, automatic first-use native runtime acquisition and Linux x86-64 regression coverage. Windows, Intel macOS and Linux
 ARM64 are deferred, not implicitly supported or required for this delivery.
 
 | Change | Issue | Implementation dependencies |
 |---|---|---|
 | `code-review-native-platform-execution` | [#460](https://github.com/nold-ai/specfact-cli-modules/issues/460) | Verified layout #459 and released #473 / Code Review 0.50.1 baseline; native isolation/dependency feasibility and bounded design approval; no blanket C15 or optional #434 prerequisite |
+| `code-review-macos-developer-id-distribution` | [#488](https://github.com/nold-ai/specfact-cli-modules/issues/488) | Optional, unscheduled Apple distribution trust; blocked by #460; never blocks native shipment or publication |
 
 Preserve the selected released review semantics and signed identities. Core #679/modules #417 are separately scheduled; an actual native consumer
 incompatibility requires explicit paired scope and compatibility evidence.
 The existing C15 dependency chain is unchanged by removing its blanket edge
 into #460. Optional preflight, seals and historical RED ledgers do not block
-native delivery.
+native delivery. Paid Developer ID and notarization are deferred to optional #488;
+initial delivery uses build-time ad-hoc native signatures, verified upstream
+signatures where applicable and SpecFact-signed manifests. Exact distribution
+boundary and independent default-protection installation acceptance still gate
+publication. Apple credential preflight is not a required initial-release step.
 
 Planning defines the contract in the change's FEASIBILITY.md and scenario
 specification; it does not prove native runtime support. Production remains

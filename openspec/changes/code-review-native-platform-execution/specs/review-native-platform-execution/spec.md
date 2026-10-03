@@ -2,7 +2,7 @@
 
 ## Scope revision — 2026-09-30
 
-Owner-approved macOS ARM64 first delivery. This replaces the prior cross-platform/C15 prerequisite scope; deferred platforms remain unsupported by this change. Current maturity is planned.
+Owner-approved macOS ARM64 first delivery. This replaces the prior cross-platform/C15 prerequisite scope; deferred platforms remain unsupported by this change. The owner-approved managed-process revision of 2026-10-02 supersedes unrestricted subprocess compatibility. Production remains gated on signed feasibility.
 
 ## ADDED Requirements
 
@@ -24,7 +24,7 @@ Code Review SHALL add a dedicated macOS ARM64 capsule while preserving Linux x86
 
 ### Requirement: Native isolation capability evidence
 
-Production backend approval SHALL follow harmless native feasibility tests of a minimal signed Seatbelt helper and an App Sandbox alternative against the same capability contract. Neither candidate is preapproved. Mandatory boundaries SHALL cover filesystem reads/writes, network and IPC access, inherited descriptors, startup/load-path integrity, resource limits and complete child-process lifecycle. Exact mechanisms, OS support and numeric limits SHALL be frozen from measured results before production implementation.
+Production backend approval SHALL follow harmless native feasibility tests of the initial-distribution managed broker/bootstrap against the capability contract. Earlier Seatbelt, App Sandbox and XPC experiments remain historical evidence; they are not alternate admission routes. The managed candidate is not preapproved. Mandatory boundaries SHALL cover filesystem reads/writes, network and IPC access, inherited descriptors, startup/load-path integrity, resource limits and complete child-process lifecycle. Exact mechanisms, OS support and numeric limits SHALL be frozen from measured results before production implementation.
 
 #### Scenario: Isolation and cleanup are proven
 
@@ -40,9 +40,9 @@ Production backend approval SHALL follow harmless native feasibility tests of a 
 
 #### Scenario: Cancellation and descendants are bounded
 
-- **GIVEN** a worker forks, creates a new session or attempts to leave the initial process group
+- **GIVEN** a managed worker requests child execution or attempts forbidden direct creation, session changes or process-group escape
 - **WHEN** timeout, user cancellation or controller failure occurs
-- **THEN** all governed descendants terminate within the frozen cleanup bound; fixtures independently check survivors and resource ceilings rather than treating killpg alone as proof
+- **THEN** all governed workers terminate within five seconds; fixtures independently check survivors and resource ceilings rather than treating killpg alone as proof
 
 #### Scenario: Startup cannot bypass confinement
 
@@ -52,7 +52,8 @@ Production backend approval SHALL follow harmless native feasibility tests of a 
 
 #### Scenario: Native XPC boundary candidate must prove descendant cleanup
 
-- **WHEN** an ordinary-user ARM64 application runs bounded fixtures through an embedded XPC service
+- **GIVEN** the historical XPC candidate is retained as rejected feasibility evidence
+- **WHEN** its ordinary-user ARM64 application runs bounded fixtures through an embedded XPC service
 - **THEN** native acceptance MUST include normal subprocesses, detachment, cancellation, timeout, client death and service death with an independent observer
 - **AND** any survivor after five seconds, missing receipt or emergency cleanup MUST reject the candidate, without enabling production selection
 - **AND** repetition counts, architecture, build/profile identity, exact failure and observer cleanup MUST be recorded; 100 repetitions per lifecycle race are required before positive admission
@@ -200,7 +201,7 @@ The macOS backend SHALL carry forward pip/pip-tools, Hatch, uv and Poetry discov
 
 ### Requirement: Signed customer release acceptance
 
-Support SHALL be claimed only after a canonical signed publication passes fresh ordinary-user installation on every advertised macOS/ABI combination and Linux regression acceptance. Distribution SHALL verify applicable Apple code signing, notarization, quarantine and third-party library loading through the real install route. Candidate/source-tree results SHALL NOT substitute for public release evidence.
+Support SHALL be claimed only after a canonical signed publication passes fresh ordinary-user installation on every advertised macOS/ABI combination and Linux regression acceptance. Distribution SHALL verify native signatures, quarantine, hardened-runtime/entitlement settings and third-party library loading through the real install route. Developer ID and notarization SHALL be optional #488 follow-up work, not initial-release prerequisites. Candidate/source-tree results SHALL NOT substitute for public release evidence.
 
 #### Scenario: Customer installs the published capsule
 
@@ -218,7 +219,7 @@ Support SHALL be claimed only after a canonical signed publication passes fresh 
 
 - **GIVEN** the final helper/runtime has been packaged and signed in the approved order
 - **WHEN** a fresh customer installation launches with normal platform protections and loads project extensions
-- **THEN** applicable signing/notarization/quarantine checks and the approved library-loading policy pass without disabling host protections; final payload hashes match the shipped signed manifest
+- **THEN** initial-distribution native-signature/quarantine checks and the approved hardening/library-loading policy pass without disabling host protections; final payload hashes match the shipped signed manifest
 
 #### Scenario: Linux regression and rollback
 
@@ -317,3 +318,105 @@ Support SHALL be claimed only after a canonical signed publication passes fresh 
 
 - **WHEN** a link-name, owner-name or group-name field contains nonzero padding after its first NUL terminator
 - **THEN** verification MUST reject the raw field before TAR parsing, using the same strict UTF-8 and zero-padding rules as path fields
+
+### Requirement: Managed native process boundary
+
+The macOS ARM64 backend SHALL use broker-owned direct workers, each traced and confined before untrusted execution. Worker-created descendants SHALL be denied by the kernel; compatibility adapters SHALL request managed launches instead. This replaces unrestricted project subprocess compatibility. Broker requests SHALL be bounded, versioned and tied to private invocation channels and broker-owned handles, never arbitrary host PIDs or self-granted permissions.
+
+#### Scenario: Managed subprocess completes
+
+- **WHEN** an admitted Python or pinned native-tool adapter requests an allowed child operation
+- **THEN** the broker launches a separately confined direct worker and returns its output, status and lifecycle through the managed channel
+- **AND** all ten analyzers and the existing pip/Hatch/uv/Poetry acceptance corpus remain release requirements
+
+#### Scenario: Worker bypasses compatibility adapter
+
+- **WHEN** project code calls fork, vfork, posix_spawn, direct process-creation syscalls or unauthorized tracing, signals or IPC
+- **THEN** the OS denies the operation; unsupported behavior is incomplete evidence and never triggers host fallback
+
+#### Scenario: Broker dies during startup or execution
+
+- **WHEN** the broker or CLI dies before tracing, during confinement, across exec or while workers are running
+- **THEN** no unconfined project code runs and independent observation finds no surviving governed worker after five seconds
+- **AND** 100 repetitions of each lifecycle race are required before admission
+
+#### Scenario: Fixed trusted bootstrap owns the pre-trace interval
+
+- **GIVEN** an initial-distribution fixed bootstrap with default unblocked termination signals and no customer code or process-group changes before tracing
+- **WHEN** its broker dies while it is suspended or running before tracing, trace-stopped, resumed, across exec or confined
+- **THEN** independent birth/tracing observation and positive/negative controls establish five-second cleanup and invocation-job removal with 100 repetitions per tested transition; a launchd-only group claim does not approve arbitrary untraced workers or replace the remaining complete boundary and OS-matrix acceptance
+
+#### Scenario: Private control protocol preserves authority and terminal status
+
+- **GIVEN** an invocation-scoped broker with a verified CLI peer and private capability
+- **WHEN** a caller sends launch, wait, signal or cancellation requests, loses its connection or supplies malformed/foreign authority
+- **THEN** bounded versioned requests affect only broker-assigned owned handles; incomplete frames and connection loss fail closed, terminal signals and accepted cancellation reasons are preserved, and independent lifecycle proof excludes competing timer/fallback cleanup
+
+#### Scenario: Owned Mach signal exceptions complete without BSD wakeup dependence
+
+- **GIVEN** a fixed signed worker whose exception endpoint is installed by the broker before spawn, then establishes PT_TRACE_ME and PT_SIGEXC before its initial stop
+- **WHEN** initial stops, terminal signals, cancellation or broker death occur
+- **THEN** bounded kernel-origin exception messages are admitted only for the registered direct child and its thread; only the initial SIGSTOP and an explicitly requested, independently verified one-use image handoff trap are suppressed, runtime signals retain their meaning, and terminal wait status remains distinct from exception replies
+- **AND** exact ad-hoc hardened builds, five-second independent cleanup, 100 repetitions and the entire hosted matrix remain required; malformed or foreign exceptions fail closed and no BSD transport fallback establishes acceptance
+
+#### Scenario: Replacement image is verified before initialization
+
+- **GIVEN** a fixed native bootstrap with active tracing and confinement and one broker-declared replacement identity
+- **WHEN** the kernel stops its directly owned worker across exec
+- **THEN** public dynamic Security validation must match the expected final signed replacement image before any target initializer; bootstrap traps, subsequent target traps and second replacements retain their real signal semantics
+- **AND** the exact profile, shared source inputs and four signed fixture artifacts are bound to versioned evidence; cancellation, CLI connection loss and broker death at the verified exec stop and after entry require independent five-second observation and 100 repetitions each on every candidate OS
+- **AND** this fixed-image subset does not admit CPython, analyzer adapters, project-manager workflows or customer installation
+
+#### Scenario: Sealed analyzer executes with exact native inputs
+
+- **GIVEN** the pinned native Semgrep core, reviewed rule packs and exact verified dylib closure
+- **WHEN** the traced bootstrap runs clean and defective fixed fixtures under its versioned deny-default analyzer profile
+- **THEN** both actual rule-pack members execute with expected outputs and exits while unauthorized host reads, descriptors, spawning, network and broker signals remain denied; snapshots bind the exercised policy to the receipt, which cannot approve the complete capsule from this subset
+
+### Requirement: Initial-distribution managed boundary gate
+
+The managed candidate SHALL prove its boundary using the exact initial distribution configuration: build-time ad-hoc signatures for our native components, verified upstream signatures where applicable and SpecFact-signed manifests covering final payload bytes. Hardened-runtime settings and narrow reviewed entitlements SHALL be recorded and tested with tracing and confinement. Missing Apple Developer ID credentials or notarization SHALL NOT block compilation, native execution, shipment or canonical GHCR publication. Invalid native signatures, corrupt payloads, failed confinement, missing boundary evidence, caller-asserted receipts and unit-test mocks SHALL NOT establish native acceptance. Optional Apple credential preflight SHALL NOT be an initial-release dependency. #460 SHALL block optional #488, never the reverse.
+
+#### Scenario: Apple credentials are unavailable
+
+- **WHEN** no Developer ID identity or notarization configuration is available
+- **THEN** initial-distribution preparation and boundary testing may proceed without Apple credential probes
+- **AND** this prerequisite result alone grants no boundary acceptance or production eligibility
+
+#### Scenario: Initial-distribution boundary is incompatible
+
+- **WHEN** native signatures, tracing, confinement, hardening or entitlements fail on the exact candidate
+- **THEN** the candidate is rejected before production integration; neither unsigned execution nor process polling replaces the failed mechanism
+
+#### Scenario: Integrity or proof is missing
+
+- **WHEN** the payload is corrupt, its native signatures are invalid or required independent boundary evidence is absent
+- **THEN** admission rejects the candidate even if Apple credentials are available
+
+### Requirement: Distinct native trust evidence
+
+Versioned inspection and evidence SHALL distinguish SpecFact manifest authentication, per-component native signing mode, notarization status and independent boundary verification. Ad-hoc signing SHALL NOT be reported as authenticated Apple publisher identity. Initial customer installation SHALL pass on a separate ARM64 Mac or clean independent macOS environment through the real CLI/GHCR route under an ordinary user with default protections; customers SHALL require no Apple credentials, local re-signing or build tools. Quarantine SHALL NOT be stripped, Gatekeeper SHALL NOT be disabled and security overrides SHALL NOT satisfy automatic installation acceptance.
+
+#### Scenario: Initial native trust is inspected
+
+- **WHEN** a verified initial-distribution runtime uses ad-hoc native signatures and has no notarization
+- **THEN** inspection distinguishes these facts from manifest authentication and boundary verification without claiming Apple publisher trust
+
+#### Scenario: Default-protection installation is blocked
+
+- **WHEN** the actual independent-Mac CLI/GHCR route is blocked by quarantine or another host protection
+- **THEN** installation acceptance fails with the concrete incompatibility rather than bypassing the protection or claiming support
+
+### Requirement: Automatic native runtime acquisition
+
+The existing review command SHALL automatically acquire a prebuilt signed Darwin ARM64 runtime on first use and show progress. It SHALL verify platform, ABI, policy/backend identity and payload digests, publish caches atomically and verify offline reuse. Customer execution SHALL require no Docker, VM, Homebrew, Xcode, administrator privilege or separately installed daemon.
+
+#### Scenario: First invocation and offline reuse
+
+- **WHEN** the ordinary command runs with an empty cache and later with a verified warm cache offline
+- **THEN** it first downloads and verifies the native runtime and later reuses exactly the admitted payload without additional customer setup
+
+#### Scenario: Native evidence reaches an older consumer
+
+- **WHEN** a consumer does not support the versioned native execution contract
+- **THEN** it rejects that evidence rather than assigning a Linux identity or protected authority

@@ -1,0 +1,68 @@
+schema_version: '2'
+requirements:
+  ? openspec:code-review-macos-developer-id-distribution:review-macos-apple-distribution:optional-apple-distribution-dependency
+  : rationale: Optional planning only; fresh final-artifact execution evidence is
+      required before promotion.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#488
+    - nold-ai/specfact-cli-modules#460
+    touchpoints:
+    - id: openspec-source-spec
+      kind: config_file
+      locator: openspec/changes/code-review-macos-developer-id-distribution/specs/review-macos-apple-distribution/spec.md
+    verification_cases:
+    - case_id: 488-1-1
+      scenario_id: optional-apple-distribution-dependency
+      method: inspection
+      intent: 'Inspect planned acceptance: Apple credentials are absent during initial
+        delivery.'
+      observable: '- **WHEN** the initial capsule has no Developer ID certificate
+        or notary credentials
+
+        - **THEN** this follow-up remains deferred and cannot fail initial delivery''s
+        independent integrity, boundary and installation acceptance Planned maturity
+        only; no Apple-signed runtime proof is claimed.'
+    - case_id: 488-1-2
+      scenario_id: optional-apple-distribution-dependency
+      method: inspection
+      intent: 'Inspect planned acceptance: Optional promotion is requested without
+        prerequisites.'
+      observable: '- **WHEN** Apple-specific promotion lacks accepted native delivery
+        or valid protected signing/notary configuration
+
+        - **THEN** only the optional promotion is blocked; accepted initial and Linux
+        distributions remain available Planned maturity only; no Apple-signed runtime
+        proof is claimed.'
+  ? openspec:code-review-macos-developer-id-distribution:review-macos-apple-distribution:exact-apple-signed-distribution-acceptance
+  : rationale: Optional planning only; fresh final-artifact execution evidence is
+      required before promotion.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#488
+    - nold-ai/specfact-cli-modules#460
+    touchpoints:
+    - id: openspec-source-spec
+      kind: config_file
+      locator: openspec/changes/code-review-macos-developer-id-distribution/specs/review-macos-apple-distribution/spec.md
+    verification_cases:
+    - case_id: 488-2-1
+      scenario_id: exact-apple-signed-distribution-acceptance
+      method: inspection
+      intent: 'Inspect planned acceptance: Signing configuration changes.'
+      observable: '- **WHEN** the previously accepted runtime is repackaged with Developer
+        ID signing or changed entitlements
+
+        - **THEN** promotion requires fresh final-artifact acceptance, including independent
+        ordinary-user default-protection installation, five-second cleanup and 100
+        repetitions per lifecycle race Planned maturity only; no Apple-signed runtime
+        proof is claimed.'
+    - case_id: 488-2-2
+      scenario_id: exact-apple-signed-distribution-acceptance
+      method: inspection
+      intent: 'Inspect planned acceptance: Apple promotion fails or its certificate
+        is revoked.'
+      observable: '- **WHEN** mandatory Apple-specific validation fails or a published
+        signing certificate becomes invalid
+
+        - **THEN** promotion fails or the affected publication is withdrawn while
+        accepted initial/Linux artifacts and diagnostic evidence are preserved Planned
+        maturity only; no Apple-signed runtime proof is claimed.'

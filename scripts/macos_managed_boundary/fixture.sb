@@ -1,0 +1,12 @@
+(version 1)
+; Startup proof only: no customer/analyzer code and no general filesystem grant.
+(deny default)
+(allow signal (target self))
+(allow process-info-pidinfo (target self))
+(allow file-write-data
+  (literal (string-append (param "ROOT") "/events"))
+  (literal (string-append (param "ROOT") "/errors")))
+(allow file-read* (literal (string-append (param "ROOT") "/allowed"))
+  (literal "/usr/bin/true"))
+; Explicitly permit this executable so fork denial isn't merely exec denial.
+(allow process-exec (literal "/usr/bin/true"))
