@@ -213,10 +213,50 @@ jobs:
                   checks["protocol_checks"] = len(PROTOCOL_CASES)
               return checks
 
+          def failure_summary(name, receipt_path, log_path):
+              result = {"failure_type": "unknown", "failed_case": "unknown", "completed_cases": {}}
+              cases = set(STARTUP_RACES if name == "startup" else CONTROL_RACES + PROTOCOL_CASES)
+              allowed = cases | {"protocol", "isolation-left", "isolation-right", "normal", "runtime-trap"}
+              classes = {"TimeoutError", "RuntimeError", "CalledProcessError", "TimeoutExpired",
+                         "OSError", "ValueError", "EOFError", "FileNotFoundError", "AssertionError"}
+              try:
+                  if receipt_path.stat().st_size <= 4 * 1024 * 1024:
+                      report = json.loads(receipt_path.read_bytes())
+                      failure = report.get("failure", "")
+                      kind = failure.partition(":")[0] if isinstance(failure, str) else ""
+                      result["failure_type"] = kind if kind in classes else "unknown"
+                      trials = report.get("trials", [])
+                      if isinstance(trials, list) and len(trials) <= 2048:
+                          counts = collections.Counter(
+                              trial.get("mode" if name == "startup" else "case")
+                              for trial in trials if isinstance(trial, dict)
+                              and trial.get("passed") is True
+                              and isinstance(trial.get("mode" if name == "startup" else "case"), str)
+                          )
+                          result["completed_cases"] = {case: counts[case] for case in sorted(cases) if counts[case]}
+              except (OSError, ValueError, AttributeError):
+                  pass
+              try:
+                  with log_path.open("rb") as log:
+                      log.seek(max(0, log_path.stat().st_size - 16384))
+                      lines = log.read(16384).decode("utf-8", errors="replace").splitlines()
+                  for line in lines:
+                      try:
+                          item = json.loads(line)
+                          case = item.get("failed_case") if isinstance(item, dict) else None
+                          if isinstance(case, str) and case in allowed:
+                              result["failed_case"] = case
+                      except ValueError:
+                          pass
+              except OSError:
+                  pass
+              return result
+
           def run_suite(name, root, context):
               receipt_path = root / f"{name}.json"
               log_path = root / f"{name}.log"
               category = "helper_failed"
+              diagnostics = {}
               try:
                   with log_path.open("wb") as log:
                       process = subprocess.run(
@@ -232,11 +272,12 @@ jobs:
               except Exception:
                   category = "receipt_or_execution_failed"
               finally:
+                  diagnostics = failure_summary(name, receipt_path, log_path)
                   # Raw receipts/logs are never printed or uploaded, including on failure.
                   receipt_path.unlink(missing_ok=True)
                   log_path.unlink(missing_ok=True)
               return {
-                  "suite": name, "result": "failed", "category": category,
+                  "suite": name, "result": "failed", "category": category, **diagnostics,
                   "production_approved": False, "signed_boundary_verified": False,
               }
 

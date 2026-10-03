@@ -109,3 +109,39 @@ def test_timeout_never_starts_another_native_suite(boundary_ci, monkeypatch, tmp
     monkeypatch.setitem(boundary_ci, "run_suite", timeout)
     assert boundary_ci["main"]() == 1
     assert calls == ["startup"]
+
+
+def test_failed_helper_reports_only_allowlisted_diagnostics(boundary_ci, monkeypatch, tmp_path):
+    receipt = {
+        "failure": "TimeoutError: private authority /secret/token 98765",
+        "trials": [{"case": "cancel", "passed": True}, {"case": "private-host-path", "passed": True}],
+        "audit_token": [98765],
+    }
+
+    def failed(_args, **options):
+        options["stdout"].write(b'{"failed_case":"isolation-right","diagnostic":"/private/secret"}\n')
+        (tmp_path / "control.json").write_text(json.dumps(receipt))
+        return boundary_ci["subprocess"].CompletedProcess([], 1)
+
+    monkeypatch.setattr(boundary_ci["subprocess"], "run", failed)
+    result = boundary_ci["run_suite"]("control", tmp_path, {})
+    assert result["result"] == "failed"
+    assert result["failure_type"] == "TimeoutError"
+    assert result["failed_case"] == "isolation-right"
+    assert result["completed_cases"] == {"cancel": 1}
+    assert not any(value in json.dumps(result) for value in ("secret", "98765", "authority", "private-host-path"))
+    assert not (tmp_path / "control.json").exists()
+    assert not (tmp_path / "control.log").exists()
+
+
+def test_failure_diagnostics_reject_unknown_names(boundary_ci, monkeypatch, tmp_path):
+    def failed(_args, **options):
+        options["stdout"].write(b'{"failed_case":"/secret/98765","diagnostic":"/secret"}\n')
+        (tmp_path / "control.json").write_text(json.dumps({"failure": "/secret/98765: private", "trials": []}))
+        return boundary_ci["subprocess"].CompletedProcess([], 1)
+
+    monkeypatch.setattr(boundary_ci["subprocess"], "run", failed)
+    result = boundary_ci["run_suite"]("control", tmp_path, {})
+    assert result["failed_case"] == "unknown"
+    assert result["failure_type"] == "unknown"
+    assert "secret" not in json.dumps(result)

@@ -317,3 +317,19 @@ No production native runtime/public command, OS matrix or independent-install
 acceptance is claimed. Public capsule-required native review still returns
 FAIL/UNKNOWN unsupported_controller_platform. Hosted matrix results must be
 recorded from the actual PR; these checks do not authorize merge/publication.
+
+## PR #489 bounded failure diagnostics — 2026-10-03
+
+Initial hosted run 37079681523 passed all six-by-100 startup races on macOS
+14 and 26; both control helpers failed. Original sanitized output reported only
+helper_failed, so the failure cause is unproven. Preserve those failures; no
+retry or later result retroactively approves the first run.
+
+Specification: NATIVE_BOUNDARY_CI.md now permits only bounded allowlisted
+failure case/exception-class/count diagnostics. Raw messages, native statuses,
+audit identities, capabilities and paths remain private.
+
+RED: actual workflow tests failed twice with missing failure_type/failed_case;
+four existing tests passed. GREEN: all six tests passed after implementation.
+Tests inject private paths/identities and unknown names, check rejection and
+raw-file deletion, and retain failure status. No boundary or timing gate changed.

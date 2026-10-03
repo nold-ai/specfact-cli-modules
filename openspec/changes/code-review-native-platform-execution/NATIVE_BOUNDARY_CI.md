@@ -104,7 +104,8 @@ PID/birth record, private capability, authority file, diagnostic path, exception
 message or native event/status output is printed or uploaded by this workflow.
 
 The public output is an explicit allowlist: platform/Python/image identity,
-suite result or fixed failure category, successful race counts, protocol count,
+suite result or fixed failure category, allowlisted failing case and exception
+class, partial successful counts, successful race counts, protocol count,
 source/helper/profile and signed-binary SHA-256 values, signing mode, hardened
 runtime and the two false production flags. The step summary contains a compact
 suite/result/check-digest table. Each check SHA-256 hashes canonical sorted JSON
@@ -188,3 +189,16 @@ timeout results cannot. Startup receipts must contain exactly one passing normal
 completion and runtime-trap control in addition to every race and negative control.
 Regression tests exercise the actual embedded workflow functions, not a duplicate
 validator or a YAML shape assertion.
+
+## Hosted failure diagnostics contract (2026-10-03)
+
+The first PR #489 run passed startup on macOS 26 and failed its control helper;
+macOS 14 also failed. A generic helper failure is insufficient to triage these
+results. On failure, the wrapper must retain only allowlisted case names,
+exception classes and counts of passed cases from a bounded private receipt/log
+read. Unknown names and exception messages must never be published. Raw logs,
+identities, paths, capabilities and native status/event payloads remain private.
+Diagnostic fields cannot change a failed suite to a pass or relax any deadline.
+
+Meaningful tests must exercise the actual workflow functions with injected
+private data, incomplete receipts and nonzero helper exits before implementation.
