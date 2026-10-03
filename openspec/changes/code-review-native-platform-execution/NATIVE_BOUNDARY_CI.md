@@ -242,3 +242,36 @@ first. Public attribution must select only a boolean failure_origin=true marker
 stamped for the actual active invocation before cleanup. Missing, unknown or
 non-boolean ownership never establishes a failing invocation. Request phases
 must cover reply validation as well as send/receive errors.
+
+## Diagnostic-only control transition observations — 2026-10-03
+
+The third hosted run at head `314e5b6c` passed 600 startup races on every image,
+but control aborted on macOS 14/15 at `bootstrap-socket` and on macOS 26 at
+`cancel` / `request-wait`. No C event-loop cause has been established; 300
+additional physical-Mac cancellation trials passed. Keep this failed run as
+missing matrix acceptance, not a retryable pass.
+
+To distinguish unread waits, reap, output EOF and completion dispatch, the fixed
+broker will emit a complete private transition snapshot for each owned worker.
+It contains four actual booleans: `wait_accepted`, `wait_pending`,
+`worker_reaped`, `output_closed`. The failing controller must select the last
+valid snapshot for the worker handle of its failing wait. The public workflow
+may copy only those four boolean fields as `last_worker_state`; missing evidence
+must remain omitted, never inferred as false. These are last observed diagnostic
+states, not a claim of current process presence or cleanup enforcement. The
+snapshot cannot contain a public PID, handle, audit token, path, capability,
+raw output, status or exception message. Raw snapshots remain private.
+
+Diagnostic instrumentation must preserve requests, signal delivery, tracing,
+wait/reap behavior, event-loop scheduling, five-second measurements, competing
+deadline exclusion and the 100-repetition requirements. Neither transition
+observations nor socket readiness checks grant production eligibility.
+
+The native workflow's pinned actions are updated to official
+[checkout v7.0.1](https://github.com/actions/checkout/releases/tag/v7.0.1)
+(`3d3c42e5aac5ba805825da76410c181273ba90b1`) and
+[setup-python v7.0.0](https://github.com/actions/setup-python/releases/tag/v7.0.0)
+(`5fda3b95a4ea91299a34e894583c3862153e4b97`). The official action manifests
+were read at those exact revisions on 2026-10-03; both use Node 24. This resolves
+the hosted Node 20 deprecation annotations. Checkout still retains no credentials;
+permissions, native Python selection and acceptance gates are unchanged.

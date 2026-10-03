@@ -35,7 +35,7 @@ struct worker {
     pid_t pid;
     uint64_t handle;
     double deadline;
-    int mode, fd, reaped, status, traced;
+    int mode, fd, reaped, status, traced, wait_accepted;
     const char *reason;
     char output[OUTPUT + 1];
     size_t used;
@@ -65,6 +65,19 @@ static void child_event(int number) {
     int saved = errno;
     char byte = 0;
     (void)write(wakeup[1], &byte, 1);
+    errno = saved;
+}
+
+/* Private diagnostic snapshots only; eight workers and 64 requests bound events.
+ * Preserve errno and emit no payload, status, handle or authority material. */
+static void control_state(const struct worker *item) {
+    int saved = errno;
+    printf("{\"control_state\":%d,\"wait_accepted\":%s,\"wait_pending\":%s,"
+        "\"worker_reaped\":%s,\"output_closed\":%s}\n", item->pid,
+        item->wait_accepted ? "true" : "false",
+        pending >= 0 && item == &workers[pending] ? "true" : "false",
+        item->reaped ? "true" : "false", item->fd < 0 ? "true" : "false");
+    fflush(stdout);
     errno = saved;
 }
 
@@ -187,12 +200,14 @@ static void launch(int mode, unsigned int timeout) {
     item->fd = stream[0];
     item->deadline = now() + timeout / 1000.0;
     item->reason = "completed";
+    item->wait_accepted = 0;
     /* A random handle is invocation-local; retain all handles, including reaped ones. */
     do {
         arc4random_buf(&item->handle, sizeof(item->handle));
         for (int i = 0; i < worker_count; i++) if (workers[i].handle == item->handle) item->handle = 0;
     } while (!item->handle);
     result(worker_count++, "launched");
+    control_state(item);
 }
 
 static uint64_t integer(const unsigned char *data, size_t size) {
@@ -235,8 +250,10 @@ static void request(void) {
     struct worker *item = &workers[index];
     if (opcode == 2) {
         if (pending >= 0) { reject("wait-limit"); return; }
+        item->wait_accepted = 1;
         if (item->reaped && item->fd < 0) result(index, "exited");
         else pending = index;
+        control_state(item); /* Immediate completion already has pending cleared. */
     } else if (item->reaped) result(index, "exited");
     else {
         /* No reuse race: this is the broker's own child, never reaped yet. */
@@ -286,6 +303,7 @@ static void reap(void) {
         } else {
             item->status = status;
             item->reaped = 1;
+            control_state(item);
         }
     }
 }
@@ -293,7 +311,7 @@ static void reap(void) {
 static void drain(struct worker *item) {
     char buffer[256];
     ssize_t count = read(item->fd, buffer, sizeof(buffer));
-    if (!count) { close(item->fd); item->fd = -1; return; }
+    if (!count) { close(item->fd); item->fd = -1; control_state(item); return; }
     if (count < 0) { if (errno != EAGAIN && errno != EINTR) die(); return; }
     if ((size_t)count > OUTPUT - item->used) die();
     memcpy(item->output + item->used, buffer, (size_t)count);
@@ -328,7 +346,9 @@ static void loop(int listener) {
         if (partial_deadline && partial_deadline < deadline) deadline = partial_deadline;
         deadline = expire_workers(current, deadline);
         if (pending >= 0 && workers[pending].reaped && workers[pending].fd < 0) {
+            struct worker *item = &workers[pending];
             result(pending, "exited"); pending = -1;
+            control_state(item);
         }
         fd_set reads, writes;
         FD_ZERO(&reads); FD_ZERO(&writes);

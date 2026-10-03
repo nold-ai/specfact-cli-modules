@@ -7,11 +7,14 @@ import importlib.util
 import json
 import os
 import socket
+import stat
 import struct
 import subprocess
+import sys
 import tempfile
 import unittest
 from contextlib import ExitStack
+from functools import partial
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -171,6 +174,161 @@ class ControlContractTests(_ControlTestCase):
     def test_native_sources_exist(self):
         for name in ("control_broker.c", "control_worker.c"):
             self.assertTrue((SOURCE.parent / name).is_file())
+
+
+class SocketReadinessTests(_ControlTestCase):
+    def _observe(self, observations, *, directory_mode=stat.S_IFDIR | 0o700, directory_uid=None):
+        uid = os.getuid()
+        directory = Path("/private-fixture")
+        clock = [10.0]
+        snapshots = iter(observations)
+        sleeps = []
+        directory_info = SimpleNamespace(st_mode=directory_mode, st_uid=uid if directory_uid is None else directory_uid)
+
+        def lstat(path):
+            if path == directory:
+                return directory_info
+            self.assertEqual(path, directory / "control.sock")
+            at, mode, owner = next(snapshots)
+            clock[0] = at
+            if mode is None:
+                raise FileNotFoundError("not bound")
+            return SimpleNamespace(st_mode=mode, st_uid=uid if owner is None else owner)
+
+        def sleep(seconds):
+            self.assertGreater(seconds, 0)
+            self.assertLessEqual(seconds, min(0.005, 13.0 - clock[0]))
+            sleeps.append(seconds)
+            clock[0] += seconds
+
+        with (
+            patch.object(self.control.SOCKET.Path, "lstat", autospec=True, side_effect=lstat) as inspect,
+            patch.object(self.control.SOCKET.Path, "stat", side_effect=AssertionError("must not follow symlinks")),
+            patch.object(self.control.SOCKET.Path, "exists", side_effect=AssertionError("existence is not readiness")),
+            patch.object(self.control.SOCKET.time, "monotonic", side_effect=lambda: clock[0]),
+            patch.object(self.control.SOCKET.time, "sleep", side_effect=sleep),
+        ):
+            self.control.SOCKET.wait_socket_ready(directory / "control.sock")
+        return inspect.call_count, sleeps
+
+    def test_owned_socket_ready_immediately(self):
+        calls, sleeps = self._observe([(10.0, stat.S_IFSOCK | 0o600, None)])
+        self.assertEqual(calls, 2)
+        self.assertEqual(sleeps, [])
+
+    def test_owned_socket_modes_transition_to_ready(self):
+        for mode in (0o000, 0o666, 0o700, 0o1600):
+            with self.subTest(mode=oct(mode)):
+                calls, sleeps = self._observe([(10.0, stat.S_IFSOCK | mode, None), (10.5, stat.S_IFSOCK | 0o600, None)])
+                self.assertEqual(calls, 4)
+                self.assertEqual(len(sleeps), 1)
+
+    def test_delayed_binding_then_mode_transition(self):
+        calls, sleeps = self._observe(
+            [(10.0, None, None), (10.5, stat.S_IFSOCK | 0o666, None), (12.9, stat.S_IFSOCK | 0o600, None)]
+        )
+        self.assertEqual(calls, 6)
+        self.assertEqual(len(sleeps), 2)
+
+    def test_missing_or_non_ready_mode_exhausts_original_budget(self):
+        for mode in (None, stat.S_IFSOCK | 0o666):
+            with (
+                self.subTest(mode=mode),
+                self.assertRaisesRegex(RuntimeError, "socket readiness deadline"),
+            ):
+                self._observe([(10.0, mode, None), (12.999, mode, None)])
+
+    def test_ready_at_or_after_deadline_is_rejected(self):
+        for ready_at in (13.0, 13.001, 14.0):
+            with (
+                self.subTest(ready_at=ready_at),
+                self.assertRaisesRegex(RuntimeError, "socket readiness deadline"),
+            ):
+                self._observe([(10.0, stat.S_IFSOCK | 0o666, None), (ready_at, stat.S_IFSOCK | 0o600, None)])
+
+    def test_first_ready_snapshot_finishing_late_is_rejected(self):
+        with self.assertRaisesRegex(RuntimeError, "socket readiness deadline"):
+            self._observe([(13.1, stat.S_IFSOCK | 0o600, None)])
+
+    def test_wrong_owner_fails_without_waiting_even_before_chmod(self):
+        for mode in (0o600, 0o666):
+            with (
+                self.subTest(mode=oct(mode)),
+                self.assertRaisesRegex(RuntimeError, "socket type/owner"),
+            ):
+                self._observe([(10.0, stat.S_IFSOCK | mode, os.getuid() + 1)])
+
+    def test_non_socket_and_symlink_fail_closed(self):
+        for kind in (stat.S_IFREG, stat.S_IFDIR, stat.S_IFIFO, stat.S_IFLNK):
+            with self.subTest(kind=kind), self.assertRaisesRegex(RuntimeError, "socket type/owner"):
+                self._observe([(10.0, kind | 0o600, None)])
+
+    def test_directory_must_remain_owned_private_directory(self):
+        for mode, uid in (
+            (stat.S_IFDIR | 0o755, None),
+            (stat.S_IFDIR | 0o1700, None),
+            (stat.S_IFDIR | 0o700, os.getuid() + 1),
+            (stat.S_IFLNK | 0o700, None),
+            (stat.S_IFREG | 0o700, None),
+        ):
+            with self.subTest(mode=mode, uid=uid), self.assertRaisesRegex(RuntimeError, "private directory"):
+                self._observe([], directory_mode=mode, directory_uid=uid)
+
+    def test_unexpected_lstat_error_is_terminal(self):
+        with (
+            patch.object(self.control.SOCKET.Path, "lstat", side_effect=PermissionError("denied")),
+            patch.object(self.control.SOCKET.time, "sleep") as sleep,
+            self.assertRaises(PermissionError),
+        ):
+            self.control.SOCKET.wait_socket_ready(Path("/private-fixture/control.sock"))
+        sleep.assert_not_called()
+
+    def test_constructor_observes_readiness_after_one_registration(self):
+        with (
+            tempfile.TemporaryDirectory() as temporary,
+            patch.object(self.control.STARTUP, "observe", return_value={"audit_token": [0] * 8}),
+            patch.object(self.control.STARTUP, "command") as register,
+            patch.object(self.control.SOCKET, "wait_socket_ready") as ready,
+        ):
+            invocation = self.control.Invocation(Path("/broker"), Path("/observer"), Path(temporary))
+        register.assert_called_once()
+        ready.assert_called_once_with(invocation.directory / "control.sock")
+        self.assertEqual(invocation.phase, "bootstrap-socket")
+
+    def test_readiness_failure_keeps_phase_and_cleans_registered_job(self):
+        original = RuntimeError("socket readiness deadline exceeded")
+        with (
+            tempfile.TemporaryDirectory() as temporary,
+            patch.object(self.control.STARTUP, "observe", return_value={"audit_token": [0] * 8}),
+            patch.object(self.control.STARTUP, "command") as register,
+            patch.object(self.control.SOCKET, "wait_socket_ready", side_effect=original),
+            patch.object(self.control.Invocation, "retain_failure", autospec=True) as retain,
+            patch.object(self.control.STARTUP, "remove_job") as remove,
+            self.assertRaises(RuntimeError) as raised,
+        ):
+            self.control.Invocation(Path("/broker"), Path("/observer"), Path(temporary))
+        self.assertIs(raised.exception, original)
+        register.assert_called_once()
+        remove.assert_called_once()
+        invocation = retain.call_args.args[0]
+        owner, phase = original.__dict__["_control_failure_origin"]
+        self.assertIs(owner, invocation)
+        self.assertEqual(phase, "bootstrap-socket")
+        self.assertEqual(invocation.phase, "cleanup")
+
+
+class ControlHelperImportTests(_ControlTestCase):
+    def test_direct_script_loads_siblings_outside_repository_import_path(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            result = subprocess.run(
+                [sys.executable, "-I", str(SOURCE), "--help"],
+                cwd=temporary,
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+        self.assertIn("--repetitions", result.stdout)
+        self.assertEqual(result.stderr, "")
 
 
 class ControlFailureTests(_ControlTestCase):
@@ -390,9 +548,7 @@ class ControlFailureOwnershipTests(_ControlTestCase):
 
             for invocation in (first, second):
                 stack.enter_context(patch.object(invocation, "connect", return_value=invocation.client))
-                stack.enter_context(
-                    patch.object(invocation, "cleanup", side_effect=lambda item=invocation: cleanup(item))
-                )
+                stack.enter_context(patch.object(invocation, "cleanup", side_effect=partial(cleanup, invocation)))
             for target, name, values in (
                 (self.control, "Invocation", {"side_effect": [first, second]}),
                 (self.control, "response", {"side_effect": reply}),

@@ -64,17 +64,19 @@ def _stamp_failure(error: BaseException) -> tuple[object | None, str]:
     return error.__dict__.setdefault("_control_failure_origin", _ACTIVE_OPERATION.get())
 
 
-def startup_module() -> Any:
-    """Reuse the parent's independent observer without modifying its source."""
-    spec = importlib.util.spec_from_file_location("control_startup_observation", SOURCE / "startup.py")
+def startup_module(helper: str = "startup") -> Any:
+    """Load a fixed internal sibling helper without changing import paths."""
+    spec = importlib.util.spec_from_file_location(f"control_{helper}_helpers", SOURCE / f"{helper}.py")
     if spec is None or spec.loader is None:
-        raise RuntimeError("startup observer helpers unavailable")
+        raise RuntimeError("control helpers unavailable")
     result = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(result)
     return result
 
 
 STARTUP = startup_module()
+SOCKET = startup_module("control_socket")
+STATE = startup_module("control_state")
 
 
 class FrameFields(NamedTuple):
@@ -253,13 +255,7 @@ class Invocation:
             _activate_operation(self, "bootstrap-register")
             STARTUP.command(["/bin/launchctl", "bootstrap", self.service.rsplit("/", 1)[0], str(plist)])
             _activate_operation(self, "bootstrap-socket")
-            path = self.directory / "control.sock"
-            deadline = time.monotonic() + 3
-            while not path.exists() and time.monotonic() < deadline:
-                time.sleep(0.005)
-            info = path.stat()
-            require(info.st_mode & 0o777 == 0o600 and info.st_uid == os.getuid(), "private socket mode/owner failed")
-            require(self.directory.stat().st_mode & 0o777 == 0o700, "private directory mode failed")
+            SOCKET.wait_socket_ready(self.directory / "control.sock")
         except BaseException as error:
             self._finish_failed_invocation(error)
             raise
@@ -343,9 +339,11 @@ class Invocation:
             "broker_sha256": hashlib.sha256(self.broker.read_bytes()).hexdigest() if self.broker.exists() else None,
         }
         path = _write_diagnostic(record)
-        _emit_json(
-            {"failed_case": self.case, "failure_phase": phase, "failure_origin": origin, "diagnostic": str(path)}
-        )
+        marker = {"failed_case": self.case, "failure_phase": phase, "failure_origin": origin, "diagnostic": str(path)}
+        state = STATE.last_worker_state(record["events"], record["requests"], phase) if origin else {}
+        if state:
+            marker["last_worker_state"] = state
+        _emit_json(marker)
         return path
 
     def _finish_failed_invocation(self, error: BaseException, *, cleanup_attempted: bool = False) -> None:

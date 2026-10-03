@@ -400,3 +400,73 @@ native timer fixtures retain their preceding explicit proof. YAML, bundle
 imports, module signature/version integrity, twenty-eight contract tests and
 smart-test coverage checks also passed. Native full boundary/platform admission
 is still incomplete; no version bump, publication or production support claim.
+
+## Socket readiness and bounded transition diagnostics — 2026-10-03
+
+Current-head hosted run 37084629954 (`314e5b6c`) passed 600 startup races on
+macOS 14, 15 and 26, but control failed on 14/15 at bootstrap-socket and on 26
+at cancel/request-wait. None is counted as complete matrix acceptance. The
+socket observation now waits within its original three-second budget for an
+owned socket with mode 0600, using lstat and rejecting wrong types/owners and
+symlinks. The signed C broker adds private transition observations only; no
+signal/tracing/wait algorithm, confinement or death deadline is changed.
+
+RED/GREEN evidence:
+
+- Socket readiness: see CONTROL_BOUNDARY_CONTRACT.md for the deterministic
+  permission-transition, delayed binding, owner/type/symlink and late-deadline
+  failures followed by 46 native-enabled passing tests.
+- Last-owned-worker state: 24 missing-module RED errors, then 24 passes;
+  controller integration failed once with 24 passes, then passed. Snapshots bind
+  to the failing wait's launched worker and export only four actual booleans.
+- Actual workflow definitions: eight RED failures with 33 passes, then 41 passes.
+  Missing, non-boolean, foreign-origin and wrong-phase observations remain
+  omitted; private fields are excluded.
+- Native C transition fixtures: ten expected RED failures, then ten event and
+  three timer tests passed using ad-hoc signed/hardened ARM64 test binaries.
+  Both terminal orders exercise actual loop completion; bounds and rejection
+  paths are covered with safely mocked system operations.
+- Combined focused validation: 214 passed without skips, including native
+  startup/control/event/timer fixtures. After strict-type lint adjustments,
+  the state/controller/workflow tests passed again (66 cases).
+- Physical macOS 27.0.1 build 26A434 control proof: 1,219 passing records,
+  100 repetitions of all twelve lifecycle cases plus nineteen protocol checks.
+  Receipt: `.specfact/native-compat/pr489-socket-state-control-100.json`.
+  Production approval and complete signed-boundary verification remain false.
+- Independent requested review-agent inspected all thirteen changed files,
+  including new files, and returned no findings; its small strict-type follow-up
+  also returned no findings. Repository broad gates and normal hooks are required
+  separately before commit. No current revision's hosted success is claimed.
+
+CodeRabbit completed head `314e5b6c` review 5398281990 with one documentation
+finding. NATIVE_NODE_TDD.md now reports the shared manifest and aggregate adapter
+results, explicitly avoiding unrecorded per-build/BasedPyright-specific claims.
+The current hosted wait-timeout cause remains unknown; 300 additional unchanged
+local cancellation trials passed and do not explain it. These diagnostics must
+not be represented as a production backend, runtime admission or shipment.
+
+Final frozen-source validation after the commit-hook complexity corrections:
+
+- Native-enabled focused suite: 214 passed without skips (14.39 seconds).
+- Physical control suite: 1,219 passed, including all twelve-by-100 lifecycle
+  cases and nineteen protocol checks. Final receipt:
+  `.specfact/native-compat/pr489-final-state-control-100.json`; SHA-256
+  `0f0b3cdf792abba541ade1b94d577835dd4a3ec1bc64248c2a1845f66f62cb60`.
+  Production approval and complete signed-boundary verification remain false.
+- Serial smart and full suites: each 3,689 passed, eighteen skipped and
+  63 subtests passed (266.18 and 273.07 seconds respectively). Seventeen native
+  opt-in skips were exercised in the focused suite; one proc-descriptor contract
+  requires Linux. An earlier concurrent smart-suite attempt returned UNKNOWN
+  in an unchanged verdict test; its isolated run and both serial suites passed.
+  A private probe confirmed ignored analyzer-cache changes affect the worktree
+  identity guard; the exact cause of that initial result remains unproven.
+- Format, typing, lint, YAML, imports, public-key signature/version verification,
+  twenty-eight contract tests, both strict OpenSpec changes, actionlint and
+  planned requirements evidence mappings passed. Signed payloads are unchanged.
+- Staged development-host Code Review returned PASS_WITH_ADVISORY: only
+  32 MISSING_ICONTRACT advisories covered by the existing standalone-script
+  exception, with no remaining defect or clean-code findings. The independent
+  follow-up review of the refactored helpers and tests returned no findings.
+
+Normal commit hooks and current-head hosted review remain separate gates.
+No hosted result from the previous head approves this revision.

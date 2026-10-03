@@ -152,7 +152,8 @@ def test_failure_diagnostics_reject_unknown_names(boundary_ci, monkeypatch, tmp_
 def test_nested_cleanup_does_not_replace_first_failure_case(boundary_ci, monkeypatch, tmp_path):
     def failed(_args, **options):
         options["stdout"].write(
-            b'{"failed_case":"isolation-right","failure_origin":true,"failure_phase":"request-wait","diagnostic":"/secret"}\n'
+            b'{"failed_case":"isolation-right","failure_origin":true,'
+            b'"failure_phase":"request-wait","diagnostic":"/secret"}\n'
             b'{"failed_case":"isolation-left","failure_origin":false,"diagnostic":"/secret"}\n'
         )
         (tmp_path / "control.json").write_text(json.dumps({"failure": "TimeoutError: private", "trials": []}))
@@ -202,3 +203,47 @@ def test_failure_case_requires_explicit_boolean_ownership(boundary_ci, monkeypat
     result = boundary_ci["run_suite"]("control", tmp_path, {})
     assert result["failed_case"] == ("isolation-left" if owner is True else "unknown")
     assert result["failure_phase"] == ("request-launch" if owner is True else "unknown")
+
+
+@pytest.mark.parametrize("field", ["wait_accepted", "wait_pending", "worker_reaped", "output_closed"])
+@pytest.mark.parametrize("value", [False, True, 0, 1, "true", None])
+def test_worker_state_publishes_only_complete_boolean_observations(boundary_ci, tmp_path, field, value):
+    state = {"wait_accepted": True, "wait_pending": True, "worker_reaped": False, "output_closed": True}
+    state[field] = value
+    marker = {
+        "failed_case": "cancel",
+        "failure_origin": True,
+        "failure_phase": "request-wait",
+        "last_worker_state": {**state, "secret": "/private/98765"},
+    }
+    (tmp_path / "control.log").write_text(json.dumps(marker) + "\n")
+    (tmp_path / "control.json").write_text(json.dumps({"failure": "TimeoutError: private", "trials": []}))
+    result = boundary_ci["failure_summary"]("control", tmp_path / "control.json", tmp_path / "control.log")
+    if isinstance(value, bool):
+        assert result["last_worker_state"] == state
+    else:
+        assert "last_worker_state" not in result
+    assert not any(item in json.dumps(result) for item in ("secret", "98765", "private"))
+
+
+@pytest.mark.parametrize(
+    "changes",
+    [
+        {"failure_origin": False},
+        {"failure_phase": "cleanup"},
+        {"last_worker_state": {}},
+        {"last_worker_state": None},
+    ],
+)
+def test_inapplicable_worker_state_remains_omitted(boundary_ci, tmp_path, changes):
+    marker = {
+        "failed_case": "cancel",
+        "failure_origin": True,
+        "failure_phase": "request-wait",
+        "last_worker_state": dict.fromkeys(("wait_accepted", "wait_pending", "worker_reaped", "output_closed"), False),
+        **changes,
+    }
+    (tmp_path / "control.log").write_text(json.dumps(marker) + "\n")
+    (tmp_path / "control.json").write_text(json.dumps({"failure": "TimeoutError: private", "trials": []}))
+    result = boundary_ci["failure_summary"]("control", tmp_path / "control.json", tmp_path / "control.log")
+    assert "last_worker_state" not in result

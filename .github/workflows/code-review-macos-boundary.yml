@@ -7,7 +7,7 @@ on:
       - .github/workflows/code-review-macos-boundary.yml
       - scripts/macos_managed_boundary/**
       - tests/unit/test_macos_managed_*.py
-      - tests/unit/test_macos_control_timers.py
+      - tests/unit/test_macos_control_*.py
       - tests/unit/test_macos_boundary_ci_receipts.py
       - openspec/changes/code-review-native-platform-execution/**
   workflow_dispatch:
@@ -51,11 +51,11 @@ jobs:
       PYTHONDONTWRITEBYTECODE: "1"
     steps:
       - name: Checkout PR merge tree without retained credentials
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
       - name: Select stdlib helper Python
-        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with:
           python-version: "3.13"
           architecture: arm64
@@ -256,6 +256,11 @@ jobs:
                               result["failed_case"] = case
                               phase = item.get("failure_phase")
                               result["failure_phase"] = phase if isinstance(phase, str) and phase in phases else "unknown"
+                              state = item.get("last_worker_state")
+                              fields = ("wait_accepted", "wait_pending", "worker_reaped", "output_closed")
+                              if (name == "control" and result["failure_phase"] == "request-wait"
+                                      and isinstance(state, dict) and all(type(state.get(field)) is bool for field in fields)):
+                                  result["last_worker_state"] = {field: state[field] for field in fields}
                               break  # Select explicit ownership, never unwind order.
                       except ValueError:
                           pass

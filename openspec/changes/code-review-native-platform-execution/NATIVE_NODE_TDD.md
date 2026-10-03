@@ -95,10 +95,11 @@ no runtime shipment or dependency-policy admission is claimed.
 
 NATIVE_COMPATIBILITY_RESULTS.md records 23 missing-implementation RED tests,
 the initial passing implementation and subsequent negative-test expansion to
-32 packager tests. The five npm-input tests are additional. Two actual offline
-builds produced the same 5,421-file manifest and passed clean/defective native
-BasedPyright behavior. Final-artifact boundary, installation and production
-eligibility remain unresolved.
+32 packager tests. The five npm-input tests are additional. The results document
+records two offline builds with one shared 5,421-file manifest digest and
+aggregate clean/defective results across all ten adapters. It does not record
+per-build commands, separate manifest receipts or BasedPyright-specific outcomes.
+Final-artifact boundary, installation and production eligibility remain unresolved.
 
 Rollback of this complete experimental checkpoint also removes:
 

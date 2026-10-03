@@ -487,3 +487,87 @@ They do not relax production/private API or security gates.
 The native C sources were unchanged. A further physical-host 100-round run
 passed 1,219 records and 100 additional isolation trials passed. The hosted
 control failures remain unproven; these local passes cannot approve that matrix.
+
+## Bootstrap socket readiness normalization — 2026-10-03
+
+After one successful launchctl bootstrap, the Python fixture SHALL observe socket
+readiness for at most three seconds against one original monotonic deadline.
+Every observation SHALL use lstat: the invocation directory must be an owned
+0700 directory, and the endpoint must be an owned Unix socket with mode 0600.
+Symlinks, non-sockets and wrong UID fail closed immediately; an absent socket or
+an owned socket with a different mode may be observed again until that deadline.
+Directory validation failures and unexpected filesystem errors are terminal.
+A ready observation completing at or after the deadline SHALL fail, including a
+late 0600 transition. Sleeps are capped by the remaining budget. Bootstrap is
+never retried, permissions are never repaired, and constructor failure retains
+bootstrap-socket attribution before ordinary post-failure cleanup.
+
+This is narrower startup readiness normalization, not a change to the five-second
+worker/death acceptance gate or any C wait handling. Hosted macOS 14/15 failures
+at head 314e5b6c reported RuntimeError in bootstrap-socket. Bind visibility before
+launchd chmod is a hypothesis, not a proven root cause; neither deterministic
+transition tests nor local registered startup proves hosted root-cause attribution.
+Scenario tests cover immediate readiness, delayed binding, transient modes,
+missing/permanently wrong modes, invalid ownership/type/symlinks, private directory
+validation, and readiness at/after the original deadline.
+
+The readiness helper is extracted into the stdlib-only control_socket.py. The
+existing startup_module loader takes a fixed internal helper name and loads the
+exact sibling path with a unique spec name; STARTUP remains unchanged at its
+call site, SOCKET loads control_socket. No helper name comes from user input and
+no sys.path mutation is used. Tests patch the helper namespace and verify direct
+script execution with isolated imports from an unrelated working directory.
+The extraction keeps control.py below the mandatory 1,000-line Pylint gate;
+there is no module-length waiver. The parent may reuse this loader for its
+separate control_state extraction.
+
+Focused readiness TDD/evidence, 2026-10-03 (Europe/Berlin):
+
+- Spec clause above preceded tests and implementation; strict OpenSpec validation
+  passed before production edits and after helper extraction.
+- RED: `PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests/unit -p test_macos_managed_control.py`
+  ran 45 tests, 26 subtest/test errors for the missing readiness helper, three
+  explicit native skips. Log: `/private/tmp/specfact-socket-readiness-red.txt`.
+  A subsequent mock-binding error was corrected with autospec before GREEN.
+- GREEN before extraction: 45 tests passed, three native skips, in 0.220 seconds;
+  with `SPECFACT_NATIVE_CONTROL=1`, all 45 passed in 10.338 seconds. Logs:
+  `/private/tmp/specfact-socket-readiness-green.txt` and
+  `/private/tmp/specfact-socket-readiness-native-green.txt`.
+- Final extracted-helper GREEN: 46 tests passed, three native skips, in 0.274
+  seconds; with `SPECFACT_NATIVE_CONTROL=1`, all 46 passed in 10.605 seconds.
+  Logs: `/private/tmp/specfact-socket-readiness-extracted-green.txt` and
+  `/private/tmp/specfact-socket-readiness-extracted-native-green.txt`.
+- Scoped Ruff lint/format and BasedPyright pass (zero type errors/warnings/notes).
+  Pylint passes at 10.00/10 with the default 1,000-line bound: control.py is 993
+  lines at this checkpoint. Only these three Python files were checked.
+- Ten sequential real registered control startups passed on macOS 27.0.1 build
+  26A434 ARM64, ordinary UID 501, in 1.177 seconds including build. Each connected,
+  authenticated and completed the fixed output fixture with exit 37; no failure
+  retry occurred. This run preceded helper extraction and is startup evidence,
+  not final-source 100-repetition lifecycle acceptance. Receipt:
+  `/private/tmp/specfact-socket-readiness-startup-10.json`; log:
+  `/private/tmp/specfact-socket-readiness-startup-10.log`. Its control.py digest
+  is bba7f75e100284146ba9bb84042a1abe00852e02d9326a947b686c298722d4f5.
+  Worker, broker and observer compiled snapshot digests match current C files
+  and head 314e5b6c. The final focused native suite above verifies extraction.
+
+Final focused checkpoint digests, before subsequent parent-owned integration:
+
+| File | SHA-256 |
+| --- | --- |
+| control.py | 6a86628811cd271d63d9ed5aa0c0ffa3a78e270c54cca380d0597a912c8d156d |
+| control_socket.py | b6e17d6a5c65caafa18d85afaa8f8c7c8e36e04e90cb31407b803fc341286091 |
+| test_macos_managed_control.py | 36648029e800bd5649a5f522afb5b0423f95cafb39840635ca0312b7bbb80a63 |
+
+Confidence: High for deterministic bounded readiness and this local fixture;
+Low for hosted root-cause attribution. Transient mode normalization, delayed
+binding and scheduler delays are tested without extending the original deadline;
+wrong ownership/type and symlinks remain terminal. These observations do not
+establish an immutable hostile-same-user path boundary or macOS 14/15 acceptance.
+The five-second death gate is unchanged. Parent reports its additional 300 cancel
+trials complete; this slice does not claim or reproduce that separate evidence.
+No C, workflow, PR body, signed module asset, commit or push was changed here.
+Broader gates and final serial 100-repetition proof remain parent-owned. Rollback:
+restore this constructor/import slice and tests, remove control_socket.py (after
+checking parent helper imports), and remove this clause/evidence. Local focused
+verification takes seconds and creates ephemeral launchd jobs only.
