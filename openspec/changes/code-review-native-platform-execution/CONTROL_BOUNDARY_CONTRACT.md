@@ -571,3 +571,22 @@ Broader gates and final serial 100-repetition proof remain parent-owned. Rollbac
 restore this constructor/import slice and tests, remove control_socket.py (after
 checking parent helper imports), and remove this clause/evidence. Local focused
 verification takes seconds and creates ephemeral launchd jobs only.
+
+## PR #489 finding 4171361951 — raw wait history (2026-10-03, Europe/Berlin)
+
+A complete raw `eof-wait` request SHALL enter the client's bounded history before
+`sendall`, even when sending fails. Its record SHALL contain opcode 2, fields
+`{"handle": handle}` and a monotonic `started` timestamp. Raw and ordinary
+requests SHALL share the same newest-64-entry bound. This history records an
+attempt, not native acceptance, and must contain no capability bytes.
+
+The existing launch response and final complete wait SHALL allow diagnostics to
+resolve the owned worker PID and export a valid `last_worker_state` observation
+at `request-wait`. Incomplete `eof-partial` and `partial-timeout` frames SHALL
+remain unrecorded, including on send failure; diagnostics SHALL omit worker
+state when history ends at launch. Frame bytes, response deferral checks,
+protocol behavior and deadlines are unchanged.
+
+Focused scenarios: complete wait recording before send; failed send retaining
+its attempt; raw and ordinary history bounded to 64; controller integration for
+complete waits; partial frames omitted from both history and worker-state output.

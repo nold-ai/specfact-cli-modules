@@ -334,6 +334,15 @@ static double expire_workers(double current, double deadline) {
     return deadline;
 }
 
+/* Signals/output are wakeup hints, not a guarantee of observable child status.
+ * Only reconcile registered direct children; kernel cleanup on parent death
+ * and all earlier deadlines remain independent of this select sleep bound. */
+static double reconcile_deadline(double current, double deadline) {
+    for (int i = 0; i < worker_count; i++)
+        if (!workers[i].reaped && current + 0.05 < deadline) return current + 0.05;
+    return deadline;
+}
+
 static void loop(int listener) {
     session_deadline = now() + 30;
     double accept_deadline = now() + 5;
@@ -344,7 +353,7 @@ static void loop(int listener) {
             (partial_deadline && current >= partial_deadline)) die();
         if (client < 0 && accept_deadline < deadline) deadline = accept_deadline;
         if (partial_deadline && partial_deadline < deadline) deadline = partial_deadline;
-        deadline = expire_workers(current, deadline);
+        deadline = reconcile_deadline(current, expire_workers(current, deadline));
         if (pending >= 0 && workers[pending].reaped && workers[pending].fd < 0) {
             struct worker *item = &workers[pending];
             result(pending, "exited"); pending = -1;

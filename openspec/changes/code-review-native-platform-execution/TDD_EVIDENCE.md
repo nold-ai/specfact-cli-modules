@@ -470,3 +470,104 @@ Final frozen-source validation after the commit-hook complexity corrections:
 
 Normal commit hooks and current-head hosted review remain separate gates.
 No hosted result from the previous head approves this revision.
+
+## PR #489 finding 4171361951 — complete raw wait history
+
+2026-10-03 (Europe/Berlin), starting head
+`1a0b68d92e89405a0d536fa0201a0d578760a2f7`, worktree
+`codex/macos-native-capsule-runtime`. User authorized this isolated correction
+while the parent investigates native C cancellation. The current
+`code-review-native-platform-execution` contract covers this diagnostic scope;
+strict OpenSpec validation passed before implementation and after the fix.
+No hierarchy refresh or cache-writing verification was run in this slice.
+
+Order: appended the raw-wait contract first, then added regression tests, ran
+RED, implemented the small shared-history correction, and ran GREEN.
+Inspection confirmed `_prepare_wait` bypassed `Client.request` for a complete
+`eof-wait`, leaving history at launch and preventing worker-PID resolution.
+`Client.record_request` now shares the newest-64-entry bound with ordinary
+requests and records opcode, fields and monotonic start before sending. Failed
+raw sends retain the attempted wait; incomplete frames remain unrecorded.
+No native acceptance is inferred from a send attempt.
+
+The identical focused RED/GREEN command was:
+
+```sh
+PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -p no:cacheprovider tests/unit/test_macos_control_state.py -q
+```
+
+- RED: exit 1; four failed, 30 passed in 1.66 seconds. Failures were the
+  before-send history assertion, complete-send-failure history retention,
+  newest-64 raw history retention, and complete-wait controller state output.
+  Log: `/private/tmp/specfact-4171361951-red.txt`.
+- Final GREEN: exit 0; all 34 passed in 0.08 seconds. Tests also exercise ordinary
+  request history bounding, valid owned-worker state integration, unchanged full
+  and partial frame bytes, and omission for both partial cases on successful and
+  failed sends. Log: `/private/tmp/specfact-4171361951-green.txt`.
+- Scoped Ruff lint and formatting checks passed for the two owned Python files.
+  Final `control.py` length is exactly 1,000 lines (starting length: 996).
+
+Only `scripts/macos_managed_boundary/control.py`,
+`tests/unit/test_macos_control_state.py`, and appends to
+`CONTROL_BOUNDARY_CONTRACT.md` and this evidence file were changed by this slice.
+No C, other tests, protocol/deadline behavior, signed payloads, commit, push,
+GitHub comments or local CodeRabbit upload. Broad suites, actual normal hooks
+and native cancellation verification remain parent-owned and unclaimed here.
+
+Confidence: High for the bounded history correction, based on failing-before
+and passing-after focused evidence. Limit: tests mock transport; they do not
+establish hosted native lifecycle acceptance. Failure modes: a failed send is
+only an attempt (native state still requires a valid owned snapshot); a partial
+frame must never look accepted (both partial cases tested); eviction of an old
+launch can prevent PID mapping (existing fail-closed omission remains intact).
+Assumption: the launch record is retained when worker-state mapping is needed.
+Focused test runtime is under two seconds; no native jobs are created. Rollback:
+revert only this history/helper slice and its tests, and remove these appended
+contract/evidence sections after checking the parent's concurrent changes.
+
+## Bounded owned-child completion — 2026-10-03
+
+Hosted run 37089687409 at head 1a0b68d9 passed 600 startup races on all three
+macOS versions and all 1,219 control records on macOS 15. macOS 14/26 failed
+cancel/request-wait after 69/29 complete lifecycle rounds respectively. Both
+last-observed snapshots had wait_accepted and wait_pending true, worker_reaped
+and output_closed false. These do not establish the underlying notification or
+kernel root cause. CANCEL_COMPLETION_CONTRACT.md specifies the bounded status
+reconciliation correction and preserves the independent kernel cleanup proof.
+
+After the specification, deterministic ad-hoc signed ARM64 event-loop tests
+failed three cases with twelve passing, rejecting the unbounded select sleep.
+The implementation limits the requested sleep to 50 milliseconds only while a
+registered direct child is unreaped; earlier deadlines remain unchanged.
+New positive controls retain a 10 millisecond worker deadline, avoid idle polling
+for empty/reaped registries and cover a reaped first child with a later active
+child. A missing-notification fixture executes the actual cancellation request
+and trace-stop continuation, then checks returned signal/reason/captured output
+without additional kill signals. Its clock and system operations are safely
+mocked; it is not a scheduler, resource or kernel-death timing measurement.
+
+Focused final native event/timer/state/controller suite: 100 passed in
+10.77 seconds. Formatter and type checks passed. The requested independent
+review-agent found no actionable defects; full native repetition and repository
+gates remain separate proof obligations before this revision is finalized.
+
+Final frozen-source validation of this correction:
+
+- Physical Mac17,9, macOS 27.0.1 build 26A434, ARM64: all 1,219 control records
+  passed (twelve-by-100 lifecycle cases and nineteen protocol checks). Receipt
+  `.specfact/native-compat/pr489-reconcile-control-100.json`, SHA-256
+  `16ed0adf14f2444023f0571d789beb8d0412b6c46435b43fcc934ff209f528ae`.
+  Production approval and full signed-boundary verification remain false.
+- Native-enabled focused suite: 230 passed without skips in 13.51 seconds.
+- Serial smart/full suites: each 3,698 passed, twenty-five skipped and
+  63 subtests passed, in 266.03/272.31 seconds. Twenty-four native opt-in skips
+  were separately exercised above; one proc-descriptor test needs Linux.
+- Format, typing, lint, YAML, imports, public-key signature/version verification,
+  twenty-eight contract tests, both strict OpenSpec changes, planned requirements
+  evidence mappings, Markdown and smart coverage checks passed. The independent
+  follow-up review found no defects after the added completion/multiple-child
+  positive controls. Normal hooks and current-head hosted review remain required.
+
+The exact cause of the earlier hosted cancellation stalls remains unproven.
+The bounded completion contract is demonstrated separately; this local proof
+does not approve the supported OS matrix or production capsule integration.

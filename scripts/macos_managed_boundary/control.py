@@ -151,17 +151,19 @@ class Client:
     def _activate_request(self, opcode: int) -> None:
         _activate_operation(getattr(self, "owner", None), REQUEST_FAILURE_PHASES.get(opcode, "unknown"))
 
+    def record_request(self, opcode: int, **fields: int) -> dict[str, Any]:
+        """Retain a bounded attempt before any request bytes are sent."""
+        self.history = [*self.history[-63:], {"opcode": opcode, "fields": fields, "started": time.monotonic()}]
+        return self.history[-1]
+
     def request(self, opcode: int, **fields: int) -> dict[str, Any]:
         """Send one bounded frame and receive its explicit result."""
         self._activate_request(opcode)
-        record: dict[str, Any] = {"opcode": opcode, "fields": fields, "started": time.monotonic()}
-        self.history.append(record)
-        self.history = self.history[-64:]
+        record = self.record_request(opcode, **fields)
         try:
             self.stream.sendall(frame(self.capability, opcode, FrameFields(**fields)))
-            result = response(self.stream)
-            record["response"] = result
-            return result
+            record["response"] = response(self.stream)
+            return record["response"]
         except Exception as error:
             record["failure"] = f"{type(error).__name__}: {error}"[:1024]
             raise
@@ -461,6 +463,8 @@ def _prepare_wait(client: Client, handle: int, case: str) -> None:
     if case not in ("eof-wait", "eof-partial", "partial-timeout"):
         return
     _activate_operation(getattr(client, "owner", None), "request-wait")
+    if case == "eof-wait":
+        client.record_request(2, handle=handle)
     packet = frame(client.capability, 2, FrameFields(handle=handle))
     client.stream.sendall(packet if case == "eof-wait" else packet[:13])
     if case == "eof-wait":

@@ -3,6 +3,7 @@
 import importlib.util
 import json
 from pathlib import Path
+from unittest.mock import Mock
 
 import pytest
 
@@ -98,3 +99,106 @@ def test_controller_exports_only_owned_last_observation(monkeypatch, tmp_path):
     control._activate_operation(None, "request-wait")  # pylint: disable=protected-access
     invocation.retain_failure(TimeoutError("other invocation"))
     assert "last_worker_state" not in markers[-1]
+
+
+@pytest.fixture(name="control")
+def fixture_control():
+    spec = importlib.util.spec_from_file_location("raw_wait_control_fixture", SOURCE.with_name("control.py"))
+    assert spec and spec.loader
+    result = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(result)
+    return result
+
+
+def raw_wait_client(control, owner=None):
+    client = object.__new__(control.Client)
+    client.owner = owner
+    client.capability = b"x" * 32
+    client.history = requests()[:1]
+    client.stream = Mock()
+    return client
+
+
+def test_complete_raw_wait_records_before_send(control, monkeypatch):
+    client = raw_wait_client(control)
+    monkeypatch.setattr(control.time, "monotonic", lambda: 123.5)
+    monkeypatch.setattr(control.select, "select", lambda *_args: ([], [], []))
+    expected = {"opcode": 2, "fields": {"handle": 42}, "started": 123.5}
+
+    def check_send(packet):
+        assert client.history[-1] == expected
+        assert packet == control.frame(client.capability, 2, control.FrameFields(handle=42))
+
+    client.stream.sendall.side_effect = check_send
+    control._prepare_wait(client, 42, "eof-wait")  # pylint: disable=protected-access
+    assert client.history == [requests()[0], expected]
+    client.stream.sendall.assert_called_once()
+
+
+@pytest.mark.parametrize("case", ["eof-wait", "eof-partial", "partial-timeout"])
+def test_raw_wait_send_failure_retains_only_complete_attempt(control, monkeypatch, case):
+    client = raw_wait_client(control)
+    monkeypatch.setattr(control.time, "monotonic", lambda: 123.5)
+    client.stream.sendall.side_effect = OSError("send failed")
+    with pytest.raises(OSError, match="send failed"):
+        control._prepare_wait(client, 42, case)  # pylint: disable=protected-access
+    expected = requests()[:1]
+    if case == "eof-wait":
+        expected.append({"opcode": 2, "fields": {"handle": 42}, "started": 123.5})
+    assert client.history == expected
+
+
+@pytest.mark.parametrize("raw", [True, False])
+def test_wait_history_keeps_newest_64_records(control, monkeypatch, raw):
+    client = raw_wait_client(control)
+    client.history = [{"opcode": 3, "fields": {"handle": handle}} for handle in range(64)]
+    retained = client.history[1:]
+    monkeypatch.setattr(control.select, "select", lambda *_args: ([], [], []))
+    monkeypatch.setattr(control, "response", lambda _stream: {"version": 1, "ok": True})
+    if raw:
+        control._prepare_wait(client, 42, "eof-wait")  # pylint: disable=protected-access
+    else:
+        client.request(2, handle=42)
+    assert len(client.history) == 64
+    assert client.history[:-1] == retained
+    assert client.history[-1]["opcode"] == 2
+    assert client.history[-1]["fields"] == {"handle": 42}
+
+
+@pytest.mark.parametrize("case", ["eof-wait", "eof-partial", "partial-timeout"])
+def test_raw_wait_controller_exports_state_only_for_complete_frame(control, monkeypatch, tmp_path, case):
+    invocation = object.__new__(control.Invocation)
+    invocation.case = case
+    invocation.directory = tmp_path
+    invocation.observer = tmp_path / "observer"
+    invocation.broker = tmp_path / "broker"
+    invocation.service = "private-service"
+    invocation.identities = []
+    client = raw_wait_client(control, invocation)
+    invocation.client = client
+    state = snapshot(wait_accepted=True, wait_pending=True, output_closed=True)
+    (tmp_path / "events").write_text(json.dumps(state) + "\n")
+    markers, diagnostics = [], []
+    monkeypatch.setattr(control.select, "select", lambda *_args: ([], [], []))
+    monkeypatch.setattr(control, "_emit_json", markers.append)
+
+    def retain(record):
+        diagnostics.append(record)
+        return tmp_path / "private-diagnostic"
+
+    monkeypatch.setattr(control, "_write_diagnostic", retain)
+    try:
+        control._prepare_wait(client, 42, case)  # pylint: disable=protected-access
+        invocation.retain_failure(TimeoutError("observation failed"))
+    finally:
+        control._activate_operation(None, "unknown")  # pylint: disable=protected-access
+    packet = control.frame(client.capability, 2, control.FrameFields(handle=42))
+    client.stream.sendall.assert_called_once_with(packet if case == "eof-wait" else packet[:13])
+    assert diagnostics[0]["failure_phase"] == "request-wait"
+    assert markers[0]["failure_origin"] is True
+    if case == "eof-wait":
+        assert markers[0]["last_worker_state"] == {field: state[field] for field in FIELDS}
+        assert diagnostics[0]["requests"][-1]["fields"] == {"handle": 42}
+    else:
+        assert client.history == requests()[:1]
+        assert "last_worker_state" not in markers[0]

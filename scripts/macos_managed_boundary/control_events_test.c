@@ -12,6 +12,7 @@
 #define read fixture_read
 #define select fixture_select
 #define kill fixture_signal
+#define clock_gettime fixture_clock_gettime
 #define SecStaticCodeCreateWithPath fixture_code
 #define SecRequirementCreateWithString fixture_requirement
 #define SecStaticCodeCheckValidity fixture_validity
@@ -23,13 +24,20 @@
 #undef read
 #undef select
 #undef kill
+#undef clock_gettime
 #undef SecStaticCodeCreateWithPath
 #undef SecRequirementCreateWithString
 #undef SecStaticCodeCheckValidity
 
 static jmp_buf loop_done;
 static int next_status, status_ready, wait_interrupt, read_error, continuations;
-static int last_signal, signals_sent;
+static int last_signal, signals_sent, reconcile_mode, select_calls;
+
+int fixture_clock_gettime(clockid_t clock, struct timespec *value) {
+    if (clock != CLOCK_MONOTONIC) _exit(94);
+    value->tv_sec = 100; value->tv_nsec = 0;
+    return 0;
+}
 
 OSStatus fixture_code(CFURLRef url, SecCSFlags flags, SecStaticCodeRef *code) {
     (void)url; (void)flags;
@@ -72,7 +80,21 @@ ssize_t fixture_read(int fd, void *buffer, size_t size) {
     return 0;
 }
 int fixture_select(int count, fd_set *reads, fd_set *writes, fd_set *errors, struct timeval *timeout) {
-    (void)count; (void)reads; (void)writes; (void)errors; (void)timeout;
+    (void)count; (void)errors;
+    if (reconcile_mode) {
+        double delay = timeout->tv_sec + timeout->tv_usec / 1e6;
+        int active = 0;
+        for (int i = 0; i < worker_count; i++) if (!workers[i].reaped) active = 1;
+        if ((active && delay > 0.050001) || (!active && delay < 1)) _exit(93);
+        if (reconcile_mode == 6 && delay > 0.010001) _exit(95);
+        if (reconcile_mode == 4 && select_calls++ < 2) {
+            FD_ZERO(reads); FD_ZERO(writes); /* No signal-handler pipe byte. */
+            status_ready = 1;
+            next_status = select_calls == 1 ? W_STOPCODE(SIGKILL) : SIGKILL;
+            if (select_calls == 2) FD_SET(workers[0].fd, reads);
+            return select_calls == 2 ? 1 : 0; /* Status wake, then output EOF. */
+        }
+    }
     longjmp(loop_done, 1); /* Inspect one actual loop completion, without blocking. */
 }
 int fixture_signal(pid_t pid, int signal_number) {
@@ -81,14 +103,15 @@ int fixture_signal(pid_t pid, int signal_number) {
     return 0;
 }
 
-static void wait_request(uint64_t handle) {
+static void control_request(unsigned char opcode, uint64_t handle) {
     memset(input, 0, sizeof(input));
     input[4] = 1;
-    input[5] = 2;
+    input[5] = opcode;
     for (int i = 0; i < 8; i++) input[8 + i] = (unsigned char)(handle >> (56 - i * 8));
     memcpy(input + 24, capability, sizeof(capability));
     request();
 }
+static void wait_request(uint64_t handle) { control_request(2, handle); }
 static void terminal_reap(void) {
     next_status = SIGKILL;
     status_ready = 1;
@@ -101,9 +124,14 @@ static void complete_wait(void) {
 
 int main(int argc, char **argv) {
     if (argc != 2) return 2;
+    if (!strcmp(argv[1], "reconcile-empty")) {
+        reconcile_mode = 1;
+        complete_wait();
+        return worker_count == 0 ? 0 : 12;
+    }
     authenticated = 1;
     memset(capability, 's', sizeof(capability));
-    launch(strcmp(argv[1], "held-stop") == 0 ? 4 : 2, 5000);
+    launch(!strcmp(argv[1], "held-stop") || !strcmp(argv[1], "reconcile-held") ? 4 : 2, 5000);
     if (worker_count != 1 || workers[0].pid != 1234567) return 3;
     struct worker *item = &workers[0];
     item->handle = 1;
@@ -111,6 +139,38 @@ int main(int argc, char **argv) {
     item->used = strlen(item->output);
     item->reason = "private-reason";
 
+    if (!strncmp(argv[1], "reconcile-", 10)) {
+        if (!strcmp(argv[1], "reconcile-reaped")) {
+            terminal_reap(); drain(item); reconcile_mode = 2;
+        } else if (!strcmp(argv[1], "reconcile-active")) reconcile_mode = 3;
+        else if (!strcmp(argv[1], "reconcile-earlier")) {
+            item->deadline = now() + 0.01; reconcile_mode = 6;
+        }
+        else if (!strcmp(argv[1], "reconcile-lost")) {
+            item->traced = 1; session_deadline = now() + 30;
+            control_request(4, item->handle); /* Real cancellation handling. */
+            output_sent = output_used = 0; /* Client consumed launch/cancel replies. */
+            reconcile_mode = 4;
+        } else if (!strcmp(argv[1], "reconcile-later")) {
+            terminal_reap(); drain(item); launch(2, 5000);
+            workers[1].handle = 2; reconcile_mode = 7;
+        } else if (!strcmp(argv[1], "reconcile-held")) {
+            next_status = W_STOPCODE(SIGSTOP); status_ready = 1; reap(); reconcile_mode = 5;
+        } else return 13;
+        wait_request(reconcile_mode == 7 ? 2 : 1); complete_wait();
+        if (reconcile_mode == 4) {
+            uint32_t size; memcpy(&size, output, sizeof(size));
+            size_t length = ntohl(size);
+            if (length > 2048 || output_used != length + 4) return 16;
+            char reply[2049]; memcpy(reply, output + 4, length); reply[length] = 0;
+            if (!strstr(reply, "\"state\":\"exited\"") || !strstr(reply, "\"signal\":9,") ||
+                !strstr(reply, "\"reason\":\"cancel\"") || !strstr(reply, "private-worker-payload")) return 17;
+            return pending == -1 && item->reaped && item->fd < 0 &&
+                continuations == 1 && last_signal == SIGKILL && signals_sent == 1 ? 0 : 14;
+        }
+        if (reconcile_mode == 7 && (pending != 1 || workers[1].reaped)) return 18;
+        return signals_sent == 0 && continuations == 0 ? 0 : 15;
+    }
     if (!strcmp(argv[1], "launch")) return 0;
     if (!strcmp(argv[1], "rejected")) {
         wait_request(99);

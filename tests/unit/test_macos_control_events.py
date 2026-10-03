@@ -133,3 +133,28 @@ def test_control_snapshot_emissions_are_bounded(native_event_binary):
     states = snapshots(native_event_binary, "bounds")
     assert len(states) == 8 * 3 + 64
     assert states[-64:] == [(True, False, True, True)] * 64
+
+
+@pytest.mark.parametrize(
+    "scenario",
+    [
+        "reconcile-empty",
+        "reconcile-reaped",
+        "reconcile-active",
+        "reconcile-held",
+        "reconcile-earlier",
+        "reconcile-later",
+    ],
+)
+def test_owned_child_reconciliation_deadline(native_event_binary, scenario):
+    snapshots(native_event_binary, scenario)
+
+
+def test_owned_child_completion_without_signal_pipe_readiness(native_event_binary):
+    assert snapshots(native_event_binary, "reconcile-lost") == [
+        (False, False, False, False),
+        (True, True, False, False),
+        (True, True, False, True),
+        (True, True, True, True),
+        (True, False, True, True),
+    ]
