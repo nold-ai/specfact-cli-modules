@@ -103,3 +103,31 @@ Runtime Requirements integration and adoption SHALL validate the exact immutable
 - **WHEN** the installed combination passes the existing representative acceptance fixtures
 - **THEN** the compatibility prerequisite is satisfied for that exact combination
 - **AND** this does not activate or replace the separate R09 required-policy cutover.
+
+### Requirement: Optional context and advisory producer feedback
+
+Producer adapters SHALL retain original severity/rule, producer identity, artifact digest, snapshot identity and verification basis separately from producer trust. Optional decision-context drift SHALL present affected obligations, test/configuration changes and missing evidence. R09 SHALL remain pure reconciliation; execution SHALL remain in workflow adapters. Structured pytest identity SHALL be certified first. One controller SHALL bound total attempts/elapsed time across selected loops and SHALL stop on exhaustion, no progress, oscillation or required human decisions.
+
+#### Scenario: Heuristic finding from trusted producer
+
+- **GIVEN** an authenticated producer emitting a heuristic finding
+- **WHEN** feedback is normalized
+- **THEN** producer trust and heuristic basis remain distinct and the original finding is available.
+
+#### Scenario: Advisory convergence with failed tests
+
+- **GIVEN** a converged advisory and a failed required test
+- **WHEN** verification is aggregated
+- **THEN** the test remains failed and the result cannot pass.
+
+#### Scenario: Context drift during verification
+
+- **GIVEN** a bound context, test or configuration changing during execution
+- **WHEN** result reuse is evaluated
+- **THEN** reuse is rejected for affected obligations and source/index bytes are preserved.
+
+#### Scenario: Nested repair would exceed budget
+
+- **GIVEN** an optional checkpoint requesting repair within an active workflow loop
+- **WHEN** the request is handled
+- **THEN** it consumes the same controller budget rather than starting a new independent attempt allowance.

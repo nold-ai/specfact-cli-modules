@@ -1,5 +1,11 @@
 # Change: Module-Owned Bounded Turn Orchestration
 
+## Owner-approved agentic SDLC amendment — 2026-10-04
+
+Include optional decision-context drift and advisory external findings in #483 producer adapters and #742 adoption. Retain original producer identity, severity/rule, artifact digest, snapshot identity and verification basis. Producer trust and finding epistemic basis are separate fields: a trusted producer can emit heuristic advice. Present affected obligations, missing evidence, source/test/configuration changes and next actions. Context absence does not block ordinary verification. Use structured pytest runner identity first; certify its selected-suite/current-attempt semantics before additional runners. Deterministic verification precedes repair; one controller owns a shared elapsed/attempt budget across optional preflight and PR loops, with exhaustion, no-progress, oscillation and required-human-decision stops. An advisory converged result never overrides a failed or unavailable required producer.
+
+This planning amendment supersedes conflicting scope and prerequisite wording below. It changes no runtime behavior and completes no implementation task. See [roadmap](../../AGENTIC_SDLC_ROADMAP.md).
+
 ## Why
 
 Agents need a stable gate sequence, resumable local progress and a bounded review/fix loop. These capabilities must not create mandatory historical proof, obscure independent test/security/review outcomes or duplicate the optional preflight runtime.
@@ -52,3 +58,7 @@ Documentation impact: module command/reference and workflow guides on modules.sp
 ## Signed Requirements compatibility gate
 
 Before selecting or adopting workflow #483 for current-run Requirements integration, validate the exact immutable signed Requirements #481 publication and its schema-v3 `current_execution` contract against the actual core and workflow versions. Verify archive/manifest/payload signatures and identities, then exercise the exact installed pair with existing representative current-result fixtures. An absent, incompatible, unsigned or v2-only producer leaves runtime integration/adoption not ready; do not substitute a passing receipt or silently downgrade the contract. Repository skill projection remains independently deliverable, and core #740 retains policy cutover ownership.
+
+## Planning validation
+
+See [AGENTIC_SDLC_VALIDATION.md](../../AGENTIC_SDLC_VALIDATION.md) for actual proposal checks and the explicit Python-only analyzer applicability exception. Runtime review and release tasks remain pending.

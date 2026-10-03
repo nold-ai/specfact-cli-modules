@@ -1,0 +1,62 @@
+schema_version: '2'
+requirements:
+  openspec:architecture-02-module-well-architected:architecture-well-architected-module:architecture-bundle-registration:
+    rationale: Make the approved planning requirement reviewable without claiming runtime evidence.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#230
+    touchpoints:
+    - id: architecture-well-architected-module-spec
+      kind: config_file
+      locator: openspec/changes/architecture-02-module-well-architected/specs/architecture-well-architected-module/spec.md
+    verification_cases:
+    - case_id: architecture-bundle-registration-inspection
+      scenario_id: architecture-bundle-registration
+      method: inspection
+      intent: Inspect Architecture bundle registration and all its acceptance scenarios.
+      observable: Strict OpenSpec validation retains the requirement and scenarios. Planning inspection only; tests,
+        implementation and signed producer acceptance remain pending.
+  ? openspec:architecture-02-module-well-architected:architecture-well-architected-module:boundary-and-interface-analysis-uses-the-shared-review-contracts
+  : rationale: Make the approved planning requirement reviewable without claiming runtime evidence.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#230
+    touchpoints:
+    - id: architecture-well-architected-module-spec
+      kind: config_file
+      locator: openspec/changes/architecture-02-module-well-architected/specs/architecture-well-architected-module/spec.md
+    verification_cases:
+    - case_id: boundary-and-interface-analysis-uses-the-shared-review-contracts-inspection
+      scenario_id: boundary-and-interface-analysis-uses-the-shared-review-contracts
+      method: inspection
+      intent: Inspect Boundary and interface analysis uses the shared review contracts and all its acceptance scenarios.
+      observable: Strict OpenSpec validation retains the requirement and scenarios. Planning inspection only; tests,
+        implementation and signed producer acceptance remain pending.
+  ? openspec:architecture-02-module-well-architected:architecture-well-architected-module:portable-boundary-rules-support-allowed-imports-patterns
+  : rationale: Make the approved planning requirement reviewable without claiming runtime evidence.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#230
+    touchpoints:
+    - id: architecture-well-architected-module-spec
+      kind: config_file
+      locator: openspec/changes/architecture-02-module-well-architected/specs/architecture-well-architected-module/spec.md
+    verification_cases:
+    - case_id: portable-boundary-rules-support-allowed-imports-patterns-inspection
+      scenario_id: portable-boundary-rules-support-allowed-imports-patterns
+      method: inspection
+      intent: Inspect Portable boundary rules support ALLOWED_IMPORTS patterns and all its acceptance scenarios.
+      observable: Strict OpenSpec validation retains the requirement and scenarios. Planning inspection only; tests,
+        implementation and signed producer acceptance remain pending.
+  ? openspec:architecture-02-module-well-architected:architecture-well-architected-module:maintained-python-dependency-evidence
+  : rationale: Make the approved planning requirement reviewable without claiming runtime evidence.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#230
+    touchpoints:
+    - id: architecture-well-architected-module-spec
+      kind: config_file
+      locator: openspec/changes/architecture-02-module-well-architected/specs/architecture-well-architected-module/spec.md
+    verification_cases:
+    - case_id: maintained-python-dependency-evidence-inspection
+      scenario_id: maintained-python-dependency-evidence
+      method: inspection
+      intent: Inspect Maintained Python dependency evidence and all its acceptance scenarios.
+      observable: Strict OpenSpec validation retains the requirement and scenarios. Planning inspection only; tests,
+        implementation and signed producer acceptance remain pending.

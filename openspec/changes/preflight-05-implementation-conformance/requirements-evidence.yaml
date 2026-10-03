@@ -123,3 +123,33 @@ requirements:
         method: inspection
         intent: "Inspect documented unsigned dev-target checksum refresh with an explicit affected-manifest path set or changed-only/full-base selector; selected-manifest/base evidence and empty/incomplete/ambiguous selection failure; stale-signature removal for the exact pre-merge payload; reachable full filesystem checksum/version verification; non-publishable checksum-only candidate status; projected-registry validation without official registry mutation; post-merge exact-payload/checksum verification and cryptographic signing with fail-closed return on drift; mandatory negative-corpus and known-good live evidence recollection plus full promotion reevaluation on the exact unchanged signed publication head before merge; rejection of checksum-only or earlier signed-head evidence; matching complete signed-manifest/generated-registry core_compatibility ranges; the lower bound at the first released #684 core; an exclusive upper bound preserved or derived from the complete bundled-module dependency intersection; rejection below the lower bound and at/above the upper bound; acceptance at the lower bound and for supported newer cores below the upper bound; role-specific signed #434 workflow identity/digest bindings; and the optional adapter #433 handoff requiring signed #434 plus independently delivered core #253, without making generic #251/#253 or native #460 depend on #434 publication."
         observable: *planning-observable
+  ? openspec:preflight-05-implementation-conformance:preflight-implementation-conformance-runtime:policy-selected-decision-context-conformance
+  : rationale: Make the approved planning requirement reviewable without claiming runtime evidence.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#434
+    touchpoints:
+    - id: preflight-implementation-conformance-runtime-spec
+      kind: config_file
+      locator: openspec/changes/preflight-05-implementation-conformance/specs/preflight-implementation-conformance-runtime/spec.md
+    verification_cases:
+    - case_id: policy-selected-decision-context-conformance-inspection
+      scenario_id: policy-selected-decision-context-conformance
+      method: inspection
+      intent: Inspect Policy-selected decision context conformance and all its acceptance scenarios.
+      observable: Strict OpenSpec validation retains the requirement and scenarios. Planning inspection only; tests,
+        implementation and signed producer acceptance remain pending.
+  ? openspec:preflight-05-implementation-conformance:preflight-implementation-conformance-runtime:operational-samples-retain-uncertainty
+  : rationale: Make the approved planning requirement reviewable without claiming runtime evidence.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#434
+    touchpoints:
+    - id: preflight-implementation-conformance-runtime-spec
+      kind: config_file
+      locator: openspec/changes/preflight-05-implementation-conformance/specs/preflight-implementation-conformance-runtime/spec.md
+    verification_cases:
+    - case_id: operational-samples-retain-uncertainty-inspection
+      scenario_id: operational-samples-retain-uncertainty
+      method: inspection
+      intent: Inspect Operational samples retain uncertainty and all its acceptance scenarios.
+      observable: Strict OpenSpec validation retains the requirement and scenarios. Planning inspection only; tests,
+        implementation and signed producer acceptance remain pending.

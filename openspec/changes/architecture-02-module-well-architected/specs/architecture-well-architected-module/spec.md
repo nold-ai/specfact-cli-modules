@@ -28,3 +28,19 @@ The bundle SHALL support portable rule resources derived from `ALLOWED_IMPORTS.m
 
 - **WHEN** the bundle loads repository boundary policy derived from an `ALLOWED_IMPORTS.md`-style source
 - **THEN** it applies those rules during architecture review and classifies violations through the paired core findings contract
+
+### Requirement: Maintained Python dependency evidence
+
+After architecture inputs ship and one complete real usage cycle, the first Python dependency-rule slice SHALL consume maintained Import Linter results. It SHALL retain exact source/configuration/tool/rule identity and associate violations with declared boundaries without building a duplicate import-graph engine. Unavailable, incomplete or wrong-snapshot extraction SHALL remain UNKNOWN. Findings SHALL retain original report references and the actual supported core compatibility range.
+
+#### Scenario: Forbidden dependency planted
+
+- **GIVEN** a supported Python fixture violating a declared dependency boundary
+- **WHEN** Import Linter evidence is consumed
+- **THEN** the planted violation is associated with its boundary, source and original rule.
+
+#### Scenario: Extraction unavailable
+
+- **GIVEN** the required analyzer cannot produce complete current-snapshot results
+- **WHEN** the boundary is evaluated
+- **THEN** it is UNKNOWN and no empty graph is treated as proof of conformance.
