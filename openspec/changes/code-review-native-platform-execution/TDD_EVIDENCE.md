@@ -134,8 +134,8 @@ ad-hoc distribution acceptance. Updated the normative proposal/design/feasibilit
 scenarios, planned mappings, tasks, status and change order before modifying tests
 or preflight. Created optional OpenSpec `code-review-macos-developer-id-distribution`
 and public story #488; verified parent #163, SpecFact CLI project/Todo, no milestone,
-#488 blocked by #460, #460 blocking #488, and #460 still blocked only by completed
-#459. Updated #460's current scope while preserving superseded historical evidence.
+Issue #488 blocked by #460, #460 blocking #488, and #460 still blocked only by completed
+Issue #459. Updated #460's current scope while preserving superseded historical evidence.
 
 Added five prerequisite-routing cases before implementation. Focused execution
 reported **5 failed, 21 passed**: no initial checker/Path import/mode existed.
@@ -208,7 +208,6 @@ startup tests. Native final rerun: 100×6 transitions passed, both native stale
 pid-version tokens rejected without killing the original fixtures. The Semgrep
 parity sidecar has 18 unit cases; combined focus is 53 passed. It records a real
 invalid-rule/frontend mismatch rather than claiming complete native parity.
-
 
 ## Native control, sealed analysis and source-binding follow-up (2026-10-03)
 
@@ -295,7 +294,6 @@ CI test initially exposed a missing PyYAML dependency in the isolated CrossHair
 review environment; installing the already-declared PyYAML 6.0.3 there repairs
 that tool-environment gap without changing module/runtime dependency policy.
 
-
 ## Final frozen-tree verification (2026-10-03, Europe/Berlin)
 
 - Native focused suite: 110 passed, no skips (actual C timer, traced trap,
@@ -333,3 +331,72 @@ RED: actual workflow tests failed twice with missing failure_type/failed_case;
 four existing tests passed. GREEN: all six tests passed after implementation.
 Tests inject private paths/identities and unknown names, check rejection and
 raw-file deletion, and retain failure status. No boundary or timing gate changed.
+
+## PR #489 review fixes and hosted diagnostic attribution — 2026-10-03
+
+Independently validated five findings: Markdown issue-reference wrapping, stale
+Node packager TDD/rollback, missing analyzer stderr, exception masking and
+Node version validation/error reporting. Documentation retains historical scope;
+no packager shipment or module enablement is claimed.
+
+Analyzer/Node diagnostic RED: six failures, forty-five passes. Final focused
+GREEN: forty-nine passes. Control exception RED: one failure/three errors;
+phase RED: eleven errors. Native focused GREEN: thirty passes. Contracts carry
+exact scope and private-data limits. Node packager/input proof: thirty-seven
+passes. No native C implementation or containment policy changed in these fixes.
+
+Workflow attribution RED: the nested first-failure test failed; GREEN: seven
+passes. Fixed-phase privacy RED: missing failure_phase; GREEN: eight passes.
+First-failure attribution and allowlisted phase reporting cannot approve a
+failed suite. Complete hosted startup passed on all three OS builds; control
+passed only macOS 14 in the second attempt. Other control failures remain open.
+
+### Independent ownership review and final focused validation
+
+The requested read-only review-agent reproduced two additional P2 diagnostic
+defects: unwind-order ownership inference and stale phases after decoded reply
+validation. Both were fixed through failing-first controller/workflow tests.
+The controller stamps the active invocation and phase once before cleanup;
+the wrapper requires an explicit boolean owner marker. A successful-body
+cleanup failure has its own fixed cleanup phase and still fails.
+
+Workflow ownership RED: five parameterized failures. GREEN: thirteen workflow
+cases. Cleanup phase RED: one failure; GREEN: thirteen cases. Final combined
+focused run with native control enabled passed **95 tests with no skips**.
+Independent review of the complete follow-up diff returned **No findings**;
+its controller/workflow reproductions passed ninety tests with thirty subtests
+(three explicitly native cases skipped, two unrelated supervision cases
+deselected in the restricted review-agent environment). The parent's focused
+run covers those native and supervision cases without the restriction.
+
+Actual post-fix sealed Semgrep passed all four scans, and all ten real native
+CPython 3.13 analyzer compatibility adapters passed. These are separate scopes;
+no all-ten sealed acceptance or production-native enablement is claimed.
+
+### Physical teardown reproduction and passing rerun
+
+The fresh pre-fix control run failed after 76 complete rounds during timeout-case
+teardown. Its independent diagnostic observed both broker and worker absent;
+immediate launchd job inspection after bootout was still registered. Preserve
+that failed receipt and log; this is not proof of the separate hosted isolation
+timeout's cause. The startup teardown contract now requires removal once and
+bounded independent absence observation within a deadline established before
+teardown. The original measured death windows and native C sources are unchanged.
+
+RED: two teardown tests failed, thirty-seven passed, one native opt-in skipped.
+GREEN: scoped startup/control/analyzer tests passed ninety-eight with four
+opt-in skips. Final actual native focused validation passed **135 with no skips**.
+Fresh serial full native runs passed **600 startup races** and **1,219 control/
+protocol records**, each with all required 100-round groups; production and
+signed-boundary approval flags remain false. The independent review-agent
+reviewed teardown and its callers with fault injections and returned **No findings**.
+Existing subprocess timeouts may delay reporting failure beyond five seconds;
+after-deadline verification can never be accepted.
+
+Final frozen-tree smart and full repository suites each passed **3,623 tests
+plus 43 subtests**, with eight platform/explicit-native skips. New native
+startup/control cases were executed in the 135-case focused run; unchanged
+native timer fixtures retain their preceding explicit proof. YAML, bundle
+imports, module signature/version integrity, twenty-eight contract tests and
+smart-test coverage checks also passed. Native full boundary/platform admission
+is still incomplete; no version bump, publication or production support claim.

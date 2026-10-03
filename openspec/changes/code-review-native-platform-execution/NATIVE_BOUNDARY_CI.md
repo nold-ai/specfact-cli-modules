@@ -3,9 +3,9 @@
 Updated 2026-10-03 (Europe/Berlin). The workflow
 [`code-review-macos-boundary.yml`](../../../.github/workflows/code-review-macos-boundary.yml)
 extends the existing startup/control fixture proof across three hosted ARM64 OS
-images. **CI executed evidence is not yet available until a PR run.** Local
-configuration validation and physical-host receipts do not establish hosted CI
-acceptance.
+images. The first hosted run passed the startup fixtures on all three images
+and failed control on all three. Local configuration validation and startup
+success do not establish complete hosted boundary acceptance.
 
 ## Runner selection and exact platform gate
 
@@ -62,7 +62,7 @@ third-party Python dependency is acquired. The preinstalled maintainer
 This is maintainer build acceptance, not a requirement for customer compilers.
 
 Preflight requires an ordinary non-root user's real `gui/<uid>` launchd domain.
-**Its availability on these hosted runners is unverified.** Failure or timeout of
+The first hosted run verified its availability on all three exact builds. Failure or timeout of
 `launchctl print gui/<uid>` fails the job before fixture execution. There is no
 skip, synthetic login session, privileged bootstrap or alternate domain fallback.
 An actual PR job result must establish GUI-domain and native probe availability.
@@ -160,8 +160,8 @@ review are not claimed by this scoped validation.
 Required next evidence: the PR run URL, tested merge SHA, all three job results,
 recorded OS/build/image/Python identities, GUI preflight result, six-by-100 and
 twelve-by-100 counts, nineteen protocol checks and sanitized check digests.
-**CI executed evidence: not-yet-available.** Do not mark the supported-matrix
-or full native admission task complete from configuration validation.
+**Complete hosted boundary acceptance: failed on the first run.** Do not mark
+the supported-matrix or full native admission task complete from startup proof.
 
 Confidence: High for the documented label architecture; hosted fixture
 compatibility remains unverified. Assumptions that can change the result:
@@ -195,10 +195,50 @@ validator or a YAML shape assertion.
 The first PR #489 run passed startup on macOS 26 and failed its control helper;
 macOS 14 also failed. A generic helper failure is insufficient to triage these
 results. On failure, the wrapper must retain only allowlisted case names,
-exception classes and counts of passed cases from a bounded private receipt/log
+exception classes, fixed operation-phase names and counts of passed cases from a bounded private receipt/log
 read. Unknown names and exception messages must never be published. Raw logs,
 identities, paths, capabilities and native status/event payloads remain private.
 Diagnostic fields cannot change a failed suite to a pass or relax any deadline.
 
 Meaningful tests must exercise the actual workflow functions with injected
 private data, incomplete receipts and nonzero helper exits before implementation.
+
+## Initial hosted execution — PR #489
+
+The first run [37079681523](https://github.com/nold-ai/specfact-cli-modules/actions/runs/37079681523)
+used merge checkout `66989837e01a407f9742dbcf241de977da278f3d`, combining
+head `b0459e322d6d63f1bb5a7833f77a6c82327a5213` with dev
+`37b6000227ba4be353a4f1769e39e92073b1fced`. Each ARM64/ordinary-user/GUI
+preflight passed; all six startup modes completed 100 times on each build.
+
+| Build | Startup result | Sanitized startup check SHA-256 | Control result |
+| --- | --- | --- | --- |
+| 23J631 | passed | e89b8f1d5488dd9d300bd53a5270f842a2151f6d18721fc33b0bbe89c91b6b57 | helper_failed |
+| 24G830 | passed | dc00b6c6894e007d04f88c23594ce2ce13039330670268685de18ba5c0d8a6dc | helper_failed |
+| 25G83 | passed | 5c1e8d9aabe4dca161be830b147ea1b3c1c87b5ce5178a5660ce7b56f6db7929 | helper_failed |
+
+Raw failures were not exported. Their cause is unproven; no later run can turn
+this failed run into acceptance. Head `55980530` added bounded diagnostics. Its
+merge checkout `2239ddb841678ab07c42d45e104e313f1a030bc1` reproduced a timeout
+in the concurrent isolation case on macOS 15 after the first eleven lifecycle
+cases; macOS 26 failed during round 18 before completing isolation. Nested
+exception propagation can report an outer invocation, so failing-case
+attribution was corrected with a failing-first workflow test.
+
+These results verify startup compatibility only. Control, complete boundary,
+production integration and customer installation remain gated.
+
+The second run [37080266799](https://github.com/nold-ai/specfact-cli-modules/actions/runs/37080266799)
+passed the full macOS 14 startup/control fixture suite at merge `2239ddb841678ab07c42d45e104e313f1a030bc1`.
+Control recorded 100 of all twelve lifecycle cases plus nineteen protocol
+checks; sanitized check SHA-256:
+`aa7129e3edf867c48818090475a6534680fffba8f5ea5dfef1466531a63e83f9`.
+macOS 15 and 26 still failed control. This single OS pass does not approve the
+full matrix. Next diagnostics select explicitly attributed failure ownership and an allowlisted
+operation phase. Nested unwind order alone cannot establish ownership.
+
+Independent review reproduced left-side failures unwinding the right invocation
+first. Public attribution must select only a boolean failure_origin=true marker
+stamped for the actual active invocation before cleanup. Missing, unknown or
+non-boolean ownership never establishes a failing invocation. Request phases
+must cover reply validation as well as send/receive errors.

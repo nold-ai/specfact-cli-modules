@@ -214,9 +214,17 @@ jobs:
               return checks
 
           def failure_summary(name, receipt_path, log_path):
-              result = {"failure_type": "unknown", "failed_case": "unknown", "completed_cases": {}}
+              result = {"failure_type": "unknown", "failed_case": "unknown",
+                        "failure_phase": "unknown", "completed_cases": {}}
               cases = set(STARTUP_RACES if name == "startup" else CONTROL_RACES + PROTOCOL_CASES)
               allowed = cases | {"protocol", "isolation-left", "isolation-right", "normal", "runtime-trap"}
+              phases = {
+                  "request-authenticate", "request-launch", "request-wait", "request-signal", "request-cancel",
+                  "bootstrap-observe-caller", "bootstrap-authority", "bootstrap-register", "bootstrap-socket",
+                  "marker-broker", "marker-trace", "marker-output", "observe-worker", "observe-removal", "cleanup",
+                  "isolation-launch", "isolation-capture", "isolation-peer-authority", "isolation-extra-connection",
+                  "isolation-owner-eof", "isolation-peer-survivor",
+              }
               classes = {"TimeoutError", "RuntimeError", "CalledProcessError", "TimeoutExpired",
                          "OSError", "ValueError", "EOFError", "FileNotFoundError", "AssertionError"}
               try:
@@ -244,8 +252,11 @@ jobs:
                       try:
                           item = json.loads(line)
                           case = item.get("failed_case") if isinstance(item, dict) else None
-                          if isinstance(case, str) and case in allowed:
+                          if isinstance(case, str) and case in allowed and item.get("failure_origin") is True:
                               result["failed_case"] = case
+                              phase = item.get("failure_phase")
+                              result["failure_phase"] = phase if isinstance(phase, str) and phase in phases else "unknown"
+                              break  # Select explicit ownership, never unwind order.
                       except ValueError:
                           pass
               except OSError:

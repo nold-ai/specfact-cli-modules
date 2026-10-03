@@ -256,3 +256,26 @@ def test_every_startup_launch_uses_the_supplied_profile(startup, monkeypatch, tm
         startup.NativeBinaries(Path("broker"), Path("worker"), Path("observer")), "captured policy", tmp_path, 2
     )
     assert profiles == ["captured policy"] * 17
+
+
+def test_teardown_observes_asynchronous_job_removal_once(startup, monkeypatch):
+    states = iter((False, False, True))
+    clock = iter((0, 1, 2, 3, 4))
+    monkeypatch.setattr(startup.time, "monotonic", lambda: next(clock))
+    monkeypatch.setattr(startup.time, "sleep", lambda _delay: None)
+    monkeypatch.setattr(startup, "job_absent", lambda _service: next(states))
+    monkeypatch.setattr(startup, "signal_fixture", lambda *_args: None)
+    issued = []
+    monkeypatch.setattr(startup, "command", lambda args, **_kwargs: issued.append(args))
+    startup.remove_job(Path("observer"), [{"pid": 100}], "owned-service")
+    assert issued == [["/bin/launchctl", "bootout", "owned-service"]]
+
+
+def test_teardown_cannot_verify_after_original_five_second_bound(startup, monkeypatch):
+    clock = iter((0, 6))
+    monkeypatch.setattr(startup.time, "monotonic", lambda: next(clock))
+    monkeypatch.setattr(startup, "job_absent", lambda _service: True)
+    monkeypatch.setattr(startup, "signal_fixture", lambda *_args: None)
+    monkeypatch.setattr(startup, "command", lambda *_args, **_kwargs: None)
+    with pytest.raises(RuntimeError, match="job removal could not be verified"):
+        startup.remove_job(Path("observer"), [], "owned-service")

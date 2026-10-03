@@ -285,13 +285,14 @@ def observe_cleanup(
 
 
 def remove_job(observer: Path, identities: list[dict[str, Any]], service: str) -> None:
-    """Always attempt job removal when fixture cleanup or observation fails."""
+    """Remove once; observe asynchronous teardown within the original bound."""
+    deadline = time.monotonic() + CLEANUP_SECONDS
     try:
         for identity in reversed(identities):
             signal_fixture(observer, identity)
     finally:
         command(["/bin/launchctl", "bootout", service], check=False)
-        if not job_absent(service):
+        if not wait_job_absent(service, deadline):
             raise RuntimeError("invocation job removal could not be verified")
 
 

@@ -42,8 +42,8 @@ The checked-in native XPC experiment ran on 2026-10-01 Europe/Berlin: two positi
 
 ## Distribution scope readback — 2026-10-02
 
-The owner deferred paid Apple identity/notarization to optional #488, blocked by
-#460. The historical zero-identity result no longer blocks initial delivery.
+The owner deferred paid Apple identity/notarization to optional #488, which is
+blocked by issue #460. The historical zero-identity result no longer blocks initial delivery.
 Ad-hoc native signatures plus SpecFact-signed manifests remain required, along
 with exact-distribution sandbox/lifecycle and separate-Mac installation proof.
 No new boundary or installation pass is established by this scope correction.

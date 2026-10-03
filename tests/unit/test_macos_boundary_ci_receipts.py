@@ -119,7 +119,9 @@ def test_failed_helper_reports_only_allowlisted_diagnostics(boundary_ci, monkeyp
     }
 
     def failed(_args, **options):
-        options["stdout"].write(b'{"failed_case":"isolation-right","diagnostic":"/private/secret"}\n')
+        options["stdout"].write(
+            b'{"failed_case":"isolation-right","failure_origin":true,"diagnostic":"/private/secret"}\n'
+        )
         (tmp_path / "control.json").write_text(json.dumps(receipt))
         return boundary_ci["subprocess"].CompletedProcess([], 1)
 
@@ -145,3 +147,58 @@ def test_failure_diagnostics_reject_unknown_names(boundary_ci, monkeypatch, tmp_
     assert result["failed_case"] == "unknown"
     assert result["failure_type"] == "unknown"
     assert "secret" not in json.dumps(result)
+
+
+def test_nested_cleanup_does_not_replace_first_failure_case(boundary_ci, monkeypatch, tmp_path):
+    def failed(_args, **options):
+        options["stdout"].write(
+            b'{"failed_case":"isolation-right","failure_origin":true,"failure_phase":"request-wait","diagnostic":"/secret"}\n'
+            b'{"failed_case":"isolation-left","failure_origin":false,"diagnostic":"/secret"}\n'
+        )
+        (tmp_path / "control.json").write_text(json.dumps({"failure": "TimeoutError: private", "trials": []}))
+        return boundary_ci["subprocess"].CompletedProcess([], 1)
+
+    monkeypatch.setattr(boundary_ci["subprocess"], "run", failed)
+    result = boundary_ci["run_suite"]("control", tmp_path, {})
+    assert result["failed_case"] == "isolation-right"
+
+
+def test_failure_phase_is_allowlisted_before_publication(boundary_ci, monkeypatch, tmp_path):
+    for phase, expected in (
+        ("request-wait", "request-wait"),
+        ("cleanup", "cleanup"),
+        ("/secret/audit/98765", "unknown"),
+    ):
+
+        def failed(_args, phase=phase, **options):
+            marker = {
+                "failed_case": "isolation-right",
+                "failure_origin": True,
+                "failure_phase": phase,
+                "diagnostic": "/secret",
+            }
+            options["stdout"].write((json.dumps(marker) + "\n").encode())
+            (tmp_path / "control.json").write_text(json.dumps({"failure": "TimeoutError: private", "trials": []}))
+            return boundary_ci["subprocess"].CompletedProcess([], 1)
+
+        monkeypatch.setattr(boundary_ci["subprocess"], "run", failed)
+        result = boundary_ci["run_suite"]("control", tmp_path, {})
+        assert result["failure_phase"] == expected
+        assert "secret" not in json.dumps(result)
+
+
+@pytest.mark.parametrize("owner", [True, False, None, "true", 1])
+def test_failure_case_requires_explicit_boolean_ownership(boundary_ci, monkeypatch, tmp_path, owner):
+    def failed(_args, **options):
+        markers = [
+            {"failed_case": "isolation-right", "failure_origin": False, "failure_phase": "observe-worker"},
+            {"failed_case": "isolation-left", "failure_origin": owner, "failure_phase": "request-launch"},
+        ]
+        options["stdout"].write(("\n".join(json.dumps(item) for item in markers) + "\n").encode())
+        (tmp_path / "control.json").write_text(json.dumps({"failure": "TimeoutError: private", "trials": []}))
+        return boundary_ci["subprocess"].CompletedProcess([], 1)
+
+    monkeypatch.setattr(boundary_ci["subprocess"], "run", failed)
+    result = boundary_ci["run_suite"]("control", tmp_path, {})
+    assert result["failed_case"] == ("isolation-left" if owner is True else "unknown")
+    assert result["failure_phase"] == ("request-launch" if owner is True else "unknown")

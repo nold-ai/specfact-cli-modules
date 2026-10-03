@@ -233,3 +233,59 @@ def test_helper_executes_the_hashed_snapshot(analyzer, tmp_path):
     script.write_bytes(b"VALUE = 'changed'\n")
     assert helper.VALUE == "snapshot"
     assert helper.loaded_source_sha256 == hashlib.sha256(raw).hexdigest()
+
+
+@pytest.mark.parametrize("stderr", [None, "error-start" + "x" * 5000 + "error-end"])
+def test_scan_timeout_preserves_service_and_available_diagnostic_tails(analyzer, monkeypatch, tmp_path, stderr):
+    events = tmp_path / "events"
+    content = "event-start" + "y" * 5000 + "event-end"
+    events.write_text(content)
+    if stderr is not None:
+        (tmp_path / "errors").write_text(stderr)
+    clock = iter((0, 1, 31))
+    monkeypatch.setattr(analyzer.time, "monotonic", lambda: next(clock))
+    monkeypatch.setattr(analyzer.time, "sleep", lambda _interval: None)
+    with pytest.raises(RuntimeError, match="sealed analyzer timeout") as caught:
+        analyzer.wait_scan(events, Path("/observer"), [], "gui/501/sealed-test")
+    assert str(caught.value) == (
+        f"sealed analyzer timeout: gui/501/sealed-test: {content[-4000:]}: {(stderr or '')[-4000:]}"
+    )
+
+
+@pytest.mark.parametrize("completed", [False, True])
+def test_missing_stderr_preserves_scan_outcome_and_job_cleanup(
+    analyzer, monkeypatch, tmp_path, sealed_assets, completed
+):
+    payload = {"version": analyzer.PARITY.VERSION, "results": [], "errors": [], "paths": {"scanned": ["fixture.py"]}}
+    content = "sealed-boundary-established\nsealed-profile-probes-ok\n" + json.dumps(payload) + "\nworker-exit=0\n"
+    directory = tmp_path / "case"
+    actual_job = analyzer.STARTUP.create_job
+    services = []
+
+    def create(*args):
+        service, plist = actual_job(*args)
+        services.append(service)
+        if completed:
+            (args[1] / "events").write_text(content)
+        return service, plist
+
+    monkeypatch.setattr(analyzer.STARTUP, "create_job", create)
+    monkeypatch.setattr(analyzer.STARTUP, "command", lambda _args: None)
+    removed = []
+    monkeypatch.setattr(analyzer.STARTUP, "remove_job", lambda *args: removed.append(args))
+    clock = iter((0, 1, 31))
+    monkeypatch.setattr(analyzer.time, "monotonic", lambda: next(clock))
+    monkeypatch.setattr(analyzer.time, "sleep", lambda _interval: None)
+    binaries = analyzer.STARTUP.NativeBinaries(Path("/broker"), Path("/worker"), Path("/observer"))
+    case = {"source": "safe", "pack": "clean_code", "expected_rule": None}
+    if completed:
+        result = analyzer.run_case(binaries, directory, case, sealed_assets, "approved profile")
+        assert result["passed"] is True
+        assert result["tool_exit"] == 0
+        assert result["tool_payload"] == payload
+        assert result["stderr"] == ""
+    else:
+        with pytest.raises(RuntimeError, match="sealed analyzer timeout"):
+            analyzer.run_case(binaries, directory, case, sealed_assets, "approved profile")
+    assert removed == [(binaries.observer, [], services[0])]
+    assert not (directory / "errors").exists()

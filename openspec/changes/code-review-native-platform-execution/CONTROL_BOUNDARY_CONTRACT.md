@@ -98,7 +98,6 @@ even when measured; do not advertise a supported production policy API.
   Parent retains repository gates and independent startup review; this checkpoint
   does not claim final merge authority or complete/archived OpenSpec work.
 
-
 ## Historical signed native repetition proof — superseded
 
 **Historical evidence only. This 1,218-trial receipt does not approve current
@@ -353,7 +352,6 @@ independent Mac, production seal or resource/tracing/IPC escape admission is
 established. Parent independent review and the separate full escape gate remain
 next; these results do not authorize production enablement.
 
-
 ## Source snapshot provenance correction — 2026-10-03
 
 Each build must read each fixed C source exactly once, write those bytes into a
@@ -366,7 +364,6 @@ fixed native sources, protocol limits and lifecycle deadlines remain unchanged.
 A regression changes temporary source originals during compilation and requires
 private read-only compiler inputs plus matching snapshot digests and single
 original reads. No checked-in C source is mutated by that test.
-
 
 Snapshot regression RED: 21 tests, seven failures, three native skips, retained
 in /private/tmp/specfact-control-snapshot-red.txt. All seven failures are in the
@@ -395,7 +392,6 @@ stalled. No native cancellation-wait failure snapshot exists in the retained
 injection; the test logs include their diagnostic paths. They do not reproduce
 the earlier terminal wait failure. Keep that historical failure unresolved and
 separate from present passing acceptance; do not infer an additional C patch.
-
 
 ## Final acceptance with source snapshots — 2026-10-03
 
@@ -471,3 +467,23 @@ attribution. production_approved=false and signed_boundary_verified=false remain
 mandatory. This host is macOS 27.0.1 build 26A434 ARM64; no older OS or independent
 Mac claim is made. Independent review, production sealing and the separate full
 resource/tracing/IPC escape gate remain outside this fixture's acceptance.
+
+## Failure reporting regression — 2026-10-03
+
+Diagnostic capture and post-failure cleanup must preserve the original exception.
+Secondary failures are noted by class only, without private message data; a
+cleanup failure after a successful body must still fail. Diagnostic files remain
+0600 and bounded, using an available private temporary directory on Linux tests.
+A fixed failure-phase enum identifies trusted operations without exporting
+request fields, native statuses, process identities, raw messages or capabilities.
+
+RED: exception tests reported one failure/three errors; phase tests reported
+eleven errors. GREEN: thirty focused tests passed with explicit native cases,
+including original-exception identity and private-data rejection. Eight narrow
+Pylint protected-access annotations apply only to deliberate white-box
+diagnostic regression tests, consistent with existing repository test patterns.
+They do not relax production/private API or security gates.
+
+The native C sources were unchanged. A further physical-host 100-round run
+passed 1,219 records and 100 additional isolation trials passed. The hosted
+control failures remain unproven; these local passes cannot approve that matrix.

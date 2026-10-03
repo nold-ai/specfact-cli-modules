@@ -77,6 +77,73 @@ class NativeSmokeTests(unittest.TestCase):
         config = {"python": sys.executable, "node": sys.executable, "basedpyright_js": str(Path(__file__).resolve())}
         self.assertEqual(smoke.command_for(config, "basedpyright"), [sys.executable, config["basedpyright_js"]])
 
+    def test_node_probe_revalidates_configured_executable_before_launch(self):
+        config = {"python": sys.executable, "node": sys.executable, "basedpyright_js": str(Path(__file__).resolve())}
+
+        def probe(argv, **_kwargs):
+            config["node"] = "node"
+            return subprocess.CompletedProcess(argv, 0, "basedpyright 1.39.10", "")
+
+        with (
+            patch.object(smoke.subprocess, "run", side_effect=probe) as run,
+            self.assertRaisesRegex(ValueError, "required absolute file is missing"),
+        ):
+            smoke._versions(config, "basedpyright")
+        self.assertEqual(run.call_count, 1)
+
+    def test_node_version_failures_retain_bounded_stderr_in_member_receipt(self):
+        config = {"python": sys.executable, "node": sys.executable, "basedpyright_js": str(Path(__file__).resolve())}
+        stderr = "node-start" + "x" * 5000 + "node-end"
+        for returncode, stdout in [(9, ""), (0, " \n")]:
+            with self.subTest(returncode=returncode):
+
+                def probe(argv, returncode=returncode, stdout=stdout, **kwargs):
+                    if argv == [config["node"], "--version"]:
+                        if kwargs.get("check") and returncode:
+                            raise subprocess.CalledProcessError(returncode, argv, output=stdout, stderr=stderr)
+                        return subprocess.CompletedProcess(argv, returncode, stdout, stderr)
+                    return subprocess.CompletedProcess(argv, 0, "basedpyright 1.39.10", "")
+
+                with (
+                    tempfile.TemporaryDirectory(prefix="pr489-node-version-") as directory,
+                    smoke.chdir(Path(directory)),
+                    patch.object(smoke.platform, "system", return_value="Darwin"),
+                    patch.object(smoke.platform, "machine", return_value="arm64"),
+                    patch.object(smoke.subprocess, "run", side_effect=probe) as run,
+                    patch.object(smoke, "_adapter_findings") as adapter,
+                ):
+                    row = smoke.worker(config, "basedpyright")
+                self.assertFalse(row["passed"])
+                self.assertEqual(
+                    row["error"],
+                    f"ValueError: node version probe failed: {returncode}: {stderr[:1200] + stderr[-800:]}",
+                )
+                adapter.assert_not_called()
+                self.assertEqual(
+                    run.call_args.kwargs, {"capture_output": True, "text": True, "timeout": 10, "check": False}
+                )
+                receipt = smoke.make_receipt({"basedpyright": row}, system="Darwin", machine="arm64")
+                self.assertEqual(receipt["members"]["basedpyright"]["error"], row["error"])
+                self.assertFalse(receipt["passed"])
+                self.assertFalse(receipt["sandbox_verified"])
+                self.assertFalse(receipt["production_eligible"])
+
+    def test_successful_node_probe_records_stripped_version(self):
+        config = {"python": sys.executable, "node": sys.executable, "basedpyright_js": str(Path(__file__).resolve())}
+        with patch.object(
+            smoke.subprocess,
+            "run",
+            side_effect=[
+                subprocess.CompletedProcess([], 0, "basedpyright 1.39.10\n", ""),
+                subprocess.CompletedProcess([], 0, " v24.16.0\n", ""),
+            ],
+        ) as run:
+            versions = smoke._versions(config, "basedpyright")
+        self.assertEqual(versions["basedpyright"], "basedpyright 1.39.10")
+        self.assertEqual(versions["node"], "v24.16.0")
+        self.assertEqual(run.call_args.args[0], [config["node"], "--version"])
+        self.assertEqual(run.call_args.kwargs["timeout"], 10)
+
     def test_diagnostics_and_operational_errors_fail_closed(self):
         finding = {"rule": "F821", "category": "style", "execution_state": "completed"}
         self.assertTrue(smoke.assess([], [finding], "F821"))

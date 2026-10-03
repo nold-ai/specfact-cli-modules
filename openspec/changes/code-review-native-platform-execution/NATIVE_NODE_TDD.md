@@ -1,6 +1,7 @@
 # Native npm input preparation: bounded TDD evidence
 
-Date: 2026-10-01 (Europe/Berlin). Baseline: modules origin/dev
+Historical input-preparation record: 2026-10-01 (Europe/Berlin).
+This section predates the implemented packager; see the dated addendum below. Baseline: modules origin/dev
 `37b6000227ba4be353a4f1769e39e92073b1fced`.
 
 ## Scope and authority
@@ -73,8 +74,8 @@ admission, native one-shot behavior parity, final signed capsule proof and
 customer-install acceptance remain open. The contract's packager/native parity
 scenarios remain planned; they must not be reported as green.
 
-Rollback: remove only the six new files listed below; no installed runtime or
-existing tracked artifact was changed.
+Historical input-only rollback: the six files below covered the initial
+preparation. The implemented packager extends this list in the addendum.
 
 - openspec/changes/code-review-native-platform-execution/NATIVE_NODE_CONTRACT.md
 - openspec/changes/code-review-native-platform-execution/NATIVE_NODE_TDD.md
@@ -82,3 +83,27 @@ existing tracked artifact was changed.
 - scripts/native_node_inputs/package-lock.json
 - scripts/native_node_inputs/.npmrc
 - tests/unit/test_native_node_inputs.py
+
+## Packager implementation addendum — 2026-10-03 (Europe/Berlin)
+
+The owner-authorized 2026-10-02 compatibility checkpoint implemented
+`scripts/native_node_package.py` and its test suite. The preceding no-packager
+and planned-scenario statements describe the historical input-only handoff,
+not the current branch. The offline packaging and bounded native one-shot
+scenarios in NATIVE_NODE_CONTRACT.md are implemented with passing evidence;
+no runtime shipment or dependency-policy admission is claimed.
+
+NATIVE_COMPATIBILITY_RESULTS.md records 23 missing-implementation RED tests,
+the initial passing implementation and subsequent negative-test expansion to
+32 packager tests. The five npm-input tests are additional. Two actual offline
+builds produced the same 5,421-file manifest and passed clean/defective native
+BasedPyright behavior. Final-artifact boundary, installation and production
+eligibility remain unresolved.
+
+Rollback of this complete experimental checkpoint also removes:
+
+- scripts/native_node_package.py
+- tests/unit/test_native_node_package.py
+- scripts/native_node_inputs/README.md
+
+Preserve the historical Linux runtime and all unrelated artifacts.

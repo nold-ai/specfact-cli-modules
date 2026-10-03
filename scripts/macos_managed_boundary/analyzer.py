@@ -153,6 +153,14 @@ def completed_scan(content: str) -> int | None:
     return -int(signals[-1]) if signals else None
 
 
+def _stderr_tail(path: Path) -> str:
+    """Keep absent launchd stderr optional without hiding other read failures."""
+    try:
+        return path.read_text()[-4000:]
+    except FileNotFoundError:
+        return ""
+
+
 def wait_scan(events: Path, observer: Path, identities: list[dict[str, Any]], service: str) -> tuple[str, int]:
     """Bound actual analyzer execution and retain independent fixture identity."""
     deadline = time.monotonic() + 30
@@ -164,7 +172,7 @@ def wait_scan(events: Path, observer: Path, identities: list[dict[str, Any]], se
             return content, status
         capture_scan_identity(content, observer, identities)
         time.sleep(0.02)
-    errors = events.with_name("errors").read_text()
+    errors = _stderr_tail(events.with_name("errors"))
     raise RuntimeError(f"sealed analyzer timeout: {service}: {content[-4000:]}: {errors[-4000:]}")
 
 
@@ -192,7 +200,7 @@ def run_case(binaries: Any, directory: Path, case: dict, assets: dict, profile: 
             "tool_exit": exit_code,
             "fixture_path": str(directory),
             "tool_payload": payload,
-            "stderr": (directory / "errors").read_text()[-4000:],
+            "stderr": _stderr_tail(directory / "errors"),
         }
     finally:
         STARTUP.remove_job(observer, identities, service)

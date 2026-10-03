@@ -94,3 +94,54 @@ floor. Generated CPython-specific Darwin ARM64 locks SHALL include all resolved
 transitive requirements and artifact hashes. Installation SHALL use normal
 dependency resolution, explicit local wheel input and hash checking; pip check
 must pass. These locks do not constitute policy or signed runtime admission.
+
+## Node version diagnostic contract — 2026-10-03 (Europe/Berlin)
+
+The direct Node version probe SHALL revalidate the supplied Node path as an
+absolute executable file immediately before launch, without PATH discovery.
+Keep its 10-second timeout. A nonzero exit or empty/whitespace-only stdout SHALL
+fail the BasedPyright member with a node version probe diagnostic that includes
+the actual exit status and bounded stderr (first 1200 plus last 800 characters,
+matching the analyzer version probe). A successful probe records the stripped
+version. Failure SHALL remain visible in the independent member receipt and
+SHALL NOT run that member's fixture adapters or promote compatibility evidence
+to sandbox verification or production eligibility.
+
+### PR489 diagnostic regression evidence
+
+Independently confirmed saved review comment 4170800584 (thread
+PRRT_kwDORVEFbs6ohyuI). Tests reproduced absent direct-probe revalidation, lost
+stderr on nonzero exit and acceptance of empty version stdout before production
+changes. Positive controls preserve the stripped version and 10-second timeout;
+failing member receipts retain bounded diagnostics and stop before adapters.
+The earlier BasedPyright probe already validates Node; the direct probe now
+validates independently as well.
+
+Worker regression fixtures now run in owned TemporaryDirectory workspaces. The
+initial failing run's root `clean/fixture.py` and `defective/fixture.py` matched
+the embedded test sources and were removed individually; their empty directories
+were then removed with rmdir. No other files were removed. Exact cleanup log:
+`/private/tmp/specfact-pr489-analyzer-smoke-review/fixture-cleanup.log`.
+
+Focused verification used Python 3.14.7 / pytest 9.1.1 on Darwin, 2026-10-03
+(Europe/Berlin). Command: `hatch run python -m pytest
+tests/unit/test_macos_sealed_analyzer.py tests/unit/test_native_analyzer_smoke.py -q`.
+The combined failing-before run exited 1: 6 failed / 45 passed (including two
+Node subtest failures). The final passing-after run exited 0: 49 passed in
+1.29 seconds. Exact logs: `/private/tmp/specfact-pr489-analyzer-smoke-review/red.log`
+and `/private/tmp/specfact-pr489-analyzer-smoke-review/green-final.log`.
+
+Touched-file checks exited 0: `hatch run ruff check --no-cache <four Python files>`,
+`hatch run ruff format --no-cache --check <four Python files>`, and
+`hatch run type-check <four Python files>` (0 errors, 0 warnings, 0 notes).
+Logs are `ruff-check.log`, `ruff-format.log`, and `type-check.log` in the same
+private evidence directory. The four files are the analyzer and smoke scripts
+and their corresponding unit-test files.
+
+The scoped SpecFact review (`--enforcement changed --bug-hunt --json`) exited 1:
+all ten required analyzer records report `unsupported_controller_platform`;
+assurance is UNKNOWN, not a clean review. Exact evidence is
+`specfact-review.json` and `specfact-review.log` in that directory. Supported
+controller review remains a parent gate. These mocked diagnostic tests and local
+POSIX worker tests do not establish fresh native analyzer, signed-boundary or
+customer-support acceptance.

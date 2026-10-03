@@ -11,9 +11,11 @@ import struct
 import subprocess
 import tempfile
 import unittest
+from contextlib import ExitStack
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import patch
+from typing import Any
+from unittest.mock import MagicMock, patch
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -34,6 +36,7 @@ class _ControlTestCase(unittest.TestCase):
 
 
 class ControlContractTests(_ControlTestCase):
+    # Private diagnostic helpers are deliberately exercised for failure/privacy regression coverage.
     def test_exact_versioned_wire(self):
         packet = self.control.frame(b"a" * 32, 1, self.control.FrameFields(argument=2, timeout_ms=300))
         self.assertEqual(len(packet), 56)
@@ -168,6 +171,322 @@ class ControlContractTests(_ControlTestCase):
     def test_native_sources_exist(self):
         for name in ("control_broker.c", "control_worker.c"):
             self.assertTrue((SOURCE.parent / name).is_file())
+
+
+class ControlFailureTests(_ControlTestCase):
+    def test_bootstrap_diagnostic_failure_preserves_original_exception(self):
+        original = subprocess.TimeoutExpired("launchctl", 10)
+        with (
+            tempfile.TemporaryDirectory() as temporary,
+            patch.object(
+                self.control.STARTUP, "observe", return_value={"audit_token": [501, 501, 20, 501, 20, 123, 1, 10]}
+            ),
+            patch.object(self.control.STARTUP, "command", side_effect=original),
+            patch.object(self.control, "_write_diagnostic", side_effect=FileNotFoundError("private detail")),
+            patch.object(self.control.STARTUP, "remove_job") as remove,
+            self.assertRaises(subprocess.TimeoutExpired) as raised,
+        ):
+            try:
+                self.control.Invocation(Path("/broker"), Path("/observer"), Path(temporary))
+            finally:
+                self.assertEqual(remove.call_count, 1)
+        self.assertIs(raised.exception, original)
+        self.assertIn("FileNotFoundError", " ".join(original.__notes__))
+        self.assertNotIn("private detail", " ".join(original.__notes__))
+
+    def test_failed_context_preserves_original_despite_secondary_failures(self):
+        for secondary in (OSError("private detail"), KeyboardInterrupt()):
+            with self.subTest(secondary=type(secondary).__name__):
+                invocation = object.__new__(self.control.Invocation)
+                original = RuntimeError("native proof failed")
+                with (
+                    patch.object(invocation, "retain_failure", side_effect=secondary),
+                    patch.object(invocation, "cleanup", side_effect=OSError("cleanup private detail")) as cleanup,
+                    self.assertRaises(RuntimeError) as raised,
+                    invocation as _fixture,
+                ):
+                    raise original
+                self.assertIs(raised.exception, original)
+                cleanup.assert_called_once_with()
+                notes = " ".join(original.__notes__)
+                self.assertIn(type(secondary).__name__, notes)
+                self.assertIn("cleanup", notes.lower())
+                self.assertNotIn("private detail", notes)
+
+    def test_successful_context_does_not_hide_cleanup_failure(self):
+        invocation = object.__new__(self.control.Invocation)
+        original = OSError("cleanup failed")
+        with (
+            patch.object(invocation, "retain_failure") as retain,
+            patch.object(invocation, "cleanup", side_effect=original),
+            self.assertRaises(OSError) as raised,
+            invocation as _fixture,
+        ):
+            pass
+        self.assertIs(raised.exception, original)
+        retain.assert_called_once_with(original)
+
+    def test_diagnostic_uses_portable_private_tempfile_without_private_tmp(self):
+        with (
+            tempfile.TemporaryDirectory() as temporary,
+            patch.object(self.control.Path, "is_dir", return_value=False),
+            patch.object(self.control.tempfile, "gettempdir", return_value=temporary),
+        ):
+            path = self.control._write_diagnostic({"case": "cancel"})  # pylint: disable=protected-access
+            self.assertEqual(path.parent, Path(temporary))
+            self.assertEqual(path.stat().st_mode & 0o777, 0o600)
+            self.assertEqual(json.loads(path.read_text()), {"case": "cancel"})
+
+    def test_diagnostic_retains_private_tmp_when_available(self):
+        with (
+            patch.object(self.control.Path, "is_dir", return_value=True),
+            patch.object(self.control.tempfile, "gettempdir") as fallback,
+            patch.object(self.control.tempfile, "mkstemp", side_effect=OSError("capture failed")) as create,
+            self.assertRaises(OSError),
+        ):
+            self.control._write_diagnostic({"case": "cancel"})  # pylint: disable=protected-access
+        self.assertEqual(create.call_args.kwargs["dir"], "/private/tmp")
+        fallback.assert_not_called()
+
+    def test_request_phase_is_explicit_before_decoding_and_validation(self):
+        invocation = object.__new__(self.control.Invocation)
+        client = object.__new__(self.control.Client)
+        client.owner = invocation
+        client.capability = b"a" * 32
+        client.history = []
+        client.stream = MagicMock()
+        for opcode, expected in enumerate(
+            ("request-authenticate", "request-launch", "request-wait", "request-signal", "request-cancel")
+        ):
+            with self.subTest(opcode=opcode), patch.object(self.control, "response", return_value={"ok": False}):
+                client.request(opcode)
+                self.assertEqual(invocation.phase, expected)
+        with patch.object(self.control, "response", return_value={"ok": False}):
+            client.request(99)
+        self.assertEqual(invocation.phase, "unknown")
+
+    def test_failure_emission_contains_trusted_phase_without_raw_error_details(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            invocation = object.__new__(self.control.Invocation)
+            self.control.__dict__["_activate_operation"](invocation, "isolation-extra-connection")
+            invocation.case = "isolation-left"
+            invocation.client = None
+            invocation.identities = []
+            invocation.directory = Path(temporary)
+            invocation.observer = Path("/observer")
+            invocation.broker = Path(temporary) / "missing-broker"
+            invocation.service = "private service"
+            with (
+                patch.object(self.control, "_write_diagnostic", return_value=Path(temporary) / "failure.json") as write,
+                patch.object(self.control, "_emit_json") as emit,
+            ):
+                invocation.retain_failure(TimeoutError("private error detail"))
+            emitted = emit.call_args.args[0]
+            self.assertEqual(emitted["failure_phase"], "isolation-extra-connection")
+            self.assertNotIn("private error detail", json.dumps(emitted))
+            self.assertEqual(write.call_args.args[0]["failure_phase"], "isolation-extra-connection")
+            self.control.__dict__["_activate_operation"](invocation, "untrusted phase detail")
+            self.assertEqual(invocation.phase, "unknown")  # pylint: disable=protected-access
+
+    def test_bootstrap_failure_records_registration_phase(self):
+        with (
+            tempfile.TemporaryDirectory() as temporary,
+            patch.object(
+                self.control.STARTUP, "observe", return_value={"audit_token": [501, 501, 20, 501, 20, 123, 1, 10]}
+            ),
+            patch.object(self.control.STARTUP, "command", side_effect=subprocess.TimeoutExpired("launchctl", 10)),
+            patch.object(self.control.Invocation, "retain_failure", autospec=True) as retain,
+            patch.object(self.control.STARTUP, "remove_job"),
+            self.assertRaises(subprocess.TimeoutExpired),
+        ):
+            try:
+                self.control.Invocation(Path("/broker"), Path("/observer"), Path(temporary))
+            finally:
+                invocation = retain.call_args.args[0]
+                original = retain.call_args.args[1]
+                owner, phase = original.__dict__["_control_failure_origin"]
+                self.assertIs(owner, invocation)
+                self.assertEqual(phase, "bootstrap-register")
+                self.assertEqual(invocation.phase, "cleanup")
+
+    def test_native_marker_failure_records_trusted_marker_phase(self):
+        invocation = object.__new__(self.control.Invocation)
+        invocation.directory = Path("/unused")
+        invocation.client = None
+        invocation.phase = "unknown"
+        for field in ("broker", "trace", "output"):
+            with (
+                self.subTest(field=field),
+                patch.object(self.control, "_event_from_file", side_effect=OSError("private marker detail")),
+                self.assertRaises(OSError),
+            ):
+                try:
+                    invocation.wait_event(field)
+                finally:
+                    self.assertEqual(invocation.phase, "marker-" + field)  # pylint: disable=protected-access
+
+
+class ControlFailureOwnershipTests(_ControlTestCase):
+    def _invocation(self, root, case, pid):
+        invocation = object.__new__(self.control.Invocation)
+        invocation.case = case
+        invocation.phase = "unknown"
+        invocation.directory = root
+        invocation.observer = root / "observer"
+        invocation.broker = root / "broker"
+        invocation.service = "private service"
+        invocation.registered = False
+        invocation.identities = [{"pid": pid, "pgid": pid}]
+        client = object.__new__(self.control.Client)
+        client.capability = b"a" * 32
+        client.history = []
+        client.stream = MagicMock()
+        client.owner = invocation
+        invocation.client = client
+        return invocation
+
+    def _isolation_failure(self, scenario):
+        with tempfile.TemporaryDirectory() as temporary, ExitStack() as stack:
+            root = Path(temporary)
+            first = self._invocation(root, "isolation-left", 11)
+            second = self._invocation(root, "isolation-right", 22)
+            emitted, cleanups = [], []
+            extra = MagicMock()
+            extra.recv.return_value = b""
+            if scenario == "extra-connection":
+                extra.recv.side_effect = TimeoutError("private extra socket detail")
+            left_reply = {"ok": True, "state": "launched", "handle": 1, "pid": 100, "deadline_ns": 999999999999}
+            if scenario == "left-launch":
+                left_reply = {"ok": False, "error": "spawn"}
+            right_replies = iter(
+                [
+                    {"ok": True, "state": "launched", "handle": 2, "pid": 200, "deadline_ns": 999999999999},
+                    {"error": "handle"},
+                    {"error": "capability"},
+                    {"ok": True},
+                    {"signal": 9, "reason": "timeout" if scenario == "right-wait-status" else "cancel"},
+                ]
+            )
+
+            def reply(stream):
+                if stream is first.client.stream:
+                    return left_reply
+                result = next(right_replies)
+                if scenario == "right-wait-transport" and "signal" in result:
+                    raise TimeoutError("private wait detail")
+                return result
+
+            def marker(_path, field, pid):
+                if scenario == "left-marker" and pid == 100:
+                    raise RuntimeError("private marker detail")
+                return {field: pid}
+
+            def cleanup(invocation):
+                cleanups.append(invocation.case)
+                # Cleanup must not change the already-stamped failure owner/phase.
+                activate = self.control.__dict__.get("_activate_operation")
+                if activate is not None:
+                    activate(invocation, "bootstrap-register")
+
+            for invocation in (first, second):
+                stack.enter_context(patch.object(invocation, "connect", return_value=invocation.client))
+                stack.enter_context(
+                    patch.object(invocation, "cleanup", side_effect=lambda item=invocation: cleanup(item))
+                )
+            for target, name, values in (
+                (self.control, "Invocation", {"side_effect": [first, second]}),
+                (self.control, "response", {"side_effect": reply}),
+                (self.control, "_event_from_file", {"side_effect": marker}),
+                (self.control, "_failure_identity", {"return_value": None}),
+                (self.control, "_write_diagnostic", {"return_value": root / "failure.json"}),
+                (self.control, "_emit_json", {"side_effect": emitted.append}),
+                (self.control, "cleanup_deadline", {"return_value": 999999999999}),
+                (self.control, "observe_absence", {"return_value": {"passed": True}}),
+                (self.control.STARTUP, "alive", {"return_value": True}),
+                (self.control.socket, "socket", {"return_value": extra}),
+            ):
+                options: dict[str, Any] = values
+                stack.enter_context(patch.object(target, name, **options))
+            stack.enter_context(
+                patch.object(
+                    self.control.STARTUP,
+                    "observe",
+                    side_effect=lambda _observer, pid: {
+                        "pid": pid,
+                        "ppid": 11 if pid == 100 else 22,
+                        "pgid": pid,
+                        "flags": 2,
+                    },
+                )
+            )
+            with self.assertRaises((RuntimeError, TimeoutError)):
+                self.control.isolation_trial(root / "broker", root / "observer", root)
+            self.assertEqual(cleanups, ["isolation-right", "isolation-left"])
+            return emitted
+
+    def test_nested_unwind_reports_actual_owner_and_phase(self):
+        for scenario, owner, phase in (
+            ("left-launch", "isolation-left", "request-launch"),
+            ("left-marker", "isolation-left", "marker-output"),
+            ("right-wait-transport", "isolation-right", "request-wait"),
+            ("right-wait-status", "isolation-right", "request-wait"),
+            ("extra-connection", "isolation-left", "isolation-extra-connection"),
+        ):
+            with self.subTest(scenario=scenario):
+                records = self._isolation_failure(scenario)
+                self.assertEqual(len(records), 2)
+                origins = [item for item in records if item.get("failure_origin") is True]
+                self.assertEqual(len(origins), 1)
+                self.assertEqual(origins[0]["failed_case"], owner)
+                self.assertTrue(all(item["failure_phase"] == phase for item in records))
+                for item in records:
+                    self.assertIs(type(item["failure_origin"]), bool)
+                    self.assertEqual(set(item), {"failed_case", "failure_phase", "failure_origin", "diagnostic"})
+                    self.assertNotIn("private wait detail", json.dumps(item))
+
+    def test_successful_nested_body_cleanup_failure_reports_cleanup_owner_once(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            first = self._invocation(root, "isolation-left", 11)
+            second = self._invocation(root, "isolation-right", 22)
+            original = OSError("private cleanup detail")
+            second.client.stream.close.side_effect = original
+            records = []
+            with (
+                patch.object(self.control, "response", return_value={"ok": True}),
+                patch.object(self.control, "_failure_identity", return_value=None),
+                patch.object(self.control, "_write_diagnostic", return_value=root / "failure.json"),
+                patch.object(self.control, "_emit_json", side_effect=records.append),
+                self.assertRaises(OSError) as raised,
+                first as _first,
+                second as _second,
+            ):
+                first.client.request(2)
+            self.assertIs(raised.exception, original)
+            first.client.stream.close.assert_called_once_with()
+            second.client.stream.close.assert_called_once_with()
+            self.assertEqual(len(records), 2)
+            origins = [item for item in records if item["failure_origin"] is True]
+            self.assertEqual([item["failed_case"] for item in origins], ["isolation-right"])
+            self.assertTrue(all(item["failure_phase"] == "cleanup" for item in records))
+
+    def test_decoded_launch_rejection_keeps_request_phase_through_validation(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            invocation = self._invocation(Path(temporary), "protocol", 11)
+            invocation.phase = "marker-output"
+            with (
+                patch.object(self.control, "response", return_value={"ok": False, "error": "spawn"}),
+                patch.object(self.control, "_write_diagnostic", return_value=Path(temporary) / "failure.json"),
+                patch.object(self.control, "_failure_identity", return_value=None),
+                patch.object(self.control, "_emit_json") as emit,
+                patch.object(invocation, "cleanup"),
+                self.assertRaises(RuntimeError),
+                invocation,
+            ):
+                invocation.client.launch()
+            record = emit.call_args.args[0]
+            self.assertEqual(record["failure_phase"], "request-launch")
+            self.assertIs(record["failure_origin"], True)
 
 
 class BuildProvenanceTests(_ControlTestCase):

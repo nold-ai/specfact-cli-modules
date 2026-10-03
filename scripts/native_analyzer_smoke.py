@@ -200,7 +200,12 @@ def _versions(config: dict, member: str) -> dict:
             )
         versions[tool] = result.stdout.strip()
     if member == "basedpyright":
-        result = subprocess.run([config["node"], "--version"], capture_output=True, text=True, timeout=10, check=True)
+        node = absolute_file(config.get("node"), executable=True)
+        result = subprocess.run([node, "--version"], capture_output=True, text=True, timeout=10, check=False)
+        if result.returncode or not result.stdout.strip():
+            raise ValueError(
+                f"node version probe failed: {result.returncode}: {(result.stderr[:1200] + result.stderr[-800:])}"
+            )
         versions["node"] = result.stdout.strip()
     if member == "pytestcoverage":
         versions.update({name: importlib.metadata.version(name) for name in ("pytest", "pytest-cov", "coverage")})

@@ -86,3 +86,18 @@ exec/trap fixture alongside the startup controls; signal failure rejects proof.
 Capture policy bytes once for the complete suite and supply that snapshot to
 every launch. Compile private native-source snapshots and retain their digests;
 checkout edits during or after execution cannot relabel tested artifacts.
+
+## Post-measurement teardown observation — 2026-10-03
+
+A physical-host control run failed teardown after 76 complete rounds despite
+independent observation showing the broker and worker absent. An immediate
+launchd registration check after bootout can race asynchronous service removal.
+Post-measurement teardown must issue removal once and observe actual service
+absence within a five-second deadline starting before teardown. It must fail
+if removal is still unverified or verification completes late.
+
+This observation is not process-cleanup enforcement or an admission rescue.
+Measured startup/control death windows, their independent survivor checks and
+original competing timer exclusion remain unchanged. An already failed trial
+never becomes passed because teardown eventually succeeds. The hosted isolation
+timeout remains independently unresolved.

@@ -20,48 +20,48 @@ import tempfile
 import time
 import uuid
 from collections import Counter
+from contextvars import ContextVar
 from pathlib import Path
 from typing import Any, NamedTuple
 
 
-SOURCE = Path(__file__).resolve().parent
-REQUEST = struct.Struct("!BBHQII32s")
-LIFECYCLE_CASES = (
-    "cancel",
-    "timeout",
-    "signal",
-    "eof-pretrace",
-    "eof-trace-stopped",
-    "eof-running",
-    "eof-wait",
-    "eof-partial",
-    "partial-timeout",
-    "broker-kill",
-    "cli-kill-wait",
-    "isolation",
+SOURCE, REQUEST = Path(__file__).resolve().parent, struct.Struct("!BBHQII32s")
+_CASE_NAMES = {
+    "lifecycle": (
+        "cancel timeout signal eof-pretrace eof-trace-stopped eof-running eof-wait eof-partial "
+        "partial-timeout broker-kill cli-kill-wait isolation"
+    ),
+    "failure": (
+        "unknown bootstrap-observe-caller bootstrap-authority bootstrap-register bootstrap-socket "
+        "marker-broker marker-trace marker-output observe-worker observe-removal isolation-peer-authority "
+        "isolation-extra-connection cleanup"
+    ),
+    "protocol": (
+        "output-status version opcode reserved foreign-handle fixture-mode host-pid signal-selector "
+        "timeout-bound unused-field fragmentation worker-limit oversize undersize authentication peer-pid "
+        "peer-pidversion term-ignored runtime-trap"
+    ),
+}
+LIFECYCLE_CASES = tuple(_CASE_NAMES["lifecycle"].split())
+PROTOCOL_CASES = tuple(_CASE_NAMES["protocol"].split())
+REQUEST_FAILURE_PHASES = dict(
+    enumerate(("request-authenticate", "request-launch", "request-wait", "request-signal", "request-cancel"))
 )
+FAILURE_PHASES = frozenset(REQUEST_FAILURE_PHASES.values()) | frozenset(_CASE_NAMES["failure"].split())
+_ACTIVE_OPERATION: ContextVar[tuple[object | None, str]] = ContextVar("control_operation", default=(None, "unknown"))
 
-PROTOCOL_CASES = (
-    "output-status",
-    "version",
-    "opcode",
-    "reserved",
-    "foreign-handle",
-    "fixture-mode",
-    "host-pid",
-    "signal-selector",
-    "timeout-bound",
-    "unused-field",
-    "fragmentation",
-    "worker-limit",
-    "oversize",
-    "undersize",
-    "authentication",
-    "peer-pid",
-    "peer-pidversion",
-    "term-ignored",
-    "runtime-trap",
-)
+
+def _activate_operation(owner: Invocation | None, phase: str) -> None:
+    """Bind a trusted operation before execution and keep it through validation."""
+    phase = phase if phase in FAILURE_PHASES else "unknown"
+    if owner is not None:
+        owner.phase = phase
+    _ACTIVE_OPERATION.set((owner, phase))
+
+
+def _stamp_failure(error: BaseException) -> tuple[object | None, str]:
+    """Snapshot once before any nested context emits diagnostics or cleans up."""
+    return error.__dict__.setdefault("_control_failure_origin", _ACTIVE_OPERATION.get())
 
 
 def startup_module() -> Any:
@@ -94,8 +94,7 @@ class PeerIdentity(NamedTuple):
     stale_pidversion: bool = False
 
 
-DEFAULT_FRAME = FrameFields()
-DEFAULT_PEER = PeerIdentity()
+DEFAULT_FRAME, DEFAULT_PEER = FrameFields(), PeerIdentity()
 
 
 def frame(capability: bytes, opcode: int, fields: FrameFields = DEFAULT_FRAME) -> bytes:
@@ -133,7 +132,9 @@ def response(stream: socket.socket) -> dict[str, Any]:
 class Client:
     """One invocation's private authenticated control connection."""
 
-    def __init__(self, path: Path, capability: bytes):
+    def __init__(self, path: Path, capability: bytes, *, owner: Invocation | None = None):
+        self.owner = owner
+        self._activate_request(0)
         self.capability = capability
         self.history: list[dict[str, Any]] = []
         self.stream = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
@@ -145,8 +146,12 @@ class Client:
             self.stream.close()
             raise
 
+    def _activate_request(self, opcode: int) -> None:
+        _activate_operation(getattr(self, "owner", None), REQUEST_FAILURE_PHASES.get(opcode, "unknown"))
+
     def request(self, opcode: int, **fields: int) -> dict[str, Any]:
         """Send one bounded frame and receive its explicit result."""
+        self._activate_request(opcode)
         record: dict[str, Any] = {"opcode": opcode, "fields": fields, "started": time.monotonic()}
         self.history.append(record)
         self.history = self.history[-64:]
@@ -160,6 +165,7 @@ class Client:
             raise
 
     def launch(self, mode: int = 2, timeout_ms: int = 5000) -> dict[str, Any]:
+        self._activate_request(1)
         started = time.monotonic()
         result = self.request(1, argument=mode, timeout_ms=timeout_ms)
         require(result.get("ok") is True and result.get("state") == "launched", f"launch rejected: {result}")
@@ -214,32 +220,39 @@ def _event_from_file(path: Path, field: str, pid: int | None) -> dict[str, Any] 
 class Invocation:
     """Own private fixture inputs and post-measurement token-safe cleanup."""
 
+    phase: str
+
     def __init__(self, broker: Path, observer: Path, root: Path, *, peer: PeerIdentity = DEFAULT_PEER):
-        self.observer = observer
-        self.broker = broker
+        self.observer, self.broker = observer, broker
         self.case = "protocol"
         self.directory = root / uuid.uuid4().hex[:12]
-        self.directory.mkdir(mode=0o700)
-        self.capability = secrets.token_bytes(32)
         self.identities: list[dict[str, Any]] = []
         self.client: Client | None = None
         self.service = f"gui/{os.getuid()}/io.specfact.control.{uuid.uuid4().hex}"
-        caller = STARTUP.observe(observer, peer.pid or os.getpid())
-        require(caller is not None, "caller token unavailable")
-        authority = self.directory / "authority"
-        token = list(caller["audit_token"])
-        if peer.stale_pidversion:
-            token[7] = (token[7] + 1) % 2**32  # authentication-only negative control
-        authority.write_bytes(self.capability + struct.pack("=8I", *token))
-        authority.chmod(0o600)
-        plist = self.directory / "job.plist"
-        plist.write_bytes(plistlib.dumps(job_config(self.service.rsplit("/", 1)[1], broker, self.directory)))
-        plist.chmod(0o600)
-        # Registration can succeed even when launchctl subsequently times out.
-        self.registered = True
-        self.registration_started = time.monotonic()
+        self.registered = False
+        _activate_operation(self, "bootstrap-authority")
         try:
+            self.directory.mkdir(mode=0o700)
+            self.capability = secrets.token_bytes(32)
+            _activate_operation(self, "bootstrap-observe-caller")
+            caller = STARTUP.observe(observer, peer.pid or os.getpid())
+            require(caller is not None, "caller token unavailable")
+            _activate_operation(self, "bootstrap-authority")
+            authority = self.directory / "authority"
+            token = list(caller["audit_token"])
+            if peer.stale_pidversion:
+                token[7] = (token[7] + 1) % 2**32  # authentication-only negative control
+            authority.write_bytes(self.capability + struct.pack("=8I", *token))
+            authority.chmod(0o600)
+            plist = self.directory / "job.plist"
+            plist.write_bytes(plistlib.dumps(job_config(self.service.rsplit("/", 1)[1], broker, self.directory)))
+            plist.chmod(0o600)
+            # Registration can succeed even when launchctl subsequently times out.
+            self.registered = True
+            self.registration_started = time.monotonic()
+            _activate_operation(self, "bootstrap-register")
             STARTUP.command(["/bin/launchctl", "bootstrap", self.service.rsplit("/", 1)[0], str(plist)])
+            _activate_operation(self, "bootstrap-socket")
             path = self.directory / "control.sock"
             deadline = time.monotonic() + 3
             while not path.exists() and time.monotonic() < deadline:
@@ -248,14 +261,12 @@ class Invocation:
             require(info.st_mode & 0o777 == 0o600 and info.st_uid == os.getuid(), "private socket mode/owner failed")
             require(self.directory.stat().st_mode & 0o777 == 0o700, "private directory mode failed")
         except BaseException as error:
-            try:
-                self.retain_failure(error)
-            finally:
-                self.cleanup()
+            self._finish_failed_invocation(error)
             raise
 
     def connect(self) -> Client:
-        self.client = Client(self.directory / "control.sock", self.capability)
+        _activate_operation(self, "request-authenticate")
+        self.client = Client(self.directory / "control.sock", self.capability, owner=self)
         self.capture_broker()
         return self.client
 
@@ -267,6 +278,9 @@ class Invocation:
 
     def wait_event(self, field: str, pid: int | None = None) -> dict[str, Any]:
         """Read-only observation of fixture markers; never cleanup enforcement."""
+        _activate_operation(
+            self, {"broker": "marker-broker", "trace": "marker-trace", "output": "marker-output"}.get(field, "unknown")
+        )
         deadline = time.monotonic() + 3
         while time.monotonic() < deadline:
             item = _event_from_file(self.directory / "events", field, pid)
@@ -286,6 +300,7 @@ class Invocation:
             self.wait_event("trace", pid)
         elif mode != 3:
             self.wait_event("output", pid)
+        _activate_operation(self, "observe-worker")
         identity = STARTUP.observe(self.observer, pid)
         require(identity is not None, "worker vanished before capture")
         self.identities.append(identity)
@@ -299,6 +314,7 @@ class Invocation:
 
     def cleanup(self) -> None:
         """Post-measurement cleanup cannot turn a failed survivor check green."""
+        _activate_operation(self, "cleanup")
         if self.client is not None:
             self.client.close()
         if self.registered:
@@ -310,8 +326,13 @@ class Invocation:
 
     def retain_failure(self, error: BaseException) -> Path:
         """Snapshot before cleanup; capability/authority bytes are never exported."""
+        owner, phase = _stamp_failure(error)
+        phase = phase if phase in FAILURE_PHASES else "unknown"
+        origin = owner is self
         record = {
             "case": self.case,
+            "failure_phase": phase,
+            "failure_origin": origin,
             "failure": f"{type(error).__name__}: {error}"[:1024],
             "service": self.service,
             "events": _bounded_text(self.directory / "events"),
@@ -322,15 +343,36 @@ class Invocation:
             "broker_sha256": hashlib.sha256(self.broker.read_bytes()).hexdigest() if self.broker.exists() else None,
         }
         path = _write_diagnostic(record)
-        _emit_json({"failed_case": self.case, "diagnostic": str(path)})
+        _emit_json(
+            {"failed_case": self.case, "failure_phase": phase, "failure_origin": origin, "diagnostic": str(path)}
+        )
         return path
 
-    def __exit__(self, _kind: Any, error: BaseException | None, _traceback: Any) -> None:
+    def _finish_failed_invocation(self, error: BaseException, *, cleanup_attempted: bool = False) -> None:
+        """Report secondary failures without replacing the original proof failure."""
+        _stamp_failure(error)
         try:
-            if error is not None:
-                self.retain_failure(error)
+            self.retain_failure(error)
+        except BaseException as diagnostic_error:
+            error.add_note(f"Failure diagnostic unavailable: {type(diagnostic_error).__name__}")
+            raise error from None
         finally:
-            self.cleanup()
+            if not cleanup_attempted:
+                try:
+                    self.cleanup()
+                except BaseException as cleanup_error:
+                    error.add_note(f"Fixture cleanup failed: {type(cleanup_error).__name__}")
+                    raise error from None
+
+    def __exit__(self, _kind: Any, error: BaseException | None, _traceback: Any) -> None:
+        if error is None:
+            try:
+                self.cleanup()
+            except BaseException as cleanup_error:
+                self._finish_failed_invocation(cleanup_error, cleanup_attempted=True)
+                raise
+        else:
+            self._finish_failed_invocation(error)
 
 
 def _bounded_text(path: Path) -> str:
@@ -354,7 +396,8 @@ def _write_diagnostic(record: dict[str, Any]) -> Path:
     """Use a private persistent receipt, bounded to 256 KiB, outside build tempfiles."""
     payload = json.dumps(record, indent=2)
     require(len(payload.encode()) <= 262144, "failure evidence exceeds bounded receipt limit")
-    fd, name = tempfile.mkstemp(prefix="specfact-control-failure-", suffix=".json", dir="/private/tmp")
+    directory = "/private/tmp" if Path("/private/tmp").is_dir() else tempfile.gettempdir()
+    fd, name = tempfile.mkstemp(prefix="specfact-control-failure-", suffix=".json", dir=directory)
     with os.fdopen(fd, "w") as stream:
         stream.write(payload + "\n")
     return Path(name)
@@ -393,6 +436,7 @@ def observe_absence(
     native_deadline_ns: int | None = None,
 ) -> dict[str, Any]:
     """Independent removal proof, excluding native timer death and any rescue signal."""
+    _activate_operation(invocation, "observe-removal")
     elapsed_deadline = started + 5
     while _within_window(elapsed_deadline, native_deadline_ns):
         if not STARTUP.alive(invocation.observer, identity):
@@ -418,6 +462,7 @@ def _prepare_wait(client: Client, handle: int, case: str) -> None:
     """Submit the full pending wait or a deliberately incomplete frame."""
     if case not in ("eof-wait", "eof-partial", "partial-timeout"):
         return
+    _activate_operation(getattr(client, "owner", None), "request-wait")
     packet = frame(client.capability, 2, FrameFields(handle=handle))
     client.stream.sendall(packet if case == "eof-wait" else packet[:13])
     if case == "eof-wait":
@@ -485,8 +530,10 @@ def isolation_trial(broker: Path, observer: Path, root: Path) -> dict[str, Any]:
         a, b = left.launch(), right.launch()
         one, two = first.capture_worker(a), second.capture_worker(b)
         require(right.request(4, handle=a["handle"]).get("error") == "handle", "foreign handle accepted")
+        _activate_operation(second, "isolation-peer-authority")
         right.stream.sendall(frame(left.capability, 4, FrameFields(handle=b["handle"])))
         require(response(right.stream).get("error") == "capability", "foreign capability accepted")
+        _activate_operation(first, "isolation-extra-connection")
         extra = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         extra.settimeout(2)
         try:
@@ -494,10 +541,12 @@ def isolation_trial(broker: Path, observer: Path, root: Path) -> dict[str, Any]:
             require(extra.recv(1) == b"", "second connection replaced owner")
         finally:
             extra.close()
+        _activate_operation(first, "observe-removal")
         started = time.monotonic()
         deadline = cleanup_deadline(a)
         left.close()
         result = observe_absence(first, one, started, job=True, native_deadline_ns=deadline)
+        _activate_operation(second, "observe-worker")
         require(STARTUP.alive(observer, two), "other invocation killed by peer EOF")
         require(right.request(4, handle=b["handle"])["ok"], "isolated cancellation failed")
         status = right.request(2, handle=b["handle"])
@@ -645,6 +694,7 @@ def _output_protocol_trials(broker: Path, observer: Path, root: Path) -> list[di
             result = client.request(opcode, **fields)
             require(result.get("ok") is False and result.get("error") == error, f"{name} was not rejected: {result}")
             trials.append({"case": name, "passed": True, "response": result})
+        _activate_operation(getattr(client, "owner", None), "request-wait")
         packet = frame(client.capability, 2, FrameFields(handle=launched["handle"]))
         for fragment in (packet[:1], packet[1:4], packet[4:15], packet[15:]):
             client.stream.sendall(fragment)
@@ -677,12 +727,15 @@ def _authentication_trials(broker: Path, observer: Path, root: Path) -> list[dic
     """Reject unauthenticated launch and an incorrect private capability."""
     trials: list[dict[str, Any]] = []
     with Invocation(broker, observer, root) as invocation:
+        _activate_operation(invocation, "request-authenticate")
         stream = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         stream.settimeout(2)
         try:
             stream.connect(str(invocation.directory / "control.sock"))
+            _activate_operation(invocation, "request-launch")
             stream.sendall(frame(invocation.capability, 1, FrameFields(argument=2, timeout_ms=1000)))
             require(response(stream).get("error") == "authentication", "unauthenticated launch accepted")
+            _activate_operation(invocation, "request-authenticate")
             stream.sendall(frame(b"z" * 32, 0))
             require(response(stream).get("error") == "capability", "bad capability accepted")
             invocation.capture_broker()
@@ -719,6 +772,7 @@ def _peer_version_trials(broker: Path, observer: Path, root: Path) -> list[dict[
     trials: list[dict[str, Any]] = []
     with Invocation(broker, observer, root, peer=PeerIdentity(stale_pidversion=True)) as invocation:
         # Reject a negative version derived from the real kernel caller token.
+        _activate_operation(invocation, "request-authenticate")
         stream = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         stream.settimeout(2)
         try:
