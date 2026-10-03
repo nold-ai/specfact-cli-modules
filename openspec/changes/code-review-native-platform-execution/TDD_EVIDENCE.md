@@ -663,3 +663,70 @@ Final post-refactor serial gates: smart-test 3,716 passed, 34 skipped and
 seconds. Logs /private/tmp/specfact-mach-final-smart.log and
 /private/tmp/specfact-mach-final-full.log remain local. No quality/cache writers
 overlapped these final suites. Final lint/types passed after refactoring.
+
+## Owned reply cleanup and socket startup evidence — 2026-10-03
+
+Head 030debe183e9a487868a781cc330e3fe6a0e42a9 hosted native run
+37095618367 passed complete signed startup/control acceptance on macOS 14
+(job 111124815166) and macOS 26 (job 111124815026). macOS 15
+(job 111124815209) passed all six startup races x 100 and all 19 protocol
+controls, then failed bootstrap-socket after 58 complete lifecycle rounds.
+The sanitized RuntimeError alone does not identify the readiness condition.
+Do not erase this failure, claim its cause or increase/retry the three-second
+readiness budget. All repository CI checks passed at this head.
+
+CodeRabbit completed review 5398975693 at 04:22:32 UTC, covering 1a0b68d9
+through 030debe1, and raised valid finding 4171673257: a cancelled worker can
+lose its owned kernel reply destination before send. Independent inspection of
+Apple XNU libsyscall/mach/mach_msg.c (accessed 2026-10-03) distinguishes
+recoverable sends from errors that may have partially consumed rights. The
+shared reply helper disposes invalid-destination/timeout/interrupted replies;
+invalid destination is benign, while all other errors fail closed. Unrecoverable
+errors rely on process cleanup to avoid double-destroying rights. Both held
+and ordinary validated replies use the helper. Only waitpid establishes
+terminal status. This narrows the reviewer suggestion to Apple's ownership
+contract, rather than blindly destroying every failed send.
+
+Specification preceded tests and code. RED reply fixture: eight admission
+checks passed and four missing-fixture errors; GREEN: all five safe reply
+cases pass, including the added interrupted-send case. RED held lifecycle
+scenario: the missing cancel operation produced timeout status instead of
+accepted cancellation. The separate cancel-held-stop case now retains kernel
+birth/tracing observation, SIGKILL/cancel status and the five-second bound,
+and is mandatory at 100 repetitions in local/hosted acceptance.
+
+RED readiness producer: two failed, 43 passed, four native skips; GREEN:
+45 passed and four native skips. Controller/CI projection RED: 12 failed and
+75 passed; GREEN: 87 passed. Fixed categories are exported only for the
+original owning bootstrap-socket failure; unknown/foreign/malformed values,
+other phases and raw authority/path/error fields are omitted. This is
+diagnostic evidence only, not a startup fix or new acceptance.
+
+Combined final native-focused suite: 311 passed in 19.36 seconds, no skips.
+Independent exact review-agent security/defect review reported No findings,
+medium confidence, with fresh signed acceptance and macOS 15 diagnosis pending.
+Formatting, types/lint and whitespace checks pass. Raw logs/receipts stay local
+and ignored. The complete native capsule remains unimplemented; production
+flags stay false, module version/signatures unchanged, no merge/publication.
+
+Fresh signed physical acceptance: all 1,319 records passed (13 lifecycle cases
+x 100 plus 19 protocol controls), including 100 cancel-held-stop observations.
+Maximum independent cleanup observation: 1.170468 seconds. Receipt
+.specfact/native-compat/pr489-owned-reply-control-100.json stays ignored, SHA256
+82a51b4cfae21ada7fc8ecddbad52cb76f3b91af680c16ef568cce12bda1e7f9.
+The final broker inventory includes the new reply header digest.
+
+SpecFact found duplicated native fixture setup; the test uses one parameterized
+signed fixture now, with all 13 C admission/reply cases passing. Final serial
+explicit-file --enforcement changed --bug-hunt review is PASS_WITH_ADVISORY:
+only documented standalone-script MISSING_ICONTRACT advisories, zero other
+findings. These are repository quality checks, not production capsule proof.
+
+Final serial repository verification: smart suite 3,764 passed, 40 skipped,
+65 subtests passed in 265.34 seconds; full suite the same counts in 272.70
+seconds. Native-only skips in these portable runs were executed separately
+in the 311-test explicit native suite. The explicit-file host review has
+33 MISSING_ICONTRACT advisories covered by the existing narrow exception.
+No other findings or clean-code regressions remain. YAML/import boundaries,
+seven unchanged module signatures, actionlint, strict validation of both
+linked changes and Markdown (historical line-length exemption only) pass.

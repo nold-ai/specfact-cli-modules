@@ -2,6 +2,7 @@
 #include <mach/mig_errors.h>
 #include "mach_exc_server.h"
 #include "control_mach_policy.h"
+#include "control_mach_reply.h"
 
 static mach_port_t exception_ports[WORKERS];
 static int exception_owner = -1;
@@ -83,8 +84,7 @@ static void release_held(int index) {
     if (ptrace(PT_THUPDATE, workers[index].pid,
         (caddr_t)(uintptr_t)held_threads[index], 0)) die();
     /* The validated initial RPC reply has no complex rights. */
-    if (mach_msg(&held_replies[index].Head, MACH_SEND_MSG | MACH_SEND_TIMEOUT,
-        held_replies[index].Head.msgh_size, 0, MACH_PORT_NULL, 0, MACH_PORT_NULL)) die();
+    send_reply(&held_replies[index].Head);
     mach_port_deallocate(mach_task_self(), held_threads[index]);
     held_threads[index] = MACH_PORT_NULL;
     memset(&held_replies[index], 0, sizeof(held_replies[index]));
@@ -115,9 +115,10 @@ static void exceptions(void) {
                     die();
                 }
                 memcpy(&held_replies[i], &reply, reply.head.msgh_size);
-            } else if (answer->RetCode != KERN_SUCCESS ||
-                mach_msg(&reply.head, MACH_SEND_MSG | MACH_SEND_TIMEOUT,
-                    reply.head.msgh_size, 0, MACH_PORT_NULL, 0, MACH_PORT_NULL)) die();
+            } else {
+                if (answer->RetCode != KERN_SUCCESS) die();
+                send_reply(&reply.head);
+            }
         }
     }
 }

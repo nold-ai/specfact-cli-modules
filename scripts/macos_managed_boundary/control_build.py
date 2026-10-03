@@ -62,7 +62,7 @@ def _compile(code: Path, target: Path, tools: BuildTools, extra: list[str]) -> d
 
 def _inputs(root: Path, source: Path, tools: BuildTools) -> tuple[list[str], list[dict[str, Any]]]:
     args, inputs = tools.prepare(root, tools.command)
-    for name in ("control_mach.inc", "control_mach_policy.h"):
+    for name in ("control_mach.inc", "control_mach_policy.h", "control_mach_reply.h"):
         data = (source / name).read_bytes()
         captured = root / name
         captured.write_bytes(data)

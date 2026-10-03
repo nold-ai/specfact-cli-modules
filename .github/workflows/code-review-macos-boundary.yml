@@ -134,7 +134,7 @@ jobs:
               "suspended", "pretrace", "trace-stopped", "traced", "exec", "confined",
           )
           CONTROL_RACES = (
-              "cancel", "timeout", "signal", "eof-pretrace", "eof-trace-stopped",
+              "cancel", "cancel-held-stop", "timeout", "signal", "eof-pretrace", "eof-trace-stopped",
               "eof-running", "eof-wait", "eof-partial", "partial-timeout",
               "broker-kill", "cli-kill-wait", "isolation",
           )
@@ -225,6 +225,10 @@ jobs:
                   "isolation-launch", "isolation-capture", "isolation-peer-authority", "isolation-extra-connection",
                   "isolation-owner-eof", "isolation-peer-survivor",
               }
+              socket_states = {
+                  "socket_missing", "socket_mode_pending", "private_after_deadline",
+                  "directory_invalid", "socket_type_invalid", "socket_owner_invalid",
+              }
               classes = {"TimeoutError", "RuntimeError", "CalledProcessError", "TimeoutExpired",
                          "OSError", "ValueError", "EOFError", "FileNotFoundError", "AssertionError"}
               try:
@@ -261,6 +265,10 @@ jobs:
                               if (name == "control" and result["failure_phase"] == "request-wait"
                                       and isinstance(state, dict) and all(type(state.get(field)) is bool for field in fields)):
                                   result["last_worker_state"] = {field: state[field] for field in fields}
+                              socket_state = item.get("bootstrap_socket_state")
+                              if (name == "control" and result["failure_phase"] == "bootstrap-socket"
+                                      and type(socket_state) is str and socket_state in socket_states):
+                                  result["bootstrap_socket_state"] = socket_state
                               break  # Select explicit ownership, never unwind order.
                       except ValueError:
                           pass

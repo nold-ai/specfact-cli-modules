@@ -600,3 +600,21 @@ with SDK MIG decoding. BSD unit mocks retain historical transition checks only;
 they are not a runtime fallback or proof of the Mach transport. Startup/analyzer
 fixtures retain their separate evidence. Exact signed hosted acceptance remains
 mandatory before any support claim.
+
+## Sanitized socket startup evidence (2026-10-03)
+
+Head 030debe1 passed complete hosted startup/control on macOS 14 and 26,
+but macOS 15 failed bootstrap-socket after 58 complete control rounds. Its
+RuntimeError alone does not identify missing binding, pending mode or invalid
+metadata. Retain the failure; do not infer a cause or lengthen the three-second
+readiness budget.
+
+Socket readiness failures SHALL carry exactly one observed category:
+socket_missing, socket_mode_pending, private_after_deadline, directory_invalid,
+socket_type_invalid or socket_owner_invalid. This records read-only lstat
+observations, never paths, modes, UIDs, authority or error text. The controller
+and CI SHALL export bootstrap_socket_state only for a recognized string from
+the original owning failure at bootstrap-socket. Missing/foreign/malformed
+values SHALL be omitted. No bootstrap retry, permission repair or new native
+acceptance is implied. Existing deadlines and all signature/lifecycle gates
+remain unchanged.

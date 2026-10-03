@@ -350,7 +350,7 @@ requirements:
       scenario_id: managed-native-process-boundary
       method: inspection
       intent: 'Inspect planned acceptance: Private control protocol preserves authority and terminal status.'
-      observable: "CONTROL_BOUNDARY_CONTRACT.md specifies private authenticated bounded requests, owned handles, preserved terminal status and independently observed lifecycle gates excluding competing cleanup. Local fixed-fixture evidence does not approve production artifacts, the OS matrix or manager adapters."
+      observable: "CONTROL_BOUNDARY_CONTRACT.md specifies private authenticated bounded requests, owned handles, preserved terminal status and independently observed lifecycle gates excluding competing cleanup. Sanitized original-owner socket readiness categories aid startup diagnosis without changing its budget. Local fixed-fixture evidence does not approve production artifacts, the OS matrix or manager adapters."
     - case_id: 460-9-7
       scenario_id: managed-native-process-boundary
       method: inspection

@@ -28,7 +28,7 @@ from typing import Any, NamedTuple
 SOURCE, REQUEST = Path(__file__).resolve().parent, struct.Struct("!BBHQII32s")
 _CASE_NAMES = {
     "lifecycle": (
-        "cancel timeout signal eof-pretrace eof-trace-stopped eof-running eof-wait eof-partial "
+        "cancel cancel-held-stop timeout signal eof-pretrace eof-trace-stopped eof-running eof-wait eof-partial "
         "partial-timeout broker-kill cli-kill-wait isolation"
     ),
     "failure": (
@@ -48,6 +48,16 @@ REQUEST_FAILURE_PHASES = dict(
     enumerate(("request-authenticate", "request-launch", "request-wait", "request-signal", "request-cancel"))
 )
 FAILURE_PHASES = frozenset(REQUEST_FAILURE_PHASES.values()) | frozenset(_CASE_NAMES["failure"].split())
+SOCKET_FAILURE_STATES = frozenset(
+    (
+        "socket_missing",
+        "socket_mode_pending",
+        "private_after_deadline",
+        "directory_invalid",
+        "socket_type_invalid",
+        "socket_owner_invalid",
+    )
+)
 _ACTIVE_OPERATION: ContextVar[tuple[object | None, str]] = ContextVar("control_operation", default=(None, "unknown"))
 
 
@@ -347,6 +357,14 @@ class Invocation:
         state = STATE.last_worker_state(record["events"], record["requests"], phase) if origin else {}
         if state:
             marker["last_worker_state"] = state
+        socket_state = error.__dict__.get("_native_socket_state")
+        if (
+            origin
+            and phase == "bootstrap-socket"
+            and type(socket_state) is str  # pylint: disable=unidiomatic-typecheck  # Reject string subclasses.
+            and socket_state in SOCKET_FAILURE_STATES
+        ):
+            marker["bootstrap_socket_state"] = socket_state
         _emit_json(marker)
         return path
 
@@ -475,16 +493,19 @@ def _prepare_wait(client: Client, handle: int, case: str) -> None:
 
 def _finish_worker(client: Client, handle: int, case: str) -> dict[str, Any]:
     """Validate signal/cancel/timeout status independently of survivor observation."""
-    if case == "cancel":
+    if case in ("cancel", "cancel-held-stop"):
         require(client.request(4, handle=handle)["ok"], "cancel rejected")
     elif case == "signal":
         require(client.request(3, handle=handle, argument=9)["ok"], "signal rejected")
     status = client.request(2, handle=handle)
     require(
-        status["state"] == "exited" and status["signal"] == 9 and status["reason"] == case,
+        status["state"] == "exited"
+        and status["signal"] == 9
+        and status["reason"] == ("cancel" if case == "cancel-held-stop" else case),
         f"unexpected status {status}",
     )
-    require("control-denials-ok" in status["output"], "native deny-default probes missing")
+    if case != "cancel-held-stop":
+        require("control-denials-ok" in status["output"], "native deny-default probes missing")
     return status
 
 
@@ -511,7 +532,7 @@ def lifecycle_trial(broker: Path, observer: Path, root: Path, case: str) -> dict
         return cli_death_trial(broker, observer, root)
     if case == "isolation":
         return isolation_trial(broker, observer, root)
-    mode = {"eof-pretrace": 3, "eof-trace-stopped": 4}.get(case, 2)
+    mode = {"eof-pretrace": 3, "eof-trace-stopped": 4, "cancel-held-stop": 4}.get(case, 2)
     timeout = 500 if case == "timeout" else 5000
     with Invocation(broker, observer, root) as invocation:
         invocation.case = case

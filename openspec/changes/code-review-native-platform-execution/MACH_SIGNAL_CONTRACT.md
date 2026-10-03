@@ -34,3 +34,24 @@ Sources inspected 2026-10-03: Apple XNU [signal handling](https://github.com/app
 [ptrace](https://github.com/apple-oss-distributions/xnu/blob/main/bsd/kern/mach_process.c),
 and [parent exit](https://github.com/apple-oss-distributions/xnu/blob/main/bsd/kern/kern_exit.c).
 Published source is an implementation reference, not proof of a hosted OS build.
+
+## Owned reply destination closes during cancellation
+
+A worker can die after its held initial stop is resumed but before its kernel
+RPC reply is sent. Recoverable failed owned reply sends SHALL destroy their unsent rights.
+MACH_SEND_INVALID_DEST SHALL be benign for this already-validated owned reply;
+timeout/interrupted sends SHALL fail closed after disposal. Other send errors
+SHALL fail closed through process cleanup without attempting to destroy rights
+that the kernel may already have partially consumed. This applies to both
+held and ordinary validated replies. A disappeared reply destination SHALL NOT
+create terminal evidence: only waitpid establishes exit/signal status.
+Signed safe-system-operation mocks SHALL prove successful sends, dead
+destinations and fail-closed non-destination errors without touching host PIDs
+or Mach rights. Actual signed lifecycle and held-stop cancellation acceptance
+remain required.
+
+Cancellation of a worker held at the initial Mach exception SHALL be a separate
+100-repetition lifecycle case, cancel-held-stop, using independent birth/tracing
+observation and the unchanged five-second bound. It SHALL preserve SIGKILL and
+the accepted cancel reason; it is not covered merely by cancelling a running
+worker or killing the broker at a held stop.

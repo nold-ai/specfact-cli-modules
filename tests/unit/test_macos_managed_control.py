@@ -211,6 +211,17 @@ class SocketReadinessTests(_ControlTestCase):
             self.control.SOCKET.wait_socket_ready(directory / "control.sock")
         return inspect.call_count, sleeps
 
+    def test_failed_socket_readiness_exposes_only_observed_category(self):
+        for mode, expected in ((None, "socket_missing"), (stat.S_IFSOCK | 0o666, "socket_mode_pending")):
+            with self.subTest(mode=mode), self.assertRaises(RuntimeError) as caught:
+                self._observe([(10.0, mode, None), (12.999, mode, None)])
+            self.assertEqual(caught.exception.__dict__.get("_native_socket_state"), expected)
+
+    def test_late_private_socket_is_distinguished_from_missing_binding(self):
+        with self.assertRaises(RuntimeError) as caught:
+            self._observe([(13.0, stat.S_IFSOCK | 0o600, None)])
+        self.assertEqual(caught.exception.__dict__.get("_native_socket_state"), "private_after_deadline")
+
     def test_owned_socket_ready_immediately(self):
         calls, sleeps = self._observe([(10.0, stat.S_IFSOCK | 0o600, None)])
         self.assertEqual(calls, 2)
@@ -656,7 +667,7 @@ class BuildProvenanceTests(_ControlTestCase):
             originals = {}
             reads = {}
             compiled = {}
-            for name in ("control_mach.inc", "control_mach_policy.h"):
+            for name in ("control_mach.inc", "control_mach_policy.h", "control_mach_reply.h"):
                 (source / name).write_bytes(b"captured include")
             for name in ("control_worker.c", "startup_observe.c", "control_broker.c"):
                 path = source / name
@@ -733,6 +744,17 @@ class NativeControlTests(_ControlTestCase):
             held.close()
 
     @unittest.skipUnless(os.environ.get("SPECFACT_NATIVE_CONTROL") == "1", "explicit native fixture run")
+    def test_held_cancellation_is_independently_observed_lifecycle_case(self):
+        with tempfile.TemporaryDirectory(dir="/private/tmp", prefix="sf-control-held-case-") as temporary:
+            root = Path(temporary).resolve()
+            broker, observer, _inventory = self.control.build(root)
+            result = self.control.lifecycle_trial(broker, observer, root, "cancel-held-stop")
+            self.assertTrue(result["passed"])
+            self.assertEqual(result["status"]["signal"], 9)
+            self.assertEqual(result["status"]["reason"], "cancel")
+            self.assertLessEqual(result["observation_seconds"], 5)
+
+    @unittest.skipUnless(os.environ.get("SPECFACT_NATIVE_CONTROL") == "1", "explicit native fixture run")
     def test_held_initial_exception_can_be_cancelled(self):
         with tempfile.TemporaryDirectory(dir="/private/tmp", prefix="sf-control-held-") as temporary:
             root = Path(temporary).resolve()
@@ -768,7 +790,7 @@ class NativeControlTests(_ControlTestCase):
             trials = self.control.run_trials(broker, observer, root, 1)
             broker_inputs = next(item for item in inventory if item["name"] == "broker")
             self.assertEqual(broker_inputs["signal_transport"], "mach-exception-v1")
-            self.assertEqual(len(broker_inputs["build_inputs"]), 6)
+            self.assertEqual(len(broker_inputs["build_inputs"]), 7)
             self.assertTrue(all(item["passed"] for item in trials), trials)
             self.assertEqual(
                 set(self.control.LIFECYCLE_CASES),

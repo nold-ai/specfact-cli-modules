@@ -247,3 +247,107 @@ def test_inapplicable_worker_state_remains_omitted(boundary_ci, tmp_path, change
     (tmp_path / "control.json").write_text(json.dumps({"failure": "TimeoutError: private", "trials": []}))
     result = boundary_ci["failure_summary"]("control", tmp_path / "control.json", tmp_path / "control.log")
     assert "last_worker_state" not in result
+
+
+@pytest.mark.parametrize(
+    "state",
+    [
+        "socket_missing",
+        "socket_mode_pending",
+        "private_after_deadline",
+        "directory_invalid",
+        "socket_type_invalid",
+        "socket_owner_invalid",
+    ],
+)
+def test_socket_state_consumer_publishes_only_category(boundary_ci, tmp_path, state):
+    marker = {
+        "failed_case": "protocol",
+        "failure_origin": True,
+        "failure_phase": "bootstrap-socket",
+        "bootstrap_socket_state": state,
+        "diagnostic": "/secret/98765",
+        "audit_token": [98765],
+        "socket_path": "/secret/control.sock",
+        "socket_uid": 98765,
+        "socket_mode": "0777",
+    }
+    (tmp_path / "control.log").write_text(json.dumps(marker) + "\n")
+    (tmp_path / "control.json").write_text(json.dumps({"failure": "RuntimeError: /secret/98765", "trials": []}))
+    result = boundary_ci["failure_summary"]("control", tmp_path / "control.json", tmp_path / "control.log")
+    assert result == {
+        "failure_type": "RuntimeError",
+        "failed_case": "protocol",
+        "failure_phase": "bootstrap-socket",
+        "completed_cases": {},
+        "bootstrap_socket_state": state,
+    }
+
+
+@pytest.mark.parametrize(
+    "changes",
+    [
+        {"bootstrap_socket_state": None},
+        {"bootstrap_socket_state": False},
+        {"bootstrap_socket_state": 1},
+        {"bootstrap_socket_state": []},
+        {"bootstrap_socket_state": {}},
+        {"bootstrap_socket_state": "/secret/98765"},
+        {"bootstrap_socket_state": "socket_missing /secret"},
+        {"failure_origin": False},
+        {"failure_origin": None},
+        {"failure_origin": "true"},
+        {"failure_origin": 1},
+        {"failure_phase": "cleanup"},
+        {"failure_phase": "bootstrap-register"},
+        {"failure_phase": "request-wait"},
+        {"failed_case": "/secret/98765"},
+    ],
+)
+def test_socket_state_consumer_omits_inapplicable_or_malformed_evidence(boundary_ci, tmp_path, changes):
+    marker = {
+        "failed_case": "protocol",
+        "failure_origin": True,
+        "failure_phase": "bootstrap-socket",
+        "bootstrap_socket_state": "socket_missing",
+        "diagnostic": "/secret/98765",
+        **changes,
+    }
+    (tmp_path / "control.log").write_text(json.dumps(marker) + "\n")
+    result = boundary_ci["failure_summary"]("control", tmp_path / "control.json", tmp_path / "control.log")
+    assert "bootstrap_socket_state" not in result
+    assert not any(item in json.dumps(result) for item in ("secret", "98765", "diagnostic"))
+
+
+def test_socket_state_consumer_omits_startup_suite(boundary_ci, tmp_path):
+    marker = {
+        "failed_case": "normal",
+        "failure_origin": True,
+        "failure_phase": "bootstrap-socket",
+        "bootstrap_socket_state": "socket_missing",
+    }
+    (tmp_path / "startup.log").write_text(json.dumps(marker) + "\n")
+    result = boundary_ci["failure_summary"]("startup", tmp_path / "startup.json", tmp_path / "startup.log")
+    assert "bootstrap_socket_state" not in result
+
+
+def test_socket_state_consumer_never_borrows_nested_or_receipt_evidence(boundary_ci, tmp_path):
+    markers = [
+        {
+            "failed_case": "protocol",
+            "failure_origin": False,
+            "failure_phase": "bootstrap-socket",
+            "bootstrap_socket_state": "socket_missing",
+        },
+        {"failed_case": "protocol", "failure_origin": True, "failure_phase": "bootstrap-socket"},
+        {
+            "failed_case": "protocol",
+            "failure_origin": True,
+            "failure_phase": "bootstrap-socket",
+            "bootstrap_socket_state": "socket_owner_invalid",
+        },
+    ]
+    (tmp_path / "control.log").write_text("\n".join(json.dumps(marker) for marker in markers) + "\n")
+    (tmp_path / "control.json").write_text(json.dumps({"bootstrap_socket_state": "directory_invalid"}))
+    result = boundary_ci["failure_summary"]("control", tmp_path / "control.json", tmp_path / "control.log")
+    assert "bootstrap_socket_state" not in result
