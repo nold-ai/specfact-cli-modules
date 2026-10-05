@@ -1,4 +1,5 @@
 #include "native_protocol.h"
+#include "sandbox_diagnostics.h"
 #include "git_child_policy.h"
 
 #include <errno.h>
@@ -216,7 +217,14 @@ int main(int argc, char **argv) {
     sandbox_init_type sandbox_init = sandbox_library ? (sandbox_init_type)dlsym(sandbox_library, "sandbox_init_with_parameters") : NULL;
     if (!sandbox_init) return startup_failure(marker_fd, 70);
     char *error = NULL;
-    if (sandbox_init(profile, 0, parameters, &error)) return startup_failure(marker_fd, 70);
+    if (sandbox_init(profile, 0, parameters, &error)) {
+        uint32_t records[2] = {
+            specfact_startup_failure_marker(70, (uint32_t)errno),
+            specfact_sandbox_line_marker(specfact_sandbox_error_line(error))
+        };
+        (void)write(marker_fd, records, sizeof(records)); /* One atomic private pipe write. */
+        return 70;
+    }
     uint32_t marker = SPECFACT_MARKER_READY;
     if (write(marker_fd, &marker, sizeof(marker)) != sizeof(marker)) return 71;
     if (raise(SIGSTOP)) return 72;

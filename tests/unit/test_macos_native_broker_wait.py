@@ -34,8 +34,13 @@ def _receive(channel: socket.socket) -> tuple[int, int, int, int, int, int]:
     return REPLY.unpack(data)
 
 
-def _controller(capsule: Path, invocation: Path) -> None:
+def _controller(capsule: Path, invocation: Path, *, fail_limits: bool = False) -> None:
     """Run the disposable CLI process; the test parent never owns its channel."""
+    if fail_limits:
+        import resource
+
+        # A real hard-limit refusal before READY; production request/profile are unchanged.
+        resource.setrlimit(resource.RLIMIT_NOFILE, (64, 64))
     parent, child = socket.socketpair()
     broker_path = capsule / "bin/specfact-native-broker"
     with (invocation / "broker.log").open("w") as log:
@@ -77,6 +82,16 @@ def _controller(capsule: Path, invocation: Path) -> None:
         )
     )
     magic, version, code, handle, _status, detail = _receive(parent)
+    if fail_limits:
+        assert (magic, version, code, detail) == (0x53464E31, 1, 1, 168)
+        diagnostic = json.loads((invocation / "broker.log").read_text())
+        assert diagnostic["bootstrap_failure_phase"] == 68
+        assert diagnostic["errno"] != 0
+        assert not (temporary / "native-self-test.pid").exists()
+        parent.close()
+        assert broker.wait(timeout=5) == 0
+        print("REJECTED_BEFORE_READY", flush=True)
+        return
     assert (magic, version, code, detail) == (0x53464E31, 1, 0, 0), (
         (magic, version, code, detail),
         (invocation / "broker.log").read_text(),
@@ -121,7 +136,7 @@ def _identity(pid: int) -> str | None:
     return observed.stdout.strip() or None
 
 
-def test_cli_death_during_wait_kills_worker_within_five_seconds() -> None:
+def _exercise_controller(*, fail_limits: bool = False) -> None:
     """A 900-second WAIT cannot hide controller death from the signed broker."""
     if sys.platform != "darwin" or os.uname().machine != "arm64" or os.environ.get("SPECFACT_NATIVE_CONTROL") != "1":
         import pytest
@@ -151,7 +166,13 @@ def test_cli_death_during_wait_kills_worker_within_five_seconds() -> None:
         for path in capsule.rglob("*"):
             path.chmod(0o700 if path.is_dir() else 0o500)
         controller = subprocess.Popen(
-            [sys.executable, str(Path(__file__).resolve()), "--controller", str(capsule), str(invocation)],
+            [
+                sys.executable,
+                str(Path(__file__).resolve()),
+                "--failure-controller" if fail_limits else "--controller",
+                str(capsule),
+                str(invocation),
+            ],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
@@ -160,6 +181,10 @@ def test_cli_death_during_wait_kills_worker_within_five_seconds() -> None:
         worker_pid = broker_pid = None
         birth = broker_birth = None
         try:
+            if fail_limits:
+                assert _line(controller, 20) == "REJECTED_BEFORE_READY"
+                assert controller.wait(timeout=5) == 0
+                return
             launched = json.loads(_line(controller, 20))
             worker_pid, broker_pid = launched["worker"], launched["broker"]
             birth = _identity(worker_pid)
@@ -195,7 +220,19 @@ def test_cli_death_during_wait_kills_worker_within_five_seconds() -> None:
                 controller.stderr.close()
 
 
+def test_cli_death_during_wait_kills_worker_within_five_seconds() -> None:
+    _exercise_controller()
+
+
+def test_failed_bootstrap_reports_numeric_reason_without_running_target() -> None:
+    _exercise_controller(fail_limits=True)
+
+
 if __name__ == "__main__" and sys.argv[1:2] == ["--controller"]:
     _controller(Path(sys.argv[2]), Path(sys.argv[3]))
+elif __name__ == "__main__" and sys.argv[1:2] == ["--failure-controller"]:
+    _controller(Path(sys.argv[2]), Path(sys.argv[3]), fail_limits=True)
+elif __name__ == "__main__" and sys.argv[1:2] == ["--failure-self-test"]:
+    test_failed_bootstrap_reports_numeric_reason_without_running_target()
 elif __name__ == "__main__" and sys.argv[1:2] == ["--self-test"]:
     test_cli_death_during_wait_kills_worker_within_five_seconds()

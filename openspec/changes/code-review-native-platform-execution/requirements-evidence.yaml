@@ -342,6 +342,11 @@ requirements:
       kind: config_file
       locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
     verification_cases:
+    - case_id: 460-9-10
+      scenario_id: managed-native-process-boundary
+      method: inspection
+      intent: "Inspect planned acceptance: Sandbox compiler rejects the sealed native profile."
+      observable: "A bounded numeric compiler line may accompany failed startup; raw messages are private and no diagnostic record satisfies READY or image admission. Mandatory isolation acceptance remains unchanged."
     - case_id: 460-9-9
       scenario_id: managed-native-process-boundary
       method: inspection

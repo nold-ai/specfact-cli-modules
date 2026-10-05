@@ -569,6 +569,12 @@ The macOS ARM64 backend SHALL use broker-owned direct workers, each traced and c
 - **THEN** the broker reports only bounded numeric bootstrap phase/error diagnostics through its private startup channel, rejects the launch and applies the original cleanup bound
 - **AND** a failure marker cannot satisfy readiness, trace ownership or executable admission; invalid/future marker phases are rejected and no raw worker output is published
 
+#### Scenario: Sandbox compiler rejects the sealed native profile
+
+- **WHEN** the fixed bootstrap cannot initialize its versioned Seatbelt profile
+- **THEN** a bounded numeric compiler line diagnostic may accompany the failed startup marker
+- **AND** raw compiler messages are not published and no failure record can satisfy readiness or image admission
+
 #### Scenario: Fixed trusted bootstrap owns the pre-trace interval
 
 - **GIVEN** an initial-distribution fixed bootstrap with default unblocked termination signals and no customer code or process-group changes before tracing

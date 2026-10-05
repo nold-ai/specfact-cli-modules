@@ -2165,3 +2165,18 @@ now invokes the actual discovery parser against this repository and asserts
 Hatch/default selection, retaining nonzero gate propagation. CodeRabbit skipped
 the requested review because 202 changed files exceed its 150-file allowance;
 this is recorded as missing review coverage, not a completed review.
+
+The macOS 14 exact-head diagnostic identifies phase 70 with errno 0: sandbox
+initialization, rather than tracing or resource setup, rejected the launch.
+No policy was removed. A new RED codec case precedes bounded compiler-line
+diagnostics over the same private channel. Numeric line records are disjoint
+from READY and cannot grant ownership or executable admission. Original native
+cleanup/resource tests pass on the physical Mac; hosted macOS 14 remains pending.
+
+A real native startup failure injection now lowers only the disposable controller's
+hard descriptor limit to 64 while preserving the production worker request of
+1024. The kernel rejects bootstrap resource setup, the target PID marker never
+appears, bounded phase/errno identify the rejection, and broker/controller exit
+within five seconds. Both original controller-loss and injected failure tests
+pass locally; the same additional proof runs on every hosted native matrix
+runner. Independent read-only closure finds no diagnostic defect.

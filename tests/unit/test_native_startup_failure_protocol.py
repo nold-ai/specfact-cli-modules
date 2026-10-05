@@ -15,7 +15,21 @@ def test_failure_markers_are_bounded_and_disjoint_from_readiness(tmp_path: Path)
 #include <assert.h>
 #include <stdint.h>
 #include "native_protocol.h"
+#include "sandbox_diagnostics.h"
 int main(void) {
+    assert(specfact_sandbox_error_line(NULL) == 0);
+    assert(specfact_sandbox_error_line("raw message without line") == 0);
+    assert(specfact_sandbox_error_line("error evaluating sandbox profile (line 22): unbound variable") == 22);
+    assert(specfact_sandbox_error_line("line -1") == 0);
+    assert(specfact_sandbox_error_line("line 4097") == 0);
+    assert(specfact_sandbox_line_marker(0) == 0);
+    assert(specfact_sandbox_line_marker(4097) == 0);
+    assert(specfact_sandbox_marker_line(SPECFACT_MARKER_READY) == 0);
+    for (uint32_t line = 1; line <= 4096; line++) {
+        uint32_t marker = specfact_sandbox_line_marker(line);
+        assert(specfact_sandbox_marker_line(marker) == line);
+        assert(specfact_startup_failure_phase(marker) == 0);
+    }
     assert(specfact_startup_failure_phase(SPECFACT_MARKER_READY) == 0);
     assert(specfact_startup_failure_phase(0) == 0);
     assert(specfact_startup_failure_marker(66, 22) == 0);

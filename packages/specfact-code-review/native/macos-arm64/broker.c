@@ -1,4 +1,5 @@
 #include "native_protocol.h"
+#include "sandbox_diagnostics.h"
 #include "git_child_policy.h"
 #include "generated_requirements.h"
 
@@ -315,11 +316,14 @@ static int owner_closed(uint32_t parent) {
     return poll(&fd, 1, 0) > 0 && (fd.revents & (POLLHUP | POLLERR | POLLNVAL));
 }
 
-static int startup_failure(uint32_t marker) {
+static int startup_failure(uint32_t marker, int marker_fd) {
     uint32_t phase = specfact_startup_failure_phase(marker);
     if (!phase) return 0;
-    fprintf(stderr, "{\"bootstrap_failure_phase\":%u,\"errno\":%u}\n",
-        phase, specfact_startup_failure_errno(marker));
+    uint32_t diagnostic = 0;
+    ssize_t count = phase == 70 ? read(marker_fd, &diagnostic, sizeof(diagnostic)) : 0;
+    uint32_t line = count == sizeof(diagnostic) ? specfact_sandbox_marker_line(diagnostic) : 0;
+    fprintf(stderr, "{\"bootstrap_failure_phase\":%u,\"errno\":%u,\"sandbox_profile_line\":%u}\n",
+        phase, specfact_startup_failure_errno(marker), line);
     return -(int)phase;
 }
 
@@ -469,7 +473,7 @@ static int launch_worker(const char *capsule, int control, const struct specfact
             else if (count < 0 && errno != EAGAIN && errno != EINTR) { error = -6; goto failed; }
         }
         if (marker_used == sizeof(marker)) {
-            error = startup_failure(marker);
+            error = startup_failure(marker, marker_pipe[0]);
             if (error) goto failed;
             if (marker != SPECFACT_MARKER_READY) { error = -6; goto failed; }
         }
@@ -487,7 +491,7 @@ static int launch_worker(const char *capsule, int control, const struct specfact
         else if (!count || (errno != EAGAIN && errno != EINTR)) break;
     }
     if (marker_used == sizeof(marker)) {
-        error = startup_failure(marker);
+        error = startup_failure(marker, marker_pipe[0]);
         if (error) goto failed;
     }
     if (marker_used != sizeof(marker) || marker != SPECFACT_MARKER_READY || controller_closed(control)) {
