@@ -137,6 +137,11 @@ jobs:
           SPECFACT_NATIVE_CONTROL: "1"
         run: |
           python -B tests/unit/test_macos_native_broker_wait.py --failure-self-test
+      - name: Prove task and thread exception-port changes are denied
+        env:
+          SPECFACT_NATIVE_CONTROL: "1"
+        run: |
+          python -B tests/unit/test_macos_native_broker_wait.py --exception-self-test
       - name: Prove failed spawn flag setup cannot launch a worker
         env:
           SPECFACT_NATIVE_CONTROL: "1"

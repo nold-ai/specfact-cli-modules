@@ -2180,3 +2180,40 @@ appears, bounded phase/errno identify the rejection, and broker/controller exit
 within five seconds. Both original controller-loss and injected failure tests
 pass locally; the same additional proof runs on every hosted native matrix
 runner. Independent read-only closure finds no diagnostic defect.
+
+## Equivalent older-kernel protection and scoped preparation — 2026-10-05
+
+Hosted macOS 14 identifies sealed profile line 23: its compiler rejects the newer
+exception-port hook. The fix does not drop that protection: all systems deny
+task/thread exception-port set/swap kernel RPCs, retaining the newer hook wherever
+it exists. A failing native probe preceded implementation. Valid requests all
+succeed outside confinement and all four fail inside the signed direct worker
+on the physical Mac. The ordinary controller-loss and hard-limit-failure cases
+also pass, including five-second cleanup. The historical control acceptance
+fixture uses the same unconditional RPC denial; its required cases/repetitions
+are unchanged. Hosted macOS 14 proof remains required and is not claimed here.
+
+Linux exact-head review progressed through authenticated source and explicit
+Hatch selection, but cold setup plus analysis exceeded the unchanged 300-second
+helper bound. New runtime prepare --scope index captures the same base/index
+snapshots and independently binds both confined environments. A real Git RED
+case preceded implementation; GREEN validates both identities, staged VCS tree,
+cleanup and unchanged checkout/index. Hosted preparation has a separate 1800s
+bound with private output/cache; review retains 300s and the mandatory customer
+cold cache remains empty. No timeout, finding or missing-evidence override is
+used. Default project preparation behavior and protected-review authority remain
+unchanged.
+
+Independent review caught the no-target preparation case. A real Git workflow-only
+index failed before correction; preparation now returns explicit NOT_APPLICABLE
+with no acquisition or runtime descriptors. It neither bypasses the subsequent
+helper nor the mandatory customer suites. GREEN: 121 helper, recipe, customer,
+public runtime and diagnostic cases; 281 historical control/receipt regressions
+pass with seven explicitly opt-in physical cases skipped. Physical signed native
+startup/resource/spawn cases run separately.
+
+A refreshed private ARM64 CPython 3.11 capsule runs all ten analyzers successfully
+on the clean uv/native-extension project with cold preparation and verified
+offline reuse under the new RPC restrictions. The all-four-manager real corpus
+is being repeated; its result will be recorded after completion. This is local
+candidate evidence, not authenticated customer installation or release acceptance.

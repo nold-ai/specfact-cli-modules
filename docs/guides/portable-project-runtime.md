@@ -9,7 +9,7 @@ expertise_level: [intermediate]
 doc_owner: specfact-cli-modules
 tracks:
   - packages/specfact-code-review/**
-last_reviewed: 2026-09-14
+last_reviewed: 2026-10-05
 exempt: false
 exempt_reason: ""
 ---
@@ -94,6 +94,21 @@ specfact code review run src/example.py tests/test_example.py --project-config /
 ```
 
 Attachment verifies the payload, project inputs, ABI, and analyzer worker identity. Changed workspace source invalidates built project packages as well as changed dependency files. Git commits, tags, and shallow-history boundaries also participate in cache identity for dynamically versioned packages. Staged reviews bind the captured Git tree separately from its HEAD commit, so private build copies retain the staged index and sanitized VCS metadata even if the live index later changes. Private Git metadata contains only the object closure recorded by the selected commit, staged tree, tags, and shallow boundary; unrelated branch refs and unreachable objects are excluded. A corrupt cache is rejected; remove only the identified invalid artifact and prepare again. Interrupted preparations do not publish partial descriptors.
+
+## Prepare an immutable staged review
+
+For a large first staged review, prepare both the committed base and captured
+Git index before analysis. This uses the same confined managers, source inputs,
+ABI selection and verified caches as the review itself:
+
+```bash
+specfact code review runtime prepare --scope index --project-config /tmp/review-runtime.toml --json
+```
+
+Each side retains its own descriptor and `local_build` provenance. Captured
+snapshots are removed after preparation; the checkout and Git index are not
+changed. A later review verifies the cached inputs again. This command does not
+grant protected pull-request authority or relax analyzer execution limits.
 
 ## Interpret incomplete evidence
 

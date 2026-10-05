@@ -155,6 +155,18 @@ jobs:
           test "${#review_paths[@]}" -gt 0
           PROJECT_CONFIG="$CUSTOMER_ROOT/commit-review-project.toml"
           printf '%s\n' 'manager = "hatch"' 'environment = "default"' > "$PROJECT_CONFIG"
+          # Provisioning is separate from the unchanged 300-second analysis budget.
+          # Prepare the same bound base/index snapshots; customer cold cache stays empty.
+          SPECFACT_CODE_REVIEW_CAPSULE_CACHE="$CUSTOMER_ROOT/commit-review-cache" \
+            SPECFACT_MODULES_REPO="$GITHUB_WORKSPACE" \
+            SPECFACT_CLI_MODULES_REPO="$GITHUB_WORKSPACE" \
+            SPECFACT_MODULES_ROOTS="$GITHUB_WORKSPACE/packages" \
+            PYTHONPATH="$GITHUB_WORKSPACE/packages/specfact-code-review/src" \
+            "$CUSTOMER_ROOT/venv/bin/python" -I -c \
+              'import subprocess,sys; sys.exit(subprocess.run(sys.argv[1:],timeout=1800,check=False).returncode)' \
+              "$CUSTOMER_ROOT/venv/bin/python" -B -P -m specfact_cli.cli \
+              code review runtime prepare --scope index --project-config "$PROJECT_CONFIG" --json \
+              > "$CUSTOMER_ROOT/commit-review-preparation.private.json"
           review_exit=0
           SPECFACT_CODE_REVIEW_CAPSULE_CACHE="$CUSTOMER_ROOT/commit-review-cache" \
             SPECFACT_CODE_REVIEW_SUBJECT_ROOT="$REVIEW_ROOT" \

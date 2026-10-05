@@ -3,6 +3,7 @@
 import json
 from pathlib import Path
 
+import pytest
 from typer.testing import CliRunner
 
 from specfact_code_review.review.commands import app
@@ -177,3 +178,58 @@ def test_runtime_prepare_selects_from_native_controller_environment(monkeypatch,
 
     assert result.exit_code == 0, result.output
     assert observed["current"] == "darwin-arm64-cp312"
+
+
+@pytest.mark.parametrize("python_delta", [True, False])
+def test_index_prepare_binds_both_snapshots_and_cleans_them(tmp_path: Path, monkeypatch, python_delta: bool) -> None:
+    import subprocess
+    from types import SimpleNamespace
+
+    monkeypatch.chdir(tmp_path)
+
+    def git(*args: str) -> str:
+        return subprocess.check_output(["git", *args], text=True).strip()
+
+    git("init", "-q")
+    git("config", "user.email", "fixture@example.invalid")
+    git("config", "user.name", "Fixture")
+    (tmp_path / "pyproject.toml").write_text('[project]\nname="consumer"\n')
+    source = tmp_path / ("app.py" if python_delta else "workflow.yml")
+    source.write_text("value=1\n")
+    git("add", ".")
+    git("-c", "core.hooksPath=/dev/null", "commit", "-qm", "fixture base")
+    base = git("rev-parse", "HEAD")
+    source.write_text("value=2\n")
+    git("add", source.name)
+    staged_tree = git("write-tree")
+    observed = []
+    runtime = object()
+    monkeypatch.setattr(runtime_commands, "select_environment", lambda *_args, **_kwargs: "linux-x86_64-cp312")
+    monkeypatch.setattr(runner, "_capsule_environment_id", lambda: "linux-x86_64-cp312")
+    monkeypatch.setattr(runner, "_prepare_capsule_runtime", lambda **_kwargs: (runtime, ""))
+    monkeypatch.setattr(runner, "_cleanup_capsule_runtime", lambda _value: None)
+
+    def prepare(plan, **kwargs):
+        observed.append(plan)
+        assert kwargs["runtime"] is runtime
+        return SimpleNamespace(
+            descriptor_path=tmp_path / "cache" / plan.identity[7:] / "project-runtime.json", identity=plan.identity
+        )
+
+    monkeypatch.setattr(runtime_commands, "prepare_runtime", prepare)
+    result = CliRunner().invoke(app, ["review", "runtime", "prepare", "--scope", "index", "--json"])
+    assert result.exit_code == 0, result.output
+    data = json.loads(result.output)
+    assert data["scope"] == "index" and data["authority"] == "local_build"
+    if not python_delta:
+        assert data["status"] == "NOT_APPLICABLE" and data["runtimes"] == {}
+        assert not observed
+        assert git("write-tree") == staged_tree
+        return
+    assert data["protected_pr_eligible"] is False
+    assert set(data["runtimes"]) == {"base", "head"}
+    assert len(observed) == 2 and observed[0].identity != observed[1].identity
+    assert [plan.vcs["commit"] for plan in observed] == [base, base]
+    assert observed[1].vcs["tree"] == staged_tree
+    assert all(not plan.root.exists() for plan in observed)
+    assert git("write-tree") == staged_tree and source.read_text() == "value=2\n"

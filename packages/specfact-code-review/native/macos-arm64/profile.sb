@@ -20,7 +20,13 @@
       (literal "/etc/hosts") (literal "/private/etc/hosts")
       (literal "/etc/resolv.conf") (literal "/private/etc/resolv.conf")
       (literal "/var/run/resolv.conf") (literal "/private/var/run/resolv.conf"))))
-(deny mach-task-exception-port-set)
+; Enforce the RPC restriction on all versions, including older kernels without
+; the newer named hook. No missing-hook branch drops the message restriction.
+(deny syscall-mig
+  (kernel-mig-routine task_set_exception_ports task_swap_exception_ports
+    thread_set_exception_ports thread_swap_exception_ports))
+(when (defined? 'mach-task-exception-port-set)
+  (deny mach-task-exception-port-set))
 (allow signal (target self))
 (allow sysctl-read
   (sysctl-name "kern.ostype")

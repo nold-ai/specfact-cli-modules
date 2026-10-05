@@ -1203,7 +1203,8 @@
       "--acquisition-url",
       "--json",
       "--offline",
-      "--project-config"
+      "--project-config",
+      "--scope"
     ],
     "owner_package": "nold-ai/specfact-code-review",
     "owner_repo": "nold-ai/specfact-cli-modules",

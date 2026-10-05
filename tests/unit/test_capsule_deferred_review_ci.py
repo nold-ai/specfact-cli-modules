@@ -65,6 +65,16 @@ def test_deferred_gate_reviews_exact_staged_tree_and_propagates_failure(
         "assert not subprocess.check_output(['git', 'diff', '--name-only'])\n"
         "raise SystemExit(int(os.environ['FIXTURE_GATE_EXIT']))\n"
     )
+    controller = repository / "packages/specfact-code-review/src/specfact_cli"
+    controller.mkdir(parents=True)
+    (controller / "__init__.py").write_text("")
+    (controller / "cli.py").write_text(
+        "import os,sys\n"
+        "assert sys.argv[1:7] == ['code','review','runtime','prepare','--scope','index']\n"
+        "assert os.environ['SPECFACT_MODULES_REPO'] == os.environ['GITHUB_WORKSPACE']\n"
+        "assert os.environ['SPECFACT_CODE_REVIEW_CAPSULE_CACHE'].endswith('/commit-review-cache')\n"
+        "print('{}')\n"
+    )
     _git(repository, "add", ".")
     _git(repository, "-c", "core.hooksPath=/dev/null", "commit", "-qm", "fixture base")
     base = _git(repository, "rev-parse", "HEAD")
@@ -197,3 +207,14 @@ run_block2
         assert "contract-test-contracts" in invoked
     else:
         assert "Capsule review deferral" in result.stderr
+
+
+def test_hosted_preparation_has_separate_bound_and_cannot_bypass_review() -> None:
+    workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())
+    step = next(item for item in workflow["jobs"]["customer"]["steps"] if item.get("name") == STEP_NAME)
+    recipe = step["run"]
+    assert "timeout=1800" in recipe
+    assert "code review runtime prepare --scope index" in recipe
+    assert recipe.index("code review runtime prepare --scope index") < recipe.index("review_exit=0")
+    assert 'SPECFACT_CODE_REVIEW_CAPSULE_CACHE="$CUSTOMER_ROOT/commit-review-cache"' in recipe
+    assert "continue-on-error" not in step

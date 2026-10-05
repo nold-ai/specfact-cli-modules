@@ -551,6 +551,13 @@ The macOS ARM64 backend SHALL use broker-owned direct workers, each traced and c
 - **AND** it binds TLS initialization to the immutable verified capsule CA bundle so the core does not probe the host with `uname`
 - **AND** it does not run the Osemgrep frontend, resolve executables through `PATH`, enable networking or permit a worker-created child process
 
+#### Scenario: Worker changes task or thread exception ports
+
+- **WHEN** a worker calls task/thread exception-port set or swap operations
+- **THEN** kernel-enforced message restrictions reject all four operations before they can alter broker observation
+- **AND** positive controls establish that the same requests succeed outside confinement
+- **AND** an unavailable newer named hook may not cause that message restriction to be omitted on older supported systems
+
 #### Scenario: Worker bypasses compatibility adapter
 
 - **WHEN** project code calls fork, vfork, posix_spawn, direct process-creation syscalls or unauthorized tracing, signals or IPC
@@ -697,6 +704,14 @@ The native backend SHALL reuse portable project discovery and prepare dependenci
 - **THEN** the caller supplies an explicit project-config selecting the declared default environment
 - **AND** the pre-commit helper forwards the selection to the existing native review command without changing project discovery rules
 - **AND** unsuccessful preparation or analyzer execution still fails the hosted gate.
+
+#### Scenario: Prepare both immutable index runtimes before bounded analysis
+
+- **WHEN** a caller selects runtime prepare with index scope
+- **THEN** preparation captures the same immutable base and staged snapshots used by review and seals each independently bound environment
+- **AND** preparation cleans snapshots and exposes only local-build provenance without granting protected PR authority
+- **AND** a captured index without governed Python impact returns explicit NOT_APPLICABLE with no prepared runtimes or capsule acquisition
+- **AND** hosted cold acquisition and preparation have a separate bounded provisioning phase while the review helper retains its existing 300-second analysis timeout
 
 ### Requirement: Equivalent execution on supported physical machines and full virtual machines
 Support SHALL depend on guest OS/build, CPU architecture, Python ABI and required kernel capabilities. A matching-architecture full VM SHALL be eligible for the same acceptance as a physical machine. VM detection SHALL NOT reject an otherwise supported environment or weaken isolation. Full-system CPU emulation SHALL be recorded as supplemental evidence; translated user-mode binaries SHALL NOT establish native acceptance for their translated architecture. Windows and Linux ARM64 remain follow-ups; this delivery covers macOS ARM64 and Linux x86-64.

@@ -12,6 +12,12 @@
 #error "FIXED_TARGET must be the build-owned absolute target path C string"
 #endif
 
+/* Older kernels use the same unconditional RPC denial as the capsule. */
+#define CONTROL_EXCEPTION_PORT_POLICY \
+    "(deny syscall-mig (kernel-mig-routine task_set_exception_ports task_swap_exception_ports " \
+    "thread_set_exception_ports thread_swap_exception_ports))" \
+    "(when (defined? 'mach-task-exception-port-set)(deny mach-task-exception-port-set))"
+
 /* Same measured custom-profile ABI as startup_worker; unsupported production API. */
 typedef int (*init_function)(const char *, uint64_t, const char *const [], char **);
 
@@ -19,7 +25,7 @@ static int confine_exec(init_function init) {
     /* No data-volume subtree aliases: only Apple library roots and exact metadata.
      * TARGET and every target ancestor come exclusively from the compiled path. */
     static const char base_profile[] =
-        "(version 1)(deny default)(deny mach-task-exception-port-set)(allow signal (target self))"
+        "(version 1)(deny default)" CONTROL_EXCEPTION_PORT_POLICY "(allow signal (target self))"
         CONTROL_RESOURCE_POLICY
         "(allow file-read* (literal \"/\"))" /* dyld libignition opens root for openat; no descendants. */
         "(allow file-read* file-map-executable process-exec (literal (param \"TARGET\")))"
@@ -87,7 +93,7 @@ static int confine(int mode, struct control_resource_state *resources) {
     int resource_error = control_resource_configure(resources);
     if (resource_error || control_resource_verify(resources, 0)) return 70;
     if (mode >= 6) return confine_exec(init);
-    const char *profile = "(version 1)(deny default)(deny mach-task-exception-port-set)(allow signal (target self))"
+    const char *profile = "(version 1)(deny default)" CONTROL_EXCEPTION_PORT_POLICY "(allow signal (target self))"
         CONTROL_RESOURCE_POLICY;
     const char *params[] = {NULL};
     char *error = NULL;
