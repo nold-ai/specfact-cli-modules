@@ -1200,9 +1200,11 @@
     "hidden": false,
     "install_prerequisite": "specfact module install nold-ai/specfact-code-review",
     "options": [
+      "--acquisition-url",
       "--json",
       "--offline",
-      "--project-config"
+      "--project-config",
+      "--scope"
     ],
     "owner_package": "nold-ai/specfact-code-review",
     "owner_repo": "nold-ai/specfact-cli-modules",

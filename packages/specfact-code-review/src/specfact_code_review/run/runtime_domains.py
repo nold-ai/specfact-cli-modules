@@ -12,7 +12,7 @@ from packaging.markers import default_environment
 from packaging.requirements import Requirement
 from packaging.utils import canonicalize_name
 
-from specfact_code_review.run.runtime_compatibility import MEMBER_DISTRIBUTIONS
+from specfact_code_review.run.runtime_compatibility import MEMBER_DISTRIBUTIONS, analyzer_dependency_conflicts
 from specfact_code_review.run.runtime_models import ProjectRuntimeError
 
 
@@ -99,9 +99,14 @@ def _selected_distribution(
 
 
 def _domain_graph(
-    domain: str, target: dict[str, Any], sealed: dict[str, Distribution], environment: dict[str, str]
+    domain: str,
+    target: dict[str, Any],
+    sealed: dict[str, Distribution],
+    environment: dict[str, str],
+    *,
+    entries: tuple[str, ...] | None = None,
 ) -> dict[str, Any]:
-    pending = list(_DOMAIN_ENTRIES[domain])
+    pending = list(_DOMAIN_ENTRIES[domain] if entries is None else entries)
     visited = set()
     rows = []
     imports = set()
@@ -133,3 +138,29 @@ def member_dependency_graphs(inventory: dict[str, Any], analyzer_root: Path) -> 
     sealed = {str(canonicalize_name(dist.metadata["Name"])): dist for dist in distributions(path=[str(analyzer_root)])}
     environment = {**default_environment(), **inventory.get("environment", {}), "extra": ""}
     return {domain: _domain_graph(domain, target, sealed, environment) for domain in _DOMAIN_ENTRIES}
+
+
+@ensure(lambda result: set(result[0]) <= {"pylint", "crosshair", "pytest-observe"})
+def native_member_dependency_graphs(
+    inventory: dict[str, Any], analyzer_root: Path
+) -> tuple[dict[str, Any], dict[str, str]]:
+    """Bind native Python domains; Node BasedPyright has its own npm closure."""
+    target = {
+        str(canonicalize_name(row["metadata"]["name"])): row["metadata"] for row in inventory.get("installed", [])
+    }
+    sealed = {str(canonicalize_name(dist.metadata["Name"])): dist for dist in distributions(path=[str(analyzer_root)])}
+    environment = {**default_environment(), **inventory.get("environment", {}), "extra": ""}
+    entries = {name: values for name, values in _DOMAIN_ENTRIES.items() if name != "basedpyright"}
+    graphs, conflicts = {}, analyzer_dependency_conflicts(inventory, analyzer_root)
+    # Native BasedPyright is the sealed npm/Node distribution, not the Linux
+    # Python distribution whose dependency chain includes nodejs-wheel binaries.
+    conflicts.pop("basedpyright", None)
+    for domain, names in entries.items():
+        member = {"crosshair": "contracts", "pytest-observe": "targeted-pytest-coverage"}.get(domain, domain)
+        if member in conflicts:
+            continue
+        try:
+            graphs[domain] = _domain_graph(domain, target, sealed, environment, entries=names)
+        except ProjectRuntimeError as exc:
+            conflicts[member] = str(exc)
+    return graphs, conflicts

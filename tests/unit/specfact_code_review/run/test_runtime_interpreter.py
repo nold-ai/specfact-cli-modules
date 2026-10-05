@@ -22,6 +22,25 @@ def test_python_selection_uses_matching_signed_worker(tmp_path: Path) -> None:
     assert select_environment(discover_project(tmp_path), current="linux-x86_64-cp312") == "linux-x86_64-cp311"
 
 
+def test_python_selection_preserves_native_darwin_platform(tmp_path: Path) -> None:
+    (tmp_path / ".python-version").write_text("3.11\n")
+
+    assert select_environment(discover_project(tmp_path), current="darwin-arm64-cp312") == "darwin-arm64-cp311"
+
+
+def test_native_python_patch_constraint_uses_native_artifact_version(tmp_path: Path) -> None:
+    (tmp_path / "pyproject.toml").write_text('[project]\nrequires-python=">=3.11.16,<3.12"\n')
+    assert select_environment(discover_project(tmp_path), current="darwin-arm64-cp311") == "darwin-arm64-cp311"
+
+
+def test_native_version_is_not_copied_from_linux_lock(tmp_path: Path) -> None:
+    from specfact_code_review.run.runtime_interpreter import signed_versions
+
+    versions = signed_versions()
+    assert versions["darwin-arm64-cp313"] == "3.13.14"
+    assert versions["darwin-arm64-cp313"] != versions["linux-x86_64-cp313"]
+
+
 def test_python_selection_rejects_conflicting_pin(tmp_path: Path) -> None:
 
     (tmp_path / ".python-version").write_text("3.11\n")

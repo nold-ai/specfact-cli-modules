@@ -1,0 +1,64 @@
+{
+  "coverage": "Z3 native Darwin binaries, Python sources and headers byte-linked to the authenticated ARM64 release. Does not license third-party Microsoft VC runtime DLLs.",
+  "dependency_admitted": false,
+  "license_git_blob": "cc90bed7477d0809f4309b718e920d411e1f3da8",
+  "license_release_member": "z3-5.1.0-arm64-osx-13.3/LICENSE.txt",
+  "license_sha256": "e617cad2ab9347e3129c2b171e87909332174e17961c5c3412d0799469111337",
+  "license_source_url": "https://raw.githubusercontent.com/Z3Prover/z3/0b6cdcdbc65da25ef0f73ac9da210574d0f66cf8/LICENSE.txt",
+  "production_eligible": false,
+  "release_sha256": "81d29e934fd863079a74af35eecaeaef8047e0e12414d33ca322b358d68383db",
+  "release_url": "https://github.com/Z3Prover/z3/releases/download/z3-5.1.0/z3-5.1.0-arm64-osx-13.3.zip",
+  "schema": "specfact-z3-supplemental-license-v1",
+  "source_commit_signature_verified": true,
+  "source_signature_verification": "GitHub API commit verification, signed with GitHub B5690EEEBB952194; captured 2026-10-03",
+  "tag": "z3-5.1.0",
+  "tag_commit": "0b6cdcdbc65da25ef0f73ac9da210574d0f66cf8",
+  "tagged_source_member": "z3/z3.py",
+  "tagged_source_sha256": "e80c1a86f03f0c4a4d2114dffb28d01523140b26780e348bd71d719d155d0001",
+  "tagged_version": "5.1.0.0",
+  "tagged_version_file_sha256": "7b0b635e04fc949249e21357f056b587d597699fd86a2f06c4a03d3694dce0fc",
+  "unlinked_non_darwin_payload": {
+    "z3/lib/libz3.dll": {
+      "sha256": "8bf540e8ab0fc43462bd64ff85deb02b1c655bdac14f4f9c40187fedf9532e7c",
+      "size": 18591744
+    },
+    "z3/lib/msvcp140.dll": {
+      "sha256": "167ceac85c2d726c4cd9e39b8881fafdc6de1520c0e67c4f6b271235f9d2a6c5",
+      "size": 1588064
+    },
+    "z3/lib/msvcp140_1.dll": {
+      "sha256": "c7713c2061b29d24de4874923522ada0815cfca80d09265c181e81d16c7c42d6",
+      "size": 50528
+    },
+    "z3/lib/msvcp140_2.dll": {
+      "sha256": "b9d67a39b900f9c69c23e5cb73150baac9a4044d9d87e5e747195f9a9232b8a4",
+      "size": 476000
+    },
+    "z3/lib/msvcp140_atomic_wait.dll": {
+      "sha256": "8e3b63333bbe2deecfd31c5c86608b5bdb7b23dbae13e3d356d2d7f78d7b67d5",
+      "size": 89952
+    },
+    "z3/lib/msvcp140_codecvt_ids.dll": {
+      "sha256": "8f22df17f40742b41caf2288a7b32f86623e840772e8c4ff60019045b89659e2",
+      "size": 41312
+    },
+    "z3/lib/vcomp140.dll": {
+      "sha256": "c52d152f08e6224d90c235d2120e82742677406037fe641b758e2c4b14940c76",
+      "size": 416096
+    },
+    "z3/lib/vcruntime140.dll": {
+      "sha256": "3c56f4167e2b3d8e6338497731e6aae8cd7ec46bd6789f9423a8d9cf9a630310",
+      "size": 246112
+    },
+    "z3/lib/vcruntime140_1.dll": {
+      "sha256": "60c70e34e2e156f8bd214b92c2125c252e17d86ac8a25799ea1a4ecabde1d97c",
+      "size": 53600
+    },
+    "z3/lib/vcruntime140_threads.dll": {
+      "sha256": "11953f531d8ed96aa2e03a5dd3de6300b934b480a505654ed2c335d9256093fa",
+      "size": 62816
+    }
+  },
+  "upstream_metadata_sha256": "b86aec419a41a2aa44e790eecfbfb1a970e2adb346dc24e6c6db79c89c0ccac2",
+  "upstream_wheel_sha256": "399a38a85d784105e5df5a05c04a581481bfdb80af7424779cf76fa843b4e66c"
+}

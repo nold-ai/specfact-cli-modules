@@ -5143,7 +5143,7 @@ def test_suppression_catalog_activation_drift_forces_unknown_report(monkeypatch:
     monkeypatch.setattr(
         runner_api.differential,
         "activate_packaged_suppression_catalog",
-        lambda: SimpleNamespace(
+        lambda **_kwargs: SimpleNamespace(
             status="UNKNOWN",
             profile_activated=False,
             digest=None,
@@ -7310,6 +7310,24 @@ def test_pytest_outcome_reconciliation_accepts_complete_parametrized_expansion()
     assert result.status == "PASS"
 
 
+def test_pytest_outcome_reconciliation_accepts_all_tests_from_planned_file_selector() -> None:
+    runner_api = _c14_runner()
+    result = runner_api.reconcile_pytest_outcomes(
+        observer=(
+            {"nodeid": "tests/test_app.py::test_first", "phase": "call", "passed": True},
+            {"nodeid": "tests/test_app.py::TestValues::test_second", "phase": "call", "passed": True},
+        ),
+        junit=(
+            {"nodeid": "tests/test_app.py::test_first", "outcome": "passed"},
+            {"nodeid": "tests/test_app.py::TestValues::test_second", "outcome": "passed"},
+        ),
+        process_exit=0,
+        planned=("tests/test_app.py",),
+    )
+
+    assert result.status == "PASS"
+
+
 def test_pytest_parameter_delimiters_preserve_real_junit_identities(tmp_path: Path) -> None:
     runner_api = _c14_runner()
     tests_root = tmp_path / "tests"
@@ -7807,3 +7825,143 @@ def test_cached_portable_request_carries_repository_and_index_context(tmp_path, 
     runner_api._run_local_capsule_context(object(), [], runner_api.ReviewOptions(), {}, "worktree")
     assert requests[0].source_snapshot is cached
     assert cached.commit == "index-" + "b" * 40
+
+
+@pytest.mark.parametrize("observation", ["pass", "empty", "conflict", "low-coverage", "doctest"])
+def test_native_project_full_discovery_retains_outcomes_and_coverage(
+    monkeypatch: MonkeyPatch, tmp_path: Path, observation: str
+) -> None:
+    runner_api = _c14_runner()
+    source = tmp_path / "app.py"
+    source.write_text("VALUE = 1\n")
+    test = tmp_path / "test_app.py"
+    test.write_text("def test_app(): pass\n")
+    policy = tmp_path / "pytest.ini"
+    policy.write_text("[pytest]\ntestpaths = /opt/specfact/snapshot\n")
+    config = tmp_path / "coveragerc"
+    config.write_text("[report]\nfail_under = 90\n")
+    records = [] if observation == "empty" else [{"nodeid": "test_app.py::test_app", "phase": "call", "passed": True}]
+    junit = '<testsuites><testsuite><testcase classname="test_app" name="test_app" /></testsuite></testsuites>'
+    if observation in {"empty", "conflict"}:
+        junit = "<testsuites/>"
+    paths = _write_complete_pytest_evidence(tmp_path, source, records, junit)
+    if observation == "doctest":
+        paths[1].write_text(json.dumps([*records, {"nodeid": "app.py::app", "phase": "call", "passed": True}]))
+        paths[2].write_text(
+            '<testsuites><testsuite><testcase classname="test_app" name="test_app" /><testcase classname="app" name="app" /></testsuite></testsuites>'
+        )
+    if observation in {"low-coverage", "doctest"}:
+        paths[0].write_text(json.dumps({"files": {str(source): {"summary": {"percent_covered": 80.0}}}}))
+    invoked = []
+
+    def execute(selectors, **_kwargs):
+        invoked.append(selectors)
+        return subprocess.CompletedProcess(["pytest"], 0, "", ""), *paths
+
+    monkeypatch.setattr(runner_api, "_run_pytest_inventory_with_coverage", execute)
+    findings, coverage = runner_api._evaluate_complete_tdd_gate(
+        [source, test],
+        ("-c", str(policy), "--cov-config", str(config), "--"),
+        snapshot_root=tmp_path,
+        allow_project_discovery=True,
+    )
+    assert invoked == [()]
+    if observation == "pass":
+        assert findings == []
+        assert coverage == {str(source): 100.0}
+    else:
+        assert findings and findings[0].severity == "error"
+        if observation == "doctest":
+            assert any(finding.rule == "TEST_COVERAGE_LOW" and finding.file == str(source) for finding in findings)
+            assert coverage is not None and coverage[str(source)] == 80.0
+        if observation not in {"low-coverage", "doctest"}:
+            assert coverage is None
+
+
+def test_protected_complete_inventory_still_rejects_empty_selectors(monkeypatch: MonkeyPatch, tmp_path: Path) -> None:
+    runner_api = _c14_runner()
+    source = tmp_path / "app.py"
+    source.write_text("VALUE = 1\n")
+    policy = tmp_path / "pytest.ini"
+    policy.write_text("[pytest]\ntestpaths = /opt/specfact/snapshot\n")
+    monkeypatch.setattr(
+        runner_api,
+        "_run_pytest_inventory_with_coverage",
+        lambda *_args, **_kwargs: pytest.fail("protected empty inventory executed"),
+    )
+    findings, coverage = runner_api._evaluate_complete_tdd_gate(
+        [source], ("-c", str(policy), "--"), snapshot_root=tmp_path
+    )
+    assert len(findings) == 1 and coverage is None
+    assert "no collected selectors" in findings[0].message
+
+
+def test_complete_native_snapshot_excludes_environments_but_keeps_project_data(tmp_path: Path) -> None:
+    runner_api = _c14_runner()
+    (tmp_path / "test_app.py").write_text("def test_app(): pass\n")
+    (tmp_path / "fixture.json").write_text('{"value": 1}')
+    for name in runner_api._ANALYZER_SCAN_EXCLUDED_DIRECTORIES:
+        directory = tmp_path / name
+        directory.mkdir()
+        (directory / "unrelated.py").write_text("environment payload\n")
+    data = tmp_path / "data"
+    data.mkdir()
+    for name in runner_api._ANALYZER_SCAN_EXCLUDED_DIRECTORIES:
+        (data / name).write_bytes(b"ordinary project fixture")
+    alias = tmp_path / "alias-data"
+    alias.mkdir()
+    (alias / "venv").symlink_to(data / "venv")
+    entries = dict(runner_api._capture_native_snapshot(tmp_path, python_only=False))
+    expected = {"test_app.py", "fixture.json", "alias-data/venv"}
+    expected.update(f"data/{name}" for name in runner_api._ANALYZER_SCAN_EXCLUDED_DIRECTORIES)
+    assert set(entries) == expected
+    assert entries["data/venv"] == b"ordinary project fixture"
+    assert entries["alias-data/venv"] == b"ordinary project fixture"
+    assert entries["fixture.json"] == b'{"value": 1}'
+
+
+def test_complete_native_test_only_review_preserves_failed_outcome(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
+    from specfact_code_review.run import native_worker
+
+    runner_api = _c14_runner()
+    test_file = tmp_path / "tests/test_app.py"
+    test_file.parent.mkdir()
+    test_file.write_text("def test_app(): assert False\n")
+    policy = tmp_path / "pytest.ini"
+    policy.write_text("[pytest]\ntestpaths = /opt/specfact/snapshot/tests\n")
+    coverage_config = tmp_path / "coveragerc"
+    coverage_config.write_text("[report]\nfail_under = 90\n")
+    coverage_path, observer_path, junit_path = _write_complete_pytest_evidence(
+        tmp_path,
+        test_file,
+        [{"nodeid": "tests/test_app.py::test_app", "phase": "call", "passed": False, "skipped": False}],
+        '<testsuites><testsuite><testcase classname="tests.test_app" name="test_app"><failure /></testcase></testsuite></testsuites>',
+    )
+    monkeypatch.setattr(runner_api, "skip_if_pytest_unavailable", lambda _: [])
+    monkeypatch.setattr(
+        runner_api,
+        "_run_pytest_inventory_with_coverage",
+        lambda *args, **kwargs: (
+            subprocess.CompletedProcess(["pytest"], 1, "", ""),
+            coverage_path,
+            observer_path,
+            junit_path,
+        ),
+    )
+    findings, coverage = runner_api._evaluate_complete_tdd_gate(
+        [test_file],
+        ("-c", str(policy), "--cov-config", str(coverage_config), "--", "tests/test_app.py::test_app"),
+        snapshot_root=tmp_path,
+    )
+    assert coverage is None
+    assert [finding.rule for finding in findings] == ["TEST_OUTCOME_NOT_PASS"]
+    response = native_worker._completed_response(
+        "targeted-pytest-coverage",
+        [finding.model_dump(mode="json") for finding in findings],
+        project=tmp_path,
+        selected={"tests/test_app.py"},
+    )
+    assert response["evidence_outcome"] == "FAIL"
+    assert response["execution_state"] == "ran"
+    normalized = cast(list[dict[str, object]], response["findings"])
+    assert normalized[0]["file"] == "tests/test_app.py"

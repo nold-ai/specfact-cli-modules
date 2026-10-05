@@ -316,6 +316,46 @@ run_lint_if_staged_python() {
 }
 
 run_code_review_gate() {
+  local deferral="${SPECFACT_CODE_REVIEW_DEFER_TO_CI:-}"
+  if [[ -n "${deferral}" ]]; then
+    local branch
+    branch="$(git branch --show-current)"
+    if [[ "${deferral}" != "github-linux" || -n "${CI:-}" || -n "${GITHUB_ACTIONS:-}" \
+      || "$(uname -s)" != "Darwin" || "$(uname -m)" != "arm64" || ! -f .git \
+      || -z "${branch}" || "${branch}" == "main" || "${branch}" == "dev" ]]; then
+      error "Capsule review deferral is restricted to explicitly approved local ARM64 Darwin feature worktrees; never CI."
+      exit 1
+    fi
+    local indexed_workflow
+    if ! indexed_workflow="$(git show :.github/workflows/capsule-customer-execution.yml 2>/dev/null)"; then
+      error "Capsule review deferral requires the indexed blocking GitHub Linux workflow."
+      exit 1
+    fi
+    if ! grep -Fq 'name: Run deferred candidate commit review without weakening enforcement' <<<"${indexed_workflow}"; then
+      error "Capsule review deferral requires the blocking GitHub Linux candidate review step."
+      exit 1
+    fi
+    if ! grep -Fq 'name: independent signed capsule review' <<<"${indexed_workflow}"; then
+      error "Capsule review deferral requires the blocking independent signed-review job."
+      exit 1
+    fi
+    local capsule_paths candidate_base
+    if ! candidate_base="$(git merge-base HEAD refs/remotes/origin/dev)"; then
+      error "Capsule review deferral cannot determine the PR merge-base against origin/dev."
+      exit 1
+    fi
+    if ! capsule_paths="$(git diff --cached --name-only "${candidate_base}" -- \
+      packages/specfact-code-review .github/workflows/capsule-customer-execution.yml)"; then
+      error "Capsule review deferral cannot determine the staged candidate delta against origin/dev."
+      exit 1
+    fi
+    if [[ -z "${capsule_paths}" ]]; then
+      error "Capsule review deferral requires a candidate change that schedules the blocking capsule workflow."
+      exit 1
+    fi
+    warn "DEFERRED: only the local capsule review requires mandatory exact-head GitHub Linux CI; this is not a PASS."
+    return 0
+  fi
   local review_array=()
   while IFS= read -r line; do
     [ -z "${line}" ] && continue

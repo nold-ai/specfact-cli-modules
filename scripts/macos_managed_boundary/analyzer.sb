@@ -1,0 +1,31 @@
+(version 1)
+; Fixed trusted analyzer only; never a project/build worker grant profile.
+(deny default)
+; libignition opens the root directory for openat; this grants no descendants.
+(allow file-read* (literal "/"))
+(allow signal (target self))
+(allow process-info-pidinfo (target self))
+(allow sysctl-read)
+(allow file-read* file-map-executable
+  (subpath "/System") (subpath "/usr/lib")
+  (literal (param "CORE")) (subpath (param "ROOT")))
+(allow file-read-data (literal "/dev/random") (literal "/dev/urandom"))
+(allow process-exec (literal (param "CORE")))
+(allow file-write* (subpath (string-append (param "ROOT") "/tmp"))
+  (subpath (string-append (param "ROOT") "/home")))
+(allow file-write-data (literal (string-append (param "ROOT") "/events"))
+  (literal (string-append (param "ROOT") "/errors")))
+
+; Digest-pinned bundled dependencies; never host package-manager locations.
+(allow file-read* file-map-executable
+  (literal (string-append (param "LIBS") "/libdwarf.2.dylib"))
+  (literal (string-append (param "LIBS") "/libev.4.dylib"))
+  (literal (string-append (param "LIBS") "/libgmp.10.dylib"))
+  (literal (string-append (param "LIBS") "/libpcre2-8.0.dylib"))
+  (literal (string-append (param "LIBS") "/libtree-sitter.0.22.dylib"))
+  (literal (string-append (param "LIBS") "/libtree-sitter.dylib"))
+  (literal (string-append (param "LIBS") "/libzstd.1.dylib"))
+)
+
+; Resolve approved inputs without exposing ancestor directory contents.
+(allow file-read-metadata (path-ancestors (param "ROOT") (param "CORE") (param "LIBS")))

@@ -4,10 +4,10 @@ description: Use for SpecFact code review workflows, especially when the user as
 allowed-tools: []
 ---
 # SpecFact Code Review Skill
-Updated: 2026-05-22 | Module: nold-ai/specfact-code-review
-Use this skill as an interactive cleanup coach, not a raw lint executor. When a user says "remove AI bloat", "simplify", "apply clean code", "fix SpecFact review", or similar, run the SpecFact review workflow, explain decisions in the user's language, show exact patch previews, and validate after small changes.
+Updated: 2026-10-05 | Module: nold-ai/specfact-code-review. To apply clean code, act as an interactive cleanup coach: explain decisions in the user's language, show exact patch previews, and validate after small changes.
 Operating guidance: command examples in this skill are not the source of truth; CLI help is authoritative. Check `specfact code review run --help`, and ask the user before guessing when help output disagrees.
 ## DO
+- Inspect the project setup with `specfact code review runtime inspect --json`. On exit 2, read `diagnostic`, `candidates` and `required_fields`; obtain the intended manager/environment/groups/extras from the caller and supply a TOML file with `--project-config`. Never guess between ambiguous setups or request a publisher catalog entry for a customer project. Reuse that configuration for preparation and review. Explicit configuration takes precedence over active context and metadata.
 - Treat `specfact code review run --help` as authoritative; use `--instructions` as the fallback AI workflow when prompts/skills are unavailable
 - For simplification queues, run `specfact code review run --scope changed --enforcement shadow --focus simplify --preview-fixes --json --out .specfact/code-review-simplify.json`
 - Inspect `cleanup_forecast` first, then treat each finding's `remediation_packet` as the portable AI IDE contract

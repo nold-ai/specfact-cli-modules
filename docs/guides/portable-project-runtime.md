@@ -9,7 +9,7 @@ expertise_level: [intermediate]
 doc_owner: specfact-cli-modules
 tracks:
   - packages/specfact-code-review/**
-last_reviewed: 2026-09-14
+last_reviewed: 2026-10-05
 exempt: false
 exempt_reason: ""
 ---
@@ -20,7 +20,7 @@ Portable project runtimes let the code review capsule use a repository's own dep
 
 Execution requires Linux x86-64 with the capsule's supported Python 3.11, 3.12, or 3.13 ABI and working unprivileged user namespaces. A local descriptor does not grant protected pull-request authority.
 
-Windows and macOS host-to-worker setup is not implemented or validated by this change. Runtime inspection reads project metadata, but automatic preparation and capsule execution require the Linux environment above. A future container or VM handoff must validate source transfer, architecture, native dependencies, and returned evidence. Linux execution cannot establish Windows- or macOS-specific test behavior.
+Linux x86-64 is the published backend. Native macOS ARM64 execution is implemented as a 0.51.0 development candidate, including project preparation and managed workers. Its authenticated runtime publication, clean installation and complete supported OS/ABI acceptance remain pending; a regular installation reports missing native artifacts explicitly until they are admitted. Windows remains a separate follow-up. Linux execution cannot establish native macOS or Windows behavior.
 
 ## Inspect and review
 
@@ -94,6 +94,21 @@ specfact code review run src/example.py tests/test_example.py --project-config /
 ```
 
 Attachment verifies the payload, project inputs, ABI, and analyzer worker identity. Changed workspace source invalidates built project packages as well as changed dependency files. Git commits, tags, and shallow-history boundaries also participate in cache identity for dynamically versioned packages. Staged reviews bind the captured Git tree separately from its HEAD commit, so private build copies retain the staged index and sanitized VCS metadata even if the live index later changes. Private Git metadata contains only the object closure recorded by the selected commit, staged tree, tags, and shallow boundary; unrelated branch refs and unreachable objects are excluded. A corrupt cache is rejected; remove only the identified invalid artifact and prepare again. Interrupted preparations do not publish partial descriptors.
+
+## Prepare an immutable staged review
+
+For a large first staged review, prepare both the committed base and captured
+Git index before analysis. This uses the same confined managers, source inputs,
+ABI selection and verified caches as the review itself:
+
+```bash
+specfact code review runtime prepare --scope index --project-config /tmp/review-runtime.toml --json
+```
+
+Each side retains its own descriptor and `local_build` provenance. Captured
+snapshots are removed after preparation; the checkout and Git index are not
+changed. A later review verifies the cached inputs again. This command does not
+grant protected pull-request authority or relax analyzer execution limits.
 
 ## Interpret incomplete evidence
 

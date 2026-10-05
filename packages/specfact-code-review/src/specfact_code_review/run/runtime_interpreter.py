@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
@@ -14,20 +15,39 @@ from packaging.specifiers import SpecifierSet
 from specfact_code_review.run.runtime_models import ProjectPlan, ProjectRuntimeError
 
 
-@ensure(lambda result: bool(result) and all(name.startswith("linux-x86_64-cp") for name in result))
+@ensure(lambda result: bool(result) and all(name.startswith(("linux-x86_64-cp", "darwin-arm64-cp")) for name in result))
 def signed_versions() -> dict[str, str]:
     lock = Path(__file__).parents[1] / "resources/contracts/pr-range-v1-toolchain-lock.json"
-    return {row["environment_id"]: row["python_version"] for row in json.loads(lock.read_text())["environments"]}
+    linux = {row["environment_id"]: row["python_version"] for row in json.loads(lock.read_text())["environments"]}
+    native_lock = lock.with_name("native-python-versions-v1.json")
+    document = json.loads(native_lock.read_text())
+    if set(document) != {"schema", "versions"} or document["schema"] != "specfact-native-python-versions-v1":
+        raise ProjectRuntimeError("project_native_python_versions_invalid")
+    darwin = document["versions"]
+    if not isinstance(darwin, dict) or any(
+        not isinstance(name, str)
+        or name not in {"darwin-arm64-cp311", "darwin-arm64-cp312", "darwin-arm64-cp313"}
+        or not isinstance(version, str)
+        or not re.fullmatch(r"3\.(11|12|13)\.[0-9]+", version)
+        or "cp" + ".".join(version.split(".")[:2]).replace(".", "") != name.rsplit("-", 1)[1]
+        for name, version in darwin.items()
+    ):
+        raise ProjectRuntimeError("project_native_python_versions_invalid")
+    return {**linux, **darwin}
 
 
-@ensure(lambda result: result.startswith("linux-x86_64-cp"))
+@ensure(lambda result: result.startswith(("linux-x86_64-cp", "darwin-arm64-cp")))
 def select_environment(plan: ProjectPlan, *, current: str) -> str:
     """Prefer a compatible current worker; otherwise require an unambiguous match."""
+    platform_id, separator, _abi = current.rpartition("-cp")
+    if not separator or platform_id not in {"linux-x86_64", "darwin-arm64"}:
+        raise ProjectRuntimeError(f"project_worker_environment_unsupported:{current}")
     constraint = SpecifierSet(plan.requires_python)
     matching = [
         name
         for name, version in signed_versions().items()
-        if version in constraint
+        if name.startswith(platform_id + "-cp")
+        and version in constraint
         and (not plan.python or version == plan.python or version.startswith(plan.python + "."))
     ]
     if current in matching:

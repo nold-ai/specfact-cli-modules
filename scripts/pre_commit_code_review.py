@@ -126,7 +126,7 @@ def review_enforcement_mode() -> str:
 
 
 @require(lambda files: files is not None)
-@ensure(lambda result: result[:5] == [sys.executable, "-m", "specfact_cli.cli", "code", "review"])
+@ensure(lambda result: result[:6] == [sys.executable, "-P", "-m", "specfact_cli.cli", "code", "review"])
 @ensure(lambda result: "--json" in result and "--out" in result)
 @ensure(lambda result: REVIEW_JSON_OUT in result)
 def build_review_command(files: Sequence[str], *, enforcement: str | None = None) -> list[str]:
@@ -134,6 +134,7 @@ def build_review_command(files: Sequence[str], *, enforcement: str | None = None
     mode = enforcement or review_enforcement_mode()
     return [
         sys.executable,
+        "-P",
         "-m",
         "specfact_cli.cli",
         "code",
@@ -144,13 +145,24 @@ def build_review_command(files: Sequence[str], *, enforcement: str | None = None
         REVIEW_JSON_OUT,
         "--enforcement",
         mode,
+        *(
+            ["--project-config", os.environ["SPECFACT_CODE_REVIEW_PROJECT_CONFIG"]]
+            if os.environ.get("SPECFACT_CODE_REVIEW_PROJECT_CONFIG")
+            else []
+        ),
         *files,
     ]
 
 
 def _repo_root() -> Path:
-    """Repository root (parent of ``scripts/``)."""
-    return REPO_ROOT
+    """Review subject; the imported analyzer/control payload stays at REPO_ROOT."""
+    selected = os.environ.get("SPECFACT_CODE_REVIEW_SUBJECT_ROOT", "")
+    if not selected:
+        return REPO_ROOT
+    root = Path(selected)
+    if not root.is_absolute() or not root.is_dir():
+        raise ValueError("SPECFACT_CODE_REVIEW_SUBJECT_ROOT must be an existing absolute directory")
+    return root.resolve()
 
 
 def _report_path(repo_root: Path) -> Path:
@@ -179,16 +191,13 @@ def _run_review_subprocess(
     # Ensure nested `python -m specfact_cli.cli` bootstraps this checkout's bundle sources first
     # (see `specfact_cli/__init__.py::_bootstrap_bundle_paths`) so ~/.specfact/modules tarballs do not
     # shadow in-repo `specfact_code_review` during the pre-commit gate.
-    env["SPECFACT_MODULES_REPO"] = str(repo_root.resolve())
-    env["SPECFACT_CLI_MODULES_REPO"] = str(repo_root.resolve())
-    env["SPECFACT_MODULES_ROOTS"] = str((repo_root / "packages").resolve())
-    package_src_roots = [path / "src" for path in sorted((repo_root / "packages").glob("specfact-*"))]
+    env["SPECFACT_MODULES_REPO"] = str(REPO_ROOT.resolve())
+    env["SPECFACT_CLI_MODULES_REPO"] = str(REPO_ROOT.resolve())
+    env["SPECFACT_MODULES_ROOTS"] = str((REPO_ROOT / "packages").resolve())
+    package_src_roots = [path / "src" for path in sorted((REPO_ROOT / "packages").glob("specfact-*"))]
     prefixes = [str(path) for path in package_src_roots if path.is_dir()]
-    previous = env.get("PYTHONPATH", "").strip()
-    if previous:
-        prefixes.extend(entry for entry in previous.split(os.pathsep) if entry)
-    if prefixes:
-        env["PYTHONPATH"] = os.pathsep.join(dict.fromkeys(prefixes))
+    # Subject directories and inherited relative paths must never import controller code.
+    env["PYTHONPATH"] = os.pathsep.join(dict.fromkeys(prefixes))
     if enforcement == "changed":
         env["SPECFACT_CODE_REVIEW_CHANGED_DIFF"] = "cached"
     try:
@@ -541,8 +550,7 @@ def ensure_runtime_available() -> tuple[bool, str | None]:
     try:
         importlib.import_module("specfact_cli.cli")
     except ModuleNotFoundError:
-        root = _repo_root()
-        if ensure_core_dependency(root) != 0:
+        if ensure_core_dependency(REPO_ROOT) != 0:
             return (
                 False,
                 "Could not install local specfact-cli. Run `hatch run dev-deps` or set SPECFACT_CLI_REPO.",
