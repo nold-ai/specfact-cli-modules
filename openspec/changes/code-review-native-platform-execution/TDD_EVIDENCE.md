@@ -2156,3 +2156,12 @@ limits remain unchanged. Hosted diagnostics are required to establish the cause.
 Module payload checksums are refreshed without publisher keys. Only CI/CD signs
 the follow-up. Complete-boundary, independent installation and production flags
 remain false until their mandatory suites pass.
+
+Independent closure confirms both controller findings are fixed and identifies
+no additional defect in the native startup diagnostic diff. It caught a caller
+format mismatch: project-config consumes TOML, whereas the first hosted fixture
+used JSON. Four RED recipe failures preceded TOML emission. The real recipe
+now invokes the actual discovery parser against this repository and asserts
+Hatch/default selection, retaining nonzero gate propagation. CodeRabbit skipped
+the requested review because 202 changed files exceed its 150-file allowance;
+this is recorded as missing review coverage, not a completed review.

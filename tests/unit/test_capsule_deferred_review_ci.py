@@ -49,9 +49,9 @@ def test_deferred_gate_reviews_exact_staged_tree_and_propagates_failure(
         "import os, subprocess, sys\n"
         "from pathlib import Path\n"
         "assert os.environ['SPECFACT_CODE_REVIEW_ENFORCEMENT'] == 'changed'\n"
-        "import json\n"
+        "import tomllib\n"
         "config = Path(os.environ['SPECFACT_CODE_REVIEW_PROJECT_CONFIG'])\n"
-        "assert json.loads(config.read_text()) == {'manager': 'hatch', 'environment': 'default'}\n"
+        "assert tomllib.loads(config.read_text()) == {'manager': 'hatch', 'environment': 'default'}\n"
         "assert Path(os.environ['SPECFACT_CODE_REVIEW_SUBJECT_ROOT']).resolve() == Path.cwd()\n"
         "assert not {'GITHUB_TOKEN', 'GH_TOKEN', 'PYTHONPATH'} & os.environ.keys()\n"
         "from pathlib import Path\n"
@@ -96,6 +96,10 @@ def test_deferred_gate_reviews_exact_staged_tree_and_propagates_failure(
         ["bash", "-c", step["run"]], cwd=repository, env=environment, capture_output=True, text=True, check=False
     )
     assert result.returncode == gate_exit, result.stdout + result.stderr
+    from specfact_code_review.run.runtime_discovery import discover_project
+
+    plan = discover_project(REPO_ROOT, config_path=customer / "commit-review-project.toml")
+    assert (plan.manager, plan.environment) == ("hatch", "default")
     assert not list((customer / "cache").iterdir())
     assert _git(repository, "rev-parse", "HEAD") == head
     assert not _git(repository, "status", "--porcelain")
