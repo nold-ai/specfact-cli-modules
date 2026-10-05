@@ -13,7 +13,7 @@ tracks:
   - scripts/pre_commit_code_review.py
   - scripts/verify-modules-signature.py
   - docs/agent-rules/**
-last_reviewed: 2026-04-16
+last_reviewed: 2026-10-05
 exempt: false
 exempt_reason: ""
 id: agent-rules-quality-gates-and-review
@@ -74,6 +74,13 @@ and require hosted review completion before merge.
 - Re-run the review when the report is missing or stale.
 - Resolve every finding at any severity unless a rare, explicit exception is documented.
 - Record the review command and timestamps in `TDD_EVIDENCE.md` or the PR description when quality gates are part of the change.
+
+## Outcome and scope review
+
+- Apply [`15-intent-and-scope.md`](./15-intent-and-scope.md) during review: verify the agreed user workflow, trust assumptions, non-goals, and acceptance, including the justification for added infrastructure.
+- Triage recommendations against the confirmed use case; escalate material scope or threat-model changes before adopting them. Preserve applicable security and quality gates.
+- Report implementation, end-to-end execution, artifact availability, and publication separately. A green check or isolated fixture cannot establish the complete user outcome.
+- Stop repeating an unchanged failed gate after two attempts without new evidence; diagnose and report the blocker before the next bounded step. Routine verification scales to touched scope while all applicable mandatory checks remain required.
 
 ## Clean-code review gate
 

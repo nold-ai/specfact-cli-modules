@@ -11,6 +11,7 @@ This file is the mandatory bootstrap governance surface for coding agents workin
 5. Reject implementation from the `dev` or `main` checkout unless the user explicitly overrides that rule.
 6. If GitHub hierarchy metadata is needed and `.specfact/backlog/github_hierarchy_cache.md` is missing or stale, refresh it with `python scripts/sync_github_hierarchy_cache.py`.
 7. Load any additional rule files required by the applicability matrix in [docs/agent-rules/INDEX.md](docs/agent-rules/INDEX.md) before implementation.
+8. Apply [the ask-decide-challenge checkpoint](docs/agent-rules/15-intent-and-scope.md) before choosing architecture or expanding scope. Reuse explicit answers already in the session; ask about consequential gaps before dependent work.
 
 ## Precedence
 
@@ -28,6 +29,9 @@ This file is the mandatory bootstrap governance surface for coding agents workin
 - Treat a provided OpenSpec change id as candidate scope, not automatic permission to proceed.
 - Verify the selected change against current repository reality and dependency state before implementation.
 - Do not auto-refine stale or ambiguous changes without the user.
+- Establish the actual user, use case, trust assumptions, non-goals, and observable completion criteria before architecture. Generic plan approval does not establish an unstated use case.
+- Compare reuse, a minimal adaptation, and custom infrastructure; justify complexity against the confirmed outcome and maintenance cost.
+- Challenge material scope, threat-model, acceptance, or effort changes before continuing dependent work. Prove one complete user workflow before expanding infrastructure; preserve existing security and test gates until an explicit scope decision changes them.
 - Perform `spec -> tests -> failing evidence -> code -> passing evidence` in that order for behavior changes.
 - Require public GitHub metadata completeness before implementation when linked issue workflow applies: parent, labels, project assignment, blockers, and blocked-by relationships.
 - If a linked GitHub issue is already `in progress`, pause and ask for clarification before implementation.
@@ -46,6 +50,7 @@ This public modules repository does not depend on a sibling internal wiki checko
 - [docs/agent-rules/INDEX.md](docs/agent-rules/INDEX.md)
 - [docs/agent-rules/05-non-negotiable-checklist.md](docs/agent-rules/05-non-negotiable-checklist.md)
 - [docs/agent-rules/10-session-bootstrap.md](docs/agent-rules/10-session-bootstrap.md)
+- [docs/agent-rules/15-intent-and-scope.md](docs/agent-rules/15-intent-and-scope.md)
 - [docs/agent-rules/20-repository-context.md](docs/agent-rules/20-repository-context.md)
 - [docs/agent-rules/30-worktrees-and-branching.md](docs/agent-rules/30-worktrees-and-branching.md)
 - [docs/agent-rules/40-openspec-and-tdd.md](docs/agent-rules/40-openspec-and-tdd.md)

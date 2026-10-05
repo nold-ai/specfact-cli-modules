@@ -45,3 +45,10 @@ All tasks below are future implementation work. This planning change completes n
 - [ ] 5.5 On that exact signed publication head, recollect 4.1/4.2 negative-corpus and known-good live evidence and reevaluate every pairwise, aggregate, identity, compatibility, quality, and rollback promotion gate. Rerun the signed-manifest/generated-registry equality, dependency-intersection, and lower/upper-bound matrix. Any fix or promotion-relevant identity change invalidates the affected evidence and repeats 5.5. Review and merge the publication PR only when the evidence and all gates bind the same unchanged signed head; checksum-only or earlier signed-head evidence cannot authorize the merge.
 - [ ] 5.6 After merged publication and official registry/install readback, make the exact signed module and both workflow identity/digest pairs available to optional #433, which also requires independently delivered core #253. Generic #251 -> #253 and native #460 do not wait for this publication.
 - [ ] 5.7 After implementation merge and verified publication, run `openspec archive preflight-05-implementation-conformance` from the repository root, update ordering/source mirrors, and remove the dedicated worktree and merged branch.
+
+## Agentic SDLC follow-up acceptance
+
+- [ ] Verify the 2026-10-04 approved scope against live issue/release readiness before implementation.
+- [ ] Derive negative tests from the amendment scenarios before behavior edits; implement conformance additions only through the owning released contracts.
+- [ ] Preserve independent producer status, optional context/assurance and existing lean release dependencies; document exact versions and rollback.
+- [ ] Report operational sample rates and binomial uncertainty separately; retain 20-per-pair/100-overall operational gates without a population <=1% claim.

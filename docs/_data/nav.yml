@@ -209,6 +209,9 @@
     - title: Session Bootstrap
       url: /contributing/agent-rules/session-bootstrap/
       expertise: [advanced]
+    - title: Intent and Scope Decisions
+      url: /contributing/agent-rules/intent-and-scope/
+      expertise: [advanced]
     - title: Repository Context
       url: /contributing/agent-rules/repository-context/
       expertise: [advanced]

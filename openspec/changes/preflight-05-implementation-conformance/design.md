@@ -1,3 +1,11 @@
+## Owner-approved agentic SDLC amendment — 2026-10-04
+
+When selected assurance binds decision context, include its digest/source identity in cache and affected-obligation selection. Reuse existing finding categories with reason codes: decision_context_changed is stale/UNKNOWN until refreshed; required_resolution_unavailable is unverifiable/UNKNOWN; reconciled_decision_contradiction is violated/FAIL. Ordinary touched unresolved assumptions stay advisory outside assurance. No missing trace link proves missing behavior. Share #483 presentation and a single repair budget, preserving independent test/review/security outcomes; no nested loop multiplies attempts. Context contracts are prerequisites only for selected context-bound assurance, not the existing context-free optional chain or lean delivery.
+
+The 20-known-good-observations-per-pair and 100-overall thresholds are operational sample gates, and the <=1% gate is an observed rate. They are not a bound on the underlying population rate. With zero failures the one-sided 95% binomial upper bound is 1 - 0.05^(1/n): approximately 13.9% at n=20 and 3.0% at n=100. Under independent representative sampling, 299 zero-failure observations are needed to put that bound below 1%. Report uncertainty and correlation/selection limitations; retain existing operational thresholds instead of raising routine delivery requirements to manufacture a statistical claim.
+
+This planning amendment supersedes conflicting scope and prerequisite wording below. It changes no runtime behavior and completes no implementation task. See [roadmap](../../AGENTIC_SDLC_ROADMAP.md).
+
 ## Scope rescope — 2026-09-20
 
 Seal, checkpoint, frozen mapping, successor approval, and historical RED/GREEN requirements in this issue apply only when an explicitly selected assurance policy requests them. They are not prerequisites for ordinary implementation, Code Review, release promotion, skill installation, or generated instructions. Keep the internal optional-feature dependency chain and source/signature integrity. Missing optional chronology is not a failed current-execution claim. No runtime policy changes in this planning update. Remove outgoing prerequisites on core #251 and modules #460. Optional harness adapters #433 continue to require this signed release explicitly.

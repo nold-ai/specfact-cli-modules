@@ -1,0 +1,47 @@
+schema_version: '2'
+requirements:
+  openspec:workflow-02-ecosystem-adapters:workflow-ecosystem-adapters:thin-upstream-and-ci-invocation-adapters:
+    rationale: Make the approved planning requirement reviewable without claiming runtime evidence.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#492
+    touchpoints:
+    - id: workflow-ecosystem-adapters-spec
+      kind: config_file
+      locator: openspec/changes/workflow-02-ecosystem-adapters/specs/workflow-ecosystem-adapters/spec.md
+    verification_cases:
+    - case_id: thin-upstream-and-ci-invocation-adapters-inspection
+      scenario_id: thin-upstream-and-ci-invocation-adapters
+      method: inspection
+      intent: Inspect Thin upstream and CI invocation adapters and all its acceptance scenarios.
+      observable: Strict OpenSpec validation retains the requirement and scenarios. Planning inspection only; tests,
+        implementation and signed producer acceptance remain pending.
+  openspec:workflow-02-ecosystem-adapters:workflow-ecosystem-adapters:loss-aware-summaries-and-sarif-projection:
+    rationale: Make the approved planning requirement reviewable without claiming runtime evidence.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#492
+    touchpoints:
+    - id: workflow-ecosystem-adapters-spec
+      kind: config_file
+      locator: openspec/changes/workflow-02-ecosystem-adapters/specs/workflow-ecosystem-adapters/spec.md
+    verification_cases:
+    - case_id: loss-aware-summaries-and-sarif-projection-inspection
+      scenario_id: loss-aware-summaries-and-sarif-projection
+      method: inspection
+      intent: Inspect Loss-aware summaries and SARIF projection and all its acceptance scenarios.
+      observable: Strict OpenSpec validation retains the requirement and scenarios. Planning inspection only; tests,
+        implementation and signed producer acceptance remain pending.
+  openspec:workflow-02-ecosystem-adapters:workflow-ecosystem-adapters:least-privilege-portable-integration:
+    rationale: Make the approved planning requirement reviewable without claiming runtime evidence.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#492
+    touchpoints:
+    - id: workflow-ecosystem-adapters-spec
+      kind: config_file
+      locator: openspec/changes/workflow-02-ecosystem-adapters/specs/workflow-ecosystem-adapters/spec.md
+    verification_cases:
+    - case_id: least-privilege-portable-integration-inspection
+      scenario_id: least-privilege-portable-integration
+      method: inspection
+      intent: Inspect Least-privilege portable integration and all its acceptance scenarios.
+      observable: Strict OpenSpec validation retains the requirement and scenarios. Planning inspection only; tests,
+        implementation and signed producer acceptance remain pending.

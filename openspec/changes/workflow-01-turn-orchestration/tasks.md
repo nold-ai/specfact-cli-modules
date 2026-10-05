@@ -40,3 +40,9 @@ Implementation is unstarted. Split an observed task exceeding two hours into bou
 ## Signed dependency adoption
 
 - [ ] Validate the exact signed #481 release, schema-v3 current_execution, archive/manifest/payload identities and actual core/#483 compatibility before Requirements integration; exercise the installed combination with existing representative fixtures and reject missing/unsigned/incompatible/v2-only producers.
+
+## Agentic SDLC follow-up acceptance
+
+- [ ] Verify the 2026-10-04 approved scope against live issue/release readiness before implementation.
+- [ ] Derive negative tests from the amendment scenarios before behavior edits; implement workflow additions only through the owning released contracts.
+- [ ] Preserve independent producer status, optional context/assurance and existing lean release dependencies; document exact versions and rollback.
