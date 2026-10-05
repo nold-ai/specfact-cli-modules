@@ -280,6 +280,7 @@ jobs:
           set -euo pipefail
           cd "$TRUSTED_ROOT"
           cat > "$TRUSTED_ROOT/reviewer.py" <<'PY'
+          import json
           import os
           import sys
           from pathlib import Path
@@ -308,7 +309,17 @@ jobs:
           ))
           try:
               if resolution.status != "PASS" or resolution.base_snapshot is None or resolution.head_snapshot is None:
-                  raise RuntimeError("trusted_index_preparation_incomplete:" + resolution.reason)
+                  reason = resolution.reason or "missing_snapshots"
+                  public_codes = {
+                      "policy_parse_failure", "git_resolution_failed", "unsafe_governed_input",
+                      "candidate_policy_change", "candidate_project_runtime_source_lock_change",
+                      "no_governed_impact", "no_reviewable_files", "missing_snapshots",
+                  }
+                  diagnostic = reason if reason in public_codes else "unstructured_reason"
+                  (Path(sys.argv[3]).parent / "status.public.json").write_text(json.dumps({
+                      "status": "INCOMPLETE", "phase": "trusted_index_preparation", "diagnostic": diagnostic,
+                  }))
+                  raise RuntimeError("trusted_index_preparation_incomplete")
               for snapshot in (resolution.base_snapshot, resolution.head_snapshot):
                   plan = discover_snapshot(snapshot.root, config_path=Path(sys.argv[3]), source_snapshot=snapshot)
                   selected = select_environment(plan, current=_capsule_environment_id())
@@ -325,11 +336,17 @@ jobs:
           trusted_env=(env -i HOME="$TRUSTED_ROOT/home" TMPDIR="$TRUSTED_ROOT/tmp"
             PATH="$TRUSTED_ROOT/venv/bin:/usr/bin:/bin" SPECFACT_MODULES_BRANCH=main
             SPECFACT_CODE_REVIEW_CAPSULE_CACHE="$TRUSTED_ROOT/cache")
-          "${trusted_env[@]}" "$TRUSTED_ROOT/venv/bin/python" -I -c \
+          if ! "${trusted_env[@]}" "$TRUSTED_ROOT/venv/bin/python" -I -c \
             'import subprocess,sys; sys.exit(subprocess.run(sys.argv[1:],timeout=1800,check=False).returncode)' \
             "$TRUSTED_ROOT/venv/bin/python" -I "$TRUSTED_ROOT/reviewer.py" \
             "$TRUSTED_ROOT/subject" prepare-index "$TRUSTED_ROOT/project.toml" \
-            > "$TRUSTED_ROOT/preparation.private.log" 2>&1
+            > "$TRUSTED_ROOT/preparation.private.log" 2>&1; then
+            echo "Independent signed reviewer preparation failed; no acceptance."
+            if [ -f "$TRUSTED_ROOT/status.public.json" ]; then
+              cat "$TRUSTED_ROOT/status.public.json"
+            fi
+            exit 1
+          fi
           "${trusted_env[@]}" "$TRUSTED_ROOT/venv/bin/python" -I -c \
             'import subprocess,sys; sys.exit(subprocess.run(sys.argv[1:],timeout=300,check=False).returncode)' \
             "$TRUSTED_ROOT/venv/bin/python" -I "$TRUSTED_ROOT/reviewer.py" \

@@ -270,9 +270,18 @@ def test_independent_reviewer_runs_in_fresh_job_without_candidate_host_code() ->
             assert step["with"]["persist-credentials"] is False
 
 
-@pytest.mark.parametrize("review_exit,preparation_status", [(0, "PASS"), (2, "PASS"), (7, "PASS"), (0, "UNKNOWN")])
+@pytest.mark.parametrize(
+    "review_exit,preparation_status,fixture_reason",
+    [
+        (0, "PASS", "policy_parse_failure"),
+        (2, "PASS", "policy_parse_failure"),
+        (7, "PASS", "policy_parse_failure"),
+        (0, "UNKNOWN", "policy_parse_failure"),
+        (0, "UNKNOWN", "private/path\nsecret"),
+    ],
+)
 def test_isolated_reviewer_preloads_trusted_code_and_never_accepts_incomplete_preparation(
-    tmp_path: Path, review_exit: int, preparation_status: str
+    tmp_path: Path, review_exit: int, preparation_status: str, fixture_reason: str
 ) -> None:
     import json
     import venv
@@ -340,7 +349,7 @@ def test_isolated_reviewer_preloads_trusted_code_and_never_accepts_incomplete_pr
             "def ScopeRequest(**kw): return SimpleNamespace(**kw)\n"
             "def resolve_scope(request):\n"
             "    assert request.scope=='index' and request.portable_project_runtime\n"
-            f"    return SimpleNamespace(status={preparation_status!r},reason='fixture_policy_incompatible',"
+            f"    return SimpleNamespace(status={preparation_status!r},reason={fixture_reason!r},"
             "base_snapshot=SimpleNamespace(root=request.repository/'base'),"
             "head_snapshot=SimpleNamespace(root=request.repository/'head'))\n"
             "def cleanup_scope_resolution(resolution): pass\n"
@@ -369,6 +378,15 @@ def test_isolated_reviewer_preloads_trusted_code_and_never_accepts_incomplete_pr
     if preparation_status != "PASS":
         assert not (trusted / "argv.json").exists()
         assert not (trusted / "prepared").exists()
+        diagnostic = json.loads((trusted / "status.public.json").read_text())
+        assert diagnostic == {
+            "status": "INCOMPLETE",
+            "phase": "trusted_index_preparation",
+            "diagnostic": fixture_reason if fixture_reason == "policy_parse_failure" else "unstructured_reason",
+        }
+        assert diagnostic["diagnostic"] in result.stdout
+        if fixture_reason != "policy_parse_failure":
+            assert fixture_reason not in result.stdout
         return
     assert (trusted / "prepared").read_text().splitlines() == ["base", "head"]
     args = json.loads((trusted / "argv.json").read_text())

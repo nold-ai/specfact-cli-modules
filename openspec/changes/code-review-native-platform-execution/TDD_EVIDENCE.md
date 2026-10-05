@@ -2324,3 +2324,17 @@ staged deletion of the independent job. RED reproduced removal in the index plus
 restoration only in the working tree. Both hosted gate markers now come from the
 exact indexed workflow; missing indexed contents fail closed. No other local
 deferral rule or repository gate is relaxed.
+
+Hosted head aeca3f47's new isolated job installed the trusted reviewer and reached
+its preparation entry point, then failed closed. Raw exception logs remained
+private, so no specific hosted reason is assumed. A failing regression now
+requires an allowlisted public incomplete-preparation summary. Only an explicit enum of known controller codes is published; arbitrary text,
+paths and newlines become `unstructured_reason`. Raw
+reports and logs remain private, and diagnostic publication never changes exit
+handling or acceptance.
+
+The actual installed signed reviewer was also queried against a disposable exact
+Git index at head aeca3f47, soft-reset to its merge-base. Its pure discovery
+returned **UNKNOWN / policy_parse_failure**, consistent with its separately
+observed BasedPyright ambiguity. No Linux analyzer or project code was run on
+macOS for this probe. Final diagnostic/deferral contracts: **57 passed**.
