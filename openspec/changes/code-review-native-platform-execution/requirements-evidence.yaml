@@ -223,6 +223,11 @@ requirements:
       kind: config_file
       locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
     verification_cases:
+    - case_id: 460-8-23
+      scenario_id: signed-customer-release-acceptance
+      method: test
+      intent: "Native connection failures remain diagnosable."
+      observable: "test_native_connection_exception_class_is_public_without_private_text verifies four fixed standard exception class names without raw failure text. Existing unknown-name and private-field tests remain mandatory; runtime readiness and repetition requirements are unchanged."
     - case_id: 460-8-1
       scenario_id: signed-customer-release-acceptance
       method: inspection
@@ -484,6 +489,26 @@ requirements:
       kind: config_file
       locator: openspec/changes/code-review-native-platform-execution/PROJECT_DRIVEN_PREPARATION_CONTRACT.md
     verification_cases:
+    - case_id: 460-15-11
+      scenario_id: prepare-unfamiliar-projects-from-discovered-or-caller-supplied-setup
+      method: test
+      intent: "Staged review activates bug-hunt."
+      observable: "test_staged_review_activates_bug_hunt_without_changing_enforcement verifies conditional analyzer activation with unchanged changed-line enforcement. Existing timeout and isolation tests remain mandatory."
+    - case_id: 460-15-12
+      scenario_id: prepare-unfamiliar-projects-from-discovered-or-caller-supplied-setup
+      method: test
+      intent: "Explicit matching tests resolve ambiguous source mapping."
+      observable: "test_explicit_matching_test_resolves_duplicate_source_stems verifies order-independent explicit matching choices, multiple explicit tests and other retained tests; absent or unrelated explicit tests preserve ambiguity. Full discovery and strict coverage remain unchanged."
+    - case_id: 460-15-13
+      scenario_id: prepare-unfamiliar-projects-from-discovered-or-caller-supplied-setup
+      method: test
+      intent: "Hosted failure exposes bounded public finding locations."
+      observable: "test_failed_candidate_diagnostics_expose_only_bounded_tracked_locations executes the real workflow diagnostic code; private/untracked paths, messages, invalid lines and severity are withheld and at most 200 locations are emitted. Existing recipe tests preserve review failure propagation."
+    - case_id: 460-15-10
+      scenario_id: prepare-unfamiliar-projects-from-discovered-or-caller-supplied-setup
+      method: test
+      intent: "Independent review installs an available published baseline."
+      observable: "The workflow's literal signed marketplace reviewer pin exists in the published registry, admits its pinned core and has the recorded signed artifact. The isolated job retains no candidate module/unsigned overrides. Hosted installation/review is required separately."
     - case_id: 460-15-7
       scenario_id: prepare-unfamiliar-projects-from-discovered-or-caller-supplied-setup
       method: inspection

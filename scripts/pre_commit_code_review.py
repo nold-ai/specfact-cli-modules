@@ -140,6 +140,7 @@ def build_review_command(files: Sequence[str], *, enforcement: str | None = None
         "code",
         "review",
         "run",
+        "--bug-hunt",
         "--json",
         "--out",
         REVIEW_JSON_OUT,

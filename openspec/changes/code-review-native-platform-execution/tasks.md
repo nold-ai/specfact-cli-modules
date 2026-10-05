@@ -139,3 +139,10 @@ replace sections 3, 4 or 6. Exact facts: DELIVERY_CHECKPOINT_2026-10-06.md.
 - [ ] Pass final-artifact macOS 14/15/26 x cp311/cp312/cp313 and independent signed installation, cold/offline reuse, physical changecost/unrelated project and Linux regression.
 - [ ] Open reviewed implementation PR to dev after applicable gate/approved-deferral handling; complete current-head findings and human merge/promotion review.
 - [ ] After authorized publication, repeat canonical fresh installation, close #460 and archive with openspec archive.
+
+- [x] Correct the hosted independent reviewer's unavailable literal version pin to the signed published 0.51.0 baseline; retain isolation and all required review execution.
+- [x] Reproduce and correct staged bug-hunt activation and explicit matching-test ambiguity; preserve required coverage and analysis budgets.
+- [x] Add bounded tracked public finding locations and fixed native connection failure classes so hosted failures remain diagnosable without publishing private reports.
+- [ ] Obtain current-head hosted review completion and resolve every valid changed finding; macOS15 authentication failure and final native acceptance remain open.
+
+- [x] Open draft PR #498 toward dev under the explicit local capsule-only deferral; keep hosted review and human merge/promotion pending.

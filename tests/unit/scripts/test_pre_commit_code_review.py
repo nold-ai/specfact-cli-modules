@@ -116,6 +116,14 @@ def test_build_review_command_writes_json_report() -> None:
     assert command[-2:] == ["tests/test_app.py", "packages/specfact-spec/src/x.py"]
 
 
+def test_staged_review_activates_bug_hunt_without_changing_enforcement() -> None:
+    module = _load_script_module()
+    command = module.build_review_command(["tests/test_app.py"], enforcement="changed")
+    assert "--bug-hunt" in command
+    assert command[command.index("--enforcement") + 1] == "changed"
+    assert command[-1] == "tests/test_app.py"
+
+
 def test_main_skips_when_no_relevant_files(capsys: pytest.CaptureFixture[str]) -> None:
     """Hook should not fail commits when no staged review-relevant paths are present."""
     module = _load_script_module()

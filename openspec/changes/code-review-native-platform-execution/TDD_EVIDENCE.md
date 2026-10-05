@@ -2493,3 +2493,145 @@ command overview/contract, core documentation accountability, module validation
 and 28 contract tests; only capsule review reported DEFERRED. No budget or
 required analyzer enforcement changed. Initial missing paired-checkout-path
 configuration was corrected without editing the core checkout.
+
+## Hosted independent reviewer pin correction — 2026-10-06 (Europe/Berlin)
+
+PR #498 was opened at 30ace59e after rebase onto origin/dev
+74d3fd4dd6f9b171f18857abcc8f659c80d686e9 (documentation/governance changes only).
+CI subsequently signed the unchanged 0.51.1 module payload at
+687b7d7396b50b2bb1454376688fae532db62c84. Public-key required-signature verification
+passed for all seven modules; no publisher key was used locally. Only its
+signature field changed. The signed head's existing validation runs were approved
+after GitHub paused the bot-authored update. Old-head results cannot replace
+current-head acceptance.
+
+Hosted independent review failed during installation: its literal 0.50.1 pin
+is not advertised by main's single-version registry; signed published 0.51.0
+installation succeeded in the separate customer job. An OpenSpec scenario and
+regression against the actual registry/tarball preceded workflow modification.
+RED: test_independent_reviewer_pin_is_installable_signed_published_baseline
+failed (0.50.1 versus 0.51.0),60 deselected. Update only the pinned published
+reviewer to 0.51.0, retaining core 0.55.4, main marketplace, env-i isolation,
+independent VM and all enforcement/budgets. GREEN: customer gate plus
+pr-orchestrator signing suites, 73 passed in 0.63 seconds. The test verifies literal
+released pins, declared core compatibility, actual archive checksum, signed
+module metadata and absence of candidate roots/unsigned overrides. Hosted
+current-head installation and review remain required.
+
+CodeRabbit skipped automatic draft review; its green status does not count as
+review completion. The trusted installed CLI authenticated, but automatic
+approval review rejected its external diff transmission as outside the bounded
+review-agent authorization. No review ran, no external diff was sent, and no
+retry/workaround was attempted. Continue the same authorized bounded agent
+review and record external review as unavailable, rather than clean.
+
+The same independent agent found P2 stale expected pins in two existing
+deferred-review security tests. A dedicated RED reproduced 2failures/18 passes;
+update only their expected literal version to 0.51.0. Existing candidate-host
+poisoning, isolated bootstrap and override rejection assertions remain intact.
+Complete affected customer/deferred-security/orchestrator suite: 93 passed in
+6.76 seconds. The concurrently already-collected full suite retained the old
+literals and reported 2failures/5001 passes; repeat on corrected sources is
+required rather than treating the earlier 5002-test pass as current.
+
+The same independent agent confirmed P2 closed after reading both corrected
+expectations; no remaining finding in this bounded correction. Fresh full-suite
+GREEN: 5003 passed, 75 skipped, five warnings, 95 subtests in 90.87 seconds. Final
+format/type/lint and YAML/OpenSpec validation pass. The smart run had collected
+old expectations and retained the same 2 failures; repeat on corrected inputs
+uses four workers without changing selection, tests, budgets or enforcement.
+
+
+## Hosted candidate review diagnostics and selection — 2026-10-06 (Europe/Berlin)
+
+Current signed head 687b7d73's cp312 deferred review failed with 160 findings
+(errors 6, warnings 138, info 16). Required Semgrep-clean execution was incomplete,
+Semgrep-bugs was not activated, and targeted pytest reported ambiguous source/test
+mapping. Raw reports stayed private; counts and bounded reason codes do not prove
+findings are resolved. No budget or enforcement waiver is permitted.
+
+The existing helper omitted bug-hunt; portable partial test mapping rejected
+multiple matching filenames even when the caller explicitly supplied a matching
+test. Specification preceded regressions. RED: 3 failed, 106 deselected for
+bug-hunt plus both input orderings. Implementation forwards --bug-hunt and resolves
+only explicitly supplied matching candidates. Unrelated explicit tests do not
+resolve ambiguity; other explicit tests and multiple matching tests are retained.
+Full discovery and required coverage are unchanged. GREEN: 209 affected tests.
+
+A separate spec/test RED showed hosted diagnostics exposed no public finding
+locations. Emit at most 200 tracked relative paths, positive integer lines and
+declared severities, retaining the failure exit. Messages, raw findings, private
+absolute/untracked paths, booleans and invalid severities stay private. The actual
+workflow code is executed by its regression; final affected suite result follows.
+
+Parallel smart-test on the corrected pin inputs had 2 failures / 5001 passes in
+existing changed-evidence tests (not stale version assertions): missing projected
+pre-enforcement evidence and unexpected required UNKNOWN. This is not a pass.
+The default serial smart-test command passed all 5003 tests, 75 skips, five warnings
+and 95 subtests in 244.88 seconds on the pin correction. The additional selection/
+diagnostic tests were not collected by that already-started run; current-source
+smart-test and full-suite validation remain required.
+
+Hosted macOS14 at 687b7d73 passed startup and control fixtures. macOS15 passed all
+six startup races at 100 repetitions, then control failed at request-authenticate
+in cancel after 73 successful repetitions per repeated group. Its exception was
+not allowlisted, so public type was unknown; this is incomplete evidence, not a
+passing boundary or a reason to increase timing budgets. macOS26 was still running
+at inspection. These fixed fixtures do not accept the final capsules or ABIs.
+
+
+Follow-up selection/diagnostic affected suite GREEN: 210 tests passed in 5.84
+seconds. The same independent agent reviewed the complete uncommitted diff
+against 687b7d73 and found no introduced defect. Native diagnostic extension
+separately reproduced four failing standard exception-class cases before adding
+only those fixed names to the existing allowlist. No runtime deadline, cleanup,
+repetition or security policy changed. Actual macOS15 connection failure is still
+unresolved pending its detailed sanitized next-run class.
+
+The explicit-manifest checksum command rejected same-version signing against
+HEAD as designed. Used existing changed-only mode against origin/dev (0.51.0)
+for the unpublished 0.51.1 payload, retaining version-bump enforcement; no same-
+version bypass or local publisher key was used. CI must sign the updated payload
+again before required-signature release verification can pass.
+
+
+Current-source mandatory smart-test GREEN: 5011 passed, 75 explicit skips,
+five warnings, 95 subtests in 254.79 seconds. Default serial execution retains
+complete selection. Native receipt suite: 216 passed in 1.61 seconds. Final
+format/type/lint (zero errors/warnings, Pylint 10/10), YAML and bundle imports
+passed. Complete local hook pipeline passed staged planned-maturity mapping and
+28 contracts / 5058 deselected; only the explicitly approved capsule review was
+DEFERRED. The same independent agent also reviewed the four-class diagnostic
+extension and entire interacting diff: no introduced finding, current hosted
+and signed native release acceptance still pending.
+
+Hosted macOS26 completed successfully at 687b7d73 alongside macOS14; macOS15
+remains failed. These are fixed-boundary fixtures with false production flags,
+not the final-artifact nine-cell OS/ABI acceptance. No native publication,
+protective-policy waiver, budget expansion or issue completion occurred.
+
+
+Completed Linux current-checkpoint evidence at 687b7d73: cp311 and cp313
+customer jobs succeeded, including cold/warm fixture/module checks and all five
+pinned upstream corpus entries (Flask/pip, Requests/uv, Hatch, detached Hatch and
+Poetry). Downloaded GitHub artifact IDs 11380162044 and 11379471574; each
+corpus-summary status is PASS and all five acceptance.json entries are candidate
+PASS. This supports the reproduced bytecode composition correction on Linux;
+it is neither follow-up-head acceptance nor native acceptance. cp312 stopped at
+its failed deferred review, and independent review stopped at unavailable-pin
+installation. Do not claim a complete green Linux matrix.
+
+The first bare signature verifier command failed because optional signed modules
+needed a public key and its default HEAD~1 baseline already held unpublished
+0.51.1. Corrected configuration uses --version-check-base origin/dev and the
+paired public module verification key; all seven filesystem payload/version
+checks passed, with 0.51.1 greater than dev's 0.51.0. No missing-key allowance,
+metadata-only check or version bypass was used. Updated code-review payload has
+a development checksum only and awaits CI signing. The nonpublishing module
+publish pre-check and OpenSpec strict validation also passed.
+
+
+Final current-source mandatory full-suite GREEN: 5011 passed, 75 explicit native/
+platform skips, five warnings, 95 subtests in 260.40 seconds. Together with the
+5011-test serial smart pass, this completes local follow-up unit selection.
+Skips and local capsule deferral remain incomplete acceptance, not passes.

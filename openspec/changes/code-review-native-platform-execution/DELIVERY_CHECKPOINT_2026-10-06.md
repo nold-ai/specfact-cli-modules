@@ -163,3 +163,36 @@ upstream manager fixtures with the existing confined domains/budgets.
 Rollback withdraws affected macOS catalog references in a corrective release,
 retains immutable historical artifacts and preserves Linux support. The current
 unpublished patch can be reverted as an ordinary source change.
+
+
+## Draft PR and hosted correction status
+
+Draft [PR #498](https://github.com/nold-ai/specfact-cli-modules/pull/498) targets
+`dev`. Its first checkpoint was rebased onto governance-only updated dev
+`74d3fd4dd6f9b171f18857abcc8f659c80d686e9`; CI signed its module at
+`687b7d7396b50b2bb1454376688fae532db62c84`. Public-key required-signature verification
+then passed all seven bundles. The follow-up changes module bytes and therefore
+requires a fresh CI signature, preserving unpublished version 0.51.1.
+
+At that signed head, hosted macOS14 and macOS26 passed fixed startup/control
+fixtures; macOS15 passed startup and failed control at request-authenticate in
+cancel after 73 repetitions. No final capsule bytes or ABI matrix were accepted.
+Linux cp311/cp313 completed customer cold/warm fixtures and all five upstream
+corpus entries across four managers (candidate PASS). cp312 failed the deferred
+candidate review;
+the independent signed reviewer failed to install unavailable version 0.50.1.
+These statuses cannot substitute for the follow-up head's required CI.
+
+The bounded correction pins independent review to signed published 0.51.0,
+activates bug-hunt in the staged helper, honors explicitly matching test paths
+when stems collide, and emits bounded tracked public finding locations/fixed
+native connection exception classes. Required incomplete evidence, strict
+coverage, original 300-second analysis and five-second cleanup bounds, immutable
+subject/reviewer separation and all lifecycle counts remain enforced. Detailed
+RED/GREEN and current-source gate results are in TDD_EVIDENCE.md.
+
+The same review agent found no introduced defect in the combined correction.
+CodeRabbit explicitly skipped the draft. Its CLI did not review: automatic
+approval review rejected external diff transmission beyond the authorized
+bounded agent. No diff was sent and no workaround or external review request
+was made. This is unavailable review evidence, not a completed review.

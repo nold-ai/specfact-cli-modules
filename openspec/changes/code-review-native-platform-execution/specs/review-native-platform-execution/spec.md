@@ -384,6 +384,13 @@ Support SHALL be claimed only after a canonical signed publication passes fresh 
 - **WHEN** a fresh customer installation launches with normal platform protections and loads project extensions
 - **THEN** initial-distribution native-signature/quarantine checks and the approved hardening/library-loading policy pass without disabling host protections; final payload hashes match the shipped signed manifest
 
+#### Scenario: Native connection failures remain diagnosable
+
+- **WHEN** a native fixture fails with a standard connection refusal, reset, broken pipe or permission error
+- **THEN** the sanitized receipt SHALL retain only that explicitly allowlisted exception class
+- **AND** raw failure text, authority bytes, private paths and identifiers SHALL remain private; an unknown class SHALL remain unknown
+- **AND** this diagnostic SHALL NOT waive any readiness, cleanup or repetition gate
+
 #### Scenario: Linux regression and rollback
 
 - **GIVEN** a macOS candidate or publication is evaluated
@@ -727,6 +734,35 @@ The native backend SHALL reuse portable project discovery and prepare dependenci
 - **AND** the review retains changed-line enforcement, all required analyzers, bug-hunt activation and the existing 300-second bound
 - **AND** unsupported published-reviewer policy or required incomplete evidence fails the job explicitly; a candidate helper returning success cannot approve it
 - **AND** candidate runtime/corpus validation remains separately required and never establishes independent reviewer authority
+
+#### Scenario: Independent review installs an available published baseline
+
+- **GIVEN** the independent reviewer starts in a fresh ordinary-user environment before candidate execution
+- **WHEN** it installs its explicitly pinned authenticated Code Review version through the main marketplace
+- **THEN** the pinned version SHALL exist in the published registry and satisfy the pinned released core's compatibility range
+- **AND** candidate manifests, helper scripts, module roots, unsigned overrides and dynamic candidate version selection SHALL NOT choose the reviewer
+- **AND** an unavailable or incompatible published baseline SHALL fail the job rather than falling back to candidate source
+
+#### Scenario: Hosted failure exposes bounded public finding locations
+
+- **WHEN** candidate review fails in the public repository
+- **THEN** hosted diagnostics SHALL expose at most 200 finding locations bound to tracked public paths with integer lines and declared severities
+- **AND** raw findings, messages, private absolute paths, receipts and tool logs SHALL remain private
+- **AND** the diagnostic step SHALL preserve the review failure exit code
+
+#### Scenario: Staged review activates bug-hunt
+
+- **WHEN** the pre-commit helper builds a staged review command
+- **THEN** it SHALL activate bug-hunt for the conditional bug analyzer and contract budgets
+- **AND** changed-line enforcement, JSON evidence, explicit project configuration and the existing 300-second analysis timeout SHALL remain unchanged
+
+#### Scenario: Explicit matching tests resolve ambiguous source mapping
+
+- **GIVEN** partial review discovers multiple conventional tests matching a source filename
+- **WHEN** the caller supplies at least one of those matching tests explicitly
+- **THEN** test selection SHALL use the supplied matching tests while retaining other explicit tests and uniquely inferred tests
+- **AND** ambiguity without an explicit matching test SHALL remain actionable incomplete evidence
+- **AND** source/test ordering SHALL NOT change the selected inventory
 
 #### Scenario: Hosted review selects its declared project environment
 

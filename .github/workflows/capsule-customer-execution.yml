@@ -174,10 +174,11 @@ jobs:
             SPECFACT_CODE_REVIEW_ENFORCEMENT=changed \
             "$CUSTOMER_ROOT/venv/bin/python" "$GITHUB_WORKSPACE/scripts/pre_commit_code_review.py" "${review_paths[@]}" || review_exit=$?
           if [ "$review_exit" -ne 0 ]; then
-            # Print only bounded reason codes; raw reports, receipts and tool logs stay private.
+            # Print bounded codes/public locations; raw reports, receipts and logs stay private.
             "$CUSTOMER_ROOT/venv/bin/python" - <<'PY'
           import json
           import re
+          import subprocess
           from pathlib import Path
 
           report = Path(".specfact/code-review.json")
@@ -188,6 +189,20 @@ jobs:
                   codes = [token for token in tokens if re.fullmatch(r"[a-zA-Z0-9_.-]{1,96}", token)]
                   if codes:
                       print(json.dumps({"analyzer": row.get("id"), "diagnostic_codes": codes}))
+              tracked = set(subprocess.check_output(["git", "ls-files", "-z"], text=True).split("\0"))
+              emitted = 0
+              for finding in data.get("findings", []):
+                  if not isinstance(finding, dict):
+                      continue
+                  file, line, severity = (finding.get(key) for key in ("file", "line", "severity"))
+                  if (
+                      isinstance(file, str) and file in tracked and not Path(file).is_absolute()
+                      and type(line) is int and line > 0 and severity in ("error", "warning", "info")
+                  ):
+                      print(json.dumps({"finding_location": {"file": file, "line": line, "severity": severity}}))
+                      emitted += 1
+                      if emitted == 200:
+                          break
           PY
           fi
           exit "$review_exit"
@@ -251,7 +266,7 @@ jobs:
           env -i HOME="$TRUSTED_ROOT/home" TMPDIR="$TRUSTED_ROOT/tmp" \
             PATH="$TRUSTED_ROOT/venv/bin:/usr/bin:/bin" SPECFACT_MODULES_BRANCH=main \
             "$TRUSTED_ROOT/venv/bin/python" -I -m specfact_cli.cli \
-            module install nold-ai/specfact-code-review --scope user --version 0.50.1 --source marketplace
+            module install nold-ai/specfact-code-review --scope user --version 0.51.0 --source marketplace
       - name: Capture immutable candidate subject without executing its host code
         shell: bash
         run: |

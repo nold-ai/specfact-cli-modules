@@ -145,6 +145,36 @@
   "base_commit": "b87159c4fbeab3a1282919823035c2109527d385",
   "complete_boundary": false,
   "date_europe_berlin": "2026-10-06",
+  "draft_pull_request": "https://github.com/nold-ai/specfact-cli-modules/pull/498",
+  "hosted_checkpoint": {
+    "final_artifact_acceptance": false,
+    "followup_acceptance_required": true,
+    "head": "687b7d7396b50b2bb1454376688fae532db62c84",
+    "independent_signed_review": "failed-unavailable-0.50.1-pin",
+    "linux_customer_fixture_stages": {
+      "cp311": "passed",
+      "cp312": "failed-deferred-review",
+      "cp313": "passed"
+    },
+    "linux_external_corpus": {
+      "cp311": {
+        "artifact_id": 11380162044,
+        "projects": 5,
+        "status": "candidate-PASS"
+      },
+      "cp312": "not-run:deferred-review-failed",
+      "cp313": {
+        "artifact_id": 11379471574,
+        "projects": 5,
+        "status": "candidate-PASS"
+      }
+    },
+    "macos_fixed_boundary": {
+      "14": "passed",
+      "15": "failed:cancel:request-authenticate:73-repetitions",
+      "26": "passed"
+    }
+  },
   "mandatory_review": {
     "assurance": "UNKNOWN",
     "reason": "native_capsule_artifact_not_admitted:darwin-arm64-cp312",

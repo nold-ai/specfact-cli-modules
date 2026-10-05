@@ -643,3 +643,40 @@ def test_customer_gate_always_adds_separate_targeted_regression(tmp_path, monkey
     monkeypatch.setattr(gate, "_run_targeted_review", lambda *args, **kwargs: calls.append(args) or [])
     assert gate._run_customer_reviews(tmp_path, tmp_path / "cache", tmp_path / "repository") == ["existing failure"]
     assert calls == [(tmp_path, tmp_path / "cache")]
+
+
+def test_independent_reviewer_pin_is_installable_signed_published_baseline():
+    """An isolated reviewer pin must be installable through the actual registry."""
+    import hashlib
+    import json
+    import re
+    import tarfile
+
+    import yaml
+    from packaging.specifiers import SpecifierSet
+
+    root = Path(__file__).parents[2]
+    workflow = yaml.load(
+        (root / ".github/workflows/capsule-customer-execution.yml").read_text(), Loader=yaml.BaseLoader
+    )
+    steps = {step["name"]: step for step in workflow["jobs"]["independent-review"]["steps"] if "name" in step}
+    installation = steps["Install trusted reviewer in its own ordinary-user environment"]["run"]
+    version = re.search(r"--version\s+([0-9]+\.[0-9]+\.[0-9]+)\s+--source marketplace", installation)
+    core = re.search(r"specfact-cli==([0-9]+\.[0-9]+\.[0-9]+)", installation)
+    assert version is not None and core is not None, "reviewer identities must be literal released pins"
+    registry = json.loads((root / "registry/index.json").read_text())
+    entry = next(row for row in registry["modules"] if row["id"] == "nold-ai/specfact-code-review")
+    assert version.group(1) == entry["latest_version"], "pinned reviewer is absent from the published registry"
+    assert SpecifierSet(entry["core_compatibility"]).contains(core.group(1))
+    archive = root / "registry" / entry["download_url"]
+    assert hashlib.sha256(archive.read_bytes()).hexdigest() == entry["checksum_sha256"]
+    with tarfile.open(archive) as stream:
+        manifest = next(member for member in stream.getmembers() if member.name.endswith("module-package.yaml"))
+        payload = stream.extractfile(manifest)
+        assert payload is not None
+        metadata = yaml.safe_load(payload.read())
+    assert str(metadata["version"]) == version.group(1)
+    assert metadata["integrity"]["signature"]
+    assert "env -i" in installation and "SPECFACT_MODULES_BRANCH=main" in installation
+    assert "SPECFACT_MODULES_ROOTS" not in installation
+    assert "SPECFACT_ALLOW_UNSIGNED" not in installation

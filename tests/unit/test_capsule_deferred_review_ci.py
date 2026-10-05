@@ -248,7 +248,7 @@ def test_independent_reviewer_runs_in_fresh_job_without_candidate_host_code() ->
     steps = independent["steps"]
     recipe = "\n".join(str(step.get("run", "")) for step in steps)
     assert "specfact-cli==0.55.4" in recipe
-    assert "--version 0.50.1" in recipe
+    assert "--version 0.51.0" in recipe
     assert "--source marketplace" in recipe
     assert "env -i" in recipe
     assert "pre_commit_code_review.py" not in recipe
@@ -428,7 +428,7 @@ def test_trusted_bootstrap_cannot_import_candidate_venv_module(tmp_path: Path) -
             (core/'__init__.py').write_text('')
             (core/'cli.py').write_text(
                 "import sys\\nassert sys.argv[1:]==['module','install','nold-ai/specfact-code-review',"
-                "'--scope','user','--version','0.50.1','--source','marketplace']\\n"
+                "'--scope','user','--version','0.51.0','--source','marketplace']\\n"
             )
             """)
     )
@@ -445,3 +445,38 @@ def test_trusted_bootstrap_cannot_import_candidate_venv_module(tmp_path: Path) -
     )
     assert not marker.exists(), "Candidate code executed on the trusted bootstrap host"
     assert result.returncode == 0, result.stdout + result.stderr
+
+
+def test_failed_candidate_diagnostics_expose_only_bounded_tracked_locations(tmp_path: Path) -> None:
+    workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())
+    step = next(item for item in workflow["jobs"]["customer"]["steps"] if item.get("name") == STEP_NAME)
+    code = step["run"].rsplit("- <<'PY'\n", 1)[1].split("\nPY\n", 1)[0]
+    _git(tmp_path, "init", "-q")
+    source = tmp_path / "public.py"
+    source.write_text("value = 1\n")
+    _git(tmp_path, "add", "public.py")
+    report = tmp_path / ".specfact/code-review.json"
+    report.parent.mkdir()
+    import json
+
+    report.write_text(
+        json.dumps(
+            {
+                "findings": [
+                    {"file": "public.py", "line": 12, "severity": "warning", "message": "PRIVATE_MESSAGE"},
+                    {"file": "/private/SECRET.py", "line": 1, "severity": "error"},
+                    {"file": "untracked_SECRET.py", "line": 1, "severity": "error"},
+                    {"file": "public.py", "line": True, "severity": "error"},
+                    {"file": "public.py", "line": 0, "severity": "error"},
+                    {"file": "public.py", "line": 1, "severity": "PRIVATE_SEVERITY"},
+                    *[{"file": "public.py", "line": line, "severity": "info"} for line in range(20, 225)],
+                ]
+            }
+        )
+    )
+    result = subprocess.run([sys.executable, "-c", code], cwd=tmp_path, capture_output=True, text=True, check=False)
+    assert result.returncode == 0, result.stderr
+    rows = [json.loads(line)["finding_location"] for line in result.stdout.splitlines()]
+    assert len(rows) == 200
+    assert rows[0] == {"file": "public.py", "line": 12, "severity": "warning"}
+    assert "PRIVATE" not in result.stdout and "SECRET" not in result.stdout

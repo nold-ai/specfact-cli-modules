@@ -43,6 +43,36 @@ def test_source_only_review_finds_corresponding_test(tmp_path: Path) -> None:
     assert select_test_paths(discover_project(tmp_path), [source], full=False) == ("tests/test_calculator.py",)
 
 
+@pytest.mark.parametrize("reverse", [False, True])
+def test_explicit_matching_test_resolves_duplicate_source_stems(tmp_path: Path, reverse: bool) -> None:
+    source = tmp_path / "app.py"
+    source.touch()
+    tests = []
+    for directory in ("tests/unit", "tests/integration"):
+        test = tmp_path / directory / "test_app.py"
+        test.parent.mkdir(parents=True)
+        test.touch()
+        tests.append(test)
+    unrelated = tmp_path / "tests/unit/test_other.py"
+    unrelated.touch()
+    with pytest.raises(ProjectRuntimeError, match="project_test_selection_ambiguous"):
+        select_test_paths(discover_project(tmp_path), [source, unrelated], full=False)
+    selected = [source, tests[0]]
+    if reverse:
+        selected.reverse()
+    assert select_test_paths(discover_project(tmp_path), selected, full=False) == ("tests/unit/test_app.py",)
+    assert select_test_paths(discover_project(tmp_path), [source, tests[0], unrelated], full=False) == (
+        "tests/unit/test_app.py",
+        "tests/unit/test_other.py",
+    )
+    assert select_test_paths(discover_project(tmp_path), [source, *tests], full=False) == (
+        "tests/integration/test_app.py",
+        "tests/unit/test_app.py",
+    )
+    with pytest.raises(ProjectRuntimeError, match="project_test_selection_ambiguous"):
+        select_test_paths(discover_project(tmp_path), [source], full=False)
+
+
 def test_no_corresponding_tests_is_actionable(tmp_path: Path) -> None:
     source = tmp_path / "app.py"
     source.touch()
