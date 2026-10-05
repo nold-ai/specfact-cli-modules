@@ -30,5 +30,5 @@ All tasks are future implementation. This planning PR completes no runtime task 
 ## 5. Release and handoff
 
 - [ ] 5.1 For runtime changes, bump the owning release per semver, update compatibility/changelog and verify signatures and payload identities; this planning-only change bumps nothing.
-- [ ] 5.2 Publish through the canonical reviewed signed release path, exercise the exact installed compatible pair and document rollback before downstream adoption.
-- [ ] 5.3 Submit the implementation PR to dev, reconcile issue/project state and paired source tracking, and archive the completed change with openspec archive only after actual delivery.
+- [ ] 5.2 Submit the implementation PR to dev and complete normal reviewed integration.
+- [ ] 5.3 Publish through the canonical signed release path, exercise the exact installed compatible pair and document rollback before downstream adoption; reconcile issue/project state and paired source tracking, and archive the completed change with openspec archive only after actual delivery.

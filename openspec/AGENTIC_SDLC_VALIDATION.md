@@ -38,3 +38,16 @@ The owner requested stricter intent and scope rules after the native-review retr
 Both repositories completed their applicable pre-commit checks, including Requirements planning evidence, YAML, Markdown and module/import gates where applicable. Python review and contract execution were skipped by the owning hooks because there were no applicable code targets. Core gate-blocking R07/R08 YAML formatting was corrected with parsed-value equality checks; no lifecycle, acceptance or historical proof semantics changed.
 
 Local git commit -S attempts, including an elevated terminal retry, failed with GPG No secret key. The owner authorized commit and push. Finalization uses GitHub createCommitOnBranch after applicable staged hooks pass, with expected-head concurrency protection. Accept the remote commit only after its signature is verified and its tree matches git write-tree exactly; then synchronize the local branch without changing its source or index contents. This preserves signed commit provenance without changing local signing configuration. Runtime #481 remains pending in its prepared worktree, with no behavior edits or tests yet.
+
+
+## Review corrections (2026-10-05)
+
+The owner requested local refresh, fixes, triage, push and comment resolution for PR #494. This pass corrects two existing planning inconsistencies: architecture requirement IDs are preserved when present and absent associations are reported without rejecting the import; adapter implementation PR review/integration precedes signed publication. No new use case, infrastructure, runtime behavior, or security guarantee is introduced. Existing release and evidence gates remain in place.
+
+- Both current review threads were independently confirmed against the approved roadmap and owning proposal.
+- Strict OpenSpec validation passed for architecture-01-solution-layer and workflow-02-ecosystem-adapters.
+- Applicable staged pre-commit hooks passed, including native Requirements planning evidence, module signature applicability, import boundaries, generated command contracts and documentation checks. Python analysis and execution contracts were inapplicable to this documentation-only scope, as recorded above.
+- Existing documentation tests: 20 passed with hatch run python -m pytest -q --no-cov tests/unit/docs/test_docs_review.py. No runtime behavior, coverage admission, RED/GREEN proof or installed-pair acceptance is claimed.
+- The paired core planning scenario also retains mandatory-ID wording at inspection time. Its alignment remains a follow-up before architecture implementation; this pass changes only PR #494.
+
+Completion for this pass is the pushed planning correction and resolved addressed review threads. Runtime delivery remains pending.
