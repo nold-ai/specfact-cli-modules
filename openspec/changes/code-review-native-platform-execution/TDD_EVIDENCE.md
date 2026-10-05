@@ -2262,3 +2262,59 @@ not accepted as completed review.
 - Final corrected private native artifact **sha256:78b83dd0175b1a2c87714aa8c299eb1a2673d7f9342f04a91d81371d2d16ad48** repeated full/default-discovery acceptance with cold preparation, offline reuse, **all ten analyzers ran and overall PASS**. This supersedes the earlier subset fixture identity only for this full proof; all publication/complete-boundary/independent-installation flags stay false.
 
 - The same final private artifact also executed a genuine **66-test-file default-discovery full review** with cold preparation/offline reuse, **all ten analyzers ran and overall PASS**. The controller transported a sealed inventory through two arguments; no argument/resource limit was increased. Raw receipts remain private.
+
+
+## Independent signed reviewer isolation — 2026-10-05
+
+GitHub finding 4184245681 remains open pending hosted validation of this correction.
+The candidate customer job is still required, but a second required job now runs
+on a fresh Ubuntu 24.04 VM with its own HOME, venv, cache and immutable staged
+subject. It installs published core 0.55.4 and signed Code Review 0.50.1 anonymously
+and never executes candidate-controlled host scripts. Installed command loading
+occurs before entering the subject; isolated Python and a clean execution
+environment exclude candidate module roots, unsigned overrides and credentials.
+The published discovery/runtime APIs prepare both exact immutable index snapshots
+inside the existing 1,800-second provisioning bound. Review retains all ten
+members, changed enforcement, bug-hunt activation and the unchanged 300-second
+analysis bound. Required incomplete evidence and every nonzero exit still block.
+
+RED: the missing separate job failed the independent-review regression. An
+intermediate same-job design was rejected by independent review because earlier
+candidate host scripts could modify its venv. RED: a real malicious candidate
+`venv.py` executed before isolated bootstrap. GREEN: the fresh job changes to its
+private directory before isolated venv/pip creation; that malicious module no
+longer executes. Recipe fixtures cover hostile imports, both bound snapshot
+preparations, successful review, exits 2/7 and incomplete preparation that never
+runs review. All 17 affected recipe cases passed; affected pre-commit/workflow
+contracts total 54 cases. Formatting, strict typing (zero errors/warnings) and YAML
+validation passed. No candidate-owned result is promoted to independent authority.
+
+A separate temporary installation of the actual published core/module completed
+anonymous installation, loaded the generated entry point and displayed the real
+review command help. Its installed-payload authentication returned PASS. Its
+actual BasedPyright policy resolver returned UNKNOWN with
+`basedpyright_config_ambiguous` for this repository. Therefore a separately
+trusted compatibility baseline remains necessary for a green independent review;
+this correction does not waive or patch the published gate. Linux analyzer
+execution is reserved for hosted CI. Raw receipts/install logs remain private.
+
+Exact head 45ee4cfe9dbf2299c9406bab6e6d0d261f4c00f1 passed the complete
+configured native-boundary workflow on ARM64 macOS 14, 15 and 26 in run
+37321105249, including 20 control lifecycle cases at 100 repetitions each and
+28 protocol cases, startup repetitions and signed production-broker protection
+checks. This is boundary-subset proof, not the full analyzer/ABI/customer-release
+matrix. Complete-boundary, production and independent customer-installation flags
+remain false. The candidate Linux 3.13 customer/corpus job also passed; 3.12 still
+hit the existing staged-helper limit.
+
+Independent read-only review-agent closure: No findings, high confidence for
+the bounded fresh-job/bootstrap correction. The local deferral guard also
+requires the independent job: removing that job was RED (deferral incorrectly
+succeeded), then GREEN after retaining every original guard and adding this
+requirement. This remains a deferral, never PASS, and cannot run in CI.
+
+Final affected workflow/pre-commit verification: **55 passed**, 5.09 seconds;
+strict OpenSpec validation passed. Both Linux candidate customer/corpus jobs for
+CPython 3.11 and 3.13 completed successfully at exact head 45ee4cfe; CPython 3.12
+remained blocked in the added staged helper, so dependent quality prerequisites
+correctly failed rather than becoming green.

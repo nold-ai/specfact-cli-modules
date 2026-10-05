@@ -116,18 +116,26 @@ def test_deferred_gate_reviews_exact_staged_tree_and_propagates_failure(
 
 
 @pytest.mark.parametrize(
-    "platform,ci,deferral,bundle,advanced_dev,expected",
+    "platform,ci,deferral,bundle,advanced_dev,independent_review,expected",
     [
-        ("Darwin", "", "github-linux", "specfact-code-review", False, 0),
-        ("Darwin", "true", "github-linux", "specfact-code-review", False, 1),
-        ("Linux", "", "github-linux", "specfact-code-review", False, 1),
-        ("Darwin", "", "invalid", "specfact-code-review", False, 1),
-        ("Darwin", "", "github-linux", "specfact-project", False, 1),
-        ("Darwin", "", "github-linux", "specfact-project", True, 1),
+        ("Darwin", "", "github-linux", "specfact-code-review", False, True, 0),
+        ("Darwin", "", "github-linux", "specfact-code-review", False, False, 1),
+        ("Darwin", "true", "github-linux", "specfact-code-review", False, True, 1),
+        ("Linux", "", "github-linux", "specfact-code-review", False, True, 1),
+        ("Darwin", "", "invalid", "specfact-code-review", False, True, 1),
+        ("Darwin", "", "github-linux", "specfact-project", False, True, 1),
+        ("Darwin", "", "github-linux", "specfact-project", True, True, 1),
     ],
 )
 def test_narrow_local_deferral_retains_block2_and_cannot_run_in_ci(
-    tmp_path: Path, platform: str, ci: str, deferral: str, bundle: str, advanced_dev: bool, expected: int
+    tmp_path: Path,
+    platform: str,
+    ci: str,
+    deferral: str,
+    bundle: str,
+    advanced_dev: bool,
+    independent_review: bool,
+    expected: int,
 ) -> None:
     repository = tmp_path / "repository"
     repository.mkdir()
@@ -136,7 +144,10 @@ def test_narrow_local_deferral_retains_block2_and_cannot_run_in_ci(
     _git(repository, "config", "user.name", "Fixture")
     workflow = repository / ".github/workflows/capsule-customer-execution.yml"
     workflow.parent.mkdir(parents=True)
-    workflow.write_text((REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())
+    workflow_source = (REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text()
+    workflow.write_text(
+        workflow_source if independent_review else workflow_source.split("\n  independent-review:", 1)[0]
+    )
     files = [
         "llms.txt",
         "docs/reference/commands.generated.json",
@@ -218,3 +229,194 @@ def test_hosted_preparation_has_separate_bound_and_cannot_bypass_review() -> Non
     assert recipe.index("code review runtime prepare --scope index") < recipe.index("review_exit=0")
     assert 'SPECFACT_CODE_REVIEW_CAPSULE_CACHE="$CUSTOMER_ROOT/commit-review-cache"' in recipe
     assert "continue-on-error" not in step
+
+
+def test_independent_reviewer_runs_in_fresh_job_without_candidate_host_code() -> None:
+    workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())
+    independent = workflow["jobs"].get("independent-review")
+    assert independent is not None, "Installed reviewer must not share a writable venv/HOME with candidate host code"
+    assert independent["runs-on"] == "ubuntu-24.04"
+    assert independent["if"] == "github.event_name == 'pull_request'"
+    assert not independent.get("needs"), "Candidate execution cannot suppress the independent review job"
+    steps = independent["steps"]
+    recipe = "\n".join(str(step.get("run", "")) for step in steps)
+    assert "specfact-cli==0.55.4" in recipe
+    assert "--version 0.50.1" in recipe
+    assert "--source marketplace" in recipe
+    assert "env -i" in recipe
+    assert "pre_commit_code_review.py" not in recipe
+    assert "link_dev_module.py" not in recipe
+    assert "SPECFACT_MODULES_ROOTS" not in recipe
+    assert "SPECFACT_ALLOW_UNSIGNED" not in recipe
+    assert "$GITHUB_WORKSPACE/scripts" not in recipe
+    assert "timeout=300" in recipe and "timeout=1800" in recipe
+    assert "--scope index --enforcement changed --bug-hunt" in recipe
+    assert "discover_snapshot" in recipe and "prepare_runtime" in recipe
+    assert "runtime prepare --project-config" not in recipe, (
+        "Mutable worktree prep cannot prewarm immutable index identities"
+    )
+    assert 'CommandRegistry.get_module_typer("code")' in recipe
+    assert recipe.index('CommandRegistry.get_module_typer("code")') < recipe.index("os.chdir(sys.argv[1])")
+    for step in steps:
+        assert not step.get("continue-on-error", False)
+        if "checkout@" in step.get("uses", ""):
+            assert step["with"]["persist-credentials"] is False
+
+
+@pytest.mark.parametrize("review_exit,preparation_status", [(0, "PASS"), (2, "PASS"), (7, "PASS"), (0, "UNKNOWN")])
+def test_isolated_reviewer_preloads_trusted_code_and_never_accepts_incomplete_preparation(
+    tmp_path: Path, review_exit: int, preparation_status: str
+) -> None:
+    import json
+    import venv
+
+    workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())
+    job = workflow["jobs"]["independent-review"]
+    step = next(
+        item
+        for item in job["steps"]
+        if item.get("name") == "Prepare and review through the authenticated installed controller"
+    )
+    trusted = tmp_path / "trusted"
+    for name in ("home", "tmp", "subject"):
+        (trusted / name).mkdir(parents=True)
+    venv.create(trusted / "venv", with_pip=False)
+    interpreter = trusted / "venv/bin/python"
+    site = Path(
+        subprocess.check_output(
+            [str(interpreter), "-I", "-c", "import sysconfig;print(sysconfig.get_path('purelib'))"], text=True
+        ).strip()
+    )
+    modules = {
+        "specfact_cli/__init__.py": "",
+        "specfact_cli/cli.py": (
+            "import os,json\nfrom pathlib import Path\n"
+            "root=Path(os.environ['HOME']).parent\n"
+            "assert Path.cwd() == root, 'core discovery entered the candidate subject'\n"
+            "assert not {'PYTHONPATH','GITHUB_TOKEN','GH_TOKEN','SPECFACT_MODULES_ROOTS','SPECFACT_ALLOW_UNSIGNED'} & os.environ.keys()\n"
+            "def app(*,args):\n"
+            "    assert Path.cwd() == root/'subject'\n"
+            "    (root/'argv.json').write_text(json.dumps(args))\n"
+            f"    raise SystemExit({review_exit})\n"
+        ),
+        "specfact_cli/registry/__init__.py": (
+            "import os\nfrom pathlib import Path\n"
+            "class CommandRegistry:\n"
+            "    @classmethod\n"
+            "    def get_module_typer(cls,name):\n"
+            "        root=Path(os.environ['HOME']).parent\n"
+            "        assert name=='code' and Path.cwd()==root\n"
+            "        (root/'preloaded').touch()\n"
+        ),
+        "specfact_code_review/__init__.py": "",
+        "specfact_code_review/run/__init__.py": "",
+        "specfact_code_review/run/portable_snapshot.py": (
+            "def discover_snapshot(root,*,config_path,source_snapshot):\n"
+            "    assert root==source_snapshot.root and config_path.is_file()\n"
+            "    return source_snapshot\n"
+        ),
+        "specfact_code_review/run/runtime_builder.py": (
+            "import os\nfrom pathlib import Path\n"
+            "def prepare_runtime(plan,*,runtime):\n"
+            "    root=Path(os.environ['HOME']).parent\n"
+            "    assert (root/'preloaded').exists()\n"
+            "    with (root/'prepared').open('a') as out: out.write(plan.root.name+'\\n')\n"
+        ),
+        "specfact_code_review/run/runtime_interpreter.py": "def select_environment(plan,*,current): return current\n",
+        "specfact_code_review/run/runner.py": (
+            "def _capsule_environment_id(): return 'linux-x86_64-cp312'\n"
+            "def _prepare_capsule_runtime(*,environment_id): return object(),''\n"
+            "def _cleanup_capsule_runtime(runtime): pass\n"
+        ),
+        "specfact_code_review/run/scope.py": (
+            "from types import SimpleNamespace\n"
+            "def ScopeRequest(**kw): return SimpleNamespace(**kw)\n"
+            "def resolve_scope(request):\n"
+            "    assert request.scope=='index' and request.portable_project_runtime\n"
+            f"    return SimpleNamespace(status={preparation_status!r},reason='fixture_policy_incompatible',"
+            "base_snapshot=SimpleNamespace(root=request.repository/'base'),"
+            "head_snapshot=SimpleNamespace(root=request.repository/'head'))\n"
+            "def cleanup_scope_resolution(resolution): pass\n"
+        ),
+    }
+    for name, content in modules.items():
+        path = site / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(content)
+    fake = trusted / "subject/specfact_cli"
+    fake.mkdir()
+    (fake / "__init__.py").write_text("raise AssertionError('candidate import attempted')")
+    (trusted / "project.toml").write_text('manager = "hatch"\nenvironment = "default"\n')
+    environment = os.environ | {
+        "TRUSTED_ROOT": str(trusted),
+        "GITHUB_TOKEN": "fixture-unused",
+        "GH_TOKEN": "fixture-unused",
+        "PYTHONPATH": str(trusted / "subject"),
+        "SPECFACT_MODULES_ROOTS": str(trusted / "subject"),
+        "SPECFACT_ALLOW_UNSIGNED": "1",
+    }
+    result = subprocess.run(["bash", "-c", step["run"]], env=environment, text=True, capture_output=True, check=False)
+    expected = review_exit if preparation_status == "PASS" else 1
+    assert result.returncode == expected, result.stdout + result.stderr
+    assert (trusted / "preloaded").exists()
+    if preparation_status != "PASS":
+        assert not (trusted / "argv.json").exists()
+        assert not (trusted / "prepared").exists()
+        return
+    assert (trusted / "prepared").read_text().splitlines() == ["base", "head"]
+    args = json.loads((trusted / "argv.json").read_text())
+    assert args[:3] == ["code", "review", "run"]
+    assert args[args.index("--scope") + 1] == "index"
+    assert args[args.index("--enforcement") + 1] == "changed"
+    assert "--bug-hunt" in args
+
+
+def test_trusted_bootstrap_cannot_import_candidate_venv_module(tmp_path: Path) -> None:
+    import textwrap
+
+    workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())
+    step = workflow["jobs"]["independent-review"]["steps"][2]
+    candidate = tmp_path / "candidate"
+    candidate.mkdir()
+    marker = tmp_path / "host-code-executed"
+    (candidate / "venv.py").write_text(
+        f"from pathlib import Path\nPath({str(marker)!r}).touch()\nraise SystemExit(9)\n"
+    )
+    launcher_dir = tmp_path / "launcher"
+    launcher_dir.mkdir()
+    launcher = launcher_dir / "python"
+    launcher.write_text(
+        f"#!{sys.executable}\n"
+        + textwrap.dedent("""\
+            import subprocess,sys
+            from pathlib import Path
+            result=subprocess.run([sys.executable,*sys.argv[1:]],check=False)
+            if result.returncode:
+                raise SystemExit(result.returncode)
+            target=Path(sys.argv[-1])
+            site=next((target/'lib').glob('python*/site-packages'))
+            (site/'pip/__main__.py').write_text(
+                "import sys\\nassert sys.argv[1:]==['install','--no-cache-dir','specfact-cli==0.55.4']\\n"
+            )
+            core=site/'specfact_cli'
+            core.mkdir()
+            (core/'__init__.py').write_text('')
+            (core/'cli.py').write_text(
+                "import sys\\nassert sys.argv[1:]==['module','install','nold-ai/specfact-code-review',"
+                "'--scope','user','--version','0.50.1','--source','marketplace']\\n"
+            )
+            """)
+    )
+    launcher.chmod(0o700)
+    runner_temp = tmp_path / "runner"
+    runner_temp.mkdir()
+    environment = os.environ | {
+        "RUNNER_TEMP": str(runner_temp),
+        "GITHUB_ENV": str(tmp_path / "job.env"),
+        "PATH": str(launcher_dir) + os.pathsep + os.environ["PATH"],
+    }
+    result = subprocess.run(
+        ["bash", "-c", step["run"]], cwd=candidate, env=environment, text=True, capture_output=True, check=False
+    )
+    assert not marker.exists(), "Candidate code executed on the trusted bootstrap host"
+    assert result.returncode == 0, result.stdout + result.stderr

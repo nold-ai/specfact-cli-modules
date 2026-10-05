@@ -331,6 +331,11 @@ run_code_review_gate() {
       error "Capsule review deferral requires the blocking GitHub Linux candidate review step."
       exit 1
     fi
+    if ! grep -Fq 'name: independent signed capsule review' \
+      .github/workflows/capsule-customer-execution.yml; then
+      error "Capsule review deferral requires the blocking independent signed-review job."
+      exit 1
+    fi
     local capsule_paths candidate_base
     if ! candidate_base="$(git merge-base HEAD refs/remotes/origin/dev)"; then
       error "Capsule review deferral cannot determine the PR merge-base against origin/dev."

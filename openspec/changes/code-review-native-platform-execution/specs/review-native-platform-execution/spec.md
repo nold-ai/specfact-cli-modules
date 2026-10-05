@@ -704,6 +704,16 @@ The native backend SHALL reuse portable project discovery and prepare dependenci
 - **THEN** the command SHALL return a structured diagnostic with candidates and required configuration fields
 - **AND** explicit project configuration SHALL allow the caller to repeat inspection without modifying repository setup
 
+#### Scenario: Deferred review uses independent signed controller code
+
+- **GIVEN** a candidate change can modify every reviewer helper and module in its checkout
+- **WHEN** the hosted job replaces an approved local capsule-only deferral
+- **THEN** a separate blocking review runs on a fresh VM that has never executed candidate host code, and uses the installed authenticated published module through the trusted core interpreter in isolated Python mode, with the immutable candidate index as its subject
+- **AND** isolated bootstrap and installed command loading occur outside the candidate checkout before entering the subject; candidate import paths, module roots, unsigned overrides and ambient credentials are absent from that review process
+- **AND** the review retains changed-line enforcement, all required analyzers, bug-hunt activation and the existing 300-second bound
+- **AND** unsupported published-reviewer policy or required incomplete evidence fails the job explicitly; a candidate helper returning success cannot approve it
+- **AND** candidate runtime/corpus validation remains separately required and never establishes independent reviewer authority
+
 #### Scenario: Hosted review selects its declared project environment
 
 - **WHEN** the deferred review caller reviews a repository with multiple Hatch environments
