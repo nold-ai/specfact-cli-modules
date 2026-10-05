@@ -155,8 +155,9 @@ jobs:
           test "${#review_paths[@]}" -gt 0
           review_exit=0
           SPECFACT_CODE_REVIEW_CAPSULE_CACHE="$CUSTOMER_ROOT/commit-review-cache" \
+            SPECFACT_CODE_REVIEW_SUBJECT_ROOT="$REVIEW_ROOT" \
             SPECFACT_CODE_REVIEW_ENFORCEMENT=changed \
-            "$CUSTOMER_ROOT/venv/bin/python" scripts/pre_commit_code_review.py "${review_paths[@]}" || review_exit=$?
+            "$CUSTOMER_ROOT/venv/bin/python" "$GITHUB_WORKSPACE/scripts/pre_commit_code_review.py" "${review_paths[@]}" || review_exit=$?
           if [ "$review_exit" -ne 0 ]; then
             # Print only bounded reason codes; raw reports, receipts and tool logs stay private.
             "$CUSTOMER_ROOT/venv/bin/python" - <<'PY'

@@ -295,3 +295,33 @@ def test_code_review_gate_blocks_only_findings_on_staged_lines() -> None:
         {"file": "pkg/example.py", "line": 9},
         changed_lines,
     )
+
+
+def test_review_subject_does_not_replace_authenticated_reviewer_checkout(
+    monkeypatch: MonkeyPatch, tmp_path: Path
+) -> None:
+    gate = _load_pre_commit_code_review_module()
+    subject = tmp_path / "subject"
+    subject.mkdir()
+    (subject / "packages/fake/src").mkdir(parents=True)
+    monkeypatch.setenv("SPECFACT_CODE_REVIEW_SUBJECT_ROOT", str(subject))
+    assert gate._repo_root() == subject.resolve()
+    observed = {}
+
+    def capture(command, **kwargs):
+        observed.update(kwargs)
+        return subprocess.CompletedProcess(command, 1, stdout="", stderr="")
+
+    monkeypatch.setattr(gate.subprocess, "run", capture)
+    monkeypatch.setenv("GITHUB_SHA", "a" * 40)
+    monkeypatch.delenv("PYTHONPATH", raising=False)
+    result = gate._run_review_subprocess(["fixture"], subject, ["app.py"], enforcement="changed")
+    assert result.returncode == 1
+    assert observed["cwd"] == str(subject)
+    assert observed["timeout"] == 300
+    environment = observed["env"]
+    assert environment["GITHUB_SHA"] == "a" * 40
+    assert environment["SPECFACT_CODE_REVIEW_CHANGED_DIFF"] == "cached"
+    assert environment["SPECFACT_MODULES_ROOTS"] == str((gate.REPO_ROOT / "packages").resolve())
+    assert str(subject / "packages/fake/src") not in environment["PYTHONPATH"].split(":")
+    assert str((gate.REPO_ROOT / "packages/specfact-code-review/src").resolve()) in environment["PYTHONPATH"].split(":")

@@ -2114,3 +2114,18 @@ changes another bundle; neither adds a candidate capsule delta. Enforcement,
 timeouts, signature verification and cold cache checks remain unchanged.
 
 GREEN after merge-base correction: **81** combined hosted-recipe/customer/parity cases pass.
+
+## Authenticated reviewer and staged subject separation — 2026-10-05
+
+The actual hosted reason was `candidate_payload_unavailable`: resetting the
+reviewer/subject checkout moved the imported source away from GITHUB_SHA. The
+existing authenticated candidate guard correctly rejected it. Five RED failures
+preceded the fix. GREEN: **82** hosted-recipe/customer/pre-commit cases pass.
+The helper takes an explicit absolute subject root for report, working directory
+and cached diff, but imports module/control sources only from its original
+REPO_ROOT. CI invokes that original helper in the unchanged event-authenticated
+checkout while the subject uses the disposable staged worktree. GitHub identity
+variables, tracked-payload verification, timeout and authoritative UNKNOWN exits
+remain unchanged. The unchanged native controller-loss proof also passes on the
+physical ARM64 macOS 27 machine; macOS 14 still fails pre-trace startup and is
+not accepted. No fallback, signature bypass or release acceptance is claimed.

@@ -149,8 +149,14 @@ def build_review_command(files: Sequence[str], *, enforcement: str | None = None
 
 
 def _repo_root() -> Path:
-    """Repository root (parent of ``scripts/``)."""
-    return REPO_ROOT
+    """Review subject; the imported analyzer/control payload stays at REPO_ROOT."""
+    selected = os.environ.get("SPECFACT_CODE_REVIEW_SUBJECT_ROOT", "")
+    if not selected:
+        return REPO_ROOT
+    root = Path(selected)
+    if not root.is_absolute() or not root.is_dir():
+        raise ValueError("SPECFACT_CODE_REVIEW_SUBJECT_ROOT must be an existing absolute directory")
+    return root.resolve()
 
 
 def _report_path(repo_root: Path) -> Path:
@@ -179,10 +185,10 @@ def _run_review_subprocess(
     # Ensure nested `python -m specfact_cli.cli` bootstraps this checkout's bundle sources first
     # (see `specfact_cli/__init__.py::_bootstrap_bundle_paths`) so ~/.specfact/modules tarballs do not
     # shadow in-repo `specfact_code_review` during the pre-commit gate.
-    env["SPECFACT_MODULES_REPO"] = str(repo_root.resolve())
-    env["SPECFACT_CLI_MODULES_REPO"] = str(repo_root.resolve())
-    env["SPECFACT_MODULES_ROOTS"] = str((repo_root / "packages").resolve())
-    package_src_roots = [path / "src" for path in sorted((repo_root / "packages").glob("specfact-*"))]
+    env["SPECFACT_MODULES_REPO"] = str(REPO_ROOT.resolve())
+    env["SPECFACT_CLI_MODULES_REPO"] = str(REPO_ROOT.resolve())
+    env["SPECFACT_MODULES_ROOTS"] = str((REPO_ROOT / "packages").resolve())
+    package_src_roots = [path / "src" for path in sorted((REPO_ROOT / "packages").glob("specfact-*"))]
     prefixes = [str(path) for path in package_src_roots if path.is_dir()]
     previous = env.get("PYTHONPATH", "").strip()
     if previous:

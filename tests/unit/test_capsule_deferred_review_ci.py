@@ -47,7 +47,9 @@ def test_deferred_gate_reviews_exact_staged_tree_and_propagates_failure(
     script.parent.mkdir()
     script.write_text(
         "import os, subprocess, sys\n"
+        "from pathlib import Path\n"
         "assert os.environ['SPECFACT_CODE_REVIEW_ENFORCEMENT'] == 'changed'\n"
+        "assert Path(os.environ['SPECFACT_CODE_REVIEW_SUBJECT_ROOT']).resolve() == Path.cwd()\n"
         "assert not {'GITHUB_TOKEN', 'GH_TOKEN', 'PYTHONPATH'} & os.environ.keys()\n"
         "from pathlib import Path\n"
         "cache = Path(os.environ['SPECFACT_CODE_REVIEW_CAPSULE_CACHE'])\n"
@@ -80,6 +82,7 @@ def test_deferred_gate_reviews_exact_staged_tree_and_propagates_failure(
     (customer / "venv/bin/python").symlink_to(sys.executable)
     environment = os.environ | {
         "CUSTOMER_ROOT": str(customer),
+        "GITHUB_WORKSPACE": str(repository),
         "CANDIDATE_HEAD": head,
         "CANDIDATE_BASE": base,
         "FIXTURE_GATE_EXIT": str(gate_exit),
