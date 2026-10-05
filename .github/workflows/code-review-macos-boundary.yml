@@ -8,9 +8,7 @@ on:
       - scripts/macos_managed_boundary/**
       - scripts/check_macos_boundary_ci_receipts.py
       - packages/specfact-code-review/native/macos-arm64/**
-      - packages/specfact-code-review/src/specfact_code_review/run/native_*.py
-      - packages/specfact-code-review/src/specfact_code_review/run/runner.py
-      - packages/specfact-code-review/src/specfact_code_review/run/portable_snapshot.py
+      - packages/specfact-code-review/src/specfact_code_review/run/**
       - tests/unit/test_macos_managed_*.py
       - tests/unit/test_macos_control_*.py
       - tests/unit/test_macos_boundary_ci_receipts.py

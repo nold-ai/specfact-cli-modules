@@ -353,5 +353,62 @@
     "linux_affected_coverage_and_oci_regressions": 191,
     "hosted_gate_recipe_tests": 77
   },
-  "native_normal_command_admission": "pending CI-authenticated native artifact"
+  "native_normal_command_admission": "pending CI-authenticated native artifact",
+  "full_default_discovery_proof": {
+    "artifact_identity": "sha256:78b83dd0175b1a2c87714aa8c299eb1a2673d7f9342f04a91d81371d2d16ad48",
+    "platform": "darwin-arm64-cp311",
+    "project_manager": "uv",
+    "project_catalog_used": false,
+    "cold_preparation": true,
+    "offline_reuse": true,
+    "pytest_testpaths_declared": false,
+    "assurance_kind": "full",
+    "native_pytest_result_provenance": "project-origin-v1",
+    "verdict": "PASS",
+    "analyzers": [
+      {
+        "id": "ruff",
+        "execution_state": "ran"
+      },
+      {
+        "id": "radon",
+        "execution_state": "ran"
+      },
+      {
+        "id": "semgrep-clean",
+        "execution_state": "ran"
+      },
+      {
+        "id": "ai-bloat-ast",
+        "execution_state": "ran"
+      },
+      {
+        "id": "ast-clean-code",
+        "execution_state": "ran"
+      },
+      {
+        "id": "basedpyright",
+        "execution_state": "ran"
+      },
+      {
+        "id": "pylint",
+        "execution_state": "ran"
+      },
+      {
+        "id": "contracts",
+        "execution_state": "ran"
+      },
+      {
+        "id": "semgrep-bugs",
+        "execution_state": "ran"
+      },
+      {
+        "id": "targeted-pytest-coverage",
+        "execution_state": "ran"
+      }
+    ],
+    "production_eligible": false,
+    "large_inventory_test_files": 66,
+    "large_inventory_verdict": "PASS"
+  }
 }

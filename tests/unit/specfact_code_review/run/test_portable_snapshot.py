@@ -188,7 +188,9 @@ def test_project_snapshot_configures_basedpyright_for_platform_runtime(
         None,
         backend=backend,
     )
-    plan = cast(ProjectPlan, SimpleNamespace(identity="sha256:" + "c" * 64, source_roots=()))
+    plan = cast(
+        ProjectPlan, SimpleNamespace(root=tmp_path, identity="sha256:" + "c" * 64, source_roots=(), pytest_config={})
+    )
 
     portable_snapshot._run_project_snapshot(
         runtime,
@@ -204,8 +206,10 @@ def test_project_snapshot_configures_basedpyright_for_platform_runtime(
 
 
 @pytest.mark.parametrize("projection_fails", [False, True])
+@pytest.mark.parametrize("full_discovery", [False, True])
+@pytest.mark.parametrize("declared_roots", [["tests"], ["."], []])
 def test_darwin_project_snapshot_binds_native_managed_pytest_contract(
-    tmp_path: Path, monkeypatch, projection_fails
+    tmp_path: Path, monkeypatch, projection_fails, full_discovery, declared_roots
 ) -> None:
     (tmp_path / "pytest.ini").write_text("[pytest]\ntestpaths=tests\n")
     source = tmp_path / "app.py"
@@ -230,7 +234,7 @@ def test_darwin_project_snapshot_binds_native_managed_pytest_contract(
     monkeypatch.setattr(
         portable_snapshot,
         "select_test_paths",
-        lambda *_args, **_kwargs: ("tests/test_runtime.py",),
+        lambda *_args, **_kwargs: () if full_discovery else ("tests/test_runtime.py",),
     )
     if projection_fails:
 
@@ -242,7 +246,10 @@ def test_darwin_project_snapshot_binds_native_managed_pytest_contract(
     def run_snapshot(_runtime, _request, settings):
         observed.append(settings)
         assert settings.member_argv is not None
-        assert settings.member_argv["contracts"] == ("contract-inputs-v1", "--test-root", "tests")
+        contract_argv = settings.member_argv["contracts"]
+        assert contract_argv[0] == "contract-inputs-v2" and len(contract_argv) == 2
+        inventory = json.loads((settings.config_roots[-1] / "contracts-native.json").read_text())
+        assert inventory["test_roots"] == (["tests"] if declared_roots == ["tests"] else ["tests/test_runtime.py"])
         if projection_fails:
             assert settings.unavailable_members["targeted-pytest-coverage"]["evidence_outcome"] == "UNKNOWN"
             return runner.CapsuleSnapshotResult({}, {})
@@ -250,7 +257,8 @@ def test_darwin_project_snapshot_binds_native_managed_pytest_contract(
         assert argv[0] == "-c"
         assert argv[2:4] == ("--rootdir", "/opt/specfact/snapshot")
         assert argv[4] == "--cov-config"
-        assert argv[-2:] == ("--", "tests/test_runtime.py")
+        assert argv[-1:] == ("--",) if full_discovery else argv[-2:] == ("--", "tests/test_runtime.py")
+        assert runner._complete_snapshot_pytest("targeted-pytest-coverage", settings)
         assert "portable-pytest-v2" not in argv
         assert settings.portable_runtime is False
         assert len(settings.config_roots) == 3
@@ -269,7 +277,9 @@ def test_darwin_project_snapshot_binds_native_managed_pytest_contract(
     )
     plan = cast(
         ProjectPlan,
-        SimpleNamespace(identity="sha256:" + "c" * 64, source_roots=(), pytest_config={"testpaths": ["tests"]}),
+        SimpleNamespace(
+            root=tmp_path, identity="sha256:" + "c" * 64, source_roots=(), pytest_config={"testpaths": declared_roots}
+        ),
     )
 
     portable_snapshot._run_project_snapshot(
@@ -698,3 +708,40 @@ def test_projected_toml_coverage_enforces_requested_threshold(tmp_path):
     path = tmp_path / "coveragerc.toml"
     path.write_text("[tool.coverage.report]\nfail_under=99\n")
     assert runner._coverage_threshold_from_policy_argv(("--cov-config", str(path))) == 99
+
+
+def test_contract_default_inventory_does_not_exclude_production_sources(tmp_path):
+    from specfact_code_review.run.native_worker import _validated_adapter_argv
+    from specfact_code_review.run.portable_worker import contract_inputs
+
+    (tmp_path / "app.py").write_text("def calculate(): return 1\n")
+    plan = cast(ProjectPlan, SimpleNamespace(root=tmp_path, pytest_config={}))
+    assert contract_inputs(plan) == ("contract-inputs-v2",)
+    path = portable_snapshot._write_native_contract_inventory(plan, tmp_path)
+    assert json.loads(path.read_text())["test_roots"] == []
+    argv = ["contract-inputs-v2", "/opt/specfact/config/1/" + path.name]
+    assert _validated_adapter_argv("contracts", argv) == argv
+    assert not runner._path_is_below_test_root(Path("app.py"), ())
+
+
+def test_native_contract_inventory_keeps_transport_bounded(tmp_path):
+    from specfact_code_review.run.native_worker import _native_contract_roots, _validated_adapter_argv
+
+    tests = tmp_path / "tests"
+    tests.mkdir()
+    for index in range(64):
+        (tests / f"test_{index}.py").write_text("def test_value(): assert True\n")
+    configs = tmp_path / ".specfact-native-config/1"
+    configs.mkdir(parents=True)
+    plan = cast(ProjectPlan, SimpleNamespace(root=tmp_path, pytest_config={}))
+    path = portable_snapshot._write_native_contract_inventory(plan, configs)
+    argv = ["contract-inputs-v2", "/opt/specfact/config/1/" + path.name]
+    assert _validated_adapter_argv("contracts", argv) == argv
+    bound = ["contract-inputs-v2", str(path)]
+    assert len(_native_contract_roots(bound, tmp_path)) == 64
+    document = json.loads(path.read_text())
+    path.chmod(0o600)
+    document["test_roots"] = ["../host"]
+    path.write_text(json.dumps(document))
+    with pytest.raises(ValueError):
+        _native_contract_roots(bound, tmp_path)

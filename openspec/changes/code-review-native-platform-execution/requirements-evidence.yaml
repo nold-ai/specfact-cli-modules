@@ -474,6 +474,21 @@ requirements:
       kind: config_file
       locator: openspec/changes/code-review-native-platform-execution/PROJECT_DRIVEN_PREPARATION_CONTRACT.md
     verification_cases:
+    - case_id: 460-15-7
+      scenario_id: prepare-unfamiliar-projects-from-discovered-or-caller-supplied-setup
+      method: inspection
+      intent: "Inspect acceptance: Full native pytest uses normal project discovery."
+      observable: "Successful empty full inventory still binds policy and complete pytest execution; unsupported selection remains UNKNOWN."
+    - case_id: 460-15-8
+      scenario_id: prepare-unfamiliar-projects-from-discovered-or-caller-supplied-setup
+      method: inspection
+      intent: "Inspect acceptance: Default contract discovery preserves production inputs."
+      observable: "Default-discovery actual test filenames and explicit empty versioned inventory retain production CrossHair inputs; no whole-project exclusion."
+    - case_id: 460-15-9
+      scenario_id: prepare-unfamiliar-projects-from-discovered-or-caller-supplied-setup
+      method: inspection
+      intent: "Inspect acceptance: Native integration changes schedule ARM64 checks."
+      observable: "The entire run integration package triggers the unchanged ARM64 boundary matrix."
     - case_id: 460-15-5
       scenario_id: prepare-unfamiliar-projects-from-discovered-or-caller-supplied-setup
       method: inspection

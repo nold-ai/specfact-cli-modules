@@ -195,14 +195,14 @@ def _validated_adapter_argv(member: str, raw: object) -> list[str]:
         )
     elif member == "contracts":
         valid = (
-            len(argv) >= 3
+            (len(argv) >= 3 and argv[0] == "contract-inputs-v1")
             and len(argv[1:]) % 2 == 0
-            and argv[0] == "contract-inputs-v1"
             and all(
                 flag == "--test-root" and _safe_relative(value)
                 for flag, value in zip(argv[1::2], argv[2::2], strict=True)
             )
         )
+        valid = valid or (len(argv) == 2 and argv[0] == "contract-inputs-v2" and bool(_CONFIG_PATH.fullmatch(argv[1])))
     elif member == "targeted-pytest-coverage":
         try:
             separator = argv.index("--")
@@ -536,6 +536,39 @@ def _patched_adapter(module: ModuleType, *, tool: str, managed_run: ManagedRun) 
     return stack
 
 
+def _native_contract_roots(argv: list[str], project: Path) -> tuple[Path, ...]:
+    """Read only a bounded sealed inventory under the materialized config grant."""
+    if argv[:1] != ["contract-inputs-v2"]:
+        return tuple(Path(value) for value in argv[2::2])
+    if len(argv) != 2:
+        raise WorkerContractError("invalid native contract manifest request")
+    path = Path(argv[1])
+    if not path.is_relative_to(project / ".specfact-native-config") or path.is_symlink():
+        raise WorkerContractError("contract inventory escapes the sealed config grant")
+    with path.open("rb") as handle:
+        payload = handle.read(_MAX_REQUEST_BYTES + 1)
+    if len(payload) > _MAX_REQUEST_BYTES:
+        raise WorkerContractError("contract inventory exceeds its admitted byte limit")
+    document = json.loads(payload)
+    if (
+        not isinstance(document, dict)
+        or set(document) != {"schema", "test_roots"}
+        or document["schema"] != "contract-inputs-v2"
+    ):
+        raise WorkerContractError("invalid native contract inventory schema")
+    roots = document["test_roots"]
+    if (
+        not isinstance(roots, list)
+        or len(roots) > _MAX_PATHS
+        or any(
+            not isinstance(root, str) or len(root.encode()) > _MAX_PATH_BYTES or not _safe_relative(root) or root == "."
+            for root in roots
+        )
+    ):
+        raise WorkerContractError("invalid native contract inventory paths")
+    return tuple(Path(value) for value in roots)
+
+
 def _standard_external_adapter(
     member: str,
     paths: list[Path],
@@ -561,7 +594,7 @@ def _standard_external_adapter(
             return cast(list[ReviewFinding], function(paths, full_result=bool(adapter_argv)))
         if member == "contracts":
             transport = cast(ReplayTransport, getattr(managed_run, "__self__", None))
-            test_roots = tuple(Path(value) for value in adapter_argv[2::2]) if adapter_argv else ()
+            test_roots = _native_contract_roots(adapter_argv, transport.project) if adapter_argv else ()
             crosshair_files = [
                 path
                 for path in paths
@@ -673,7 +706,11 @@ def _pytest_external_adapter(
                 patch.object(
                     module,
                     "_evaluate_complete_tdd_gate",
-                    partial(module._evaluate_complete_tdd_gate, snapshot_root=transport.project),
+                    partial(
+                        module._evaluate_complete_tdd_gate,
+                        snapshot_root=transport.project,
+                        allow_project_discovery=True,
+                    ),
                 )
             )
         stack.enter_context(patch.object(module, "_pytest_python_executable", lambda: "capsule-tool:pytest"))

@@ -356,7 +356,9 @@ def checked_exception_port(trial: JsonObject) -> None:
     status = trial["status"]
     assert status["state"] == "exited" and status["exit"] == 37 and status["signal"] == 0
     assert status["traced"] is True
-    assert any(f"exception-port-{kind}-status={code}-installed=0" in status["output"].splitlines() for code in (0, 8))
+    assert any(
+        f"exception-port-{kind}-status={code}-installed=0" in status["output"].splitlines() for code in (0, 8, 53)
+    )
     assert f"exception-swap-{kind}-installed=0" in status["output"].splitlines()
     assert f"exception-clear-{kind}-preserved=1" in status["output"].splitlines()
 

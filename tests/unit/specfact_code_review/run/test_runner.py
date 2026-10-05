@@ -7825,3 +7825,72 @@ def test_cached_portable_request_carries_repository_and_index_context(tmp_path, 
     runner_api._run_local_capsule_context(object(), [], runner_api.ReviewOptions(), {}, "worktree")
     assert requests[0].source_snapshot is cached
     assert cached.commit == "index-" + "b" * 40
+
+
+@pytest.mark.parametrize("observation", ["pass", "empty", "conflict", "low-coverage", "doctest"])
+def test_native_project_full_discovery_retains_outcomes_and_coverage(
+    monkeypatch: MonkeyPatch, tmp_path: Path, observation: str
+) -> None:
+    runner_api = _c14_runner()
+    source = tmp_path / "app.py"
+    source.write_text("VALUE = 1\n")
+    test = tmp_path / "test_app.py"
+    test.write_text("def test_app(): pass\n")
+    policy = tmp_path / "pytest.ini"
+    policy.write_text("[pytest]\ntestpaths = /opt/specfact/snapshot\n")
+    config = tmp_path / "coveragerc"
+    config.write_text("[report]\nfail_under = 90\n")
+    records = [] if observation == "empty" else [{"nodeid": "test_app.py::test_app", "phase": "call", "passed": True}]
+    junit = '<testsuites><testsuite><testcase classname="test_app" name="test_app" /></testsuite></testsuites>'
+    if observation in {"empty", "conflict"}:
+        junit = "<testsuites/>"
+    paths = _write_complete_pytest_evidence(tmp_path, source, records, junit)
+    if observation == "doctest":
+        paths[1].write_text(json.dumps([*records, {"nodeid": "app.py::app", "phase": "call", "passed": True}]))
+        paths[2].write_text(
+            '<testsuites><testsuite><testcase classname="test_app" name="test_app" /><testcase classname="app" name="app" /></testsuite></testsuites>'
+        )
+    if observation in {"low-coverage", "doctest"}:
+        paths[0].write_text(json.dumps({"files": {str(source): {"summary": {"percent_covered": 80.0}}}}))
+    invoked = []
+
+    def execute(selectors, **_kwargs):
+        invoked.append(selectors)
+        return subprocess.CompletedProcess(["pytest"], 0, "", ""), *paths
+
+    monkeypatch.setattr(runner_api, "_run_pytest_inventory_with_coverage", execute)
+    findings, coverage = runner_api._evaluate_complete_tdd_gate(
+        [source, test],
+        ("-c", str(policy), "--cov-config", str(config), "--"),
+        snapshot_root=tmp_path,
+        allow_project_discovery=True,
+    )
+    assert invoked == [()]
+    if observation == "pass":
+        assert findings == []
+        assert coverage == {str(source): 100.0}
+    else:
+        assert findings and findings[0].severity == "error"
+        if observation == "doctest":
+            assert any(finding.rule == "TEST_COVERAGE_LOW" and finding.file == str(source) for finding in findings)
+            assert coverage is not None and coverage[str(source)] == 80.0
+        if observation not in {"low-coverage", "doctest"}:
+            assert coverage is None
+
+
+def test_protected_complete_inventory_still_rejects_empty_selectors(monkeypatch: MonkeyPatch, tmp_path: Path) -> None:
+    runner_api = _c14_runner()
+    source = tmp_path / "app.py"
+    source.write_text("VALUE = 1\n")
+    policy = tmp_path / "pytest.ini"
+    policy.write_text("[pytest]\ntestpaths = /opt/specfact/snapshot\n")
+    monkeypatch.setattr(
+        runner_api,
+        "_run_pytest_inventory_with_coverage",
+        lambda *_args, **_kwargs: pytest.fail("protected empty inventory executed"),
+    )
+    findings, coverage = runner_api._evaluate_complete_tdd_gate(
+        [source], ("-c", str(policy), "--"), snapshot_root=tmp_path
+    )
+    assert len(findings) == 1 and coverage is None
+    assert "no collected selectors" in findings[0].message

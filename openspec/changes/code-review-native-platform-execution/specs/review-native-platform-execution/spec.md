@@ -727,6 +727,26 @@ The native backend SHALL reuse portable project discovery and prepare dependenci
 - **THEN** the JSON primary takes precedence as defined upstream, its complete bounded reference graph is sealed, and malformed or unsafe selected JSON remains incomplete evidence without TOML fallback
 - **AND** ignored TOML cannot suppress governed findings; projection and anti-suppression checks remain mandatory
 
+#### Scenario: Full native pytest uses normal project discovery
+
+- **WHEN** full native review selects an empty positional test inventory for normal pytest discovery
+- **THEN** the controller still binds the projected pytest and coverage policies, marks complete inventory and executes project-origin-v1 tests without inventing selectors
+- **AND** a failed selection or unsupported policy remains UNKNOWN
+- **AND** native project-origin full discovery reconciles nonempty observer/JUnit outcomes and strict production coverage; protected complete inventories still reject absent selectors
+- **AND** production modules collected as doctests retain the production coverage threshold
+
+#### Scenario: Default contract discovery preserves production inputs
+
+- **WHEN** testpaths is absent or dot, including a project with no test files
+- **THEN** contracts receive a valid versioned inventory of actual test files, excluding only those files from CrossHair while retaining production sources
+- **AND** empty test inventory does not exclude the entire project or accept path escapes
+- **AND** the native v2 inventory is a bounded sealed configuration file rather than one launch argument per test file; projects with 64 or more tests retain the existing worker argument-count limit
+
+#### Scenario: Native integration changes schedule ARM64 checks
+
+- **WHEN** a file in the runtime integration package changes
+- **THEN** the native matrix workflow is scheduled even when the basename does not start with native_
+
 ### Requirement: Equivalent execution on supported physical machines and full virtual machines
 Support SHALL depend on guest OS/build, CPU architecture, Python ABI and required kernel capabilities. A matching-architecture full VM SHALL be eligible for the same acceptance as a physical machine. VM detection SHALL NOT reject an otherwise supported environment or weaken isolation. Full-system CPU emulation SHALL be recorded as supplemental evidence; translated user-mode binaries SHALL NOT establish native acceptance for their translated architecture. Windows and Linux ARM64 remain follow-ups; this delivery covers macOS ARM64 and Linux x86-64.
 

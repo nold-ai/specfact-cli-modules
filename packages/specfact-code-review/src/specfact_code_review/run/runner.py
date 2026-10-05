@@ -7131,6 +7131,8 @@ def _evaluate_pytest_execution(
     allow_project_omitted_initializers: bool = True,
     coverage_threshold: float = _COVERAGE_THRESHOLD,
     blocking_low_coverage: bool = False,
+    discovery_snapshot: Path | None = None,
+    discovery_test_patterns: tuple[str, ...] = (),
 ) -> tuple[list[ReviewFinding], dict[str, float] | None]:
     anchor = source_files[0] if source_files else Path("/opt/specfact/snapshot")
     pytest_skip = skip_if_pytest_unavailable(anchor)
@@ -7158,6 +7160,17 @@ def _evaluate_pytest_execution(
         )
         if outcome.status != "PASS":
             return [_pytest_outcome_finding(anchor, status=outcome.status)], None
+        if discovery_snapshot is not None:
+            if not observer:
+                raise ValueError("project_full_pytest_collected_no_tests")
+            test_files = set()
+            for record in observer:
+                relative = Path(str(record.get("nodeid", "")).split("::", maxsplit=1)[0])
+                if relative.is_absolute() or ".." in relative.parts or relative.suffix != ".py":
+                    raise ValueError("project_full_pytest_test_path_invalid")
+                if any(fnmatch.fnmatch(relative.name, pattern) for pattern in discovery_test_patterns):
+                    test_files.add(discovery_snapshot / relative)
+            source_files = [path for path in source_files if path not in test_files]
         coverage_payload = json.loads(coverage_path.read_text(encoding="utf-8"))
     except (OSError, ValueError, json.JSONDecodeError, ET.ParseError) as exc:
         return [
@@ -7216,7 +7229,11 @@ def _complete_pytest_coverage_roots(
 
 
 def _evaluate_complete_tdd_gate(
-    files: list[Path], adapter_argv: tuple[str, ...], *, snapshot_root: Path = Path("/opt/specfact/snapshot")
+    files: list[Path],
+    adapter_argv: tuple[str, ...],
+    *,
+    snapshot_root: Path = Path("/opt/specfact/snapshot"),
+    allow_project_discovery: bool = False,
 ) -> tuple[list[ReviewFinding], dict[str, float] | None]:
     """Execute the controller-supplied complete immutable pytest inventory."""
     policy_argv, selectors = _split_pytest_adapter_argv(adapter_argv)
@@ -7231,7 +7248,7 @@ def _evaluate_complete_tdd_gate(
         and file_path.name != "conftest.py"
         and not _is_below_any_root(file_path, coverage_test_roots)
     ]
-    if not selectors:
+    if not selectors and not allow_project_discovery:
         anchor = source_files[0] if source_files else snapshot_root
         return [
             tool_error(
@@ -7240,6 +7257,12 @@ def _evaluate_complete_tdd_gate(
                 message="Complete pytest inventory contains no collected selectors.",
             )
         ], None
+    discovery_patterns: tuple[str, ...] = ()
+    if not selectors and allow_project_discovery:
+        parser = configparser.ConfigParser(interpolation=None)
+        with Path(policy_argv[policy_argv.index("-c") + 1]).open(encoding="utf-8") as handle:
+            parser.read_file(handle)
+        discovery_patterns = tuple(parser.get("pytest", "python_files", fallback="test_*.py *_test.py").split())
     return _evaluate_pytest_execution(
         source_files,
         lambda: _run_pytest_inventory_with_coverage(selectors, policy_argv=policy_argv),
@@ -7247,6 +7270,8 @@ def _evaluate_complete_tdd_gate(
         allow_project_omitted_initializers=False,
         coverage_threshold=_coverage_threshold_from_policy_argv(policy_argv),
         blocking_low_coverage=True,
+        discovery_snapshot=snapshot_root if not selectors and allow_project_discovery else None,
+        discovery_test_patterns=discovery_patterns,
     )
 
 

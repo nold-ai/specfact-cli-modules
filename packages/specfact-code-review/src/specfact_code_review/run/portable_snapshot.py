@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import os
-import shlex
 import shutil
 import tempfile
 from contextlib import ExitStack
@@ -14,7 +13,12 @@ from typing import Any
 
 from icontract import require
 
-from specfact_code_review.run.portable_worker import DEPENDENT_MEMBERS, preparation_failure_snapshot, select_test_paths
+from specfact_code_review.run.portable_worker import (
+    DEPENDENT_MEMBERS,
+    contract_inputs,
+    preparation_failure_snapshot,
+    select_test_paths,
+)
 from specfact_code_review.run.runtime_artifacts import load_runtime
 from specfact_code_review.run.runtime_builder import copy_project, prepare_runtime
 from specfact_code_review.run.runtime_discovery import discover_project
@@ -104,6 +108,19 @@ def _write_native_basedpyright_config(
     )
     config.chmod(0o400)
     return config
+
+
+def _write_native_contract_inventory(plan: ProjectPlan, config_root: Path) -> Path:
+    """Bind large and empty native test inventories without widening launch budgets."""
+    inputs = contract_inputs(plan)
+    roots = list(inputs[2::2]) if inputs[0] == "contract-inputs-v1" else []
+    payload = json.dumps({"schema": "contract-inputs-v2", "test_roots": roots}, separators=(",", ":")).encode()
+    if len(payload) > 16 << 20:
+        raise ProjectRuntimeError("project_contract_inventory_too_large")
+    path = config_root / "contracts-native.json"
+    path.write_bytes(payload)
+    path.chmod(0o400)
+    return path
 
 
 @require(lambda request: request.snapshot_root.is_dir())
@@ -229,9 +246,11 @@ def _run_project_snapshot(
     }
     native_backend = getattr(runtime, "backend", "linux-x86_64") == "darwin-arm64"
     native_test_selectors: tuple[str, ...] = ()
+    native_test_selection_complete = False
     if not options.no_tests:
         try:
             native_test_selectors = tuple(select_test_paths(plan, files, full=assurance_kind == "full"))
+            native_test_selection_complete = True
             if not native_backend:
                 arguments["targeted-pytest-coverage"] = (
                     "portable-pytest-v2",
@@ -249,7 +268,7 @@ def _run_project_snapshot(
     with ExitStack() as cleanup:
         config_roots: tuple[Path, ...] = ()
         if native_backend:
-            if native_test_selectors:
+            if native_test_selection_complete:
                 builder = _PolicyBindingBuilder()
                 try:
                     _bind_pytest_coverage_policy(builder, snapshot_root, local_project_assurance=assurance_kind)
@@ -265,16 +284,6 @@ def _run_project_snapshot(
                 finally:
                     for root in dict.fromkeys(builder.cleanup_roots):
                         cleanup.callback(shutil.rmtree, root, ignore_errors=True)
-            declared_tests = getattr(plan, "pytest_config", {}).get("testpaths", [])
-            test_roots = shlex.split(declared_tests) if isinstance(declared_tests, str) else declared_tests
-            roots = [value for value in test_roots if value not in {"", "."}]
-            if roots:
-                arguments["contracts"] = (
-                    "contract-inputs-v1",
-                    *(value for root in roots for value in ("--test-root", root)),
-                )
-            else:
-                arguments.pop("contracts", None)
             temporary_parent = Path(tempfile.gettempdir()).resolve(strict=True)
             directory = cleanup.enter_context(
                 tempfile.TemporaryDirectory(prefix="specfact-native-basedpyright-", dir=temporary_parent)
@@ -285,6 +294,11 @@ def _run_project_snapshot(
                 raise ProjectRuntimeError("project_native_basedpyright_source_root_invalid")
             config = _write_native_basedpyright_config(snapshot_root, files, config_root, source_roots=tuple(roots))
             config_roots = (*config_roots, config_root)
+            contract_config = _write_native_contract_inventory(plan, config_root)
+            arguments["contracts"] = (
+                "contract-inputs-v2",
+                f"/opt/specfact/config/{len(config_roots)}/{contract_config.name}",
+            )
             arguments["basedpyright"] = (
                 "--project",
                 f"/opt/specfact/config/{len(config_roots)}/{config.name}",

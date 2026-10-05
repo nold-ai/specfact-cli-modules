@@ -797,3 +797,29 @@ def test_optimized_python_cannot_admit_empty_evidence():
     )
     assert result.returncode != 0
     assert "requires enabled assertions" in result.stderr
+
+
+def test_native_workflow_covers_runtime_integration_paths():
+    import fnmatch
+
+    workflow = yaml.safe_load((ROOT / ".github/workflows/code-review-macos-boundary.yml").read_text())
+    paths = workflow.get("on", workflow.get(True))["pull_request"]["paths"]
+    for basename in (
+        "runtime_native.py",
+        "runtime_builder.py",
+        "runtime_interpreter.py",
+        "runtime_domains.py",
+        "target_bootstrap.py",
+    ):
+        path = f"packages/specfact-code-review/src/specfact_code_review/run/{basename}"
+        assert any(fnmatch.fnmatch(path, pattern) for pattern in paths), path
+
+
+@pytest.mark.parametrize("kind", ["task", "thread"])
+def test_exception_receipt_accepts_explicit_kernel_policy_denial(boundary_ci, kind):
+    trial = _control_trial(f"exec-exception-{kind}")
+    trial["status"]["output"] = trial["status"]["output"].replace("status=0", "status=53")
+    boundary_ci["checked_exception_port"](trial)
+    trial["status"]["output"] = trial["status"]["output"].replace("preserved=1", "preserved=0")
+    with pytest.raises(AssertionError):
+        boundary_ci["checked_exception_port"](trial)
