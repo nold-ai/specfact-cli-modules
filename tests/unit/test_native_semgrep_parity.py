@@ -111,7 +111,7 @@ class NativeSemgrepParityTests(unittest.TestCase):
         self.assertFalse(parity.assess_case("parse_error", error, self._row(payload()))["passed"])
         self.assertFalse(parity.assess_case("invalid_rule", error, error)["passed"])
         invalid = self._row(payload(errors=[{"type": "Rule parse error", "level": "error"}], scanned=[]), 7)
-        self.assertTrue(parity.assess_case("invalid_rule", invalid, invalid)["passed"])
+        self.assertFalse(parity.assess_case("invalid_rule", invalid, invalid)["passed"])
         self.assertFalse(parity.assess_case("invalid_rule", invalid, {**invalid, "returncode": 2})["passed"])
 
     def test_partial_parsing_variant_preserves_error_locations(self):
@@ -284,3 +284,147 @@ class SourceProvenanceTests(unittest.TestCase):
         self.assertNotIn("harness_sha256", report)
         self.assertEqual(report["smoke_sha256"], parity.hashlib.sha256(parity.SMOKE_SOURCE).hexdigest())
         self.assertEqual(parity.smoke.CLEAN, captured)
+
+
+class DependencyParityContracts(unittest.TestCase):
+    def test_nested_rule_layout_is_mandatory_and_uses_literal_rule_ids(self):
+        self.assertIn("nested_clean_code_defective", parity.CASES)
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary).resolve()
+            parity.prepare_fixture(directory, "nested_clean_code_defective", {"clean_code": b"rules: []\n"})
+            self.assertTrue((directory / ".semgrep/clean_code.yaml").is_file())
+            assets = {"python": Path(sys.executable), "frontend": directory / "semgrep", "core": directory / "core"}
+            for frontend in ("python", "native"):
+                argv, _ = parity.build_command(frontend, assets, directory, "nested_clean_code_defective")
+                self.assertIn("--no-rewrite-rule-ids", argv)
+                self.assertEqual(argv[-2], str(directory / ".semgrep/clean_code.yaml"))
+
+    def test_equal_wrong_invalid_rule_exit_never_passes(self):
+        canonical = {"findings": [], "errors": [{"type": "Rule parse error", "level": "error"}], "scanned": []}
+        row = {"canonical": canonical, "returncode": 2}
+        self.assertFalse(parity.assess_case("invalid_rule", row, row)["passed"])
+
+    def test_receipt_exposes_counts_and_never_admits_dependencies(self):
+        rows = {name: {"passed": True} for name in parity.CASES}
+        receipt = parity.make_receipt(rows, system="Darwin", machine="arm64")
+        self.assertEqual(receipt["matched_cases"], len(parity.CASES))
+        self.assertEqual(receipt["required_cases"], len(parity.CASES))
+        self.assertIs(receipt["dependency_admitted"], False)
+
+
+class DistributionBindingTests(unittest.TestCase):
+    def test_distribution_metadata_is_hash_pinned_before_execution(self):
+        self.assertIn("metadata", parity.ASSET_PINS)
+        path, digest = parity.ASSET_PINS["metadata"]
+        self.assertEqual(path, parity.SITE / f"semgrep-{parity.VERSION}.dist-info/METADATA")
+        with tempfile.TemporaryDirectory() as temporary:
+            changed = Path(temporary).resolve() / "METADATA"
+            changed.write_bytes(b"Name: semgrep\nVersion: 1.175.0\nRequires-Dist: unreviewed\n")
+            with (
+                patch.object(parity, "ASSET_PINS", {"metadata": (changed, digest)}),
+                self.assertRaisesRegex(ValueError, "SHA-256"),
+            ):
+                parity.validate_assets()
+
+
+class VersionedAdapterTests(unittest.TestCase):
+    setUp = NativeSemgrepParityTests.setUp
+    _canonical = NativeSemgrepParityTests._canonical
+
+    def invalid_native(self):
+        data = payload(
+            errors=[
+                {
+                    "code": 2,
+                    "type": "Rule parse error",
+                    "level": "error",
+                    "rule_id": "invalid-pattern",
+                    "message": "invalid pattern retained",
+                }
+            ],
+            scanned=[],
+        )
+        return {
+            "returncode": 7,
+            "stdout": json.dumps(data),
+            "stderr": "raw failure",
+            "canonical": self._canonical(data),
+        }
+
+    def test_real_discovery_becomes_legacy_selected_paths_without_claiming_analysis(self):
+        native = self.invalid_native()
+        discovery = {"returncode": 0, "stdout": "fixture.py\n", "stderr": ""}
+        adapted = parity.adapt_native_result(native, discovery, self.directory)
+        self.assertEqual(adapted["schema"], "specfact-semgrep-1.175.0-legacy-result-v1")
+        self.assertEqual(adapted["returncode"], 2)
+        self.assertEqual(adapted["payload"]["errors"], json.loads(native["stdout"])["errors"])
+        self.assertEqual(adapted["payload"]["paths"]["scanned"], ["fixture.py"])
+        self.assertEqual(adapted["analyzed_targets"], [])
+        self.assertEqual(native["returncode"], 7)
+        self.assertEqual(native["canonical"]["scanned"], [])
+
+    def test_missing_failed_duplicate_outside_or_empty_discovery_rejects(self):
+        for discovery in (
+            None,
+            {"returncode": 1, "stdout": "fixture.py\n"},
+            {"returncode": 0, "stdout": ""},
+            {"returncode": 0, "stdout": "fixture.py\nfixture.py\n"},
+            {"returncode": 0, "stdout": "../customer.py\n"},
+        ):
+            with self.subTest(discovery=discovery), self.assertRaises(ValueError):
+                parity.adapt_native_result(self.invalid_native(), discovery, self.directory)
+
+    def test_other_error_types_and_findings_are_never_mapped_to_rule_failure(self):
+        for update in (
+            {"results": [finding()]},
+            {"errors": [{"code": 7, "type": "SemgrepError", "level": "error", "message": "missing config"}]},
+            {"version": "1.176.0"},
+        ):
+            native = self.invalid_native()
+            data = json.loads(native["stdout"])
+            data.update(update)
+            native["stdout"] = json.dumps(data)
+            with self.subTest(update=update), self.assertRaises(ValueError):
+                parity.adapt_native_result(native, {"returncode": 0, "stdout": "fixture.py\n"}, self.directory)
+
+    def test_error_code_and_message_are_semantic_and_never_discarded(self):
+        data = payload(errors=[{"code": 2, "type": "Rule parse error", "level": "error", "message": "first"}])
+        first = self._canonical(data)
+        data["errors"][0]["message"] = "changed"
+        self.assertNotEqual(first, self._canonical(data))
+        data["errors"][0]["message"] = "first"
+        data["errors"][0]["code"] = 7
+        self.assertNotEqual(first, self._canonical(data))
+
+
+class CompleteAdapterErrorTests(unittest.TestCase):
+    setUp = NativeSemgrepParityTests.setUp
+    _canonical = NativeSemgrepParityTests._canonical
+
+    def test_error_columns_and_offsets_are_compared_as_part_of_complete_structure(self):
+        data = payload(
+            errors=[
+                {
+                    "code": 3,
+                    "type": "Syntax error",
+                    "level": "warn",
+                    "message": "syntax failed",
+                    "path": "fixture.py",
+                    "spans": [{"file": "fixture.py", "start": {"line": 2, "col": 5, "offset": 0}}],
+                }
+            ]
+        )
+        reference = {"returncode": 0, "stdout": json.dumps(data), "canonical": self._canonical(data)}
+        data["errors"][0]["spans"][0]["start"]["col"] = 6
+        native = {"returncode": 0, "stdout": json.dumps(data), "discovery": {"returncode": 0, "stdout": "fixture.py\n"}}
+        self.assertFalse(parity.assess_adapter_case("parse_error", reference, native, self.directory)["passed"])
+
+
+class RawErrorControlTests(unittest.TestCase):
+    def test_reference_and_native_rule_failure_controls_have_distinct_pinned_statuses(self):
+        errors = [{"type": "Rule parse error", "level": "error", "code": 2, "message": "failed pattern"}]
+        reference = {"returncode": 2, "canonical": {"findings": [], "errors": errors, "scanned": ["fixture.py"]}}
+        native = {"returncode": 7, "canonical": {"findings": [], "errors": errors, "scanned": []}}
+        compared = parity.assess_case("invalid_rule", reference, native)
+        self.assertEqual(compared["positive_controls"], {"python": True, "native": True})
+        self.assertFalse(compared["passed"])

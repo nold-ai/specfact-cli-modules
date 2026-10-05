@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 
+from specfact_code_review.run import runtime_domains
 from specfact_code_review.run.runtime_domains import _top_level_imports, member_dependency_graphs
 from specfact_code_review.run.runtime_models import ProjectRuntimeError
 
@@ -58,6 +59,36 @@ def test_missing_member_dependency_cannot_be_silently_omitted(tmp_path: Path) ->
     _distribution(tmp_path, "pylint", dependencies=("absent>=1",))
     with pytest.raises(ProjectRuntimeError, match="project_analyzer_dependency_missing:pylint:absent"):
         member_dependency_graphs({"installed": []}, tmp_path)
+
+
+def test_native_graph_does_not_require_prohibited_python_basedpyright_closure(tmp_path: Path) -> None:
+    _distribution(tmp_path, "pylint")
+    _distribution(tmp_path, "radon")
+    graphs, conflicts = runtime_domains.native_member_dependency_graphs({"installed": []}, tmp_path)
+    assert set(graphs) == {"pylint", "crosshair", "pytest-observe"}
+    assert conflicts == {}
+    assert "basedpyright" not in str(graphs)
+
+
+def test_native_graph_preserves_independent_members_when_a_project_dependency_conflicts(tmp_path: Path) -> None:
+    _distribution(tmp_path, "pylint", dependencies=("shared>=2",))
+    _distribution(tmp_path, "radon")
+    _distribution(tmp_path, "shared")
+    inventory = {"installed": [{"metadata": {"name": "shared", "version": "1", "requires_dist": []}}]}
+    graphs, conflicts = runtime_domains.native_member_dependency_graphs(inventory, tmp_path)
+    assert "pylint" not in graphs
+    assert "pylint" in conflicts
+    assert "pytest-observe" in graphs
+
+
+def test_native_graph_rejects_project_version_conflicts_with_pinned_analyzer_entry(tmp_path: Path) -> None:
+    _distribution(tmp_path, "pylint", dependencies=("astroid>=1",))
+    _distribution(tmp_path, "astroid")
+    inventory = {"installed": [{"metadata": {"name": "astroid", "version": "2.0", "requires_dist": []}}]}
+    graphs, conflicts = runtime_domains.native_member_dependency_graphs(inventory, tmp_path)
+    assert "pylint" not in graphs
+    assert "astroid" in conflicts["pylint"]
+    assert "pytest-observe" in graphs
 
 
 @pytest.mark.parametrize("version,conflict", [("7.0", True), ("8.4", False)])

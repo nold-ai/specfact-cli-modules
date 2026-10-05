@@ -40,6 +40,7 @@ CONTROL_RACES = (
     "exec-cancel-held",
     "exec-eof-held",
     "exec-broker-kill-held",
+    "exec-identity-swap",
 )
 PROTOCOL_CASES = (
     "output-status",
@@ -61,12 +62,15 @@ PROTOCOL_CASES = (
     "peer-pidversion",
     "term-ignored",
     "runtime-trap",
+    "bootstrap-identity",
     "exec-status",
     "exec-runtime-trap",
     "exec-bootstrap-trap",
     "exec-failed",
     "exec-second-image",
     "exec-modified-target",
+    "exec-exception-task",
+    "exec-exception-thread",
 )
 BROKER_INPUTS = (
     "mach-exception-defs",
@@ -95,6 +99,7 @@ _FAILURE_PHASES = frozenset(
         "bootstrap-register",
         "bootstrap-socket",
         "marker-broker",
+        "marker-bootstrap-identity",
         "marker-trace",
         "marker-output",
         "marker-exec",
@@ -294,6 +299,16 @@ def checked_exec_lifecycle(trial: JsonObject) -> None:
     """Require independent traced identity and removal inside the original bound."""
     case, identity = trial["case"], trial["worker_identity"]
     _checked_birth_identity(identity)
+    assert trial["bootstrap_identity"] == {
+        "bootstrap_identity": identity["pid"],
+        "suspended": True,
+        "output_empty": True,
+    }
+    marker = trial["image_stop"]
+    assert isinstance(marker, dict)
+    assert _is_integer(marker["exec"]) and marker["exec"] == identity["pid"]
+    assert _is_integer(marker["verified_ns"]) and marker["verified_ns"] > 0
+    assert marker["held"] is case.endswith("-held")
     if case.endswith("-held"):
         assert identity["pgid"] != identity["pid"]
     else:
@@ -305,13 +320,69 @@ def checked_exec_lifecycle(trial: JsonObject) -> None:
         _checked_job_removal(trial)
 
 
+def checked_identity_swap(trial: JsonObject) -> None:
+    """A real foreign signed image must be rejected at its held kernel stop."""
+    identity = trial["worker_identity"]
+    _checked_birth_identity(identity)
+    assert trial["bootstrap_identity"] == {
+        "bootstrap_identity": identity["pid"],
+        "suspended": True,
+        "output_empty": True,
+    }
+    assert identity["pgid"] != identity["pid"]
+    _checked_removal_seconds(trial["observation_seconds"])
+    assert trial["job_removed"] is True
+    assert _is_integer(trial["native_proof_deadline_ns"]) and trial["native_proof_deadline_ns"] > 0
+    rejection = trial["image_rejection"]
+    assert _is_integer(rejection["exec_identity_failure"]) and rejection["exec_identity_failure"] == identity["pid"]
+    assert rejection["stage"] == "foreign"
+    assert rejection["status"] == -67050  # Native Security errSecCSReqFailed.
+    assert rejection["output_complete"] is True and rejection["initializer_seen"] is False
+    foreign = trial["foreign_payload"]
+    source = (SOURCE / "control_target.c").read_bytes() + b"\nvolatile const unsigned int foreign_identity = 1;\n"
+    assert foreign["source_sha256"] == hashlib.sha256(source).hexdigest()
+    assert valid_digest(foreign["sha256"])
+    assert "flags=0x10002(adhoc,runtime)" in foreign["signing"] and "Signature=adhoc" in foreign["signing"]
+    assert foreign["entitlements"].strip() == ""
+    positive = foreign["positive_output"].splitlines()
+    assert "target-positive-ok" in positive
+    assert sum(line.startswith("target-initializer-ns=") for line in positive) == 1
+
+
+def checked_exception_port(trial: JsonObject) -> None:
+    """Unadapted native calls cannot steal the broker's signal exception route."""
+    kind = trial["case"].removeprefix("exec-exception-")
+    assert kind in ("task", "thread") and trial["installed"] is False
+    status = trial["status"]
+    assert status["state"] == "exited" and status["exit"] == 37 and status["signal"] == 0
+    assert status["traced"] is True
+    assert any(f"exception-port-{kind}-status={code}-installed=0" in status["output"].splitlines() for code in (0, 8))
+    assert f"exception-swap-{kind}-installed=0" in status["output"].splitlines()
+    assert f"exception-clear-{kind}-preserved=1" in status["output"].splitlines()
+
+
+def checked_bootstrap_identity(trial: JsonObject) -> None:
+    """Bind suspended-process verification to the exact worker returned by wait."""
+    status = trial["status"]
+    marker = trial["bootstrap_identity"]
+    assert status["state"] == "exited" and status["exit"] == 37 and status["signal"] == 0
+    assert _is_integer(status["pid"]) and status["pid"] > 1
+    assert marker == {
+        "bootstrap_identity": status["pid"],
+        "suspended": True,
+        "output_empty": True,
+    }
+
+
 def _checked_control_inputs(item: JsonObject, digest: JsonObject) -> None:
     """Enforce empty entitlements and exact role-specific input snapshots."""
     assert item["entitlements"].strip() == ""
     if item["name"] == "broker":
         assert item["signal_transport"] == "mach-exception-v1"
         digest["build_inputs"] = checked_inputs(item, BROKER_INPUTS)
-    elif item["name"] in ("worker", "target"):
+    elif item["name"] == "worker":
+        digest["build_inputs"] = checked_inputs(item, ("control_probes.h", "control_resource.h"))
+    elif item["name"] == "target":
         digest["build_inputs"] = checked_inputs(item, ("control_probes.h",))
 
 
@@ -343,7 +414,7 @@ def checked_artifacts(name: str, artifacts: list[JsonObject]) -> JsonObject:
 def _checked_header(name: str, report: JsonObject, context: JsonObject) -> None:
     """Validate the suite schema, native platform and mandatory repetition claim."""
     assert name in ("startup", "control")
-    version = 1 if name == "startup" else 2
+    version = 1 if name == "startup" else 4
     assert report["schema_version"] == f"specfact-managed-{name}-experiment-v{version}"
     assert report["architecture"] == "arm64"
     assert report["os_build"] == context["os_build"]
@@ -389,14 +460,21 @@ def _checked_startup_trials(report: JsonObject, counts: collections.Counter[str]
 def _checked_control_trials(
     trials: list[JsonObject], counts: collections.Counter[str], expected: dict[str, int]
 ) -> None:
-    """Control v2 admits exactly the required protocol and lifecycle cases."""
+    """Control v3 admits exactly the required protocol and lifecycle cases."""
     assert counts == collections.Counter({**expected, **dict.fromkeys(PROTOCOL_CASES, 1)})
     assert not any(trial.get("abandon_process_group") for trial in trials)
     for trial in trials:
         case = trial["case"]
+        if case == "bootstrap-identity":
+            checked_bootstrap_identity(trial)
+            continue
         if not case.startswith("exec-"):
             continue
-        if case in CONTROL_RACES:
+        if case == "exec-identity-swap":
+            checked_identity_swap(trial)
+        elif case.startswith("exec-exception-"):
+            checked_exception_port(trial)
+        elif case in CONTROL_RACES:
             checked_exec_lifecycle(trial)
         elif case in PROTOCOL_CASES:
             checked_exec_protocol(trial)
@@ -550,7 +628,7 @@ def run_suite(name: str, root: Path, context: JsonObject) -> JsonObject:
                 [sys.executable, "-B", str(SOURCE / f"{name}.py"), "--repetitions", "100", "--out", str(receipt_path)],
                 stdout=log,
                 stderr=subprocess.STDOUT,
-                timeout=720,
+                timeout=720 if name == "startup" else 900,
                 check=False,
             )
         if process.returncode == 0:
@@ -587,7 +665,9 @@ def main() -> int:
         summary.write("Bounded startup/control fixtures; production flags remain false.\n\n")
         summary.write("| Suite | Result | Check SHA-256 |\n| --- | --- | --- |\n")
         for name in ("startup", "control"):
-            _LOGGER.info("Starting %s: 100 repetitions, serial, 720-second ceiling.", name)
+            _LOGGER.info(
+                "Starting %s: 100 repetitions, serial, %s-second ceiling.", name, 720 if name == "startup" else 900
+            )
             checks = run_suite(name, root, context)
             digest = hashlib.sha256(json.dumps(checks, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
             _LOGGER.info("%s", json.dumps({**checks, "check_sha256": digest}, sort_keys=True))

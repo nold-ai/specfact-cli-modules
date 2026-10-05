@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ast
+import hashlib
 import importlib.machinery
 import importlib.util
 import json
@@ -381,7 +382,11 @@ def _control_artifact(boundary_ci, name, source):
         "signing": "flags=0x10002(adhoc,runtime)\nSignature=adhoc\nCDHash=" + "a" * 40,
         "entitlements": "",
     }
-    inputs = {"broker": BROKER_INPUTS, "worker": ("control_probes.h",), "target": ("control_probes.h",)}
+    inputs = {
+        "broker": BROKER_INPUTS,
+        "worker": ("control_probes.h", "control_resource.h"),
+        "target": ("control_probes.h",),
+    }
     if name in inputs:
         item["build_inputs"] = [_control_input(boundary_ci, filename) for filename in inputs[name]]
     if name == "broker":
@@ -401,6 +406,29 @@ def _cancel_status(held):
     }
 
 
+def _identity_swap_fields():
+    fields = _exec_lifecycle_fields("exec-eof-held")
+    fields.pop("image_stop")
+    fields["foreign_payload"] = {
+        "source_sha256": hashlib.sha256(
+            (ROOT / "scripts/macos_managed_boundary/control_target.c").read_bytes()
+            + b"\nvolatile const unsigned int foreign_identity = 1;\n"
+        ).hexdigest(),
+        "sha256": "a" * 64,
+        "signing": "flags=0x10002(adhoc,runtime)\nSignature=adhoc",
+        "entitlements": "",
+        "positive_output": "target-initializer-ns=99\ntarget-positive-ok\n",
+    }
+    fields["image_rejection"] = {
+        "exec_identity_failure": 400,
+        "stage": "foreign",
+        "status": -67050,
+        "output_complete": True,
+        "initializer_seen": False,
+    }
+    return fields
+
+
 def _exec_lifecycle_fields(case):
     """Supply complete independent birth, tracing and bounded removal observations."""
     held, cancel = case.endswith("-held"), "cancel" in case
@@ -413,6 +441,8 @@ def _exec_lifecycle_fields(case):
             "start_sec": 123,
             "start_usec": 456,
         },
+        "bootstrap_identity": {"bootstrap_identity": 400, "suspended": True, "output_empty": True},
+        "image_stop": {"exec": 400, "verified_ns": 100, "held": held},
         "observation_seconds": 0.2,
         "job_removed": None if cancel else True,
         "native_proof_deadline_ns": None if cancel else 200,
@@ -449,8 +479,35 @@ def _exec_protocol_fields(case):
 def _control_trial(case):
     """Attach exec evidence only to the matching lifecycle or protocol fixture."""
     trial = {"case": case, "passed": True}
-    if case in EXEC_LIFECYCLE:
+    if case == "bootstrap-identity":
+        trial.update(
+            {
+                "bootstrap_identity": {
+                    "bootstrap_identity": 400,
+                    "suspended": True,
+                    "output_empty": True,
+                },
+                "status": {"pid": 400, "state": "exited", "exit": 37, "signal": 0, "traced": True},
+            }
+        )
+    elif case == "exec-identity-swap":
+        trial.update(_identity_swap_fields())
+    elif case in EXEC_LIFECYCLE:
         trial.update(_exec_lifecycle_fields(case))
+    elif case.startswith("exec-exception-"):
+        kind = case.removeprefix("exec-exception-")
+        trial.update(
+            {
+                "installed": False,
+                "status": {
+                    "state": "exited",
+                    "exit": 37,
+                    "signal": 0,
+                    "traced": True,
+                    "output": f"exception-port-{kind}-status=0-installed=0\nexception-swap-{kind}-installed=0\nexception-clear-{kind}-preserved=1",
+                },
+            }
+        )
     elif case in EXEC_PROTOCOL:
         trial.update(_exec_protocol_fields(case))
     return trial
@@ -458,7 +515,7 @@ def _control_trial(case):
 
 @pytest.fixture(name="control_receipt")
 def fixture_control_receipt(boundary_ci, startup_receipt):
-    """Build a complete v2 receipt with the exact native artifact and trial closure."""
+    """Build a complete v3 receipt with the exact native artifact and trial closure."""
     races = tuple(dict.fromkeys(boundary_ci["CONTROL_RACES"] + EXEC_LIFECYCLE))
     protocol = tuple(dict.fromkeys(boundary_ci["PROTOCOL_CASES"] + EXEC_PROTOCOL))
     sources = {
@@ -469,7 +526,7 @@ def fixture_control_receipt(boundary_ci, startup_receipt):
     }
     return {
         **startup_receipt,
-        "schema_version": "specfact-managed-control-experiment-v2",
+        "schema_version": "specfact-managed-control-experiment-v4",
         "control_subset_passed": True,
         "trials": [_control_trial(case) for case in races for _ in range(100)]
         + [_control_trial(case) for case in protocol],
@@ -478,12 +535,29 @@ def fixture_control_receipt(boundary_ci, startup_receipt):
     }
 
 
-def test_complete_control_v2_receipt_is_accepted(boundary_ci, control_receipt):
+def test_complete_control_v4_receipt_is_accepted(boundary_ci, control_receipt):
     checks = boundary_ci["checked_receipt"]("control", control_receipt, {"os_build": "26A434"})
     assert checks["result"] == "passed"
-    assert checks["protocol_checks"] == 25
-    assert len(checks["completed_races"]) == 19
+    assert checks["protocol_checks"] == 28
+    assert len(checks["completed_races"]) == 20
     assert set(checks["artifacts"]) == {"broker", "worker", "observer", "target"}
+
+
+@pytest.mark.parametrize(
+    "marker",
+    [
+        None,
+        {},
+        {"bootstrap_identity": 401, "suspended": True, "output_empty": True},
+        {"bootstrap_identity": 400, "suspended": False, "output_empty": True},
+        {"bootstrap_identity": 400, "suspended": True, "output_empty": False},
+    ],
+)
+def test_bootstrap_identity_protocol_requires_exact_suspended_process(boundary_ci, control_receipt, marker):
+    trial = next(item for item in control_receipt["trials"] if item["case"] == "bootstrap-identity")
+    trial["bootstrap_identity"] = marker
+    with pytest.raises((AssertionError, KeyError, TypeError)):
+        boundary_ci["checked_receipt"]("control", control_receipt, {"os_build": "26A434"})
 
 
 @pytest.mark.parametrize("case", EXEC_LIFECYCLE + EXEC_PROTOCOL)
@@ -558,6 +632,37 @@ def test_incomplete_or_misordered_target_evidence_is_rejected(boundary_ci, contr
 def test_wrong_exec_wait_status_is_rejected(boundary_ci, control_receipt, case):
     next(item for item in control_receipt["trials"] if item["case"] == case)["status"]["signal"] = 9
     with pytest.raises((AssertionError, KeyError, ValueError)):
+        boundary_ci["checked_receipt"]("control", control_receipt, {"os_build": "26A434"})
+
+
+@pytest.mark.parametrize(
+    "field,value",
+    [("stage", "lookup"), ("output_complete", False), ("initializer_seen", True), ("exec_identity_failure", 401)],
+)
+def test_live_identity_swap_requires_observed_preinitializer_rejection(boundary_ci, control_receipt, field, value):
+    trial = {"case": "exec-identity-swap", "passed": True, **_identity_swap_fields()}
+    trial["image_rejection"][field] = value
+    check = boundary_ci["checked_identity_swap"]
+    with pytest.raises((AssertionError, KeyError, ValueError, TypeError)):
+        check(trial)
+
+
+@pytest.mark.parametrize("case", EXEC_LIFECYCLE)
+@pytest.mark.parametrize(
+    "marker",
+    [None, {}, {"exec": 401, "verified_ns": 100, "held": False}, {"exec": 400, "verified_ns": True, "held": False}],
+)
+def test_lifecycle_without_matching_verified_image_is_rejected(boundary_ci, control_receipt, case, marker):
+    next(item for item in control_receipt["trials"] if item["case"] == case)["image_stop"] = marker
+    with pytest.raises((AssertionError, KeyError, ValueError, TypeError)):
+        boundary_ci["checked_receipt"]("control", control_receipt, {"os_build": "26A434"})
+
+
+@pytest.mark.parametrize("case", EXEC_LIFECYCLE)
+def test_lifecycle_with_wrong_image_hold_state_is_rejected(boundary_ci, control_receipt, case):
+    trial = next(item for item in control_receipt["trials"] if item["case"] == case)
+    trial["image_stop"]["held"] = not case.endswith("-held")
+    with pytest.raises(AssertionError):
         boundary_ci["checked_receipt"]("control", control_receipt, {"os_build": "26A434"})
 
 

@@ -1,5 +1,5 @@
 name: nold-ai/specfact-code-review
-version: 0.50.1
+version: 0.51.0
 commands:
   - code
 tier: official
@@ -20,15 +20,26 @@ authenticated_resources:
     digest: sha256:dd399ca740ef6f2c5c4a0c3351aab5bb92a12a9a3b3e338a045822ef71fc6e47
     checkpoint_contract: project_runtime_contract
   resources/contracts/pr-range-v1-suppression-catalog.json:
-    digest: sha256:32346a8a0848bc024b1330c37ab5bdcf12f092460cce904ebbab831f6d276375
+    digest: sha256:3cc769700bc97d6a13b1a9c3554b66453aa319cf229795e7cede4d917ff13f3b
     checkpoint_contract: suppression_catalog_contract
   resources/contracts/review-report-schema-1.6-consumer-matrix.json:
-    digest: sha256:bb826ae8317039eb5da7ce11822d5a54a2043af6341b4f6ec08b14eb4a5b52fc
+    digest: sha256:827d8f28dabe82be0d1c0e7a438b3b15f62f2a8832f6b4f73d46134cde49194f
     checkpoint_contract: schema-1.6-consumer-matrix-v1
+  resources/contracts/native-capsule-catalog-v1.json:
+    digest: sha256:37a278cb3cecc21ba8fe0d81b3ec3413b4adbd89596ea04bd69f879006dc014d
+    checkpoint_contract: native_capsule_catalog_v1
+  resources/contracts/native-python-versions-v1.json:
+    digest: sha256:a8104e15a29a19cf31e93bc886115ca41c4c416845da0b9332efc65ed9bc21c8
+    checkpoint_contract: native_python_versions_v1
+  resources/contracts/native-project-acquisition-catalog-v1.json:
+    digest: sha256:da064e1631499ca159950c2394118531df9bd2818b65d2221ef9228d146f2a2e
+    checkpoint_contract: native_project_acquisition_catalog_v1
+  resources/keys/project-acquisition-public.pem:
+    digest: sha256:4e54ffb02307e1a85c166c40aba6d1bc40fbb9a8ef40bf756f8870e5bb08d1c8
+    checkpoint_contract: native_project_acquisition_trust_v1
 core_compatibility: '>=0.55.1,<1.0.0'
 description: Official SpecFact code review bundle package.
 category: codebase
 bundle_group_command: code
 integrity:
-  checksum: sha256:25bb1137bc0bb3254713e6001a767d6ac73d01f12868d8f29148b8280084b3ee
-  signature: +ZtHk940rQ8FS6Tbh67+rY2V9BAV2SR8S2qtJNt3EUT390N7ksDZFvxDAfwnnzK/vF8KF3ZTdorRSO7QhxAjAQ==
+  checksum: sha256:b9c387ce25ed1eb1fd44630e046ffd83425ee954372e6b3799993ee4f9ee21c7

@@ -97,13 +97,14 @@ def build(root: Path, source: Path, tools: BuildTools) -> tuple[Path, Path, list
     (root / "clock-verification.json").write_text(json.dumps(tools.clock(), indent=2) + "\n")
     args, inputs = _inputs(root, source, tools)
     probes = _capture(root, source, "control_probes.h")
+    resources = _capture(root, source, "control_resource.h")
     target, worker, observer, broker = (root / f"control-{name}" for name in ("target", "worker", "observer", "broker"))
     target_item = _compile(source / "control_target.c", target, tools, [f"-I{root}"])
     target_item["build_inputs"] = [probes.copy()]
     target_hash = _cdhash(target_item, tools)
     target_macro = "-DFIXED_TARGET=" + json.dumps(str(target))
     worker_item = _compile(source / "control_worker.c", worker, tools, [f"-I{root}", target_macro])
-    worker_item["build_inputs"] = [probes.copy()]
+    worker_item["build_inputs"] = [probes.copy(), resources]
     worker_hash = _cdhash(worker_item, tools)
     observer_item = _compile(source / "startup_observe.c", observer, tools, [])
     args += [

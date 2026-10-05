@@ -1200,6 +1200,7 @@
     "hidden": false,
     "install_prerequisite": "specfact module install nold-ai/specfact-code-review",
     "options": [
+      "--acquisition-url",
       "--json",
       "--offline",
       "--project-config"

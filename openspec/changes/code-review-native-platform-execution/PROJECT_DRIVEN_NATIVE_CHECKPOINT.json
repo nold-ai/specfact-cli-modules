@@ -1,0 +1,357 @@
+{
+  "schema": "specfact-native-local-checkpoint-v1",
+  "date": "2026-10-05",
+  "platform": {
+    "os": "macOS",
+    "version": "27.0.1",
+    "build": "26A434",
+    "architecture": "arm64",
+    "python": "3.11.16"
+  },
+  "artifact_identity": "sha256:36787480dc13c581ac950affd678cf3513767df706b8c955e3bf255033de606a",
+  "signing_mode": "adhoc",
+  "execution_authority": "private-maintainer-candidate",
+  "production_eligible": false,
+  "complete_boundary_accepted": false,
+  "customer_installation_accepted": false,
+  "supported_release_matrix_accepted": false,
+  "project_catalog_required": false,
+  "caller_checkouts_clean": true,
+  "projects": [
+    {
+      "project": "requests",
+      "controller_exit": 0,
+      "production_eligible": false,
+      "artifact_identity": "sha256:36787480dc13c581ac950affd678cf3513767df706b8c955e3bf255033de606a",
+      "cold_preparation": true,
+      "offline_reuse": true,
+      "project_catalog_used": false,
+      "verdict": "FAIL",
+      "analyzers": [
+        {
+          "id": "ruff",
+          "execution_state": "ran",
+          "diagnostic": ""
+        },
+        {
+          "id": "radon",
+          "execution_state": "ran",
+          "diagnostic": ""
+        },
+        {
+          "id": "semgrep-clean",
+          "execution_state": "ran",
+          "diagnostic": ""
+        },
+        {
+          "id": "ai-bloat-ast",
+          "execution_state": "ran",
+          "diagnostic": ""
+        },
+        {
+          "id": "ast-clean-code",
+          "execution_state": "ran",
+          "diagnostic": ""
+        },
+        {
+          "id": "basedpyright",
+          "execution_state": "ran",
+          "diagnostic": ""
+        },
+        {
+          "id": "pylint",
+          "execution_state": "ran",
+          "diagnostic": ""
+        },
+        {
+          "id": "contracts",
+          "execution_state": "ran",
+          "diagnostic": ""
+        },
+        {
+          "id": "semgrep-bugs",
+          "execution_state": "ran",
+          "diagnostic": ""
+        },
+        {
+          "id": "targeted-pytest-coverage",
+          "execution_state": "ran",
+          "diagnostic": ""
+        }
+      ],
+      "pytest_outcome": "PASS"
+    },
+    {
+      "project": "flask",
+      "controller_exit": 0,
+      "production_eligible": false,
+      "artifact_identity": "sha256:36787480dc13c581ac950affd678cf3513767df706b8c955e3bf255033de606a",
+      "cold_preparation": true,
+      "offline_reuse": true,
+      "project_catalog_used": false,
+      "verdict": "FAIL",
+      "analyzers": [
+        {
+          "id": "ruff",
+          "execution_state": "ran",
+          "diagnostic": ""
+        },
+        {
+          "id": "radon",
+          "execution_state": "ran",
+          "diagnostic": ""
+        },
+        {
+          "id": "semgrep-clean",
+          "execution_state": "ran",
+          "diagnostic": ""
+        },
+        {
+          "id": "ai-bloat-ast",
+          "execution_state": "ran",
+          "diagnostic": ""
+        },
+        {
+          "id": "ast-clean-code",
+          "execution_state": "ran",
+          "diagnostic": ""
+        },
+        {
+          "id": "basedpyright",
+          "execution_state": "ran",
+          "diagnostic": ""
+        },
+        {
+          "id": "pylint",
+          "execution_state": "ran",
+          "diagnostic": ""
+        },
+        {
+          "id": "contracts",
+          "execution_state": "ran",
+          "diagnostic": ""
+        },
+        {
+          "id": "semgrep-bugs",
+          "execution_state": "ran",
+          "diagnostic": ""
+        },
+        {
+          "id": "targeted-pytest-coverage",
+          "execution_state": "ran",
+          "diagnostic": ""
+        }
+      ],
+      "pytest_outcome": "PASS"
+    },
+    {
+      "project": "poetry",
+      "controller_exit": 0,
+      "production_eligible": false,
+      "artifact_identity": "sha256:36787480dc13c581ac950affd678cf3513767df706b8c955e3bf255033de606a",
+      "cold_preparation": true,
+      "offline_reuse": true,
+      "project_catalog_used": false,
+      "verdict": "FAIL",
+      "analyzers": [
+        {
+          "id": "ruff",
+          "execution_state": "ran",
+          "diagnostic": ""
+        },
+        {
+          "id": "radon",
+          "execution_state": "ran",
+          "diagnostic": ""
+        },
+        {
+          "id": "semgrep-clean",
+          "execution_state": "ran",
+          "diagnostic": ""
+        },
+        {
+          "id": "ai-bloat-ast",
+          "execution_state": "ran",
+          "diagnostic": ""
+        },
+        {
+          "id": "ast-clean-code",
+          "execution_state": "ran",
+          "diagnostic": ""
+        },
+        {
+          "id": "basedpyright",
+          "execution_state": "ran",
+          "diagnostic": ""
+        },
+        {
+          "id": "pylint",
+          "execution_state": "ran",
+          "diagnostic": ""
+        },
+        {
+          "id": "contracts",
+          "execution_state": "ran",
+          "diagnostic": ""
+        },
+        {
+          "id": "semgrep-bugs",
+          "execution_state": "ran",
+          "diagnostic": ""
+        },
+        {
+          "id": "targeted-pytest-coverage",
+          "execution_state": "ran",
+          "diagnostic": ""
+        }
+      ],
+      "pytest_outcome": "PASS"
+    },
+    {
+      "project": "hatch",
+      "controller_exit": 0,
+      "production_eligible": false,
+      "artifact_identity": "sha256:36787480dc13c581ac950affd678cf3513767df706b8c955e3bf255033de606a",
+      "cold_preparation": true,
+      "offline_reuse": true,
+      "project_catalog_used": false,
+      "verdict": "FAIL",
+      "analyzers": [
+        {
+          "id": "ruff",
+          "execution_state": "ran",
+          "diagnostic": ""
+        },
+        {
+          "id": "radon",
+          "execution_state": "ran",
+          "diagnostic": ""
+        },
+        {
+          "id": "semgrep-clean",
+          "execution_state": "ran",
+          "diagnostic": ""
+        },
+        {
+          "id": "ai-bloat-ast",
+          "execution_state": "ran",
+          "diagnostic": ""
+        },
+        {
+          "id": "ast-clean-code",
+          "execution_state": "ran",
+          "diagnostic": ""
+        },
+        {
+          "id": "basedpyright",
+          "execution_state": "ran",
+          "diagnostic": ""
+        },
+        {
+          "id": "pylint",
+          "execution_state": "ran",
+          "diagnostic": ""
+        },
+        {
+          "id": "contracts",
+          "execution_state": "ran",
+          "diagnostic": ""
+        },
+        {
+          "id": "semgrep-bugs",
+          "execution_state": "ran",
+          "diagnostic": ""
+        },
+        {
+          "id": "targeted-pytest-coverage",
+          "execution_state": "ran",
+          "diagnostic": ""
+        }
+      ],
+      "pytest_outcome": "PASS"
+    },
+    {
+      "project": "auto-uv",
+      "controller_exit": 0,
+      "production_eligible": false,
+      "artifact_identity": "sha256:36787480dc13c581ac950affd678cf3513767df706b8c955e3bf255033de606a",
+      "cold_preparation": true,
+      "offline_reuse": true,
+      "project_catalog_used": false,
+      "verdict": "PASS",
+      "analyzers": [
+        {
+          "id": "ruff",
+          "execution_state": "ran",
+          "diagnostic": ""
+        },
+        {
+          "id": "radon",
+          "execution_state": "ran",
+          "diagnostic": ""
+        },
+        {
+          "id": "semgrep-clean",
+          "execution_state": "ran",
+          "diagnostic": ""
+        },
+        {
+          "id": "ai-bloat-ast",
+          "execution_state": "ran",
+          "diagnostic": ""
+        },
+        {
+          "id": "ast-clean-code",
+          "execution_state": "ran",
+          "diagnostic": ""
+        },
+        {
+          "id": "basedpyright",
+          "execution_state": "ran",
+          "diagnostic": ""
+        },
+        {
+          "id": "pylint",
+          "execution_state": "ran",
+          "diagnostic": ""
+        },
+        {
+          "id": "contracts",
+          "execution_state": "ran",
+          "diagnostic": ""
+        },
+        {
+          "id": "semgrep-bugs",
+          "execution_state": "ran",
+          "diagnostic": ""
+        },
+        {
+          "id": "targeted-pytest-coverage",
+          "execution_state": "ran",
+          "diagnostic": ""
+        }
+      ],
+      "pytest_outcome": "PASS"
+    }
+  ],
+  "checks": {
+    "focused_tests": 149,
+    "full_suite_passed": 4921,
+    "full_suite_skipped": 73,
+    "contract_tests": 28,
+    "linux_supplemental_regressions": 279,
+    "linux_validation": "x86-64 userspace emulation on ARM64 Docker guest; no release acceptance",
+    "format_types_lint": "passed",
+    "yaml_bundle_manifest_verification": "passed",
+    "strict_openspec": "passed",
+    "independent_refactor_review": "no findings",
+    "oci_integrity_regressions": 121,
+    "independent_oci_allocation_review": "no findings",
+    "native_coverage_regressions": 70,
+    "independent_integration_review": "finding corrected; closure no findings",
+    "normal_commit_gate": "maintainer approved local capsule-only deferral to required exact-head GitHub Linux CI; all remaining local gate components retained",
+    "linux_affected_coverage_and_oci_regressions": 191,
+    "hosted_gate_recipe_tests": 77
+  },
+  "native_normal_command_admission": "pending CI-authenticated native artifact"
+}

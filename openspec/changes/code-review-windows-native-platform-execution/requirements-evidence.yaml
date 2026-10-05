@@ -1,0 +1,49 @@
+schema_version: '2'
+requirements:
+  openspec:code-review-windows-native-platform-execution:review-windows-native-execution:project-driven-windows-preparation:
+    rationale: Define the linked Windows follow-up without claiming implemented Windows support.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#495
+    touchpoints:
+    - id: openspec-source-spec
+      kind: config_file
+      locator: openspec/changes/code-review-windows-native-platform-execution/specs/review-windows-native-execution/spec.md
+    verification_cases:
+    - case_id: 495-1-1
+      scenario_id: project-driven-windows-preparation
+      method: inspection
+      intent: "Inspect planned acceptance: Unfamiliar configured project."
+      observable: "Unfamiliar repositories prepare with the authentic selected manager in disposable domains without publisher catalog entries or checkout/environment mutation; ambiguous discovery returns candidates and required configuration. Planned only; no Windows execution or release acceptance is claimed."
+  openspec:code-review-windows-native-platform-execution:review-windows-native-execution:proven-windows-execution-boundary:
+    rationale: Define the linked Windows follow-up without claiming implemented Windows support.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#495
+    touchpoints:
+    - id: openspec-source-spec
+      kind: config_file
+      locator: openspec/changes/code-review-windows-native-platform-execution/specs/review-windows-native-execution/spec.md
+    verification_cases:
+    - case_id: 495-2-1
+      scenario_id: proven-windows-execution-boundary
+      method: inspection
+      intent: "Inspect planned acceptance: Preparation or boundary capability is unavailable."
+      observable: "Missing preparation or kernel capabilities preserve independent findings and incomplete required evidence; no host fallback or PASS is permitted. Planned only; no Windows execution or release acceptance is claimed."
+  openspec:code-review-windows-native-platform-execution:review-windows-native-execution:equivalent-physical-and-vm-acceptance:
+    rationale: Define the linked Windows follow-up without claiming implemented Windows support.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#495
+    touchpoints:
+    - id: openspec-source-spec
+      kind: config_file
+      locator: openspec/changes/code-review-windows-native-platform-execution/specs/review-windows-native-execution/spec.md
+    verification_cases:
+    - case_id: 495-3-1
+      scenario_id: equivalent-physical-and-vm-acceptance
+      method: inspection
+      intent: "Inspect planned acceptance: Clean matching-architecture Windows VM."
+      observable: "A full matching Windows x86-64 VM under an ordinary user and normal protections can satisfy the same complete installation/runtime acceptance as physical compute; VM status neither rejects execution nor weakens isolation. Planned only; no Windows execution or release acceptance is claimed."
+    - case_id: 495-3-2
+      scenario_id: equivalent-physical-and-vm-acceptance
+      method: inspection
+      intent: "Inspect planned acceptance: Translated applications on ARM64 Windows."
+      observable: "Translated x86-64 applications in an ARM64 Windows guest remain supplemental and cannot establish native Windows x86-64 acceptance. Planned only; no Windows execution or release acceptance is claimed."

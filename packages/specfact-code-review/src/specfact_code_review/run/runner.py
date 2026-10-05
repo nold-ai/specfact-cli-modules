@@ -18,7 +18,7 @@ import sys
 import tempfile
 import tomllib
 import xml.etree.ElementTree as ET
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Mapping
 from contextlib import ExitStack, chdir, suppress
 from dataclasses import dataclass, field, replace
 from functools import lru_cache, partial
@@ -30,7 +30,7 @@ from beartype import beartype
 from icontract import ensure, require
 
 from specfact_code_review._review_utils import normalize_path_variants, tool_error
-from specfact_code_review.run import differential, scope, toolchain
+from specfact_code_review.run import differential, native_backend, native_execution, scope, toolchain
 from specfact_code_review.run.findings import (
     PR_RANGE_CONDITIONAL_ANALYZERS,
     PR_RANGE_REQUIRED_ANALYZERS,
@@ -113,6 +113,39 @@ _ANALYZER_SCAN_EXCLUDED_DIRECTORIES = frozenset(
         "venv",
     }
 )
+_NATIVE_MEMBER_PLANS = {
+    "ruff": "analyzer.ruff.v1",
+    "radon": "analyzer.radon.v1",
+    "semgrep-clean": "analyzer.semgrep-clean.v1",
+    "ai-bloat-ast": "analyzer.ai-bloat-ast.v1",
+    "ast-clean-code": "analyzer.ast-clean-code.v1",
+    "basedpyright": "analyzer.basedpyright.v1",
+    "pylint": "analyzer.pylint.v1",
+    "contracts": "analyzer.contracts.v1",
+    "semgrep-bugs": "analyzer.semgrep-bugs.v1",
+    "targeted-pytest-coverage": "analyzer.targeted-pytest-coverage.v1",
+}
+_NATIVE_TOOL_PLANS = {
+    "basedpyright": "tool.basedpyright.v1",
+    "crosshair": "tool.crosshair.v1",
+    "pylint": "tool.pylint.v1",
+    "pytest": "tool.pytest.v1",
+    "radon": "tool.radon.v1",
+    "ruff": "tool.ruff.v1",
+    "semgrep": "tool.semgrep.v1",
+}
+_NATIVE_MEMBER_TO_TOOL = {
+    "basedpyright": "basedpyright",
+    "contracts": "crosshair",
+    "pylint": "pylint",
+    "radon": "radon",
+    "ruff": "ruff",
+    "semgrep-bugs": "semgrep",
+    "semgrep-clean": "semgrep",
+    "targeted-pytest-coverage": "pytest",
+}
+_NATIVE_REPLAY_LIMIT = 128
+_NATIVE_TOOL_OUTPUT_LIMIT = 4 << 20
 ReviewFocus = Literal["simplify"]
 ReviewEnforcementMode = Literal["full", "changed", "shadow"]
 LocalAssuranceKind = Literal["worktree", "full", "explicit_files"]
@@ -188,8 +221,11 @@ class CapsuleRuntime:
     environment_id: str
     interpreter: str
     bootstrap: str
-    bubblewrap: BubblewrapIdentity
+    bubblewrap: BubblewrapIdentity | None
     cleanup_root: Path | None = None
+    backend: Literal["linux-x86_64", "darwin-arm64"] = "linux-x86_64"
+    native_lease: object | None = None
+    analyzer_versions: Mapping[str, str] | None = None
 
 
 @dataclass(frozen=True)
@@ -198,6 +234,8 @@ class CapsuleSnapshotResult:
 
     evidence: dict[str, dict[str, object]]
     findings_by_member: dict[str, list[ReviewFinding]]
+    expected_versions: Mapping[str, str] | None = None
+    platform_id: Literal["linux-x86_64", "darwin-arm64"] = "linux-x86_64"
 
 
 @dataclass(frozen=True)
@@ -224,6 +262,147 @@ class CapsuleMemberExecutionRequest:
     complete_pytest_inventory: bool = False
     project_runtime_root: Path | None = None
     portable_runtime: bool = False
+
+
+def _read_native_snapshot_file(root: Path, source: Path) -> bytes:
+    """Read one regular in-root file while detecting substitution during capture."""
+
+    resolved = source.resolve(strict=True)
+    if not resolved.is_relative_to(root):
+        raise ValueError("native_snapshot_alias_escape")
+    descriptor = os.open(resolved, os.O_RDONLY | os.O_NOFOLLOW)
+    try:
+        before = os.fstat(descriptor)
+        if not stat.S_ISREG(before.st_mode) or before.st_size > 128 << 20:
+            raise ValueError("native_snapshot_input_not_regular")
+        chunks: list[bytes] = []
+        observed = 0
+        while chunk := os.read(descriptor, min(64 * 1024, (128 << 20) + 1 - observed)):
+            chunks.append(chunk)
+            observed += len(chunk)
+            if observed > 128 << 20:
+                raise ValueError("native_snapshot_file_too_large")
+        after = os.fstat(descriptor)
+    finally:
+        os.close(descriptor)
+    if (
+        before.st_dev,
+        before.st_ino,
+        before.st_size,
+        before.st_mtime_ns,
+    ) != (
+        after.st_dev,
+        after.st_ino,
+        after.st_size,
+        after.st_mtime_ns,
+    ) or observed != before.st_size:
+        raise ValueError("native_snapshot_changed_during_staging")
+    return b"".join(chunks)
+
+
+def _validate_native_snapshot_name(relative: Path) -> tuple[str, str]:
+    if not relative.parts or relative.is_absolute() or any(part in {"", ".", ".."} for part in relative.parts):
+        raise ValueError("native_snapshot_input_path_invalid")
+    normalized = relative.as_posix()
+    if relative.parts[0].startswith(".specfact-native-") or relative.parts[0] == ".specfact-project-runtime":
+        raise ValueError("native_snapshot_reserved_path_collision")
+    return normalized, normalized.casefold()
+
+
+def _capture_native_files(root: Path, files: list[tuple[Path, Path]]) -> list[tuple[str, bytes]]:
+    """Capture only explicitly selected files without traversing their siblings."""
+
+    root = root.resolve(strict=True)
+    entries: list[tuple[str, bytes]] = []
+    aliases: set[str] = set()
+    total = 0
+    for source, relative in files:
+        normalized, alias = _validate_native_snapshot_name(relative)
+        if alias in aliases or len(entries) >= 100_000:
+            raise ValueError("native_snapshot_inventory_invalid")
+        payload = _read_native_snapshot_file(root, source)
+        total += len(payload)
+        if total > 512 << 20:
+            raise ValueError("native_snapshot_bytes_exceeded")
+        aliases.add(alias)
+        entries.append((normalized, payload))
+    return sorted(entries)
+
+
+def _capture_native_snapshot(root: Path, *, python_only: bool = False) -> list[tuple[str, bytes]]:
+    """Materialize a bounded immutable tree, dereferencing only internal aliases."""
+
+    root = root.resolve(strict=True)
+    entries: list[tuple[str, bytes]] = []
+    aliases: set[str] = set()
+    total = 0
+
+    def add_file(source: Path, relative: Path) -> None:
+        nonlocal total
+        normalized, alias = _validate_native_snapshot_name(relative)
+        if alias in aliases or len(entries) >= 100_000:
+            raise ValueError("native_snapshot_inventory_invalid")
+        payload = _read_native_snapshot_file(root, source)
+        total += len(payload)
+        if total > 512 << 20:
+            raise ValueError("native_snapshot_bytes_exceeded")
+        aliases.add(alias)
+        entries.append((normalized, payload))
+
+    def visit(directory: Path, logical: Path, active: frozenset[tuple[int, int]]) -> None:
+        resolved = directory.resolve(strict=True)
+        if not resolved.is_relative_to(root) or not resolved.is_dir():
+            raise ValueError("native_snapshot_directory_alias_escape")
+        metadata = resolved.stat()
+        identity = (metadata.st_dev, metadata.st_ino)
+        if identity in active:
+            raise ValueError("native_snapshot_directory_alias_cycle")
+        with os.scandir(resolved) as stream:
+            children = sorted(stream, key=lambda entry: entry.name.casefold())
+        for child in children:
+            source = Path(child.path)
+            relative = logical / child.name
+            metadata = source.lstat()
+            if python_only and child.name in _ANALYZER_SCAN_EXCLUDED_DIRECTORIES:
+                continue
+            if stat.S_ISLNK(metadata.st_mode):
+                target = source.resolve(strict=True)
+                if not target.is_relative_to(root):
+                    raise ValueError("native_snapshot_alias_escape")
+                if target.is_dir():
+                    visit(target, relative, active | {identity})
+                elif target.is_file() and (not python_only or relative.suffix in {".py", ".pyi"}):
+                    add_file(target, relative)
+                elif not target.is_file():
+                    raise ValueError("native_snapshot_alias_special")
+            elif stat.S_ISDIR(metadata.st_mode):
+                visit(source, relative, active | {identity})
+            elif stat.S_ISREG(metadata.st_mode) and (not python_only or relative.suffix in {".py", ".pyi"}):
+                add_file(source, relative)
+            elif not stat.S_ISREG(metadata.st_mode):
+                raise ValueError("native_snapshot_special_file")
+
+    visit(root, Path(), frozenset())
+    return sorted(entries)
+
+
+def _capture_native_source_context(root: Path, selected: list[tuple[Path, Path]]) -> list[tuple[str, bytes]]:
+    """Capture selected targets and bounded in-project Python import support."""
+
+    context = _capture_native_snapshot(root, python_only=True)
+    targets = _capture_native_files(root, selected)
+    entries = dict(context)
+    aliases = {name.casefold(): name for name in entries}
+    for name, payload in targets:
+        if (previous := aliases.get(name.casefold())) is not None and previous != name:
+            raise ValueError("native_snapshot_inventory_invalid")
+        if name in entries and entries[name] != payload:
+            raise ValueError("native_snapshot_changed_during_staging")
+        aliases[name.casefold()] = name
+        entries[name] = payload
+    if len(entries) > 100_000 or sum(len(payload) for payload in entries.values()) > 512 << 20:
+        raise ValueError("native_snapshot_inventory_invalid")
+    return sorted(entries.items())
 
 
 @dataclass(frozen=True)
@@ -439,8 +618,16 @@ def default_pr_range_profile() -> AnalyzerProfile:
     )
 
 
-def aggregate_profile_evidence(evidence: dict[str, dict[str, object]]) -> ProfileEvidenceReport:
+def aggregate_profile_evidence(
+    evidence: dict[str, dict[str, object]],
+    *,
+    expected_versions: Mapping[str, str] | None = None,
+) -> ProfileEvidenceReport:
     profile = default_pr_range_profile()
+    expected = expected_versions or _C14_ANALYZER_VERSIONS
+    valid_expected = set(expected) == set(profile.all_ids) and all(
+        isinstance(value, str) and value for value in expected.values()
+    )
     members: list[AnalyzerEvidence] = []
     required_unknown = False
     known_fail = False
@@ -450,7 +637,7 @@ def aggregate_profile_evidence(evidence: dict[str, dict[str, object]]) -> Profil
         outcome = str(raw.get("evidence_outcome", "UNKNOWN"))
         version = str(raw.get("version", ""))
         has_member_unknown = _has_required_unknown_reasons(raw.get("required_unknown_reasons", []))
-        if execution == "error" or version != _C14_ANALYZER_VERSIONS[member_id]:
+        if execution == "error" or not valid_expected or version != expected.get(member_id):
             outcome = "UNKNOWN"
         required_unknown |= outcome == "UNKNOWN" or has_member_unknown
         known_fail |= outcome == "FAIL"
@@ -677,17 +864,51 @@ def _prepare_capsule_runtime(
 ) -> tuple[CapsuleRuntime | None, str]:
     """Materialize and compose the signed runtime without host analyzer fallback."""
 
-    if platform.system() != "Linux" or platform.machine() not in {"x86_64", "AMD64"}:
-        return None, "unsupported_controller_platform"
+    selected_backend = native_backend.select_runtime_backend(
+        platform.system(),
+        platform.machine(),
+        (sys.version_info.major, sys.version_info.minor),
+    )
+    if selected_backend.kind == "unsupported":
+        return None, selected_backend.reason
+    storage_root = Path(
+        os.environ.get(
+            "SPECFACT_CODE_REVIEW_CAPSULE_CACHE",
+            str(Path.home() / ".cache/specfact/code-review/capsules"),
+        )
+    ).expanduser()
+    if selected_backend.kind == "darwin-arm64":
+        if environment_id is not None:
+            if environment_id not in {"darwin-arm64-cp311", "darwin-arm64-cp312", "darwin-arm64-cp313"}:
+                return None, f"native_capsule_environment_mismatch:{selected_backend.environment_id}"
+            selected_backend = native_backend.BackendSelection("darwin-arm64", environment_id, "")
+        try:
+            prepared = native_backend.prepare_native_runtime(
+                selected_backend,
+                cache_root=storage_root,
+                artifact_catalog=native_backend.load_native_artifact_catalog(),
+            )
+        except (KeyError, OSError, TypeError, ValueError, subprocess.TimeoutExpired) as exc:
+            return None, f"native_capsule_runtime_unavailable:{type(exc).__name__}"
+        if prepared.lease is not None:
+            return (
+                CapsuleRuntime(
+                    root=prepared.lease.path,
+                    identity="sha256:" + prepared.lease.identity,
+                    environment_id=selected_backend.environment_id,
+                    interpreter="python/bin/python3",
+                    bootstrap="bin/specfact-native-bootstrap",
+                    bubblewrap=None,
+                    backend="darwin-arm64",
+                    native_lease=prepared.lease,
+                    analyzer_versions=dict(prepared.lease.analyzer_versions),
+                ),
+                "",
+            )
+        return None, prepared.reason
     capsule_root: Path | None = None
     try:
         lock, environment_id, environment = _capsule_lock_environment(environment_id)
-        storage_root = Path(
-            os.environ.get(
-                "SPECFACT_CODE_REVIEW_CAPSULE_CACHE",
-                str(Path.home() / ".cache/specfact/code-review/capsules"),
-            )
-        ).expanduser()
         storage_root.mkdir(parents=True, exist_ok=True)
         materialized = toolchain.materialize_capsule(
             lock,
@@ -758,6 +979,9 @@ def _remove_invocation_capsule(root: Path | None) -> None:
 
 
 def _cleanup_capsule_runtime(runtime: CapsuleRuntime) -> None:
+    lease = getattr(runtime, "native_lease", None)
+    if lease is not None:
+        lease.close()
     cleanup_root = getattr(runtime, "cleanup_root", None)
     _remove_invocation_capsule(cleanup_root if isinstance(cleanup_root, Path) else None)
 
@@ -1131,6 +1355,16 @@ def _prepare_capsule_process_roots(process_root: Path) -> tuple[Path, Path, Path
 
 
 def _execute_capsule_member(request: CapsuleMemberExecutionRequest) -> dict[str, object]:
+    if getattr(request.runtime, "backend", "linux-x86_64") == "darwin-arm64":
+        return _execute_native_capsule_member(request)
+    bubblewrap = request.runtime.bubblewrap
+    if bubblewrap is None:
+        return {
+            "execution_state": "error",
+            "evidence_outcome": "UNKNOWN",
+            "findings": [],
+            "diagnostic": "linux_bubblewrap_identity_missing",
+        }
     with tempfile.TemporaryDirectory(prefix=f"specfact-{request.member}-") as temporary_directory:
         request_root, output_root, scratch_root, control_root = _prepare_capsule_process_roots(
             Path(temporary_directory)
@@ -1179,7 +1413,7 @@ def _execute_capsule_member(request: CapsuleMemberExecutionRequest) -> dict[str,
             }
         execution = execute_launch_plan(
             build_launch_plan(context),
-            request.runtime.bubblewrap,
+            bubblewrap,
             extra_argv=("specfact_code_review.run.runner", "/opt/specfact/config/0/request.json"),
         )
         response_path = output_root / "result.json"
@@ -1212,6 +1446,553 @@ def _execute_capsule_member(request: CapsuleMemberExecutionRequest) -> dict[str,
             }
 
 
+def _execute_native_capsule_member(request: CapsuleMemberExecutionRequest) -> dict[str, object]:
+    """Run one closed Darwin analyzer plan through the invocation broker."""
+
+    plan_id = _NATIVE_MEMBER_PLANS.get(request.member)
+    lease = request.runtime.native_lease
+    if plan_id is None or lease is None:
+        return {
+            "member": request.member,
+            "execution_state": "error",
+            "evidence_outcome": "UNKNOWN",
+            "findings": [],
+            "diagnostic": f"native_capsule_execution_plan_not_admitted:{request.member}",
+        }
+
+    def incomplete(reason: str) -> dict[str, object]:
+        return {
+            "member": request.member,
+            "execution_state": "error",
+            "evidence_outcome": "UNKNOWN",
+            "findings": [],
+            "diagnostic": reason,
+        }
+
+    temporary_parent = Path(tempfile.gettempdir()).resolve(strict=True)
+    with tempfile.TemporaryDirectory(prefix=f"specfact-native-{request.member}-", dir=temporary_parent) as directory:
+        invocation_root = Path(directory)
+        invocation_root.chmod(0o700)
+        temporary_root = invocation_root / "temporary"
+        temporary_root.mkdir(mode=0o700)
+        staged_projects: list[Path] = []
+        try:
+            snapshot = request.snapshot_root.resolve(strict=True)
+            relative_paths: list[str] = []
+            selected_files: list[tuple[Path, Path]] = []
+            for source in request.files:
+                if not source.is_file():
+                    return incomplete("native_snapshot_input_not_regular")
+                resolved_source = source.resolve(strict=True)
+                if not resolved_source.is_relative_to(snapshot):
+                    return incomplete("native_snapshot_input_path_invalid")
+                relative = resolved_source.relative_to(snapshot)
+                if any(part in {"", ".", ".."} for part in relative.parts):
+                    return incomplete("native_snapshot_input_path_invalid")
+                if relative.name.startswith(".specfact-native-"):
+                    return incomplete("native_snapshot_reserved_path_collision")
+                relative_paths.append(relative.as_posix())
+                selected_files.append((source, relative))
+            if (
+                request.portable_runtime
+                or request.project_runtime_root is not None
+                or request.complete_pytest_inventory
+            ):
+                snapshot_entries = _capture_native_snapshot(snapshot)
+            else:
+                snapshot_entries = _capture_native_source_context(snapshot, selected_files)
+
+            config_entries: list[tuple[str, bytes]] = []
+            config_bytes = 0
+            config_aliases: set[str] = set()
+            for index, raw_root in enumerate(request.config_roots, 1):
+                if raw_root.is_symlink():
+                    return incomplete("native_config_root_invalid")
+                config_root = raw_root.resolve(strict=True)
+                if config_root != raw_root.absolute() or not config_root.is_dir():
+                    return incomplete("native_config_root_invalid")
+                for directory, names, files in os.walk(config_root, topdown=True, followlinks=False):
+                    names.sort()
+                    files.sort()
+                    current = Path(directory)
+                    for name in names:
+                        if (current / name).is_symlink():
+                            return incomplete("native_config_symlink_rejected")
+                    for name in files:
+                        source = current / name
+                        relative = source.relative_to(config_root)
+                        destination_name = (Path(".specfact-native-config") / str(index) / relative).as_posix()
+                        alias = destination_name.casefold()
+                        if (
+                            alias in config_aliases
+                            or len(config_entries) >= 1_000
+                            or source.is_symlink()
+                            or not source.is_file()
+                        ):
+                            return incomplete("native_config_inventory_invalid")
+                        descriptor = os.open(source, os.O_RDONLY | os.O_NOFOLLOW)
+                        try:
+                            before = os.fstat(descriptor)
+                            if not stat.S_ISREG(before.st_mode) or before.st_size > 16 << 20:
+                                return incomplete("native_config_file_invalid")
+                            chunks: list[bytes] = []
+                            observed = 0
+                            while chunk := os.read(descriptor, min(64 * 1024, (16 << 20) + 1 - observed)):
+                                chunks.append(chunk)
+                                observed += len(chunk)
+                                if observed > 16 << 20:
+                                    return incomplete("native_config_file_invalid")
+                            after = os.fstat(descriptor)
+                            if (before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns) != (
+                                after.st_dev,
+                                after.st_ino,
+                                after.st_size,
+                                after.st_mtime_ns,
+                            ) or observed != before.st_size:
+                                return incomplete("native_config_changed_during_snapshot")
+                        finally:
+                            os.close(descriptor)
+                        config_bytes += observed
+                        if config_bytes > 64 << 20:
+                            return incomplete("native_config_inventory_invalid")
+                        config_aliases.add(alias)
+                        config_entries.append((destination_name, b"".join(chunks)))
+
+            analyzer_request = {
+                "adapter_argv": request.adapter_argv,
+                "bug_hunt": request.options.bug_hunt,
+                "complete_pytest_inventory": request.complete_pytest_inventory,
+                "member": request.member,
+                "paths": sorted(relative_paths),
+                "schema": "specfact-native-analyzer-request-v1",
+            }
+
+            def write_document(path: Path, value: object) -> None:
+                path.write_text(
+                    json.dumps(value, ensure_ascii=False, separators=(",", ":"), sort_keys=True) + "\n",
+                    encoding="utf-8",
+                )
+                path.chmod(0o400)
+
+            def stage_project(
+                stage: int,
+                *,
+                replies: list[dict[str, object]] | None = None,
+                tool_request: dict[str, object] | None = None,
+            ) -> Path:
+                project_root = invocation_root / f"project-{stage:03d}"
+                project_root.mkdir(mode=0o700)
+                staged_projects.append(project_root)
+                for relative_name, payload in snapshot_entries:
+                    destination = project_root / relative_name
+                    destination.parent.mkdir(parents=True, exist_ok=True)
+                    with destination.open("xb") as output_stream:
+                        output_stream.write(payload)
+                    destination.chmod(0o400)
+                for relative_name, payload in config_entries:
+                    destination = project_root / relative_name
+                    destination.parent.mkdir(parents=True, exist_ok=True)
+                    with destination.open("xb") as stream:
+                        stream.write(payload)
+                    destination.chmod(0o400)
+                source_runtime = request.project_runtime_root
+                domain_tool = tool_request.get("tool") if tool_request else None
+                if source_runtime is None and domain_tool in {"pylint", "crosshair", "pytest"}:
+                    from specfact_code_review.run.native_project_runtime import prepare_source_environment
+
+                    source_runtime = invocation_root / "source-environment"
+                    if not source_runtime.exists():
+                        prepare_source_environment(request.runtime, source_runtime)
+                if source_runtime is not None:
+                    destination_runtime = project_root / ".specfact-project-runtime"
+                    if source_runtime.is_symlink() or not source_runtime.is_dir() or destination_runtime.exists():
+                        raise ValueError("native project runtime root is invalid or collides with source")
+
+                    def copy_runtime_file(source: str, destination: str) -> str:
+                        before = os.lstat(source)
+                        if not stat.S_ISREG(before.st_mode) or before.st_nlink != 1:
+                            raise ValueError("native project runtime contains indirection")
+                        shutil.copyfile(source, destination, follow_symlinks=False)
+                        after = os.lstat(source)
+                        if (
+                            before.st_dev,
+                            before.st_ino,
+                            before.st_size,
+                            before.st_mtime_ns,
+                        ) != (
+                            after.st_dev,
+                            after.st_ino,
+                            after.st_size,
+                            after.st_mtime_ns,
+                        ):
+                            raise ValueError("native project runtime changed during staging")
+                        Path(destination).chmod(0o400)
+                        return destination
+
+                    shutil.copytree(
+                        source_runtime,
+                        destination_runtime,
+                        symlinks=False,
+                        copy_function=copy_runtime_file,
+                    )
+                if domain_tool in {"pylint", "crosshair", "pytest"}:
+                    from specfact_code_review.run.native_analyzer_view import VIEW_NAME, build_analyzer_view
+
+                    descriptor = json.loads(
+                        (project_root / ".specfact-project-runtime/project-runtime.json").read_text()
+                    )
+                    domain = "pytest-observe" if domain_tool == "pytest" else domain_tool
+                    graph = descriptor["inventory"]["member_graphs"].get(domain)
+                    if graph is None:
+                        conflict = descriptor["inventory"]["analyzer_conflicts"]
+                        raise ValueError(f"native project dependency domain unavailable: {domain}: {conflict}")
+                    abi = request.runtime.environment_id.rsplit("-", 1)[-1].removeprefix("cp")
+                    analyzer_site = request.runtime.root / f"python/lib/python{abi[0]}.{abi[1:]}/site-packages"
+                    build_analyzer_view(analyzer_site, project_root / VIEW_NAME, graph)
+                if tool_request is None:
+                    write_document(project_root / ".specfact-native-request.json", analyzer_request)
+                    if replies is not None:
+                        write_document(
+                            project_root / ".specfact-native-replies.json",
+                            {"replies": replies, "schema": "specfact-native-analyzer-replies-v1"},
+                        )
+                else:
+                    write_document(project_root / ".specfact-native-tool-request.json", tool_request)
+                for root, directories, _files in os.walk(project_root, topdown=False):
+                    for name in directories:
+                        (Path(root) / name).chmod(0o500)
+                project_root.chmod(0o500)
+                return project_root
+
+            def prepare(
+                stage: int, selected_plan: str, project_root: Path, *, timeout_ms: int = 120_000
+            ) -> native_execution.NativeExecutionRequest:
+                _seal_native_private_tree(temporary_root, discard_symlinks=True)
+                output_root = invocation_root / f"output-{stage:03d}"
+                output_root.mkdir(mode=0o700)
+                return native_execution.prepare_native_execution(
+                    lease=lease,
+                    plan_id=selected_plan,
+                    invocation_root=invocation_root,
+                    project_snapshot=project_root,
+                    output_root=output_root,
+                    temporary_root=temporary_root,
+                    environment={
+                        "LANG": "C.UTF-8",
+                        "LC_ALL": "C.UTF-8",
+                        "NO_COLOR": "1",
+                        "PYTHONHASHSEED": "0",
+                        "PYTHONUTF8": "1",
+                        "TZ": "UTC",
+                    },
+                    descriptor_grants={"stdin": 0, "stdout": 1, "stderr": 2},
+                    timeout_ms=timeout_ms,
+                    budget=native_execution.ResourceBudget(
+                        address_space_bytes=4 << 30,
+                        file_size_bytes=64 << 20,
+                        open_files=256,
+                        output_bytes=16 << 20,
+                    ),
+                )
+
+            def read_response(output_root: Path) -> dict[str, object]:
+                response_path = output_root / "result.json"
+                if response_path.is_symlink() or not response_path.is_file():
+                    raise ValueError("native analyzer result is missing")
+                if response_path.stat().st_size > 16 << 20:
+                    raise ValueError("native analyzer result exceeds its bound")
+                response = json.loads(response_path.read_text(encoding="utf-8"))
+                if not isinstance(response, dict):
+                    raise ValueError("native analyzer response identity is invalid")
+                observed_member = response.get("member")
+                if observed_member != request.member:
+                    bounded_member = (
+                        observed_member
+                        if isinstance(observed_member, str)
+                        and re.fullmatch(r"[a-z0-9][a-z0-9-]{0,63}", observed_member)
+                        else "invalid"
+                    )
+                    observed_diagnostic = response.get("diagnostic")
+                    bounded_diagnostic = (
+                        observed_diagnostic
+                        if isinstance(observed_diagnostic, str)
+                        and len(observed_diagnostic) <= 512
+                        and re.fullmatch(r"[A-Za-z0-9_./:;,=+ -]*", observed_diagnostic)
+                        else "invalid"
+                    )
+                    raise ValueError(
+                        f"native analyzer response identity mismatch:{bounded_member}:{bounded_diagnostic}"
+                    )
+                findings = response.get("findings")
+                if not isinstance(findings, list):
+                    raise ValueError("native analyzer findings are invalid")
+                for finding in findings:
+                    ReviewFinding.model_validate(finding)
+                return cast(dict[str, object], response)
+
+            def validate_managed_request(value: object, sequence: int) -> tuple[dict[str, object], str]:
+                fields = {
+                    "argv",
+                    "capture_output",
+                    "cwd",
+                    "environment",
+                    "member",
+                    "schema",
+                    "sequence",
+                    "text",
+                    "timeout_ms",
+                    "tool",
+                }
+                if not isinstance(value, dict) or set(value) != fields:
+                    raise ValueError("managed launch request fields are invalid")
+                managed = cast(dict[str, object], value)
+                expected_tool = _NATIVE_MEMBER_TO_TOOL.get(request.member)
+                tool = managed["tool"]
+                if (
+                    managed["schema"] != "specfact-managed-launch-request-v1"
+                    or managed["member"] != request.member
+                    or managed["sequence"] != sequence
+                    or managed["capture_output"] is not True
+                    or managed["text"] is not True
+                    or managed["cwd"] != "project"
+                    or not isinstance(tool, str)
+                    or tool != expected_tool
+                    or tool not in _NATIVE_TOOL_PLANS
+                ):
+                    raise ValueError("managed launch request identity is invalid")
+                timeout = managed["timeout_ms"]
+                environment = managed["environment"]
+                argv = managed["argv"]
+                if (
+                    type(timeout) is not int
+                    or not 1 <= timeout <= 240_000
+                    or not isinstance(environment, dict)
+                    or not all(isinstance(key, str) and isinstance(item, str) for key, item in environment.items())
+                    or not isinstance(argv, list)
+                    or not argv
+                    or len(argv) > 128
+                    or argv[0] != f"capsule-tool:{tool}"
+                    or any(
+                        not isinstance(argument, str) or "\x00" in argument or len(argument.encode("utf-8")) > 64 << 10
+                        for argument in argv
+                    )
+                ):
+                    raise ValueError("managed launch request payload is invalid")
+                return managed, tool
+
+            replies: list[dict[str, object]] = []
+            stage = 0
+            with native_execution.NativeExecutionSession(
+                native_execution.BinaryNativeExecutionTransport(lease)
+            ) as session:
+                for sequence in range(_NATIVE_REPLAY_LIMIT + 1):
+                    analyzer_project = stage_project(stage, replies=replies if replies else None)
+                    analyzer = prepare(stage, plan_id, analyzer_project)
+                    stage += 1
+                    analyzer_result = session.wait(session.launch(analyzer), 120_000)
+                    response = read_response(analyzer.output_root)
+                    if analyzer_result.returncode == 0:
+                        if "managed_launch_request" in response:
+                            return incomplete("native_analyzer_unexpected_managed_request")
+                        return response
+                    if analyzer_result.returncode != 75:
+                        return incomplete(f"native_analyzer_exit:{analyzer_result.returncode}")
+                    if sequence >= _NATIVE_REPLAY_LIMIT:
+                        return incomplete("native_analyzer_replay_limit_exceeded")
+                    managed, tool = validate_managed_request(response.get("managed_launch_request"), sequence)
+                    tool_project = stage_project(stage, tool_request=managed)
+                    tool_timeout = cast(int, managed["timeout_ms"])
+                    tool_execution = prepare(stage, _NATIVE_TOOL_PLANS[tool], tool_project, timeout_ms=tool_timeout)
+                    stage += 1
+                    tool_result = session.wait(session.launch(tool_execution), tool_timeout)
+                    if not -255 <= tool_result.returncode <= 255:
+                        return incomplete("native_tool_returncode_invalid")
+                    if (
+                        len(tool_result.stdout) > _NATIVE_TOOL_OUTPUT_LIMIT
+                        or len(tool_result.stderr) > _NATIVE_TOOL_OUTPUT_LIMIT
+                    ):
+                        return incomplete("native_tool_output_exceeds_bound")
+                    try:
+                        stdout = tool_result.stdout.decode("utf-8", errors="strict")
+                        stderr = tool_result.stderr.decode("utf-8", errors="strict")
+                    except UnicodeDecodeError:
+                        return incomplete("native_tool_output_not_utf8")
+                    stdout = _normalize_native_tool_stdout(tool, stdout, tool_project)
+                    replies.append(
+                        {
+                            "request": managed,
+                            "result": {
+                                "returncode": tool_result.returncode,
+                                "stderr": stderr,
+                                "stdout": stdout,
+                            },
+                        }
+                    )
+            return incomplete("native_analyzer_replay_terminated")
+        except (
+            json.JSONDecodeError,
+            native_execution.NativeExecutionIncompleteError,
+            OSError,
+            TypeError,
+            ValueError,
+        ) as exc:
+            return incomplete(f"native_analyzer_execution_failed:{exc}")
+        finally:
+            for project_root in staged_projects:
+                for root, directories, files in os.walk(project_root):
+                    for name in files:
+                        with suppress(OSError):
+                            (Path(root) / name).chmod(0o600)
+                    for name in directories:
+                        with suppress(OSError):
+                            (Path(root) / name).chmod(0o700)
+                with suppress(OSError):
+                    project_root.chmod(0o700)
+
+
+def _normalize_native_tool_stdout(tool: str, stdout: str, project_root: Path) -> str:
+    """Rebind tool-snapshot diagnostics before replay in the next immutable stage."""
+
+    if tool == "pytest":
+        return stdout
+    root = project_root.resolve(strict=True)
+
+    def relative_path(raw: object) -> str:
+        if not isinstance(raw, str):
+            raise ValueError("native tool output path is invalid")
+        path = Path(raw)
+        if not path.is_absolute():
+            if not raw or any(part in {"", ".", ".."} for part in raw.split("/")):
+                raise ValueError("native tool output path is invalid")
+            return raw
+        try:
+            relative = path.relative_to(root)
+        except ValueError as exc:
+            raise ValueError("native tool output path is outside exact tool snapshot") from exc
+        if not relative.parts or any(part in {"", ".", ".."} for part in relative.parts):
+            raise ValueError("native tool output path is invalid")
+        return relative.as_posix()
+
+    if tool == "crosshair":
+        normalized_lines: list[str] = []
+        for line in stdout.splitlines(keepends=True):
+            match = re.fullmatch(r"(.+):([0-9]+):(\s*(?:error|warning|info):\s*.+)(\n?)", line)
+            if match is None:
+                normalized_lines.append(line)
+            else:
+                normalized_lines.append(
+                    f"{relative_path(match.group(1))}:{match.group(2)}:{match.group(3)}{match.group(4)}"
+                )
+        return "".join(normalized_lines)
+
+    value = json.loads(stdout)
+    if tool in {"ruff", "pylint"}:
+        if not isinstance(value, list):
+            raise ValueError("native tool findings must be a list")
+        key = "filename" if tool == "ruff" else "path"
+        for item in value:
+            if not isinstance(item, dict) or key not in item:
+                raise ValueError("native tool finding path is invalid")
+            item[key] = relative_path(item[key])
+            if tool == "pylint" and "abspath" in item:
+                item["abspath"] = relative_path(item["abspath"])
+        return json.dumps(value, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
+    if tool == "basedpyright":
+        if not isinstance(value, dict) or not isinstance(value.get("generalDiagnostics"), list):
+            raise ValueError("native basedpyright diagnostics are invalid")
+        for item in value["generalDiagnostics"]:
+            if not isinstance(item, dict) or "file" not in item:
+                raise ValueError("native basedpyright diagnostic path is invalid")
+            item["file"] = relative_path(item["file"])
+            related = item.get("relatedInformation", [])
+            if not isinstance(related, list):
+                raise ValueError("native basedpyright related information is invalid")
+            for entry in related:
+                if not isinstance(entry, dict) or "file" not in entry:
+                    raise ValueError("native basedpyright related path is invalid")
+                entry["file"] = relative_path(entry["file"])
+        return json.dumps(value, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
+    if tool == "radon":
+        if not isinstance(value, dict):
+            raise ValueError("native Radon output must be an object")
+        normalized = {relative_path(key): item for key, item in value.items()}
+        if len(normalized) != len(value):
+            raise ValueError("native Radon output path collision")
+        return json.dumps(normalized, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
+    if tool != "semgrep":
+        raise ValueError("native tool output uses an unsupported normalization plan")
+    if not isinstance(value, dict):
+        raise ValueError("native Semgrep output must be an object")
+
+    paths = value.get("paths")
+    if not isinstance(paths, dict):
+        raise ValueError("native Semgrep path evidence is missing")
+    scanned = paths.get("scanned")
+    skipped = paths.get("skipped", [])
+    if not isinstance(scanned, list) or not isinstance(skipped, list):
+        raise ValueError("native Semgrep path evidence is invalid")
+    paths["scanned"] = [relative_path(item) for item in scanned]
+    normalized_skipped: list[object] = []
+    for item in skipped:
+        if isinstance(item, str):
+            normalized_skipped.append(relative_path(item))
+        elif isinstance(item, dict) and "path" in item:
+            normalized_skipped.append({**item, "path": relative_path(item["path"])})
+        else:
+            raise ValueError("native Semgrep skipped path evidence is invalid")
+    paths["skipped"] = normalized_skipped
+
+    results = value.get("results")
+    if not isinstance(results, list):
+        raise ValueError("native Semgrep results are invalid")
+    for result in results:
+        if not isinstance(result, dict) or "path" not in result:
+            raise ValueError("native Semgrep result path is invalid")
+        result["path"] = relative_path(result["path"])
+    return json.dumps(value, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
+
+
+def _seal_native_private_tree(root: Path, *, discard_symlinks: bool = False) -> None:
+    """Reject indirection and normalize completed-worker state for broker reuse."""
+
+    absolute = root.absolute()
+    if root.is_symlink() or root.resolve(strict=True) != absolute or not root.is_dir():
+        raise ValueError("native private tree root is invalid")
+    owner = os.getuid()
+    directories: list[Path] = [root]
+    files: list[Path] = []
+    for directory, names, filenames in os.walk(root, topdown=True, followlinks=False):
+        current = Path(directory)
+        for name in tuple(names):
+            path = current / name
+            metadata = path.lstat()
+            if discard_symlinks and stat.S_ISLNK(metadata.st_mode) and metadata.st_uid == owner:
+                path.unlink()
+                names.remove(name)
+                continue
+            if stat.S_ISLNK(metadata.st_mode) or not stat.S_ISDIR(metadata.st_mode) or metadata.st_uid != owner:
+                raise ValueError("native private tree contains indirection or a foreign directory")
+            directories.append(path)
+        for name in filenames:
+            path = current / name
+            metadata = path.lstat()
+            if discard_symlinks and stat.S_ISLNK(metadata.st_mode) and metadata.st_uid == owner:
+                path.unlink()
+                continue
+            if (
+                stat.S_ISLNK(metadata.st_mode)
+                or not stat.S_ISREG(metadata.st_mode)
+                or metadata.st_uid != owner
+                or metadata.st_nlink != 1
+            ):
+                raise ValueError("native private tree contains indirection or a special file")
+            files.append(path)
+    for path in files:
+        path.chmod(0o600)
+    for path in reversed(directories):
+        path.chmod(0o700)
+
+
 def _not_applicable_member(reason: str) -> dict[str, object]:
     return {
         "execution_state": "not_applicable",
@@ -1238,6 +2019,13 @@ def _dispatch_capsule_member(
     if request.member == "semgrep-bugs" and not (request.options.bug_hunt or sealed_bugs_policy):
         return _not_applicable_member("conditional_member_not_activated")
     if request.member == "targeted-pytest-coverage" and request.options.no_tests:
+        if getattr(request.runtime, "backend", "linux-x86_64") == "darwin-arm64":
+            return {
+                "execution_state": "error",
+                "evidence_outcome": "UNKNOWN",
+                "findings": [],
+                "diagnostic": "native_pytest_required_for_complete_review",
+            }
         return _not_applicable_member("tests_explicitly_disabled_for_legacy_scope")
     return _execute_capsule_member(request)
 
@@ -1283,6 +2071,7 @@ def _run_capsule_snapshot(
     settings = settings or CapsuleSnapshotSettings()
     evidence: dict[str, dict[str, object]] = {}
     findings_by_member: dict[str, list[ReviewFinding]] = {}
+    expected_versions = getattr(runtime, "analyzer_versions", None) or _C14_ANALYZER_VERSIONS
     relative_inputs = _snapshot_relative_inputs(snapshot_root, files)
     applicability = classify_snapshot_input_kinds(
         relative_inputs if settings.scope_paths is None else settings.scope_paths
@@ -1316,14 +2105,19 @@ def _run_capsule_snapshot(
         evidence[member] = {
             "execution_state": str(raw.get("execution_state", "error")),
             "evidence_outcome": str(raw.get("evidence_outcome", "UNKNOWN")),
-            "version": _C14_ANALYZER_VERSIONS[member],
+            "version": expected_versions[member],
             "diagnostic": str(raw.get("diagnostic", "")),
             "sandbox_invocation": "fresh",
             "capsule_identity": runtime.identity,
             "environment_id": getattr(runtime, "environment_id", ""),
             **({"target_execution": raw["target_execution"]} if "target_execution" in raw else {}),
         }
-    return CapsuleSnapshotResult(evidence, findings_by_member)
+    return CapsuleSnapshotResult(
+        evidence,
+        findings_by_member,
+        expected_versions,
+        getattr(runtime, "backend", "linux-x86_64"),
+    )
 
 
 def _mounted_config_path(index: int, path: Path) -> str:
@@ -1355,10 +2149,13 @@ class _PolicyBindingBuilder:
     member_argv: dict[str, tuple[str, ...]] = field(default_factory=dict)
 
     def register(self, path: Path) -> str:
-        root = path.parent
+        canonical_path = path.resolve(strict=True)
+        if not canonical_path.is_file():
+            raise ValueError("policy_projection_not_regular")
+        root = canonical_path.parent
         self.config_roots.append(root)
         self.cleanup_roots.append(root)
-        return _mounted_config_path(len(self.config_roots), path)
+        return _mounted_config_path(len(self.config_roots), canonical_path)
 
     def result(self) -> SnapshotPolicyBindings:
         return SnapshotPolicyBindings(
@@ -1437,9 +2234,9 @@ def _ini_projection_value(value: object) -> str:
     if isinstance(value, bool):
         return "true" if value else "false"
     if isinstance(value, list | tuple):
-        return "\n    ".join(str(item) for item in value)
+        return "\n    ".join(_ini_projection_value(item) for item in value)
     if isinstance(value, str | int | float):
-        return str(value)
+        return "\n    ".join(str(value).splitlines())
     raise ValueError("policy_projection_value_unsupported")
 
 
@@ -1463,6 +2260,33 @@ def _serialize_coverage_projection(values: dict[str, object]) -> str:
     return "\n".join(lines) + "\n"
 
 
+def _write_coverage_projection(builder: _PolicyBindingBuilder, values: dict[str, object]) -> str:
+    # INI getlist cannot represent a regex spanning lines as one list member.
+    # Keep that exact pattern in TOML, quoting both keys and payload values.
+    multiline_patterns = any(
+        isinstance(value, list | tuple) and any(isinstance(item, str) and "\n" in item for item in value)
+        for value in values.values()
+    )
+    if not multiline_patterns:
+        return _write_policy_projection(builder, name="coveragerc", payload=_serialize_coverage_projection(values))
+    sections: dict[str, list[str]] = {}
+    for qualified, value in sorted(values.items()):
+        section, key = qualified.split(":", maxsplit=1)
+        if not isinstance(value, str | int | float | bool | list | tuple):
+            raise ValueError("policy_projection_value_unsupported")
+        sections.setdefault(section, []).append(
+            f"{json.dumps(key, ensure_ascii=False)} = {json.dumps(value, allow_nan=False, ensure_ascii=False)}"
+        )
+    payload = (
+        "\n".join(
+            f"[tool.coverage.{json.dumps(section, ensure_ascii=False)}]\n" + "\n".join(fields)
+            for section, fields in sections.items()
+        )
+        + "\n"
+    )
+    return _write_policy_projection(builder, name="coveragerc.toml", payload=payload)
+
+
 def _write_policy_projection(builder: _PolicyBindingBuilder, *, name: str, payload: str) -> str:
     root = Path(tempfile.mkdtemp(prefix=f"specfact-{name}-projection-"))
     path = root / name
@@ -1474,9 +2298,24 @@ def _write_policy_projection(builder: _PolicyBindingBuilder, *, name: str, paylo
 def _bind_pytest_coverage_policy(
     builder: _PolicyBindingBuilder,
     policy_bundle: object | None,
+    *,
+    local_project_assurance: str | None = None,
 ) -> None:
+    if local_project_assurance is not None and local_project_assurance not in {
+        "worktree",
+        "full",
+        "explicit_files",
+        "index",
+        "range_preview",
+    }:
+        raise ValueError("project_origin_not_local")
     pytest_policy = _pytest_policy_values(policy_bundle)
-    selection = validate_pytest_selection_controls(pytest_policy)
+    selection_policy = dict(pytest_policy)
+    if local_project_assurance is not None:
+        selection_policy["addopts"] = [
+            value for value in cast(list[object], pytest_policy.get("addopts", [])) if value != "--doctest-modules"
+        ]
+    selection = validate_pytest_selection_controls(selection_policy)
     if selection.status != "PASS":
         raise ValueError(selection.reason)
     private_root = Path("/opt/specfact/tmp")
@@ -1487,23 +2326,32 @@ def _bind_pytest_coverage_policy(
     )
     if pytest_projection.status != "PASS":
         raise ValueError(pytest_projection.reason)
+    coverage_policy = _coverage_policy_values(policy_bundle)
+    local_coverage = {}
+    if local_project_assurance is not None:
+        for key in ("report:exclude_lines", "report:exclude_also", "report:partial_branches", "report:partial_also"):
+            if key in coverage_policy:
+                value = coverage_policy.pop(key)
+                local_coverage[key] = (
+                    [line.strip() for line in value.splitlines() if line.strip()] if isinstance(value, str) else value
+                )
     coverage_projection = project_coverage_policy(
-        _coverage_policy_values(policy_bundle),
+        coverage_policy,
         snapshot_root=Path("/opt/specfact/snapshot"),
         output_root=private_root / "coverage",
     )
     if coverage_projection.status != "PASS":
         raise ValueError(coverage_projection.reason)
+    if local_project_assurance is not None:
+        for key in ("report:exclude_lines", "report:exclude_also", "report:partial_branches", "report:partial_also"):
+            coverage_projection.values.pop(key, None)
+    coverage_projection.values.update(local_coverage)
     pytest_config = _write_policy_projection(
         builder,
         name="pytest.ini",
         payload=_serialize_pytest_projection(pytest_projection.values),
     )
-    coverage_config = _write_policy_projection(
-        builder,
-        name="coveragerc",
-        payload=_serialize_coverage_projection(coverage_projection.values),
-    )
+    coverage_config = _write_coverage_projection(builder, coverage_projection.values)
     builder.member_argv["targeted-pytest-coverage"] = (
         "-c",
         pytest_config,
@@ -3711,7 +4559,11 @@ def _pytest_planned_nodes_match(*, planned: tuple[str, ...], observed: tuple[str
         return False
     matched: list[str] = []
     for nodeid in observed:
-        candidates = tuple(selector for selector in planned if nodeid == selector or nodeid.startswith(f"{selector}["))
+        candidates = tuple(
+            selector
+            for selector in planned
+            if nodeid == selector or nodeid.startswith((f"{selector}[", f"{selector}::"))
+        )
         if len(candidates) != 1:
             return False
         matched.append(candidates[0])
@@ -4019,7 +4871,14 @@ def _pytest_observer_script() -> str:
         )
     return startup + (
         "import json, pathlib, sys, pytest, pytest_cov.plugin as pytest_cov_plugin\n"
-        "class Observer:\n" + trusted_import_hook + "    def __init__(self, path):\n"
+        "class Observer:\n"
+        + trusted_import_hook
+        + "    def pytest_plugin_registered(self, plugin, plugin_name, manager):\n"
+        "        if plugin is self:\n"
+        "            for name, (project_plugin, distribution) in globals().get('__specfact_project_pytest_plugins__', {}).items():\n"
+        "                manager.register(project_plugin, name)\n"
+        "                manager._plugin_distinfo.append((project_plugin, distribution))\n"
+        "    def __init__(self, path):\n"
         "        self.path = pathlib.Path(path)\n"
         "        self.records = []\n"
         "    def pytest_itemcollected(self, item):\n"
@@ -6329,10 +7188,16 @@ def _coverage_threshold_from_policy_argv(policy_argv: tuple[str, ...]) -> float:
         raise ValueError("sealed coverage configuration is missing") from exc
     parser = configparser.ConfigParser(interpolation=None)
     try:
-        with config_path.open(encoding="utf-8") as handle:
-            parser.read_file(handle)
-        configured = parser.getfloat("report", "fail_under", fallback=_COVERAGE_THRESHOLD)
-    except (OSError, configparser.Error, ValueError) as exc:
+        if config_path.suffix == ".toml":
+            with config_path.open("rb") as handle:
+                document = tomllib.load(handle)
+            report = document.get("tool", {}).get("coverage", {}).get("report", {})
+            configured = float(report.get("fail_under", _COVERAGE_THRESHOLD))
+        else:
+            with config_path.open(encoding="utf-8") as handle:
+                parser.read_file(handle)
+            configured = parser.getfloat("report", "fail_under", fallback=_COVERAGE_THRESHOLD)
+    except (OSError, configparser.Error, ValueError, TypeError, AttributeError) as exc:
         raise ValueError("sealed coverage threshold is invalid") from exc
     if not 0.0 <= configured <= 100.0:
         raise ValueError("sealed coverage threshold is invalid")
@@ -6351,12 +7216,11 @@ def _complete_pytest_coverage_roots(
 
 
 def _evaluate_complete_tdd_gate(
-    files: list[Path], adapter_argv: tuple[str, ...]
+    files: list[Path], adapter_argv: tuple[str, ...], *, snapshot_root: Path = Path("/opt/specfact/snapshot")
 ) -> tuple[list[ReviewFinding], dict[str, float] | None]:
     """Execute the controller-supplied complete immutable pytest inventory."""
     policy_argv, selectors = _split_pytest_adapter_argv(adapter_argv)
     test_roots = _projected_pytest_test_roots(policy_argv)
-    snapshot_root = Path("/opt/specfact/snapshot")
     selected_test_files = {snapshot_root / selector.split("::", maxsplit=1)[0] for selector in selectors}
     coverage_test_roots = _complete_pytest_coverage_roots(test_roots, selected_test_files, snapshot_root=snapshot_root)
     source_files = [
@@ -6368,7 +7232,7 @@ def _evaluate_complete_tdd_gate(
         and not _is_below_any_root(file_path, coverage_test_roots)
     ]
     if not selectors:
-        anchor = source_files[0] if source_files else Path("/opt/specfact/snapshot")
+        anchor = source_files[0] if source_files else snapshot_root
         return [
             tool_error(
                 tool="pytest",
@@ -6484,16 +7348,26 @@ def _capsule_evidence_list(evidence: dict[str, dict[str, object]]) -> list[dict[
 
 def _activated_capsule_report_evidence(
     evidence: dict[str, dict[str, object]],
+    expected_versions: Mapping[str, str] | None = None,
+    platform_id: str = "linux-x86_64",
 ) -> tuple[differential.CatalogActivation, dict[str, dict[str, object]]]:
-    activation = differential.activate_packaged_suppression_catalog()
+    versions = expected_versions or _C14_ANALYZER_VERSIONS
+    activation = differential.activate_packaged_suppression_catalog(
+        platform_id=platform_id,
+        analyzer_versions=versions,
+    )
     if activation.status == "PASS" and activation.profile_activated and activation.digest is not None:
+        return activation, evidence
+    if set(evidence) == set(default_pr_range_profile().all_ids) and all(
+        item.get("evidence_outcome") == "UNKNOWN" for item in evidence.values()
+    ):
         return activation, evidence
     return activation, {
         member: {
             **evidence.get(member, {}),
             "execution_state": "error",
             "evidence_outcome": "UNKNOWN",
-            "version": _C14_ANALYZER_VERSIONS[member],
+            "version": versions[member],
             "diagnostic": activation.reason or "suppression_catalog_activation_failed",
         }
         for member in default_pr_range_profile().all_ids
@@ -6506,9 +7380,42 @@ def _capsule_report(
     *,
     options: ReviewOptions,
     scope_evidence: dict[str, object],
+    expected_versions: Mapping[str, str] | None = None,
+    platform_id: str = "linux-x86_64",
 ) -> ReviewReport:
-    activation, report_evidence = _activated_capsule_report_evidence(evidence)
-    profile = aggregate_profile_evidence(report_evidence)
+    activation, report_evidence = _activated_capsule_report_evidence(
+        evidence,
+        expected_versions,
+        platform_id,
+    )
+    if platform_id == "darwin-arm64":
+        pytest_evidence = dict(report_evidence.get("targeted-pytest-coverage", {}))
+        if pytest_evidence.get("execution_state") == "ran":
+            pytest_evidence["result_provenance"] = "project-origin-v1"
+            scope_evidence = {**scope_evidence, "native_pytest_result_provenance": "project-origin-v1"}
+        skipped_pytest = pytest_evidence.get("execution_state") == "not_applicable"
+        bypassed_pytest = options.no_tests and pytest_evidence.get("evidence_outcome") == "PASS"
+        protected_range = (
+            scope_evidence.get("assurance_kind") not in _LOCAL_ASSURANCE_KINDS
+            and pytest_evidence.get("evidence_outcome") != "UNKNOWN"
+        )
+        if skipped_pytest or bypassed_pytest or protected_range:
+            report_evidence = {
+                **report_evidence,
+                "targeted-pytest-coverage": {
+                    **pytest_evidence,
+                    "execution_state": "error",
+                    "evidence_outcome": "UNKNOWN",
+                    "diagnostic": (
+                        "native_project_origin_pytest_not_protected_range_evidence"
+                        if protected_range
+                        else "native_pytest_required_for_complete_review"
+                    ),
+                },
+            }
+        else:
+            report_evidence = {**report_evidence, "targeted-pytest-coverage": pytest_evidence}
+    profile = aggregate_profile_evidence(report_evidence, expected_versions=expected_versions)
     findings = [
         finding for member in default_pr_range_profile().all_ids for finding in findings_by_member.get(member, [])
     ]
@@ -6539,17 +7446,31 @@ def _capsule_report(
 
 
 def _unknown_capsule_report(reason: str, *, options: ReviewOptions, scope_evidence: dict[str, object]) -> ReviewReport:
+    selected = native_backend.select_runtime_backend()
+    environment_id = selected.environment_id or "unsupported-controller"
+    versions = (
+        dict.fromkeys(default_pr_range_profile().all_ids, "unavailable")
+        if selected.kind == "darwin-arm64"
+        else _C14_ANALYZER_VERSIONS
+    )
     evidence: dict[str, dict[str, object]] = {
         member: {
             "execution_state": "error",
             "evidence_outcome": "UNKNOWN",
-            "version": _C14_ANALYZER_VERSIONS[member],
+            "version": versions[member],
             "diagnostic": reason,
-            "environment_id": _capsule_environment_id(),
+            "environment_id": environment_id,
         }
         for member in default_pr_range_profile().all_ids
     }
-    return _capsule_report(evidence, {}, options=options, scope_evidence=scope_evidence)
+    return _capsule_report(
+        evidence,
+        {},
+        options=options,
+        scope_evidence=scope_evidence,
+        expected_versions=versions,
+        platform_id=selected.kind,
+    )
 
 
 def _is_development_source_checkout() -> bool:
@@ -6917,6 +7838,8 @@ def _finalize_local_capsule_snapshot(
             findings_by_member,
             options=review_options,
             scope_evidence=scope_evidence,
+            expected_versions=getattr(snapshot, "expected_versions", None),
+            platform_id=getattr(snapshot, "platform_id", "linux-x86_64"),
         ),
         review_options,
         files=files,
@@ -7839,6 +8762,8 @@ def _run_immutable_scope_review_with_runtime(
         classified_findings,
         options=options,
         scope_evidence=scope_evidence,
+        expected_versions=getattr(runtime, "analyzer_versions", None),
+        platform_id=getattr(runtime, "backend", "linux-x86_64"),
     )
 
 

@@ -99,6 +99,7 @@ pythonVersion = "3.11"
 typeCheckingMode = "standard"
 useLibraryCodeForTypes = true
 extraPaths = [
+    ".",
     "src",
     "packages/specfact-project/src",
     "packages/specfact-backlog/src",

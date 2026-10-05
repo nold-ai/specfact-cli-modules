@@ -35,6 +35,7 @@ jobs:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
           persist-credentials: false
+          fetch-depth: 0
       - name: Checkout published registry baseline for candidate installation
         if: github.event_name == 'pull_request'
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
@@ -129,6 +130,27 @@ jobs:
           }
           EOF
           sudo apparmor_parser -r "$profile"
+      - name: Run deferred candidate commit review without weakening enforcement
+        if: github.event_name == 'pull_request' && matrix.python == '3.12'
+        shell: bash
+        env:
+          CANDIDATE_HEAD: ${{ github.event.pull_request.head.sha }}
+          CANDIDATE_BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          test "$(id -u)" -ne 0
+          unset GITHUB_TOKEN GH_TOKEN PYTHONPATH
+          REVIEW_ROOT="$CUSTOMER_ROOT/staged-review"
+          git worktree add --detach "$REVIEW_ROOT" "$CANDIDATE_HEAD"
+          git -C "$REVIEW_ROOT" reset --soft "$CANDIDATE_BASE"
+          cd "$REVIEW_ROOT"
+          review_paths=()
+          while IFS= read -r -d '' path; do
+            review_paths+=("$path")
+          done < <(git diff --cached --name-only --diff-filter=ACMR -z)
+          test "${#review_paths[@]}" -gt 0
+          SPECFACT_CODE_REVIEW_ENFORCEMENT=changed \
+            "$CUSTOMER_ROOT/venv/bin/python" scripts/pre_commit_code_review.py "${review_paths[@]}"
       - name: Exercise cold and warm fixtures and modules repository
         shell: bash
         run: |

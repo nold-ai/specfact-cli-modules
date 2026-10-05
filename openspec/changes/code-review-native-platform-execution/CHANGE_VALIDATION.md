@@ -1,5 +1,14 @@
 # Native feasibility follow-up — 2026-09-30
 
+Current revision (2026-10-05, Europe/Berlin) uses
+`codex/macos-native-capsule-runtime` and PR #489. #460's scope was synchronized
+with project-driven preparation and matching-architecture full-VM acceptance.
+Strict OpenSpec validation passed; planned evidence mapping is updated alongside
+the new scenarios. Physical cold pip preparation and all-ten review succeeded
+on an unrelated repository and a private self-referential project. Genuine
+project findings are retained. Full four-manager and signed customer acceptance
+remain incomplete; earlier scope/metadata statements below are historical.
+
 Branch: `codex/macos-arm64-capsule-feasibility`, based on the planning revision below. [Native results](NATIVE_RESULTS.md) supersede the earlier no-execution status. The follow-up records real native positive/negative tests, bounded Docker candidate tooling and remaining acceptance failures. Production runtime selection, signatures, module versions and published artifacts remain unchanged.
 
 The unresolved planning review annotations about TDD evidence recording and mandatory production quality gates are addressed explicitly in tasks.md. Docker assembly is separated from native execution/signing and protected GHCR promotion in design.md and the acceptance scenarios. Green tooling checks do not imply capsule acceptance.

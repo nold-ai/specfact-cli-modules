@@ -14,7 +14,7 @@ Code Review SHALL add a dedicated macOS ARM64 capsule while preserving Linux x86
 
 - **GIVEN** a signed supported macOS ARM64 installation
 - **WHEN** an ordinary user runs review or runtime inspect/prepare
-- **THEN** the selected runtime executes natively without sudo, Docker, WSL, a VM, Rosetta or CPU emulation; diagnostics and reports identify the actual OS, architecture, ABI and backend
+- **THEN** the selected runtime executes natively without requiring sudo, Docker, WSL, an additional VM, Rosetta or CPU emulation; compatible full VMs and physical systems are eligible, and diagnostics and reports identify the actual OS, architecture, ABI and backend
 
 #### Scenario: Architecture is not silently substituted
 
@@ -38,11 +38,30 @@ Production backend approval SHALL follow harmless native feasibility tests of th
 - **WHEN** launch readiness is evaluated
 - **THEN** the runtime rejects analyzer launch and reports incomplete evidence under the released status/exit contract without weakening isolation
 
+#### Scenario: Linux launch identity is absent after platform selection
+
+- **GIVEN** a Linux capsule runtime without its verified Bubblewrap identity
+- **WHEN** a member launch is requested
+- **THEN** the controller returns incomplete member evidence before preparing a sandbox or starting an analyzer
+
 #### Scenario: Cancellation and descendants are bounded
 
 - **GIVEN** a managed worker requests child execution or attempts forbidden direct creation, session changes or process-group escape
 - **WHEN** timeout, user cancellation or controller failure occurs
 - **THEN** all governed workers terminate within five seconds; fixtures independently check survivors and resource ceilings rather than treating killpg alone as proof
+
+#### Scenario: A stalled bootstrap cannot hold startup indefinitely
+
+- **GIVEN** an admitted, signed bootstrap has entered tracing but remains alive without sending its confinement-ready marker
+- **WHEN** the startup deadline expires or the controller closes its private channel
+- **THEN** the broker rejects launch, kills and reaps that worker, and leaves no reusable handle or uncontrolled process; it never blocks indefinitely on the marker pipe
+
+#### Scenario: Hostile writable output cannot delay cancellation
+
+- **GIVEN** a worker has created a large or changing tree in its granted output or temporary directory after launch
+- **WHEN** its owner sends WAIT or CANCEL for the broker-assigned handle
+- **THEN** the broker processes lifecycle control without recursively traversing worker-writable trees, and cancellation plus independent survivor observation remains within the five-second cleanup bound
+- **AND** launch-time path, ownership, and tree checks and terminal output-file checks remain fail-closed
 
 #### Scenario: Startup cannot bypass confinement
 
@@ -81,15 +100,76 @@ The macOS backend SHALL preserve the exact released baseline's scope, findings, 
 - **WHEN** it receives macOS evidence
 - **THEN** it rejects unsupported evidence explicitly rather than interpreting it as historical Linux or protected PR assurance
 
+#### Scenario: Native preparation fails before an analyzer launches
+
+- **GIVEN** a macOS ARM64 controller selects a native analyzer ABI
+- **WHEN** native acquisition or preparation returns incomplete evidence
+- **THEN** the report retains the selected Darwin/ARM64 environment identity and native platform admission context
+- **AND** it does not label the failed run as a Linux capsule or imply that an analyzer ran
+
 ### Requirement: Verified provisioning and offline reuse
 
 Module-shipped files SHALL retain full-module signature/checksum verification. External native runtimes SHALL have an approved signed manifest binding artifact and installed-payload digests, OS, architecture, ABI, complete dependency closure, released policy identity and backend/profile version. Cache identity SHALL include those bindings. Provisioning, extraction and each launch including offline reuse SHALL verify the selected payload and admission policy, and prevent substitution between verification and use.
+
+The signed native manifest SHALL bind the exact closed analyzer-version map used by that platform artifact. Native report evidence and profile-version admission SHALL use this authenticated map rather than the historical Linux version map. Linux artifacts and evidence SHALL retain their existing identities until a separately verified Linux upgrade is published. Missing, extra, malformed or mismatched native analyzer-version bindings SHALL fail before execution or yield incomplete evidence; a native analyzer result SHALL never be relabeled as a different released version.
+
+#### Scenario: Large signed extraction budget does not preallocate that budget
+
+- **GIVEN** a verified Linux regression capsule layer has a signed unpacked-byte allowance larger than the available controller memory
+- **WHEN** acquisition decompresses a layer whose actual content fits the environment
+- **THEN** it reads bounded chunks rather than allocating the entire signed allowance in advance
+- **AND** compressed digest, complete uncompressed diff-ID, unpacked-byte and file-count limits, duplicate-path rejection and whiteout safety remain mandatory before application
+- **AND** historical Linux artifact identities, worker limits and acceptance thresholds remain unchanged
 
 #### Scenario: Cached native runtime
 
 - **GIVEN** a complete approved cache for the selected OS, ABI and policy
 - **WHEN** review runs offline
 - **THEN** it revalidates the payload and uses only the bound runtime while recording its identity
+
+#### Scenario: Explicit local publication reuses a cache offline
+
+- **GIVEN** an authenticated local publication supplied the manifest, detached signature and public key for a capsule already installed in the verified cache
+- **WHEN** offline mode is selected and the source archive is unavailable
+- **THEN** the backend constructs no archive reader, revalidates the cached payload and executes only that exact bound identity
+
+#### Scenario: Native backend has no admitted artifact
+
+- **GIVEN** Code Review runs on Darwin ARM64 with CPython 3.11, 3.12 or 3.13
+- **WHEN** backend selection derives the matching `darwin-arm64-cp311`, `darwin-arm64-cp312` or `darwin-arm64-cp313` identity but the authenticated artifact catalog has no admitted entry
+- **THEN** runtime preparation returns actionable incomplete evidence for that exact identity without executing host analyzers, compiling customer-runtime tools or selecting a Linux artifact
+
+#### Scenario: Already incomplete native evidence keeps its root diagnostic
+
+- **GIVEN** every analyzer is already UNKNOWN from a missing runtime, project acquisition, or snapshot failure
+- **WHEN** report assembly cannot activate the platform-specific suppression catalog because no analyzer-version identity was available
+- **THEN** the report remains UNKNOWN with the original actionable diagnostic for each analyzer
+- **AND** suppression activation cannot promote the report or replace the root cause with a secondary policy-version mismatch
+
+#### Scenario: Controller Python is newer than the native analyzer matrix
+
+- **GIVEN** the SpecFact CLI runs under CPython 3.14 on Darwin ARM64
+- **WHEN** Code Review selects its analyzer runtime
+- **THEN** it selects the pinned CPython 3.12 native analyzer environment without claiming CPython 3.14 project-extension compatibility
+- **AND** project dependencies or syntax incompatible with the selected runtime yield actionable incomplete evidence, never host execution or a false PASS
+
+#### Scenario: Native signing metadata is bound to the payload
+
+- **GIVEN** an authenticated Darwin ARM64 capsule manifest declares executable native-signing records
+- **WHEN** cold acquisition or offline cache reuse verifies the capsule
+- **THEN** every executable payload is covered by authenticated signing metadata and its observed native signature matches before the cache is returned for backend admission
+
+#### Scenario: Native analyzer versions differ from Linux
+
+- **GIVEN** the authenticated Darwin ARM64 manifest binds Semgrep clean and bug-hunt analyzers to 1.175.0 while the preserved Linux artifact remains on 1.144.0
+- **WHEN** a native review report is assembled and its profile evidence is admitted
+- **THEN** both native analyzers are reported and checked as 1.175.0 without changing or falsely relabeling Linux evidence
+
+#### Scenario: Native analyzer-version binding is incomplete
+
+- **GIVEN** a native manifest omits, adds or malforms any member of the closed ten-analyzer version map
+- **WHEN** capsule acquisition authenticates the manifest
+- **THEN** the capsule is rejected before cache publication or analyzer execution
 
 #### Scenario: Invalid native artifact
 
@@ -181,6 +261,76 @@ The full native closure SHALL satisfy released dependency policy independently o
 
 The macOS backend SHALL carry forward pip/pip-tools, Hatch, uv and Poetry discovery, source selection, pytest plugins and coverage from #473. Acquisition, build hooks, preparation and analysis SHALL each have explicit trust, filesystem, process and network boundaries. Mach-O/dyld dependency handling SHALL replace Linux ELF assumptions for macOS. The trusted control domain SHALL remain separate from project code and extensions.
 
+#### Scenario: Dependency-free pip project needs no acquisition entry
+
+- **GIVEN** a pip project declares no dependencies, selected extras, requirements, constraints or dynamic dependency metadata
+- **WHEN** its native project runtime is prepared on first use
+- **THEN** the controller creates and verifies an empty sealed site-packages layer bound to the source plan and native runtime without requiring a project-specific remote bundle
+- **AND** any declared or dynamically supplied dependency keeps the authenticated acquisition requirement
+
+#### Scenario: Runtime preparation preserves the native controller platform
+
+- **GIVEN** Code Review runs on an ARM64 macOS controller with a supported CPython ABI
+- **WHEN** the developer invokes `specfact code review runtime prepare`
+- **THEN** project Python selection starts from the matching `darwin-arm64-cp*` environment
+
+#### Scenario: Prepared native runtime executes the managed pytest contract
+
+- **GIVEN** an authenticated Darwin/ARM64 project runtime and a selected pytest inventory
+- **WHEN** Code Review executes targeted pytest and coverage through the native broker
+- **THEN** it binds sealed pytest and coverage projections plus the complete selected inventory to the fixed native worker plan
+- **AND** it does not send the Linux portable-worker adapter protocol to the native worker
+- **AND** Linux toolchain-lock identities are not passed to the native backend
+
+#### Scenario: Project preparation uses an admitted resource budget
+
+- **GIVEN** an authenticated native project bundle is ready for sealed preparation
+- **WHEN** the controller creates the broker request
+- **THEN** every resource value is within the versioned managed-process bounds
+- **AND** oversized output or descriptor grants are rejected before project code can execute
+
+#### Scenario: Project preparation returns a versioned result
+
+- **GIVEN** the broker launches a fixed native project-manager plan
+- **WHEN** preparation completes, is incomplete or rejects its input
+- **THEN** the worker writes the exact versioned project-preparation result schema
+- **AND** the controller rejects unversioned or differently versioned output
+
+#### Scenario: Wheel installation admits only layouts it can materialize
+
+- **GIVEN** an authenticated wheel places files in a top-level `.data` scheme directory
+- **WHEN** sealed project preparation inspects its members before publishing output
+- **THEN** it returns actionable `INCOMPLETE` evidence instead of `COMPLETE` with misplaced files
+- **AND** no partial site-packages root is published
+
+#### Scenario: Shared explicit wheel directories do not collide
+
+- **GIVEN** two authenticated wheels each contain the same explicit directory entry and otherwise disjoint regular files beneath it
+- **WHEN** sealed project preparation preflights and extracts the wheel closure
+- **THEN** it accepts the repeated directory and publishes both files
+- **AND** duplicate file paths, file/directory type collisions, case-insensitive aliases, and symlink entries remain rejected before extraction
+
+#### Scenario: Native wheel tags respect the host's macOS version
+
+- **GIVEN** an authenticated ARM64 or universal2 wheel declares a minimum macOS release
+- **WHEN** the host release is older or cannot be established
+- **THEN** the wheel is rejected before extraction with no prepared output
+- **AND** a compatible minimum release remains eligible for the selected Python ABI
+
+#### Scenario: Authenticated acquisition becomes a read-only worker view
+
+- **GIVEN** the controller has authenticated a publisher bundle whose recorded files use private staging modes
+- **WHEN** it copies the bundle into the project worker snapshot
+- **THEN** regular files are sealed read-only before launch
+- **AND** the worker requires the authenticated source mode and the sealed effective mode instead of requiring writable inputs
+
+#### Scenario: Native snapshots use canonical macOS path identity
+
+- **GIVEN** macOS exposes the same temporary or project directory through aliases such as `/var` and `/private/var`
+- **WHEN** selected files are rebound into an immutable analyzer snapshot
+- **THEN** containment and relative paths use one resolved root identity
+- **AND** genuine aliases outside that root remain rejected
+
 #### Scenario: Native extension and plugin execute
 
 - **GIVEN** a pinned external project contains an ARM64 extension, pytest plugin and coverage configuration
@@ -198,6 +348,13 @@ The macOS backend SHALL carry forward pip/pip-tools, Hatch, uv and Poetry discov
 - **GIVEN** a required extension or library has no admitted native build
 - **WHEN** preparation analyzes the project
 - **THEN** it reports the root incompatibility honestly, preserves independent static evidence where supported, and never converts incomplete required evidence to PASS
+
+#### Scenario: Native coverage exclusions use the admitted snapshot root
+
+- **GIVEN** native selected inputs include production files, selected tests and helpers below sealed test roots
+- **WHEN** the complete native pytest adapter evaluates coverage from its physical immutable snapshot
+- **THEN** it rebinds controller-validated logical test roots and selectors to that snapshot before exclusion
+- **AND** it preserves missing/low production coverage failures, escaping-root rejection, thresholds and project-origin provenance
 
 ### Requirement: Signed customer release acceptance
 
@@ -226,6 +383,15 @@ Support SHALL be claimed only after a canonical signed publication passes fresh 
 - **GIVEN** a macOS candidate or publication is evaluated
 - **WHEN** the existing Linux customer matrix and cross-platform fixtures run
 - **THEN** Linux remains supported with historical identities intact; a faulty macOS publication can be withdrawn or superseded without disabling Linux or deleting evidence
+
+#### Scenario: Platform-dependent local review is deferred to matching Linux CI
+
+- **GIVEN** the maintainer explicitly authorizes deferring only the unavailable local capsule review to GitHub's matching x86-64 Linux runner
+- **WHEN** the candidate PR is updated
+- **THEN** CI reconstructs the exact event-bound candidate tree and stages its changes against the event-bound base in an isolated worktree
+- **AND** the unchanged pre-commit review helper runs as an ordinary user with its existing enforcement, timeout, integrity and sandbox checks, and any nonzero exit fails the required customer job
+- **AND** only the capsule step may be explicitly deferred on a local ARM64 Darwin feature worktree; invalid values, CI execution and other platforms reject the deferral, while every other original commit-hook component executes normally
+- **AND** other local gates remain required, no credentials reach the review process, and this candidate result does not establish public installation or native macOS release acceptance
 
 #### Scenario: Local Docker assembly preserves native identity
 
@@ -327,7 +493,59 @@ The macOS ARM64 backend SHALL use broker-owned direct workers, each traced and c
 
 - **WHEN** an admitted Python or pinned native-tool adapter requests an allowed child operation
 - **THEN** the broker launches a separately confined direct worker and returns its output, status and lifecycle through the managed channel
+- **AND** the controller converts only tool-reported paths proven below that exact tool snapshot into stable relative snapshot paths before analyzer replay, rejecting paths outside the tool snapshot
 - **AND** all ten analyzers and the existing pip/Hatch/uv/Poetry acceptance corpus remain release requirements
+
+#### Scenario: Managed tools receive private writable state
+
+- **GIVEN** an admitted tool whose upstream runtime initializes a home, cache or configuration directory even when persistent caching is disabled
+- **WHEN** the broker launches its managed worker against an immutable project snapshot
+- **THEN** the trusted adapter binds the process temporary directory, home, cache, configuration and tool-specific cache locations below the invocation's private temporary root
+- **AND** no tool may create state in the project snapshot, capsule cache or developer home directory
+- **AND** before each subsequent broker request the controller rejects indirection or special files in that state and seals admitted directories and regular files to owner-only modes
+- **AND** the profile may grant the fixed null device needed by Python tooling, without granting other device paths
+
+#### Scenario: Controller-generated policy projections use canonical roots
+
+- **WHEN** the trusted controller creates immutable pytest, coverage, Ruff, BasedPyright or Pylint policy projections below a host temporary-directory alias
+- **THEN** it records and binds the canonical existing projection root before native admission
+- **AND** native execution still rejects caller-provided noncanonical, symbolic-link or missing configuration roots
+
+#### Scenario: Managed pytest evidence stays in private temporary storage
+
+- **WHEN** the targeted pytest adapter requests observer, coverage-data, coverage-report and JUnit outputs
+- **THEN** the trusted pytest tool plan materializes their exact logical paths below the invocation temporary root, including fixed path-bearing option values
+- **AND** it rejects other embedded host paths or option forms instead of writing into the immutable project
+- **AND** complete-inventory pytest receives the bounded immutable project snapshot needed to resolve its controller-approved selectors, while analyzers without project-runtime needs keep the narrower selected-file snapshot
+- **AND** the trusted tool adapter normalizes only bounded integer and integer-enum process exits to broker status values
+- **AND** the pytest domain imports the immutable project snapshot whether or not a separate project dependency runtime exists; sealed project site-packages remain conditional on a verified runtime
+- **AND** pytest cache state is overridden to a fixed invocation-private temporary path rather than attempting the projected `/opt/specfact` path on the host
+
+#### Scenario: Native pytest reports project-origin evidence honestly
+
+- **GIVEN** a selected project test registers an exit handler that rewrites observer, JUnit and coverage files and forces a successful process exit
+- **WHEN** the native pytest tool finishes its pytest call
+- **THEN** the controller labels the result as project-origin pytest evidence, including when its ordinary reconciliation reports PASS
+- **AND** it never labels observer, JUnit, coverage, or process-exit facts as independently protected from project Python
+- **AND** missing, malformed, or mismatched files remain incomplete; a known forged-result fixture is recorded as an accepted limit of project-origin results, not as a security proof
+- **AND** protected consumers reject project-origin results unless an explicit versioned compatibility change authorizes them
+
+#### Scenario: Native pytest opt-out remains explicit
+
+- **GIVEN** a Darwin ARM64 review with `no_tests` requested, an empty selection, or a Python-stub-only selection
+- **WHEN** the native controller builds the analyzer report
+- **THEN** targeted pytest remains required for a complete native review; a requested opt-out is UNKNOWN with an explicit diagnostic
+- **AND** the review cannot report PASS by treating pytest as NOT_APPLICABLE or by skipping its worker
+- **AND** an explicit `no_tests` request fails before member execution rather than silently running tests against the requested opt-out
+- **AND** the Linux `no_tests` compatibility behavior is unchanged
+
+#### Scenario: Semgrep uses its admitted single-process core interface
+
+- **GIVEN** the pinned Osemgrep frontend initializes networking support by launching an external operating-system probe
+- **WHEN** a sealed Semgrep analyzer requests a managed scan
+- **THEN** the trusted adapter validates and merges only immutable rule packs from the verified capsule or controller-projected configuration, writes the pinned version's exact target schema below private temporary storage, and executes the verified Semgrep core image directly with one job and JSON output without progress dots
+- **AND** it binds TLS initialization to the immutable verified capsule CA bundle so the core does not probe the host with `uname`
+- **AND** it does not run the Osemgrep frontend, resolve executables through `PATH`, enable networking or permit a worker-created child process
 
 #### Scenario: Worker bypasses compatibility adapter
 
@@ -346,6 +564,20 @@ The macOS ARM64 backend SHALL use broker-owned direct workers, each traced and c
 - **WHEN** its broker dies while it is suspended or running before tracing, trace-stopped, resumed, across exec or confined
 - **THEN** independent birth/tracing observation and positive/negative controls establish five-second cleanup and invocation-job removal with 100 repetitions per tested transition; a launchd-only group claim does not approve arbitrary untraced workers or replace the remaining complete boundary and OS-matrix acceptance
 
+#### Scenario: Confined workers resolve only explicitly granted roots
+
+- **GIVEN** a capsule and invocation whose canonical paths traverse host directories outside both granted trees
+- **WHEN** the fixed bootstrap applies confinement and starts an isolated Python analyzer, tool or project worker
+- **THEN** the profile grants read-metadata access only to the bounded canonical ancestor chains needed to resolve the capsule and invocation roots, while project, output and temporary paths remain confined below the invocation root
+- **AND** isolated Python runs with bytecode generation disabled by an interpreter flag, so execution cannot add unsigned cache entries even when environment variables are ignored
+
+#### Scenario: Production workers enter the granted project root
+
+- **GIVEN** the CLI process was started from a host directory outside the invocation and capsule grants
+- **WHEN** the fixed bootstrap has established confinement and is ready to replace itself with an analyzer, tool or project worker
+- **THEN** it changes its working directory to the verified project snapshot before replacement, so worker compatibility code never needs access to the CLI caller's host working directory
+- **AND** inability to enter that snapshot fails the launch before project code executes
+
 #### Scenario: Private control protocol preserves authority and terminal status
 
 - **GIVEN** an invocation-scoped broker with a verified CLI peer and private capability
@@ -358,6 +590,13 @@ The macOS ARM64 backend SHALL use broker-owned direct workers, each traced and c
 - **WHEN** initial stops, terminal signals, cancellation or broker death occur
 - **THEN** bounded kernel-origin exception messages are admitted only for the registered direct child and its thread; only the initial SIGSTOP and an explicitly requested, independently verified one-use image handoff trap are suppressed, runtime signals retain their meaning, and terminal wait status remains distinct from exception replies
 - **AND** exact ad-hoc hardened builds, five-second independent cleanup, 100 repetitions and the entire hosted matrix remain required; malformed or foreign exceptions fail closed and no BSD transport fallback establishes acceptance
+
+#### Scenario: Production plan admission never activates fixture-only exception holds
+
+- **GIVEN** a production request for any analyzer, managed tool or project-manager plan
+- **WHEN** the broker admits the initial trace stop and the verified replacement image stop
+- **THEN** it resumes the worker immediately and reports the admitted image as released
+- **AND** lifecycle experiments that intentionally retain a kernel exception reply use a separate fixed maintainer fixture and cannot be selected by a production plan number
 
 #### Scenario: Replacement image is verified before initialization
 
@@ -409,7 +648,7 @@ Versioned inspection and evidence SHALL distinguish SpecFact manifest authentica
 
 ### Requirement: Automatic native runtime acquisition
 
-The existing review command SHALL automatically acquire a prebuilt signed Darwin ARM64 runtime on first use and show progress. It SHALL verify platform, ABI, policy/backend identity and payload digests, publish caches atomically and verify offline reuse. Customer execution SHALL require no Docker, VM, Homebrew, Xcode, administrator privilege or separately installed daemon.
+The existing review command SHALL automatically acquire a prebuilt signed Darwin ARM64 runtime on first use and show bounded progress at phase changes and coarse byte intervals, including the final byte count. It SHALL verify platform, ABI, policy/backend identity and payload digests, publish caches atomically and verify offline reuse. Customer execution SHALL require no Docker, VM, Homebrew, Xcode, administrator privilege or separately installed daemon.
 
 #### Scenario: First invocation and offline reuse
 
@@ -420,3 +659,26 @@ The existing review command SHALL automatically acquire a prebuilt signed Darwin
 
 - **WHEN** a consumer does not support the versioned native execution contract
 - **THEN** it rejects that evidence rather than assigning a Linux identity or protected authority
+### Requirement: Prepare unfamiliar projects from discovered or caller-supplied setup
+The native backend SHALL reuse portable project discovery and prepare dependencies on demand from the actual repository. Explicit project configuration SHALL precede verified active context and unambiguous metadata. No project identity SHALL require registration in a publisher acquisition catalog. Failed JSON inspection SHALL identify the diagnostic, candidate selections and required configuration without executing project code. Dependency/build hooks SHALL execute only in a confined project preparation domain with no acquisition credentials or direct network access.
+
+#### Scenario: First review of an unfamiliar dependency-bearing project
+- **GIVEN** a compatible project absent from every publisher project catalog
+- **WHEN** the caller runs review with an unambiguous or explicit manager selection
+- **THEN** the backend SHALL resolve and prepare its dependencies using authentic pinned manager semantics
+- **AND** SHALL retain independently available findings and report incomplete evidence if required preparation is unsupported
+
+#### Scenario: Caller resolves ambiguous discovery
+- **GIVEN** repository metadata admits multiple project managers or environments
+- **WHEN** the caller invokes runtime inspect with JSON output
+- **THEN** the command SHALL return a structured diagnostic with candidates and required configuration fields
+- **AND** explicit project configuration SHALL allow the caller to repeat inspection without modifying repository setup
+
+### Requirement: Equivalent execution on supported physical machines and full virtual machines
+Support SHALL depend on guest OS/build, CPU architecture, Python ABI and required kernel capabilities. A matching-architecture full VM SHALL be eligible for the same acceptance as a physical machine. VM detection SHALL NOT reject an otherwise supported environment or weaken isolation. Full-system CPU emulation SHALL be recorded as supplemental evidence; translated user-mode binaries SHALL NOT establish native acceptance for their translated architecture. Windows and Linux ARM64 remain follow-ups; this delivery covers macOS ARM64 and Linux x86-64.
+
+#### Scenario: Clean installation in a matching-architecture guest
+- **GIVEN** an ordinary user in a clean supported full VM with default protections
+- **WHEN** the final capsule is acquired through the documented installation route
+- **THEN** cold acquisition, offline reuse, analysis, integrity and lifecycle acceptance SHALL run without publisher keys or host development tools
+- **AND** evidence SHALL record guest OS/kernel build, architecture, ABI, artifact identity and configured virtualization mode

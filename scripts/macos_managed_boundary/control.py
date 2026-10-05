@@ -34,7 +34,7 @@ _CASE_NAMES = {
     ),
     "failure": (
         "unknown bootstrap-observe-caller bootstrap-authority bootstrap-register bootstrap-socket "
-        "marker-broker marker-trace marker-output marker-exec observe-worker observe-removal isolation-peer-authority "
+        "marker-broker marker-bootstrap-identity marker-trace marker-output marker-exec observe-worker observe-removal isolation-peer-authority "
         "isolation-extra-connection cleanup"
     ),
     "protocol": (
@@ -89,9 +89,10 @@ STATE = startup_module("control_state")
 BUILD = startup_module("control_build")
 MACH = startup_module("control_mach_build")
 EXEC = startup_module("control_exec")
+ADMISSION = startup_module("control_admission")
 EXEC_LIFECYCLE_CASES, EXEC_PROTOCOL_CASES = EXEC.LIFECYCLE_CASES, EXEC.PROTOCOL_CASES
-LIFECYCLE_CASES = (*_CASE_NAMES["lifecycle"].split(), *EXEC_LIFECYCLE_CASES)
-PROTOCOL_CASES = (*_CASE_NAMES["protocol"].split(), *EXEC_PROTOCOL_CASES)
+LIFECYCLE_CASES = (*_CASE_NAMES["lifecycle"].split(), *EXEC_LIFECYCLE_CASES, *ADMISSION.LIFECYCLE_CASES)
+PROTOCOL_CASES = (*_CASE_NAMES["protocol"].split(), *EXEC_PROTOCOL_CASES, *ADMISSION.PROTOCOL_CASES)
 
 
 class FrameFields(NamedTuple):
@@ -189,6 +190,11 @@ class Client:
         result = self.request(1, argument=mode, timeout_ms=timeout_ms)
         require(result.get("ok") is True and result.get("state") == "launched", f"launch rejected: {result}")
         require(isinstance(result.get("deadline_ns"), int), "native launch deadline missing")
+        owner = getattr(self, "owner", None)
+        if owner is not None:
+            marker = owner.wait_event("bootstrap_identity", result["pid"])
+            _validate_bootstrap_identity(marker, result["pid"])
+            result["bootstrap_identity"] = marker
         result["launch_started"] = started  # Mach/Python elapsed clock, not the native epoch.
         return result
 
@@ -200,6 +206,14 @@ def require(condition: bool, message: str) -> None:
     """Assertions used as proof gates also work under python -O."""
     if not condition:
         raise RuntimeError(message)
+
+
+def _validate_bootstrap_identity(marker: object, pid: int) -> None:
+    """Require exact suspended-process verification before worker execution."""
+    require(isinstance(marker, dict), "bootstrap identity marker missing")
+    require(marker.get("bootstrap_identity") == pid, "foreign bootstrap identity marker")
+    require(marker.get("suspended") is True, "bootstrap was not suspended during identity verification")
+    require(marker.get("output_empty") is True, "bootstrap produced output before identity verification")
 
 
 def job_config(label: str, broker: Path, directory: Path) -> dict[str, Any]:
@@ -299,9 +313,13 @@ class Invocation:
         """Read-only observation of fixture markers; never cleanup enforcement."""
         _activate_operation(
             self,
-            {"broker": "marker-broker", "trace": "marker-trace", "output": "marker-output", "exec": "marker-exec"}.get(
-                field, "unknown"
-            ),
+            {
+                "broker": "marker-broker",
+                "bootstrap_identity": "marker-bootstrap-identity",
+                "trace": "marker-trace",
+                "output": "marker-output",
+                "exec": "marker-exec",
+            }.get(field, "unknown"),
         )
         deadline = time.monotonic() + 3
         while time.monotonic() < deadline:
@@ -318,10 +336,12 @@ class Invocation:
     def capture_worker(self, launched: dict[str, Any], mode: int = 2) -> dict[str, Any]:
         """Validate the original kernel identity before injecting lifecycle faults."""
         pid = launched["pid"]
+        bootstrap = launched.get("bootstrap_identity") or self.wait_event("bootstrap_identity", pid)
+        _validate_bootstrap_identity(bootstrap, pid)
         if mode in (10, 11):
             marker = self.wait_event("exec", pid)
             require(marker.get("held") is (mode == 11), "unexpected replacement hold")
-        elif mode == 4:
+        elif mode in (4, 13):
             self.wait_event("trace", pid)
         elif mode != 3:
             self.wait_event("output", pid)
@@ -337,7 +357,7 @@ class Invocation:
         self.identities.append(identity)
         require(identity["ppid"] == self.identities[0]["pid"], "worker not direct broker child")
         require(bool(identity["flags"] & 2) == (mode != 3), "unexpected tracing flag")
-        if mode in (3, 4, 11):
+        if mode in (3, 4, 11, 13):
             require(identity["pgid"] == self.identities[0]["pgid"], "trusted startup left launchd group")
         elif mode in (2, 10):
             require(identity["pgid"] == pid, "traced hold fixture did not leave group")
@@ -553,6 +573,8 @@ def _trigger_lifecycle(
 
 def lifecycle_trial(broker: Path, observer: Path, root: Path, case: str) -> dict[str, Any]:
     """Use kernel identity proof plus returned status for each added lifecycle."""
+    if case == "exec-identity-swap":
+        return identity_swap_trial(broker, observer, root)
     if case == "cli-kill-wait":
         return cli_death_trial(broker, observer, root)
     if case == "isolation":
@@ -571,7 +593,20 @@ def lifecycle_trial(broker: Path, observer: Path, root: Path, case: str) -> dict
         deadline = cleanup_deadline(launched) if job else None
         started, status = _trigger_lifecycle(invocation, client, launched["handle"], case)
         result = observe_absence(invocation, identity, started, job=job, native_deadline_ns=deadline)
-        return {"case": case, **result, "status": status}
+        marker = (
+            _event_from_file(invocation.directory / "events", "exec", launched["pid"])
+            if case in EXEC_LIFECYCLE_CASES
+            else None
+        )
+        if case in EXEC_LIFECYCLE_CASES:
+            EXEC.verify_lifecycle_marker(marker, identity, case, require)
+        return {
+            "case": case,
+            **result,
+            "status": status,
+            "image_stop": marker,
+            "bootstrap_identity": launched["bootstrap_identity"],
+        }
 
 
 def isolation_trial(broker: Path, observer: Path, root: Path) -> dict[str, Any]:
@@ -721,6 +756,21 @@ verify_exec_status = partial(EXEC.verify_status, require=require)
 
 exec_trials = partial(EXEC.trials, tools=EXEC.ExecTools(Invocation, require, _event_from_file))
 
+exception_port_trial = partial(
+    ADMISSION.exception_port_trial,
+    tools=ADMISSION.AdmissionTools(Invocation, require, observe_absence, cleanup_deadline, STARTUP.command, BUILD),
+)
+
+identity_swap_trial = partial(
+    ADMISSION.identity_swap_trial,
+    tools=ADMISSION.AdmissionTools(Invocation, require, observe_absence, cleanup_deadline, STARTUP.command, BUILD),
+)
+
+bootstrap_identity_trial = partial(
+    ADMISSION.bootstrap_identity_trial,
+    tools=ADMISSION.AdmissionTools(Invocation, require, observe_absence, cleanup_deadline, STARTUP.command, BUILD),
+)
+
 
 def _output_protocol_trials(broker: Path, observer: Path, root: Path) -> list[dict[str, Any]]:
     """Prove native output, rejection, fragmentation and retained handle limits."""
@@ -860,7 +910,12 @@ def _term_ignored_trials(broker: Path, observer: Path, root: Path) -> list[dict[
 
 def protocol_trials(broker: Path, observer: Path, root: Path) -> list[dict[str, Any]]:
     """Actual negative requests must reject while fixed positive execution works."""
-    trials = [runtime_trap_trial(broker, observer, root), *exec_trials(broker, observer, root)]
+    trials = [
+        bootstrap_identity_trial(broker, observer, root),
+        runtime_trap_trial(broker, observer, root),
+        *exec_trials(broker, observer, root),
+        *(exception_port_trial(broker, observer, root, kind) for kind in ("task", "thread")),
+    ]
     for check in (
         _output_protocol_trials,
         _frame_size_trials,
@@ -933,7 +988,7 @@ def receipt(repetitions: int, trials: list[dict[str, Any]]) -> dict[str, Any]:
     protocol = set(PROTOCOL_CASES).issubset(successes)
     passed = protocol and bool(trials) and all(item.get("passed") is True for item in trials)
     return {
-        "schema_version": "specfact-managed-control-experiment-v2",
+        "schema_version": "specfact-managed-control-experiment-v4",
         "completed_lifecycle_cases": counts,
         "control_subset_passed": passed and _counts_complete(counts, 1),
         "repetition_gate_passed": passed and repetitions >= 100 and _counts_complete(counts, 100),

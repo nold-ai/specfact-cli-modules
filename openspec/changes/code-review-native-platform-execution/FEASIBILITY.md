@@ -1,5 +1,33 @@
 # macOS ARM64 feasibility gate
 
+## Project-driven and full-VM revision — 2026-10-04 (Europe/Berlin)
+
+Shared ProjectPlan discovery or explicit caller configuration now determines
+the disposable project snapshot and authentic manager invocation. Publisher
+catalogs describe SpecFact runtimes, not customer projects. Build hooks execute
+separately from sealed acquisition. Locally sealed environments retain
+local_build provenance and verified offline reuse. See
+PROJECT_DRIVEN_PREPARATION_CONTRACT.md.
+
+Matching OS/architecture full VMs and physical machines use the same acceptance
+harness and sandbox requirements. VM presence alone never rejects a runtime.
+UTM is optional for local debugging; x86-64 full-system emulation on Apple
+Silicon supplements matching x86-64 Linux CI acceptance. An ARM64 guest
+translating x86-64 applications cannot establish native x86-64 acceptance.
+Docker/WSL Linux runs do not establish Darwin/Windows backend acceptance.
+Independent installation may use a clean supported full VM with ordinary-user
+default protections, no shared host credentials and no security overrides.
+Record guest OS/kernel, architecture, ABI, artifact and virtualization mode.
+
+The physical pip milestone is implemented; all ten analyzers execute on an
+unrelated project. Controlled Hatch/uv/Poetry projects also execute all ten, and
+live managed Python subprocess behavior is measured. Unchanged upstream Poetry
+preparation retains its locked Git commit and verifies offline reuse. The full
+upstream corpus, native tool children, supported release matrix and authenticated
+independent installation remain mandatory and incomplete. Pip substitution and
+catalog pre-filling cannot satisfy those gates. See NATIVE_RESULTS.md for the
+individual measured checkpoints and remaining corpus failures.
+
 ## Distribution-signing split — 2026-10-02 (Europe/Berlin)
 
 This owner-approved revision supersedes the earlier Developer-ID-first milestone.

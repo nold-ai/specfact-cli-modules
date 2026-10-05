@@ -1,5 +1,28 @@
 # Change: Dedicated macOS ARM64 Code Review Capsule
 
+## Current project-driven revision — 2026-10-04 (Europe/Berlin)
+
+Reuse released portable discovery and caller configuration for unfamiliar projects.
+Remove publisher project catalogs from normal preparation: only SpecFact runtime
+artifacts require publisher catalog entries. Resolve project dependencies on
+demand with real pinned managers; local prepared environments retain local_build
+provenance, content verification and atomic offline reuse. Keep acquisition,
+untrusted preparation and analyzer/project execution boundaries separate.
+
+Support is determined by OS/build, architecture, Python ABI and required kernel
+capabilities. Full matching-architecture VMs are valid acceptance environments;
+hardware brand and VM detection never select a weaker execution boundary.
+Use optional UTM guests for local reproduction and matching-architecture CI VMs
+for final Linux/Windows acceptance. Record CPU emulation separately. This change
+still delivers macOS ARM64 and Linux x86-64; Windows and Linux ARM64 follow later.
+Developer ID remains optional #488, and module signing keys are used only in CI.
+Deferred Windows delivery is [#495](https://github.com/nold-ai/specfact-cli-modules/issues/495) /
+[`code-review-windows-native-platform-execution`](../code-review-windows-native-platform-execution/proposal.md).
+#460 blocks that follow-up; it does not block this change.
+
+Earlier signed per-project acquisition bundles remain historical experiments or
+explicit fixture imports; they must never be required to review an unknown repo.
+
 ## Distribution-signing split — 2026-10-02 (Europe/Berlin)
 
 This owner-approved revision supersedes the earlier Developer-ID-first milestone.

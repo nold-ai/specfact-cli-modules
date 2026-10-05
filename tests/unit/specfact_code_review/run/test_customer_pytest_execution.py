@@ -6,7 +6,7 @@ from typing import Any
 
 import pytest
 
-from specfact_code_review.run import runner
+from specfact_code_review.run import native_backend, runner
 
 
 def _customer_run(
@@ -128,6 +128,11 @@ def test_capsule_acquisition_failure_retains_abi_without_changing_diagnostic(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(runner, "_capsule_environment_id", lambda: "linux-x86_64-cp313")
+    monkeypatch.setattr(
+        native_backend,
+        "select_runtime_backend",
+        lambda: native_backend.BackendSelection("linux-x86_64", "linux-x86_64-cp313", ""),
+    )
     report = runner._unknown_capsule_report(
         "oci_acquisition_failed:verified cache entry is missing",
         options=runner.ReviewOptions(),

@@ -161,10 +161,16 @@ Owner-approved revisions on 2026-09-30 and 2026-10-02 (Europe/Berlin): #460 deli
 first, with managed processes, automatic first-use native runtime acquisition and Linux x86-64 regression coverage. Windows, Intel macOS and Linux
 ARM64 are deferred, not implicitly supported or required for this delivery.
 
+The 2026-10-04 revision restores automatic/caller-configured project discovery and
+on-demand preparation without publisher project catalogs. Matching-architecture
+full VMs qualify for acceptance; CPU emulation is supplemental. Windows remains
+a follow-up, and Developer ID remains optional #488.
+
 | Change | Issue | Implementation dependencies |
 |---|---|---|
 | `code-review-native-platform-execution` | [#460](https://github.com/nold-ai/specfact-cli-modules/issues/460) | Verified layout #459 and released #473 / Code Review 0.50.1 baseline; native isolation/dependency feasibility and bounded design approval; no blanket C15 or optional #434 prerequisite |
 | `code-review-macos-developer-id-distribution` | [#488](https://github.com/nold-ai/specfact-cli-modules/issues/488) | Optional, unscheduled Apple distribution trust; blocked by #460; never blocks native shipment or publication |
+| `code-review-windows-native-platform-execution` | [#495](https://github.com/nold-ai/specfact-cli-modules/issues/495) | Deferred Windows x86-64 backend using #460's project-driven contract; blocked by #460; never blocks Linux/macOS delivery; matching-architecture full VM acceptance permitted |
 
 Preserve the selected released review semantics and signed identities. Core #679/modules #417 are separately scheduled; an actual native consumer
 incompatibility requires explicit paired scope and compatibility evidence.

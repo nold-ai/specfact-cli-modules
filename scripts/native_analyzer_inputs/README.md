@@ -108,3 +108,80 @@ For static Mach-O/load inspection without execution:
 Inventory is bounded to a stable local payload and rejects incompatible or
 external loads. It does not prove dynamic loading, minimum OS, signing, sandboxing
 or verification-to-launch integrity.
+
+## Dependency evidence before admission
+
+Run the offline npm audit from this repository root with an explicit interpreter:
+
+```sh
+/absolute/python -B -m scripts.native_analyzer_inputs.candidate_policy \
+  /absolute/inputs/basedpyright-1.39.10.tgz > /absolute/private/npm-evidence.json
+```
+
+It authenticates the committed archive integrity before bounded parsing, records
+actual MIT/third-party license payload hashes and explicit fsevents omission, and
+captures the complete released ten-member analyzer version map without importing
+production modules. The released Semgrep 1.144.0 identity conflicts with native
+1.175.0; the paired core floor requires at least 1.175.0. Matching clean/defective
+fixtures does not resolve that policy drift. Parent-owned production policy and
+cross-version/Linux evidence must reconcile it; do not downgrade the candidate.
+
+The expanded `scripts/native_semgrep_parity.py` also covers `.semgrep` rule layouts
+using the pinned distribution's `--no-rewrite-rule-ids` option on both frontends.
+Raw emitted IDs remain exact. Raw invalid-pattern Python/native exit and scanned-target parity still fail on
+1.175.0. The owner-authorized versioned adapter below preserves the released
+result semantics using independently measured target discovery; raw errors remain.
+
+The authenticated upstream Z3 wheel contains **no license file** despite MIT
+METADATA. The sidecar records the missing in-wheel text (`license_payload_complete=false`)
+and hashes all 39 unchanged members; the wheel remains byte-identical to the
+existing correction. It does not fabricate or insert license text. Final license
+admission requires separately authenticated redistribution terms, including the
+bundled Windows DLL payloads. Existing source/native preservation and correct
+RECORD/metadata are evidence, not dependency admission.
+
+Exact dependency-task contract and measured scope are in
+[NATIVE_DEPENDENCY_CONTRACT.md](../../openspec/changes/code-review-native-platform-execution/NATIVE_DEPENDENCY_CONTRACT.md).
+
+
+## Versioned Semgrep candidate and authenticated Z3 license
+
+The proposed complete version map is frozen in `candidate-version-policy.json`.
+It names Semgrep 1.175.0 and adapter
+`specfact-semgrep-1.175.0-legacy-result-v1`; it does not change the released 1.144.0
+policy. Parent integration must update all production producers, consumers, locks
+and signed profiles and validate Linux/portable semantics before admission.
+
+The parity CLI now evaluates the versioned adapter conformance (exit 0 for all
+required cases), while its schema-2 receipt preserves raw frontend `passed=false`,
+raw 13/14 comparison and every stdout/stderr. `adapter.passed=true` records the
+separate 14/14 protocol result. Native `--x-ls` supplies actual selected targets
+before rule validation. On the precisely typed rule failure, legacy exit 2 and
+`paths.scanned` preserve the reference's selected-target meaning; explicit
+`analyzed_targets=[]` states that no scan succeeded. Complete error structures,
+including code/message/column/offset, remain compared. Discovery failure,
+unknown/mixed errors or changed versions reject adaptation.
+
+`Z3-LICENSE.txt` is the unmodified official tagged license, authenticated with
+`z3-license-provenance.json`; both are reviewed repository inputs. Obtain the
+exact upstream ARM64 release archive named in that provenance (its digest is
+checked offline), then prepare license-bearing candidate artifacts:
+
+```sh
+/absolute/python scripts/native_z3_wheel.py \
+  /absolute/inputs/z3_solver-5.1.0.0-py3-none-macosx_13_0_arm64.whl \
+  /absolute/new-licensed-z3-candidate \
+  --release-archive /absolute/inputs/z3-5.1.0-arm64-osx-13.3.zip
+```
+
+The schema-3 sidecar verifies tagged source/metadata identity and byte-links 28
+native/source/header members to that authenticated release. The output directory
+also contains the exact supplemental `Z3-LICENSE.txt`; the corrected wheel is
+byte-identical. Final signed redistribution must carry and authenticate that
+license file separately: installing the wheel alone does not include it.
+
+The supplemental MIT text covers the verified Z3 Darwin/source payload; it does
+not supply Microsoft VC runtime terms or Windows binary-source linkage. Exact
+unlinked DLL identities remain named in the reviewed provenance and sidecar.
+Neither this evidence nor adapter conformance admits the complete dependency
+closure or enables production execution.

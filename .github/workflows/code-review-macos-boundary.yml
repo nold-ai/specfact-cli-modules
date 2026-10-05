@@ -7,9 +7,17 @@ on:
       - .github/workflows/code-review-macos-boundary.yml
       - scripts/macos_managed_boundary/**
       - scripts/check_macos_boundary_ci_receipts.py
+      - packages/specfact-code-review/native/macos-arm64/**
+      - packages/specfact-code-review/src/specfact_code_review/run/native_*.py
+      - packages/specfact-code-review/src/specfact_code_review/run/runner.py
+      - packages/specfact-code-review/src/specfact_code_review/run/portable_snapshot.py
       - tests/unit/test_macos_managed_*.py
       - tests/unit/test_macos_control_*.py
       - tests/unit/test_macos_boundary_ci_receipts.py
+      - tests/unit/test_macos_native_broker_wait.py
+      - tests/unit/test_macos_native_file_budget.py
+      - tests/unit/specfact_code_review/run/test_native_*.py
+      - tests/unit/specfact_code_review/run/test_runner_native.py
       - openspec/changes/code-review-native-platform-execution/**
   workflow_dispatch:
 
@@ -119,6 +127,21 @@ jobs:
                   summary.write(message + "\n")
               raise SystemExit(1)
           PY
+      - name: Prove release broker cleans up controller loss during WAIT
+        env:
+          SPECFACT_NATIVE_CONTROL: "1"
+        run: |
+          python -B tests/unit/test_macos_native_broker_wait.py --self-test
+      - name: Prove failed spawn flag setup cannot launch a worker
+        env:
+          SPECFACT_NATIVE_CONTROL: "1"
+        run: |
+          python -B tests/unit/test_macos_native_spawn_flags.py --self-test
+      - name: Prove file writes use the independent file budget
+        env:
+          SPECFACT_NATIVE_CONTROL: "1"
+        run: |
+          python -B tests/unit/test_macos_native_file_budget.py --self-test
       - name: Run startup then control at 100 repetitions each
         # One foreground process runs both suites serially; no retries.
         run: |

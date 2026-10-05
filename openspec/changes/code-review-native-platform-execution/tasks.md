@@ -109,3 +109,12 @@ applicable stapling and certificate renewal/revocation belong only to #488.
 - [ ] Pass 100 repetitions of cancellation, connection loss and broker death both at the verified replacement stop and after target entry on the physical Mac and macOS 14/15/26.
 - [x] Bind four final signed fixture artifacts, shared headers, dynamic requirements and image-stop evidence to the revised experimental receipt; old receipts cannot approve the new handoff.
 - [ ] Integrate actual admitted interpreter/analyzer execution only after this subset and the remaining full boundary gates pass.
+## Project-driven preparation correction — 2026-10-04
+
+- [x] Synchronize #460, proposal/design/spec/evidence and change order with caller-driven discovery and full-VM acceptance.
+- [x] Return structured JSON discovery failures and update the installed skill.
+- [x] Capture failing unfamiliar-project preparation without a catalog entry; implement a real cold pip preparation and complete review (physical CPython 3.11 candidate; complete release matrix remains below).
+- [x] Implement authentic Hatch/uv/Poetry preparation and managed subprocess adapters; prove all four managers' cold/offline preparation on the physical CPython 3.11 candidate without catalog dependence. Complete corpus and matrix acceptance remain below.
+- [ ] Validate all ten analyzers, manager corpus, plugins, coverage and compatible native extensions against unrelated projects.
+- [ ] Pass clean ordinary-user installation in an independent macOS ARM64 VM or Mac, supported macOS matrix and Linux x86-64 CI VM regression.
+- [ ] Run final repository gates and independent security/defect review; update PR #489 and actual current-head reviews with CI-only signing follow-up.

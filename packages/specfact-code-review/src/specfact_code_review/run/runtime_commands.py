@@ -9,6 +9,7 @@ from typing import Annotated
 import typer
 from icontract import require
 
+from specfact_code_review.run import native_backend
 from specfact_code_review.run.runtime_builder import prepare_runtime
 from specfact_code_review.run.runtime_discovery import discover_project
 from specfact_code_review.run.runtime_interpreter import select_environment
@@ -28,6 +29,20 @@ def inspect_runtime(
     try:
         plan = discover_project(Path.cwd(), config_path=project_config)
     except ProjectRuntimeError as exc:
+        if json_output:
+            typer.echo(
+                json.dumps(
+                    {
+                        "status": "incomplete",
+                        "diagnostic": exc.diagnostic,
+                        "message": str(exc),
+                        "candidates": list(exc.candidates),
+                        "required_fields": list(exc.required_fields),
+                    },
+                    indent=2,
+                )
+            )
+            raise typer.Exit(code=2) from exc
         raise typer.BadParameter(str(exc)) from exc
     data = {**plan.document(), "identity": plan.identity}
     typer.echo(
@@ -43,6 +58,7 @@ def prepare_project(
     project_config: Annotated[Path | None, typer.Option("--project-config")] = None,
     json_output: Annotated[bool, typer.Option("--json")] = False,
     offline: Annotated[bool, typer.Option("--offline")] = False,
+    acquisition_url: Annotated[str | None, typer.Option("--acquisition-url")] = None,
 ) -> None:
     """Prepare or verify a cached runtime using the signed capsule interpreter."""
     from specfact_code_review.run.runner import (
@@ -54,11 +70,18 @@ def prepare_project(
     runtime = None
     try:
         plan = discover_project(Path.cwd(), config_path=project_config)
-        selected = select_environment(plan, current=_capsule_environment_id())
+        controller = native_backend.select_runtime_backend()
+        current = controller.environment_id if controller.kind == "darwin-arm64" else _capsule_environment_id()
+        selected = select_environment(plan, current=current)
         runtime, reason = _prepare_capsule_runtime(environment_id=selected)
         if runtime is None:
             raise ProjectRuntimeError(reason)
-        prepared = prepare_runtime(plan, runtime=runtime, offline=offline)
+        prepared = prepare_runtime(
+            plan,
+            runtime=runtime,
+            offline=offline,
+            acquisition_url=acquisition_url,
+        )
         result = {
             "descriptor": str(prepared.descriptor_path),
             "identity": prepared.identity,

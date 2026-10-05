@@ -1248,7 +1248,9 @@ def _coverage_applicable(relative: str, payload: bytes) -> tuple[bool, str]:
         tool = document.get("tool", {})
         return isinstance(tool, dict) and isinstance(tool.get("coverage"), dict), "tool.coverage"
     sections = _parsed_ini_sections(payload, relative)
-    expected_prefix = "run" if relative == ".coveragerc" else "coverage:"
+    if relative == ".coveragerc":
+        return bool(set(sections) & {"run", "report", "paths", "html", "xml", "json", "lcov"}), "run"
+    expected_prefix = "coverage:"
     return any(
         section == expected_prefix or section.startswith(expected_prefix) for section in sections
     ), expected_prefix

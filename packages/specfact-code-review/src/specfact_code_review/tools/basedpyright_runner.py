@@ -55,9 +55,9 @@ def _finding_from_diagnostic(diagnostic: object, *, allowed_paths: set[str]) -> 
     message = diagnostic["message"]
     if not isinstance(message, str):
         raise ValueError("basedpyright message must be a string")
-    line = diagnostic["range"]["start"]["line"]
-    if not isinstance(line, int):
-        raise ValueError("basedpyright line must be an integer")
+    line = diagnostic["range"]["start"]["line"] if "range" in diagnostic else 0
+    if not isinstance(line, int) or isinstance(line, bool) or line < 0:
+        raise ValueError("basedpyright line must be a nonnegative integer")
     rule = diagnostic.get("rule")
     if rule is not None and not isinstance(rule, str):
         raise ValueError("basedpyright rule must be a string when present")

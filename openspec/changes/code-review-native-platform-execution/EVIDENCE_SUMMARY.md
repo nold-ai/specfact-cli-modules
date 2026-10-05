@@ -1,5 +1,19 @@
 # Reviewed feasibility evidence — 2026-09-30
 
+Current project-driven evidence (2026-10-05, Europe/Berlin): pinned native pip
+26.2.1 prepares unfamiliar dependencies and the actual project root without a
+publisher project catalog. Separate network-denied workers execute setuptools
+hooks and inspect the resulting wheel. PyPA sampleproject at
+`621e4974ca25ce531773def586ba3ed8e736b3fc` executes all ten analyzers and returns
+FAIL for genuine project findings; a private self-referential-extras project
+executes all ten and returns PASS. Both reuse verified local caches offline.
+Physical platform: ARM64 macOS 27.0.1 (26A434), capsule CPython 3.11.15.
+One independent review agent's concrete preparation defects were reproduced and
+fixed; its final focused review found no new defects. Full four-manager,
+OS/ABI, boundary and independent-install acceptance remain incomplete. Raw
+receipts stay private and production eligibility remains false. Historical
+observations follow below; see TDD_EVIDENCE.md for current regressions.
+
 Observed on physical Mac17,9, macOS 27.0.1 (26A434), ARM64. No Rosetta or Docker execution was counted as native execution. Confidence is high for these bounded observations, not for production support. Raw local execution transcripts are not included in this PR.
 
 ## Isolation
@@ -47,3 +61,42 @@ blocked by issue #460. The historical zero-identity result no longer blocks init
 Ad-hoc native signatures plus SpecFact-signed manifests remain required, along
 with exact-distribution sandbox/lifecycle and separate-Mac installation proof.
 No new boundary or installation pass is established by this scope correction.
+
+## Project-driven native checkpoint — 2026-10-05, Europe/Berlin
+
+The physical host is macOS 27.0.1 (26A434), ARM64; this is supplemental
+CPython 3.11.16 candidate evidence, not the supported release matrix. No
+publisher signing key, Docker, host project environment or project catalog
+was used. Paid Developer ID remains optional #488. Production eligibility
+and publication flags remain false.
+
+- Controlled pip, Hatch, uv and Poetry projects completed cold preparation,
+  verified offline reuse and all ten analyzers. These are authentic pinned
+  managers, not pip replacements for other managers. The upstream corpus
+  remains a separate mandatory gate.
+- Automatic discovery on an unfamiliar uv project without uv.lock or a
+  publisher catalog completed with all ten analyzers and PASS, including
+  pytest-cov and an actual MarkupSafe ARM64 extension import. Artifact
+  identity: sha256:f04b93cbcd496a17287ea2f24243b8ccd83651034cc3e405cf7d6cfe6180a2e0.
+- Managed uv built from the reviewed upstream commit and locked Cargo input
+  using the private pinned toolchain. Its verified ad-hoc hardened binary
+  digest is 3b1a6d08d941bdb0934ab72804748ae5ddd2aeb35940ee93c7a8a44b67cef151.
+  The prepared candidate used that exact builder output.
+- An authentic Poetry custom root build executed its managed Python child
+  and completed preparation/offline reuse. All analyzers ran; genuine
+  fixture findings and coverage deficits produced FAIL, not incomplete
+  manager evidence. This custom-build trial is not a clean PASS fixture.
+- The exact upstream Requests and Flask corpus commits completed native
+  preparation/offline reuse. Initial review exposed internal-link snapshot
+  handling, whole-file BasedPyright diagnostic parsing and policy projection
+  gaps. Their initial incomplete reviews are retained privately and cannot
+  count as passing corpus acceptance.
+- Native live managed-child proof passed after adding sibling imports through
+  -c, -m and script launches and reordered -I options. It also exercised
+  streams, waits, timeout/kill, handle reuse and direct-fork denial.
+
+Fresh signed supported-OS/ABI acceptance, all unchanged upstream manager
+corpus members, complete boundary/resource/escape proof, an independent clean
+installation route, Linux x86-64 VM regression, final repository gates and
+actual current-head reviews remain mandatory. Module signing and canonical
+publication are CI/CD follow-ups; neither occurred locally.

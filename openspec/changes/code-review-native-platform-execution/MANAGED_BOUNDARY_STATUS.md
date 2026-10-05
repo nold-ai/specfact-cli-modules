@@ -1,5 +1,21 @@
 # Managed boundary implementation checkpoint
 
+Current project-driven checkpoint (2026-10-05, Europe/Berlin): real cold pip
+preparation, confined setuptools root build, offline cache reuse and all ten
+analyzers execute on an unrelated repository. A private unpublished root with
+self-referential extras also returns PASS with all ten analyzers. Controlled
+projects for all four authentic managers now prepare and execute all ten
+analyzers, including automatic uv discovery with a native extension. The
+unchanged upstream Poetry corpus additionally prepares its locked Git source
+and reuses the environment offline. A physical build-hook fixture verifies live
+managed Python streams, waiting, timeouts and termination, plus kernel denial of
+direct fork. These are private maintainer candidate proofs, not authenticated
+customer installation. The complete unchanged upstream corpus (including Hatch
+workspace/VCS preparation), native tool children, release matrix and independent
+installation remain incomplete. No complete-boundary or production flag is set.
+See NATIVE_RESULTS.md and PROJECT_DRIVEN_PREPARATION_CONTRACT.md. Older
+fixed-fixture statements below are historical checkpoints.
+
 Recorded 2026-10-03 (Europe/Berlin). **Production integration remains blocked.**
 The local fixed-fixture startup and confinement prototype is implemented; see
 [STARTUP_BOUNDARY_RESULTS.md](STARTUP_BOUNDARY_RESULTS.md). The owner-approved managed-process scope is retained; no requirement

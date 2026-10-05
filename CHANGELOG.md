@@ -9,6 +9,42 @@ and this project follows SemVer for bundle versions.
 
 ### Added
 
+- Align native complete-pytest coverage roots and selected tests with the admitted
+  physical snapshot so test helpers do not become production coverage targets;
+  retain missing/low production coverage failures and path-escape rejection.
+
+- Bound OCI gzip read allocations to 1 MiB while preserving signed extraction
+  ceilings and all digest/archive checks; large accepted budgets no longer
+  trigger an immediate budget-sized allocation on Linux guests.
+
+- Prepare `specfact-code-review` 0.51.0 with a native Darwin/ARM64 managed
+  process backend, authenticated candidate capsule cache, offline project
+  preparation, and platform-bound analyzer evidence. Local signed test
+  candidates execute all ten analyzers on CPython 3.11–3.13. Local native
+  pytest results are labeled `project-origin-v1`; protected range
+  reviews reject that provenance pending a consumer compatibility change.
+  The module's native publication catalogs remain empty until boundary,
+  external-project, customer-installation and GHCR acceptance gates pass; this change
+  does not yet advertise macOS support. Module signing is performed by the
+  protected CI/CD PR follow-up.
+- Replace the native per-project acquisition catalog prerequisite with
+  project-driven pinned pip wheel resolution, confined PEP 517 root builds,
+  offline installation and source-bound coverage imports. Return structured
+  discovery diagnostics and preserve verified local cache reuse. Controlled
+  native projects use authentic pinned Hatch, uv and Poetry as well; upstream
+  Poetry preparation preserves locked Git sources. The complete upstream corpus,
+  signed distribution and release acceptance remain pending. Matching
+  OS/architecture VMs are valid acceptance environments.
+- Correct native Hatch's offline uv target, partial-clone SCM snapshots,
+  registry token streaming, relative cache leases, bounded acquisition archive
+  parsing, intentionally omitted analyzer payload files and full wheel ABI
+  admission. Preserve explicit incomplete evidence for unsupported project
+  behavior and all existing protected-review restrictions.
+- Preserve native project pytest plugin discovery and version metadata in
+  broker-owned parallel children. Adapt the reviewed rerun plugin's failure-count
+  IPC to private storage while keeping network denial and strict result
+  reconciliation. Expose only the verified packaged uv image for discovery;
+  separate managed launch validation and bounded stream handling by responsibility.
 - Document the previously published C14 merge-quality range review with immutable scope manifests,
   differential finding continuity, fail-closed analyzer evidence, signed runtime
   contracts, and schema 1.6 report truth. Historical release

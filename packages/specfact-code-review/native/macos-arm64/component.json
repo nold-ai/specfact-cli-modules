@@ -1,0 +1,48 @@
+{
+  "schema": "specfact-native-component-v1",
+  "platform": "darwin-arm64",
+  "status": "candidate",
+  "minimum_macos": "14.0",
+  "protocol": 1,
+  "signing": {
+    "mode": "adhoc",
+    "hardened_runtime": true,
+    "customer_signing_required": false
+  },
+  "outputs": [
+    "bin/specfact-native-broker",
+    "bin/specfact-native-bootstrap",
+    "bin/specfact-native-verifier",
+    "bin/specfact-native-self-test"
+  ],
+  "plans": [
+    "boundary.self-test.v1",
+    "analyzer.ruff.v1",
+    "analyzer.radon.v1",
+    "analyzer.semgrep-clean.v1",
+    "analyzer.ai-bloat-ast.v1",
+    "analyzer.ast-clean-code.v1",
+    "analyzer.basedpyright.v1",
+    "analyzer.pylint.v1",
+    "analyzer.contracts.v1",
+    "analyzer.semgrep-bugs.v1",
+    "analyzer.targeted-pytest-coverage.v1",
+    "tool.ruff.v1",
+    "tool.radon.v1",
+    "tool.semgrep.v1",
+    "tool.basedpyright.v1",
+    "tool.pylint.v1",
+    "tool.crosshair.v1",
+    "tool.pytest.v1",
+    "project.pip.v1",
+    "project.hatch.v1",
+    "project.uv.v1",
+    "project.poetry.v1",
+    "acquisition.pip-wheels.v1",
+    "project.pip-install.v1",
+    "project.python-build.v1",
+    "project.wheel-inspect.v1",
+    "acquisition.uv-project.v1"
+  ],
+  "production_eligible": false
+}

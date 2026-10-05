@@ -32,7 +32,32 @@ static OSStatus code_requirement(SecCodeRef code, CFStringRef text) {
     return result;
 }
 
-static int running_image(pid_t pid) {
+/* The worker is still held in the kernel exception RPC. Drain its real output
+ * before killing the broker; a fabricated empty output cannot prove ordering. */
+static void identity_failure(struct worker *item, const char *stage, OSStatus result) {
+    if (item->fd >= 0) {
+        char pending[OUTPUT + 1];
+        ssize_t count = read(item->fd, pending, sizeof(pending));
+        if (count < 0 && errno != EAGAIN) die();
+        if (count > 0) {
+            if ((size_t)count > OUTPUT - item->used) die();
+            memcpy(item->output + item->used, pending, (size_t)count);
+            item->used += (size_t)count;
+            item->output[item->used] = 0;
+            /* No writer can execute while this owned exception is held. */
+            count = read(item->fd, pending, sizeof(pending));
+            if (count > 0 || (count < 0 && errno != EAGAIN)) die();
+        }
+    }
+    printf("{\"exec_identity_failure\":%d,\"stage\":\"%s\",\"status\":%d,"
+        "\"output_complete\":true,\"initializer_seen\":%s}\n", item->pid, stage, (int)result,
+        strstr(item->output, "target-initializer-ns=") ? "true" : "false");
+    fflush(stdout);
+    die();
+}
+
+static int running_image(struct worker *item) {
+    pid_t pid = item->pid;
     CFNumberRef number = CFNumberCreate(NULL, kCFNumberIntType, &pid);
     if (!number) die();
     const void *keys[] = {kSecGuestAttributePid}, *values[] = {number};
@@ -43,18 +68,18 @@ static int running_image(pid_t pid) {
     SecCodeRef code = NULL;
     OSStatus result = SecCodeCopyGuestWithAttributes(NULL, attributes, kSecCSDefaultFlags, &code);
     CFRelease(attributes);
-    if (result || !code) die();
+    if (result || !code) identity_failure(item, "lookup", result);
     result = code_requirement(code, CFSTR(TARGET_REQUIREMENT));
     int image = result == errSecSuccess;
     if (result == errSecCSReqFailed)
         result = code_requirement(code, CFSTR(WORKER_REQUIREMENT));
     CFRelease(code);
-    if (result) die(); /* Invalid, missing and foreign identities are not ordinary traps. */
+    if (result) identity_failure(item, result == errSecCSReqFailed ? "foreign" : "validity", result);
     return image;
 }
 
 static int exec_intent(int mode) {
-    return mode == 6 || mode == 7 || mode == 8 || mode == 10 || mode == 11 || mode == 12;
+    return mode == 6 || mode == 7 || mode == 8 || mode == 10 || mode == 11 || mode == 12 || mode == 13 || mode == 14 || mode == 15;
 }
 
 static uint64_t exec_timestamp(void) {
@@ -79,7 +104,7 @@ kern_return_t catch_mach_exception_raise(mach_port_t port, mach_port_t thread,
     if (initial) { printf("{\"trace\":%d}\n", item->pid); fflush(stdout); }
     int admitted = 0;
     if (!initial && exec_intent(item->mode) && !item->exec_admitted && code[1] == SIGTRAP) {
-        enum exec_action action = exec_transition(1, item->exec_admitted, (int)code[1], running_image(pid));
+        enum exec_action action = exec_transition(1, item->exec_admitted, (int)code[1], running_image(item));
         if (action == EXEC_REJECT) die();
         if (action == EXEC_ADMIT) {
             item->exec_admitted = admitted = 1;
@@ -89,7 +114,7 @@ kern_return_t catch_mach_exception_raise(mach_port_t port, mach_port_t thread,
         }
     }
     mach_port_deallocate(mach_task_self(), task);
-    if ((initial && item->mode == 4) || (admitted && item->mode == 11)) {
+    if ((initial && (item->mode == 4 || item->mode == 13)) || (admitted && item->mode == 11)) {
         if (held_threads[index]) die();
         held_threads[index] = thread;
         exception_owner = index;

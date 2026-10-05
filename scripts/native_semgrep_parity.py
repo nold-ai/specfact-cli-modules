@@ -47,6 +47,7 @@ assert SMOKE_SPEC is not None and SMOKE_SPEC.loader is not None
 smoke = importlib.util.module_from_spec(SMOKE_SPEC)
 SMOKE_SPEC.loader.exec_module(smoke)
 VERSION = "1.175.0"
+ADAPTER_SCHEMA = "specfact-semgrep-1.175.0-legacy-result-v1"
 TIMEOUT_SECONDS = 30
 FILE_LIMIT = 256 * 1024 * 1024
 INPUT_LIMIT = 512 * 1024
@@ -54,6 +55,10 @@ VENV = ROOT / ".specfact/native-compat/venv"
 SITE = VENV / "lib/python3.13/site-packages"
 RULES = ROOT / "packages/specfact-code-review/src/specfact_code_review/.semgrep"
 ASSET_PINS = {
+    "metadata": (
+        SITE / f"semgrep-{VERSION}.dist-info/METADATA",
+        "b5a84bef84d9cc221e457d690cc2b99d21bfe39355e260f587246b4c247d3c29",
+    ),
     "python": (VENV / "bin/python", "091704d2238fa5d3d95299894a24d02fa0cf0f874d7b1cd019f9a19b767628ab"),
     "frontend": (VENV / "bin/semgrep", "90f87f661e29c56f2e87ced4411694b2a32f1d202e7834d99df5aa738bdfe0b3"),
     "core": (SITE / "semgrep/bin/semgrep-core", "ec9b34d035688a7d8d77c7a45fe1cd2b8e8d9e15ac4f50071eada9c131925e53"),
@@ -77,6 +82,9 @@ for _pack, _member in (("clean_code", "semgrepclean"), ("bugs", "semgrepbugs")):
             "source": _source,
             "expected_rule": None if _case == "clean" else smoke.MEMBERS[_member][2],
         }
+for _name, _case_inputs in list(CASES.items()):
+    CASES[f"nested_{_name}"] = {**_case_inputs, "rule_directory": ".semgrep"}
+
 CASES.update(
     {
         "parse_error": {
@@ -134,12 +142,12 @@ def validate_assets() -> tuple[dict, dict]:
             limit=FILE_LIMIT
             if name == "core"
             else INPUT_LIMIT
-            if name in {"frontend", "clean_code", "bugs"}
+            if name in {"frontend", "clean_code", "bugs", "metadata"}
             else FILE_LIMIT,
             executable=name in {"python", "frontend", "core"},
             allow_interpreter_link=name == "python",
         )
-    metadata = SITE / f"semgrep-{VERSION}.dist-info/METADATA"
+    metadata = assets["metadata"]
     _regular_file(metadata)
     if metadata.stat().st_size > INPUT_LIMIT:
         raise ValueError("distribution metadata size limit exceeded")
@@ -153,12 +161,17 @@ def validate_assets() -> tuple[dict, dict]:
     return assets, packs
 
 
+def _rule_path(case: str) -> Path:
+    selected = CASES[case]
+    return Path(selected.get("rule_directory", "")) / f"{selected['pack']}.yaml"
+
+
 def _fixture_inputs(case: str, packs: dict) -> dict[str, bytes]:
     selected = CASES[case]
     pack = selected["pack"]
     return {
         "fixture.py": selected["source"].encode(),
-        f"{pack}.yaml": INVALID_RULE if pack == "invalid" else packs[pack],
+        _rule_path(case).as_posix(): INVALID_RULE if pack == "invalid" else packs[pack],
     }
 
 
@@ -167,6 +180,10 @@ def prepare_fixture(directory: Path, case: str, packs: dict) -> None:
         path = directory / name
         if path.is_symlink():
             raise ValueError("symlink fixture rejected")
+        if path.parent != directory:
+            if path.parent.is_symlink():
+                raise ValueError("symlink rule directory rejected")
+            path.parent.mkdir(exist_ok=True)
         path.write_bytes(content)
     verify_fixture(directory, case, packs)
 
@@ -193,9 +210,10 @@ def build_command(frontend: str, assets: dict, directory: Path, case: str) -> tu
         "--project-root",
         str(directory),
         "--disable-nosem",
+        "--no-rewrite-rule-ids",
         "--json",
         "--config",
-        str(directory / f"{CASES[case]['pack']}.yaml"),
+        str(directory / _rule_path(case)),
         "fixture.py",
     ]
     return command, str(assets["core"] if native else assets["python"])
@@ -240,7 +258,11 @@ def _relative_path(value: object, directory: Path, *, rule_allowed: bool = False
         relative = path.relative_to(directory).as_posix()
     except ValueError as exc:
         raise ValueError("evidence path outside fixture") from exc
-    allowed = {"fixture.py"} | ({"clean_code.yaml", "bugs.yaml", "invalid.yaml"} if rule_allowed else set())
+    allowed = {"fixture.py"} | (
+        {"clean_code.yaml", "bugs.yaml", "invalid.yaml", ".semgrep/clean_code.yaml", ".semgrep/bugs.yaml"}
+        if rule_allowed
+        else set()
+    )
     if relative not in allowed:
         raise ValueError("evidence path outside fixed inputs")
     _regular_file(path)
@@ -304,6 +326,12 @@ def _error_span(span: dict, directory: Path) -> dict:
 
 def _error_record(item: dict, directory: Path) -> dict:
     error: dict[str, object] = {"type": _error_type(item["type"], directory), "level": _text(item["level"])}
+    if "code" in item:
+        if not isinstance(item["code"], int) or isinstance(item["code"], bool) or item["code"] < 1:
+            raise ValueError("positive integer error code required")
+        error["code"] = item["code"]
+    if "message" in item:
+        error["message"] = _text(item["message"])
     if item.get("path") is not None:
         error["path"] = _relative_path(item["path"], directory, rule_allowed=True)
     if item.get("rule_id") is not None:
@@ -345,11 +373,16 @@ def execution_row(result: subprocess.CompletedProcess, directory: Path) -> dict:
     return row
 
 
-def _error_control(case: str, status: int, canonical: dict) -> bool:
+def _error_control(case: str, status: int, canonical: dict, *, invalid_rule_status: int = 7) -> bool:
     if canonical["findings"] or not canonical["errors"]:
         return False
     if case == "invalid_rule":
-        return status > 1 and all(_error_tag(error) == "Rule parse error" for error in canonical["errors"])
+        expected_targets = ["fixture.py"] if invalid_rule_status == 2 else []
+        return (
+            status == invalid_rule_status
+            and canonical["scanned"] == expected_targets
+            and all(_error_tag(error) == "Rule parse error" for error in canonical["errors"])
+        )
     return status == 0 and all(_error_tag(error) in {"Syntax error", "PartialParsing"} for error in canonical["errors"])
 
 
@@ -364,12 +397,12 @@ def _expected_findings(case: str, findings: list) -> bool:
     )
 
 
-def _positive_control(case: str, row: dict) -> bool:
+def _positive_control(case: str, row: dict, *, invalid_rule_status: int = 7) -> bool:
     if "canonical" not in row or "error" in row:
         return False
     canonical, status = row["canonical"], row["returncode"]
     if case in {"invalid_rule", "parse_error"}:
-        return _error_control(case, status, canonical)
+        return _error_control(case, status, canonical, invalid_rule_status=invalid_rule_status)
     if status != 0 or canonical["errors"] or canonical["scanned"] != ["fixture.py"]:
         return False
     return _expected_findings(case, canonical["findings"])
@@ -377,7 +410,10 @@ def _positive_control(case: str, row: dict) -> bool:
 
 def assess_case(case: str, reference: dict, native: dict) -> dict:
     differences = [name for name in ("returncode", "canonical") if reference.get(name) != native.get(name)]
-    controls = {"python": _positive_control(case, reference), "native": _positive_control(case, native)}
+    controls = {
+        "python": _positive_control(case, reference, invalid_rule_status=2),
+        "native": _positive_control(case, native),
+    }
     return {
         "passed": not differences and all(controls.values()),
         "differences": differences,
@@ -385,6 +421,89 @@ def assess_case(case: str, reference: dict, native: dict) -> dict:
         "python": reference,
         "native": native,
     }
+
+
+def _discovered_targets(discovery: dict | None, directory: Path) -> list[str]:
+    if not isinstance(discovery, dict) or discovery.get("returncode") != 0:
+        raise ValueError("successful native target discovery required")
+    output = discovery.get("stdout")
+    if not isinstance(output, str):
+        raise ValueError("native target discovery output required")
+    paths = [_relative_path(path, directory) for path in output.splitlines()]
+    if paths != ["fixture.py"]:
+        raise ValueError("native discovery must select the exact fixed target once")
+    return paths
+
+
+def adapt_native_result(native: dict, discovery: dict | None, directory: Path) -> dict:
+    """Preserve legacy failure semantics using real discovery, never a fake scan."""
+    selected = _discovered_targets(discovery, directory)
+    payload = json.loads(native["stdout"])
+    canonical = canonicalize(payload, directory)
+    status = native["returncode"]
+    analyzed = canonical["scanned"]
+    meaning = "native_reported_scanned_targets"
+    if status == 7:
+        errors = payload["errors"]
+        if (
+            canonical["findings"]
+            or analyzed
+            or not errors
+            or any(
+                error.get("code") != 2 or error.get("type") != "Rule parse error" or error.get("level") != "error"
+                for error in errors
+            )
+        ):
+            raise ValueError("only pure pinned rule-parse failures may use legacy result adaptation")
+        status = 2
+        payload["paths"]["scanned"] = selected
+        canonical = canonicalize(payload, directory)
+        meaning = "selected_targets_on_rule_failure"
+    return {
+        "schema": ADAPTER_SCHEMA,
+        "returncode": status,
+        "payload": payload,
+        "canonical": canonical,
+        "discovered_targets": selected,
+        "analyzed_targets": analyzed,
+        "legacy_scanned_means": meaning,
+        "raw_native_returncode": native["returncode"],
+    }
+
+
+def _adapter_control(case: str, row: dict) -> bool:
+    if case != "invalid_rule":
+        return _positive_control(case, row)
+    canonical = row.get("canonical", {})
+    errors = canonical.get("errors", [])
+    return (
+        row.get("returncode") == 2
+        and not canonical.get("findings")
+        and canonical.get("scanned") == ["fixture.py"]
+        and bool(errors)
+        and all(
+            error.get("type") == "Rule parse error" and error.get("code") == 2 and error.get("level") == "error"
+            for error in errors
+        )
+    )
+
+
+def assess_adapter_case(case: str, reference: dict, native: dict, directory: Path) -> dict:
+    """Compare the explicit versioned protocol separately from raw frontend parity."""
+    try:
+        adapted = adapt_native_result(native, native.get("discovery"), directory)
+        differences = [key for key in ("returncode", "canonical") if reference.get(key) != adapted.get(key)]
+        if json.loads(reference["stdout"])["errors"] != adapted["payload"]["errors"]:
+            differences.append("complete_error_structure")
+        controls = {"python": _adapter_control(case, reference), "adapter": _adapter_control(case, adapted)}
+        return {
+            "passed": not differences and all(controls.values()),
+            "differences": differences,
+            "positive_controls": controls,
+            "result": adapted,
+        }
+    except (KeyError, TypeError, ValueError) as exc:
+        return {"passed": False, "error": f"{type(exc).__name__}: {exc}"}
 
 
 def make_receipt(rows: dict, *, system: str, machine: str) -> dict:
@@ -397,6 +516,9 @@ def make_receipt(rows: dict, *, system: str, machine: str) -> dict:
         "sandbox_verified": False,
         "production_eligible": False,
         "single_process_verified": False,
+        "dependency_admitted": False,
+        "matched_cases": sum(row.get("passed") is True for row in complete.values()),
+        "required_cases": len(CASES),
         "system": system,
         "architecture": machine,
         "os_version": platform.platform(),
@@ -419,6 +541,17 @@ def _frontend_execution(frontend: str, assets: dict, directory: Path, case: str,
             )
             verify_fixture(directory, case, packs)
             argv, executable = build_command(frontend, assets, directory, case)
+            discovery = None
+            if frontend == "native":
+                discovery_argv = [*argv[:2], "--x-ls", *argv[2:]]
+                observed = run_command(discovery_argv, executable=executable, cwd=directory, env=env)
+                discovery = {
+                    "argv": discovery_argv,
+                    "returncode": observed.returncode,
+                    "stdout": observed.stdout,
+                    "stderr": observed.stderr,
+                }
+                verify_fixture(directory, case, packs)
             result = run_command(argv, executable=executable, cwd=directory, env=env)
             raw = {
                 "argv": argv,
@@ -427,6 +560,8 @@ def _frontend_execution(frontend: str, assets: dict, directory: Path, case: str,
                 "stdout": result.stdout,
                 "stderr": result.stderr,
             }
+            if discovery is not None:
+                raw["discovery"] = discovery
             raw["canonical"] = canonicalize(json.loads(result.stdout), directory)
             verify_fixture(directory, case, packs)
     except (OSError, ValueError, subprocess.SubprocessError) as exc:
@@ -437,6 +572,7 @@ def _frontend_execution(frontend: str, assets: dict, directory: Path, case: str,
 def run_parity() -> dict:
     started = time.monotonic()
     rows = {}
+    adapter_rows = {}
     receipt_assets = {}
     try:
         if platform.system() != "Darwin" or platform.machine() != "arm64":
@@ -452,9 +588,27 @@ def run_parity() -> dict:
                     for frontend in ("python", "native")
                 }
                 rows[case] = assess_case(case, executions["python"], executions["native"])
+                adapter_rows[case] = assess_adapter_case(case, executions["python"], executions["native"], directory)
     except (OSError, ValueError) as exc:
         rows = {case: {"passed": False, "error": f"{type(exc).__name__}: {exc}"} for case in CASES}
     receipt = make_receipt(rows, system=platform.system(), machine=platform.machine())
+    complete_adapter = {
+        case: adapter_rows.get(case, {"passed": False, "error": "required adapter case missing"}) for case in CASES
+    }
+    receipt["evidence_kind"] = "native_semgrep_versioned_adapter_conformance_only"
+    receipt["schema_version"] = 2
+    receipt["raw_frontend_parity_passed"] = receipt["passed"]
+    receipt["adapter"] = {
+        "schema": ADAPTER_SCHEMA,
+        "matched_cases": sum(row.get("passed") is True for row in complete_adapter.values()),
+        "required_cases": len(CASES),
+        "passed": platform.system() == "Darwin"
+        and platform.machine() == "arm64"
+        and all(row.get("passed") is True for row in complete_adapter.values()),
+        "production_eligible": False,
+        "dependency_admitted": False,
+        "cases": complete_adapter,
+    }
     receipt["timestamp_utc"] = datetime.now(UTC).isoformat()
     receipt["elapsed_seconds"] = round(time.monotonic() - started, 3)
     receipt["assets"] = receipt_assets
@@ -466,7 +620,7 @@ def main() -> int:
     argparse.ArgumentParser(description=__doc__).parse_args()
     receipt = run_parity()
     sys.stdout.write(json.dumps(receipt, indent=2) + "\n")
-    return 0 if receipt["passed"] else 1
+    return 0 if receipt["adapter"]["passed"] else 1
 
 
 if __name__ == "__main__":

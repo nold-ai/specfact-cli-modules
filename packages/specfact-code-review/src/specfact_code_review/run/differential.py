@@ -8,6 +8,7 @@ import json
 import re
 import tokenize
 from collections import defaultdict
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from importlib.resources import files
 from pathlib import Path
@@ -18,7 +19,7 @@ from icontract import ensure, require
 
 
 _SUPPRESSION_CATALOG_RESOURCE = "resources/contracts/pr-range-v1-suppression-catalog.json"
-_FROZEN_SUPPRESSION_CATALOG_DIGEST = "sha256:32346a8a0848bc024b1330c37ab5bdcf12f092460cce904ebbab831f6d276375"
+_FROZEN_SUPPRESSION_CATALOG_DIGEST = "sha256:3cc769700bc97d6a13b1a9c3554b66453aa319cf229795e7cede4d917ff13f3b"
 _PR_RANGE_V1_SUPPRESSION_CATALOG_DIGEST = _FROZEN_SUPPRESSION_CATALOG_DIGEST
 
 
@@ -1579,8 +1580,60 @@ def _activate_bound_suppression_catalog(
     )
 
 
+def _semgrep_suppression_policy_admitted(
+    catalog: bytes,
+    *,
+    platform_id: str,
+    analyzer_versions: Mapping[str, str],
+) -> bool:
+    """Admit parser/help evidence only for its authenticated platform and tool version."""
+
+    if platform_id not in {"linux-x86_64", "darwin-arm64"}:
+        return False
+    versions = {analyzer_versions.get(member) for member in ("semgrep-clean", "semgrep-bugs")}
+    if len(versions) != 1 or None in versions:
+        return False
+    try:
+        document = json.loads(catalog)
+        families = document["families"]
+        family = next(item for item in families if item.get("id") == "nosemgrep")
+        policies = family["platform_version_policies"]
+    except (KeyError, StopIteration, TypeError, json.JSONDecodeError):
+        return False
+    if not isinstance(policies, list) or len(policies) != 2:
+        return False
+    admitted: dict[str, str] = {}
+    for policy in policies:
+        if not isinstance(policy, dict) or set(policy) != {
+            "help_schema_digest",
+            "parser_catalog_digest",
+            "platform",
+            "tool_version",
+        }:
+            return False
+        platform = policy["platform"]
+        version = policy["tool_version"]
+        if (
+            platform not in {"linux-x86_64", "darwin-arm64"}
+            or platform in admitted
+            or not isinstance(version, str)
+            or re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", version) is None
+            or any(
+                not isinstance(policy[name], str) or re.fullmatch(r"sha256:[0-9a-f]{64}", policy[name]) is None
+                for name in ("parser_catalog_digest", "help_schema_digest")
+            )
+        ):
+            return False
+        admitted[platform] = version
+    return admitted == {"linux-x86_64": "1.144.0", "darwin-arm64": "1.175.0"} and admitted[platform_id] in versions
+
+
 @ensure(lambda result: result.status in {"PASS", "UNKNOWN"})
-def activate_packaged_suppression_catalog() -> CatalogActivation:
+def activate_packaged_suppression_catalog(
+    *,
+    platform_id: str = "linux-x86_64",
+    analyzer_versions: Mapping[str, str] | None = None,
+) -> CatalogActivation:
     """Activate the installed catalog only when every report binding matches its raw bytes."""
 
     try:
@@ -1596,6 +1649,13 @@ def activate_packaged_suppression_catalog() -> CatalogActivation:
         return CatalogActivation("UNKNOWN", False, reason="suppression_catalog_resource_unavailable")
     if checkpoint.suppression_catalog_contract.digest != _FROZEN_SUPPRESSION_CATALOG_DIGEST:
         return CatalogActivation("UNKNOWN", False, reason="suppression_catalog_checkpoint_binding_mismatch")
+    versions = analyzer_versions or {"semgrep-clean": "1.144.0", "semgrep-bugs": "1.144.0"}
+    if not _semgrep_suppression_policy_admitted(
+        resource.canonical_bytes,
+        platform_id=platform_id,
+        analyzer_versions=versions,
+    ):
+        return CatalogActivation("UNKNOWN", False, reason="suppression_catalog_semgrep_policy_mismatch")
     return _activate_bound_suppression_catalog(
         resource_digest=resource.digest,
         matrix_bindings=bindings,

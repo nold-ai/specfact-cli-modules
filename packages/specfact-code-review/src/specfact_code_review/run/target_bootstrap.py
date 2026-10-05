@@ -33,12 +33,12 @@ _TOOL_IMPORTS = {
 }
 
 
-def _verified_analyzer_spec(fullname: str, spec):
+def _verified_analyzer_spec(fullname: str, spec, *, analyzer_root: Path | None = None):
     """Confine module origins and every namespace portion to the verified mount."""
     locations = [] if spec is None else list(spec.submodule_search_locations or ())
     if spec is not None and spec.origin:
         locations.append(spec.origin)
-    root = ANALYZERS.resolve()
+    root = (analyzer_root or ANALYZERS).resolve()
     if not locations or any(not Path(location).resolve().is_relative_to(root) for location in locations):
         raise ImportError(f"project_worker_analyzer_origin_mismatch:{fullname}")
     return spec
@@ -47,28 +47,29 @@ def _verified_analyzer_spec(fullname: str, spec):
 class AnalyzerFinder:
     """Pin analyzer entry-point packages while allowing target-owned dependencies."""
 
-    def __init__(self, names: set[str]) -> None:
+    def __init__(self, names: set[str], *, analyzer_root: Path | None = None) -> None:
         self.names = names
+        self.analyzer_root = analyzer_root or ANALYZERS
 
     def find_spec(self, fullname: str, path=None, target=None):
         del target
         if fullname.split(".")[0] not in self.names:
             return None
-        spec = importlib.machinery.PathFinder.find_spec(fullname, path or [str(ANALYZERS)])
-        return _verified_analyzer_spec(fullname, spec)
+        spec = importlib.machinery.PathFinder.find_spec(fullname, path or [str(self.analyzer_root)])
+        return _verified_analyzer_spec(fullname, spec, analyzer_root=self.analyzer_root)
 
     def validate_loaded(self) -> None:
         """Reject cached project modules instead of silently replacing their objects."""
         for fullname, module in tuple(sys.modules.items()):
             if fullname.split(".")[0] in self.names:
-                _verified_analyzer_spec(fullname, getattr(module, "__spec__", None))
+                _verified_analyzer_spec(fullname, getattr(module, "__spec__", None), analyzer_root=self.analyzer_root)
 
 
 class DomainFinder(AnalyzerFinder, importlib.metadata.DistributionFinder):
     """Pin this member's recorded analyzer-owned dependency closure."""
 
-    def __init__(self, graph: dict) -> None:
-        super().__init__(set(graph["sealed_imports"]))
+    def __init__(self, graph: dict, *, analyzer_root: Path | None = None) -> None:
+        super().__init__(set(graph["sealed_imports"]), analyzer_root=analyzer_root)
         self.distributions = {row["name"] for row in graph["installed"] if row["origin"] == "analyzer"}
 
     def find_distributions(self, context=None):
@@ -79,10 +80,59 @@ class DomainFinder(AnalyzerFinder, importlib.metadata.DistributionFinder):
         requested = re.sub(r"[-_.]+", "-", context.name).lower() if context.name else None
         return (
             distribution
-            for distribution in importlib.metadata.distributions(path=[str(ANALYZERS)])
+            for distribution in importlib.metadata.distributions(path=[str(self.analyzer_root)])
             if (name := re.sub(r"[-_.]+", "-", distribution.metadata["Name"]).lower()) in self.distributions
             and (requested is None or requested == name)
         )
+
+
+class RestrictedDomainFinder(DomainFinder):
+    """Expose a member's analyzer location without general package fallback."""
+
+    def __init__(self, graph: dict, *, analyzer_root: Path, project_site: Path) -> None:
+        super().__init__(graph, analyzer_root=analyzer_root)
+        self.project_site = project_site
+
+    def find_spec(self, fullname: str, path=None, target=None):
+        if fullname.partition(".")[0] in self.names:
+            return super().find_spec(fullname, path, target)
+        search = path or sys.path
+        project_search = [
+            location for location in search if not Path(location).resolve().is_relative_to(self.analyzer_root.resolve())
+        ]
+        spec = importlib.machinery.PathFinder.find_spec(fullname, project_search)
+        if spec is not None:
+            return spec
+        spec = importlib.machinery.PathFinder.find_spec(fullname, search)
+        locations = [] if spec is None else list(spec.submodule_search_locations or ())
+        if spec is not None and spec.origin and spec.origin not in {"built-in", "frozen"}:
+            locations.append(spec.origin)
+        if any(Path(location).resolve().is_relative_to(self.analyzer_root.resolve()) for location in locations):
+            raise ModuleNotFoundError(f"project_worker_unrelated_analyzer_import:{fullname}")
+        return spec
+
+    def find_distributions(self, context=None):
+        context = context or importlib.metadata.DistributionFinder.Context()
+        roots = {str(self.project_site.resolve()): "project", str(self.analyzer_root.resolve()): "analyzer"}
+        for path in context.path:
+            origin = roots.get(str(Path(path).resolve()))
+            if origin is None:
+                continue
+            selected = importlib.metadata.DistributionFinder.Context(name=context.name, path=[path])
+            # Query the standard directory scanner directly, avoiding recursive
+            # dispatch and excluding every unrelated analyzer distribution.
+            for distribution in importlib.metadata.MetadataPathFinder.find_distributions(selected):
+                name = re.sub(r"[-_.]+", "-", distribution.metadata["Name"]).lower()
+                if (origin == "analyzer" and name in self.distributions) or (
+                    origin == "project" and name not in self.distributions
+                ):
+                    yield distribution
+
+
+class ImportPathFinder:
+    """Resolve ordinary imports without widening the member's metadata domain."""
+
+    find_spec = staticmethod(importlib.machinery.PathFinder.find_spec)
 
 
 def _stdlib_paths() -> list[str]:
@@ -93,7 +143,8 @@ def _stdlib_paths() -> list[str]:
         stdlib / "lib-dynload",
         Path(sys.base_prefix) / "lib" / f"python{sys.version_info.major}{sys.version_info.minor}.zip",
     }
-    return [path for path in sys.path if path and Path(path) in allowed]
+    canonical = {path.resolve() for path in allowed}
+    return [path for path in sys.path if path and Path(path).resolve() in canonical]
 
 
 def _dispatch_callable_state(value) -> tuple:

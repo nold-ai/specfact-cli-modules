@@ -32,6 +32,18 @@ class ExecTools(NamedTuple):
     event: Any
 
 
+def verify_lifecycle_marker(marker: Any, identity: dict[str, Any], case: str, require: Any) -> None:
+    """Bind every lifecycle measurement to this worker's actual verified image."""
+    require(isinstance(marker, dict), "lifecycle image stop missing")
+    require(marker.get("exec") == identity["pid"], "foreign lifecycle image stop")
+    verified = marker.get("verified_ns")
+    require(
+        isinstance(verified, int) and not isinstance(verified, bool) and verified > 0,
+        "invalid lifecycle verification timestamp",
+    )
+    require(marker.get("held") is case.endswith("-held"), "wrong lifecycle image hold state")
+
+
 def verify_status(status: dict[str, Any], marker: dict[str, Any], mode: int, require: Any) -> None:
     """Bind initializer ordering to the verified image stop and genuine signal result."""
     output = status["output"]

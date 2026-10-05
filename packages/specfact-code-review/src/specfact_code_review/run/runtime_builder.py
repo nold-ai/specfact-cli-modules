@@ -18,11 +18,13 @@ from icontract import ensure, require
 from packaging.specifiers import SpecifierSet
 
 from specfact_code_review.run import sandbox
+from specfact_code_review.run.native_project_runtime import prepare_native_project_runtime
 from specfact_code_review.run.runtime_adapters import MANAGER_REQUIREMENTS, install_commands
 from specfact_code_review.run.runtime_artifacts import load_runtime, seal_runtime, validate_build_artifact
 from specfact_code_review.run.runtime_compatibility import analyzer_dependency_conflicts
 from specfact_code_review.run.runtime_domains import member_dependency_graphs
 from specfact_code_review.run.runtime_git import git_identity, stage_git
+from specfact_code_review.run.runtime_interpreter import signed_versions
 from specfact_code_review.run.runtime_models import (
     PreparedRuntime,
     ProjectPlan,
@@ -104,6 +106,7 @@ def _run_logged_builder(command: list[str], descriptor: int, build_log: IO[bytes
 def copy_project(source: Path, destination: Path, *, commit: str = "HEAD", include_vcs: bool = True) -> None:
     """Copy inputs into private build storage without dereferencing source links."""
 
+    source, destination = source.resolve(strict=True), destination.resolve()
     expected = source_identity(source)
 
     def ignored(directory: str, names: list[str]) -> set[str]:
@@ -228,10 +231,7 @@ def _build(plan: ProjectPlan, runtime: Any, staging: Path, *, build_log: IO[byte
 
 
 def _validate_python(plan: ProjectPlan, environment: str) -> None:
-    lock = json.loads(
-        (Path(__file__).parents[1] / "resources/contracts/pr-range-v1-toolchain-lock.json").read_text(encoding="utf-8")
-    )
-    versions = {row["environment_id"]: row["python_version"] for row in lock["environments"]}
+    versions = signed_versions()
     version = versions.get(environment)
     if version is None or (plan.requires_python and version not in SpecifierSet(plan.requires_python)):
         raise ProjectRuntimeError(f"project_python_incompatible:{environment}:{plan.requires_python}")
@@ -269,10 +269,19 @@ def prepare_runtime(
     runtime: Any,
     cache_root: Path | None = None,
     offline: bool = False,
+    acquisition_url: str | None = None,
 ) -> PreparedRuntime:
     """Build or validate reusable local dependencies for the exact capsule ABI."""
     environment = str(runtime.environment_id)
     _validate_python(plan, environment)
+    if getattr(runtime, "backend", "linux-x86_64") == "darwin-arm64":
+        return prepare_native_project_runtime(
+            plan,
+            runtime=runtime,
+            cache_root=cache_root,
+            offline=offline,
+            acquisition_url=acquisition_url,
+        )
     cache = cache_root or Path.home() / ".cache/specfact/code-review/project-runtimes-v2"
     cache.mkdir(parents=True, exist_ok=True, mode=0o700)
     if cache.is_symlink():

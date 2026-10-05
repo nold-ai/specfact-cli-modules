@@ -34,6 +34,12 @@ OUTPUT_FILENAME = "z3_solver-5.1.0.0+specfact.1-py3-none-macosx_14_0_arm64.whl"
 MAX_ARCHIVE_BYTES = 64 * 1024 * 1024
 MAX_EXPANDED_BYTES = 160 * 1024 * 1024
 MAX_MEMBERS = 256
+LICENSE_INPUT = Path(__file__).resolve().parent / "native_analyzer_inputs/Z3-LICENSE.txt"
+LICENSE_PROVENANCE_INPUT = LICENSE_INPUT.with_name("z3-license-provenance.json")
+LICENSE_SHA256 = "e617cad2ab9347e3129c2b171e87909332174e17961c5c3412d0799469111337"
+LICENSE_PROVENANCE_SHA256 = "a50b8debad942303dbee99c89de3dcdfd2d139957bc3e99e8ecacdbd85af0d6a"
+RELEASE_SHA256 = "81d29e934fd863079a74af35eecaeaef8047e0e12414d33ca322b358d68383db"
+RELEASE_PREFIX = "z3-5.1.0-arm64-osx-13.3/"
 # Exact metadata observed after authenticating the official PyPI artifact.
 EXPECTED_METADATA = (
     b"Metadata-Version: 2.4\n"
@@ -203,10 +209,115 @@ def wheel_bytes(files: dict[str, bytes]) -> bytes:
     return data
 
 
-def provenance(data: bytes) -> dict:
-    """Bind the observed upstream metadata and exact documented corrections."""
+def _bounded_input(path: Path, limit: int) -> bytes:
+    with path.open("rb") as stream:
+        content = stream.read(limit + 1)
+    if len(content) > limit:
+        raise ValueError("reviewed input size limit exceeded")
+    return content
+
+
+def reviewed_license_inputs() -> dict:
+    """Authenticate reviewed text and official tag/metadata/release provenance."""
+    license_data = _bounded_input(LICENSE_INPUT, 64 * 1024)
+    if hashlib.sha256(license_data).hexdigest() != LICENSE_SHA256:
+        raise ValueError("supplemental license digest mismatch")
+    data = _bounded_input(LICENSE_PROVENANCE_INPUT, 64 * 1024)
+    if hashlib.sha256(data).hexdigest() != LICENSE_PROVENANCE_SHA256:
+        raise ValueError("supplemental license provenance digest mismatch")
+    evidence = json.loads(data)
+    blob = b"blob " + str(len(license_data)).encode() + b"\0" + license_data
+    if hashlib.sha1(blob).hexdigest() != evidence["license_git_blob"]:
+        raise ValueError("supplemental license Git blob mismatch")
+    return evidence
+
+
+def _release_member(name: str) -> str | None:
+    if name.startswith(UPSTREAM_DIST_INFO + "/") or name.endswith(".dll"):
+        return None
+    if name in {"z3/lib/libz3.dylib", "z3/lib/libz3.5.1.dylib"}:
+        relative = "bin/libz3.dylib"
+    elif name == "z3_solver-5.1.0.0.data/data/bin/z3":
+        relative = "bin/z3"
+    elif name.startswith("z3/include/"):
+        relative = name.removeprefix("z3/")
+    elif name.startswith("z3/") and name.endswith(".py"):
+        relative = "bin/python/" + name
+    else:
+        raise ValueError(f"unrecognized Z3 release linkage member: {name}")
+    return RELEASE_PREFIX + relative
+
+
+def release_license_evidence(files: dict[str, bytes], archive_path: Path) -> dict:
+    """Verify native/source byte linkage; never apply MIT to unmatched DLLs."""
+    data = _bounded_input(archive_path, MAX_ARCHIVE_BYTES)
+    if hashlib.sha256(data).hexdigest() != RELEASE_SHA256:
+        raise ValueError("upstream release digest mismatch")
+    evidence = reviewed_license_inputs()
+    release = read_members(data)
+    if release.get(evidence["license_release_member"]) != _bounded_input(LICENSE_INPUT, 64 * 1024):
+        raise ValueError("release license linkage mismatch")
+    if files.get(UPSTREAM_DIST_INFO + "/METADATA") != EXPECTED_METADATA:
+        raise ValueError("wheel metadata linkage mismatch")
+    source = files.get(evidence["tagged_source_member"], b"")
+    if hashlib.sha256(source).hexdigest() != evidence["tagged_source_sha256"]:
+        raise ValueError("tagged source linkage mismatch")
+    linked = {}
+    for name, content in sorted(files.items()):
+        member = _release_member(name)
+        if member is None:
+            continue
+        if release.get(member) != content:
+            raise ValueError(f"release byte linkage mismatch: {name}")
+        linked[name] = {"release_member": member, "sha256": hashlib.sha256(content).hexdigest(), "size": len(content)}
+    unlinked = {
+        name: {"sha256": hashlib.sha256(content).hexdigest(), "size": len(content)}
+        for name, content in files.items()
+        if name.endswith(".dll")
+    }
+    if unlinked != evidence["unlinked_non_darwin_payload"]:
+        raise ValueError("unlinked toolchain payload identity mismatch")
     return {
-        "schema_version": 1,
+        **evidence,
+        "linked_members": linked,
+        "source_and_native_license_verified": True,
+        "redistribution_license_filename": "Z3-LICENSE.txt",
+        "remaining_toolchain_gaps": [f"unreviewed_non_darwin_payload:{name}" for name in sorted(unlinked)],
+    }
+
+
+def provenance(data: bytes, upstream_files: dict[str, bytes], release_archive: Path | None = None) -> dict:
+    """Verify preservation before binding the upstream and downstream identities."""
+    restored = read_members(data)
+    verify_record(restored, DOWNSTREAM_DIST_INFO)
+    if restored != corrected_members(upstream_files):
+        raise ValueError("output payload differs from approved metadata-only correction")
+    unchanged = {
+        name: {"sha256": hashlib.sha256(content).hexdigest(), "size": len(content)}
+        for name, content in sorted(upstream_files.items())
+        if name not in {UPSTREAM_DIST_INFO + "/" + member for member in ("METADATA", "WHEEL", "RECORD")}
+    }
+    licenses = {
+        name: entry
+        for name, entry in unchanged.items()
+        if Path(name).name.upper().startswith(("LICENSE", "NOTICE", "COPYING"))
+    }
+    if any(entry["size"] == 0 for entry in licenses.values()):
+        raise ValueError("empty upstream license payload")
+    supplemental = release_license_evidence(upstream_files, release_archive) if release_archive is not None else None
+    gaps = (
+        supplemental["remaining_toolchain_gaps"]
+        if supplemental
+        else ([] if licenses else ["missing_upstream_license_payload"])
+    )
+    return {
+        "schema_version": 3,
+        "supplemental_license": supplemental,
+        "z3_source_and_native_license_verified": supplemental is not None,
+        "unchanged_members": unchanged,
+        "licenses": licenses,
+        "license_payload_complete": bool(licenses),
+        "admission_gaps": gaps,
         "production_eligible": False,
         "dependency_admitted": False,
         "upstream": {"url": UPSTREAM_URL, "sha256": UPSTREAM_SHA256},
@@ -219,21 +330,28 @@ def provenance(data: bytes) -> dict:
             "filename_platform": {"from": "macosx_13_0_arm64", "to": "macosx_14_0_arm64"},
             "RECORD": "regenerated SHA-256 and sizes for every member; RECORD row unhashed",
         },
-        "payload": "all other member bytes unchanged, including native code, source and licenses",
+        "payload": "all other member bytes unchanged; observed contents bound by unchanged_members and licenses",
         "limitations": "native minimum OS/architecture inventory and resolver/pip check remain separate gates",
     }
 
 
-def prepare(source: Path, destination: Path) -> Path:
+def prepare(source: Path, destination: Path, *, release_archive: Path | None = None) -> Path:
     """Authenticate and validate fully before creating an exclusive output directory."""
-    files = corrected_members(read_members(read_authenticated(source)))
+    upstream_files = read_members(read_authenticated(source))
+    files = corrected_members(upstream_files)
     data = wheel_bytes(files)
-    receipt = json.dumps(provenance(data), indent=2, sort_keys=True) + "\n"
+    receipt = json.dumps(provenance(data, upstream_files, release_archive), indent=2, sort_keys=True) + "\n"
+    license_data = _bounded_input(LICENSE_INPUT, 64 * 1024) if release_archive is not None else None
+    if license_data is not None and hashlib.sha256(license_data).hexdigest() != LICENSE_SHA256:
+        raise ValueError("supplemental license digest mismatch before output")
     destination.mkdir(mode=0o700, parents=False, exist_ok=False)
     output = destination / OUTPUT_FILENAME
     try:
         with output.open("xb") as stream:
             stream.write(data)
+        if license_data is not None:
+            with (destination / "Z3-LICENSE.txt").open("xb") as stream:
+                stream.write(license_data)
         with output.with_suffix(".provenance.json").open("x", encoding="utf-8") as stream:
             stream.write(receipt)
     except BaseException:
@@ -247,9 +365,12 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("source", type=Path)
     parser.add_argument("destination", type=Path)
+    parser.add_argument(
+        "--release-archive", type=Path, help="exact authenticated upstream ARM64 ZIP for supplemental license/linkage"
+    )
     args = parser.parse_args()
     try:
-        output = prepare(args.source, args.destination)
+        output = prepare(args.source, args.destination, release_archive=args.release_archive)
     except (ValueError, OSError, zipfile.BadZipFile) as exc:
         parser.exit(1, f"Z3 preparation failed: {exc}\n")
     sys.stdout.write(os.fspath(output) + "\n")

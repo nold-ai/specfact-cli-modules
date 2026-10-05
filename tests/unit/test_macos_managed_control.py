@@ -586,6 +586,8 @@ class ControlFailureOwnershipTests(_ControlTestCase):
                 return result
 
             def marker(_path, field, pid):
+                if field == "bootstrap_identity":
+                    return {field: pid, "suspended": True, "output_empty": True}
                 if scenario == "left-marker" and pid == 100:
                     raise RuntimeError("private marker detail")
                 return {field: pid}
@@ -716,6 +718,7 @@ class BuildProvenanceTests(_ControlTestCase):
         self.positive_status = {"target": 0, "worker": 0}
         for name in (
             "control_probes.h",
+            "control_resource.h",
             "control_exec_policy.h",
             "control_mach.inc",
             "control_mach_policy.h",
@@ -817,19 +820,23 @@ class BuildProvenanceTests(_ControlTestCase):
         self.assertLess(target_signed, self.commands.index(compiles[1]))
         self.assertIn("-DFIXED_TARGET=" + json.dumps(str(self.root / "control-target")), compiles[1])
 
-    def test_shared_probes_are_captured_once_for_both_images(self):
+    def test_worker_inputs_capture_shared_probes_and_resource_policy(self):
         _broker, _observer, inventory = self._build()
         compiles = [args for args in self.commands if args[0] == "/usr/bin/xcrun"]
+        expected = {
+            "target": ("control_probes.h",),
+            "worker": ("control_probes.h", "control_resource.h"),
+        }
         for component in inventory[:2]:
             with self.subTest(component=component["name"]):
                 inputs = component["build_inputs"]
-                self.assertEqual(len(inputs), 1)
-                self.assertEqual(inputs[0]["name"], "control_probes.h")
-                captured = Path(inputs[0]["path"])
-                self.assertEqual(captured, self.root / "control_probes.h")
-                self.assertEqual(captured.stat().st_mode & 0o777, 0o444)
-                self.assertEqual(captured.read_bytes(), self.originals[self.source / "control_probes.h"])
-                self.assertEqual(inputs[0]["sha256"], hashlib.sha256(captured.read_bytes()).hexdigest())
+                self.assertEqual(tuple(item["name"] for item in inputs), expected[component["name"]])
+                for item in inputs:
+                    captured = Path(item["path"])
+                    self.assertEqual(captured, self.root / item["name"])
+                    self.assertEqual(captured.stat().st_mode & 0o777, 0o444)
+                    self.assertEqual(captured.read_bytes(), self.originals[self.source / item["name"]])
+                    self.assertEqual(item["sha256"], hashlib.sha256(captured.read_bytes()).hexdigest())
                 self.assertIn(f"-I{self.root}", compiles[0 if component["name"] == "target" else 1])
 
     def test_broker_binds_both_identities_and_captured_policy(self):

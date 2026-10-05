@@ -6,6 +6,7 @@
 #include <string.h>
 #include <sys/ptrace.h>
 #include "control_probes.h"
+#include "control_resource.h"
 
 #ifndef FIXED_TARGET
 #error "FIXED_TARGET must be the build-owned absolute target path C string"
@@ -18,7 +19,8 @@ static int confine_exec(init_function init) {
     /* No data-volume subtree aliases: only Apple library roots and exact metadata.
      * TARGET and every target ancestor come exclusively from the compiled path. */
     static const char base_profile[] =
-        "(version 1)(deny default)(allow signal (target self))"
+        "(version 1)(deny default)(deny mach-task-exception-port-set)(allow signal (target self))"
+        CONTROL_RESOURCE_POLICY
         "(allow file-read* (literal \"/\"))" /* dyld libignition opens root for openat; no descendants. */
         "(allow file-read* file-map-executable process-exec (literal (param \"TARGET\")))"
         "(allow file-read* file-map-executable"
@@ -77,13 +79,16 @@ static int confine_exec(init_function init) {
     return init(profile, 0, params, &error) ? 22 : 0;
 }
 
-static int confine(int mode) {
+static int confine(int mode, struct control_resource_state *resources) {
     void *library = dlopen("/usr/lib/libsandbox.dylib", RTLD_NOW | RTLD_LOCAL);
     if (!library) return 20;
     init_function init = (init_function)dlsym(library, "sandbox_init_with_parameters");
     if (!init) return 21;
+    int resource_error = control_resource_configure(resources);
+    if (resource_error || control_resource_verify(resources, 0)) return 70;
     if (mode >= 6) return confine_exec(init);
-    const char *profile = "(version 1)(deny default)(allow signal (target self))";
+    const char *profile = "(version 1)(deny default)(deny mach-task-exception-port-set)(allow signal (target self))"
+        CONTROL_RESOURCE_POLICY;
     const char *params[] = {NULL};
     char *error = NULL;
     return init(profile, 0, params, &error) ? 22 : 0;
@@ -102,7 +107,7 @@ static int exec_target(int mode) {
         puts("exec-failed");
         return fflush(stdout) ? 5 : 38;
     }
-    const char *argument = mode == 7 ? "2" : mode == 10 ? "3" : mode == 12 ? "4" : "1";
+    const char *argument = mode == 7 ? "2" : mode == 10 ? "3" : mode == 12 ? "4" : mode == 14 ? "5" : mode == 15 ? "6" : "1";
     /* Mode 11 is held by the broker at its verified replacement stop. */
     execl(FIXED_TARGET, FIXED_TARGET, argument, (char *)NULL);
     return 39;
@@ -115,14 +120,26 @@ int main(int argc, char **argv) {
     else if (!strcmp(argv[1], "10")) mode = 10;
     else if (!strcmp(argv[1], "11")) mode = 11;
     else if (!strcmp(argv[1], "12")) mode = 12;
+    else if (!strcmp(argv[1], "13")) mode = 13;
+    else if (!strcmp(argv[1], "14")) mode = 14;
+    else if (!strcmp(argv[1], "15")) mode = 15;
     else return 2;
     if (!mode) return control_probes(0, "control-positive-ok");
     if (mode == 3) { for (;;) pause(); } /* launchd-owned trusted pretrace */
-    if (ptrace(PT_TRACE_ME, 0, NULL, 0) || ptrace(PT_SIGEXC, 0, NULL, 0) || raise(SIGSTOP)) return 3;
+    if (ptrace(PT_TRACE_ME, 0, NULL, 0)) return 3;
+    /* The held identity-swap fixture may ignore termination only after kernel tracing. */
+    if (mode == 13 && signal(SIGTERM, SIG_IGN) == SIG_ERR) return 4;
+    if (ptrace(PT_SIGEXC, 0, NULL, 0) || raise(SIGSTOP)) return 3;
     /* Only traced code can leave the launchd group or ignore termination. */
     if (mode == 2 && (setsid() < 0 || signal(SIGTERM, SIG_IGN) == SIG_ERR)) return 4;
-    int result = confine(mode);
+    struct control_resource_state resources;
+    int result = confine(mode, &resources);
     if (result) return result;
+    if (control_resource_verify(&resources, 1)) return 71;
+    printf("resource-bounds vm-baseline=%llu vm-delta=%llu vm-ceiling=%llu nofile=128 fsize=16777216 api-denied=1\n",
+        (unsigned long long)resources.loaded_vm_baseline_bytes,
+        (unsigned long long)CONTROL_RESOURCE_VM_DELTA_BYTES,
+        (unsigned long long)resources.address_space_ceiling_bytes);
     result = control_probes(1, "control-denials-ok");
     if (result) return result;
     puts("control-ready");

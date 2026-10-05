@@ -14,6 +14,18 @@ from icontract import ensure
 class ProjectRuntimeError(ValueError):
     """An actionable preparation or runtime identity failure."""
 
+    def __init__(
+        self,
+        message: str,
+        *,
+        candidates: tuple[str, ...] = (),
+        required_fields: tuple[str, ...] = (),
+    ) -> None:
+        super().__init__(message)
+        self.diagnostic = message.split(":", 1)[0].split(";", 1)[0]
+        self.candidates = candidates
+        self.required_fields = required_fields
+
 
 @ensure(lambda result: result.startswith("sha256:") and len(result) == 71)
 def content_digest(value: bytes) -> str:

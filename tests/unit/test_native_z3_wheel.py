@@ -210,3 +210,83 @@ def test_no_overwrite(tmp_path, packager, monkeypatch):
     with pytest.raises(FileExistsError):
         packager.prepare(path, out)
     assert sentinel.read_text() == "keep"
+
+
+def test_provenance_binds_every_unchanged_member_and_license(prepared_wheel, packager):
+    wheel, _, original = prepared_wheel
+    receipt = json.loads(wheel.with_suffix(".provenance.json").read_bytes())
+    unchanged = receipt["unchanged_members"]
+    for name, data in original.items():
+        if name.endswith(("/METADATA", "/WHEEL", "/RECORD")):
+            continue
+        assert unchanged[name] == {"sha256": hashlib.sha256(data).hexdigest(), "size": len(data)}
+    license_path = "z3_solver-5.1.0.0.data/data/LICENSE.txt"
+    assert receipt["licenses"][license_path] == unchanged[license_path]
+
+
+def test_provenance_rejects_altered_source_with_valid_record(tmp_path, packager, monkeypatch):
+    _path, original = source(tmp_path, packager, monkeypatch)
+    files = packager.corrected_members(original)
+    files["z3/z3.py"] = b"altered source"
+    record_name = packager.DOWNSTREAM_DIST_INFO + "/RECORD"
+    files[record_name] = record({k: v for k, v in files.items() if k != record_name}, record_name)
+    data = packager.wheel_bytes(files)
+    with pytest.raises(ValueError, match="payload"):
+        packager.provenance(data, original)
+
+
+def test_missing_license_is_an_explicit_admission_gap(tmp_path, packager, monkeypatch):
+    _path, original = source(tmp_path, packager, monkeypatch)
+    original = {k: v for k, v in original.items() if not k.endswith("LICENSE.txt")}
+    record_name = packager.UPSTREAM_DIST_INFO + "/RECORD"
+    original[record_name] = record({k: v for k, v in original.items() if k != record_name}, record_name)
+    data = packager.wheel_bytes(packager.corrected_members(original))
+    receipt = packager.provenance(data, original)
+    assert receipt["license_payload_complete"] is False
+    assert receipt["licenses"] == {}
+    assert "missing_upstream_license_payload" in receipt["admission_gaps"]
+    assert receipt["dependency_admitted"] is False
+
+
+def test_reviewed_supplemental_license_is_bound_to_exact_tag_and_blob(packager):
+    evidence = packager.reviewed_license_inputs()
+    assert evidence["tag_commit"] == "0b6cdcdbc65da25ef0f73ac9da210574d0f66cf8"
+    assert evidence["license_sha256"] == "e617cad2ab9347e3129c2b171e87909332174e17961c5c3412d0799469111337"
+    assert evidence["license_git_blob"] == "cc90bed7477d0809f4309b718e920d411e1f3da8"
+    assert evidence["source_commit_signature_verified"] is True
+
+
+def test_supplemental_license_tamper_rejects(tmp_path, packager, monkeypatch):
+    license_file = tmp_path / "LICENSE.txt"
+    license_file.write_bytes(b"guessed license text")
+    monkeypatch.setattr(packager, "LICENSE_INPUT", license_file)
+    with pytest.raises(ValueError, match=r"license.*digest"):
+        packager.reviewed_license_inputs()
+
+
+def test_release_archive_hash_rejects_before_parsing(tmp_path, packager):
+    archive = tmp_path / "release.zip"
+    archive.write_bytes(b"not a zip")
+    with pytest.raises(ValueError, match=r"release.*digest"):
+        packager.release_license_evidence({}, archive)
+
+
+def test_release_member_mismatch_rejects_even_with_valid_archive_hash(tmp_path, packager, monkeypatch):
+    archive = tmp_path / "release.zip"
+    with zipfile.ZipFile(archive, "w") as output:
+        output.writestr("z3-5.1.0-arm64-osx-13.3/LICENSE.txt", packager.LICENSE_INPUT.read_bytes())
+        output.writestr("z3-5.1.0-arm64-osx-13.3/bin/python/z3/z3.py", b"wrong source")
+    monkeypatch.setattr(packager, "RELEASE_SHA256", hashlib.sha256(archive.read_bytes()).hexdigest())
+    with pytest.raises(ValueError, match="linkage"):
+        packager.release_license_evidence({"z3/z3.py": b"different source"}, archive)
+
+
+def test_license_replacement_before_output_is_not_relabelled_as_verified(tmp_path, packager, monkeypatch):
+    path, _original = source(tmp_path, packager, monkeypatch)
+    replaced = tmp_path / "replaced-license.txt"
+    replaced.write_bytes(b"unauthenticated replacement")
+    monkeypatch.setattr(packager, "LICENSE_INPUT", replaced)
+    monkeypatch.setattr(packager, "provenance", lambda *_args: {"z3_source_and_native_license_verified": True})
+    with pytest.raises(ValueError, match="license digest"):
+        packager.prepare(path, tmp_path / "out", release_archive=tmp_path / "unused.zip")
+    assert not (tmp_path / "out").exists()

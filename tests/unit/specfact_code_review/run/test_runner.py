@@ -5143,7 +5143,7 @@ def test_suppression_catalog_activation_drift_forces_unknown_report(monkeypatch:
     monkeypatch.setattr(
         runner_api.differential,
         "activate_packaged_suppression_catalog",
-        lambda: SimpleNamespace(
+        lambda **_kwargs: SimpleNamespace(
             status="UNKNOWN",
             profile_activated=False,
             digest=None,
@@ -7305,6 +7305,24 @@ def test_pytest_outcome_reconciliation_accepts_complete_parametrized_expansion()
         ),
         process_exit=0,
         planned=("tests/test_app.py::test_value",),
+    )
+
+    assert result.status == "PASS"
+
+
+def test_pytest_outcome_reconciliation_accepts_all_tests_from_planned_file_selector() -> None:
+    runner_api = _c14_runner()
+    result = runner_api.reconcile_pytest_outcomes(
+        observer=(
+            {"nodeid": "tests/test_app.py::test_first", "phase": "call", "passed": True},
+            {"nodeid": "tests/test_app.py::TestValues::test_second", "phase": "call", "passed": True},
+        ),
+        junit=(
+            {"nodeid": "tests/test_app.py::test_first", "outcome": "passed"},
+            {"nodeid": "tests/test_app.py::TestValues::test_second", "outcome": "passed"},
+        ),
+        process_exit=0,
+        planned=("tests/test_app.py",),
     )
 
     assert result.status == "PASS"

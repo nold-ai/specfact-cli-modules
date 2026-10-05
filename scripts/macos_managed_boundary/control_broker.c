@@ -33,7 +33,7 @@
 #ifndef TARGET_REQUIREMENT
 #error "Build requires a pinned target CDHash requirement"
 #endif
-#define MAX_FIXTURE 12
+#define MAX_FIXTURE 15
 #else
 #define MAX_FIXTURE 5
 #endif
@@ -144,6 +144,41 @@ static int signed_worker(void) {
     return signed_path(FIXED_WORKER, CFSTR(WORKER_REQUIREMENT));
 }
 
+#ifndef CONTROL_BSD_TEST
+/* Validate the exact process created by posix_spawn while it is still held
+ * before user code. This complements, but does not borrow from, the pathname
+ * check above. */
+static OSStatus running_requirement(pid_t pid, CFStringRef expected) {
+    CFNumberRef number = CFNumberCreate(NULL, kCFNumberIntType, &pid);
+    if (!number) return errSecAllocate;
+    const void *keys[] = {kSecGuestAttributePid}, *values[] = {number};
+    CFDictionaryRef attributes = CFDictionaryCreate(NULL, keys, values, 1,
+        &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
+    CFRelease(number);
+    if (!attributes) return errSecAllocate;
+    SecCodeRef code = NULL;
+    SecRequirementRef requirement = NULL;
+    OSStatus result = SecCodeCopyGuestWithAttributes(NULL, attributes, kSecCSDefaultFlags, &code);
+    CFRelease(attributes);
+    if (!result) result = SecRequirementCreateWithString(expected, kSecCSDefaultFlags, &requirement);
+    if (!result) result = SecCodeCheckValidity(code, kSecCSStrictValidate, requirement);
+    if (requirement) CFRelease(requirement);
+    if (code) CFRelease(code);
+    return result;
+}
+
+static void reject_spawned_worker(struct worker *item) {
+    if (kill(item->pid, SIGKILL) && errno != ESRCH) die();
+    int status;
+    pid_t waited;
+    do { waited = waitpid(item->pid, &status, 0); } while (waited < 0 && errno == EINTR);
+    if (waited < 0 && errno != ECHILD) die();
+    close(item->fd);
+    item->fd = -1;
+    die();
+}
+#endif
+
 static void queue(const char *json) {
     size_t length = strlen(json);
     if (length > 2048) die();
@@ -205,7 +240,11 @@ static void launch(int mode, unsigned int timeout) {
     posix_spawn_file_actions_t actions;
     posix_spawnattr_t attributes;
     if (posix_spawn_file_actions_init(&actions) || posix_spawnattr_init(&attributes)) die();
-    if (posix_spawnattr_setflags(&attributes, POSIX_SPAWN_CLOEXEC_DEFAULT) ||
+    short spawn_flags = POSIX_SPAWN_CLOEXEC_DEFAULT;
+    #ifndef CONTROL_BSD_TEST
+    spawn_flags |= POSIX_SPAWN_START_SUSPENDED;
+    #endif
+    if (posix_spawnattr_setflags(&attributes, spawn_flags) ||
         posix_spawn_file_actions_addopen(&actions, 0, "/dev/null", O_RDONLY, 0) ||
         posix_spawn_file_actions_adddup2(&actions, stream[1], 1) ||
         posix_spawn_file_actions_adddup2(&actions, stream[1], 2)) die();
@@ -227,6 +266,17 @@ static void launch(int mode, unsigned int timeout) {
     item->deadline = now() + timeout / 1000.0;
     item->reason = "completed";
     item->wait_accepted = 0;
+    #ifndef CONTROL_BSD_TEST
+    char premature;
+    ssize_t observed = read(item->fd, &premature, sizeof(premature));
+    int observation_error = errno;
+    OSStatus identity = running_requirement(item->pid, CFSTR(WORKER_REQUIREMENT));
+    if (observed != -1 || observation_error != EAGAIN || identity != errSecSuccess)
+        reject_spawned_worker(item);
+    printf("{\"bootstrap_identity\":%d,\"suspended\":true,\"output_empty\":true}\n", item->pid);
+    fflush(stdout);
+    if (kill(item->pid, SIGCONT)) reject_spawned_worker(item);
+    #endif
     /* A random handle is invocation-local; retain all handles, including reaped ones. */
     do {
         arc4random_buf(&item->handle, sizeof(item->handle));

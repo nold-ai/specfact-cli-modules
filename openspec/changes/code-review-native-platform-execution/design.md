@@ -1,5 +1,32 @@
 # Design: Dedicated macOS ARM64 Code Review Capsule
 
+## Project-driven preparation and VM acceptance — 2026-10-04
+
+ProjectPlan and existing --project-config/--project-runtime interfaces are shared
+across backends. Selection is explicit configuration, verified active context,
+then unambiguous metadata. JSON discovery failures expose diagnostic, candidates
+and required_fields with exit 2; successful inspection remains compatible.
+Unknown projects are locally prepared without publisher project registration.
+Real pinned managers preserve locks, selected groups/extras and environment
+semantics in disposable storage. Build hooks and project plugins do not execute
+in the credential/network-bearing acquisition domain. Managed launch requests
+inherit only narrower permissions; unsupported operations remain incomplete.
+
+Publisher authentication applies to SpecFact runtime artifacts. Project layers
+retain unsigned local_build provenance and content identities, verified before
+atomic cache publication and warm reuse. Per-project signed acquisition catalogs
+and the earlier static offline wheel adapters are superseded as normal setup.
+
+Full VMs with a supported guest OS/kernel, architecture and ABI are equivalent
+acceptance environments to physical systems. VM status is not an authorization
+or artifact-selection input. The test harness records guest build, architecture,
+ABI, artifact digest and configured virtualization/emulation mode. A fresh
+independent matching-architecture VM can provide ordinary-user installation
+acceptance. UTM x86-64 emulation on Apple Silicon is supplemental; Windows ARM64
+running translated x64 programs does not establish native Windows x64 acceptance.
+Docker/WSL Linux execution provides Linux evidence only. Windows and Linux ARM64
+remain linked follow-up deliveries, never implied by booting their guests.
+
 ## Distribution-signing split — 2026-10-02 (Europe/Berlin)
 
 This owner-approved revision supersedes the earlier Developer-ID-first milestone.
@@ -103,7 +130,7 @@ Verify native signatures, quarantine, hardened-runtime settings, entitlements an
 
 Specify versioned platform evidence and paired core scope only where real compatibility tests demand it. Preserve local-versus-protected authority boundaries and released verdict semantics without claiming future C15 guarantees.
 
-Run native macOS ARM64 customer acceptance for each advertised OS/Python combination, plus the existing Linux customer matrix. Record whether CI infrastructure is virtualized independently of the application's no-VM runtime requirement; require native ARM64 processes and a physical-Mac smoke, never emulated execution as native evidence.
+Run native macOS ARM64 customer acceptance for each advertised OS/Python combination, plus the existing Linux customer matrix. Record the guest or physical OS/build, architecture and required kernel capabilities. A compatible matching-architecture full VM is eligible; customers need no additional VM to run the capsule. Retain a physical-Mac smoke and record CPU emulation only as supplemental evidence.
 
 ## Local Docker assembly and GHCR promotion
 

@@ -15,6 +15,32 @@ def test_run_basedpyright_returns_empty_for_no_files() -> None:
     assert run_basedpyright([]) == []
 
 
+def test_basedpyright_retains_whole_file_import_cycle(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
+    file_path = tmp_path / "target.py"
+    diagnostic = {
+        "file": str(file_path),
+        "severity": "error",
+        "message": "Cycle detected in import chain",
+        "rule": "reportImportCycles",
+    }
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        Mock(
+            return_value=completed_process(
+                "basedpyright",
+                stdout=json.dumps({"generalDiagnostics": [diagnostic]}),
+                returncode=1,
+            )
+        ),
+    )
+    findings = run_basedpyright([file_path])
+    assert len(findings) == 1
+    assert findings[0].category == "type_safety"
+    assert findings[0].rule == "reportImportCycles"
+    assert findings[0].line == 1
+
+
 def test_projected_basedpyright_launch_uses_only_project_include(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
     file_path = tmp_path / "target.py"
     project_path = "/opt/specfact/config/1/basedpyright.json"
