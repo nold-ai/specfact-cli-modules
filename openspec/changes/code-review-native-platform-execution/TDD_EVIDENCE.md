@@ -2318,3 +2318,9 @@ strict OpenSpec validation passed. Both Linux candidate customer/corpus jobs for
 CPython 3.11 and 3.13 completed successfully at exact head 45ee4cfe; CPython 3.12
 remained blocked in the added staged helper, so dependent quality prerequisites
 correctly failed rather than becoming green.
+
+A final independent guard review found that working-tree checks could conceal a
+staged deletion of the independent job. RED reproduced removal in the index plus
+restoration only in the working tree. Both hosted gate markers now come from the
+exact indexed workflow; missing indexed contents fail closed. No other local
+deferral rule or repository gate is relaxed.

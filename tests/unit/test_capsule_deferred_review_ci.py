@@ -120,6 +120,7 @@ def test_deferred_gate_reviews_exact_staged_tree_and_propagates_failure(
     [
         ("Darwin", "", "github-linux", "specfact-code-review", False, True, 0),
         ("Darwin", "", "github-linux", "specfact-code-review", False, False, 1),
+        ("Darwin", "", "github-linux", "specfact-code-review", False, "unstaged_restore", 1),
         ("Darwin", "true", "github-linux", "specfact-code-review", False, True, 1),
         ("Linux", "", "github-linux", "specfact-code-review", False, True, 1),
         ("Darwin", "", "invalid", "specfact-code-review", False, True, 1),
@@ -134,7 +135,7 @@ def test_narrow_local_deferral_retains_block2_and_cannot_run_in_ci(
     deferral: str,
     bundle: str,
     advanced_dev: bool,
-    independent_review: bool,
+    independent_review: bool | str,
     expected: int,
 ) -> None:
     repository = tmp_path / "repository"
@@ -174,7 +175,13 @@ def test_narrow_local_deferral_retains_block2_and_cannot_run_in_ci(
         _git(repository, "update-ref", "refs/remotes/origin/dev", "HEAD")
     for relative in files[-2:]:
         (worktree / relative).write_text("candidate\n")
+    if independent_review == "unstaged_restore":
+        (worktree / ".github/workflows/capsule-customer-execution.yml").write_text(
+            workflow_source.split("\n  independent-review:", 1)[0]
+        )
     _git(worktree, "add", ".")
+    if independent_review == "unstaged_restore":
+        (worktree / ".github/workflows/capsule-customer-execution.yml").write_text(workflow_source)
     calls = tmp_path / "calls"
     script = (REPO_ROOT / "scripts/pre-commit-quality-checks.sh").read_text().rsplit('main "$@"', 1)[0]
     recipe = (

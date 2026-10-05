@@ -326,13 +326,16 @@ run_code_review_gate() {
       error "Capsule review deferral is restricted to explicitly approved local ARM64 Darwin feature worktrees; never CI."
       exit 1
     fi
-    if ! grep -Fq 'name: Run deferred candidate commit review without weakening enforcement' \
-      .github/workflows/capsule-customer-execution.yml; then
+    local indexed_workflow
+    if ! indexed_workflow="$(git show :.github/workflows/capsule-customer-execution.yml 2>/dev/null)"; then
+      error "Capsule review deferral requires the indexed blocking GitHub Linux workflow."
+      exit 1
+    fi
+    if ! grep -Fq 'name: Run deferred candidate commit review without weakening enforcement' <<<"${indexed_workflow}"; then
       error "Capsule review deferral requires the blocking GitHub Linux candidate review step."
       exit 1
     fi
-    if ! grep -Fq 'name: independent signed capsule review' \
-      .github/workflows/capsule-customer-execution.yml; then
+    if ! grep -Fq 'name: independent signed capsule review' <<<"${indexed_workflow}"; then
       error "Capsule review deferral requires the blocking independent signed-review job."
       exit 1
     fi
