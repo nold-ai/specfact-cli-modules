@@ -927,3 +927,45 @@ def test_broker_entry_point_requires_both_broker_output_files_and_bounded_key(
     assert _invoke_broker(monkeypatch, capsule, project, output, temporary, "pip") == (
         native_project_manager.EXIT_INVALID_REQUEST
     )
+
+
+@pytest.mark.parametrize("selected_abi", ["cp311", "cp312", "cp313"])
+@pytest.mark.parametrize("platform_tag", ["any", "macosx_14_0_arm64", "macosx_14_0_universal2"])
+def test_minor_specific_pure_wheels_prepare_authenticated_bytes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, selected_abi: str, platform_tag: str
+) -> None:
+    monkeypatch.setattr(platform, "mac_ver", lambda: ("14.7", ("", "", ""), ""))
+    interpreter = selected_abi.replace("cp", "py", 1)
+    descriptor, lock, wheelhouse, output, _ = _bundle(
+        tmp_path, abi=selected_abi, filename=f"fixture_dep-2.0-{interpreter}-none-{platform_tag}.whl"
+    )
+    evidence = native_project_manager.prepare_project(
+        descriptor_path=descriptor, manager_lock_path=lock, wheelhouse=wheelhouse, output=output, verifier=_verify
+    )
+    assert evidence["status"] == "COMPLETE"
+    assert evidence["abi"] == selected_abi
+    assert (output / "fixture_dep/__init__.py").read_bytes() == b"VALUE = 2\n"
+
+
+@pytest.mark.parametrize(
+    "tag",
+    [
+        "py314-none-any",
+        "py3013-none-any",
+        "py313-cp313-any",
+        "py314-none-macosx_14_0_arm64",
+        "py313-cp313-macosx_14_0_arm64",
+        "py313-none-macosx_14_0_x86_64",
+        "py313-none-macosx_26_0_arm64",
+    ],
+)
+def test_minor_specific_pure_wheels_retain_admission_restrictions(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, tag: str
+) -> None:
+    monkeypatch.setattr(platform, "mac_ver", lambda: ("14.7", ("", "", ""), ""))
+    descriptor, lock, wheelhouse, output, _ = _bundle(tmp_path, abi="cp313", filename=f"fixture_dep-2.0-{tag}.whl")
+    with pytest.raises(native_project_manager.NativeProjectPreparationError, match="wheel tag"):
+        native_project_manager.prepare_project(
+            descriptor_path=descriptor, manager_lock_path=lock, wheelhouse=wheelhouse, output=output, verifier=_verify
+        )
+    assert not output.exists()

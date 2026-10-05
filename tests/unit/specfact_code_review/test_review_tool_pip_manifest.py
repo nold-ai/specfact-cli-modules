@@ -59,3 +59,9 @@ def test_module_package_authenticates_raw_project_runtime_schema_bytes() -> None
     expected = "sha256:" + hashlib.sha256(resource_path.read_bytes()).hexdigest()
 
     assert data["authenticated_resources"][resource]["digest"] == expected
+
+
+def test_controller_authentication_dependencies_are_installed() -> None:
+    data = yaml.safe_load(MODULE_PACKAGE.read_text(encoding="utf-8"))
+    declared = {_normalized_distribution(item) for item in data["pip_dependencies"]}
+    assert {"packaging", "requests", "cryptography"} <= declared

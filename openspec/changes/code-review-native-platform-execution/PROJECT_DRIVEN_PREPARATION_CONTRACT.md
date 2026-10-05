@@ -336,3 +336,37 @@ relax inherited grants or execute before confinement. Standard subprocess
 interfaces remain compatible even where their fixed public signatures exceed
 internal style limits. Existing behavioral and negative admission tests are
 the authority, alongside the actual confined native quality findings.
+
+## Controller installation and minor-specific pure wheels
+
+The installed module SHALL declare cryptography as a controller dependency for
+authenticated native acquisition and capsule verification. Ordinary Linux and
+macOS reviews SHALL not depend on an undeclared developer-environment library.
+Analyzer dependencies remain sealed, and signature verification remains required.
+
+Authenticated wheel admission SHALL accept `py311-none`, `py312-none` and
+`py313-none` for their corresponding selected CPython ABI, for `any` or supported
+macOS ARM64/universal2 platforms. Minor-specific tags do not waive ABI,
+architecture, host minimum-version, digest or signature checks. Newer or
+noncanonical Python tags and native ABI claims on pure wheels SHALL reject
+before output creation.
+
+Scenarios: an ordinary module installer provisions the controller's cryptography
+requirement; each supported minor-specific pure wheel preserves authenticated
+payload bytes; foreign architecture, future Python, native ABI and future macOS
+minimum-version pure-wheel claims reject.
+
+## Complete snapshot and test-only failure attribution
+
+Complete pytest snapshots SHALL retain ordinary project data while excluding
+the same generated/environment directories as source-only captures. Local
+`.venv`, version-control internals and caches are not project test inputs.
+
+A native review selecting only tests SHALL preserve reconciled pytest failure
+findings at a selected test file. Coverage source selection remains unchanged;
+test files SHALL NOT become production coverage inputs to obtain an anchor.
+Findings outside selected inputs remain rejected.
+
+Directory exclusions SHALL apply to directories and directory aliases, not
+regular project data files with the same name. Complete captures retain such
+files and internal regular-file aliases under the existing path/integrity checks.

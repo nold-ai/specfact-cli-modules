@@ -244,7 +244,8 @@ def _validate_bundle_paths(
 def _compatible_tag(tag: Tag, abi: str) -> bool:
     interpreter, wheel_abi, platform = tag.interpreter, tag.abi, tag.platform
     selected_minor = int(abi.removeprefix("cp3"))
-    interpreter_match = interpreter == abi or interpreter == "py3"
+    pure_interpreter = interpreter in {"py3", f"py3{selected_minor}"}
+    interpreter_match = interpreter == abi or pure_interpreter
     if platform == "any":
         return interpreter_match and wheel_abi == "none"
     minimum = re.fullmatch(r"macosx_(\d+)_(\d+)_(?:arm64|universal2)", platform)
@@ -252,7 +253,7 @@ def _compatible_tag(tag: Tag, abi: str) -> bool:
         return False
     # Explicit inputs keep the selected capsule ABI independent of host Python.
     compatible = cpython_tags((3, selected_minor), abis=[abi], platforms=[platform])
-    if not (interpreter == "py3" and wheel_abi == "none") and tag not in compatible:
+    if not (pure_interpreter and wheel_abi == "none") and tag not in compatible:
         return False
     host = re.match(r"^(\d+)\.(\d+)(?:\.|$)", platform_module.mac_ver()[0])
     if host is None:

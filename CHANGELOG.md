@@ -9,6 +9,11 @@ and this project follows SemVer for bundle versions.
 
 ### Added
 
+- Declare the capsule controller cryptography dependency, accept matching
+  Python-minor pure wheels, exclude generated environments from complete native
+  pytest snapshots, and retain actionable failures when only tests are selected.
+  Signature, wheel admission, coverage and selected-path checks remain required.
+
 - Align native complete-pytest coverage roots and selected tests with the admitted
   physical snapshot so test helpers do not become production coverage targets;
   retain missing/low production coverage failures and path-escape rejection.

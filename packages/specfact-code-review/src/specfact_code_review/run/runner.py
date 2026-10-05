@@ -363,7 +363,7 @@ def _capture_native_snapshot(root: Path, *, python_only: bool = False) -> list[t
             source = Path(child.path)
             relative = logical / child.name
             metadata = source.lstat()
-            if python_only and child.name in _ANALYZER_SCAN_EXCLUDED_DIRECTORIES:
+            if child.name in _ANALYZER_SCAN_EXCLUDED_DIRECTORIES and child.is_dir():
                 continue
             if stat.S_ISLNK(metadata.st_mode):
                 target = source.resolve(strict=True)
@@ -7133,8 +7133,9 @@ def _evaluate_pytest_execution(
     blocking_low_coverage: bool = False,
     discovery_snapshot: Path | None = None,
     discovery_test_patterns: tuple[str, ...] = (),
+    fallback_anchor: Path = Path("/opt/specfact/snapshot"),
 ) -> tuple[list[ReviewFinding], dict[str, float] | None]:
-    anchor = source_files[0] if source_files else Path("/opt/specfact/snapshot")
+    anchor = source_files[0] if source_files else fallback_anchor
     pytest_skip = skip_if_pytest_unavailable(anchor)
     if pytest_skip:
         return pytest_skip, None
@@ -7272,6 +7273,7 @@ def _evaluate_complete_tdd_gate(
         blocking_low_coverage=True,
         discovery_snapshot=snapshot_root if not selectors and allow_project_discovery else None,
         discovery_test_patterns=discovery_patterns,
+        fallback_anchor=files[0] if files else snapshot_root,
     )
 
 

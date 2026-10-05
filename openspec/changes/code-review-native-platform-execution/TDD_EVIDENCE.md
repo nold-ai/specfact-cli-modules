@@ -2338,3 +2338,64 @@ Git index at head aeca3f47, soft-reset to its merge-base. Its pure discovery
 returned **UNKNOWN / policy_parse_failure**, consistent with its separately
 observed BasedPyright ambiguity. No Linux analyzer or project code was run on
 macOS for this probe. Final diagnostic/deferral contracts: **57 passed**.
+
+## PR minor-wheel and controller-installation corrections — 2026-10-05
+
+Findings 4184894581 and 4185082326: specification added before tests. Focused
+RED: 10 failed, 112 passed in 0.55 seconds; undeclared cryptography and all nine
+exact-minor pure-wheel platform combinations failed. Existing negative admission
+cases stayed passing. After declaring the controller dependency and accepting
+only matching minor-specific pure tags, focused GREEN: 181 passed in 2.46
+seconds, including native manager, analyzer-view, capsule authentication and
+manifest tests. Foreign architecture, future minimum OS/Python, noncanonical
+minor and native ABI claims remain rejected. Payload verification is unchanged.
+
+Exact head 41ef7efb's fresh hosted independent signed-review job reported
+INCOMPLETE / trusted_index_preparation / policy_parse_failure. The installed
+published reviewer still blocks approval; this is independent fail-closed
+evidence, not candidate self-review. Raw logs stayed private.
+
+New findings 4185481982 and 4185481999: the complete-snapshot/test-only contract
+preceded regression tests. RED confirmed generated/environment entries in a
+complete snapshot. After correcting sealed config fixture paths, the test-only
+regression reached a reconciled TEST_OUTCOME_NOT_PASS and failed native worker
+path normalization at the fallback snapshot anchor. The correction keeps
+production coverage inputs unchanged and anchors empty-source outcomes at the
+first selected file. The worker's selected-path admission is unchanged.
+
+Affected runner/worker GREEN after checksum refresh: **467 passed in 79.84
+seconds**. An independent review-agent found that the initial directory-name
+filter also omitted regular fixtures named `venv`. A strengthened fixture was
+RED (1 failed, 416 deselected), then GREEN after excluding only directories:
+**5 passed, 462 deselected in 0.55 seconds** across affected complete snapshot
+and TDD gate cases. Regular fixture bytes and an internal regular-file alias
+are retained. Review-agent closure: **No findings** for both corrections.
+Controller dependency/minor-wheel closure independently returned **No findings**.
+
+Security finding 4185494833 remains open: scheduling and fresh installations do
+not authenticate the candidate-defined workflow. The protected dev baseline
+lacks the independent job. A separately reviewed protected workflow revision
+and compatible signed controller baseline are required for protected approval.
+Neither candidate checks nor local deferral imply that approval.
+
+Actual supplemental physical ARM64 validation used the refreshed ad-hoc native
+candidate `sha256:5846f6095dbcaaf12ea67a44ba614d972536dbe77cc41826d5a15207aa5cd2d6`,
+macOS 27.0.1 / build 26A434, CPython 3.11.16. A configured test-only project
+retained a local environment while declaring `testpaths = tests`. All ten
+analyzers ran; nine returned PASS, pytest returned FAIL with
+TEST_OUTCOME_NOT_PASS, and the complete review returned FAIL. The selected
+failing test remained in the inventory. No publisher keys were used. Raw logs
+and reports remain private. This supplements, not replaces, release acceptance.
+
+The earlier unconfigured source-only probe with a test-looking file inside its
+local environment returned UNKNOWN / uncollected_test_candidate during static
+inventory planning. This is not claimed as default-root success. The configured
+probe above verifies the corrected worker/snapshot behavior; complete default
+discovery and independent installation gates remain required. All production,
+complete-boundary and customer-installation admission flags remain false.
+
+Final scoped typing: 0 errors, 0 warnings, 0 notes. Ruff and strict OpenSpec
+validation passed. Normal commit hooks passed, including repository lint and
+contracts; only the expressly approved local capsule review was deferred to
+GitHub Linux. Module manifest is checksum-refreshed and remains unsigned until
+the protected CI/CD follow-up supplies its signature.
