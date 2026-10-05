@@ -1805,3 +1805,56 @@ def test_normalized_simplify_request_preserves_project_runtime_paths() -> None:
     normalized = run_commands._normalize_review_request(request)
     assert normalized.project_config == request.project_config
     assert normalized.project_runtime == request.project_runtime
+
+
+@pytest.mark.parametrize("with_findings", [False, True])
+def test_default_output_shows_distinct_unknown_runtime_diagnostics(monkeypatch: Any, with_findings: bool) -> None:
+    report = _report()
+    if with_findings:
+        report = _changed_enforcement_report()
+    reason = "native_capsule_artifact_not_admitted:darwin-arm64-cp312"
+    report = report.model_copy(
+        update={
+            "analyzer_evidence": [
+                {"id": "ruff", "evidence_outcome": "UNKNOWN", "diagnostic": reason},
+                {"id": "radon", "evidence_outcome": "UNKNOWN", "diagnostic": reason},
+                {"id": "pylint", "evidence_outcome": "UNKNOWN", "diagnostic": "native registry timeout"},
+                {"id": "contracts", "evidence_outcome": "PASS", "diagnostic": "successful-private-detail"},
+            ]
+        }
+    )
+    monkeypatch.setattr(run_commands, "run_review", lambda files, **kwargs: report)
+    result = runner.invoke(app, ["review", "run", str(FIXTURE_FILE)])
+    assert result.output.count(reason) == 1
+    assert "native registry timeout" in result.output
+    assert "successful-private-detail" not in result.output
+
+
+def test_default_output_renders_unknown_diagnostic_as_literal_text(monkeypatch: Any) -> None:
+    reason = "native_cache_invalid:[red]payload[/red]"
+    report = _report().model_copy(
+        update={
+            "analyzer_evidence": [
+                {"id": "ruff", "evidence_outcome": "UNKNOWN", "diagnostic": reason},
+            ]
+        }
+    )
+    monkeypatch.setattr(run_commands, "run_review", lambda files, **kwargs: report)
+    result = runner.invoke(app, ["review", "run", str(FIXTURE_FILE)])
+    assert reason in result.output
+
+
+def test_json_output_preserves_unknown_diagnostic_contract(monkeypatch: Any, tmp_path: Path) -> None:
+    reason = "native_capsule_artifact_not_admitted:darwin-arm64-cp312"
+    report = _report().model_copy(
+        update={
+            "analyzer_evidence": [
+                {"id": "ruff", "evidence_outcome": "UNKNOWN", "diagnostic": reason},
+            ]
+        }
+    )
+    monkeypatch.setattr(run_commands, "run_review", lambda files, **kwargs: report)
+    output = tmp_path / "report.json"
+    result = runner.invoke(app, ["review", "run", "--json", "--out", str(output), str(FIXTURE_FILE)])
+    assert result.exit_code == 0
+    assert json.loads(output.read_text())["analyzer_evidence"][0]["diagnostic"] == reason

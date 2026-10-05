@@ -104,7 +104,7 @@ class SchemaLimitError(ValueError):
 class BuildResult:
     archive: Path
     manifest: Path
-    signature: Path
+    signature: Path | None
     summary: Path
 
 
@@ -701,7 +701,7 @@ def build_native_capsule(
     backend: str,
     policy: str,
     analyzer_versions: Mapping[str, str],
-    private_key: object,
+    private_key: object | None,
     signature_inspector: Callable[[Path], dict[str, object]] = inspect_native_signature,
     entitlements_inspector: Callable[[Path], object] = inspect_entitlements,
 ) -> BuildResult:
@@ -763,10 +763,15 @@ def build_native_capsule(
     outputs = BuildResult(
         archive=destination / "capsule.tar",
         manifest=destination / "manifest.json",
-        signature=destination / "manifest.sig",
+        signature=destination / "manifest.sig" if private_key is not None else None,
         summary=destination / "summary.json",
     )
-    with _exclusive_outputs(destination, ("capsule.tar", "manifest.json", "manifest.sig", "summary.json")) as streams:
+    output_names = ("capsule.tar", "manifest.json", "summary.json")
+    if private_key is not None:
+        output_names += ("manifest.sig",)
+    elif (destination / "manifest.sig").exists() or (destination / "manifest.sig").is_symlink():
+        raise ValueError("unsigned output contains a stale signature sidecar")
+    with _exclusive_outputs(destination, output_names) as streams:
         archive_size, archive_digest = _stream_archive(streams["capsule.tar"], sources, file_records)
         if archive_size != expected_archive_size:
             raise ValueError("deterministic USTAR size mismatch")
@@ -788,7 +793,7 @@ def build_native_capsule(
         }
         manifest_bytes = _canonical(document)
         _limit(len(manifest_bytes) > MAX_MANIFEST, "manifest_bytes", len(manifest_bytes), MAX_MANIFEST)
-        signature = _sign(manifest_bytes, private_key)
+        signature = _sign(manifest_bytes, private_key) if private_key is not None else None
         summary = {
             "archive_sha256": document["archive"]["sha256"],
             "archive_size": archive_size,
@@ -802,7 +807,10 @@ def build_native_capsule(
         }
 
         _write_output(streams["manifest.json"], manifest_bytes)
-        _write_output(streams["manifest.sig"], signature.encode("ascii"))
+        if signature is not None:
+            _write_output(streams["manifest.sig"], signature.encode("ascii"))
+        else:
+            summary["manifest_authenticated"] = False
         _write_output(streams["summary.json"], _canonical(summary) + b"\n")
     return outputs
 
@@ -838,7 +846,9 @@ def main() -> int:
     parser.add_argument("--backend", required=True)
     parser.add_argument("--policy", required=True)
     parser.add_argument("--analyzer-version-policy", type=Path, required=True)
-    parser.add_argument("--private-key", type=Path, required=True)
+    signing = parser.add_mutually_exclusive_group(required=True)
+    signing.add_argument("--private-key", type=Path, help="Protected CI/CD publisher key only")
+    signing.add_argument("--unsigned", action="store_true", help="Build final bytes without signing authority")
     args = parser.parse_args()
     closure = json.loads(args.closure.read_text(encoding="utf-8"))
     if not isinstance(closure, dict):
@@ -858,7 +868,7 @@ def main() -> int:
         backend=args.backend,
         policy=args.policy,
         analyzer_versions=version_policy["analyzer_versions"],
-        private_key=_load_private_key(args.private_key),
+        private_key=None if args.unsigned else _load_private_key(args.private_key),
     )
     print(result.summary.read_text(encoding="ascii"), end="")
     return 0

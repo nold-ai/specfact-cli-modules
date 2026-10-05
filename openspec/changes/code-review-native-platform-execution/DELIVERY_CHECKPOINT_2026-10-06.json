@@ -1,0 +1,179 @@
+{
+  "abis": {
+    "cp311": {
+      "analyzer_candidate": {
+        "abi": "3.11",
+        "completed_cases": 20,
+        "library_loading_experiment": true,
+        "members": 10,
+        "passed": 10,
+        "production_eligible": false
+      },
+      "hatch_reconstruction_missing_artifacts": [
+        "lock:hatch.lock",
+        "sealed-distribution:pyodbc",
+        "sealed-distribution:pytest-asyncio",
+        "sealed-executable:specfact-hatch-adapter"
+      ],
+      "project_observer": {
+        "broker_verified": true,
+        "coverage_recorded": true,
+        "native_extension_architecture": "arm64",
+        "native_extension_imported": true,
+        "plugin_loaded": true,
+        "preparation_domain_separate": true,
+        "production_approved": false,
+        "pytest_executed": true
+      },
+      "rejected_empty_entitlement_artifact": {
+        "archive_sha256": "9a908ab3c4c06437a2b45ce630b24369645d67ee2d12f68d2f05b699269aa965",
+        "archive_size": 600412672,
+        "environment_id": "darwin-arm64-cp311",
+        "file_count": 11127,
+        "manifest_authenticated": false,
+        "manifest_sha256": "0004a62e70e1c39ee6c162e694eeedcda6344d6eef65ff9af7acf3cf5c0af87a",
+        "native_image_count": 36,
+        "production_eligible": false,
+        "publication": "candidate-only",
+        "signing_mode": "adhoc"
+      },
+      "semgrep_adapter_parity": {
+        "abi": "3.11",
+        "matched_cases": 14,
+        "plan_id": "semgrep-1.175.0-offline-ca-v2",
+        "production_eligible": false,
+        "reference_sha256": "efbae0e733db2ea821702d36f9dfdd377194a22f11335f4208d4a233a76075f8",
+        "required_cases": 14,
+        "semantic_adapter_sha256": "471977480df00f50a7f3e624802db9d964f2afad0a9f6c01707e803ab51be45e"
+      }
+    },
+    "cp312": {
+      "analyzer_candidate": {
+        "abi": "3.12",
+        "completed_cases": 20,
+        "library_loading_experiment": true,
+        "members": 10,
+        "passed": 10,
+        "production_eligible": false
+      },
+      "hatch_reconstruction_missing_artifacts": [
+        "lock:hatch.lock",
+        "sealed-distribution:pyodbc",
+        "sealed-distribution:pytest-asyncio",
+        "sealed-executable:specfact-hatch-adapter"
+      ],
+      "project_observer": {
+        "broker_verified": true,
+        "coverage_recorded": true,
+        "native_extension_architecture": "arm64",
+        "native_extension_imported": true,
+        "plugin_loaded": true,
+        "preparation_domain_separate": true,
+        "production_approved": false,
+        "pytest_executed": true
+      },
+      "rejected_empty_entitlement_artifact": {
+        "archive_sha256": "9c562827f4ee97e2c1120e9c7b7f866cbe2b2416272532562f6e88cc32fb2878",
+        "archive_size": 600330240,
+        "environment_id": "darwin-arm64-cp312",
+        "file_count": 11126,
+        "manifest_authenticated": false,
+        "manifest_sha256": "f95a2a18d3f9f46b00b122e7fd7d0288300fef0b84e980111d9a3ca66c6e09a6",
+        "native_image_count": 36,
+        "production_eligible": false,
+        "publication": "candidate-only",
+        "signing_mode": "adhoc"
+      },
+      "semgrep_adapter_parity": {
+        "abi": "3.12",
+        "matched_cases": 14,
+        "plan_id": "semgrep-1.175.0-offline-ca-v2",
+        "production_eligible": false,
+        "reference_sha256": "efbae0e733db2ea821702d36f9dfdd377194a22f11335f4208d4a233a76075f8",
+        "required_cases": 14,
+        "semantic_adapter_sha256": "471977480df00f50a7f3e624802db9d964f2afad0a9f6c01707e803ab51be45e"
+      }
+    },
+    "cp313": {
+      "analyzer_candidate": {
+        "abi": "3.13",
+        "completed_cases": 20,
+        "library_loading_experiment": true,
+        "members": 10,
+        "passed": 10,
+        "production_eligible": false
+      },
+      "hatch_reconstruction_missing_artifacts": [
+        "lock:hatch.lock",
+        "sealed-distribution:pyodbc",
+        "sealed-distribution:pytest-asyncio",
+        "sealed-executable:specfact-hatch-adapter"
+      ],
+      "project_observer": {
+        "broker_verified": true,
+        "coverage_recorded": true,
+        "native_extension_architecture": "arm64",
+        "native_extension_imported": true,
+        "plugin_loaded": true,
+        "preparation_domain_separate": true,
+        "production_approved": false,
+        "pytest_executed": true
+      },
+      "rejected_empty_entitlement_artifact": {
+        "archive_sha256": "477691de5e29a9ad167ecfca099521d9138a32fc57a785b426231a2f19810f41",
+        "archive_size": 599658496,
+        "environment_id": "darwin-arm64-cp313",
+        "file_count": 11126,
+        "manifest_authenticated": false,
+        "manifest_sha256": "cb79a3212fe45734464c709c43acb7d780cb4fa6f89d1441d5f84971962d7471",
+        "native_image_count": 36,
+        "production_eligible": false,
+        "publication": "candidate-only",
+        "signing_mode": "adhoc"
+      },
+      "semgrep_adapter_parity": {
+        "abi": "3.13",
+        "matched_cases": 14,
+        "plan_id": "semgrep-1.175.0-offline-ca-v2",
+        "production_eligible": false,
+        "reference_sha256": "efbae0e733db2ea821702d36f9dfdd377194a22f11335f4208d4a233a76075f8",
+        "required_cases": 14,
+        "semantic_adapter_sha256": "471977480df00f50a7f3e624802db9d964f2afad0a9f6c01707e803ab51be45e"
+      }
+    }
+  },
+  "base_commit": "b87159c4fbeab3a1282919823035c2109527d385",
+  "complete_boundary": false,
+  "date_europe_berlin": "2026-10-06",
+  "mandatory_review": {
+    "assurance": "UNKNOWN",
+    "reason": "native_capsule_artifact_not_admitted:darwin-arm64-cp312",
+    "verdict": "FAIL"
+  },
+  "native_catalog_entries": 0,
+  "platform": {
+    "architecture": "arm64",
+    "os_build": "26A434",
+    "os_version": "27.0.1"
+  },
+  "production_eligible": false,
+  "quality_gates": {
+    "bundle_imports": "PASS",
+    "contract_tests": 28,
+    "explicit_skips": 75,
+    "format": "PASS",
+    "full_tests": 5002,
+    "lint": "PASS",
+    "local_capsule_gate_handling": "DEFERRED_human_approved_2026-10-06_blocking_exact_head_linux_ci",
+    "mandatory_capsule_review": "UNKNOWN_FAIL",
+    "manifest_integrity_version": "PASS_unsigned_development_baseline",
+    "openspec_strict": "PASS",
+    "publish_precheck": "PASS_not_publication",
+    "requirements_mapping": "PASS_planned_maturity_not_execution",
+    "smart_tests": 4998,
+    "subtests": 95,
+    "type_check": "PASS",
+    "yaml": "PASS"
+  },
+  "schema": "specfact-native-delivery-checkpoint-v1"
+}

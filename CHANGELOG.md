@@ -7,6 +7,15 @@ and this project follows SemVer for bundle versions.
 
 ## [Unreleased]
 
+### Fixed
+
+- Prepare Code Review 0.51.1 to display distinct UNKNOWN analyzer diagnostics in
+  ordinary terminal reports. Native capsule builders can emit unsigned final
+  archive/manifest bytes for separate CI signing. Exclude controller-generated
+  bytecode from copied analyzer payloads and composition identities, matching the
+  module signing boundary. These corrections add no supported macOS combinations or public runtime
+  capabilities. Native catalog publication and customer acceptance remain gated.
+
 ### Added
 
 - Declare the capsule controller cryptography dependency, accept matching

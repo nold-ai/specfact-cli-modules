@@ -65,7 +65,7 @@
 - [ ] Admit Node/npm, Semgrep and Z3 closure, Mach-O loading, signed caches and versioned evidence.
 - [ ] Implement first-use acquisition, offline reuse and compatibility rejection; repeat signed customer installation.
 - [ ] Complete native ARM64 CI and physical-Mac proof plus Linux regression, all repository gates and independent review.
-- [ ] Bump module minor version, manifests/signatures, changelog and registry only for the completed capability.
+- [ ] Prepare patch 0.51.1 for completion/correction of the released 0.51.0 promise; sign and publish through CI only after acceptance, and update registry identities from actual release bytes.
 - [ ] Open implementation PR to dev and resolve current-head reviews/checks; no automatic merge or publication.
 
 ## 7. Parallel native compatibility (owner approved 2026-10-02)
@@ -118,3 +118,24 @@ applicable stapling and certificate renewal/revocation belong only to #488.
 - [ ] Validate all ten analyzers, manager corpus, plugins, coverage and compatible native extensions against unrelated projects.
 - [ ] Pass clean ordinary-user installation in an independent macOS ARM64 VM or Mac, supported macOS matrix and Linux x86-64 CI VM regression.
 - [ ] Run final repository gates and independent security/defect review; update PR #489 and actual current-head reviews with CI-only signing follow-up.
+
+## Delivery continuation — 2026-10-06 (Europe/Berlin)
+
+Earlier umbrella tasks remain unchecked until their complete acceptance passes.
+The following bounded checkpoint preserves historical failures and does not
+replace sections 3, 4 or 6. Exact facts: DELIVERY_CHECKPOINT_2026-10-06.md.
+
+- [x] Reopen #460, restore Todo, verify parent/labels/project/dependencies and create one isolated codex worktree from current origin/dev; confirm main release files are present.
+- [x] Specify, reproduce and correct missing ordinary-output diagnostics; preserve JSON and literal rendering.
+- [x] Specify, reproduce and add keyless deterministic archive/manifest assembly; use no local publisher key.
+- [x] Assemble actual cp311/cp312/cp313 empty-entitlement archive candidates; retain their extension-loading rejection and unsigned identities.
+- [x] Run actual ten-analyzer clean/defective fixtures and plugin/coverage/native-extension observers for each ABI using the existing library-loading experiment; retain candidate-only status.
+- [x] Reproduce generated controller bytecode changing the sealed payload identity; exclude exactly the signing boundary's cache/bytecode categories with four regression cases.
+- [x] Run full unit/contract/smart suites and bounded independent security/defect review; these do not complete the UNKNOWN capsule review gate.
+- [ ] Complete current-head Linux CI and obtain a non-UNKNOWN required SpecFact review; any local deferral requires explicit human approval under the quality rule.
+- [ ] Admit exact native loader entitlements, complete dependency policies and four-manager upstream corpus with final artifact bytes.
+- [ ] Add the protected native build/accept/sign/stage workflow and its protected environment; all signing remains CI-only and candidate code cannot control signing authority.
+- [ ] Populate authenticated cp311/cp312/cp313 catalog resources from accepted, CI-signed immutable GHCR artifact identities.
+- [ ] Pass final-artifact macOS 14/15/26 x cp311/cp312/cp313 and independent signed installation, cold/offline reuse, physical changecost/unrelated project and Linux regression.
+- [ ] Open reviewed implementation PR to dev after applicable gate/approved-deferral handling; complete current-head findings and human merge/promotion review.
+- [ ] After authorized publication, repeat canonical fresh installation, close #460 and archive with openspec archive.

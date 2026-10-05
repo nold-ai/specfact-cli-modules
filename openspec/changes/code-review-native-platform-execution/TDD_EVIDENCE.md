@@ -2399,3 +2399,97 @@ validation passed. Normal commit hooks passed, including repository lint and
 contracts; only the expressly approved local capsule review was deferred to
 GitHub Linux. Module manifest is checksum-refreshed and remains unsigned until
 the protected CI/CD follow-up supplies its signature.
+
+
+## Delivery corrections — 2026-10-06 (Europe/Berlin)
+
+Specification scenarios and NATIVE_ARTIFACT_BUILD_CONTRACT.md preceded new tests.
+Source edits followed the observed RED results. Commands below ran in the
+isolated finish-460 worktree using controller CPython 3.14.7 / pytest 9.1.1.
+Fixture-only test keys never authenticate release artifacts; no publisher key
+was accessed. Raw transcripts are private under /private/tmp/specfact460-*.
+
+| Correction | Focused RED command | Observed RED | Full focused GREEN |
+| --- | --- | --- | --- |
+| Literal distinct UNKNOWN causes in ordinary output | `hatch run pytest -q tests/unit/specfact_code_review/run/test_commands.py -k 'unknown_runtime_diagnostics or unknown_diagnostic'` | 3 failed, 1 passed | Same file: 83 passed |
+| Keyless deterministic native assembly | `hatch run pytest -q tests/unit/test_build_macos_native_capsule.py -k unsigned` | 1 failed, 1 passed | Same file: 60 passed |
+| Generated controller cache cannot affect module composition | `hatch run pytest -q tests/unit/specfact_code_review/run/test_toolchain.py -k controller_bytecode` | 4 failed | Same file: 116 passed |
+
+The command implementation deduplicates only UNKNOWN analyzer diagnostics and
+renders them with Rich markup/highlighting disabled. Existing JSON output
+remains unchanged. The unsigned builder never calls a signer, omits manifest.sig,
+rejects stale sidecars and retains native-signature checks; signed builder
+archive/manifest bytes remain identical. The toolchain exclusion exactly matches
+module signing: __pycache__ entries and .pyc/.pyo files. Four new cases verify copied
+payload exclusion and unchanged identities. Existing
+`test_builtin_analyzer_missing_or_drifted_payload_is_unknown` and
+`test_builtin_copy_rejects_payload_drift_after_verification`, included in the
+116-test toolchain run, separately verify source/content/mode tamper rejection.
+
+`hatch run contract-test`: 28 passed. `hatch run smart-test`: 4998 passed,
+75 skipped, 95 subtests. `hatch run test -n 4` after the bytecode correction:
+5002 passed, 75 skipped, 95 subtests, five warnings in 111.19 seconds.
+Explicit native proof skips are not passing native acceptance.
+
+Mandatory review command:
+`hatch run specfact code review run --enforcement changed --bug-hunt --json --out .specfact/code-review.json`.
+Report timestamp 2026-10-05T22:11:36.527467Z; FAIL / UNKNOWN / ci_exit_code=1,
+all ten required members identify the missing darwin-arm64-cp312 catalog artifact.
+The outer process returned zero and is not proof of gate success. No findings
+were returned, but unavailable required evidence still blocks the gate.
+One requested bounded review agent found no actionable security/defect issues
+in the implementation and incremental bytecode fix; this does not replace the
+required capsule review or current-head GitHub reviews.
+
+Full artifact/candidate identities, accepted fixture limits, rejected loader
+configuration and remaining release obligations are in
+DELIVERY_CHECKPOINT_2026-10-06.md and its machine-readable sidecar. Do not archive
+this change or infer production eligibility from the unit/checkpoint results.
+
+
+Final checkpoint validation: format PASS; type check zero errors/warnings;
+lint PASS (Pylint 10/10); YAML/import boundary PASS; unsigned-development
+manifest integrity/version gate PASS for all seven modules using the paired
+core's public verification key; publish pre-check PASS with unchanged declared
+core compatibility (core 0.55.4 exercised); OpenSpec strict validation PASS.
+No publisher key or main-release required-signature claim is involved.
+
+After the initial missing-reference failure, only fixed hash-authenticated
+Semgrep inputs were restored into ignored worktree storage. The existing
+versioned adapter comparison then passed 14/14 cases for cp311, cp312 and cp313,
+with reference efbae0e733db2ea821702d36f9dfdd377194a22f11335f4208d4a233a76075f8
+and semantic adapter 471977480df00f50a7f3e624802db9d964f2afad0a9f6c01707e803ab51be45e.
+This is candidate compatibility evidence; producer/consumer/lock/signed policy
+admission and final-artifact Linux/native acceptance remain required.
+
+Staged requirements evidence gate: PASS at planned maturity; implementation
+evidence not-yet-available and delivery status proposal-only. The initial branch
+diff selected no committed changes, so its no-impact result was not counted.
+The staged invocation includes both output paths and the workflow-declared
+project/requirements module import paths.
+
+Final independent review identified one P3 evidence-attribution defect: the
+ledger attributed source mutation to the four new bytecode cases. Corrected the
+claim to cite the existing source-tamper tests that actually ran; no code change
+or additional acceptance claim was needed.
+
+The same independent agent read back the attribution correction and confirmed
+P3 closed, with no remaining concrete inconsistency in those statements.
+
+## Approved local capsule review deferral — 2026-10-06 (Europe/Berlin)
+
+The human explicitly approved the pending request to defer only the local
+Darwin ARM64 feature-worktree capsule review to blocking current-head GitHub
+Linux CI, enabling commit/push and a draft PR toward dev. Use
+SPECFACT_CODE_REVIEW_DEFER_TO_CI=github-linux only for local hooks. Every other
+quality gate still runs. This records DEFERRED, never PASS; both candidate
+customer acceptance and independent signed review remain required before merge.
+The approval grants no merge, signing-key access, publication, boundary admission
+or production eligibility. The existing UNKNOWN report is retained.
+
+The approved complete local hook pipeline passed after selecting the existing
+paired core checkout via SPECFACT_CLI_REPO. It ran format, YAML, imports, lint,
+command overview/contract, core documentation accountability, module validation
+and 28 contract tests; only capsule review reported DEFERRED. No budget or
+required analyzer enforcement changed. Initial missing paired-checkout-path
+configuration was corrected without editing the core checkout.

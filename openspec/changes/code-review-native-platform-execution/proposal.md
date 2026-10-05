@@ -1,5 +1,21 @@
 # Change: Dedicated macOS ARM64 Code Review Capsule
 
+## Delivery correction — 2026-10-06 (Europe/Berlin)
+
+Code Review 0.51.0 and core 0.55.4 are released, but the authenticated native
+catalog is empty. Issue #460 was reopened and moved to Todo on 2026-10-05;
+merged implementation is not customer delivery. Continue this change without
+archiving it. Prepare patch 0.51.1 for corrections to the promised delivery,
+rather than another additive capability or a new minor version.
+
+The current worktree reproduces complete CPython 3.11–3.13 native assembly.
+Empty-entitlement runtime candidates fail actual extension loading; the existing
+library-loading experiment completes ten-analyzer fixtures for every ABI but
+remains experimental. The protected release path, dependency/profile admission,
+final-artifact OS/ABI matrix and independent signed installation remain required.
+See DELIVERY_CHECKPOINT_2026-10-06.md for exact results and gaps. No publication,
+customer support claim, production flag or complete-boundary flag is added.
+
 ## Current project-driven revision — 2026-10-04 (Europe/Berlin)
 
 Reuse released portable discovery and caller configuration for unfamiliar projects.

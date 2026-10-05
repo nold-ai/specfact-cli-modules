@@ -680,6 +680,20 @@ Versioned inspection and evidence SHALL distinguish SpecFact manifest authentica
 
 The existing review command SHALL automatically acquire a prebuilt signed Darwin ARM64 runtime on first use and show bounded progress at phase changes and coarse byte intervals, including the final byte count. It SHALL verify platform, ABI, policy/backend identity and payload digests, publish caches atomically and verify offline reuse. Customer execution SHALL require no Docker, VM, Homebrew, Xcode, administrator privilege or separately installed daemon.
 
+#### Scenario: Controller bytecode does not change runtime composition
+
+- **GIVEN** the same verified installed module source on cold and warm runs
+- **WHEN** controller imports create or update `__pycache__`, `.pyc` or `.pyo` files excluded by module signing
+- **THEN** those generated files are omitted from the copied capsule payload and its composition identity
+- **AND** source, resource and executable changes still invalidate the verified payload; cached controller bytecode is never an analyzer input
+
+#### Scenario: Ordinary review output identifies unavailable native delivery
+
+- **GIVEN** native acquisition or verification leaves required analyzer evidence UNKNOWN
+- **WHEN** a developer runs the ordinary review command without JSON output
+- **THEN** the text report includes each distinct recorded analyzer diagnostic as literal text, including the unavailable ABI or acquisition cause
+- **AND** repeated diagnostics are shown once, successful analyzer diagnostics are omitted, and JSON retains its existing evidence contract
+
 #### Scenario: First invocation and offline reuse
 
 - **WHEN** the ordinary command runs with an empty cache and later with a verified warm cache offline
@@ -765,3 +779,14 @@ Support SHALL depend on guest OS/build, CPU architecture, Python ABI and require
 - **WHEN** the final capsule is acquired through the documented installation route
 - **THEN** cold acquisition, offline reuse, analysis, integrity and lifecycle acceptance SHALL run without publisher keys or host development tools
 - **AND** evidence SHALL record guest OS/kernel build, architecture, ABI, artifact identity and configured virtualization mode
+
+### Requirement: CI-only native artifact assembly
+
+Native build and test jobs SHALL emit deterministic final archive and canonical manifest bytes without publisher signing authority. Only separate protected CI/CD jobs running reviewed pinned code SHALL authenticate accepted manifests. Unsigned outputs SHALL NOT populate the customer catalog or establish production eligibility.
+
+#### Scenario: Build final archive bytes without manifest signing authority
+
+- **GIVEN** a complete verified native runtime root and no publisher key
+- **WHEN** the maintainer or read-only build job selects unsigned assembly
+- **THEN** the builder emits the same deterministic archive and canonical manifest as the signed path, without calling a signer or creating a signature sidecar
+- **AND** the summary declares manifest authentication false and production eligibility false; only a separate protected CI signing step can authenticate the manifest

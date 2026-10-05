@@ -455,6 +455,16 @@ requirements:
       kind: config_file
       locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
     verification_cases:
+    - case_id: 460-11-3
+      scenario_id: automatic-native-runtime-acquisition
+      method: test
+      intent: "Ordinary review output identifies unavailable native delivery."
+      observable: "test_default_output_shows_distinct_unknown_runtime_diagnostics, test_default_output_renders_unknown_diagnostic_as_literal_text and test_json_output_preserves_unknown_diagnostic_contract pass; distinct UNKNOWN causes render literally and existing JSON remains unchanged. This unit evidence does not admit a native artifact."
+    - case_id: 460-11-4
+      scenario_id: automatic-native-runtime-acquisition
+      method: test
+      intent: "Controller bytecode does not change runtime composition."
+      observable: "test_controller_bytecode_cannot_change_cold_warm_payload_identity passes for four generated-cache cases; existing test_builtin_analyzer_missing_or_drifted_payload_is_unknown and test_builtin_copy_rejects_payload_drift_after_verification separately verify source tamper rejection. Hosted Linux cold/warm acceptance remains required."
     - case_id: 460-11-1
       scenario_id: automatic-native-runtime-acquisition
       method: inspection
@@ -528,3 +538,17 @@ requirements:
       method: inspection
       intent: 'Inspect planned acceptance: Clean installation in a matching-architecture guest.'
       observable: 'Clean guest installation records OS/kernel, architecture, ABI, artifact identity and virtualization mode and runs unchanged acceptance under default protections. CPU emulation is supplemental. No independent installation pass is claimed.'
+  openspec:code-review-native-platform-execution:review-native-platform-execution:ci-only-native-artifact-assembly:
+    rationale: Separate final-byte assembly from protected publisher signing authority.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#460
+    touchpoints:
+    - id: openspec-source-spec
+      kind: config_file
+      locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
+    verification_cases:
+    - case_id: 460-16-1
+      scenario_id: ci-only-native-artifact-assembly
+      method: test
+      intent: "Build final archive bytes without manifest signing authority."
+      observable: "test_unsigned_build_preserves_final_bytes_without_signer and test_unsigned_build_still_rejects_invalid_native_signature pass; keyless output preserves archive/manifest bytes and native checks. Protected release workflow, CI signing and publication remain unimplemented and cannot be inferred from this test."
