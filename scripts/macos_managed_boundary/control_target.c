@@ -72,7 +72,8 @@ static int exception_port_probe(int thread, int denied) {
             EXCEPTION_DEFAULT | MACH_EXCEPTION_CODES, THREAD_STATE_NONE, masks, &count, ports, behaviors, flavors) :
         task_swap_exception_ports(mach_task_self(), EXC_MASK_SOFTWARE, port,
             EXCEPTION_DEFAULT | MACH_EXCEPTION_CODES, THREAD_STATE_NONE, masks, &count, ports, behaviors, flavors);
-    if (swapped != KERN_SUCCESS && swapped != KERN_NO_ACCESS) return 40;
+    /* syscall-mig policy denial is KERN_DENIED; retain endpoint snapshots below. */
+    if (swapped != KERN_SUCCESS && swapped != KERN_NO_ACCESS && swapped != KERN_DENIED) return 40;
     if (!swapped) {
         if (count > EXC_TYPES_COUNT) return 40;
         for (mach_msg_type_number_t i = 0; i < count; i++) if (ports[i]) mach_port_deallocate(mach_task_self(), ports[i]);

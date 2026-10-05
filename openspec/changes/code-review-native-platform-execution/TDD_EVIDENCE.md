@@ -2217,3 +2217,31 @@ on the clean uv/native-extension project with cold preparation and verified
 offline reuse under the new RPC restrictions. The all-four-manager real corpus
 is being repeated; its result will be recorded after completion. This is local
 candidate evidence, not authenticated customer installation or release acceptance.
+
+Final native corpus repeats all five projects against one unchanged private
+artifact: `sha256:09172a6ece415d84e4e0fa8d7658ac6f5bdf45537956f55481be80334fb5e5f4`. Requests/pip, Flask/uv, Poetry and Hatch
+each prepare cold, verify offline reuse and execute all ten analyzers with pytest
+PASS. Genuine upstream findings retain FAIL; automatic uv/native-extension review
+returns overall PASS. All five caller checkouts remain clean. The checkpoint is
+updated with only allowlisted summary fields; raw reports stay private.
+
+Five physical signed native regressions pass, including the real failed-startup
+injection, valid positive exception-port controls and four kernel-denied RPCs.
+Independent closure reports no remaining findings in the runtime preparation,
+controller, workflow, policy and probe deltas. Every normal hook passed, including
+28 contracts; only the owner-approved local capsule step is explicitly DEFERRED
+to mandatory Linux CI. CI signs publisher metadata exclusively.
+
+The current signed macOS 14 job passes the release broker startup, resource, spawn
+and exception-port proofs and proceeds to unchanged 100-repetition startup/control
+suites. That progress is not complete matrix or production acceptance. Exact-head
+Linux provisioning/review and actual review coverage remain required. CodeRabbit
+has skipped this PR because its file allowance is exceeded; skipped status is
+not accepted as completed review.
+
+### Hosted failure corrections — 5 October 2026
+
+- Final full repository suite before the following two narrow corrections: **4,939 passed, 75 explicit native/maintainer skips, five warnings**, 310.71 seconds. No failing tests were suppressed.
+- Signed CI head c5aa6225 passed actual broker WAIT/controller-loss, failed-bootstrap, task/thread exception-denial, spawn-flag and file-budget checks on ARM64 macOS 14/15/26. The existing 100-repetition historical control suite correctly failed at exec-exception-task; no release matrix pass is claimed. Physical reproduction: both task/thread cases RED. Independent endpoints remained unchanged but the target returned 40 because its swap probe accepted KERN_NO_ACCESS while syscall-mig returned **KERN_DENIED (53)**, explicitly defined as security-policy denial by the SDK. Accepting that precise denial retains all endpoint snapshots, positive controls and exit checks. GREEN: four real signed admission cases passed in 5.15 seconds, including identity swap rejection.
+- Hosted Linux index preparation correctly rejected the repository's two BasedPyright primaries. Pinned upstream 1.39.10 documents JSON precedence over TOML: https://docs.basedpyright.com/v1.39.10/configuration/config-files/ (accessed 5 October 2026). Corrected the selection semantics without editing the reviewed repository or weakening sealed graph, path, projection or suppression checks. RED: two precedence cases failed, two invalid/unsafe JSON no-fallback cases passed. GREEN: all 178 scope/runtime/hosted recipe cases passed in 18.29 seconds. Invalid or unsafe selected JSON cannot fall back to TOML.
+- Current-head hosted Linux execution, full 100-repetition native matrix and external review remain required. CodeRabbit's 202-file versus 150-file skip is **not** completed review; no filtered-out security/test surfaces or repeated requests substitute for review.

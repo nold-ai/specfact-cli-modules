@@ -1548,6 +1548,7 @@ def resolve_basedpyright_policy(root: Path, *, expected_version: str) -> BasedPy
 
     if expected_version != "1.39.10":
         return _unknown_basedpyright("basedpyright_loader_profile_drift")
+    # Match pinned upstream primary precedence; never fall back after a JSON error.
     primaries: list[str] = []
     try:
         if os.path.lexists(root / "pyrightconfig.json"):
@@ -1557,14 +1558,12 @@ def resolve_basedpyright_policy(root: Path, *, expected_version: str) -> BasedPy
                 pyproject_primary=False,
             )
             primaries.append("pyrightconfig.json")
-        if os.path.lexists(root / "pyproject.toml"):
+        elif os.path.lexists(root / "pyproject.toml"):
             payload = _stable_regular_bytes(root / "pyproject.toml", max_size=16 * 1024 * 1024)
             if _basedpyright_values(payload, "pyproject.toml", pyproject_primary=True) is not None:
                 primaries.append("pyproject.toml")
     except (GitResolutionError, PolicyResolutionError) as exc:
         return _unknown_basedpyright(str(exc))
-    if len(primaries) > 1:
-        return _unknown_basedpyright("basedpyright_config_ambiguous")
     if not primaries:
         return BasedPyrightPolicy(graph_digest=_canonical_json_digest([]))
     selected = primaries[0]

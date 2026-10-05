@@ -32,6 +32,12 @@ Production backend approval SHALL follow harmless native feasibility tests of th
 - **WHEN** tests exercise authorized reads/writes and prohibited host reads/writes, outbound and listening network operations, inherited descriptors and child processes
 - **THEN** allowed operations succeed and denied operations fail for the intended policy reason; helper startup or parser failure is not successful confinement evidence
 
+#### Scenario: Kernel RPC denial retains exception endpoints
+
+- **WHEN** the signed control fixture receives KERN_DENIED or KERN_NO_ACCESS from exception-port swapping
+- **THEN** acceptance still requires independent snapshots proving set, swap and clear cannot change the original endpoint, successful unconstrained positive controls, and the normal target exit
+- **AND** unrelated errors or a changed endpoint cannot satisfy acceptance
+
 #### Scenario: Required capability is unavailable
 
 - **GIVEN** a required isolation capability or analyzer is missing, incompatible or unverifiable
@@ -712,6 +718,14 @@ The native backend SHALL reuse portable project discovery and prepare dependenci
 - **AND** preparation cleans snapshots and exposes only local-build provenance without granting protected PR authority
 - **AND** a captured index without governed Python impact returns explicit NOT_APPLICABLE with no prepared runtimes or capsule acquisition
 - **AND** hosted cold acquisition and preparation have a separate bounded provisioning phase while the review helper retains its existing 300-second analysis timeout
+
+
+#### Scenario: Pinned BasedPyright primary configuration precedence
+
+- **GIVEN** a project containing both pyrightconfig.json and pyproject.toml
+- **WHEN** the pinned 1.39.10 policy loader binds analyzer inputs
+- **THEN** the JSON primary takes precedence as defined upstream, its complete bounded reference graph is sealed, and malformed or unsafe selected JSON remains incomplete evidence without TOML fallback
+- **AND** ignored TOML cannot suppress governed findings; projection and anti-suppression checks remain mandatory
 
 ### Requirement: Equivalent execution on supported physical machines and full virtual machines
 Support SHALL depend on guest OS/build, CPU architecture, Python ABI and required kernel capabilities. A matching-architecture full VM SHALL be eligible for the same acceptance as a physical machine. VM detection SHALL NOT reject an otherwise supported environment or weaken isolation. Full-system CPU emulation SHALL be recorded as supplemental evidence; translated user-mode binaries SHALL NOT establish native acceptance for their translated architecture. Windows and Linux ARM64 remain follow-ups; this delivery covers macOS ARM64 and Linux x86-64.

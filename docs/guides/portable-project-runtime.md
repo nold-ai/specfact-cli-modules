@@ -20,7 +20,7 @@ Portable project runtimes let the code review capsule use a repository's own dep
 
 Execution requires Linux x86-64 with the capsule's supported Python 3.11, 3.12, or 3.13 ABI and working unprivileged user namespaces. A local descriptor does not grant protected pull-request authority.
 
-Windows and macOS host-to-worker setup is not implemented or validated by this change. Runtime inspection reads project metadata, but automatic preparation and capsule execution require the Linux environment above. A future container or VM handoff must validate source transfer, architecture, native dependencies, and returned evidence. Linux execution cannot establish Windows- or macOS-specific test behavior.
+Linux x86-64 is the published backend. Native macOS ARM64 execution is implemented as a 0.51.0 development candidate, including project preparation and managed workers. Its authenticated runtime publication, clean installation and complete supported OS/ABI acceptance remain pending; a regular installation reports missing native artifacts explicitly until they are admitted. Windows remains a separate follow-up. Linux execution cannot establish native macOS or Windows behavior.
 
 ## Inspect and review
 
