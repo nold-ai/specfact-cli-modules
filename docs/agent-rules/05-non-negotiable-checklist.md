@@ -12,7 +12,7 @@ tracks:
   - docs/agent-rules/**
   - openspec/CHANGE_ORDER.md
   - openspec/config.yaml
-last_reviewed: 2026-04-12
+last_reviewed: 2026-10-05
 exempt: false
 exempt_reason: ""
 id: agent-rules-non-negotiable-checklist
@@ -28,6 +28,8 @@ stop_conditions:
   - no valid OpenSpec change covers requested modification
   - stale or ambiguous change requires refinement
   - failing-before evidence missing for behavior change
+  - consequential intent or trust assumptions unconfirmed
+  - material scope or effort expansion undecided
 depends_on:
   - agent-rules-index
 ---
@@ -39,6 +41,10 @@ depends_on:
 - SHALL treat a provided OpenSpec change id as candidate scope, not automatic permission to proceed.
 - SHALL verify selected change validity against current repository reality and dependency state before implementation.
 - SHALL not auto-refine stale, superseded, or ambiguous changes without the user.
+- SHALL apply [`15-intent-and-scope.md`](./15-intent-and-scope.md) before architecture or scope expansion; establish the actual workflow, consequential trust assumptions, non-goals, and observable completion criteria.
+- SHALL compare simpler approaches and justify custom infrastructure against confirmed needs and maintenance cost.
+- SHALL obtain an explicit decision before dependent work on a material scope, threat-model, acceptance, or effort expansion; reuse prior authorization within its bounds.
+- SHALL demonstrate one complete representative user workflow before generalizing infrastructure and SHALL report partial delivery when that workflow remains unproven.
 - SHALL consult `openspec/CHANGE_ORDER.md` before creating, implementing, or archiving a change.
 - SHALL finalize completed OpenSpec changes with `openspec archive <change-id>` and SHALL NOT relocate `openspec/changes/<change-id>/` by hand.
 - SHALL consult `.specfact/backlog/github_hierarchy_cache.md` before manual GitHub hierarchy lookup and SHALL refresh it when missing or stale.

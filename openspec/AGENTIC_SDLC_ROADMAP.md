@@ -9,6 +9,14 @@ Owner-approved plan, reconciled 2026-10-04 (Europe/Berlin). **Status: planning c
 - #481's existing worktree contains planning, not a delivered schema-v3 reconciler. #483 is also planned. Core #742 has live tracking but its workflow proposal is not present on the fetched core dev base; this PR records its approved amendment here and in the issue instead of replacing another branch's files.
 - The public registry at the start of this change lists Code Review 0.50.1 and Requirements 0.5.1. Registry presence is not installed-pair verification. Published review execution documents Linux x86-64/Python 3.11–3.13; ongoing native-platform candidates are not blanket released support.
 
+## Intent and scope checkpoint (2026-10-05)
+
+Apply the repository's [ask-decide-challenge rule](../docs/agent-rules/15-intent-and-scope.md) before implementing each story. Establish the actual user workflow, consequential trust assumptions, non-goals, observable completion criteria, and a bounded first milestone. Compare reuse and a minimal adaptation before custom infrastructure. Challenge material changes in scope, threat model, acceptance, or effort before dependent work proceeds; generic approval cannot establish an unstated use case.
+
+The native-review retrospective exposed a mismatch between reviewing a developer's own repositories and designing for hostile repositories. This is a design-process lesson, not a measured labor-cost or productivity claim and not an amendment to native-runtime security or release acceptance. Existing applicable gates remain in force until an explicit scope decision revises them.
+
+Prove one complete representative user workflow before broad orchestration or platform expansion. Stop repeated unchanged gate attempts, keep authorized delegation bounded, and report demonstrated outcomes separately from infrastructure activity. These are agent working rules; the optional RequirementDecisionContext companion, its schema/digest, and runtime enforcement remain optional follow-ups with their existing dependency boundaries.
+
 ## Bounded stories and order
 
 | Order | Owning work | Delivery and dependency boundary |

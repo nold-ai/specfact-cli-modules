@@ -12,7 +12,7 @@ tracks:
   - openspec/config.yaml
   - openspec/CHANGE_ORDER.md
   - docs/agent-rules/**
-last_reviewed: 2026-04-12
+last_reviewed: 2026-10-05
 exempt: false
 exempt_reason: ""
 id: agent-rules-openspec-and-tdd
@@ -47,6 +47,9 @@ This modules repository does not require a sibling internal wiki checkout. When 
 
 ## Change validity
 
+- Apply [`15-intent-and-scope.md`](./15-intent-and-scope.md) before converting a user request into requirements. Record confirmed use cases, trust assumptions, non-goals, alternatives, the selected design, and a bounded first end-to-end milestone in the proposal/design.
+- Identify agent recommendations and unresolved assumptions separately from user-confirmed or externally mandatory requirements. Structural OpenSpec validation and generic plan approval do not establish customer need.
+- When new evidence materially changes scope, acceptance, or expected effort, challenge the decision before refining the change or implementing the expansion. Preserve existing gates pending that decision.
 - Never implement from a change id alone.
 - Revalidate the selected change against current repository reality, dependency state, and possible superseding work.
 - Use `openspec validate <change-id> --strict` to capture dependency and interface impact before implementation and before finalization.

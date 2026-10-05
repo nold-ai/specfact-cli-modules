@@ -22,6 +22,17 @@ The isolated internal wiki mirror resolves five pending source-page gaps (includ
 
 No behavior tests were written for this documentation change. Runtime tests must follow the scenario-first failing/passing order under the applicable repository evidence policy.
 
+## Ask-decide-challenge amendment (2026-10-05)
+
+The owner requested stricter intent and scope rules after the native-review retrospective and selected this existing roadmap branch/PR for the amendment. Scope is agent governance documentation, loader/checklist references, navigation, and the roadmap link. It does not revise runtime security guarantees, acceptance tests, optional context contracts, or module release metadata.
+
+- Agent-rule frontmatter and canonical applicability signals: passed (`hatch run validate-agent-rule-signals`).
+- Documentation commands, routes, navigation, and frontmatter: passed (`hatch run python scripts/check-docs-commands.py`), no findings.
+- Existing governance, documentation, signal-validator, and docs-command tests: 50 passed (`hatch run python -m pytest -q --no-cov tests/unit/docs/test_agent_rules_governance.py tests/unit/docs/test_docs_review.py tests/unit/scripts/test_validate_agent_rule_applies_when.py tests/unit/test_check_docs_commands_script.py`). Coverage admission is not claimed by this scoped documentation test run.
+- Scope review: explicit session answers remain reusable; routine fixes need no repeated permission; consequential unstated assumptions require clarification; existing security/test gates remain intact; optional RequirementDecisionContext remains optional.
+- Applicable staged pre-commit hooks passed: module verification, format, manifest YAML, import boundaries, generated command overview/contracts, core documentation accountability, and documentation validation. The owning hooks skipped Python lint, active-change evidence, analyzer review, and contract execution for this documentation-only path set; those skips are not runtime PASS evidence.
+- No new runtime behavior or fabricated failing-first evidence. The existing planning-only applicability exception still applies to this documentation surface.
+
 ## Final pre-commit and signing result
 
 Both repositories completed their applicable pre-commit checks, including Requirements planning evidence, YAML, Markdown and module/import gates where applicable. Python review and contract execution were skipped by the owning hooks because there were no applicable code targets. Core gate-blocking R07/R08 YAML formatting was corrected with parsed-value equality checks; no lifecycle, acceptance or historical proof semantics changed.
