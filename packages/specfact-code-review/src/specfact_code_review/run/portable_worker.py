@@ -118,6 +118,17 @@ def _test_candidates(plan: ProjectPlan, roots: tuple[str, ...], patterns: tuple[
     }
 
 
+def contract_inputs(plan: ProjectPlan) -> tuple[str, ...]:
+    """Exclude declared test roots or actual default-discovery tests, never all source."""
+    roots = _strings(plan.pytest_config.get("testpaths"))
+    if not roots or "." in roots:
+        patterns = _strings(plan.pytest_config.get("python_files", ["test_*.py", "*_test.py"]))
+        roots = tuple(sorted(_test_candidates(plan, roots or (".",), patterns)))
+    if not roots:
+        return ("contract-inputs-v2",)  # Explicit empty test inventory: retain all production inputs.
+    return ("contract-inputs-v1", *(value for root in roots for value in ("--test-root", root)))
+
+
 @ensure(lambda result, full: (full or bool(result)) and len(result) == len(set(result)))
 def select_test_paths(plan: ProjectPlan, files: list[Path], *, full: bool) -> tuple[str, ...]:
     """Select real native test paths without rewriting the customer's pytest policy."""

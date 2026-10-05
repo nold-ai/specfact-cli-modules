@@ -61,6 +61,13 @@ Before running quality gates in a fresh worktree, bootstrap the Hatch environmen
 
 Run the full pipeline manually with `./scripts/pre-commit-quality-checks.sh` or `… all`.
 
+An explicitly approved local ARM64 Darwin feature-worktree exception may set
+`SPECFACT_CODE_REVIEW_DEFER_TO_CI=github-linux` to defer only the capsule review
+to the blocking exact-head GitHub Linux customer job. Every other hook component
+still executes. This reports DEFERRED, never PASS; it is rejected in CI, on other
+platforms or protected checkouts. Record maintainer approval in change evidence
+and require hosted review completion before merge.
+
 ## SpecFact code review JSON
 
 - Treat `.specfact/code-review.json` as mandatory evidence before an OpenSpec change is complete.

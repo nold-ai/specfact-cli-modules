@@ -106,7 +106,7 @@ def test_build_review_command_writes_json_report() -> None:
 
     command = module.build_review_command(["tests/test_app.py", "packages/specfact-spec/src/x.py"])
 
-    assert command[:5] == [sys.executable, "-m", "specfact_cli.cli", "code", "review"]
+    assert command[:6] == [sys.executable, "-P", "-m", "specfact_cli.cli", "code", "review"]
     assert "--json" in command
     assert "--out" in command
     assert "--enforcement" in command

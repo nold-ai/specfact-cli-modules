@@ -1,0 +1,2 @@
+# Preserve the authenticated upstream Z3 license as an exact byte artifact.
+scripts/native_analyzer_inputs/Z3-LICENSE.txt -text -diff

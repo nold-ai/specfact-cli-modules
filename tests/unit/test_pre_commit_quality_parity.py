@@ -295,3 +295,87 @@ def test_code_review_gate_blocks_only_findings_on_staged_lines() -> None:
         {"file": "pkg/example.py", "line": 9},
         changed_lines,
     )
+
+
+def test_review_subject_does_not_replace_authenticated_reviewer_checkout(
+    monkeypatch: MonkeyPatch, tmp_path: Path
+) -> None:
+    gate = _load_pre_commit_code_review_module()
+    subject = tmp_path / "subject"
+    subject.mkdir()
+    (subject / "packages/fake/src").mkdir(parents=True)
+    monkeypatch.setenv("SPECFACT_CODE_REVIEW_SUBJECT_ROOT", str(subject))
+    assert gate._repo_root() == subject.resolve()
+    observed = {}
+
+    def capture(command, **kwargs):
+        observed.update(kwargs)
+        return subprocess.CompletedProcess(command, 1, stdout="", stderr="")
+
+    monkeypatch.setattr(gate.subprocess, "run", capture)
+    monkeypatch.setenv("GITHUB_SHA", "a" * 40)
+    monkeypatch.setenv("PYTHONPATH", ".")
+    result = gate._run_review_subprocess(["fixture"], subject, ["app.py"], enforcement="changed")
+    assert result.returncode == 1
+    assert observed["cwd"] == str(subject)
+    assert observed["timeout"] == 300
+    environment = observed["env"]
+    assert environment["GITHUB_SHA"] == "a" * 40
+    assert environment["SPECFACT_CODE_REVIEW_CHANGED_DIFF"] == "cached"
+    assert environment["SPECFACT_MODULES_ROOTS"] == str((gate.REPO_ROOT / "packages").resolve())
+    assert "." not in environment["PYTHONPATH"].split(":")
+    assert str(subject / "packages/fake/src") not in environment["PYTHONPATH"].split(":")
+    assert str((gate.REPO_ROOT / "packages/specfact-code-review/src").resolve()) in environment["PYTHONPATH"].split(":")
+
+
+def test_subject_package_cannot_shadow_controller_cli(monkeypatch: MonkeyPatch, tmp_path: Path) -> None:
+    gate = _load_pre_commit_code_review_module()
+    trusted = tmp_path / "trusted"
+    trusted_cli = trusted / "packages/specfact-control-fixture/src/specfact_cli"
+    trusted_cli.mkdir(parents=True)
+    (trusted_cli / "__init__.py").write_text("")
+    (trusted_cli / "cli.py").write_text("raise SystemExit(7)\n")
+    subject = tmp_path / "subject"
+    forged_cli = subject / "specfact_cli"
+    forged_cli.mkdir(parents=True)
+    sentinel = tmp_path / "subject-executed"
+    (forged_cli / "__init__.py").write_text(
+        "from pathlib import Path\n" + f"Path({str(sentinel)!r}).write_text('executed')\n"
+    )
+    (forged_cli / "cli.py").write_text("raise SystemExit(0)\n")
+    monkeypatch.setattr(gate, "REPO_ROOT", trusted)
+    monkeypatch.setenv("PYTHONPATH", ".")
+    result = gate._run_review_subprocess(
+        gate.build_review_command(["app.py"]), subject, ["app.py"], enforcement="changed"
+    )
+    assert result.returncode == 7, result.stderr
+    assert not sentinel.exists()
+
+
+def test_missing_runtime_bootstrap_uses_reviewer_not_subject(monkeypatch: MonkeyPatch, tmp_path: Path) -> None:
+    gate = _load_pre_commit_code_review_module()
+    subject = tmp_path / "subject"
+    subject.mkdir()
+    monkeypatch.setenv("SPECFACT_CODE_REVIEW_SUBJECT_ROOT", str(subject))
+    roots = []
+    imports = []
+
+    def controlled_import(name):
+        imports.append(name)
+        if len(imports) == 1:
+            raise ModuleNotFoundError("fixture missing runtime")
+        return object()
+
+    monkeypatch.setattr(gate.importlib, "import_module", controlled_import)
+    monkeypatch.setattr(gate, "ensure_core_dependency", lambda root: roots.append(root) or 0)
+    assert gate.ensure_runtime_available() == (True, None)
+    assert roots == [gate.REPO_ROOT]
+
+
+def test_helper_forwards_explicit_project_configuration(monkeypatch: MonkeyPatch, tmp_path: Path) -> None:
+    gate = _load_pre_commit_code_review_module()
+    config = tmp_path / "project.json"
+    config.write_text('{"manager":"hatch","environment":"default"}')
+    monkeypatch.setenv("SPECFACT_CODE_REVIEW_PROJECT_CONFIG", str(config))
+    command = gate.build_review_command(["app.py"])
+    assert command[command.index("--project-config") + 1] == str(config)

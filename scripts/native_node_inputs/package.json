@@ -1,0 +1,9 @@
+{
+  "name": "specfact-native-basedpyright-input",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Experimental npm input only; no native runtime admission.",
+  "dependencies": {
+    "basedpyright": "1.39.10"
+  }
+}

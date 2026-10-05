@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
@@ -867,6 +868,45 @@ def test_suppression_checkpoint_binding_repeats_stably(differential_api: Any) ->
     resource, checkpoint = differential_api.load_suppression_catalog_and_checkpoint()
 
     assert resource.digest == checkpoint.suppression_catalog_contract.digest
+
+
+@pytest.mark.parametrize(
+    ("platform_id", "version", "expected_status"),
+    [
+        ("linux-x86_64", "1.144.0", "PASS"),
+        ("darwin-arm64", "1.175.0", "PASS"),
+        ("linux-x86_64", "1.175.0", "UNKNOWN"),
+        ("darwin-arm64", "1.144.0", "UNKNOWN"),
+    ],
+)
+def test_packaged_suppression_catalog_admits_exact_platform_semgrep_policy(
+    differential_api: Any, platform_id: str, version: str, expected_status: str
+) -> None:
+    result = differential_api.activate_packaged_suppression_catalog(
+        platform_id=platform_id,
+        analyzer_versions={"semgrep-clean": version, "semgrep-bugs": version},
+    )
+
+    assert result.status == expected_status
+    assert result.profile_activated is (expected_status == "PASS")
+    if expected_status == "UNKNOWN":
+        assert result.reason == "suppression_catalog_semgrep_policy_mismatch"
+
+
+@pytest.mark.parametrize("field", ["parser_catalog_digest", "help_schema_digest"])
+def test_semgrep_suppression_policy_rejects_malformed_parser_or_help_identity(
+    differential_api: Any, field: str
+) -> None:
+    resource, _checkpoint = differential_api.load_suppression_catalog_and_checkpoint()
+    document = json.loads(resource.canonical_bytes)
+    family = next(item for item in document["families"] if item["id"] == "nosemgrep")
+    family["platform_version_policies"][0][field] = "sha256:invalid"
+
+    assert not differential_api._semgrep_suppression_policy_admitted(
+        differential_api._canonical_bytes(document),
+        platform_id="darwin-arm64",
+        analyzer_versions={"semgrep-clean": "1.175.0", "semgrep-bugs": "1.175.0"},
+    )
 
 
 def test_suppression_catalog_drift_is_unknown_before_profile_activation(differential_api: Any) -> None:

@@ -1,5 +1,14 @@
 # Native feasibility follow-up — 2026-09-30
 
+Current revision (2026-10-05, Europe/Berlin) uses
+`codex/macos-native-capsule-runtime` and PR #489. #460's scope was synchronized
+with project-driven preparation and matching-architecture full-VM acceptance.
+Strict OpenSpec validation passed; planned evidence mapping is updated alongside
+the new scenarios. Physical cold pip preparation and all-ten review succeeded
+on an unrelated repository and a private self-referential project. Genuine
+project findings are retained. Full four-manager and signed customer acceptance
+remain incomplete; earlier scope/metadata statements below are historical.
+
 Branch: `codex/macos-arm64-capsule-feasibility`, based on the planning revision below. [Native results](NATIVE_RESULTS.md) supersede the earlier no-execution status. The follow-up records real native positive/negative tests, bounded Docker candidate tooling and remaining acceptance failures. Production runtime selection, signatures, module versions and published artifacts remain unchanged.
 
 The unresolved planning review annotations about TDD evidence recording and mandatory production quality gates are addressed explicitly in tasks.md. Docker assembly is separated from native execution/signing and protected GHCR promotion in design.md and the acceptance scenarios. Green tooling checks do not imply capsule acceptance.
@@ -152,3 +161,19 @@ offline reuse rejects mismatch before dependency admission or analyzer launch.
 The design and existing stale-cache scenario agree. These are planning-contract
 clarifications only: prerequisite release/design approval gates remain in place,
 no backend, policy replacement, or native platform support is implemented.
+
+## Optional Apple distribution scope — 2026-10-02
+
+Both native and optional Apple OpenSpec changes pass strict validation. Staged
+Requirements evidence passes for two sources at planned maturity; no executable
+runtime evidence is claimed. GitHub readback confirms optional #488 shares
+parent #163/project SpecFact CLI, remains Todo with no milestone and is blocked
+by #460, without a reverse edge. #460 retains its completed #459 dependency.
+
+Prerequisite routing has focused RED/GREEN and actual local command evidence.
+Repository gates and independent review passed; exact test counts, initial smart
+failures followed by successful serial reruns, the documented bootstrap advisory
+exception and actual unsupported native capsule result are in TDD_EVIDENCE.md.
+The original source-derived startup counterexample now has a passing fixed-
+bootstrap physical-host mechanism; complete matrix/startup/escape/resource and
+default-protection independent installation remain mandatory future gates. Neither active change is ready to archive.

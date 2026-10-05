@@ -1248,7 +1248,9 @@ def _coverage_applicable(relative: str, payload: bytes) -> tuple[bool, str]:
         tool = document.get("tool", {})
         return isinstance(tool, dict) and isinstance(tool.get("coverage"), dict), "tool.coverage"
     sections = _parsed_ini_sections(payload, relative)
-    expected_prefix = "run" if relative == ".coveragerc" else "coverage:"
+    if relative == ".coveragerc":
+        return bool(set(sections) & {"run", "report", "paths", "html", "xml", "json", "lcov"}), "run"
+    expected_prefix = "coverage:"
     return any(
         section == expected_prefix or section.startswith(expected_prefix) for section in sections
     ), expected_prefix
@@ -1546,6 +1548,7 @@ def resolve_basedpyright_policy(root: Path, *, expected_version: str) -> BasedPy
 
     if expected_version != "1.39.10":
         return _unknown_basedpyright("basedpyright_loader_profile_drift")
+    # Match pinned upstream primary precedence; never fall back after a JSON error.
     primaries: list[str] = []
     try:
         if os.path.lexists(root / "pyrightconfig.json"):
@@ -1555,14 +1558,12 @@ def resolve_basedpyright_policy(root: Path, *, expected_version: str) -> BasedPy
                 pyproject_primary=False,
             )
             primaries.append("pyrightconfig.json")
-        if os.path.lexists(root / "pyproject.toml"):
+        elif os.path.lexists(root / "pyproject.toml"):
             payload = _stable_regular_bytes(root / "pyproject.toml", max_size=16 * 1024 * 1024)
             if _basedpyright_values(payload, "pyproject.toml", pyproject_primary=True) is not None:
                 primaries.append("pyproject.toml")
     except (GitResolutionError, PolicyResolutionError) as exc:
         return _unknown_basedpyright(str(exc))
-    if len(primaries) > 1:
-        return _unknown_basedpyright("basedpyright_config_ambiguous")
     if not primaries:
         return BasedPyrightPolicy(graph_digest=_canonical_json_digest([]))
     selected = primaries[0]

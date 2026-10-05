@@ -1,5 +1,79 @@
 # Native macOS ARM64 experiments — 2026-09-30
 
+## Preparation review checkpoint — 2026-10-05 (Europe/Berlin)
+
+The Git/assembly integration passes 93 focused tests and now includes the
+reproduced Git image, licenses and corresponding source, with an exact compiled
+broker requirement. Private candidate identity:
+`sha256:6a2861d097bd4a3df15d710574f698d063ddee3cf5be0f1cc09ccf2e871e1385`.
+The initial Hatch checkout was a partial clone missing historical blobs; its
+network-disabled VCS export correctly failed. A complete disposable checkout
+of the same mandatory commit leaves the original fixture untouched. That native
+attempt builds the root and workspace wheels and reaches authentic Hatch/uv
+installation, where the private-copy wheelhouse path conflicts with the
+admitted immutable input path. The handoff correction and its actual rerun
+remain pending. No Hatch corpus pass is claimed.
+
+Independent defect review found and reproduced five preparation bugs involving
+workspace resolution/imports, executable modes, sanitized pip VCS context and
+signature-check timeout reporting. Closure review identified four further gaps
+in explicit member paths, uv modes, ancestor VCS context and pip hash mode. After
+correction, the integrated preparation, discovery and analyzer suite passes
+**312 tests**, and independent preparation closure review reports no findings. A namespace backend
+without a verifiable file origin is rejected with a structured diagnostic.
+
+The Requests, Flask and Poetry corpus repositories prepare and reuse their
+environments offline. Nine analyzers execute against their canonical corpus
+paths; their actual findings are retained. Required pytest evidence remains
+incomplete while approval for the local project-origin policy projection is
+pending. This is not a complete corpus pass or a release acceptance result.
+
+## Project-driven corpus checkpoint — 2026-10-05 (Europe/Berlin)
+
+The unchanged Poetry corpus at `be56ff07db06e9b82574648433ca228e4cac549b`
+prepares with pinned Poetry 2.4.3, exact locked Git source acquisition, a confined
+source build and verified offline reuse on native CPython 3.11.16. With its
+declared corpus source/test paths, nine analyzers run; pytest remains incomplete
+because its coverage exclusions require the pending owner-approved local
+`project-origin-v1` policy change. Actual findings produce FAIL independently of
+that missing evidence. Candidate artifact identity:
+`sha256:b87b5a8ec8932beb5d6aebd7a200b816fa0952898942eae88c54334a9597e0c2`.
+
+The unchanged Hatch corpus exposes matrix selection and local workspace
+requirements that the adapter previously rejected. These have focused RED/GREEN
+coverage (128 combined VCS, manager and controller tests pass). Packaged confined
+Git and the actual offline uv child still require physical validation before
+claiming that corpus passes. Neither this checkpoint nor controlled-project
+passes establish the supported release matrix, authenticated independent
+installation, complete boundary acceptance or production eligibility.
+
+## Current project-driven preparation checkpoint — 2026-10-04 (Europe/Berlin)
+
+The earlier lifecycle failures and guarded pytest checkpoints below are
+historical evidence, not the current project-origin contract. The current pip
+candidate runs all ten real analyzers on an unrelated dependency-bearing
+repository through the native broker. Cold preparation and verified offline
+reuse succeed without a project publisher catalog. Missing Developer ID is
+not a blocker. Authentic Hatch/uv/Poetry managed launch, the full boundary and
+supported OS/ABI matrix, independent installation and authenticated GHCR
+release acceptance remain unfinished. Production eligibility stays false.
+
+Target: PyPA sampleproject commit `621e4974ca25ce531773def586ba3ed8e736b3fc`.
+Physical host: macOS 27.0.1, build 26A434, ARM64; capsule CPython 3.11.15.
+Pinned pip 26.2.1 acquired backend and project wheels. Setuptools hooks ran in
+separate network-denied disposable workers; a fresh sealed worker inspected
+wheel metadata. The root distribution and dependencies were installed offline.
+Source roots matched the built wheel's Python files to immutable snapshot
+bytes. Pytest reported actual coverage failures instead of missing coverage;
+the review verdict was FAIL for project findings, with all ten members `ran`.
+The target checkout remained clean. A second unfamiliar requirements-only
+project also passed native cold preparation and offline reuse.
+
+These private maintainer candidates use ad-hoc native signing and do not have
+publisher-authenticated release admission. They prove execution, not the
+customer download route. No module or publisher signing keys were used; raw
+logs and receipts remain private. See TDD_EVIDENCE.md for regressions and review.
+
 ## Decision
 
 Production decision: NO-GO for the tested lifecycle designs. Native execution and bounded confinement are demonstrated, but the complete feasibility gate has not passed. These experiments ran on the physical ARM64 Mac, without Docker or Rosetta. The released CLI still returns incomplete evidence on macOS. Do not advertise capsule support or select a production backend from these results.
@@ -73,6 +147,27 @@ The [local candidate build guide](candidate-build/README.md) reproduces native h
 
 Full analyzer integration, project preparation/build hooks, pytest plugins and coverage, all project-manager corpora, cache integrity/concurrency, verification-to-launch races, resource bounds, complete lifecycle cleanup, consumer evidence and Linux regression suites remain required. None is marked passing by these smoke tests.
 
+### Managed project-corpus acceptance candidate
+
+On 3 October 2026, a new maintainer harness bound the pinned portable-runtime
+pip, Hatch, uv and Poetry corpus entries to immutable managed-process plans.
+Preparation and execution have separate domains; commands come only from the
+trusted plan, and unknown executables, argv, environment, paths and child-process
+semantics fail as incomplete evidence with no host fallback.
+
+The prepared-project observer passed on native ARM64 macOS 27.0.1 build 26A434
+using the sealed CPython 3.13 analyzer candidate. Two broker-owned workers proved
+separate preparation and execution, one real pytest call, explicit project-plugin
+loading, coverage of the declared source and import of the sealed generic ARM64
+`_cffi_backend` extension. All 20 focused cases passed, including the physical
+case. This proves the bounded observer path, not real package-manager preparation.
+
+The candidate payload has no admitted pip/Hatch/uv/Poetry preparation adapter
+images. Consequently no manager build hook or pinned upstream dependency closure
+was executed by this slice. The four-manager release gate remains incomplete and
+production eligibility remains false until those fixed adapters and real corpus
+runs pass the complete supported matrix.
+
 This is a substantial backend/packaging effort; these observations do not justify a delivery estimate. Rollback is to retain the released Linux backend and withdraw any experimental macOS publication. No production assets, module signatures or runtime selection were changed by these experiments.
 
 ## Evidence handling
@@ -86,3 +181,200 @@ Next: resolve the lifecycle and dependency admission failures, complete the rema
 ## Native XPC follow-up
 
 The checked-in native XPC experiment ran on 2026-10-01 Europe/Berlin: two positive controls passed and all sixteen detached lifecycle cases failed, with empty final cleanup audits. See [XPC boundary results](XPC_BOUNDARY_RESULTS.md). The candidate is rejected; production remains NO-GO.
+
+## Fixed manager adapter matrix — 2026-10-03
+
+The maintainer harness now contains executable broker-only preparation adapters
+for fixed offline pip, Hatch, uv and Poetry plans, plus deterministic sealed
+output inventory and domain-bound execution handoff. Unit acceptance covers
+successful fixed pip dispatch, external toolchain refusal, byte tampering and
+cross-domain descriptor reuse. The repository-owned Hatch reconstruction passed
+native broker admission; no manager command fell back to a host executable.
+
+Current CPython 3.13 result: pip 0/1, Hatch 0/1, uv 0/1 and Poetry 0/1 complete.
+The exact blockers are missing pinned upstream source/lock inputs and missing
+sealed manager artifacts. The locally available Hatch reconstruction additionally
+lacks `hatch.lock`, `specfact-hatch-adapter`, `pyodbc` and `pytest-asyncio`.
+Therefore the manager matrix is 0 passed, 4 incomplete, production false. The
+adapter and handoff implementation is present, while real upstream preparation
+remains blocked on authenticated artifacts rather than being simulated.
+
+## Trusted acquisition/offline preparation result — 2026-10-03
+
+The maintainer harness now creates a signed-content descriptor for a pinned
+source archive, verified Git commit/tree evidence, extracted source inventory,
+generated manager lock and exact dependency wheel/sdist closure. It installs the
+complete bundle atomically and permits offline reuse only after signature,
+content, path, hash, tag, mode and completion-marker verification. Acquisition
+does not execute project code or build hooks. Preparation has no network or
+credentials and uses only the fixed manager adapter and authenticated bundle;
+execution receives only sealed prepared output.
+
+Local reconstructed acceptance completed all fixed adapter rows: pip 1/1, Hatch
+1/1, uv 1/1 and Poetry 1/1. Compatible generic ARM64/Universal2 and ABI3 wheels
+are admitted; sdists are explicitly marked for preparation-domain build hooks.
+External SDK/compiler failures remain actionable incomplete evidence and partial
+prepared output is removed. The focused result is 50 passed, two skipped; the
+broader native macOS unit regression passed 863 tests and 69 subtests with 56
+explicitly gated cases skipped. Ruff and BasedPyright reported zero findings,
+and strict OpenSpec validation passed.
+
+This does not change the physical upstream matrix: pip 0/1, Hatch 0/1, uv 0/1
+and Poetry 0/1. Completing those rows requires release-authenticated source-fetch
+evidence, resolved wheelhouses and the four sealed adapter binaries inside the
+candidate artifact, followed by broker-owned preparation across the supported
+macOS/ABI matrix. No network fetch, production signing, runner integration,
+publication or production approval is claimed by this slice.
+
+## Complete local candidate and bounded project matrix — 2026-10-03
+
+On the physical ARM64 macOS 27.0.1 (26A434) host, the complete candidate
+assembler produced separate CPython 3.11, 3.12 and 3.13 archives. Each archive
+contains all ten analyzer dependencies and 34 inspected native images. The
+candidate summaries record 10,629/10,629/10,630 files respectively, ad-hoc
+native signing and `production_eligible=false`. Clean and defective analyzer
+fixtures passed 20/20 per ABI; the pinned Semgrep reference cases passed 14/14
+per ABI. The archive manifests are signed with a private **test** key and are
+not publication identities.
+
+An additional private acceptance variant embedded the matching public key for
+the fixture acquisition signer and rebuilt each candidate archive and manifest.
+This did not alter the module's checked-in acquisition trust key or locally sign
+the module. The mismatch against the checked-in key had correctly failed closed
+as `project_native_acquisition_authentication_failed` before this variant was
+built. The four tiny Git project fixtures (pip, Hatch, uv and Poetry) then each
+prepared an authenticated offline project runtime and ran the public full-scope
+Code Review command under CPython 3.11, 3.12 and 3.13. All 12 reviews exited 0,
+reported PASS with no findings or unknown required evidence, and recorded all
+ten analyzers as executed with PASS evidence. Private reports and the 12-row
+allowlisted summary are retained in the local acceptance directory.
+
+This establishes executable local compatibility for the bounded fixtures on one
+physical OS build. These are not the pinned external project corpus, a clean
+customer installation, the published GHCR route, or a multi-OS signed boundary
+admission. The current module catalog has no published native entries. The
+production acquisition signing identity still needs to be provisioned in the
+protected release workflow; the fixture key cannot be used as that identity.
+Module signatures remain a CI/CD PR follow-up, not a local signing step.
+
+The final source snapshot was rebuilt after the broker startup and dispatch
+corrections. The three ad-hoc-signed candidate archives again contain
+10,629/10,629/10,630 files and 34 native images each. Their archive SHA-256
+digests are `41da81b124ca15edab5c946f7ff64f505fea7fe0bff4cc49c60e09e1258a45f5`
+(CPython 3.11), `555f196f545393c51d6e7f158ec6ffcef96bcaea60c0a59e24616142baa17998`
+(3.12), and `73e1cc8a4396fd5750ba1f67f738c67acdd239b95cdfde571eded9206dda1ca7`
+(3.13). Every manifest records `production_eligible=false`. A private
+test-trust variant of these final archives completed the same 12/12
+manager-by-ABI public full-review matrix, with ten analyzer PASS records,
+zero findings and no unknown required evidence in every row. A further
+CPython 3.12 pip run selecting only `app.py` passed all ten analyzers while
+importing its unchanged sibling `support.py` from the staged source context.
+The allowlisted results are in the private
+`/private/tmp/specfact-project-acceptance17/project-matrix-final-summary.json`
+and `pip-selected-cp312-final.json` files. These remain local fixture results;
+the independently acquired customer route, pinned external project corpus and
+other macOS versions have not passed complete acceptance.
+
+## Current controller acceptance limit — 2026-10-04
+
+**Later 2026-10-04 contract revision:** the owner accepted project-origin
+pytest results for local native reviews after the separate-receiver probe
+showed that arbitrary project code can impersonate its result channel. The
+prelaunch refusal described below is historical. Current source launches the
+managed pytest worker and labels executed results `project-origin-v1` in
+analyzer and scope evidence. It keeps protected range reviews UNKNOWN until
+their consumer contract explicitly admits that provenance. The historical
+pre-guard PASS matrix below is not fresh proof for this revision. The packaged
+native runtime and project-acquisition catalogs remain empty; no customer
+artifact is admitted or published.
+
+The 12/12 tiny project reviews above and the selected-file CPython 3.12 case
+were measured **before** the native pytest receipt guard. They are historical
+candidate observations, not passing acceptance of the current controller. The
+physical forged-receipt regression showed that project code could rewrite
+worker-owned pytest evidence and make a failed test appear clean. The controller
+now returns `native_pytest_receipt_boundary_unverified` before launching that
+worker. Accordingly the current source cannot claim full ten-analyzer PASS, even
+when a pre-guard test-trust capsule did so. A process-separated, non-impersonable
+pytest outcome channel and fresh complete acceptance are required. All native
+capsule manifests in this work remain `production_eligible=false`; no production
+GHCR catalog entry exists.
+
+This change does not use or require a local **module-signing** key. The Code
+Review module signature is reserved for the protected CI/CD PR follow-up.
+Ad-hoc code signatures on native Mach-O test components and private test-only
+capsule manifest signatures are distinct from the module signature.
+
+The final physical full-scope CPython 3.12 run on this host, using the current
+controller and a private test-trust candidate capsule, retained a real Ruff F401
+finding and marked `targeted-pytest-coverage` `error/UNKNOWN` with diagnostic
+`native_pytest_receipt_boundary_unverified`; required unknown evidence is true.
+An earlier run with the narrower tool-only guard falsely reported this analyzer
+`ran/PASS`, which prompted the analyzer-level refusal. The current observation
+is a safe incomplete result, not the requested complete native acceptance.
+
+## Final local verification status — 2026-10-04
+
+On the physical ARM64 host, the ad-hoc-signed broker WAIT controller-loss,
+spawn-flag fault-injection and independent file-budget regressions passed
+serially (`3 passed`). The default Codex tool sandbox denied `PT_TRACE_ME`
+with `EPERM`; a disposable diagnostic build identified this as the reason for
+broker detail 105. Native proofs were rerun with the tool sandbox disabled.
+No worker policy or macOS protection was relaxed.
+
+The repository smart and full suites each passed `4433 passed, 69 skipped`
+when run outside that tool sandbox. Format, type-check, lint, YAML, bundle
+import, module checksum/version/public-key verification, 28 contract tests and
+strict OpenSpec validation passed. The Code Review module manifest is
+checksum-only for the protected CI/CD signing follow-up, as required by the
+module release policy. A local `specfact code review run --enforcement changed
+--bug-hunt` and the normal staged pre-commit Block 2 review gate both returned
+`assurance_status=UNKNOWN`, `ci_exit_code=1`, zero findings. The manual run
+reported `unsupported_controller_platform`; the staged-hook report gives the
+more specific `native_capsule_python_abi_unsupported:darwin-arm64-cp314` for
+all ten analyzers in this checkout's Python 3.14 environment. Its legacy
+`linux-x86_64-cp314` environment label does not indicate actual Linux
+execution. At that checkpoint, even a supported Python 3.12 controller lacked
+an admitted catalog entry and the then-required protected pytest evidence channel. This is a
+blocking review-gate result, not a clean review.
+No commit, PR update, publication or production claim follows from the local
+test passes while that gate and native acceptance remain incomplete.
+
+## Project-driven native checkpoint — 2026-10-05, Europe/Berlin
+
+The physical host is macOS 27.0.1 (26A434), ARM64; this is supplemental
+CPython 3.11.16 candidate evidence, not the supported release matrix. No
+publisher signing key, Docker, host project environment or project catalog
+was used. Paid Developer ID remains optional #488. Production eligibility
+and publication flags remain false.
+
+- Controlled pip, Hatch, uv and Poetry projects completed cold preparation,
+  verified offline reuse and all ten analyzers. These are authentic pinned
+  managers, not pip replacements for other managers. The upstream corpus
+  remains a separate mandatory gate.
+- Automatic discovery on an unfamiliar uv project without uv.lock or a
+  publisher catalog completed with all ten analyzers and PASS, including
+  pytest-cov and an actual MarkupSafe ARM64 extension import. Artifact
+  identity: sha256:f04b93cbcd496a17287ea2f24243b8ccd83651034cc3e405cf7d6cfe6180a2e0.
+- Managed uv built from the reviewed upstream commit and locked Cargo input
+  using the private pinned toolchain. Its verified ad-hoc hardened binary
+  digest is 3b1a6d08d941bdb0934ab72804748ae5ddd2aeb35940ee93c7a8a44b67cef151.
+  The prepared candidate used that exact builder output.
+- An authentic Poetry custom root build executed its managed Python child
+  and completed preparation/offline reuse. All analyzers ran; genuine
+  fixture findings and coverage deficits produced FAIL, not incomplete
+  manager evidence. This custom-build trial is not a clean PASS fixture.
+- The exact upstream Requests and Flask corpus commits completed native
+  preparation/offline reuse. Initial review exposed internal-link snapshot
+  handling, whole-file BasedPyright diagnostic parsing and policy projection
+  gaps. Their initial incomplete reviews are retained privately and cannot
+  count as passing corpus acceptance.
+- Native live managed-child proof passed after adding sibling imports through
+  -c, -m and script launches and reordered -I options. It also exercised
+  streams, waits, timeout/kill, handle reuse and direct-fork denial.
+
+Fresh signed supported-OS/ABI acceptance, all unchanged upstream manager
+corpus members, complete boundary/resource/escape proof, an independent clean
+installation route, Linux x86-64 VM regression, final repository gates and
+actual current-head reviews remain mandatory. Module signing and canonical
+publication are CI/CD follow-ups; neither occurred locally.
