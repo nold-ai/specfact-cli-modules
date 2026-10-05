@@ -384,6 +384,15 @@ Support SHALL be claimed only after a canonical signed publication passes fresh 
 - **WHEN** a fresh customer installation launches with normal platform protections and loads project extensions
 - **THEN** initial-distribution native-signature/quarantine checks and the approved hardening/library-loading policy pass without disabling host protections; final payload hashes match the shipped signed manifest
 
+#### Scenario: Private socket metadata precedes listener readiness
+
+- **GIVEN** the private launchd socket has the correct owner, type and mode before its listener accepts connections
+- **WHEN** initial control connection receives ConnectionRefusedError
+- **THEN** the fixture client SHALL observe readiness within its existing seven-second connection budget using fresh sockets and rechecking private metadata
+- **AND** elapsed metadata checks and socket creation SHALL consume the same deadline; the remaining blocking connect timeout SHALL be refreshed immediately before connecting
+- **AND** it SHALL close each unsuccessful socket, authenticate exactly once after connection, and never retry authentication, register another job or retry a fixture
+- **AND** other connection errors and an expired budget SHALL remain failures; the three-second metadata, five-second cleanup and 100-repetition gates SHALL remain unchanged
+
 #### Scenario: Native connection failures remain diagnosable
 
 - **WHEN** a native fixture fails with a standard connection refusal, reset, broken pipe or permission error
@@ -745,8 +754,9 @@ The native backend SHALL reuse portable project discovery and prepare dependenci
 
 #### Scenario: Hosted failure exposes bounded public finding locations
 
-- **WHEN** candidate review fails in the public repository
+- **WHEN** candidate or independently installed review fails in the public repository
 - **THEN** hosted diagnostics SHALL expose at most 200 finding locations bound to tracked public paths with integer lines and declared severities
+- **AND** diagnostics MAY include only fixed public analyzer/category/rule identities and fixed failure classifications; independent review SHALL use trusted inline projection, never candidate host scripts
 - **AND** raw findings, messages, private absolute paths, receipts and tool logs SHALL remain private
 - **AND** the diagnostic step SHALL preserve the review failure exit code
 

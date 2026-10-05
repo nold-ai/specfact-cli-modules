@@ -196,3 +196,27 @@ CodeRabbit explicitly skipped the draft. Its CLI did not review: automatic
 approval review rejected external diff transmission beyond the authorized
 bounded agent. No diff was sent and no workaround or external review request
 was made. This is unavailable review evidence, not a completed review.
+
+
+## Socket readiness follow-up at signed 18e77026
+
+At signed 18e77026, Linux cp311/cp313 customer acceptance and all three minimum-
+core checks pass. The cp312 required review and independently installed signed
+review fail; independent 0.51.0/core0.55.4 installation itself succeeds. Fixed
+native macOS14/15 lifecycle jobs pass, while macOS26 fails request-authenticate
+with ConnectionRefusedError. This is current-head fixture evidence only.
+
+The follow-up observes listener readiness within the original seven-second
+connect deadline, refreshing the remaining timeout after metadata checks. Only
+initial refusal retries; auth, job registration and fixtures do not. RED4+RED1,
+and independent-agent deadline RED2, precede the current 304-test native unit
+pass (five explicit native skips). Physical macOS27 full attempts stopped in
+protocol checks and do not count as 100-repetition acceptance. Hosted review
+failure diagnostics now expose only finite public identities/classes and bounded
+tracked locations, preserving private reports and original failure exits.
+
+Local analyzer reproduction confirms complexity findings in builder/workflow
+functions. Required clean-code remediation and four incomplete analyzer results
+remain blockers. Final archives, protected signing/staging, all nine native
+OS/ABI cells and fresh default-protection independent installation remain
+unproven. #460 stays open; no promotion/publication/archive is authorized.

@@ -155,10 +155,9 @@ class Client:
         self._activate_request(0)
         self.capability = capability
         self.history: list[dict[str, Any]] = []
-        self.stream = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        self.stream.settimeout(7)
+        self.stream = SOCKET.connect_private_socket(path)
         try:
-            self.stream.connect(str(path))
+            self.stream.settimeout(7)
             require(self.request(0).get("state") == "authenticated", "authentication failed")
         except BaseException:
             self.stream.close()

@@ -462,6 +462,7 @@ def test_failed_candidate_diagnostics_expose_only_bounded_tracked_locations(tmp_
     report.write_text(
         json.dumps(
             {
+                "analyzer_evidence": [{"id": "PRIVATE_ANALYZER", "diagnostic": "PRIVATE_TOKEN"}],
                 "findings": [
                     {"file": "public.py", "line": 12, "severity": "warning", "message": "PRIVATE_MESSAGE"},
                     {"file": "/private/SECRET.py", "line": 1, "severity": "error"},
@@ -470,7 +471,7 @@ def test_failed_candidate_diagnostics_expose_only_bounded_tracked_locations(tmp_
                     {"file": "public.py", "line": 0, "severity": "error"},
                     {"file": "public.py", "line": 1, "severity": "PRIVATE_SEVERITY"},
                     *[{"file": "public.py", "line": line, "severity": "info"} for line in range(20, 225)],
-                ]
+                ],
             }
         )
     )
@@ -480,3 +481,69 @@ def test_failed_candidate_diagnostics_expose_only_bounded_tracked_locations(tmp_
     assert len(rows) == 200
     assert rows[0] == {"file": "public.py", "line": 12, "severity": "warning"}
     assert "PRIVATE" not in result.stdout and "SECRET" not in result.stdout
+
+
+@pytest.mark.parametrize("job_name", ["customer", "independent-review"])
+def test_both_failed_reviews_project_fixed_analyzer_identity_without_private_text(
+    tmp_path: Path, job_name: str
+) -> None:
+    import json
+
+    workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())
+    name = STEP_NAME if job_name == "customer" else "Prepare and review through the authenticated installed controller"
+    recipe = next(step["run"] for step in workflow["jobs"][job_name]["steps"] if step.get("name") == name)
+    # The independent projector runs as trusted inline Python in its fresh job.
+    code = recipe.rsplit("- <<'PY'\n", 1)[1].split("\nPY\n", 1)[0]
+    _git(tmp_path, "init", "-q")
+    (tmp_path / "public.py").write_text("value = 1\n")
+    _git(tmp_path, "add", "public.py")
+    report = tmp_path / ".specfact/code-review.json"
+    report.parent.mkdir()
+    report.write_text(
+        json.dumps(
+            {
+                "findings": [
+                    {
+                        "file": "public.py",
+                        "line": 1,
+                        "severity": "error",
+                        "category": "clean_code",
+                        "tool": "radon",
+                        "rule": "CC34",
+                        "message": "PRIVATE_MESSAGE",
+                    },
+                    {
+                        "file": "public.py",
+                        "line": 2,
+                        "severity": "error",
+                        "category": "tool_error",
+                        "tool": "semgrep",
+                        "rule": "tool_error",
+                        "message": "TimeoutExpired PRIVATE_SECRET",
+                    },
+                    {
+                        "file": "public.py",
+                        "line": 3,
+                        "severity": "error",
+                        "category": "PRIVATE_CATEGORY",
+                        "tool": "PRIVATE_TOOL",
+                        "rule": "PRIVATE_RULE",
+                        "message": "PRIVATE_SECRET",
+                    },
+                ]
+            }
+        )
+    )
+    result = subprocess.run([sys.executable, "-c", code], cwd=tmp_path, capture_output=True, text=True, check=False)
+    assert result.returncode == 0, result.stderr
+    rows = [json.loads(line)["finding_location"] for line in result.stdout.splitlines()]
+    assert rows[0] == {
+        "file": "public.py",
+        "line": 1,
+        "severity": "error",
+        "category": "clean_code",
+        "tool": "radon",
+        "rule": "CC34",
+    }
+    assert rows[1]["failure_class"] == "timeout"
+    assert "PRIVATE" not in result.stdout

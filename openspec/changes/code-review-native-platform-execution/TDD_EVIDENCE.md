@@ -2635,3 +2635,65 @@ Final current-source mandatory full-suite GREEN: 5011 passed, 75 explicit native
 platform skips, five warnings, 95 subtests in 260.40 seconds. Together with the
 5011-test serial smart pass, this completes local follow-up unit selection.
 Skips and local capsule deferral remain incomplete acceptance, not passes.
+
+
+## 2026-10-06 socket listener readiness and hosted failure diagnostics
+
+Signed checkpoint 18e77026f480268c58ea72186b682e715104339c has all seven
+public-key filesystem signatures verified against origin/dev. Current hosted
+Linux cp311/cp313 customer jobs and all three minimum-core jobs passed; cp312
+failed required review with four incomplete analyzers. Fresh independent signed
+0.51.0 installation passed, but its review exited 1 with its private report
+withheld. Current fixed-boundary macOS14/15 passed; macOS26 failed at
+request-authenticate with ConnectionRefusedError (38 complete lifecycle rounds,
+39 successes for the earlier cases). Runs 37387817080 and 37387816637 are
+candidate fixture evidence, not signed native archive acceptance.
+
+Spec preceded new readiness tests. RED4 in specfact460-connect-red.log and RED1
+Client-routing test in specfact460-client-route-red.log preceded changes to
+control_socket.py / Client. The helper retries only initial ConnectionRefusedError,
+rechecks private directory/socket metadata, closes each failed descriptor and
+uses the original seven-second connection deadline. Authentication runs once;
+other errors remain terminal. No fixture/job retry or expanded metadata,
+analysis, cleanup or repetition budget. Existing agent found stale remaining
+budget after metadata work; RED2 in specfact460-metadata-budget-red.log confirmed
+it. Recompute immediately before blocking connect fixed the finding. Current
+native unit GREEN: 304 passed, 5 explicit native-run skips (1.97 seconds).
+
+Two attempted full physical macOS27 runs did not establish lifecycle acceptance.
+The first failed the foreign-peer assertion; an isolated owning protocol check
+observed foreign-client EOFError and passed. The instrumented second full run
+stopped when the exception-port positive target received SIGKILL. Both failures
+are retained privately; neither is a boundary or repetition pass. This host is
+outside the required macOS14/15/26 matrix. No protection was disabled and no
+unchanged third attempt was made.
+
+Hosted diagnostic spec/test RED2 preceded inline workflow changes. A further
+synthetic regex-safe PRIVATE_TOKEN RED1 established that arbitrary diagnostic
+ids/tokens cannot be public. Both projectors now use finite analyzer/code/tool/
+category/rule allowlists, tracked relative public locations, integer positive
+lines and a 200-row cap. A tool error may expose only a fixed timeout class.
+Independent projection runs trusted inline code in its fresh env-i environment;
+no candidate script selects or executes the installed reviewer. Raw messages,
+absolute/untracked paths and reports remain private; original failure exits are
+preserved. Workflow/customer tests GREEN84 (5.68 seconds before the final
+finite-token correction; final rerun recorded below).
+
+Local existing-adapter reproduction identifies the hosted complexity errors:
+build_native_capsule CC34, length121 and parameters10; _git_identity CC18;
+builder test CC17; published-pin test CC17; independent-isolation tests CC25/
+CC20 and local deferral test parameters8. This is diagnostic evidence, not a
+passing capsule review; clean-code remediation remains required. Local
+basedpyright adapter reports no errors at these locations. No analysis budget
+or enforcement waiver was introduced.
+
+Final finite-token workflow/customer rerun GREEN84 in 5.42 seconds. The same
+requested bounded review agent verified the deadline finding closed and found
+no further introduced issue in socket/inline workflow changes. Required serial
+smart GREEN5025/75skips/5warnings/95subtests in 244.80 seconds; full GREEN5025
+with identical skip/warning/subtest counts in 248.53 seconds. Format, types/lint
+(zero errors/warnings, Pylint10/10), YAML, imports and OpenSpec strict passed.
+All seven strict public-key filesystem signatures/version checks against
+origin/dev passed at 18e77026; no signed module payload changed in this follow-up.
+Hosted review/native acceptance remains required; local capsule review uses
+only the human-approved DEFERRED mechanism, never PASS.

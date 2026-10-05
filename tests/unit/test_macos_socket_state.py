@@ -6,7 +6,7 @@ import importlib.util
 import json
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -115,3 +115,127 @@ def test_socket_state_rejects_string_subclass(control, invocation):
         _native_socket_state=PrivateString("socket_missing"), _control_failure_origin=(invocation, "bootstrap-socket")
     )
     assert "bootstrap_socket_state" not in emitted_marker(control, invocation, error)
+
+
+@pytest.mark.parametrize("failure", [ConnectionRefusedError, PermissionError, ConnectionResetError])
+def test_private_socket_connect_waits_only_for_refused_listener(control, tmp_path, failure):
+    first, second = Mock(), Mock()
+    first.connect.side_effect = failure("private detail")
+    with (
+        patch.object(control.SOCKET, "_private_socket_state", return_value="private"),
+        patch.object(control.SOCKET.socket, "socket", side_effect=[first, second]) as factory,
+        patch.object(control.SOCKET.time, "monotonic", return_value=10.0),
+        patch.object(control.SOCKET.time, "sleep") as sleep,
+    ):
+        if failure is ConnectionRefusedError:
+            assert control.SOCKET.connect_private_socket(tmp_path / "control.sock") is second
+            first.close.assert_called_once()
+            second.close.assert_not_called()
+            assert factory.call_count == 2
+            sleep.assert_called_once()
+        else:
+            with pytest.raises(failure):
+                control.SOCKET.connect_private_socket(tmp_path / "control.sock")
+            first.close.assert_called_once()
+            assert factory.call_count == 1
+            sleep.assert_not_called()
+        first.sendall.assert_not_called()
+        second.sendall.assert_not_called()
+
+
+def test_private_socket_connection_cannot_extend_original_budget(control, tmp_path):
+    stream = Mock()
+    refused = ConnectionRefusedError("private detail")
+    stream.connect.side_effect = refused
+    with (
+        patch.object(control.SOCKET, "_private_socket_state", return_value="private"),
+        patch.object(control.SOCKET.socket, "socket", return_value=stream) as factory,
+        patch.object(control.SOCKET.time, "monotonic", side_effect=[10.0, 10.0, 10.0, 17.0]),
+        patch.object(control.SOCKET.time, "sleep") as sleep,
+        pytest.raises(ConnectionRefusedError) as raised,
+    ):
+        control.SOCKET.connect_private_socket(tmp_path / "control.sock")
+    assert raised.value is refused
+    factory.assert_called_once()
+    stream.settimeout.assert_called_once_with(7.0)
+    stream.close.assert_called_once()
+    sleep.assert_not_called()
+
+
+def test_client_authenticates_once_after_listener_becomes_ready(control, tmp_path):
+    first, second = Mock(), Mock()
+    first.connect.side_effect = ConnectionRefusedError("not listening")
+    with (
+        patch.object(control.SOCKET, "_private_socket_state", return_value="private"),
+        patch.object(control.socket, "socket", side_effect=[first, second]),
+        patch.object(control.SOCKET.time, "monotonic", return_value=10.0),
+        patch.object(control.SOCKET.time, "sleep"),
+        patch.object(control.Client, "request", return_value={"state": "authenticated"}) as authenticate,
+    ):
+        client = control.Client(tmp_path / "control.sock", b"x" * 32)
+    assert client.stream is second
+    first.close.assert_called_once()
+    authenticate.assert_called_once_with(0)
+
+
+@pytest.mark.parametrize("changed_state", ["socket_missing", "socket_mode_pending", "socket_owner_invalid"])
+def test_refused_listener_rechecks_private_metadata_before_next_socket(control, tmp_path, changed_state):
+    stream = Mock()
+    stream.connect.side_effect = ConnectionRefusedError()
+    with (
+        patch.object(control.SOCKET, "_private_socket_state", side_effect=["private", changed_state]),
+        patch.object(control.SOCKET.socket, "socket", return_value=stream) as factory,
+        patch.object(control.SOCKET.time, "monotonic", return_value=10.0),
+        patch.object(control.SOCKET.time, "sleep"),
+        pytest.raises(RuntimeError, match="private socket changed"),
+    ):
+        control.SOCKET.connect_private_socket(tmp_path / "control.sock")
+    factory.assert_called_once()
+    stream.close.assert_called_once()
+    stream.sendall.assert_not_called()
+
+
+def test_connected_socket_after_deadline_is_closed(control, tmp_path):
+    stream = Mock()
+    with (
+        patch.object(control.SOCKET, "_private_socket_state", return_value="private"),
+        patch.object(control.SOCKET.socket, "socket", return_value=stream) as factory,
+        patch.object(control.SOCKET.time, "monotonic", side_effect=[10.0, 10.0, 10.0, 17.0]),
+        pytest.raises(TimeoutError, match="connection budget exceeded"),
+    ):
+        control.SOCKET.connect_private_socket(tmp_path / "control.sock")
+    factory.assert_called_once()
+    stream.close.assert_called_once()
+    stream.sendall.assert_not_called()
+
+
+def test_failed_authentication_closes_stream_without_reconnecting(control, tmp_path):
+    stream = Mock()
+    with (
+        patch.object(control.SOCKET, "connect_private_socket", return_value=stream) as connect,
+        patch.object(control.Client, "request", return_value={"state": "rejected"}) as authenticate,
+        pytest.raises(RuntimeError, match="authentication failed"),
+    ):
+        control.Client(tmp_path / "control.sock", b"x" * 32)
+    connect.assert_called_once()
+    authenticate.assert_called_once_with(0)
+    stream.close.assert_called_once()
+
+
+@pytest.mark.parametrize("after_metadata", [16.0, 17.0])
+def test_metadata_checks_cannot_extend_connection_budget(control, tmp_path, after_metadata):
+    stream = Mock()
+    with (
+        patch.object(control.SOCKET, "_private_socket_state", return_value="private"),
+        patch.object(control.SOCKET.socket, "socket", return_value=stream),
+        patch.object(control.SOCKET.time, "monotonic", side_effect=[10.0, 10.0, after_metadata, 16.5]),
+    ):
+        if after_metadata == 17.0:
+            with pytest.raises(TimeoutError):
+                control.SOCKET.connect_private_socket(tmp_path / "control.sock")
+            stream.connect.assert_not_called()
+            stream.close.assert_called_once()
+        else:
+            assert control.SOCKET.connect_private_socket(tmp_path / "control.sock") is stream
+            stream.settimeout.assert_called_once_with(1.0)
+            stream.close.assert_not_called()

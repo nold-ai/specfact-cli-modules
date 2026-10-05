@@ -177,18 +177,22 @@ jobs:
             # Print bounded codes/public locations; raw reports, receipts and logs stay private.
             "$CUSTOMER_ROOT/venv/bin/python" - <<'PY'
           import json
-          import re
+          import os
           import subprocess
           from pathlib import Path
 
-          report = Path(".specfact/code-review.json")
+          report = Path(os.environ.get("REVIEW_PUBLIC_REPORT", ".specfact/code-review.json"))
           if report.is_file():
               data = json.loads(report.read_text())
+              public_analyzers = {"ruff", "radon", "semgrep-clean", "ai-bloat-ast", "ast-clean-code", "basedpyright", "pylint", "contracts", "semgrep-bugs", "targeted-pytest-coverage"}
+              public_codes = {"analyzer_reported_incomplete_execution", "capsule_request_failed", "project_test_selection_ambiguous", "project_runtime_required", "project_pytest_coverage_missing", "analyzer_output_invalid", "timeout", "capsule_acquisition_failed", "native_capsule_artifact_not_admitted"}
               for row in data.get("analyzer_evidence", []):
+                  if not isinstance(row, dict) or not isinstance(row.get("id"), str) or row["id"] not in public_analyzers:
+                      continue
                   tokens = str(row.get("diagnostic", "")).split(":")[:3]
-                  codes = [token for token in tokens if re.fullmatch(r"[a-zA-Z0-9_.-]{1,96}", token)]
+                  codes = [token for token in tokens if token in public_codes]
                   if codes:
-                      print(json.dumps({"analyzer": row.get("id"), "diagnostic_codes": codes}))
+                      print(json.dumps({"analyzer": row["id"], "diagnostic_codes": codes}))
               tracked = set(subprocess.check_output(["git", "ls-files", "-z"], text=True).split("\0"))
               emitted = 0
               for finding in data.get("findings", []):
@@ -199,7 +203,21 @@ jobs:
                       isinstance(file, str) and file in tracked and not Path(file).is_absolute()
                       and type(line) is int and line > 0 and severity in ("error", "warning", "info")
                   ):
-                      print(json.dumps({"finding_location": {"file": file, "line": line, "severity": severity}}))
+                      location = {"file": file, "line": line, "severity": severity}
+                      public_values = {
+                          "category": {"clean_code", "security", "type_safety", "contracts", "testing", "style", "architecture", "tool_error", "naming", "kiss", "yagni", "dry", "solid", "ai_bloat"},
+                          "tool": {"ruff", "radon", "radon-kiss", "semgrep", "ast", "basedpyright", "pylint", "contract_runner", "crosshair", "pytest"},
+                          "rule": {"tool_error", "MISSING_ICONTRACT", "CROSSHAIR_COUNTEREXAMPLE", "CROSSHAIR_INCOMPLETE_EVIDENCE", "kiss.loc.error", "kiss.loc.warning", "kiss.nesting.error", "kiss.nesting.warning", "kiss.parameter-count.error", "kiss.parameter-count.warning", *(f"CC{number}" for number in range(1, 1001))},
+                      }
+                      for key, allowed in public_values.items():
+                          value = finding.get(key)
+                          if isinstance(value, str) and value in allowed:
+                              location[key] = value
+                      if location.get("category") == "tool_error":
+                          message = finding.get("message")
+                          if isinstance(message, str) and any(marker in message.lower() for marker in ("timeoutexpired", "timed out", "timeout")):
+                              location["failure_class"] = "timeout"
+                      print(json.dumps({"finding_location": location}))
                       emitted += 1
                       if emitted == 200:
                           break
@@ -362,9 +380,61 @@ jobs:
             fi
             exit 1
           fi
+          review_exit=0
           "${trusted_env[@]}" "$TRUSTED_ROOT/venv/bin/python" -I -c \
             'import subprocess,sys; sys.exit(subprocess.run(sys.argv[1:],timeout=300,check=False).returncode)' \
             "$TRUSTED_ROOT/venv/bin/python" -I "$TRUSTED_ROOT/reviewer.py" \
             "$TRUSTED_ROOT/subject" code review run --scope index --enforcement changed --bug-hunt \
             --project-config "$TRUSTED_ROOT/project.toml" --json --out "$TRUSTED_ROOT/review.private.json" \
-            > "$TRUSTED_ROOT/review.private.log" 2>&1
+            > "$TRUSTED_ROOT/review.private.log" 2>&1 || review_exit=$?
+          if [ "$review_exit" -ne 0 ]; then
+            cd "$TRUSTED_ROOT/subject"
+            "${trusted_env[@]}" REVIEW_PUBLIC_REPORT="$TRUSTED_ROOT/review.private.json" "$TRUSTED_ROOT/venv/bin/python" -I - <<'PY'
+          import json
+          import os
+          import subprocess
+          from pathlib import Path
+
+          report = Path(os.environ.get("REVIEW_PUBLIC_REPORT", ".specfact/code-review.json"))
+          if report.is_file():
+              data = json.loads(report.read_text())
+              public_analyzers = {"ruff", "radon", "semgrep-clean", "ai-bloat-ast", "ast-clean-code", "basedpyright", "pylint", "contracts", "semgrep-bugs", "targeted-pytest-coverage"}
+              public_codes = {"analyzer_reported_incomplete_execution", "capsule_request_failed", "project_test_selection_ambiguous", "project_runtime_required", "project_pytest_coverage_missing", "analyzer_output_invalid", "timeout", "capsule_acquisition_failed", "native_capsule_artifact_not_admitted"}
+              for row in data.get("analyzer_evidence", []):
+                  if not isinstance(row, dict) or not isinstance(row.get("id"), str) or row["id"] not in public_analyzers:
+                      continue
+                  tokens = str(row.get("diagnostic", "")).split(":")[:3]
+                  codes = [token for token in tokens if token in public_codes]
+                  if codes:
+                      print(json.dumps({"analyzer": row["id"], "diagnostic_codes": codes}))
+              tracked = set(subprocess.check_output(["git", "ls-files", "-z"], text=True).split("\0"))
+              emitted = 0
+              for finding in data.get("findings", []):
+                  if not isinstance(finding, dict):
+                      continue
+                  file, line, severity = (finding.get(key) for key in ("file", "line", "severity"))
+                  if (
+                      isinstance(file, str) and file in tracked and not Path(file).is_absolute()
+                      and type(line) is int and line > 0 and severity in ("error", "warning", "info")
+                  ):
+                      location = {"file": file, "line": line, "severity": severity}
+                      public_values = {
+                          "category": {"clean_code", "security", "type_safety", "contracts", "testing", "style", "architecture", "tool_error", "naming", "kiss", "yagni", "dry", "solid", "ai_bloat"},
+                          "tool": {"ruff", "radon", "radon-kiss", "semgrep", "ast", "basedpyright", "pylint", "contract_runner", "crosshair", "pytest"},
+                          "rule": {"tool_error", "MISSING_ICONTRACT", "CROSSHAIR_COUNTEREXAMPLE", "CROSSHAIR_INCOMPLETE_EVIDENCE", "kiss.loc.error", "kiss.loc.warning", "kiss.nesting.error", "kiss.nesting.warning", "kiss.parameter-count.error", "kiss.parameter-count.warning", *(f"CC{number}" for number in range(1, 1001))},
+                      }
+                      for key, allowed in public_values.items():
+                          value = finding.get(key)
+                          if isinstance(value, str) and value in allowed:
+                              location[key] = value
+                      if location.get("category") == "tool_error":
+                          message = finding.get("message")
+                          if isinstance(message, str) and any(marker in message.lower() for marker in ("timeoutexpired", "timed out", "timeout")):
+                              location["failure_class"] = "timeout"
+                      print(json.dumps({"finding_location": location}))
+                      emitted += 1
+                      if emitted == 200:
+                          break
+          PY
+          fi
+          exit "$review_exit"

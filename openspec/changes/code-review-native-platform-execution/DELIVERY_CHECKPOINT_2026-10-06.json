@@ -147,34 +147,60 @@
   "date_europe_berlin": "2026-10-06",
   "draft_pull_request": "https://github.com/nold-ai/specfact-cli-modules/pull/498",
   "hosted_checkpoint": {
+    "boundary_run": 37387816637,
     "final_artifact_acceptance": false,
     "followup_acceptance_required": true,
-    "head": "687b7d7396b50b2bb1454376688fae532db62c84",
-    "independent_signed_review": "failed-unavailable-0.50.1-pin",
+    "head": "18e77026f480268c58ea72186b682e715104339c",
+    "independent_signed_installation": "passed:published-0.51.0-core-0.55.4",
+    "independent_signed_review": "failed:private-report-unavailable-public-diagnostics-added-next-head",
     "linux_customer_fixture_stages": {
       "cp311": "passed",
       "cp312": "failed-deferred-review",
       "cp313": "passed"
     },
-    "linux_external_corpus": {
-      "cp311": {
-        "artifact_id": 11380162044,
-        "projects": 5,
-        "status": "candidate-PASS"
-      },
-      "cp312": "not-run:deferred-review-failed",
-      "cp313": {
-        "artifact_id": 11379471574,
-        "projects": 5,
-        "status": "candidate-PASS"
-      }
-    },
     "macos_fixed_boundary": {
       "14": "passed",
-      "15": "failed:cancel:request-authenticate:73-repetitions",
-      "26": "passed"
-    }
+      "15": "passed",
+      "26": "failed:eof-trace-stopped:request-authenticate:ConnectionRefusedError"
+    },
+    "minimum_core": {
+      "cp311": "passed",
+      "cp312": "passed",
+      "cp313": "passed"
+    },
+    "orchestrator_run": 37387817080
   },
+  "hosted_history": [
+    {
+      "final_artifact_acceptance": false,
+      "followup_acceptance_required": true,
+      "head": "687b7d7396b50b2bb1454376688fae532db62c84",
+      "independent_signed_review": "failed-unavailable-0.50.1-pin",
+      "linux_customer_fixture_stages": {
+        "cp311": "passed",
+        "cp312": "failed-deferred-review",
+        "cp313": "passed"
+      },
+      "linux_external_corpus": {
+        "cp311": {
+          "artifact_id": 11380162044,
+          "projects": 5,
+          "status": "candidate-PASS"
+        },
+        "cp312": "not-run:deferred-review-failed",
+        "cp313": {
+          "artifact_id": 11379471574,
+          "projects": 5,
+          "status": "candidate-PASS"
+        }
+      },
+      "macos_fixed_boundary": {
+        "14": "passed",
+        "15": "failed:cancel:request-authenticate:73-repetitions",
+        "26": "passed"
+      }
+    }
+  ],
   "mandatory_review": {
     "assurance": "UNKNOWN",
     "reason": "native_capsule_artifact_not_admitted:darwin-arm64-cp312",
@@ -192,18 +218,30 @@
     "contract_tests": 28,
     "explicit_skips": 75,
     "format": "PASS",
-    "full_tests": 5002,
+    "full_tests": 5025,
     "lint": "PASS",
     "local_capsule_gate_handling": "DEFERRED_human_approved_2026-10-06_blocking_exact_head_linux_ci",
     "mandatory_capsule_review": "UNKNOWN_FAIL",
-    "manifest_integrity_version": "PASS_unsigned_development_baseline",
+    "manifest_integrity_version": "PASS_CI_signed_18e77026_public_key_filesystem_origin_dev",
     "openspec_strict": "PASS",
     "publish_precheck": "PASS_not_publication",
     "requirements_mapping": "PASS_planned_maturity_not_execution",
-    "smart_tests": 4998,
+    "smart_tests": 5025,
     "subtests": 95,
     "type_check": "PASS",
     "yaml": "PASS"
   },
-  "schema": "specfact-native-delivery-checkpoint-v1"
+  "schema": "specfact-native-delivery-checkpoint-v1",
+  "socket_readiness_followup": {
+    "bounded_agent_review": "no findings after P2 deadline correction",
+    "client_route_red": 1,
+    "helper_red": 4,
+    "hosted_acceptance": "pending-next-head",
+    "metadata_budget_red": 2,
+    "native_unit_explicit_skips": 5,
+    "native_unit_passed": 304,
+    "physical_complete_boundary": false,
+    "production_eligible": false,
+    "workflow_unit_passed": 84
+  }
 }

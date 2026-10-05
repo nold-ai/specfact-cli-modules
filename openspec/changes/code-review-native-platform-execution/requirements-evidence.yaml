@@ -223,6 +223,11 @@ requirements:
       kind: config_file
       locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
     verification_cases:
+    - case_id: 460-8-24
+      scenario_id: signed-customer-release-acceptance
+      method: test
+      intent: "Private socket metadata precedes listener readiness."
+      observable: "test_private_socket_connect_waits_only_for_refused_listener, test_metadata_checks_cannot_extend_connection_budget and related tests verify refusal-only fresh sockets, metadata rechecks, original seven-second budget including metadata work, close on deadline/error and one authentication. No job or fixture retry; hosted 100-repetition and cleanup acceptance remain required."
     - case_id: 460-8-23
       scenario_id: signed-customer-release-acceptance
       method: test
@@ -503,7 +508,7 @@ requirements:
       scenario_id: prepare-unfamiliar-projects-from-discovered-or-caller-supplied-setup
       method: test
       intent: "Hosted failure exposes bounded public finding locations."
-      observable: "test_failed_candidate_diagnostics_expose_only_bounded_tracked_locations executes the real workflow diagnostic code; private/untracked paths, messages, invalid lines and severity are withheld and at most 200 locations are emitted. Existing recipe tests preserve review failure propagation."
+      observable: "test_failed_candidate_diagnostics_expose_only_bounded_tracked_locations executes the real workflow diagnostic code; private/untracked paths, messages, invalid lines and severity are withheld and at most 200 locations are emitted. test_both_failed_reviews_project_fixed_analyzer_identity_without_private_text covers candidate and independent trusted inline projections with finite public values. Arbitrary analyzer identifiers/tokens remain private. Existing recipe tests preserve review failure propagation."
     - case_id: 460-15-10
       scenario_id: prepare-unfamiliar-projects-from-discovered-or-caller-supplied-setup
       method: test

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import socket
 import stat
 import time
 from pathlib import Path
@@ -33,12 +34,7 @@ def wait_socket_ready(path: Path) -> None:
     uid = os.getuid()
     state = "unobserved"
     while time.monotonic() < deadline:
-        directory = path.parent.lstat()
-        if not (
-            stat.S_ISDIR(directory.st_mode) and directory.st_uid == uid and stat.S_IMODE(directory.st_mode) == 0o700
-        ):
-            raise _failure("private directory type/mode/owner failed", "directory_invalid")
-        state = _socket_state(path, uid)
+        state = _private_socket_state(path, uid)
         if state == "private":
             break
         remaining = deadline - time.monotonic()
@@ -48,3 +44,41 @@ def wait_socket_ready(path: Path) -> None:
         raise _failure("socket readiness deadline exceeded", state)
     if time.monotonic() >= deadline:
         raise _failure("socket readiness deadline exceeded", state)
+
+
+def _private_socket_state(path: Path, uid: int) -> str:
+    directory = path.parent.lstat()
+    if not (stat.S_ISDIR(directory.st_mode) and directory.st_uid == uid and stat.S_IMODE(directory.st_mode) == 0o700):
+        raise _failure("private directory type/mode/owner failed", "directory_invalid")
+    return _socket_state(path, uid)
+
+
+def connect_private_socket(path: Path) -> socket.socket:
+    """Wait for one listener within the original seven-second connect budget."""
+    deadline = time.monotonic() + 7
+    while True:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise TimeoutError("private socket connection budget exceeded")
+        state = _private_socket_state(path, os.getuid())
+        if state != "private":
+            raise _failure("private socket changed before connection", state)
+        stream = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        try:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise TimeoutError("private socket connection budget exceeded")
+            stream.settimeout(remaining)
+            stream.connect(str(path))
+            if time.monotonic() >= deadline:
+                raise TimeoutError("private socket connection budget exceeded")
+            return stream
+        except ConnectionRefusedError:
+            stream.close()
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise
+            time.sleep(min(0.005, remaining))
+        except BaseException:
+            stream.close()
+            raise
