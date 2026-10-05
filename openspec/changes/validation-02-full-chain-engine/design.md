@@ -1,3 +1,9 @@
+## Scope rescope — 2026-09-20
+
+Consume independent current_execution and optional chronology without inflating test results into full requirement coverage. The full validation graph is not a prerequisite for https://github.com/nold-ai/specfact-cli-modules/issues/481 or ordinary current-run validation.
+
+This owner-requested planning amendment supersedes conflicting default-workflow and dependency wording below; runtime behavior is unchanged. [Replacement policy](../requirements-09-minimal-evidence/proposal.md).
+
 ## Context
 
 This change implements the narrowed validation evidence graph runtime scope for `validation-02-full-chain-engine`. It is proposal-stage only and defines implementation strategy without changing runtime code.

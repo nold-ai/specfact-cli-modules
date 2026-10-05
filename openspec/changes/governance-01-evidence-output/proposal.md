@@ -1,5 +1,11 @@
 # Change: Runtime Evidence Output for CI and AI Handoff
 
+## Scope rescope — 2026-09-20
+
+Emit lean current-run results and references to existing CI artifacts. Historical chronology is optional and separately labeled; no transcripts, approval receipts, or duplicate proof execution by default. This broader emitter feature is not a blocker for https://github.com/nold-ai/specfact-cli-modules/issues/481.
+
+This owner-requested planning amendment supersedes conflicting default-workflow and dependency wording below; runtime behavior is unchanged. [Replacement policy](../requirements-09-minimal-evidence/proposal.md).
+
 ## Why
 
 SpecFact needs machine-readable evidence that validation ran, policies were

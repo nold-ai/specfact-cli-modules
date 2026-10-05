@@ -1,0 +1,48 @@
+# Planning-only mapping for the existing planned-maturity gate.
+schema_version: '2'
+requirements:
+  openspec:governance-01-evidence-output:full-chain-validation:full-chain-evidence-serialization:
+    rationale: Serialize optional graph results without making them a delivery prerequisite.
+    touchpoints:
+      - id: full-chain-validation-spec
+        kind: config_file
+        locator: openspec/changes/governance-01-evidence-output/specs/full-chain-validation/spec.md
+    verification_cases:
+      - case_id: full-chain-validation-full-chain-evidence-serialization-inspection
+        scenario_id: full-chain-evidence-serialization
+        method: inspection
+        intent: Inspect the declared requirement, scenarios and any replacement migration for consistency with the
+          approved planning scope.
+        observable: Serialization scenarios preserve supplied producer verdicts and separate current execution,
+          incomplete coverage and optional chronology without requiring the producer. This is planned inspection,
+          not runtime execution or implementation proof.
+  openspec:governance-01-evidence-output:governance-evidence-output:governance-evidence-output:
+    rationale: Expose usable evidence without manufacturing authority or coverage.
+    touchpoints:
+      - id: governance-evidence-output-spec
+        kind: config_file
+        locator: openspec/changes/governance-01-evidence-output/specs/governance-evidence-output/spec.md
+    verification_cases:
+      - case_id: governance-evidence-output-governance-evidence-output-inspection
+        scenario_id: governance-evidence-output
+        method: inspection
+        intent: Inspect the declared requirement, scenarios and any replacement migration for consistency with the
+          approved planning scope.
+        observable: Envelope scenarios retain policy/exception context, layer coverage, independent clean-code and
+          producer outcomes, current-only claims and artifact location. This is planned inspection, not runtime
+          execution or implementation proof.
+  openspec:governance-01-evidence-output:policy-engine:policy-evidence-serialization:
+    rationale: Preserve the authority of the policy producer.
+    touchpoints:
+      - id: policy-engine-spec
+        kind: config_file
+        locator: openspec/changes/governance-01-evidence-output/specs/policy-engine/spec.md
+    verification_cases:
+      - case_id: policy-engine-policy-evidence-serialization-inspection
+        scenario_id: policy-evidence-serialization
+        method: inspection
+        intent: Inspect the declared requirement, scenarios and any replacement migration for consistency with the
+          approved planning scope.
+        observable: Policy serialization retains original verdicts, policy identity and exception context while
+          separating current execution from optional chronology. This is planned inspection, not runtime execution
+          or implementation proof.

@@ -139,15 +139,44 @@ def vcs_context(root: Path, commit: str = "HEAD", *, tree: str | None = None) ->
 def _copy_bound_objects(source: Path, private: Path, selected: dict[str, str]) -> None:
     tags = dict(line.rsplit(" ", 1) for line in selected["tags"].splitlines())
     roots = {selected["commit"], selected["tree"], *tags.values()}
+    root_input = ("\n".join(sorted(roots)) + "\n").encode("ascii")
+    shallow_file = private / ".git/shallow"
     objects = _git_bytes(
         source,
         "rev-list",
         "--objects",
         "--no-object-names",
+        "--missing=print",
         "--stdin",
-        input_data=("\n".join(sorted(roots)) + "\n").encode("ascii"),
-        shallow_file=private / ".git/shallow",
+        input_data=root_input,
+        shallow_file=shallow_file,
     )
+    if any(line.startswith(b"?") for line in objects.splitlines()):
+        # Version queries need exact history metadata, not historical file bytes.
+        # A missing tree/commit/tag must still fail; never invoke lazy fetching.
+        _git_bytes(
+            source,
+            "rev-list",
+            "--objects",
+            "--no-object-names",
+            "--filter=blob:none",
+            "--missing=error",
+            "--stdin",
+            input_data=root_input,
+            shallow_file=shallow_file,
+        )
+        # Both HEAD and a separately captured index must retain their full source
+        # closure, so status/diff and builds cannot accept missing current bytes.
+        _git_bytes(
+            source,
+            "rev-list",
+            "--objects",
+            "--no-object-names",
+            selected["commit"] + "^{tree}",
+            selected["tree"],
+            shallow_file=shallow_file,
+        )
+        objects = b"\n".join(line for line in objects.splitlines() if not line.startswith(b"?")) + b"\n"
     pack_prefix = private / ".git/objects/pack/pack"
     _git_bytes(
         source,

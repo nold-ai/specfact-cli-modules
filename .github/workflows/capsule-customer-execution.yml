@@ -35,6 +35,7 @@ jobs:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
           persist-credentials: false
+          fetch-depth: 0
       - name: Checkout published registry baseline for candidate installation
         if: github.event_name == 'pull_request'
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
@@ -121,6 +122,9 @@ jobs:
           profile specfact-customer-capsule "$CUSTOMER_ROOT/cache/**/opt/specfact/bin/bwrap-static" flags=(unconfined) {
             userns,
           }
+          profile specfact-customer-commit-review "$CUSTOMER_ROOT/commit-review-cache/**/opt/specfact/bin/bwrap-static" flags=(unconfined) {
+            userns,
+          }
           profile specfact-customer-offline-network "/specfact-corpus-offline/bwrap" flags=(unconfined) {
             userns,
           }
@@ -129,6 +133,64 @@ jobs:
           }
           EOF
           sudo apparmor_parser -r "$profile"
+      - name: Run deferred candidate commit review without weakening enforcement
+        if: github.event_name == 'pull_request' && matrix.python == '3.12'
+        shell: bash
+        env:
+          CANDIDATE_HEAD: ${{ github.event.pull_request.head.sha }}
+          CANDIDATE_BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          test "$(id -u)" -ne 0
+          unset GITHUB_TOKEN GH_TOKEN PYTHONPATH
+          REVIEW_ROOT="$CUSTOMER_ROOT/staged-review"
+          REVIEW_BASE="$(git merge-base "$CANDIDATE_HEAD" "$CANDIDATE_BASE")"
+          git worktree add --detach "$REVIEW_ROOT" "$CANDIDATE_HEAD"
+          git -C "$REVIEW_ROOT" reset --soft "$REVIEW_BASE"
+          cd "$REVIEW_ROOT"
+          review_paths=()
+          while IFS= read -r -d '' path; do
+            review_paths+=("$path")
+          done < <(git diff --cached --name-only --diff-filter=ACMR -z)
+          test "${#review_paths[@]}" -gt 0
+          PROJECT_CONFIG="$CUSTOMER_ROOT/commit-review-project.toml"
+          printf '%s\n' 'manager = "hatch"' 'environment = "default"' > "$PROJECT_CONFIG"
+          # Provisioning is separate from the unchanged 300-second analysis budget.
+          # Prepare the same bound base/index snapshots; customer cold cache stays empty.
+          SPECFACT_CODE_REVIEW_CAPSULE_CACHE="$CUSTOMER_ROOT/commit-review-cache" \
+            SPECFACT_MODULES_REPO="$GITHUB_WORKSPACE" \
+            SPECFACT_CLI_MODULES_REPO="$GITHUB_WORKSPACE" \
+            SPECFACT_MODULES_ROOTS="$GITHUB_WORKSPACE/packages" \
+            PYTHONPATH="$GITHUB_WORKSPACE/packages/specfact-code-review/src" \
+            "$CUSTOMER_ROOT/venv/bin/python" -I -c \
+              'import subprocess,sys; sys.exit(subprocess.run(sys.argv[1:],timeout=1800,check=False).returncode)' \
+              "$CUSTOMER_ROOT/venv/bin/python" -B -P -m specfact_cli.cli \
+              code review runtime prepare --scope index --project-config "$PROJECT_CONFIG" --json \
+              > "$CUSTOMER_ROOT/commit-review-preparation.private.json"
+          review_exit=0
+          SPECFACT_CODE_REVIEW_CAPSULE_CACHE="$CUSTOMER_ROOT/commit-review-cache" \
+            SPECFACT_CODE_REVIEW_SUBJECT_ROOT="$REVIEW_ROOT" \
+            SPECFACT_CODE_REVIEW_PROJECT_CONFIG="$PROJECT_CONFIG" \
+            SPECFACT_CODE_REVIEW_ENFORCEMENT=changed \
+            "$CUSTOMER_ROOT/venv/bin/python" "$GITHUB_WORKSPACE/scripts/pre_commit_code_review.py" "${review_paths[@]}" || review_exit=$?
+          if [ "$review_exit" -ne 0 ]; then
+            # Print only bounded reason codes; raw reports, receipts and tool logs stay private.
+            "$CUSTOMER_ROOT/venv/bin/python" - <<'PY'
+          import json
+          import re
+          from pathlib import Path
+
+          report = Path(".specfact/code-review.json")
+          if report.is_file():
+              data = json.loads(report.read_text())
+              for row in data.get("analyzer_evidence", []):
+                  tokens = str(row.get("diagnostic", "")).split(":")[:3]
+                  codes = [token for token in tokens if re.fullmatch(r"[a-zA-Z0-9_.-]{1,96}", token)]
+                  if codes:
+                      print(json.dumps({"analyzer": row.get("id"), "diagnostic_codes": codes}))
+          PY
+          fi
+          exit "$review_exit"
       - name: Exercise cold and warm fixtures and modules repository
         shell: bash
         run: |
@@ -157,3 +219,137 @@ jobs:
             ${{ env.CUSTOMER_ROOT }}/capsule-userns.apparmor
           if-no-files-found: error
           retention-days: 14
+
+  independent-review:
+    name: independent signed capsule review
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      CANDIDATE_HEAD: ${{ github.event.pull_request.head.sha }}
+      CANDIDATE_BASE: ${{ github.event.pull_request.base.sha }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.12"
+      - name: Install trusted reviewer in its own ordinary-user environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(id -u)" -ne 0
+          TRUSTED_ROOT="$RUNNER_TEMP/specfact-independent-review"
+          mkdir -m 0700 "$TRUSTED_ROOT"
+          mkdir -m 0700 "$TRUSTED_ROOT/home" "$TRUSTED_ROOT/tmp"
+          echo "TRUSTED_ROOT=$TRUSTED_ROOT" >> "$GITHUB_ENV"
+          cd "$TRUSTED_ROOT"
+          python -I -m venv "$TRUSTED_ROOT/venv"
+          "$TRUSTED_ROOT/venv/bin/python" -I -m pip install --no-cache-dir specfact-cli==0.55.4
+          env -i HOME="$TRUSTED_ROOT/home" TMPDIR="$TRUSTED_ROOT/tmp" \
+            PATH="$TRUSTED_ROOT/venv/bin:/usr/bin:/bin" SPECFACT_MODULES_BRANCH=main \
+            "$TRUSTED_ROOT/venv/bin/python" -I -m specfact_cli.cli \
+            module install nold-ai/specfact-code-review --scope user --version 0.50.1 --source marketplace
+      - name: Capture immutable candidate subject without executing its host code
+        shell: bash
+        run: |
+          set -euo pipefail
+          REVIEW_BASE="$(git merge-base "$CANDIDATE_HEAD" "$CANDIDATE_BASE")"
+          git -c core.hooksPath=/dev/null worktree add --detach "$TRUSTED_ROOT/subject" "$CANDIDATE_HEAD"
+          git -C "$TRUSTED_ROOT/subject" -c core.hooksPath=/dev/null reset --soft "$REVIEW_BASE"
+          printf '%s\n' 'manager = "hatch"' 'environment = "default"' > "$TRUSTED_ROOT/project.toml"
+      - name: Allow namespaces only for the trusted capsule launcher
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y bubblewrap
+          cat > "$TRUSTED_ROOT/capsule.apparmor" <<EOF
+          abi <abi/4.0>,
+          include <tunables/global>
+          profile specfact-independent-capsule "$TRUSTED_ROOT/cache/**/opt/specfact/bin/bwrap-static" flags=(unconfined) {
+            userns,
+          }
+          EOF
+          sudo apparmor_parser -r "$TRUSTED_ROOT/capsule.apparmor"
+      - name: Prepare and review through the authenticated installed controller
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$TRUSTED_ROOT"
+          cat > "$TRUSTED_ROOT/reviewer.py" <<'PY'
+          import json
+          import os
+          import sys
+          from pathlib import Path
+          from specfact_cli.cli import app
+          from specfact_cli.registry import CommandRegistry
+
+          # Register and load the installed reviewer before entering the subject.
+          # This fresh job has never executed candidate-controlled host programs.
+          CommandRegistry.get_module_typer("code")
+          from specfact_code_review.run.portable_snapshot import discover_snapshot
+          from specfact_code_review.run.runtime_builder import prepare_runtime
+          from specfact_code_review.run.runtime_interpreter import select_environment
+          from specfact_code_review.run.runner import (
+              _capsule_environment_id, _prepare_capsule_runtime, _cleanup_capsule_runtime,
+          )
+          from specfact_code_review.run.scope import (
+              ScopeRequest, resolve_scope, cleanup_scope_resolution,
+          )
+
+          os.chdir(sys.argv[1])
+          if sys.argv[2] != "prepare-index":
+              app(args=sys.argv[2:])
+              raise SystemExit(0)
+          resolution = resolve_scope(ScopeRequest(
+              repository=Path.cwd(), scope="index", portable_project_runtime=True,
+          ))
+          try:
+              if resolution.status != "PASS" or resolution.base_snapshot is None or resolution.head_snapshot is None:
+                  reason = resolution.reason or "missing_snapshots"
+                  public_codes = {
+                      "policy_parse_failure", "git_resolution_failed", "unsafe_governed_input",
+                      "candidate_policy_change", "candidate_project_runtime_source_lock_change",
+                      "no_governed_impact", "no_reviewable_files", "missing_snapshots",
+                  }
+                  diagnostic = reason if reason in public_codes else "unstructured_reason"
+                  (Path(sys.argv[3]).parent / "status.public.json").write_text(json.dumps({
+                      "status": "INCOMPLETE", "phase": "trusted_index_preparation", "diagnostic": diagnostic,
+                  }))
+                  raise RuntimeError("trusted_index_preparation_incomplete")
+              for snapshot in (resolution.base_snapshot, resolution.head_snapshot):
+                  plan = discover_snapshot(snapshot.root, config_path=Path(sys.argv[3]), source_snapshot=snapshot)
+                  selected = select_environment(plan, current=_capsule_environment_id())
+                  runtime, reason = _prepare_capsule_runtime(environment_id=selected)
+                  if runtime is None:
+                      raise RuntimeError("trusted_runtime_preparation_incomplete:" + reason)
+                  try:
+                      prepare_runtime(plan, runtime=runtime)
+                  finally:
+                      _cleanup_capsule_runtime(runtime)
+          finally:
+              cleanup_scope_resolution(resolution)
+          PY
+          trusted_env=(env -i HOME="$TRUSTED_ROOT/home" TMPDIR="$TRUSTED_ROOT/tmp"
+            PATH="$TRUSTED_ROOT/venv/bin:/usr/bin:/bin" SPECFACT_MODULES_BRANCH=main
+            SPECFACT_CODE_REVIEW_CAPSULE_CACHE="$TRUSTED_ROOT/cache")
+          if ! "${trusted_env[@]}" "$TRUSTED_ROOT/venv/bin/python" -I -c \
+            'import subprocess,sys; sys.exit(subprocess.run(sys.argv[1:],timeout=1800,check=False).returncode)' \
+            "$TRUSTED_ROOT/venv/bin/python" -I "$TRUSTED_ROOT/reviewer.py" \
+            "$TRUSTED_ROOT/subject" prepare-index "$TRUSTED_ROOT/project.toml" \
+            > "$TRUSTED_ROOT/preparation.private.log" 2>&1; then
+            echo "Independent signed reviewer preparation failed; no acceptance."
+            if [ -f "$TRUSTED_ROOT/status.public.json" ]; then
+              cat "$TRUSTED_ROOT/status.public.json"
+            fi
+            exit 1
+          fi
+          "${trusted_env[@]}" "$TRUSTED_ROOT/venv/bin/python" -I -c \
+            'import subprocess,sys; sys.exit(subprocess.run(sys.argv[1:],timeout=300,check=False).returncode)' \
+            "$TRUSTED_ROOT/venv/bin/python" -I "$TRUSTED_ROOT/reviewer.py" \
+            "$TRUSTED_ROOT/subject" code review run --scope index --enforcement changed --bug-hunt \
+            --project-config "$TRUSTED_ROOT/project.toml" --json --out "$TRUSTED_ROOT/review.private.json" \
+            > "$TRUSTED_ROOT/review.private.log" 2>&1

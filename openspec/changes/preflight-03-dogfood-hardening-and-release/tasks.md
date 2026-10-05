@@ -1,18 +1,24 @@
 # Tasks: preflight-03-dogfood-hardening-and-release (modules hardening/publication)
 
+## Scope rescope — 2026-09-20
+
+Seal, checkpoint, frozen mapping, successor approval, and historical RED/GREEN requirements in this issue apply only when an explicitly selected assurance policy requests them. They are not prerequisites for ordinary implementation, Code Review, release promotion, skill installation, or generated instructions. Keep the internal optional-feature dependency chain and source/signature integrity. Missing optional chronology is not a failed current-execution claim. No runtime policy changes in this planning update. Remove the outgoing prerequisite imposed on modules C15 #417; preserve prerequisites #431/core #683 and consumers core #684/modules #434.
+
+This owner-requested planning amendment supersedes conflicting default-workflow and dependency wording below; runtime behavior is unchanged. [Replacement policy](../requirements-09-minimal-evidence/proposal.md).
+
 All tasks below are future implementation and release work. This planning change completes none of them and creates no `TDD_EVIDENCE.md`.
 
 ## 1. Dedicated session, worktree, and readiness
 
 - [ ] 1.1 In a dedicated issue-linked session, create `feature/preflight-03-dogfood-hardening-and-release` from current `origin/dev` in a new modules worktree before any implementation edit.
 - [ ] 1.2 Refresh hierarchy metadata and verify issue parent, labels, project `Todo`, assignee, blockers, and concurrency status; stop if the issue is already active elsewhere.
-- [ ] 1.3 Verify the complete core #682 -> modules #431 -> core C14 #680 -> core #683 sequence, confirm the paired core dogfood go decision, preserve modules C14 #416 as open and `In Progress` unless separately authorized, and identify the exact released registry-withdrawal command/workflow plus core installer-rejection contract; stop for a separate core change if either interface is absent.
+- [ ] 1.3 Verify core #682 -> modules #431 and independently delivered C14 #680 as the two inputs to core #683, confirm its dogfood go decision, preserve the already-closed modules C14 #416 state, and identify the exact released registry-withdrawal command/workflow plus core installer-rejection contract; stop for a separate core change if either interface is absent.
 
 ## 2. Evidence ledger, specs, and failing-first tests
 
 - [ ] 2.1 Build the hardening ledger mapping every accepted item to dogfood evidence, contract path, generalized rule, regression selector, and owner; exclude unsupported ideas.
 - [ ] 2.2 Finalize spec deltas for only those evidence-backed items and the stable release contract.
-- [ ] 2.3 Add or update tests for the C14 corpus and bounded independent cases, then run them before production edits and record the failing results in a newly created `TDD_EVIDENCE.md`.
+- [ ] 2.3 Add or update tests for the C14 corpus and bounded independent cases, then run them before production edits and summarize meaningful failures briefly with existing CI artifacts where available.
 
 ## 3. Minimal hardening implementation
 
@@ -32,5 +38,5 @@ All tasks below are future implementation and release work. This planning change
 
 - [ ] 5.1 Open, review, and merge the behavior-ready implementation PR to `dev`, linking the paired core evidence and issue; feature-branch artifacts are not publishable release identities.
 - [ ] 5.2 Allow only the canonical post-merge publish workflow to generate, sign, and propose registry/archive/checksum/signature/history artifacts; review and merge that publication PR only after immutable artifact, registry, checksum, signature, core-compatibility, signed workflow version/digest, delegated CLI identity, history, rollback-operation, installer-rejection, and persisted-state rollback identities pass. Verify that every post-publication correction or withdrawal uses a new patch version and retains the prior artifact, digest, signature, registry record, and release-history entry unchanged.
-- [ ] 5.3 Update downstream issues with the exact merged stable handoff, including the signed workflow version/digest and delegated CLI identity. Publication-PR merge and registry/install readback may unblock core #684 and C15. Modules #434 remains blocked until both this #432 handoff and core #684 are complete; #251, #253, and #433 remain downstream of signed #434 and never block it.
+- [ ] 5.3 Update downstream issues with the exact merged stable handoff, including the signed workflow version/digest and delegated CLI identity. Publication-PR merge and registry/install readback may unblock core #684. Modules #434 requires both this #432 handoff and core #684. Optional #433 requires signed #434 and independently delivered core #253; C15 and generic #251/#253 do not wait for this handoff.
 - [ ] 5.4 After implementation merge and verified publication, run `openspec archive preflight-03-dogfood-hardening-and-release`, update ordering/source mirrors, and remove the dedicated worktree and merged branch.

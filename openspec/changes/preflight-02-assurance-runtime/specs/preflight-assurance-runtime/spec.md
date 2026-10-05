@@ -1,8 +1,14 @@
+## Scope rescope — 2026-09-20
+
+Seal, checkpoint, frozen mapping, successor approval, and historical RED/GREEN requirements in this issue apply only when an explicitly selected assurance policy requests them. They are not prerequisites for ordinary implementation, Code Review, release promotion, skill installation, or generated instructions. Keep the internal optional-feature dependency chain and source/signature integrity. Missing optional chronology is not a failed current-execution claim. No runtime policy changes in this planning update. Remove the outgoing prerequisite imposed on core C14 #680; core dogfood #683 still requires this runtime explicitly.
+
+This owner-requested planning amendment supersedes conflicting default-workflow and dependency wording below; runtime behavior is unchanged. [Replacement policy](../../../requirements-09-minimal-evidence/proposal.md).
+
 ## ADDED Requirements
 
 ### Requirement: Deterministic pre-implementation loop
 
-The module SHALL execute a stateful pre-implementation loop that discovers a change, captures exact inputs, runs required validators, presents findings, accepts only user-authorized refinement, reruns after changes, records explicit approval, and verifies the resulting seal before implementation.
+When optional preflight assurance is explicitly selected, the module SHALL execute a stateful pre-implementation loop that discovers a change, captures exact inputs, runs required validators, presents findings, accepts only user-authorized refinement, reruns after changes, records explicit approval, and verifies the resulting seal before implementation.
 
 #### Scenario: Ready change is approved and sealed
 
@@ -20,11 +26,11 @@ The module SHALL execute a stateful pre-implementation loop that discovers a cha
 
 ### Requirement: Read-only default
 
-The preflight command SHALL inspect and render without modifying change artifacts or project state unless an explicit write operation is authorized.
+Every `specfact preflight run <change-id>` invocation SHALL inspect and render without modifying change artifacts or project state unless an explicit write operation is authorized, regardless of assurance-policy selection.
 
 #### Scenario: Default review finds stale tasks
 
-- **GIVEN** an OpenSpec change contains stale tasks
+- **GIVEN** an OpenSpec change contains stale tasks, with or without selected assurance policy
 - **WHEN** `specfact preflight run <change-id>` executes without `--write`
 - **THEN** it returns structured findings and suggested source-owned refinements
 - **AND** no OpenSpec, source, GitHub, or project artifact is changed.
@@ -39,7 +45,7 @@ The preflight command SHALL inspect and render without modifying change artifact
 
 ### Requirement: Versioned Python validator registry
 
-The module SHALL run validators identified by stable ID and version and SHALL distinguish required from optional validators.
+When optional preflight assurance is explicitly selected, the module SHALL run validators identified by stable ID and version and SHALL distinguish required from optional validators.
 
 #### Scenario: Required validator is unavailable
 
@@ -57,7 +63,7 @@ The module SHALL run validators identified by stable ID and version and SHALL di
 
 ### Requirement: Required MVP validation domains
 
-The initial runtime SHALL validate artifact completeness, source freshness, role-classified scope, component ownership, per-input influence or no-impact disposition, risk-dimension disposition, Requirements-plan identity, dependency readiness, interface ownership, acceptance-testability, and conflicting active work. A no-impact disposition SHALL bind the exact sealed input/path identity and role, its baseline observation identity/digest, a non-empty rationale, and a policy-authorized deterministic permitted-transition predicate identity/version/configuration digest with a closed change class and observable invariants. The predicate SHALL be supported and semantics-preserving for that role, SHALL NOT admit arbitrary content, behavior, configuration, dependency, or execution changes, and SHALL be evaluable by a later checkpoint against exact provenance-bound base/current observations. If those properties cannot be established, the input SHALL require explicit influence mappings instead. Risk validation SHALL require every affected behavior or interface to contain the closed core dimensions `boundary`, `malformed_or_missing_input`, `state_transition`, `idempotency`, `cache`, `error`, `status`, `timeout`, `unknown_precedence`, `path`, `repository_lifecycle`, `platform`, and `compatibility`.
+When optional preflight assurance is explicitly selected, the initial runtime SHALL validate artifact completeness, source freshness, role-classified scope, component ownership, per-input influence or no-impact disposition, risk-dimension disposition, Requirements-plan identity, dependency readiness, interface ownership, acceptance-testability, and conflicting active work. A no-impact disposition SHALL bind the exact sealed input/path identity and role, its baseline observation identity/digest, a non-empty rationale, and a policy-authorized deterministic permitted-transition predicate identity/version/configuration digest with a closed change class and observable invariants. The predicate SHALL be supported and semantics-preserving for that role, SHALL NOT admit arbitrary content, behavior, configuration, dependency, or execution changes, and SHALL be evaluable by a later checkpoint against exact provenance-bound base/current observations. If those properties cannot be established, the input SHALL require explicit influence mappings instead. Risk validation SHALL require every affected behavior or interface to contain the closed core dimensions `boundary`, `malformed_or_missing_input`, `state_transition`, `idempotency`, `cache`, `error`, `status`, `timeout`, `unknown_precedence`, `path`, `repository_lifecycle`, `platform`, and `compatibility`.
 
 #### Scenario: Scope has no acceptance or test trace
 
@@ -117,7 +123,7 @@ The initial runtime SHALL validate artifact completeness, source freshness, role
 
 ### Requirement: Human and JSON rendering parity
 
-The CLI SHALL derive human and JSON output from the same normalized validation result.
+Every preflight invocation SHALL derive human and JSON output from the same normalized validation result, including when optional assurance is not selected.
 
 #### Scenario: Renderer outputs are compared
 
@@ -128,11 +134,11 @@ The CLI SHALL derive human and JSON output from the same normalized validation r
 
 ### Requirement: Persisted approval artifacts
 
-Only during an explicitly authorized approval write MAY the runtime atomically persist working copies of the normalized contract, validation result, seal, and lineage-tip response under an ignored project-local, change-specific path; that path SHALL NOT be the canonical cross-checkout approval authority by itself. Seal-aware repository policy SHALL identify a rollback-resistant canonical approval source that is either tracked with governed repository state and anchored to policy-authorized protected base/history outside candidate control, or independently attested by an authenticated append-only/monotonic authority. Either source SHALL be immutable and shareable with a fresh clone or protected consumer and SHALL permit rejection of an older internally valid seal/tip restoration. During that explicitly authorized approval write, the runtime SHALL atomically persist the normalized contract, validation result, seal, canonical lineage-tip record, and their source bindings to the canonical source. The tip SHALL bind the repository, change, and lineage identities, latest seal digest and monotonic sequence, complete predecessor-chain digest, registry/source identity, protected-history or independent-monotonic anchor, and update authority. A successor approval SHALL advance the complete canonical set exactly once; an ancestor seal SHALL NOT remain representable as the current tip. A read-only preflight run SHALL write no local, project, or shared state.
+Regardless of assurance-policy selection, any persistence SHALL require explicit write authorization and atomic complete writes; partial output SHALL NOT establish a valid approval. Only during an explicitly authorized approval write MAY the runtime atomically persist working copies of the normalized contract, validation result, seal, and lineage-tip response under an ignored project-local, change-specific path; that path SHALL NOT be the canonical cross-checkout approval authority by itself. When optional seal-aware assurance is selected, its repository policy SHALL identify a rollback-resistant canonical approval source that is either tracked with governed repository state and anchored to policy-authorized protected base/history outside candidate control, or independently attested by an authenticated append-only/monotonic authority. Either source SHALL be immutable and shareable with a fresh clone or protected consumer and SHALL permit rejection of an older internally valid seal/tip restoration. During that explicitly authorized approval write, the runtime SHALL atomically persist the normalized contract, validation result, seal, canonical lineage-tip record, and their source bindings to the canonical source. The tip SHALL bind the repository, change, and lineage identities, latest seal digest and monotonic sequence, complete predecessor-chain digest, registry/source identity, protected-history or independent-monotonic anchor, and update authority. A successor approval SHALL advance the complete canonical set exactly once; an ancestor seal SHALL NOT remain representable as the current tip. A read-only preflight run SHALL write no local, project, or shared state.
 
 #### Scenario: Persistence is interrupted
 
-- **GIVEN** one requested approval artifact cannot be written or verified
+- **GIVEN** an explicitly authorized persistence request, regardless of assurance-policy selection, and one requested approval artifact cannot be written or verified
 - **WHEN** persistence runs
 - **THEN** no partial set is treated as a valid approved contract
 - **AND** the runtime reports a non-ready persistence result.
@@ -180,7 +186,7 @@ The future module SHALL bundle one canonical `specfact-preflight` workflow that 
 
 ### Requirement: Implementation gate instructions
 
-Consumers SHALL be able to reference the workflow from compact AGENTS.md, OpenSpec, Spec Kit, or command-harness instructions without embedding the full validation loop.
+When optional preflight assurance is explicitly selected, consumers SHALL be able to reference the workflow from compact AGENTS.md, OpenSpec, Spec Kit, or command-harness instructions without embedding the full validation loop.
 
 #### Scenario: Generated instruction gate is evaluated
 

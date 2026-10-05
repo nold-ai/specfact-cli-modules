@@ -1628,3 +1628,34 @@ def test_index_discovery_failure_removes_both_materialized_roots(
     snapshots = [root for root in created if root.name.startswith("specfact-review-")]
     assert len(snapshots) == 2
     assert all(not root.exists() for root in created)
+
+
+@pytest.mark.parametrize("toml", ['[tool.basedpyright]\ntypeCheckingMode="off"\n', "[tool.basedpyright\n"])
+def test_basedpyright_json_primary_precedes_toml(scope_api: Any, tmp_path: Path, toml: str) -> None:
+    (tmp_path / "pyrightconfig.json").write_text('{"extends":"base.json","typeCheckingMode":"strict"}')
+    (tmp_path / "base.json").write_text('{"pythonVersion":"3.11"}')
+    (tmp_path / "pyproject.toml").write_text(toml)
+    policy = scope_api.resolve_basedpyright_policy(tmp_path, expected_version="1.39.10")
+    try:
+        assert policy.status == "PASS", policy.reason
+        assert policy.selected_path == "pyrightconfig.json"
+        assert set(policy.reference_paths) == {"pyrightconfig.json", "base.json"}
+        assert policy.values["typeCheckingMode"] == "strict"
+        assert policy.values["pythonVersion"] == "3.11"
+    finally:
+        if policy.bundle_root is not None:
+            scope_api.shutil.rmtree(policy.bundle_root)
+
+
+@pytest.mark.parametrize("unsafe", [False, True])
+def test_invalid_json_primary_never_falls_back_to_toml(scope_api: Any, tmp_path: Path, unsafe: bool) -> None:
+    (tmp_path / "pyproject.toml").write_text('[tool.basedpyright]\ntypeCheckingMode="strict"\n')
+    target = tmp_path / "pyrightconfig.json"
+    if unsafe:
+        (tmp_path / "other.json").write_text("{}")
+        target.symlink_to("other.json")
+    else:
+        target.write_text("{broken")
+    policy = scope_api.resolve_basedpyright_policy(tmp_path, expected_version="1.39.10")
+    assert policy.status == "UNKNOWN"
+    assert policy.bundle_root is None

@@ -1,5 +1,11 @@
 # Change: Pre-Implementation Assurance Runtime and Bundled Workflow
 
+## Scope rescope — 2026-09-20
+
+Seal, checkpoint, frozen mapping, successor approval, and historical RED/GREEN requirements in this issue apply only when an explicitly selected assurance policy requests them. They are not prerequisites for ordinary implementation, Code Review, release promotion, skill installation, or generated instructions. Keep the internal optional-feature dependency chain and source/signature integrity. Missing optional chronology is not a failed current-execution claim. No runtime policy changes in this planning update. Remove the outgoing prerequisite imposed on core C14 #680; core dogfood #683 still requires this runtime explicitly.
+
+This owner-requested planning amendment supersedes conflicting default-workflow and dependency wording below; runtime behavior is unchanged. [Replacement policy](../requirements-09-minimal-evidence/proposal.md).
+
 ## Why
 
 Core contracts alone cannot stop an agent from implementing a stale or internally inconsistent change. SpecFact needs an official modules-owned runtime that deterministically assembles change inputs, evaluates them, exposes unresolved findings for human refinement, and records approval against the exact reviewed contract before implementation starts.
@@ -34,7 +40,7 @@ Core contracts alone cannot stop an agent from implementing a stale or internall
 
 - Parent Feature: modules [#163](https://github.com/nold-ai/specfact-cli-modules/issues/163), under Epic [#162](https://github.com/nold-ai/specfact-cli-modules/issues/162).
 - Blocked by core `preflight-01-design-contract-core`.
-- Blocks core C14 adoption issue [nold-ai/specfact-cli#680](https://github.com/nold-ai/specfact-cli/issues/680).
+- Blocks optional core dogfood #683, which also requires independently delivered C14 #680. This runtime does not block C14 adoption.
 - Consumes, without duplicating, architecture, governance evidence, traceability, and native OpenSpec/Spec Kit import inputs.
 
 ## Explicit Non-Goals

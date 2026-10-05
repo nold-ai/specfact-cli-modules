@@ -1,8 +1,12 @@
 # Design: Customer Capsule Execution Correction
 
-## Delivery boundary and baseline
+## Current disposition — 2026-09-21 (Europe/Berlin)
 
-The historical planning baseline used modules `a6bac86ec529715b9122a7a670ee4886a749d9f6` and Code Review 0.49.77. Preserve the installed-payload layout correction and existing core compatibility. Implementation was authorized and merged through #467, with canonical registry publication #468; release review fixes and public acceptance remain pending. Reproduction evidence freezes exact module/core versions and artifact identities. Read the paired core #680 proposal before changing handoff assumptions. No core source changes are included here.
+Issue #466 is closed completed and project Done; release PR #469 merged on 2026-09-13. The retained design describes the corrective contract and dated delivery checkpoints, not outstanding release work or authorization to resume implementation. Reconcile existing evidence before native archival; issue closure does not establish unverified acceptance results.
+
+## Delivery boundary and historical baseline
+
+The historical planning baseline used modules `a6bac86ec529715b9122a7a670ee4886a749d9f6` and Code Review 0.49.77. Preserve the installed-payload layout correction and existing core compatibility. Implementation was authorized and merged through #467, with canonical registry publication #468; at the 2026-09-13 implementation checkpoint, release review fixes and public acceptance were still pending. Reproduction evidence freezes exact module/core versions and artifact identities. Read the paired core #680 proposal before changing handoff assumptions. No core source changes are included here.
 
 ## Customer reproduction
 
@@ -32,7 +36,7 @@ Establish every required mount destination before the relevant composition is se
 
 Preserve CLI syntax, core/module discovery and handoff, canonical source mounts, signature verification, and existing assurance/exit semantics. Extend diagnostic detail within current fields; do not collapse infrastructure failure into an empty review or analyzer PASS. A known blocking finding may retain FAIL even when other evidence is incomplete; uncertainty must remain visible. Local or range-candidate evidence cannot claim protected pr_range authority.
 
-Future changes are limited to proven capsule causes and the customer validation path. Run the customer matrix against candidate artifacts in a separately identified development lane, then against the actual signed public release as acceptance. The candidate lane cannot substitute for released installation. Publish immutable assets first through canonical tooling, update patch version/locks/resource identities/signatures/registry consistently, and preserve recoverable prior releases. Keep the bug open until released validation passes; archive via OpenSpec only after implementation, merge, and acceptance.
+The authorized corrective scope was limited to proven capsule causes and the customer validation path. Run the customer matrix against candidate artifacts in a separately identified development lane, then against the actual signed public release as acceptance. The candidate lane cannot substitute for released installation. Publish immutable assets first through canonical tooling, update patch version/locks/resource identities/signatures/registry consistently, and preserve recoverable prior releases. The historical delivery instruction was to keep the bug open until released validation passed. The issue is now closed; reconcile the retained release evidence before native OpenSpec archival without repeating publication or inferring acceptance from closure.
 
 ## Risks, costs and rollback
 
@@ -42,7 +46,7 @@ Future changes are limited to proven capsule causes and the customer validation 
 
 Compressed runtime layer totals are 263599655, 258372661, and 255962422 bytes for cp311/cp312/cp313: 777934738 bytes total, approximately 0.78 GB decimal per full cold matrix, excluding installation dependencies. Disk use is larger after extraction; the signed candidate matrix recorded 251–434 seconds per customer job, excluding queue and quality checks. Rollback uses reviewed revert plus canonical signed publication and registry correction, never edits to published immutable payloads. If the old release remains affected, record that limitation instead of claiming rollback restores working customer execution.
 
-## Implementation checkpoint — 2026-09-12
+## Historical implementation checkpoint — 2026-09-12
 
 The owner authorized implementation and integration into modules dogfooding CI. The existing dedicated worktree and PR now carry the implementation; earlier planning validation remains historical evidence. Static inspection also found that default materialization requests cache-only acquisition and that all GitHub Actions environments select candidate payload provenance, even for installed customer modules. Add regressions before correcting these paths.
 

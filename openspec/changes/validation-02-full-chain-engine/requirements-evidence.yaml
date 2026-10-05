@@ -1,0 +1,32 @@
+# Planning-only mapping for the existing planned-maturity gate.
+schema_version: '2'
+requirements:
+  openspec:validation-02-full-chain-engine:full-chain-validation:full-chain-validation:
+    rationale: Retain useful optional graph validation without burdening ordinary verification.
+    touchpoints:
+      - id: full-chain-validation-spec
+        kind: config_file
+        locator: openspec/changes/validation-02-full-chain-engine/specs/full-chain-validation/spec.md
+    verification_cases:
+      - case_id: full-chain-validation-full-chain-validation-inspection
+        scenario_id: full-chain-validation
+        method: inspection
+        intent: Inspect the declared requirement, scenarios and any replacement migration for consistency with the
+          approved planning scope.
+        observable: Graph scenarios preserve transition results, severity policy, orphan findings and independent
+          quality outcomes while reporting current execution separately from coverage and chronology. This is planned
+          inspection, not runtime execution or implementation proof.
+  openspec:validation-02-full-chain-engine:sidecar-validation:full-chain-sidecar-inputs:
+    rationale: Extend optional validation inputs without breaking existing spec-code use.
+    touchpoints:
+      - id: sidecar-validation-spec
+        kind: config_file
+        locator: openspec/changes/validation-02-full-chain-engine/specs/sidecar-validation/spec.md
+    verification_cases:
+      - case_id: sidecar-validation-full-chain-sidecar-inputs-inspection
+        scenario_id: full-chain-sidecar-inputs
+        method: inspection
+        intent: Inspect the declared requirement, scenarios and any replacement migration for consistency with the
+          approved planning scope.
+        observable: Sidecar scenarios support the declared full-chain payload and retain the existing spec-code
+          validation path. This is planned inspection, not runtime execution or implementation proof.

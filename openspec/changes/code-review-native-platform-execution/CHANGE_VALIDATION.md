@@ -1,4 +1,58 @@
-# Planning Validation
+# Native feasibility follow-up — 2026-09-30
+
+Current revision (2026-10-05, Europe/Berlin) uses
+`codex/macos-native-capsule-runtime` and PR #489. #460's scope was synchronized
+with project-driven preparation and matching-architecture full-VM acceptance.
+Strict OpenSpec validation passed; planned evidence mapping is updated alongside
+the new scenarios. Physical cold pip preparation and all-ten review succeeded
+on an unrelated repository and a private self-referential project. Genuine
+project findings are retained. Full four-manager and signed customer acceptance
+remain incomplete; earlier scope/metadata statements below are historical.
+
+Branch: `codex/macos-arm64-capsule-feasibility`, based on the planning revision below. [Native results](NATIVE_RESULTS.md) supersede the earlier no-execution status. The follow-up records real native positive/negative tests, bounded Docker candidate tooling and remaining acceptance failures. Production runtime selection, signatures, module versions and published artifacts remain unchanged.
+
+The unresolved planning review annotations about TDD evidence recording and mandatory production quality gates are addressed explicitly in tasks.md. Docker assembly is separated from native execution/signing and protected GHCR promotion in design.md and the acceptance scenarios. Green tooling checks do not imply capsule acceptance.
+
+PR #486 annotation 4147374695 also corrected the design delivery sequence: measured experiments and candidate tooling are delivered; unresolved feasibility and production approval remain future gates.
+
+PR #486 review corrected proposal scope to include the delivered candidate verifier/tests and measured feasibility work while retaining the production gate.
+
+Current verifier TDD and local quality results are recorded in [TDD_EVIDENCE.md](TDD_EVIDENCE.md). The reviewed summary excludes raw local execution transcripts. No production acceptance or GHCR promotion is claimed.
+
+## Earlier planning revision — 2026-09-30
+
+- Branch: `codex/macos-arm64-capsule-plan`, based on remote dev `b683c2cf5a23244b29c41f21309d4ff3b9764b8d`.
+- Owner-approved scope: dedicated macOS ARM64 capsule; Linux x86-64 regression; other platforms deferred.
+- GitHub #460 renamed and rewritten; readback remains open / Todo. Removed only the blocked-by edge to core #679 (issue id 5197266316); retained closed layout #459. Other C15 relationships unchanged.
+- Production remains gated on measured feasibility, admitted dependency closure and bounded design approval. No native support, prototype result or release is claimed.
+- Updated proposal/design/tasks/scenarios/evidence mapping and CHANGE_ORDER; added FEASIBILITY.md.
+- `openspec validate code-review-native-platform-execution --strict`: passed.
+- Planned Requirements gate with CI's project/requirements PYTHONPATH and explicit output/summary paths: one source passed, zero failed/skipped; observed maturity planned; implementation evidence not-yet-available.
+- Structural Markdown checks passed with existing MD013/MD060 exclusions; Ruff check and format --check passed (1,362 files unchanged).
+- Manifest/YAML and bundle import checks passed. Full payload/signature/version-baseline verification passed for all seven modules using the core public key.
+- Staged SpecFact review helper explicitly skipped OpenSpec Markdown with no Python targets. No analyzer PASS or synthetic runtime report is claimed.
+- Whitespace check passed. Production tests, native prototypes and platform acceptance were not run for this planning-only revision.
+
+Bootstrap notes: the initial evidence command lacked CI module paths, then exposed the existing helper's None-summary type restriction. Re-running with CI paths and explicit summary passed. These are invocation corrections, not runtime fixes. The local editable core used for planning validation is not native release compatibility evidence.
+
+The records below describe historical planning revisions. Their old scope and dependency statements are superseded by the 2026-09-30 proposal/specification and live issue readback.
+
+## Historical planning validation
+
+## Current dependency readback — 2026-09-20
+
+Live GitHub native relationships match the lean rescope: #460 is blocked by
+modules #459 (closed) and core #679 (open), with no #434 edge. Core #680 is
+blocked by modules #459 and #466 (both closed), with no #431 edge. No dependency
+mutation was needed in this review; the earlier rescope already removed the
+optional edges. Issue #460's old body dependency list has now been reconciled
+with those native relationships. C15 and compatible layout/release verification
+remain required; optional preflight does not gate native execution.
+
+The records below describe their dated historical snapshots, not current
+dependency authority or fresh test results.
+
+## Historical planning validation — 2026-09-06
 
 - Checked: 2026-09-06T22:17:24+02:00 (Europe/Berlin).
 - Planning base: modules origin/dev commit 5772621922d0913cc8685e8bfddb7fa0c6364bcc.
@@ -107,3 +161,19 @@ offline reuse rejects mismatch before dependency admission or analyzer launch.
 The design and existing stale-cache scenario agree. These are planning-contract
 clarifications only: prerequisite release/design approval gates remain in place,
 no backend, policy replacement, or native platform support is implemented.
+
+## Optional Apple distribution scope — 2026-10-02
+
+Both native and optional Apple OpenSpec changes pass strict validation. Staged
+Requirements evidence passes for two sources at planned maturity; no executable
+runtime evidence is claimed. GitHub readback confirms optional #488 shares
+parent #163/project SpecFact CLI, remains Todo with no milestone and is blocked
+by #460, without a reverse edge. #460 retains its completed #459 dependency.
+
+Prerequisite routing has focused RED/GREEN and actual local command evidence.
+Repository gates and independent review passed; exact test counts, initial smart
+failures followed by successful serial reruns, the documented bootstrap advisory
+exception and actual unsupported native capsule result are in TDD_EVIDENCE.md.
+The original source-derived startup counterexample now has a passing fixed-
+bootstrap physical-host mechanism; complete matrix/startup/escape/resource and
+default-protection independent installation remain mandatory future gates. Neither active change is ready to archive.

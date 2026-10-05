@@ -20,12 +20,15 @@
 
 - Parent Feature: modules [#163](https://github.com/nold-ai/specfact-cli-modules/issues/163).
 - Native direct blockers verified: modules [#431](https://github.com/nold-ai/specfact-cli-modules/issues/431) and paired core [#683](https://github.com/nold-ai/specfact-cli/issues/683).
-- Required transitive sequence verified: core [#682](https://github.com/nold-ai/specfact-cli/issues/682) -> modules #431 -> core C14 [#680](https://github.com/nold-ai/specfact-cli/issues/680) -> core #683 -> this change.
-- Native downstream sequence verified: this #432 release blocks core #684 and modules C15 #417; modules #434 then consumes #432 plus core #684 and blocks core #251 -> #253 -> modules #433.
+- Current rescope (2026-09-20): core #682 -> modules #431; core #683 requires both #431 and independently delivered core C14 #680, then this #432 release. #431 does not block #680.
+- Downstream: #432 -> core #684/modules #434. Optional adapters #433 require signed #434 plus independently delivered core #253. #432 does not block C15 #417; #434 does not block generic #251/#253.
 - GitHub readback verified User Story type, parent #163, project `SpecFact CLI` / `Todo`, assignee `djm81`, and the required labels.
-- Modules C14 #416 is referenced as delivered-by-publication context but remains untouched while GitHub shows it `In Progress`.
+- Modules C14 #416 is shipped/closed historical context as of the 2026-09-20 rescope; earlier In Progress observations are not current readiness authority.
 
-## Validation Record
+## Historical Validation Record
+
+The dated checks below are historical observations; they do not approve the
+current dependency graph or replace implementation-time verification.
 
 - `openspec status --change preflight-03-dogfood-hardening-and-release --json`: PASS on 2026-08-25; all required proposal artifacts reported complete.
 - `openspec validate preflight-03-dogfood-hardening-and-release --strict`: PASS on 2026-08-25.

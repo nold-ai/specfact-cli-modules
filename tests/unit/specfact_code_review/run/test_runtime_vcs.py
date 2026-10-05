@@ -11,6 +11,7 @@ import pytest
 from typer.testing import CliRunner
 
 from specfact_code_review.run import (
+    native_project_runtime,
     portable_snapshot,
     runner,
     runtime_builder,
@@ -73,6 +74,65 @@ def test_tag_change_invalidates_runtime_without_source_byte_changes(tmp_path: Pa
     after = discover_project(root)
     assert before.source_identity == after.source_identity
     assert before.identity != after.identity
+
+
+def test_native_build_input_keeps_bound_history_and_excludes_ambient_git_configuration(tmp_path: Path) -> None:
+    root = tmp_path / "project"
+    _repository(root)
+    _git(root, "tag", "v1.0.0")
+    _git(root, "config", "credential.helper", "!ambient-helper")
+    (root / ".git/hooks/unsafe-hook").write_text("ambient hook")
+    (root / "app.py").write_text("VALUE = 2\n")
+    plan = discover_project(root)
+    snapshot, build = tmp_path / "snapshot", tmp_path / "build"
+    native_project_runtime._copy_native_snapshot(plan, snapshot)
+    native_project_runtime._copy_native_build_input(snapshot, build)
+    assert _git(build, "rev-parse", "HEAD") == plan.vcs["commit"]
+    assert _git(build, "describe", "--tags", "--long") == "v1.0.0-0-g" + plan.vcs["commit"][:7]
+    assert _git(build, "diff", "--name-only") == "app.py"
+    assert "ambient-helper" not in (build / ".git/config").read_text()
+    assert not (build / ".git/hooks/unsafe-hook").exists()
+
+
+def test_native_immutable_transfer_retains_clean_tracked_executable_mode(tmp_path: Path) -> None:
+    root = tmp_path / "project"
+    _repository(root)
+    (root / "app.py").chmod(0o755)
+    _git(root, "add", "app.py")
+    _git(
+        root,
+        "-c",
+        "user.name=Fixture",
+        "-c",
+        "user.email=fixture@example.test",
+        "-c",
+        "commit.gpgsign=false",
+        "commit",
+        "-qm",
+        "executable",
+    )
+    snapshot, transferred = tmp_path / "snapshot", tmp_path / "transferred"
+    native_project_runtime._copy_native_snapshot(discover_project(root), snapshot)
+    native_project_runtime._copy_immutable(snapshot, transferred)
+    assert _git(transferred, "status", "--porcelain") == ""
+
+
+def test_native_pip_root_hook_keeps_sanitized_vcs_before_build(tmp_path: Path, monkeypatch) -> None:
+    root = tmp_path / "project"
+    _repository(root)
+    (root / "requirements.txt").write_text("idna==3.10\n")
+    plan = discover_project(root)
+
+    class ReachedBuildError(Exception):
+        pass
+
+    def build(_plan, _runtime, snapshot, *_args):
+        assert _git(snapshot, "rev-parse", "HEAD") == plan.vcs["commit"]
+        raise ReachedBuildError
+
+    monkeypatch.setattr(native_project_runtime, "_build_project_wheel", build)
+    with pytest.raises(ReachedBuildError):
+        native_project_runtime._prepare_project_on_demand(plan, object(), tmp_path / "artifact")
 
 
 @pytest.mark.parametrize("state", ["fresh", "staged", "orphan"])
@@ -464,6 +524,44 @@ def test_missing_promisor_object_does_not_run_host_transport(tmp_path: Path) -> 
         copy_vcs_context(root, copied)
     assert not marker.exists()
     assert not (copied / ".git").exists()
+
+
+@pytest.mark.parametrize("missing_kind", ["historical_blob", "historical_tree"])
+def test_partial_history_export_retains_versions_without_lazy_fetch(tmp_path: Path, missing_kind: str) -> None:
+    root = tmp_path / "source"
+    _repository(root)
+    ancestor = _git(root, "rev-parse", "HEAD")
+    missing = _git(root, "rev-parse", "HEAD:app.py" if missing_kind == "historical_blob" else "HEAD^{tree}")
+    _annotated_tag(root, "v1", "version anchor")
+    (root / "app.py").write_text("VALUE = 2\n")
+    selected = _commit_fixture(root, "selected source is complete")
+    marker = tmp_path / "transport-executed"
+    transport = tmp_path / "transport.sh"
+    transport.write_text(f"#!/bin/sh\ntouch '{marker}'\nexit 1\n")
+    transport.chmod(0o700)
+    _git(root, "config", "core.repositoryformatversion", "1")
+    _git(root, "config", "extensions.partialClone", "origin")
+    _git(root, "config", "remote.origin.promisor", "true")
+    _git(root, "config", "remote.origin.url", "ssh://example.invalid/project")
+    _git(root, "config", "core.sshCommand", str(transport))
+    (root / ".git/objects" / missing[:2] / missing[2:]).unlink()
+    copied = tmp_path / "copy"
+    copied.mkdir()
+    (copied / "app.py").write_text("VALUE = 2\n")
+    if missing_kind == "historical_tree":
+        with pytest.raises(ProjectRuntimeError, match="project_git_snapshot_failed"):
+            copy_vcs_context(root, copied)
+        assert not (copied / ".git").exists()
+    else:
+        copy_vcs_context(root, copied)
+        assert _git(copied, "rev-parse", "HEAD") == selected
+        assert _git(copied, "rev-list", "--count", "HEAD") == "2"
+        assert _git(copied, "describe", "--tags", "--long") == "v1-1-g" + selected[:7]
+        assert _git(copied, "status", "--porcelain") == ""
+        objects = _git(copied, "cat-file", "--batch-all-objects", "--batch-check=%(objectname)").splitlines()
+        assert ancestor in objects and missing not in objects
+        assert "example.invalid" not in (copied / ".git/config").read_text()
+    assert not marker.exists()
 
 
 @pytest.mark.parametrize("empty_template", [False, True])

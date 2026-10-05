@@ -1,6 +1,10 @@
 # Design: Repair C14 Installed Payload Layout Handling
 
-## Verified current behavior
+## Current disposition — 2026-09-21 (Europe/Berlin)
+
+Issue #459 is closed completed and project Done. Implementation #462 merged and Code Review 0.49.77 was published through #463. This retained design describes the correction and its historical planning baseline; it does not authorize further implementation. Reconcile existing evidence before native archival without treating closure as new release-acceptance proof.
+
+## Verified historical behavior — 2026-09-06
 
 Observed on 2026-09-06 (Europe/Berlin): core 0.55.4, official Code Review 0.49.76, Python 3.12.13, Linux x86-64. Strict range review resolved scope but returned UNKNOWN/exit 1; no analyzer completed. Core verify_module_artifact returned true. derive_core_0_55_1_install_handoff caught FileNotFoundError for the absent flat directory while src/specfact_code_review existed.
 
@@ -24,6 +28,6 @@ A remaining runtime, project-dependency, or candidate-policy UNKNOWN after repai
 
 ## Release and recovery
 
-Future implementation requires a Code Review patch version, checksum/signature verification, registry parity, and the canonical post-merge publication workflow. Do not manually sign with unavailable credentials or mutate installed signed modules. Keep core compatibility unchanged unless verification proves a new dependency. If release verification fails, withhold publication and return to implementation evidence; preserve the previous published artifact identity.
+The corrective release required a Code Review patch version, checksum/signature verification, registry parity, and the canonical post-merge publication workflow. Do not manually sign with unavailable credentials or mutate installed signed modules. Keep core compatibility unchanged unless verification proves a new dependency. If release verification fails, withhold publication and return to implementation evidence; preserve the previous published artifact identity.
 
-This planning PR performs none of those release actions. The issue remains open, and implementation is not complete merely because this proposal lands.
+Historical planning PR #461 performed none of those release actions and left the issue open. That planning-only checkpoint is superseded by the completed disposition above; its safeguards do not indicate pending implementation or publication.

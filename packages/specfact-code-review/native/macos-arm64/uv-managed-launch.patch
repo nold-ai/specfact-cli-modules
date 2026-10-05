@@ -1,0 +1,74 @@
+diff --git a/crates/uv-build-frontend/src/lib.rs b/crates/uv-build-frontend/src/lib.rs
+index 45893dc..e1ffb0a 100644
+--- a/crates/uv-build-frontend/src/lib.rs
++++ b/crates/uv-build-frontend/src/lib.rs
+@@ -1234,7 +1234,8 @@ impl PythonRunner {
+ 
+         let _permit = self.concurrent_build_slots.acquire().await.unwrap();
+ 
+-        let mut child = Command::new(venv.python_executable())
++        let mut command = Command::new(venv.python_executable());
++        command
+             .args(["-c", script])
+             .current_dir(source_tree.simplified())
+             .envs(environment_variables)
+@@ -1252,8 +1253,23 @@ impl PythonRunner {
+             .env_remove(EnvVars::PYX_AUTH_TOKEN)
+             .env_remove(EnvVars::UV_AUTH_TOKEN)
+             .stdout(std::process::Stdio::piped())
+-            .stderr(std::process::Stdio::piped())
+-            .spawn()
++            .stderr(std::process::Stdio::piped());
++
++        #[cfg(target_os = "macos")]
++        if uv_python::specfact_managed::active() {
++            let command = command.into_std();
++            let output = tokio::task::spawn_blocking(move || uv_python::specfact_managed::output(&command))
++                .await
++                .map_err(|err| Error::CommandFailed(venv.python_executable().to_path_buf(), io::Error::other(err)))?
++                .map_err(|err| Error::CommandFailed(venv.python_executable().to_path_buf(), err))?;
++            let stdout = String::from_utf8_lossy(&output.stdout).lines().map(str::to_owned).collect::<Vec<_>>();
++            let stderr = String::from_utf8_lossy(&output.stderr).lines().map(str::to_owned).collect::<Vec<_>>();
++            let mut printer = Printer::from(self.level);
++            for line in &stdout { let _ = write!(printer, "{line}"); }
++            for line in &stderr { let _ = write!(printer, "{line}"); }
++            return Ok(PythonRunnerOutput { stdout, stderr, status: output.status });
++        }
++        let mut child = command.spawn()
+             .map_err(|err| Error::CommandFailed(venv.python_executable().to_path_buf(), err))?;
+ 
+         // Create buffers to capture `stdout` and `stderr`.
+diff --git a/crates/uv-python/src/interpreter.rs b/crates/uv-python/src/interpreter.rs
+index 7f160db..3c13304 100644
+--- a/crates/uv-python/src/interpreter.rs
++++ b/crates/uv-python/src/interpreter.rs
+@@ -1006,7 +1006,15 @@ impl InterpreterInfo {
+         #[cfg(target_os = "macos")]
+         command.env("SYSTEM_VERSION_COMPAT", "0");
+ 
+-        let output = command.output().map_err(|err| {
++        #[cfg(target_os = "macos")]
++        let captured = if crate::specfact_managed::active() {
++            crate::specfact_managed::output(&command)
++        } else {
++            command.output()
++        };
++        #[cfg(not(target_os = "macos"))]
++        let captured = command.output();
++        let output = captured.map_err(|err| {
+             match err.kind() {
+                 io::ErrorKind::NotFound => return Error::NotFound(interpreter.to_path_buf()),
+                 io::ErrorKind::PermissionDenied => {
+diff --git a/crates/uv-python/src/lib.rs b/crates/uv-python/src/lib.rs
+index b928a50..e7a2840 100644
+--- a/crates/uv-python/src/lib.rs
++++ b/crates/uv-python/src/lib.rs
+@@ -36,6 +36,8 @@ mod environment;
+ mod implementation;
+ mod installation;
+ mod interpreter;
++#[cfg(target_os = "macos")]
++pub mod specfact_managed;
+ pub mod macos_dylib;
+ pub mod managed;
+ #[cfg(windows)]

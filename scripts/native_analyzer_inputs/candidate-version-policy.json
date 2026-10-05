@@ -1,0 +1,28 @@
+{
+  "analyzer_versions": {
+    "ai-bloat-ast": "module-release-bound",
+    "ast-clean-code": "module-release-bound",
+    "basedpyright": "1.39.10",
+    "contracts": "crosshair-tool-0.0.109+icontract-2.7.1",
+    "pylint": "4.0.7",
+    "radon": "6.0.1",
+    "ruff": "0.15.12",
+    "semgrep-bugs": "1.175.0",
+    "semgrep-clean": "1.175.0",
+    "targeted-pytest-coverage": "pytest-9.0.3+pytest-cov-7.1.0+coverage-7.15.4"
+  },
+  "dependency_admitted": false,
+  "dependency_pins": {
+    "mcp": "1.29.0",
+    "semgrep": "1.175.0",
+    "z3-solver": "5.1.0.0+specfact.1"
+  },
+  "production_eligible": false,
+  "proposal_only": true,
+  "schema": "specfact-native-candidate-policy-v1",
+  "security_floors": {
+    "mcp": "1.28.1",
+    "semgrep": "1.175.0"
+  },
+  "semgrep_adapter": "specfact-semgrep-1.175.0-legacy-result-v1"
+}

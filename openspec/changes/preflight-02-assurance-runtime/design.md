@@ -1,3 +1,9 @@
+## Scope rescope — 2026-09-20
+
+Seal, checkpoint, frozen mapping, successor approval, and historical RED/GREEN requirements in this issue apply only when an explicitly selected assurance policy requests them. They are not prerequisites for ordinary implementation, Code Review, release promotion, skill installation, or generated instructions. Keep the internal optional-feature dependency chain and source/signature integrity. Missing optional chronology is not a failed current-execution claim. No runtime policy changes in this planning update. Remove the outgoing prerequisite imposed on core C14 #680; core dogfood #683 still requires this runtime explicitly.
+
+This owner-requested planning amendment supersedes conflicting default-workflow and dependency wording below; runtime behavior is unchanged. [Replacement policy](../requirements-09-minimal-evidence/proposal.md).
+
 ## Context
 
 This change owns the executable half of deterministic pre-implementation assurance. It consumes the core contract from `preflight-01-design-contract-core` and keeps workflow prose thin by placing determinate checks in Python validators.
@@ -63,7 +69,7 @@ The module-owned `specfact-preflight` skill defines when to invoke the runtime, 
 
 ### 5. Instruction layering
 
-General AGENTS.md/OpenSpec/Spec Kit instructions should contain only the gate: select a change, run the installed preflight workflow, require a valid current seal, and stop on blocking/unknown/stale results. Detailed loop content remains in the module-owned skill. Core #251 later discovers/installs/exports that skill, and core #253 later generates the small harness instruction reference.
+When applicable policy selects preflight assurance, compact AGENTS.md/OpenSpec/Spec Kit references invoke the installed workflow, require a current seal and stop on blocking/unknown/stale results. Ordinary instructions use current validation without that gate. Detailed optional loop content remains module-owned. Independently delivered core #251/#253 may discover/export the signed asset or reference it once available; their own delivery does not wait for preflight.
 
 ### 6. Assurance language
 

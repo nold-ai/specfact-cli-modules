@@ -1,3 +1,7 @@
+## Superseded planning — 2026-09-20
+
+The unimplemented current-run correction transfers to [#481](https://github.com/nold-ai/specfact-cli-modules/issues/481) and `requirements-09-minimal-evidence`. Do not implement this historical task list independently or wait for abandoned R08. Closed #368 remains historical; shipped behavior is unchanged.
+
 ## Context
 
 Modules own Requirements mappings, maturity, deterministic plans, JUnit reconciliation, and report semantics. Core owns Git snapshot selection, isolated execution, timeouts, environments, artifacts, and CI enforcement.

@@ -4,14 +4,21 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import tempfile
+from contextlib import ExitStack
 from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 
 from icontract import require
 
-from specfact_code_review.run.portable_worker import DEPENDENT_MEMBERS, preparation_failure_snapshot, select_test_paths
+from specfact_code_review.run.portable_worker import (
+    DEPENDENT_MEMBERS,
+    contract_inputs,
+    preparation_failure_snapshot,
+    select_test_paths,
+)
 from specfact_code_review.run.runtime_artifacts import load_runtime
 from specfact_code_review.run.runtime_builder import copy_project, prepare_runtime
 from specfact_code_review.run.runtime_discovery import discover_project
@@ -71,6 +78,49 @@ class ProjectSnapshotRequest:
     options: Any
     assurance_kind: str
     source_snapshot: Any = None
+
+
+def _write_native_basedpyright_config(
+    snapshot_root: Path, files: list[Path], config_root: Path, *, source_roots: tuple[str, ...] = ()
+) -> Path:
+    """Bind native imports to the sealed staged project runtime without spawning Python."""
+
+    relative_files = {
+        Path(os.path.abspath(snapshot_root / path)).relative_to(snapshot_root).as_posix() for path in files
+    }
+    if any(
+        not isinstance(root, str)
+        or Path(root).is_absolute()
+        or ".." in Path(root).parts
+        or not (snapshot_root / root).is_dir()
+        or (snapshot_root / root).resolve() != snapshot_root / root
+        for root in source_roots
+    ):
+        raise ProjectRuntimeError("project_native_basedpyright_source_root_invalid")
+    values = {
+        "extraPaths": ["../../.specfact-project-runtime/site-packages", *(f"../../{root}" for root in source_roots)],
+        "include": [f"../../{relative}" for relative in sorted(relative_files)],
+    }
+    config = config_root / "basedpyright-native.json"
+    config.write_text(
+        json.dumps(values, ensure_ascii=False, separators=(",", ":"), sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    config.chmod(0o400)
+    return config
+
+
+def _write_native_contract_inventory(plan: ProjectPlan, config_root: Path) -> Path:
+    """Bind large and empty native test inventories without widening launch budgets."""
+    inputs = contract_inputs(plan)
+    roots = list(inputs[2::2]) if inputs[0] == "contract-inputs-v1" else []
+    payload = json.dumps({"schema": "contract-inputs-v2", "test_roots": roots}, separators=(",", ":")).encode()
+    if len(payload) > 16 << 20:
+        raise ProjectRuntimeError("project_contract_inventory_too_large")
+    path = config_root / "contracts-native.json"
+    path.write_bytes(payload)
+    path.chmod(0o400)
+    return path
 
 
 @require(lambda request: request.snapshot_root.is_dir())
@@ -138,7 +188,7 @@ def _run_in_private_source(runtime: Any, request: ProjectSnapshotRequest, settin
     from specfact_code_review.run.runner import _run_capsule_snapshot
 
     with tempfile.TemporaryDirectory(prefix="specfact-project-source-") as directory:
-        source = Path(directory) / "source"
+        source = Path(directory).resolve(strict=True) / "source"
         copy_project(request.snapshot_root, source, include_vcs=False)
         files = [
             source / Path(os.path.abspath(request.snapshot_root / path)).relative_to(request.snapshot_root)
@@ -154,7 +204,12 @@ def _run_project_snapshot(
     runtime: Any, request: ProjectSnapshotRequest, plan: ProjectPlan
 ) -> tuple[Any, dict[str, Any]]:
     """Prepare once, execute applicable members, and retain independent evidence."""
-    from specfact_code_review.run.runner import CapsuleSnapshotSettings
+    from specfact_code_review.run.runner import (
+        CapsuleSnapshotSettings,
+        _bind_pytest_coverage_policy,
+        _PolicyBindingBuilder,
+        _with_pytest_inventory,
+    )
 
     snapshot_root, files, options = request.snapshot_root, request.files, request.options
     assurance_kind = request.assurance_kind
@@ -183,18 +238,24 @@ def _run_project_snapshot(
         "protected_pr_eligible": False,
         "source_roots": list(plan.source_roots),
     }
-    arguments: dict[str, tuple[str, ...]] = {
-        "basedpyright": ("--pythonpath", "/opt/specfact/project-runtime/bin/python"),
-    }
+    arguments: dict[str, tuple[str, ...]] = {}
     conflicts = prepared.descriptor.get("inventory", {}).get("analyzer_conflicts", {})
     unavailable = {
         member: {"execution_state": "error", "evidence_outcome": "UNKNOWN", "diagnostic": reason}
         for member, reason in conflicts.items()
     }
+    native_backend = getattr(runtime, "backend", "linux-x86_64") == "darwin-arm64"
+    native_test_selectors: tuple[str, ...] = ()
+    native_test_selection_complete = False
     if not options.no_tests:
         try:
-            selectors = select_test_paths(plan, files, full=assurance_kind == "full")
-            arguments["targeted-pytest-coverage"] = ("portable-pytest-v2", json.dumps({"selectors": selectors}))
+            native_test_selectors = tuple(select_test_paths(plan, files, full=assurance_kind == "full"))
+            native_test_selection_complete = True
+            if not native_backend:
+                arguments["targeted-pytest-coverage"] = (
+                    "portable-pytest-v2",
+                    json.dumps({"selectors": native_test_selectors}),
+                )
         except ProjectRuntimeError as exc:
             unavailable["targeted-pytest-coverage"] = {
                 "execution_state": "error",
@@ -204,16 +265,57 @@ def _run_project_snapshot(
     bound = replace(
         runtime, identity=document_digest({"capsule": runtime.identity, "project_runtime": prepared.identity})
     )
-    snapshot = _run_in_private_source(
-        bound,
-        request,
-        CapsuleSnapshotSettings(
-            project_runtime_root=prepared.root,
-            member_argv=arguments,
-            portable_runtime=True,
-            unavailable_members=unavailable,
-        ),
-    )
+    with ExitStack() as cleanup:
+        config_roots: tuple[Path, ...] = ()
+        if native_backend:
+            if native_test_selection_complete:
+                builder = _PolicyBindingBuilder()
+                try:
+                    _bind_pytest_coverage_policy(builder, snapshot_root, local_project_assurance=assurance_kind)
+                    pytest_bindings = _with_pytest_inventory(builder.result(), native_test_selectors)
+                    config_roots = pytest_bindings.config_roots
+                    arguments.update(pytest_bindings.member_argv)
+                except (OSError, TypeError, ValueError) as exc:
+                    unavailable["targeted-pytest-coverage"] = {
+                        "execution_state": "error",
+                        "evidence_outcome": "UNKNOWN",
+                        "diagnostic": f"native_pytest_policy_projection_failed:{exc}",
+                    }
+                finally:
+                    for root in dict.fromkeys(builder.cleanup_roots):
+                        cleanup.callback(shutil.rmtree, root, ignore_errors=True)
+            temporary_parent = Path(tempfile.gettempdir()).resolve(strict=True)
+            directory = cleanup.enter_context(
+                tempfile.TemporaryDirectory(prefix="specfact-native-basedpyright-", dir=temporary_parent)
+            )
+            config_root = Path(directory).resolve(strict=True)
+            roots = prepared.descriptor.get("inventory", {}).get("source_roots", [])
+            if not isinstance(roots, list):
+                raise ProjectRuntimeError("project_native_basedpyright_source_root_invalid")
+            config = _write_native_basedpyright_config(snapshot_root, files, config_root, source_roots=tuple(roots))
+            config_roots = (*config_roots, config_root)
+            contract_config = _write_native_contract_inventory(plan, config_root)
+            arguments["contracts"] = (
+                "contract-inputs-v2",
+                f"/opt/specfact/config/{len(config_roots)}/{contract_config.name}",
+            )
+            arguments["basedpyright"] = (
+                "--project",
+                f"/opt/specfact/config/{len(config_roots)}/{config.name}",
+            )
+        else:
+            arguments["basedpyright"] = ("--pythonpath", "/opt/specfact/project-runtime/bin/python")
+        snapshot = _run_in_private_source(
+            bound,
+            request,
+            CapsuleSnapshotSettings(
+                config_roots=config_roots,
+                project_runtime_root=prepared.root,
+                member_argv=arguments,
+                portable_runtime=not native_backend,
+                unavailable_members=unavailable,
+            ),
+        )
     try:
         verify_inputs(plan)
         load_runtime(
@@ -255,7 +357,26 @@ def run_project_scope_pair(resolution: Any, *, runtime: Any, options: Any, scope
         results.append(result)
         bindings[side] = binding
     combined, findings = _classify_range_findings(resolution, results[0], results[1])
+    native_versions = results[1].expected_versions
+    native_platform = results[1].platform_id
+    if results[0].expected_versions != native_versions or results[0].platform_id != native_platform:
+        combined = {
+            member: {
+                **value,
+                "execution_state": "error",
+                "evidence_outcome": "UNKNOWN",
+                "diagnostic": "project_range_runtime_identity_mismatch",
+            }
+            for member, value in combined.items()
+        }
     evidence = {**scope_evidence, "project_runtime": bindings, "protected_pr_eligible": False}
     if evidence.get("assurance_kind") in {"range_candidate", "pr_range"}:
         evidence["assurance_kind"] = "range_preview"
-    return _capsule_report(combined, findings, options=options, scope_evidence=evidence)
+    return _capsule_report(
+        combined,
+        findings,
+        options=options,
+        scope_evidence=evidence,
+        expected_versions=native_versions,
+        platform_id=native_platform,
+    )

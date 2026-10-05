@@ -558,11 +558,14 @@ def _apply_tar_member(root: Path, archive: tarfile.TarFile, member: tarfile.TarI
 
 
 def _bounded_gzip_decompress(payload: bytes, *, max_bytes: int) -> bytes:
-    with gzip.GzipFile(fileobj=io.BytesIO(payload)) as compressed:
-        uncompressed = compressed.read(max_bytes + 1)
-    if len(uncompressed) > max_bytes:
-        raise ValueError("OCI layer exceeds its signed unpacked-byte bound")
-    return uncompressed
+    with io.BytesIO() as uncompressed, gzip.GzipFile(fileobj=io.BytesIO(payload)) as compressed:
+        total = 0
+        while chunk := compressed.read(min(1_048_576, max_bytes - total + 1)):
+            total += len(chunk)
+            if total > max_bytes:
+                raise ValueError("OCI layer exceeds its signed unpacked-byte bound")
+            uncompressed.write(chunk)
+        return uncompressed.getvalue()
 
 
 def _apply_oci_layer(

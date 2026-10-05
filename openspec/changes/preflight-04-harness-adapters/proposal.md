@@ -1,5 +1,11 @@
 # Change: Plug-and-Play Preflight Harness Adapters
 
+## Scope rescope — 2026-09-20
+
+Seal, checkpoint, frozen mapping, successor approval, and historical RED/GREEN requirements in this issue apply only when an explicitly selected assurance policy requests them. They are not prerequisites for ordinary implementation, Code Review, release promotion, skill installation, or generated instructions. Keep the internal optional-feature dependency chain and source/signature integrity. Missing optional chronology is not a failed current-execution claim. No runtime policy changes in this planning update. Preserve core #253 and add #434 as a direct native prerequisite; generic installer #251 no longer provides that dependency transitively. Harness adapters remain optional.
+
+This owner-requested planning amendment supersedes conflicting default-workflow and dependency wording below; runtime behavior is unchanged. [Replacement policy](../requirements-09-minimal-evidence/proposal.md).
+
 ## Why
 
 The stable preflight workflow should be installable in compatible agent harnesses without copying validator logic or maintaining divergent workflow prose. Codex, Everything Claude Code (ECC), and hatch3r are the first integration targets because they already expose skills, commands or plugins, and cross-harness instruction surfaces with different packaging conventions.
@@ -31,7 +37,7 @@ The stable preflight workflow should be installable in compatible agent harnesse
 ## Dependencies
 
 - Parent Feature: modules [#163](https://github.com/nold-ai/specfact-cli-modules/issues/163).
-- Blocked by core `ai-integration-03-instruction-files` [#253](https://github.com/nold-ai/specfact-cli/issues/253), which is blocked by #251 and the signed modules #434 handoff.
+- Blocked by independently delivered core `ai-integration-03-instruction-files` [#253](https://github.com/nold-ai/specfact-cli/issues/253), which consumes generic #251, and directly by the signed modules #434 handoff. #434 does not block #251 or #253.
 - Consumes the signed #434 module identity and both separately named workflow identities/digests from modules `preflight-05-implementation-conformance`; no feature-branch asset may be packaged.
 - hatch3r support is additionally blocked until the selected release contains and documents a supported third-party distribution/extension mechanism. A separately accepted upstream change is insufficient until it is merged, released, and documented in that selected release.
 

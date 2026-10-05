@@ -83,6 +83,20 @@ def test_copy_project_supports_repository_local_symlink(tmp_path: Path) -> None:
     assert (tmp_path / "copy/cert-link.pem").read_text() == "test certificate fixture"
 
 
+def test_copy_project_internal_link_under_aliased_parent(tmp_path: Path) -> None:
+    real = tmp_path / "real"
+    real.mkdir()
+    alias = tmp_path / "alias"
+    alias.symlink_to(real, target_is_directory=True)
+    source = real / "source"
+    (source / "tests/client").mkdir(parents=True)
+    (source / "tests/ca").mkdir()
+    (source / "tests/ca/cert.pem").write_text("fixture")
+    (source / "tests/client/ca").symlink_to("../ca", target_is_directory=True)
+    copy_project(source, alias / "copy", include_vcs=False)
+    assert (real / "copy/tests/client/ca/cert.pem").read_text() == "fixture"
+
+
 def test_builder_provides_vcs_metadata_tool_without_host_configuration(tmp_path: Path) -> None:
     runtime = SimpleNamespace(root=tmp_path / "capsule", interpreter="/opt/specfact/python/bin/python")
     command = builder_command(runtime, staging=tmp_path / "staging", executable="/proc/self/fd/12")
@@ -96,6 +110,50 @@ def test_python_patch_constraint_uses_signed_interpreter_version(tmp_path: Path,
     runtime = SimpleNamespace(environment_id="linux-x86_64-cp312", identity="sha256:" + "a" * 64)
     with pytest.raises(ProjectRuntimeError, match="offline_cache_miss"):
         prepare_runtime(plan, runtime=runtime, cache_root=tmp_path / "cache", offline=True)
+
+
+def test_darwin_runtime_uses_native_project_builder_without_bubblewrap(tmp_path: Path, monkeypatch) -> None:
+    plan = ProjectPlan(tmp_path, manager="pip")
+    runtime = SimpleNamespace(
+        backend="darwin-arm64",
+        environment_id="darwin-arm64-cp312",
+        identity="sha256:" + "a" * 64,
+    )
+    expected = SimpleNamespace(descriptor={"project_identity": plan.identity})
+    observed = []
+
+    def prepare_native(value, **kwargs):
+        observed.append((value, kwargs))
+        return expected
+
+    monkeypatch.setattr(runtime_builder, "prepare_native_project_runtime", prepare_native)
+    monkeypatch.setattr(
+        runtime_builder.sandbox,
+        "_verified_bubblewrap_descriptor",
+        lambda *_args: (_ for _ in ()).throw(AssertionError("Darwin preparation used bubblewrap")),
+    )
+
+    assert (
+        prepare_runtime(
+            plan,
+            runtime=runtime,
+            cache_root=tmp_path / "cache",
+            offline=True,
+            acquisition_url="https://ghcr.io/v2/nold-ai/project-runtime/blobs/sha256:fixture",
+        )
+        is expected
+    )
+    assert observed == [
+        (
+            plan,
+            {
+                "runtime": runtime,
+                "cache_root": tmp_path / "cache",
+                "offline": True,
+                "acquisition_url": "https://ghcr.io/v2/nold-ai/project-runtime/blobs/sha256:fixture",
+            },
+        )
+    ]
 
 
 @pytest.mark.parametrize("number", [errno.EEXIST, errno.ENOTEMPTY])

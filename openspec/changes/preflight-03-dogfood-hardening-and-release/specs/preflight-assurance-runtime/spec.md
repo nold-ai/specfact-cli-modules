@@ -1,8 +1,14 @@
+## Scope rescope — 2026-09-20
+
+Seal, checkpoint, frozen mapping, successor approval, and historical RED/GREEN requirements in this issue apply only when an explicitly selected assurance policy requests them. They are not prerequisites for ordinary implementation, Code Review, release promotion, skill installation, or generated instructions. Keep the internal optional-feature dependency chain and source/signature integrity. Missing optional chronology is not a failed current-execution claim. No runtime policy changes in this planning update. Remove the outgoing prerequisite imposed on modules C15 #417; preserve prerequisites #431/core #683 and consumers core #684/modules #434.
+
+This owner-requested planning amendment supersedes conflicting default-workflow and dependency wording below; runtime behavior is unchanged. [Replacement policy](../../../requirements-09-minimal-evidence/proposal.md).
+
 ## MODIFIED Requirements
 
 ### Requirement: Deterministic pre-implementation loop
 
-The stable module SHALL execute a stateful pre-implementation loop that discovers a change, captures exact inputs, runs required validators, presents findings, accepts only user-authorized refinement, reruns after changes, records explicit approval, and verifies the resulting seal before implementation. It SHALL retain regression evidence for every accepted dogfood defect that affected snapshotting, validation, review, refinement, approval, sealing, or verification.
+When optional preflight assurance is explicitly selected, the stable module SHALL execute a stateful pre-implementation loop that discovers a change, captures exact inputs, runs required validators, presents findings, accepts only user-authorized refinement, reruns after changes, records explicit approval, and verifies the resulting seal before implementation. It SHALL retain regression evidence for every accepted dogfood defect that affected snapshotting, validation, review, refinement, approval, sealing, or verification.
 
 #### Scenario: Ready change is approved and sealed
 

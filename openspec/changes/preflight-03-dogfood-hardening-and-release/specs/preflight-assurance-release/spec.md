@@ -1,3 +1,9 @@
+## Scope rescope — 2026-09-20
+
+Seal, checkpoint, frozen mapping, successor approval, and historical RED/GREEN requirements in this issue apply only when an explicitly selected assurance policy requests them. They are not prerequisites for ordinary implementation, Code Review, release promotion, skill installation, or generated instructions. Keep the internal optional-feature dependency chain and source/signature integrity. Missing optional chronology is not a failed current-execution claim. No runtime policy changes in this planning update. Remove the outgoing prerequisite imposed on modules C15 #417; preserve prerequisites #431/core #683 and consumers core #684/modules #434.
+
+This owner-requested planning amendment supersedes conflicting default-workflow and dependency wording below; runtime behavior is unchanged. [Replacement policy](../../../requirements-09-minimal-evidence/proposal.md).
+
 ## ADDED Requirements
 
 ### Requirement: Evidence-backed hardening scope
@@ -81,14 +87,21 @@ The stable release SHALL advertise a dependency-backed bounded core range. Its i
 
 ### Requirement: Signed publication handoff
 
-Downstream stories SHALL receive the immutable published module version, artifact digest, signature identity, registry identity, compatible core identity, signed canonical workflow version/digest, delegated CLI identity, and completed regression result.
+Consumers of the optional preflight release SHALL receive the immutable published module version, artifact digest, signature identity, registry identity, compatible core identity, signed canonical workflow version/digest, delegated CLI identity, and completed regression result. This handoff SHALL gate only adoption of these optional assets; generic installation/instructions #251/#253 and C15 SHALL NOT require this release to implement or ship.
 
 #### Scenario: Downstream adoption starts from a feature build
 
 - **GIVEN** only an unpublished branch artifact exists
-- **WHEN** #251, preflight conformance, adapters, or C15 checks readiness
-- **THEN** the dependency remains unresolved
+- **WHEN** optional preflight conformance or an adapter checks readiness to consume that preflight asset
+- **THEN** its optional-asset dependency remains unresolved
 - **AND** feature-branch output cannot satisfy the stable handoff.
+
+#### Scenario: Independent delivery has no preflight release
+
+- **GIVEN** generic installation/instructions #251/#253 or C15 satisfy their own prerequisites but no stable preflight release exists
+- **WHEN** their implementation or release readiness is evaluated
+- **THEN** this optional publication handoff SHALL NOT block them
+- **AND** any later installation of a preflight asset still verifies its signed identity.
 
 ### Requirement: Release rollback
 

@@ -4,6 +4,15 @@ This modules-side contract must be read with the core repository's
 `openspec/INTEGRATION.md`. It records ownership boundaries for active paired
 changes without creating runtime behavior.
 
+## Ordinary workflow ownership
+
+- Paired `workflow-01-turn-orchestration` assigns reusable `specfact workflow` execution, bundled workflow skills, producer adapters and disposable local receipts to modules #483; core #742 owns repository settings, check-only gate adapters, thin wrapper projection and signed adoption/pilot.
+- This unsealed ordinary path does not replace optional preflight/checkpoint/conformance. Seal-bound behavior stays with its existing owners and applies only on explicit assurance selection.
+- R09 owns current-run Requirements claims; its module reconciler remains free of Git/test/network execution. Governance owns durable evidence envelopes, traceability owns artifact semantics, and C15 owns calibrated review policy. A workflow findings projection preserves original producer identities/outcomes and cannot fuse verdicts or silently extend ReviewReport.
+- Standalone verify and ordinary CI require no prior local receipts. Local progress cannot authenticate itself for protected CI. Generic #251/#253 still owns customer installation/export and general generated references; repository wrapper projection is a separate development convenience.
+- Release direction is modules #481 -> workflow modules #483 -> core #742 runtime adoption. Independent projection has no signed-runtime prerequisite. Related optional assurance/graph/findings work is not a blanket blocker.
+- Runtime integration/adoption validates exact signed #481 schema-v3 current_execution and actual core/#483 compatibility before selecting the workflow combination; a signed workflow alone is insufficient. Projection remains independent.
+
 ## Preflight Ownership
 
 - Core `preflight-01-design-contract-core` owns design-contract,
@@ -37,6 +46,10 @@ changes without creating runtime behavior.
 
 ## Shared Rules
 
+The preflight, seal, checkpoint and conformance rules below apply only when
+that optional assurance policy is explicitly selected. They do not add gates
+to ordinary MEB delivery or generic skill/instruction installation.
+
 - Architecture-01, governance-01, traceability, and native OpenSpec/Spec Kit
   import remain upstream inputs; preflight must not redefine their payloads.
 - The signed module skill is the canonical workflow source. General AGENTS.md,
@@ -59,6 +72,13 @@ changes without creating runtime behavior.
 
 ## Delivery Sequence
 
-`core #682 -> modules #431 -> core C14 #680/#683 -> modules #432 -> core #684 -> modules #434 -> core #251 -> core #253 -> modules #433`.
-Modules C15 `#417` -> core C15 #679 remains an independent signal-calibration
-branch after stable #432. Existing policy/exception blockers remain in force.
+Optional preflight follows core #682 -> modules #431, then core #683 after
+both #431 and independently delivered core C14 #680 -> modules #432 ->
+core #684 -> modules #434. Optional adapters #433 require both signed #434
+and independently delivered core #253.
+
+Generic skills/instructions core #251 -> #253 and signal calibration modules
+C15 #417 -> core C15 #679 do not wait for optional #432/#434. C15 retains
+protected C14 adoption and existing policy/profile/exception prerequisites.
+The separate MEB migration remains signed modules #481 -> core #740 adoption
+and coordinated policy cutover.

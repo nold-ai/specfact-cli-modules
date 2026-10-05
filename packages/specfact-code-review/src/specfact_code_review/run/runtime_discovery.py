@@ -153,7 +153,11 @@ def _active_selection(
         selected = {"manager": "hatch", "environment": active}
     if os.environ.get("POETRY_ACTIVE") == "1":
         if selected:
-            raise ProjectRuntimeError("project_active_environment_ambiguous:hatch,poetry; use --project-config")
+            raise ProjectRuntimeError(
+                "project_active_environment_ambiguous:hatch,poetry; use --project-config",
+                candidates=("hatch", "poetry"),
+                required_fields=("manager",),
+            )
         selected = {"manager": "poetry"}
     return selected
 
@@ -174,7 +178,9 @@ def _manager(root: Path, project: dict[str, Any], hatch: dict[str, Any], config:
         candidates.add("hatch")
     if len(candidates) > 1:
         raise ProjectRuntimeError(
-            f"project_manager_ambiguous:{','.join(sorted(candidates))}; select manager in --project-config"
+            f"project_manager_ambiguous:{','.join(sorted(candidates))}; select manager in --project-config",
+            candidates=tuple(sorted(candidates)),
+            required_fields=("manager",),
         )
     return next(iter(candidates), "pip")
 
@@ -304,7 +310,9 @@ def _selection(
         if len(environments) > 1:
             raise ProjectRuntimeError(
                 f"project_environment_ambiguous:{','.join(sorted(environments))}; "
-                "select environment in --project-config"
+                "select environment in --project-config",
+                candidates=tuple(sorted(environments)),
+                required_fields=("environment",),
             )
         environment = next(iter(environments), "default")
     if "groups" in values:
@@ -316,7 +324,11 @@ def _selection(
         groups = project.get("tool", {}).get("poetry", {}).get("group", groups)
     tests = sorted(set(groups) & {"test", "tests", "testing"})
     if len(tests) > 1:
-        raise ProjectRuntimeError(f"project_test_groups_ambiguous:{','.join(tests)}; select groups in --project-config")
+        raise ProjectRuntimeError(
+            f"project_test_groups_ambiguous:{','.join(tests)}; select groups in --project-config",
+            candidates=tuple(tests),
+            required_fields=("groups",),
+        )
     return environment, tuple(tests)
 
 
@@ -324,7 +336,9 @@ def _default_requirements(root: Path) -> list[str]:
     texts = [name for name in ("requirements.txt", "requirements.in") if (root / name).is_file()]
     if (root / "pylock.toml").is_file() and texts:
         raise ProjectRuntimeError(
-            f"project_requirements_ambiguous:pylock.toml,{','.join(texts)}; select requirements in --project-config"
+            f"project_requirements_ambiguous:pylock.toml,{','.join(texts)}; select requirements in --project-config",
+            candidates=("pylock.toml", *texts),
+            required_fields=("requirements",),
         )
     for name in ("pylock.toml", "requirements.txt", "requirements.in"):
         if (root / name).is_file():
@@ -366,7 +380,9 @@ def _test_extras(
     if len(candidates) > 1 or (candidates and groups):
         choices = [*("extra:" + name for name in candidates), *("group:" + name for name in groups)]
         raise ProjectRuntimeError(
-            f"project_test_dependencies_ambiguous:{','.join(choices)}; select groups/extras in --project-config"
+            f"project_test_dependencies_ambiguous:{','.join(choices)}; select groups/extras in --project-config",
+            candidates=tuple(choices),
+            required_fields=("groups", "extras"),
         )
     return tuple(candidates)
 

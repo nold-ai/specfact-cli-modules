@@ -1,0 +1,787 @@
+"""COPY-only candidates preserve bytes, never confer native execution authority."""
+
+from __future__ import annotations
+
+import gzip
+import hashlib
+import importlib.util
+import io
+import json
+import subprocess
+import sys
+import tarfile
+import zlib
+from pathlib import Path
+from typing import Any
+
+import pytest
+
+
+@pytest.fixture(name="api")
+def fixture_candidate_api() -> Any:
+    """Load the standalone inspector for direct API tests."""
+    path = Path(__file__).parents[2] / "scripts/macos_capsule_candidate.py"
+    spec = importlib.util.spec_from_file_location("macos_capsule_candidate", path)
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def digest(data: bytes) -> str:
+    """Compute fixture descriptor identities from their exact content."""
+    return "sha256:" + hashlib.sha256(data).hexdigest()
+
+
+def tar_bytes(entries: list[tuple[str, bytes, bytes, int]]) -> bytes:
+    """Build small ordinary TAR fixtures with explicit member types."""
+    output = io.BytesIO()
+    with tarfile.open(fileobj=output, mode="w") as archive:
+        for name, content, kind, mode in entries:
+            member = tarfile.TarInfo(name)
+            member.type, member.mode = kind, mode
+            member.size = len(content) if kind == tarfile.REGTYPE else 0
+            if kind in (tarfile.SYMTYPE, tarfile.LNKTYPE):
+                member.linkname = "../../outside"
+            archive.addfile(member, io.BytesIO(content))
+    return output.getvalue()
+
+
+def candidate_layers(expected: Path, change: str) -> tuple[bytes, bytes]:
+    """Create a payload layer and inject the selected negative case."""
+    entries = [
+        ({"layer-slash": "proof//"}.get(change, "proof"), b"", tarfile.DIRTYPE, 0o755),
+        ("proof/hello", (expected / "hello").read_bytes(), tarfile.REGTYPE, 0o755),
+    ]
+    if change == "payload":
+        entries[1] = ("proof/hello", b"changed", tarfile.REGTYPE, 0o755)
+    if change == "mode":
+        entries[1] = (entries[1][0], entries[1][1], entries[1][2], 0o644)
+    if change in ("symlink", "hardlink", "fifo"):
+        kind = {"symlink": tarfile.SYMTYPE, "hardlink": tarfile.LNKTYPE, "fifo": tarfile.FIFOTYPE}[change]
+        entries.append(("proof/other", b"", kind, 0o644))
+    if change in ("../escape", "/absolute", "proof/./hello", "proof//hello", "proof/../hello"):
+        entries.append((change, b"bad", tarfile.REGTYPE, 0o644))
+    if change == "duplicate":
+        entries.append(entries[1])
+    if change == "extra":
+        entries.append(("proof/extra", b"extra", tarfile.REGTYPE, 0o644))
+    raw = tar_bytes(entries)
+    if change.startswith("layer-framing:"):
+        raw = malformed_tar(raw, change.split(":", 1)[1])
+    layer = candidate_gzip(raw, change)
+    if change == "invalid-deflate":
+        layer = bytes.fromhex("1f8b0800000000000000") + b"\xff" * 16
+    return raw, layer
+
+
+def candidate_descriptor(blobs: dict[str, bytes], data: bytes, media: str) -> dict[str, Any]:
+    """Store fixture bytes and return their matching OCI descriptor."""
+    identity = digest(data)
+    blobs["blobs/sha256/" + identity.split(":")[1]] = data
+    return {"digest": identity, "size": len(data), "mediaType": media}
+
+
+def candidate_config(raw: bytes, change: str) -> Any:
+    """Build native configuration metadata with optional corruption."""
+    config: Any = {"os": "darwin", "architecture": "arm64", "rootfs": {"type": "layers", "diff_ids": [digest(raw)]}}
+    if change in ("linux", "amd64"):
+        config["os" if change == "linux" else "architecture"] = change
+    if change.startswith("schema:"):
+        config.update(json.loads(change.removeprefix("schema:")))
+    if change in ("NaN", "Infinity", "-Infinity"):
+        config["unused"] = float(change)
+    if change == "diffid":
+        config["rootfs"]["diff_ids"] = [digest(b"wrong")]
+    if change == "config-type":
+        config = []
+    return config
+
+
+def candidate_manifest(
+    blobs: dict[str, bytes], layer_desc: dict[str, Any], config_desc: dict[str, Any], change: str
+) -> dict[str, Any]:
+    """Build a one-layer manifest with optional descriptor corruption."""
+    if change == "size":
+        layer_desc["size"] += 1
+    if change == "size-type":
+        layer_desc["size"] = True
+    if change == "corrupt":
+        blobs["blobs/sha256/" + layer_desc["digest"].split(":")[1]] = b"corrupted"
+    patch_document(config_desc, "config-descriptor", change)
+    patch_document(layer_desc, "layer-descriptor", change)
+    manifest = {
+        "schemaVersion": 2,
+        "mediaType": "application/vnd.oci.image.manifest.v1+json",
+        "config": config_desc,
+        "layers": [layer_desc],
+    }
+    if change == "manifest-version-type":
+        manifest["schemaVersion"] = 2.0
+    if change == "layers-type":
+        manifest["layers"] = {}
+    patch_document(manifest, "manifest", change)
+    return manifest
+
+
+def candidate_index(manifest_desc: dict[str, Any], change: str) -> Any:
+    """Build a single-platform index with optional invalid metadata."""
+    manifest_desc["platform"] = {"os": "linux" if change == "index-platform" else "darwin", "architecture": "arm64"}
+    patch_document(manifest_desc, "manifest-descriptor", change)
+    index: Any = {"schemaVersion": 2, "manifests": [manifest_desc]}
+    if change == "index-version-type":
+        index["schemaVersion"] = 2.0
+    if change == "index-type":
+        index = []
+    patch_document(index, "index", change)
+    return index
+
+
+def candidate_outer(blobs: dict[str, bytes], index: Any, change: str) -> bytes:
+    """Package referenced blobs and optional invalid outer records."""
+    outer = [
+        ("oci-layout", candidate_metadata({"imageLayoutVersion": "1.0.0"}, "layout", change), tarfile.REGTYPE, 0o644),
+        ("index.json", candidate_metadata(index, "index", change), tarfile.REGTYPE, 0o644),
+    ]
+    outer.extend((name, data, tarfile.REGTYPE, 0o644) for name, data in blobs.items())
+    if change == "outer-duplicate":
+        outer.append(outer[1])
+    if change == "outer-link":
+        outer.append(("other", b"", tarfile.SYMTYPE, 0o644))
+    extra_entries = {
+        "outer-slash": ("blobs//", b"", tarfile.DIRTYPE, 0o755),
+        "outer-extra": ("unchecked", b"extra", tarfile.REGTYPE, 0o644),
+        "outer-blob": ("blobs/sha256/" + "0" * 64, b"extra", tarfile.REGTYPE, 0o644),
+        "outer-directory": ("unchecked", b"", tarfile.DIRTYPE, 0o755),
+    }
+    if change in extra_entries:
+        outer.append(extra_entries[change])
+    raw = tar_bytes(outer)
+    return malformed_tar(raw, change.split(":", 1)[1]) if change.startswith("outer-framing:") else raw
+
+
+def candidate(tmp_path: Path, change: str = "") -> tuple[Path, Path]:
+    """Write a self-contained candidate and its expected payload tree."""
+    expected = tmp_path / "expected"
+    expected.mkdir()
+    (expected / "hello").write_bytes(b"operator-supplied native bytes")
+    (expected / "hello").chmod(0o755)
+    raw, layer = candidate_layers(expected, change)
+    blobs: dict[str, bytes] = {}
+    config = candidate_config(raw, change)
+    layer_desc = candidate_descriptor(blobs, layer, "application/vnd.oci.image.layer.v1.tar+gzip")
+    config_desc = candidate_descriptor(
+        blobs, candidate_metadata(config, "config", change), "application/vnd.oci.image.config.v1+json"
+    )
+    manifest = candidate_manifest(blobs, layer_desc, config_desc, change)
+    manifest_desc = candidate_descriptor(
+        blobs, candidate_metadata(manifest, "manifest", change), "application/vnd.oci.image.manifest.v1+json"
+    )
+    index = candidate_index(manifest_desc, change)
+    path = tmp_path / "candidate.tar"
+    path.write_bytes(candidate_outer(blobs, index, change))
+    return path, expected
+
+
+def test_valid_candidate_is_never_production_evidence(api: Any, tmp_path: Path) -> None:
+    """Keep successful byte comparison separate from production authority."""
+    archive, expected = candidate(tmp_path)
+    result = api.verify_candidate(archive, expected)
+    assert result["status"] == "PASS"
+    assert result["experimental"] is True
+    assert result["production_eligible"] is False
+    assert result["native_evidence_authenticity"] == "unverified-operator-claim"
+    assert result["native_execution_performed"] is False
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        "linux",
+        "amd64",
+        "index-platform",
+        "corrupt",
+        "size",
+        "size-type",
+        "diffid",
+        "payload",
+        "mode",
+        "symlink",
+        "hardlink",
+        "fifo",
+        "../escape",
+        "/absolute",
+        "proof/./hello",
+        "proof//hello",
+        "proof/../hello",
+        "duplicate",
+        "extra",
+        "config-type",
+        "layers-type",
+        "index-type",
+        "manifest-version-type",
+        "index-version-type",
+        "outer-duplicate",
+        "outer-link",
+        "NaN",
+        "Infinity",
+        "-Infinity",
+        "outer-extra",
+        "outer-blob",
+        "outer-directory",
+    ],
+)
+def test_reject_invalid_candidate(api: Any, tmp_path: Path, change: str) -> None:
+    """Reject invalid identities, metadata, paths and payload contents."""
+    archive, expected = candidate(tmp_path, change)
+    with pytest.raises(ValueError):
+        api.verify_candidate(archive, expected)
+
+
+def test_bounded_decompression(api: Any, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Reject layers exceeding the uncompressed byte budget."""
+    archive, expected = candidate(tmp_path)
+    monkeypatch.setattr(api, "MAX_LAYER_BYTES", 1024)
+    with pytest.raises(ValueError, match="limit"):
+        api.verify_candidate(archive, expected)
+
+
+def test_operator_tree_links_rejected(api: Any, tmp_path: Path) -> None:
+    """Reject symlinks in the operator-provided expected tree."""
+    archive, expected = candidate(tmp_path)
+    (expected / "alias").symlink_to(expected / "hello")
+    with pytest.raises(ValueError):
+        api.verify_candidate(archive, expected)
+
+
+def test_malformed_gzip_is_value_error(api: Any, tmp_path: Path) -> None:
+    """Normalize malformed compressed data into the public error contract."""
+    archive, expected = candidate(tmp_path, "invalid-deflate")
+    with pytest.raises(ValueError):
+        api.verify_candidate(archive, expected)
+
+
+@pytest.mark.parametrize(
+    "case",
+    [
+        ("", 0),
+        ("linux", 1),
+        ("NaN", 1),
+        ("Infinity", 1),
+        ("-Infinity", 1),
+        ('schema:{"config":[]}', 1),
+        ('schema:{"history":{}}', 1),
+        ('schema:{"created":"invalid"}', 1),
+    ],
+)
+def test_cli_local_only_json(tmp_path: Path, case: tuple[str, int]) -> None:
+    """Check real CLI exit codes and local-only JSON evidence."""
+    change, code = case
+    archive, expected = candidate(tmp_path, change)
+    script = Path(__file__).parents[2] / "scripts/macos_capsule_candidate.py"
+    process = subprocess.run(
+        [sys.executable, str(script), str(archive), "--expected-payload", str(expected)],
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=10,
+    )
+    assert process.returncode == code
+    result = json.loads(process.stderr if code else process.stdout)
+    assert result["production_eligible"] is False
+    assert result["experimental"] is True
+    assert not (tmp_path / "proof").exists()
+
+
+FRAMING_CASES = (
+    "header-tail:500",
+    "header-tail:511",
+    "numeric-empty:nul",
+    "numeric-empty:space",
+    *(f"numeric:{name}" for name in ("mode", "uid", "gid", "size", "mtime", "checksum", "major", "minor")),
+    "path-padding:linkname",
+    "path-padding:uname",
+    "path-padding:gname",
+    "path-padding:name",
+    "path-padding:prefix",
+    "format:unknown",
+    "format:ustar-version",
+    "format:gnu-version",
+    "format:v7",
+    "invalid-header",
+    "trailing-data",
+    "one-zero",
+    "missing-end",
+    "partial-header",
+    "unaligned",
+    "padding",
+    "sparse",
+    "pax",
+    "global-pax",
+    "long-name",
+    "long-link",
+)
+
+
+def malformed_tar(data: bytes, change: str) -> bytes:
+    """Inject physical framing faults while preserving OCI descriptor consistency."""
+    if change.startswith("header-tail:"):
+        header = bytearray(data[:512])
+        header[int(change.split(":")[1])] = 1
+        header[148:156] = b"        "
+        header[148:156] = f"{sum(header):06o}\0 ".encode()
+        return bytes(header) + data[512:]
+    if change.startswith("numeric-empty:"):
+        header = bytearray(data[:512])
+        header[108:116] = (b"\0" if change.endswith("nul") else b" ") * 8
+        header[148:156] = b"        "
+        header[148:156] = f"{sum(header):06o}\0 ".encode()
+        return bytes(header) + data[512:]
+    if change.startswith("numeric:"):
+        return tar_numeric_garbage(data, change.split(":", 1)[1])
+    if change.startswith("path-padding:"):
+        return tar_path_padding(data, change.split(":", 1)[1])
+    if change.startswith("format:"):
+        return tar_format(data, change.split(":", 1)[1])
+    offset = 0
+    while any(data[offset : offset + 512]):
+        member = tarfile.TarInfo.frombuf(data[offset : offset + 512], "utf-8", "strict")
+        offset += 512 + ((member.size + 511) // 512) * 512
+    body = data[:offset]
+    replacements = {
+        "invalid-header": body + b"!" * 512 + bytes(1024),
+        "trailing-data": body + bytes(1024) + b"!" * 512,
+        "one-zero": body + bytes(512),
+        "missing-end": body,
+        "partial-header": body + b"!" * 32,
+        "unaligned": data + bytes(1),
+    }
+    if change in replacements:
+        return replacements[change]
+    if change == "padding":
+        patched = bytearray(data)
+        first = tarfile.TarInfo.frombuf(data[:512], "utf-8", "strict")
+        payload_offset = 512 if first.isfile() else 1024
+        patched[payload_offset + 100] = 1
+        return bytes(patched)
+    member = tarfile.TarInfo("extension")
+    member.type = {
+        "sparse": tarfile.GNUTYPE_SPARSE,
+        "pax": tarfile.XHDTYPE,
+        "global-pax": tarfile.XGLTYPE,
+        "long-name": tarfile.GNUTYPE_LONGNAME,
+        "long-link": tarfile.GNUTYPE_LONGLINK,
+    }[change]
+    header = bytearray(member.tobuf(format=tarfile.GNU_FORMAT))
+    if change == "sparse":
+        header[482] = 1
+        header[148:156] = b"        "
+        header[148:156] = f"{sum(header):06o}\0 ".encode()
+        return body + bytes(header)
+    return bytes(header) + data
+
+
+@pytest.mark.parametrize("change", FRAMING_CASES)
+@pytest.mark.parametrize("location", ["outer", "layer"])
+def test_malformed_tar_api(api: Any, tmp_path: Path, location: str, change: str) -> None:
+    """Reject malformed outer and layer TAR records through ValueError."""
+    archive, expected = candidate(tmp_path, f"{location}-framing:{change}")
+    with pytest.raises(ValueError):
+        api.verify_candidate(archive, expected)
+
+
+@pytest.mark.parametrize("change", FRAMING_CASES)
+@pytest.mark.parametrize("location", ["outer", "layer"])
+def test_malformed_tar_cli(tmp_path: Path, location: str, change: str) -> None:
+    """Require failure JSON without a traceback for malformed TAR records."""
+    archive, expected = candidate(tmp_path, f"{location}-framing:{change}")
+    script = Path(__file__).parents[2] / "scripts/macos_capsule_candidate.py"
+    process = subprocess.run(
+        [sys.executable, str(script), str(archive), "--expected-payload", str(expected)],
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=10,
+    )
+    assert process.returncode == 1
+    assert not process.stdout
+    result = json.loads(process.stderr)
+    assert result["status"] == "FAIL"
+    assert result["production_eligible"] is False
+
+
+def candidate_metadata(value: Any, field: str, change: str) -> bytes:
+    """Encode one metadata record while keeping all descriptor hashes consistent."""
+    encoding = change.rsplit(":", 1)[1] if change.startswith(f"metadata:{field}:") else "utf-8"
+    return json.dumps(value).encode(encoding)
+
+
+@pytest.mark.parametrize(
+    "change",
+    ["layer-slash", "outer-slash"]
+    + [
+        f"metadata:{field}:{encoding}"
+        for field in ("layout", "index", "manifest", "config")
+        for encoding in ("utf-16", "utf-32")
+    ],
+)
+@pytest.mark.parametrize("interface", ["api", "cli"])
+def test_reject_raw_paths_and_metadata_encoding(api: Any, tmp_path: Path, change: str, interface: str) -> None:
+    """Reject inputs that permissive TAR/JSON decoders would normalize or detect."""
+    archive, expected = candidate(tmp_path, change)
+    if interface == "api":
+        with pytest.raises(ValueError):
+            api.verify_candidate(archive, expected)
+        return
+    script = Path(__file__).parents[2] / "scripts/macos_capsule_candidate.py"
+    process = subprocess.run(
+        [sys.executable, str(script), str(archive), "--expected-payload", str(expected)],
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=10,
+    )
+    assert process.returncode == 1
+    assert json.loads(process.stderr)["status"] == "FAIL"
+
+
+def candidate_gzip(raw: bytes, change: str) -> bytes:
+    """Mutate gzip framing independently of the TAR and recompute OCI hashes."""
+    layer = gzip.compress(raw, mtime=0)
+    if change.startswith("gzip-flag:"):
+        return layer[:3] + bytes([int(change.split(":")[1])]) + layer[4:]
+    if change in ("gzip-crc-valid", "gzip-crc-invalid"):
+        header = layer[:3] + b"\x02" + layer[4:10]
+        crc = zlib.crc32(header) & 0xFFFF
+        crc ^= int(change == "gzip-crc-invalid")
+        return header + crc.to_bytes(2, "little") + layer[10:]
+    suffix = {"gzip-concatenated": gzip.compress(b"", mtime=0), "gzip-trailing": b"junk", "gzip-zero": b"\0"}
+    if change == "gzip-truncated":
+        return layer[:-1]
+    return layer + suffix.get(change, b"")
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        "gzip-flag:32",
+        "gzip-flag:64",
+        "gzip-flag:128",
+        "gzip-crc-invalid",
+        "gzip-concatenated",
+        "gzip-trailing",
+        "gzip-zero",
+        "gzip-truncated",
+    ],
+)
+@pytest.mark.parametrize("interface", ["api", "cli"])
+def test_reject_gzip_framing(api: Any, tmp_path: Path, change: str, interface: str) -> None:
+    """Reject malformed gzip despite matching descriptors and unchanged TAR bytes."""
+    archive, expected = candidate(tmp_path, change)
+    if interface == "api":
+        with pytest.raises(ValueError):
+            api.verify_candidate(archive, expected)
+        return
+    script = Path(__file__).parents[2] / "scripts/macos_capsule_candidate.py"
+    process = subprocess.run(
+        [sys.executable, str(script), str(archive), "--expected-payload", str(expected)],
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=10,
+    )
+    assert process.returncode == 1
+    assert json.loads(process.stderr)["status"] == "FAIL"
+
+
+def test_valid_gzip_header_crc(api: Any, tmp_path: Path) -> None:
+    """Accept a correctly checksummed optional gzip header."""
+    archive, expected = candidate(tmp_path, "gzip-crc-valid")
+    assert api.verify_candidate(archive, expected)["status"] == "PASS"
+
+
+def tar_format(data: bytes, case: str) -> bytes:
+    """Set a physical magic/version pair and repair its checksum."""
+    identifiers = {
+        "unknown": b"BADMAG!!",
+        "ustar-version": b"ustar\0!!",
+        "gnu-version": b"ustar !!",
+        "v7": bytes(8),
+        "ustar": b"ustar\0" + b"00",
+        "gnu": b"ustar  \0",
+    }
+    header = bytearray(data[:512])
+    header[257:265] = identifiers[case]
+    header[148:156] = b"        "
+    header[148:156] = f"{sum(header):06o}\0 ".encode()
+    return bytes(header) + data[512:]
+
+
+@pytest.mark.parametrize("format_name", ["ustar", "gnu"])
+@pytest.mark.parametrize("location", ["outer", "layer"])
+def test_supported_tar_format(api: Any, tmp_path: Path, location: str, format_name: str) -> None:
+    """Accept both explicitly supported ordinary TAR format identifiers."""
+    archive, expected = candidate(tmp_path, f"{location}-framing:format:{format_name}")
+    assert api.verify_candidate(archive, expected)["status"] == "PASS"
+
+
+def tar_path_padding(data: bytes, field: str) -> bytes:
+    """Hide nonzero path bytes after the first terminator and repair checksum."""
+    start, end = {
+        "name": (0, 100),
+        "prefix": (345, 500),
+        "linkname": (157, 257),
+        "uname": (265, 297),
+        "gname": (297, 329),
+    }[field]
+    header = bytearray(data[:512])
+    value = bytes(header[start:end]).split(b"\0", 1)[0] + b"\0../escape"
+    header[start:end] = value.ljust(end - start, b"\0")
+    header[148:156] = b"        "
+    header[148:156] = f"{sum(header):06o}\0 ".encode()
+    return bytes(header) + data[512:]
+
+
+@pytest.mark.parametrize(
+    "patch",
+    [
+        {"config": []},
+        {"history": {}},
+        {"history": [False]},
+        {"config": {"Env": [False]}},
+        {"config": {"Labels": {"x": 1}}},
+        {"config": {"Volumes": {"x": []}}},
+        {"config": {"Entrypoint": {}}},
+        {"config": {"Cmd": [1]}},
+        {"config": {"User": False}},
+        {"config": {"WorkingDir": []}},
+        {"config": {"ArgsEscaped": 1}},
+        {"config": {"ExposedPorts": {"80/tcp": []}}},
+        {"created": "not-a-date"},
+        {"author": []},
+        {"variant": False},
+        {"os.version": []},
+        {"os.features": [1]},
+        {"history": [{"empty_layer": 1}]},
+        {"history": [{"created": "invalid"}]},
+    ],
+)
+def test_reject_config_schema(api: Any, tmp_path: Path, patch: dict[str, Any]) -> None:
+    """Reject malformed known fields even with consistent blob descriptors."""
+    archive, expected = candidate(tmp_path, "schema:" + json.dumps(patch))
+    with pytest.raises(ValueError):
+        api.verify_candidate(archive, expected)
+
+
+def test_accept_config_schema_optional_values(api: Any, tmp_path: Path) -> None:
+    """Accept valid nullable runtime options and typed history metadata."""
+    patch = {
+        "config": {
+            "Entrypoint": None,
+            "Cmd": None,
+            "Volumes": None,
+            "Labels": None,
+            "Env": ["X=y"],
+            "ArgsEscaped": False,
+        },
+        "history": [{"created": "2026-09-30T00:00:00Z", "empty_layer": False}],
+    }
+    archive, expected = candidate(tmp_path, "schema:" + json.dumps(patch))
+    assert api.verify_candidate(archive, expected)["status"] == "PASS"
+
+
+def patch_document(value: Any, target: str, change: str) -> None:
+    """Mutate metadata before enclosing descriptors are computed."""
+    prefix = f"document:{target}:"
+    if change.startswith(prefix):
+        value.update(json.loads(change.removeprefix(prefix)))
+
+
+@pytest.mark.parametrize(
+    "target", ["index", "manifest", "manifest-descriptor", "config-descriptor", "layer-descriptor"]
+)
+@pytest.mark.parametrize("patch", [{"annotations": []}, {"annotations": {"x": 1}}, {"artifactType": 3}])
+def test_reject_document_schema(api: Any, tmp_path: Path, target: str, patch: dict[str, Any]) -> None:
+    """Reject malformed known metadata throughout the referenced graph."""
+    archive, expected = candidate(tmp_path, f"document:{target}:" + json.dumps(patch))
+    with pytest.raises(ValueError):
+        api.verify_candidate(archive, expected)
+
+
+@pytest.mark.parametrize("target", ["manifest-descriptor", "config-descriptor", "layer-descriptor"])
+@pytest.mark.parametrize("patch", [{"urls": [1]}, {"data": 1}])
+def test_reject_descriptor_schema(api: Any, tmp_path: Path, target: str, patch: dict[str, Any]) -> None:
+    """Validate optional descriptor fields for every referenced payload."""
+    archive, expected = candidate(tmp_path, f"document:{target}:" + json.dumps(patch))
+    with pytest.raises(ValueError):
+        api.verify_candidate(archive, expected)
+
+
+@pytest.mark.parametrize(
+    "target", ["index", "manifest", "manifest-descriptor", "config-descriptor", "layer-descriptor"]
+)
+def test_accept_document_annotations(api: Any, tmp_path: Path, target: str) -> None:
+    """Retain valid optional annotations across the OCI graph."""
+    archive, expected = candidate(tmp_path, f'document:{target}:{{"annotations":{{"x":"y"}}}}')
+    assert api.verify_candidate(archive, expected)["status"] == "PASS"
+
+
+@pytest.mark.parametrize(
+    "target,patch",
+    [
+        (target, {"data": data})
+        for target in ("manifest-descriptor", "config-descriptor", "layer-descriptor")
+        for data in ("IQ==", "")
+    ]
+    + [
+        (
+            target,
+            {
+                "subject": {
+                    "mediaType": "application/vnd.oci.image.manifest.v1+json",
+                    "digest": "sha256:" + "0" * 64,
+                    "size": 1,
+                }
+            },
+        )
+        for target in ("index", "manifest")
+    ],
+)
+@pytest.mark.parametrize("interface", ["api", "cli"])
+def test_reject_alternative_references(
+    api: Any, tmp_path: Path, target: str, patch: dict[str, Any], interface: str
+) -> None:
+    """Reject embedded bytes and dangling subjects outside the fixed graph."""
+    archive, expected = candidate(tmp_path, f"document:{target}:" + json.dumps(patch))
+    if interface == "api":
+        with pytest.raises(ValueError):
+            api.verify_candidate(archive, expected)
+        return
+    script = Path(__file__).parents[2] / "scripts/macos_capsule_candidate.py"
+    process = subprocess.run(
+        [sys.executable, str(script), str(archive), "--expected-payload", str(expected)],
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=10,
+    )
+    assert process.returncode == 1
+    assert json.loads(process.stderr)["status"] == "FAIL"
+
+
+@pytest.mark.parametrize(
+    "media_type,valid",
+    [
+        ("text/plain", False),
+        ("application/vnd.oci.image.manifest.v1+json", False),
+        ("application/vnd.oci.image.index.v1+json", True),
+    ],
+)
+@pytest.mark.parametrize("interface", ["api", "cli"])
+def test_index_media_identity(api: Any, tmp_path: Path, media_type: str, valid: bool, interface: str) -> None:
+    """Require any declared index media type to agree with the document identity."""
+    archive, expected = candidate(tmp_path, "document:index:" + json.dumps({"mediaType": media_type}))
+    if interface == "api":
+        if valid:
+            assert api.verify_candidate(archive, expected)["status"] == "PASS"
+        else:
+            with pytest.raises(ValueError):
+                api.verify_candidate(archive, expected)
+        return
+    script = Path(__file__).parents[2] / "scripts/macos_capsule_candidate.py"
+    process = subprocess.run(
+        [sys.executable, str(script), str(archive), "--expected-payload", str(expected)],
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=10,
+    )
+    assert process.returncode == (0 if valid else 1)
+    assert json.loads(process.stdout if valid else process.stderr)["status"] == ("PASS" if valid else "FAIL")
+
+
+@pytest.mark.parametrize("key", ["", "\n"])
+@pytest.mark.parametrize(
+    "target",
+    [
+        "index",
+        "manifest",
+        "manifest-descriptor",
+        "config-descriptor",
+        "layer-descriptor",
+        "Labels",
+        "Volumes",
+        "ExposedPorts",
+    ],
+)
+def test_reject_unmatched_map_keys(api: Any, tmp_path: Path, key: str, target: str) -> None:
+    """Reject map entries that would escape the upstream property pattern."""
+    if target in ("Labels", "Volumes", "ExposedPorts"):
+        change = "schema:" + json.dumps({"config": {target: {key: 1}}})
+    else:
+        change = f"document:{target}:" + json.dumps({"annotations": {key: 1}})
+    archive, expected = candidate(tmp_path, change)
+    with pytest.raises(ValueError):
+        api.verify_candidate(archive, expected)
+
+
+@pytest.mark.parametrize("interface", ["api", "cli"])
+def test_reject_expected_hardlink(api: Any, tmp_path: Path, interface: str) -> None:
+    """Reject an expected file whose inode is also reachable outside the tree."""
+    archive, expected = candidate(tmp_path)
+    (tmp_path / "outside-alias").hardlink_to(expected / "hello")
+    assert (expected / "hello").stat().st_nlink == 2
+    if interface == "api":
+        with pytest.raises(ValueError):
+            api.verify_candidate(archive, expected)
+        return
+    script = Path(__file__).parents[2] / "scripts/macos_capsule_candidate.py"
+    process = subprocess.run(
+        [sys.executable, str(script), str(archive), "--expected-payload", str(expected)],
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=10,
+    )
+    assert process.returncode == 1
+    assert json.loads(process.stderr)["status"] == "FAIL"
+
+
+def tar_numeric_garbage(data: bytes, field: str) -> bytes:
+    """Append ignored garbage to numeric fields while keeping checksum valid."""
+    bounds = {
+        "mode": (100, 108),
+        "uid": (108, 116),
+        "gid": (116, 124),
+        "size": (124, 136),
+        "mtime": (136, 148),
+        "checksum": (148, 156),
+        "major": (329, 337),
+        "minor": (337, 345),
+    }
+    start, end = bounds[field]
+    header = bytearray(data[:512])
+    value = int(bytes(header[start:end]).strip(b"\0 ") or b"0", 8)
+    if field == "mtime":
+        value = 0
+    encoded = f"{value:o}".encode() + b"\0"
+    header[start:end] = encoded.ljust(end - start, b"!")
+    header[148:156] = b"        "
+    suffix = b"\0!" if field == "checksum" else b"\0 "
+    header[148:156] = f"{sum(header):06o}".encode() + suffix
+    return bytes(header) + data[512:]
+
+
+@pytest.mark.parametrize("history", [[], [{"empty_layer": True}], [{}, {}]])
+def test_history_layer_mismatch(api: Any, tmp_path: Path, history: list[dict[str, Any]]) -> None:
+    """Reject schema-valid history that cannot describe the single layer."""
+    archive, expected = candidate(tmp_path, "schema:" + json.dumps({"history": history}))
+    with pytest.raises(ValueError):
+        api.verify_candidate(archive, expected)
+
+
+@pytest.mark.parametrize("history", [None, [{}], [{"empty_layer": True}, {}]])
+def test_history_layer_match(api: Any, tmp_path: Path, history: Any) -> None:
+    """Accept absent-equivalent history and a single non-empty history item."""
+    archive, expected = candidate(tmp_path, "schema:" + json.dumps({"history": history}))
+    assert api.verify_candidate(archive, expected)["status"] == "PASS"

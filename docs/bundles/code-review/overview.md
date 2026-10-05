@@ -19,6 +19,35 @@ Use it together with the [Codebase](/bundles/codebase/overview/) bundle (`import
 - `specfact module install nold-ai/specfact-code-review` — the manifest `bundle_dependencies` list includes **`nold-ai/specfact-codebase`**, so SpecFact CLI **will automatically install** the Codebase bundle alongside this one for the full shared **`specfact code`** command surface (import, analyze, drift, and related commands live there).
 - Signed capsule execution requires Linux x86-64 with Python 3.11, 3.12 or 3.13 and permission to create unprivileged user namespaces. Analyzer dependencies come from the verified capsule.
 
+The 0.51.0 development change includes a native macOS ARM64 backend candidate.
+Its locally assembled, ad-hoc-signed test artifacts run on a physical ARM64
+Mac, but the official native catalogs remain empty pending boundary, external
+project, supported-OS and customer-installation acceptance. The released module
+does not yet provide automatic macOS capsule installation. On macOS, missing
+native artifacts produce incomplete review evidence rather than running tools
+from the developer host. See the
+[native platform change](https://github.com/nold-ai/specfact-cli-modules/issues/460)
+for the current delivery gate. Module signing occurs in the protected CI/CD PR
+follow-up; customers do not need an Apple Developer ID.
+
+The current pip candidate derives dependencies from the selected project,
+builds its root wheel in a confined worker and uses pinned pip for wheel
+resolution and offline installation. Customer projects do not need publisher
+catalog entries. Ambiguous `runtime inspect --json` results identify candidate
+setups and required caller configuration; explicit `--project-config` selects
+the setup. Controlled native projects also use authentic pinned Hatch, uv and
+Poetry. The complete upstream corpus and distribution acceptance remain pending;
+the candidate does not yet establish general macOS support.
+Pinned upstream projects for all four managers now prepare cold and reuse their
+private environments offline. On the physical CPython 3.11 candidate, selected unchanged upstream source/test
+slices execute all ten analyzers with pytest PASS, including parallel workers
+and the selected project plugins. Local doctest/coverage compatibility retains
+project-origin provenance and cannot authorize protected range evidence. A controlled project with automatic discovery,
+pytest coverage and a native extension executes all ten analyzers successfully.
+Matching OS/architecture VMs qualify for acceptance under the same sandbox
+requirements as physical machines. Local x86-64 emulation on Apple Silicon
+supplements matching-architecture Linux CI acceptance.
+
 ## Capsule setup and troubleshooting
 
 Install the released core and official module into user-owned locations, then run the review from your repository:
@@ -37,7 +66,7 @@ Ubuntu 24.04 can restrict unprivileged user namespaces through AppArmor. A names
 
 Capsule setup and integrity failures remain `UNKNOWN` with a failing exit. Preserve the JSON report, module/core versions, Python ABI, cache identity and the launch diagnostic. Namespace failures identify the denied capability; filesystem launch failures retain the path context; final-root integrity failures show expected and actual digests and entry counts. Do not edit sealed files or replace expected hashes with observed values. To diagnose corruption, retain the failing evidence and retry in a new empty user-owned cache; keep the original cache available for comparison.
 
-Full scope inventories the complete pytest suite. Explicit-file and worktree reviews select reviewed tests or unambiguous corresponding tests for the selected source files; unrelated test suites are not run. If the required test selection cannot be established, pytest evidence is `UNKNOWN` and the review fails, while independent static analyzer results remain available. The existing explicit `--no-tests` control is unchanged.
+Full scope inventories the complete pytest suite. Explicit-file and worktree reviews select reviewed tests or unambiguous corresponding tests for the selected source files; unrelated test suites are not run. If the required test selection cannot be established, pytest evidence is `UNKNOWN` and the review fails, while independent static analyzer results remain available. Linux retains the explicit `--no-tests` control. The macOS ARM64 candidate requires pytest for a complete local review, so `--no-tests` yields `UNKNOWN`. Native pytest results are labeled `project-origin-v1`: project tests and plugins can influence their own reported outcomes. Protected range reviews reject that provenance pending an explicit consumer compatibility change.
 
 The persistent CI matrix separates candidate-source checks on pull requests from public signed-installation checks after release/registry publication or manual dispatch. It requires all ten analyzer members to execute on controlled clean and defective fixtures and on an exact-commit source/test slice of this repository. Skips, empty evidence and `UNKNOWN` fail the gate. A passing candidate run does not constitute signed-release acceptance; repeat the public matrix after canonical signing and publication before closing the bug.
 

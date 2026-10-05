@@ -21,10 +21,13 @@
 
 - Parent Feature: modules [#163](https://github.com/nold-ai/specfact-cli-modules/issues/163).
 - Native blocker verified: core [#682](https://github.com/nold-ai/specfact-cli/issues/682).
-- Native downstream edges verified: core C14 [#680](https://github.com/nold-ai/specfact-cli/issues/680) and modules [#432](https://github.com/nold-ai/specfact-cli-modules/issues/432).
+- Current rescope (2026-09-20): downstream optional core dogfood #683 and modules #432 consume this runtime. Core #683 also requires independent C14 #680; this runtime does not block #680.
 - GitHub readback verified User Story type, parent #163, project `SpecFact CLI` / `Todo`, assignee `djm81`, and the required labels.
 
-## Validation Record
+## Historical Validation Record
+
+The dated checks below do not approve the current dependency graph or replace
+implementation-time verification.
 
 - `openspec status --change preflight-02-assurance-runtime --json`: PASS on 2026-08-25; all required proposal artifacts reported complete.
 - `openspec validate preflight-02-assurance-runtime --strict`: PASS on 2026-08-25.

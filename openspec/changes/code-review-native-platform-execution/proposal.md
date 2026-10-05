@@ -1,56 +1,143 @@
-# Change: Native Local Code Review Across macOS Linux and Windows
+# Change: Dedicated macOS ARM64 Code Review Capsule
+
+## Current project-driven revision — 2026-10-04 (Europe/Berlin)
+
+Reuse released portable discovery and caller configuration for unfamiliar projects.
+Remove publisher project catalogs from normal preparation: only SpecFact runtime
+artifacts require publisher catalog entries. Resolve project dependencies on
+demand with real pinned managers; local prepared environments retain local_build
+provenance, content verification and atomic offline reuse. Keep acquisition,
+untrusted preparation and analyzer/project execution boundaries separate.
+
+Support is determined by OS/build, architecture, Python ABI and required kernel
+capabilities. Full matching-architecture VMs are valid acceptance environments;
+hardware brand and VM detection never select a weaker execution boundary.
+Use optional UTM guests for local reproduction and matching-architecture CI VMs
+for final Linux/Windows acceptance. Record CPU emulation separately. This change
+still delivers macOS ARM64 and Linux x86-64; Windows and Linux ARM64 follow later.
+Developer ID remains optional #488, and module signing keys are used only in CI.
+Deferred Windows delivery is [#495](https://github.com/nold-ai/specfact-cli-modules/issues/495) /
+[`code-review-windows-native-platform-execution`](../code-review-windows-native-platform-execution/proposal.md).
+#460 blocks that follow-up; it does not block this change.
+
+Earlier signed per-project acquisition bundles remain historical experiments or
+explicit fixture imports; they must never be required to review an unknown repo.
+
+## Distribution-signing split — 2026-10-02 (Europe/Berlin)
+
+This owner-approved revision supersedes the earlier Developer-ID-first milestone.
+Optional [#488](https://github.com/nold-ai/specfact-cli-modules/issues/488) /
+[`code-review-macos-developer-id-distribution`](../code-review-macos-developer-id-distribution/proposal.md)
+is blocked by #460; it does not block this change, shipment or publication.
+"Signed runtime" in this change means native signatures plus an authenticated
+SpecFact payload manifest, not a mandatory Apple publisher identity. Preserve
+historical experiments as evidence, without treating their old signing policy as
+current acceptance. Sandbox, dependency, lifecycle and real-installation gates
+remain mandatory. Apple credentials do not solve the startup ownership gap.
+
+## Managed-process revision — 2026-10-02 (Europe/Berlin)
+
+The owner approved a managed-process contract for native macOS ARM64. This
+supersedes unrestricted project subprocess compatibility; earlier failed
+experiments remain historical evidence, not implementation of this revision.
+This approved scope is normative for the current milestone; historical Seatbelt,
+App Sandbox and XPC experiments neither mandate unrestricted subprocess support
+nor establish acceptance of the managed candidate.
+The first release still requires all ten analyzers and the pip, Hatch, uv and
+Poetry corpus, plugins, coverage and compatible ARM64 extension imports.
+
+The normal command automatically downloads and verifies a prebuilt signed
+runtime on first use, shows progress and subsequently reuses verified caches
+offline. Customers need no Docker, VM, Homebrew, Xcode, sudo or separately
+installed daemon. Unsupported process behavior produces actionable incomplete
+evidence, never host execution or PASS with missing required evidence.
+
+The candidate must use an invocation-scoped native broker that owns every
+worker directly. Each worker must establish tracing and a versioned Seatbelt
+policy before project code runs. Kernel restrictions must deny direct
+fork/vfork/posix_spawn and tracing/IPC escapes; compatibility adapters must
+request bounded launches through private inherited channels. Python interception is not the security boundary. Acquisition,
+build/preparation, sealed analyzers and project execution remain separate domains.
+
+The first milestone is boundary proof using the exact initial distribution
+configuration: build-time ad-hoc signatures for our native components, verified
+upstream signatures where applicable, and SpecFact-signed manifests covering the
+final payload bytes. Record and test hardened-runtime settings, narrow reviewed
+entitlements, tracing and confinement together. Paid Developer ID membership and
+notarization are optional follow-up work; missing Apple credentials do not block
+compilation, execution, shipment or canonical GHCR publication.
+Independently observe every startup transition, broker/CLI death, timeout,
+cancellation and concurrent requests, with no survivor after five seconds and
+100 repetitions per lifecycle race. Invalid native signatures, failed tracing or
+confinement, or missing mandatory evidence reject the candidate. These lifecycle
+bounds are mandatory admission gates, not tunable defaults.
+Production integration, version 0.51.0 (or next available minor), registry and
+publication changes follow the gate and complete acceptance, not this revision.
 
 ## Why
 
-SpecFact's primary use is a local-first CLI invoked by developers and agentic AI independently of their OS. C14's immutable execution path is currently Linux x86-64 specific even though several pinned analyzers already ship native macOS and Windows builds. Native ARM64 Linux images alone would not satisfy this product requirement.
+Mac developers need the ordinary Code Review workflow to execute reliably on their native host. The released Linux x86-64 capsule cannot provide that support by changing platform detection: its launcher, observation, filesystem layout and project native-library inventory are Linux-specific.
+
+## Scope revision — 2026-09-30
+
+The owner approved macOS ARM64 as the first new platform and separate native delivery from C15. This revision replaces the broader macOS/Linux/Windows x64/ARM64 delivery scope and the blanket core #679 prerequisite. Windows, Intel macOS and Linux ARM64 are deferred. Linux x86-64 remains supported and is a regression obligation.
 
 ## What Changes
 
-- Specify native macOS, Linux, and Windows execution with explicit x64/ARM64 coverage and no Docker, WSL, VM, or emulation dependency.
-- Preserve portable review and C15 verdict semantics while separating runtime provisioning and OS-native isolation/observation.
-- Require released prerequisite/C15 baseline reassessment and native platform evidence before final implementation design or support claims.
-- Gate native dependency admission on the released core/module policy independently of signatures; exclude prohibited sources and resolve inherited C14 lock conflicts before implementation approval.
+- Preserve review and runtime inspect/prepare commands; select an approved native backend automatically.
+- Plan dedicated signed macOS ARM64 artifacts, cache identities and platform evidence while preserving released review semantics and historical Linux artifacts.
+- Rebase on Code Review 0.50.1 and completed portable project-runtime #473, including pip/pip-tools, Hatch, uv, Poetry, project workers, native extensions, plugins and coverage.
+- Separate provisioning, preparation, launch, isolation, observation and cleanup from portable review logic; include Mach-O/dyld and relocatable user-owned paths.
+- Require initial-distribution managed-broker boundary proof as the first milestone, then complete isolation and dependency feasibility before bounded production-design approval. Historical Seatbelt/App Sandbox/XPC experiments remain evidence of rejected or incomplete approaches, not alternative current milestones.
+- Require signed customer-installation acceptance, native positive/negative tests and Linux regressions before advertising support.
+- Retain the earlier bounded local candidate tooling: COPY-only Docker assembly, strict OCI/TAR/JSON verification against an operator-owned payload, regression tests and reviewed native feasibility results. This tooling never executes or publishes an archive and always rejects production eligibility; it does not satisfy the managed-process milestone.
 
 ## Capabilities
 
 ### New Capabilities
 
-- `review-native-platform-execution`: Requirements and verification obligations for native local platform execution; the installed-payload correction remains a separate prerequisite.
+- `review-native-platform-execution`: bounded macOS ARM64 execution, trust, lifecycle and release acceptance.
 
 ### Modified Capabilities
 
-None in this planning delivery. Future implementation must reconcile these obligations with the then-current review contracts before modifying a public interface.
-
-## Impact
-
-Planning artifacts only. No runtime source, tests, schemas, versions, signatures, registry entries, or supported-platform claims change. Future signed bundle changes require semver/core compatibility and canonical publication. No current CLI/API additions are approved.
+No released runtime capability changes in this feasibility delivery. Any future platform evidence or consumer interface must be explicitly versioned and compatibility-tested.
 
 ## Dependencies
 
-- Parent: modules [#163](https://github.com/nold-ai/specfact-cli-modules/issues/163), under epic #162.
-- Direct blockers: layout correction [#459](https://github.com/nold-ai/specfact-cli-modules/issues/459), released checkpoint/conformance [#434](https://github.com/nold-ai/specfact-cli-modules/issues/434), and core C15 adoption [#679](https://github.com/nold-ai/specfact-cli/issues/679).
-- Transitive sequence: core #682 -> modules #431 -> core #680 -> core #683 -> modules #432; modules #432 plus core #684 -> modules #434.
-- Modules #432 plus existing policy/profile/exception prerequisites -> modules C15 #417 -> core #679. Core #679 retains its existing policy/profile/exception blockers.
-- Core means nold-ai/specfact-cli; modules means nold-ai/specfact-cli-modules. Preserve existing edges; do not duplicate transitive blockers.
-- Harness adapters #433 are downstream of #434 and are not prerequisites for native execution.
+Parent: modules #163 under #162. Verified layout correction #459 is the completed direct baseline. Completed #466 and #473 are released runtime context; initial module baseline is 0.50.1. Pin the exact compatible released core/module and signed identities during feasibility.
+
+Core #679 and modules #417 are not blanket blockers. Preserve the selected released verdict contract; native work does not implement C15. An actual native consumer incompatibility requires a named paired change and compatibility evidence, not wholesale adoption of unrelated C15/policy/exception work. Optional #431/#432/#434, preflight, seals and historical RED ledgers do not block this delivery.
+
+The complete native closure must satisfy dependency policy. BasedPyright 1.39.10 directly requires prohibited `nodejs-wheel-binaries>=20.13.1`; replacing a Node executable alone does not resolve that metadata/closure conflict. No replacement source or policy exception is preapproved.
 
 ## Acceptance Criteria
 
-- This change has proposal, design, scenario-based spec deltas, ordered future tasks, and planned Requirements evidence.
-- GitHub type, assignee, parent, project Todo status, labels, and native dependency relationships match this proposal.
-- Strict OpenSpec validation, Markdown checks, staged planned-maturity Requirements validation, and applicable planning review pass.
-- The planning PR targets dev, references the issue without closing it, and leaves implementation tasks unchecked.
-- Future implementation design cannot be approved until the complete native dependency closure is policy-admissible; `nodejs-wheel-binaries` is excluded under the current core prohibition and no replacement is preapproved.
-- Future behavior acceptance is defined in specs/review-native-platform-execution/spec.md; planning acceptance does not establish runtime correctness.
+- Issue, dependency edges, proposal, design, scenarios, tasks, evidence mapping and change order agree on macOS ARM64 first and independent C15 delivery.
+- The feasibility milestone has executable proof obligations, explicit failure/stop conditions and a production approval gate.
+- CPython 3.11–3.13 is a candidate matrix; minimum macOS version and actual supported combinations are frozen only from passing native evidence.
+- Planning and candidate-tool validation pass; measured native experiments are recorded separately and never imply native support or released artifacts.
+- First-release acceptance requires all ten analyzers and the pip/pip-tools, Hatch, uv and Poetry corpus, including plugins, coverage and compatible ARM64 extension imports, plus isolation, integrity, lifecycle, signed distribution and Linux regressions. Unsupported process diagnostics cannot excuse a missing required corpus result.
 
-## Non-Goals
+## Impact and Non-Goals
 
-No production implementation, runtime tests, release actions, implementation completion, or archive operation in this PR. Existing unrelated changes remain untouched.
+The earlier feasibility delivery included the scope revision, native feasibility results, a local COPY-only Docker fixture, the bounded `scripts/macos_capsule_candidate.py` verifier and its regression tests. Measured lifecycle failures keep production architecture approval blocked. Production runtime code, signed payloads, module versions, registry entries and support claims remain unchanged. Keep #460 open through feasibility; the recorded Todo status is historical metadata, not a fresh issue-status check. Production implementation, publication and OpenSpec archival remain future gated tasks. No unsandboxed, Homebrew, Rosetta or development-host fallback establishes capsule support.
 
 ## Source Tracking
 
 <!-- source_repo: nold-ai/specfact-cli-modules -->
-- **GitHub Issue**: #460
-- **Issue URL**: <https://github.com/nold-ai/specfact-cli-modules/issues/460>
-- **Last Synced Status**: proposed; Todo; implementation not started
+- **GitHub Issue**: [#460](https://github.com/nold-ai/specfact-cli-modules/issues/460)
+- **Last Synced Status**: open / Todo; signing scope split, 2026-10-02 Europe/Berlin
 - **Sanitized**: true
+
+## Native implementation checkpoint — 2026-10-03 (Europe/Berlin)
+
+Actual physical-host work now includes fixed-bootstrap launchd/tracing ownership,
+a private bounded broker control protocol and both sealed Semgrep rule-pack
+analyzers. Startup proof passes 100 repetitions of six stages; control proof
+retains historical results and review corrections separately. Native clean and
+defective Semgrep fixtures execute with denied host/descriptor/process/network
+controls and exact dependency grants. MANAGED_BOUNDARY_STATUS.md links measured
+contracts and current limits. The public native command, all-ten-analyzer managed
+integration, four-manager corpus, immutable runtime delivery and independent-Mac
+installation still require implementation/admission; this checkpoint does not
+claim those capabilities or justify a module release bump.

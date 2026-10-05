@@ -1,8 +1,11 @@
 """Automatic scope attachment preserves static evidence on preparation failure."""
 
+import configparser
+import json
+import shutil
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any, cast
+from typing import Any, Literal, cast
 
 import pytest
 
@@ -13,7 +16,279 @@ from specfact_code_review.run.portable_snapshot import (
     run_project_snapshot,
 )
 from specfact_code_review.run.portable_worker import DEPENDENT_MEMBERS
-from specfact_code_review.run.runtime_models import PreparedRuntime, ProjectRuntimeError
+from specfact_code_review.run.runtime_models import PreparedRuntime, ProjectPlan, ProjectRuntimeError
+
+
+def test_native_project_origin_policy_preserves_doctests_and_coverage_exclusions(tmp_path):
+    (tmp_path / "pyproject.toml").write_text(
+        '[tool.pytest.ini_options]\naddopts="--doctest-modules"\ntestpaths=["tests"]\n'
+        '[tool.coverage.report]\nexclude_lines=["pragma: no cover"]\n'
+    )
+    builder = runner._PolicyBindingBuilder()
+    try:
+        runner._bind_pytest_coverage_policy(builder, tmp_path, local_project_assurance="explicit_files")
+        contents = {p.name: p.read_text() for root in builder.cleanup_roots for p in root.iterdir() if p.is_file()}
+        assert "--doctest-modules" in contents["pytest.ini"]
+        assert "pragma: no cover" in contents["coveragerc"]
+    finally:
+        for root in builder.cleanup_roots:
+            shutil.rmtree(root)
+    with pytest.raises(ValueError, match="pytest_selection_policy_unsupported"):
+        runner._bind_pytest_coverage_policy(runner._PolicyBindingBuilder(), tmp_path)
+    with pytest.raises(ValueError, match="project_origin_not_local"):
+        runner._bind_pytest_coverage_policy(
+            runner._PolicyBindingBuilder(), tmp_path, local_project_assurance="range_candidate"
+        )
+    assert runner.project_coverage_policy({"report:exclude_lines": ["pragma: no cover"]}).status == "UNKNOWN"
+
+
+@pytest.mark.parametrize("filename, section", [(".coveragerc", "report"), ("setup.cfg", "coverage:report")])
+def test_native_local_coverage_preserves_multiline_ini_expressions(tmp_path, filename, section):
+    expressions = ["pragma: no cover", "if TYPE_CHECKING:", "[section-like-expression]", "else:"]
+    (tmp_path / filename).write_text(
+        f"[{section}]\nexclude_lines =\n" + "".join(f"    {value}\n" for value in expressions)
+    )
+    builder = runner._PolicyBindingBuilder()
+    try:
+        runner._bind_pytest_coverage_policy(builder, tmp_path, local_project_assurance="worktree")
+        path = next(root / "coveragerc" for root in builder.cleanup_roots if (root / "coveragerc").is_file())
+        parser = configparser.ConfigParser(interpolation=None)
+        parser.read_string(path.read_text())
+        assert parser.sections() == ["report", "run"]
+        assert parser["report"]["exclude_lines"].splitlines() == expressions
+        assert set(parser["report"]) == {"exclude_lines"}
+    finally:
+        for root in builder.cleanup_roots:
+            shutil.rmtree(root)
+
+
+@pytest.mark.parametrize("assurance", ["range_candidate", "pr_range", "unknown"])
+def test_native_local_policy_rejects_protected_or_unknown_assurance(tmp_path, assurance):
+    with pytest.raises(ValueError, match="project_origin_not_local"):
+        runner._bind_pytest_coverage_policy(runner._PolicyBindingBuilder(), tmp_path, local_project_assurance=assurance)
+
+
+@pytest.mark.parametrize("local_assurance", [None, "worktree"])
+def test_native_local_policy_keeps_coverage_plugins_unsupported(tmp_path, local_assurance):
+    (tmp_path / ".coveragerc").write_text("[run]\nplugins = malicious_project_plugin\n")
+    with pytest.raises(ValueError, match="coverage_policy_unsupported"):
+        runner._bind_pytest_coverage_policy(
+            runner._PolicyBindingBuilder(), tmp_path, local_project_assurance=local_assurance
+        )
+
+
+@pytest.mark.parametrize("key", ["exclude_lines", "exclude_also", "partial_branches", "partial_also"])
+def test_native_local_toml_exclusions_cannot_inject_coverage_sections(tmp_path, key):
+    from coverage.config import read_coverage_config
+
+    expression = "foo\n[coverage:run]\nplugins = project_plugin"
+    (tmp_path / "pyproject.toml").write_text(f'[tool.coverage.report]\n{key}=["""{expression}"""]\n')
+    builder = runner._PolicyBindingBuilder()
+    try:
+        runner._bind_pytest_coverage_policy(builder, tmp_path, local_project_assurance="worktree")
+        path = next(
+            path for root in builder.cleanup_roots for path in root.iterdir() if path.name.startswith("coveragerc")
+        )
+        projected = read_coverage_config(str(path), warn=lambda _message: None)
+        assert projected.plugins == []
+        assert projected.data_file.startswith("/opt/specfact/tmp/coverage/")
+        field = "exclude_list" if key.startswith("exclude") else "partial_list"
+        assert expression in getattr(projected, field)
+    finally:
+        for root in builder.cleanup_roots:
+            shutil.rmtree(root)
+
+
+@pytest.mark.parametrize("key, field", [("exclude_also", "exclude_list"), ("partial_also", "partial_list")])
+def test_native_local_additive_exclusions_preserve_coverage_defaults(tmp_path, key, field):
+    from coverage.config import read_coverage_config
+
+    expression = "@overload"
+    (tmp_path / "pyproject.toml").write_text(f'[tool.coverage.report]\n{key}=["{expression}"]\n')
+    defaults = read_coverage_config(False, warn=lambda _message: None)
+    builder = runner._PolicyBindingBuilder()
+    try:
+        runner._bind_pytest_coverage_policy(builder, tmp_path, local_project_assurance="worktree")
+        path = next(root / "coveragerc" for root in builder.cleanup_roots if (root / "coveragerc").is_file())
+        projected = read_coverage_config(str(path), warn=lambda _message: None)
+        assert getattr(projected, field) == [*getattr(defaults, field), expression]
+    finally:
+        for root in builder.cleanup_roots:
+            shutil.rmtree(root)
+
+
+def test_native_basedpyright_uses_verified_editable_source_roots(tmp_path):
+    source, configs = tmp_path / "source", tmp_path / "config"
+    (source / "src/customer").mkdir(parents=True)
+    configs.mkdir()
+    (source / "src/customer/__init__.py").write_text("VALUE=1\n")
+    config = portable_snapshot._write_native_basedpyright_config(
+        source, [Path("src/customer/__init__.py")], configs, source_roots=("src",)
+    )
+    document = json.loads(config.read_text())
+    assert document["extraPaths"] == ["../../.specfact-project-runtime/site-packages", "../../src"]
+
+
+def test_native_basedpyright_rejects_unbound_source_roots(tmp_path):
+    source, configs = tmp_path / "source", tmp_path / "config"
+    source.mkdir()
+    configs.mkdir()
+    with pytest.raises(ValueError, match="source_root"):
+        portable_snapshot._write_native_basedpyright_config(source, [], configs, source_roots=("../host",))
+
+
+@pytest.mark.parametrize(
+    ("backend", "expected_argv"),
+    [
+        ("linux-x86_64", ("--pythonpath", "/opt/specfact/project-runtime/bin/python")),
+        ("darwin-arm64", ("--project", "/opt/specfact/config/1/basedpyright-native.json")),
+    ],
+)
+def test_project_snapshot_configures_basedpyright_for_platform_runtime(
+    tmp_path: Path, monkeypatch, backend: Literal["linux-x86_64", "darwin-arm64"], expected_argv: tuple[str, ...]
+) -> None:
+    source = tmp_path / "app.py"
+    source.write_text("import dependency\n", encoding="utf-8")
+    artifact = tmp_path / "project-runtime"
+    artifact.mkdir()
+    prepared = PreparedRuntime(
+        artifact,
+        artifact / "project-runtime.json",
+        "sha256:" + "b" * 64,
+        {"inventory": {}},
+    )
+    observed: list[runner.CapsuleSnapshotSettings] = []
+
+    monkeypatch.setattr(portable_snapshot, "prepare_runtime", lambda *_args, **_kwargs: prepared)
+    monkeypatch.setattr(portable_snapshot, "load_runtime", lambda *_args, **_kwargs: prepared)
+    monkeypatch.setattr(portable_snapshot, "verify_inputs", lambda _plan: None)
+
+    def run_snapshot(_runtime, _request, settings):
+        observed.append(settings)
+        if backend == "darwin-arm64":
+            assert len(settings.config_roots) == 1
+            config = settings.config_roots[0] / "basedpyright-native.json"
+            values = json.loads(config.read_text(encoding="utf-8"))
+            assert values == {
+                "extraPaths": ["../../.specfact-project-runtime/site-packages"],
+                "include": ["../../app.py"],
+            }
+            assert config.stat().st_mode & 0o222 == 0
+        else:
+            assert settings.config_roots == ()
+        return runner.CapsuleSnapshotResult({}, {})
+
+    monkeypatch.setattr(portable_snapshot, "_run_in_private_source", run_snapshot)
+    runtime = runner.CapsuleRuntime(
+        tmp_path,
+        "sha256:" + "a" * 64,
+        ("darwin-arm64-cp312" if backend == "darwin-arm64" else "linux-x86_64-cp312"),
+        "python",
+        "bootstrap",
+        None,
+        backend=backend,
+    )
+    plan = cast(
+        ProjectPlan, SimpleNamespace(root=tmp_path, identity="sha256:" + "c" * 64, source_roots=(), pytest_config={})
+    )
+
+    portable_snapshot._run_project_snapshot(
+        runtime,
+        ProjectSnapshotRequest(tmp_path, [source], runner.ReviewOptions(no_tests=True), "explicit_files"),
+        plan,
+    )
+
+    member_argv = observed[0].member_argv
+    assert member_argv is not None
+    assert member_argv["basedpyright"] == expected_argv
+    if backend == "darwin-arm64":
+        assert all("/bin/python" not in argument for argument in member_argv["basedpyright"])
+
+
+@pytest.mark.parametrize("projection_fails", [False, True])
+@pytest.mark.parametrize("full_discovery", [False, True])
+@pytest.mark.parametrize("declared_roots", [["tests"], ["."], []])
+def test_darwin_project_snapshot_binds_native_managed_pytest_contract(
+    tmp_path: Path, monkeypatch, projection_fails, full_discovery, declared_roots
+) -> None:
+    (tmp_path / "pytest.ini").write_text("[pytest]\ntestpaths=tests\n")
+    source = tmp_path / "app.py"
+    source.write_text("VALUE = 1\n", encoding="utf-8")
+    tests = tmp_path / "tests"
+    tests.mkdir()
+    selected_test = tests / "test_runtime.py"
+    selected_test.write_text("def test_runtime():\n    assert True\n", encoding="utf-8")
+    artifact = tmp_path / "project-runtime"
+    artifact.mkdir()
+    prepared = PreparedRuntime(
+        artifact,
+        artifact / "project-runtime.json",
+        "sha256:" + "b" * 64,
+        {"inventory": {}},
+    )
+    observed: list[runner.CapsuleSnapshotSettings] = []
+
+    monkeypatch.setattr(portable_snapshot, "prepare_runtime", lambda *_args, **_kwargs: prepared)
+    monkeypatch.setattr(portable_snapshot, "load_runtime", lambda *_args, **_kwargs: prepared)
+    monkeypatch.setattr(portable_snapshot, "verify_inputs", lambda _plan: None)
+    monkeypatch.setattr(
+        portable_snapshot,
+        "select_test_paths",
+        lambda *_args, **_kwargs: () if full_discovery else ("tests/test_runtime.py",),
+    )
+    if projection_fails:
+
+        def fail_projection(*_args, **_kwargs):
+            raise ValueError("coverage_policy_unsupported")
+
+        monkeypatch.setattr(runner, "_bind_pytest_coverage_policy", fail_projection)
+
+    def run_snapshot(_runtime, _request, settings):
+        observed.append(settings)
+        assert settings.member_argv is not None
+        contract_argv = settings.member_argv["contracts"]
+        assert contract_argv[0] == "contract-inputs-v2" and len(contract_argv) == 2
+        inventory = json.loads((settings.config_roots[-1] / "contracts-native.json").read_text())
+        assert inventory["test_roots"] == (["tests"] if declared_roots == ["tests"] else ["tests/test_runtime.py"])
+        if projection_fails:
+            assert settings.unavailable_members["targeted-pytest-coverage"]["evidence_outcome"] == "UNKNOWN"
+            return runner.CapsuleSnapshotResult({}, {})
+        argv = settings.member_argv["targeted-pytest-coverage"]
+        assert argv[0] == "-c"
+        assert argv[2:4] == ("--rootdir", "/opt/specfact/snapshot")
+        assert argv[4] == "--cov-config"
+        assert argv[-1:] == ("--",) if full_discovery else argv[-2:] == ("--", "tests/test_runtime.py")
+        assert runner._complete_snapshot_pytest("targeted-pytest-coverage", settings)
+        assert "portable-pytest-v2" not in argv
+        assert settings.portable_runtime is False
+        assert len(settings.config_roots) == 3
+        assert all(root.is_dir() for root in settings.config_roots)
+        return runner.CapsuleSnapshotResult({}, {})
+
+    monkeypatch.setattr(portable_snapshot, "_run_in_private_source", run_snapshot)
+    runtime = runner.CapsuleRuntime(
+        tmp_path,
+        "sha256:" + "a" * 64,
+        "darwin-arm64-cp312",
+        "python",
+        "bootstrap",
+        None,
+        backend="darwin-arm64",
+    )
+    plan = cast(
+        ProjectPlan,
+        SimpleNamespace(
+            root=tmp_path, identity="sha256:" + "c" * 64, source_roots=(), pytest_config={"testpaths": declared_roots}
+        ),
+    )
+
+    portable_snapshot._run_project_snapshot(
+        runtime,
+        ProjectSnapshotRequest(tmp_path, [source], runner.ReviewOptions(), "full"),
+        plan,
+    )
+
+    assert observed
 
 
 def test_failed_preparation_never_runs_dependency_members(tmp_path: Path, monkeypatch) -> None:
@@ -406,3 +681,67 @@ def test_unsafe_fallback_source_never_dispatches_analyzer(tmp_path: Path, monkey
     assert evidence["status"] == "UNKNOWN"
     assert "project_source_copy_failed" in evidence["diagnostic"]
     assert all(row["evidence_outcome"] == "UNKNOWN" for row in snapshot.evidence.values())
+
+
+def test_native_local_multiline_unicode_coverage_preserves_threshold(tmp_path):
+    from coverage.config import read_coverage_config
+
+    expression = "first\nsecond 😀"
+    (tmp_path / "pyproject.toml").write_text(
+        '[tool.coverage.report]\nexclude_lines=["""' + expression + '"""]\nfail_under=99\n'
+    )
+    builder = runner._PolicyBindingBuilder()
+    try:
+        runner._bind_pytest_coverage_policy(builder, tmp_path, local_project_assurance="worktree")
+        path = next(
+            path for root in builder.cleanup_roots for path in root.iterdir() if path.name.startswith("coveragerc")
+        )
+        projected = read_coverage_config(str(path), warn=lambda _message: None)
+        assert expression in projected.exclude_list
+        assert runner._coverage_threshold_from_policy_argv(("--cov-config", str(path))) == 99
+    finally:
+        for root in builder.cleanup_roots:
+            shutil.rmtree(root)
+
+
+def test_projected_toml_coverage_enforces_requested_threshold(tmp_path):
+    path = tmp_path / "coveragerc.toml"
+    path.write_text("[tool.coverage.report]\nfail_under=99\n")
+    assert runner._coverage_threshold_from_policy_argv(("--cov-config", str(path))) == 99
+
+
+def test_contract_default_inventory_does_not_exclude_production_sources(tmp_path):
+    from specfact_code_review.run.native_worker import _validated_adapter_argv
+    from specfact_code_review.run.portable_worker import contract_inputs
+
+    (tmp_path / "app.py").write_text("def calculate(): return 1\n")
+    plan = cast(ProjectPlan, SimpleNamespace(root=tmp_path, pytest_config={}))
+    assert contract_inputs(plan) == ("contract-inputs-v2",)
+    path = portable_snapshot._write_native_contract_inventory(plan, tmp_path)
+    assert json.loads(path.read_text())["test_roots"] == []
+    argv = ["contract-inputs-v2", "/opt/specfact/config/1/" + path.name]
+    assert _validated_adapter_argv("contracts", argv) == argv
+    assert not runner._path_is_below_test_root(Path("app.py"), ())
+
+
+def test_native_contract_inventory_keeps_transport_bounded(tmp_path):
+    from specfact_code_review.run.native_worker import _native_contract_roots, _validated_adapter_argv
+
+    tests = tmp_path / "tests"
+    tests.mkdir()
+    for index in range(64):
+        (tests / f"test_{index}.py").write_text("def test_value(): assert True\n")
+    configs = tmp_path / ".specfact-native-config/1"
+    configs.mkdir(parents=True)
+    plan = cast(ProjectPlan, SimpleNamespace(root=tmp_path, pytest_config={}))
+    path = portable_snapshot._write_native_contract_inventory(plan, configs)
+    argv = ["contract-inputs-v2", "/opt/specfact/config/1/" + path.name]
+    assert _validated_adapter_argv("contracts", argv) == argv
+    bound = ["contract-inputs-v2", str(path)]
+    assert len(_native_contract_roots(bound, tmp_path)) == 64
+    document = json.loads(path.read_text())
+    path.chmod(0o600)
+    document["test_roots"] = ["../host"]
+    path.write_text(json.dumps(document))
+    with pytest.raises(ValueError):
+        _native_contract_roots(bound, tmp_path)
