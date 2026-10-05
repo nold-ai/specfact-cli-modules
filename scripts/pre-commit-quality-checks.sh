@@ -331,6 +331,20 @@ run_code_review_gate() {
       error "Capsule review deferral requires the blocking GitHub Linux candidate review step."
       exit 1
     fi
+    local capsule_paths candidate_base
+    if ! candidate_base="$(git merge-base HEAD refs/remotes/origin/dev)"; then
+      error "Capsule review deferral cannot determine the PR merge-base against origin/dev."
+      exit 1
+    fi
+    if ! capsule_paths="$(git diff --cached --name-only "${candidate_base}" -- \
+      packages/specfact-code-review .github/workflows/capsule-customer-execution.yml)"; then
+      error "Capsule review deferral cannot determine the staged candidate delta against origin/dev."
+      exit 1
+    fi
+    if [[ -z "${capsule_paths}" ]]; then
+      error "Capsule review deferral requires a candidate change that schedules the blocking capsule workflow."
+      exit 1
+    fi
     warn "DEFERRED: only the local capsule review requires mandatory exact-head GitHub Linux CI; this is not a PASS."
     return 0
   fi

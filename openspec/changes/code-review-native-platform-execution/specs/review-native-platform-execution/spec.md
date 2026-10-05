@@ -388,8 +388,10 @@ Support SHALL be claimed only after a canonical signed publication passes fresh 
 
 - **GIVEN** the maintainer explicitly authorizes deferring only the unavailable local capsule review to GitHub's matching x86-64 Linux runner
 - **WHEN** the candidate PR is updated
-- **THEN** CI reconstructs the exact event-bound candidate tree and stages its changes against the event-bound base in an isolated worktree
+- **THEN** CI reconstructs the exact event-bound candidate tree and stages its changes against the merge-base with the event-bound base in an isolated worktree
 - **AND** the unchanged pre-commit review helper runs as an ordinary user with its existing enforcement, timeout, integrity and sandbox checks, and any nonzero exit fails the required customer job
+- **AND** the deferred review uses its own launcher-scoped cache and leaves the mandatory cold-customer cache empty
+- **AND** the local deferral requires a final staged candidate delta against its merge-base with the fetched dev baseline that schedules the capsule workflow
 - **AND** only the capsule step may be explicitly deferred on a local ARM64 Darwin feature worktree; invalid values, CI execution and other platforms reject the deferral, while every other original commit-hook component executes normally
 - **AND** other local gates remain required, no credentials reach the review process, and this candidate result does not establish public installation or native macOS release acceptance
 

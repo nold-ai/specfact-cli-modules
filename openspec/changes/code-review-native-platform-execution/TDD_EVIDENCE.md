@@ -2082,3 +2082,35 @@ cases pass. The accepted local deferral retains command overview/contract,
 core documentation, docs, prompt, staged requirements and contract execution
 inside the original Block 2 pipeline. CI, Linux and invalid values reject it.
 The normal commit will use this capsule-only option with every hook enabled.
+
+## Hosted gate review corrections — 2026-10-05 (Europe/Berlin)
+
+The reused independent review-agent confirmed two concrete findings: the hosted
+helper could populate the mandatory cold-customer cache, and unrelated bundle
+changes could qualify for local deferral without scheduling capsule CI. Three
+RED failures preceded the fixes. GREEN: 78 hosted-recipe/customer/parity cases
+pass. The helper now receives its own commit-review cache under a separate exact
+launcher AppArmor rule; the original cold cache remains empty. Local deferral
+requires a final staged delta versus fetched origin/dev in Code Review or the
+customer workflow, which are actual capsule trigger paths. Missing baseline or
+non-triggering deltas fail. Every normal commit-hook component remains active.
+
+PR implementation head `049828fd5556f91041781d9cbe38eee83154878a` was pushed.
+CI alone signed its module in `9c7920cc324c7578964b1e88656265f80a6e2a2b`;
+all seven public-key signature/checksum verifications pass after preserving the
+ignored local native build outside the signed source payload. Required bot-head
+workflows were approved through GitHub. The first hosted deferred helper returned
+UNKNOWN and correctly failed, despite zero findings; no finding filter, timeout
+or assurance override was applied. Its rerun prints only bounded diagnostic
+reason codes; raw reports/logs/receipts remain private. Current-head CI and actual
+review completion remain required and are not claimed here.
+
+Independent closure caught the divergent-dev variant of the trigger check.
+Three additional RED failures proved that direct base-tip comparisons include
+changes made only on dev. Both hosted staging and local eligibility now use the
+merge-base with their bound base. The real-Git fixtures cover dev changing an
+unrelated Python file and dev changing only Code Review while the feature
+changes another bundle; neither adds a candidate capsule delta. Enforcement,
+timeouts, signature verification and cold cache checks remain unchanged.
+
+GREEN after merge-base correction: **81** combined hosted-recipe/customer/parity cases pass.

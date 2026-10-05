@@ -122,6 +122,9 @@ jobs:
           profile specfact-customer-capsule "$CUSTOMER_ROOT/cache/**/opt/specfact/bin/bwrap-static" flags=(unconfined) {
             userns,
           }
+          profile specfact-customer-commit-review "$CUSTOMER_ROOT/commit-review-cache/**/opt/specfact/bin/bwrap-static" flags=(unconfined) {
+            userns,
+          }
           profile specfact-customer-offline-network "/specfact-corpus-offline/bwrap" flags=(unconfined) {
             userns,
           }
@@ -141,16 +144,37 @@ jobs:
           test "$(id -u)" -ne 0
           unset GITHUB_TOKEN GH_TOKEN PYTHONPATH
           REVIEW_ROOT="$CUSTOMER_ROOT/staged-review"
+          REVIEW_BASE="$(git merge-base "$CANDIDATE_HEAD" "$CANDIDATE_BASE")"
           git worktree add --detach "$REVIEW_ROOT" "$CANDIDATE_HEAD"
-          git -C "$REVIEW_ROOT" reset --soft "$CANDIDATE_BASE"
+          git -C "$REVIEW_ROOT" reset --soft "$REVIEW_BASE"
           cd "$REVIEW_ROOT"
           review_paths=()
           while IFS= read -r -d '' path; do
             review_paths+=("$path")
           done < <(git diff --cached --name-only --diff-filter=ACMR -z)
           test "${#review_paths[@]}" -gt 0
-          SPECFACT_CODE_REVIEW_ENFORCEMENT=changed \
-            "$CUSTOMER_ROOT/venv/bin/python" scripts/pre_commit_code_review.py "${review_paths[@]}"
+          review_exit=0
+          SPECFACT_CODE_REVIEW_CAPSULE_CACHE="$CUSTOMER_ROOT/commit-review-cache" \
+            SPECFACT_CODE_REVIEW_ENFORCEMENT=changed \
+            "$CUSTOMER_ROOT/venv/bin/python" scripts/pre_commit_code_review.py "${review_paths[@]}" || review_exit=$?
+          if [ "$review_exit" -ne 0 ]; then
+            # Print only bounded reason codes; raw reports, receipts and tool logs stay private.
+            "$CUSTOMER_ROOT/venv/bin/python" - <<'PY'
+          import json
+          import re
+          from pathlib import Path
+
+          report = Path(".specfact/code-review.json")
+          if report.is_file():
+              data = json.loads(report.read_text())
+              for row in data.get("analyzer_evidence", []):
+                  tokens = str(row.get("diagnostic", "")).split(":")[:3]
+                  codes = [token for token in tokens if re.fullmatch(r"[a-zA-Z0-9_.-]{1,96}", token)]
+                  if codes:
+                      print(json.dumps({"analyzer": row.get("id"), "diagnostic_codes": codes}))
+          PY
+          fi
+          exit "$review_exit"
       - name: Exercise cold and warm fixtures and modules repository
         shell: bash
         run: |

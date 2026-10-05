@@ -20,7 +20,10 @@ def _git(root: Path, *args: str) -> str:
 
 
 @pytest.mark.parametrize("gate_exit", [0, 7])
-def test_deferred_gate_reviews_exact_staged_tree_and_propagates_failure(tmp_path: Path, gate_exit: int) -> None:
+@pytest.mark.parametrize("advanced_dev", [False, True])
+def test_deferred_gate_reviews_exact_staged_tree_and_propagates_failure(
+    tmp_path: Path, gate_exit: int, advanced_dev: bool
+) -> None:
     workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())
     steps = workflow["jobs"]["customer"]["steps"]
     step = next((item for item in steps if item.get("name") == STEP_NAME), None)
@@ -38,12 +41,19 @@ def test_deferred_gate_reviews_exact_staged_tree_and_propagates_failure(tmp_path
     target = repository / "packages/example/src/example.py"
     target.parent.mkdir(parents=True)
     target.write_text("value = 1\n")
+    unrelated = target.with_name("unrelated.py")
+    unrelated.write_text("value = 1\n")
     script = repository / "scripts/pre_commit_code_review.py"
     script.parent.mkdir()
     script.write_text(
         "import os, subprocess, sys\n"
         "assert os.environ['SPECFACT_CODE_REVIEW_ENFORCEMENT'] == 'changed'\n"
         "assert not {'GITHUB_TOKEN', 'GH_TOKEN', 'PYTHONPATH'} & os.environ.keys()\n"
+        "from pathlib import Path\n"
+        "cache = Path(os.environ['SPECFACT_CODE_REVIEW_CAPSULE_CACHE'])\n"
+        "assert cache == Path(os.environ['CUSTOMER_ROOT']) / 'commit-review-cache'\n"
+        "cache.mkdir(parents=True, exist_ok=True)\n"
+        "(cache / 'verified-fixture-blob').write_text('fixture')\n"
         "assert sys.argv[1:] == ['packages/example/src/example.py']\n"
         "assert open(sys.argv[1]).read() == 'value = 2\\n'\n"
         "assert subprocess.check_output(['git', 'diff', '--cached', '--name-only'], text=True).strip() == sys.argv[1]\n"
@@ -57,7 +67,15 @@ def test_deferred_gate_reviews_exact_staged_tree_and_propagates_failure(tmp_path
     _git(repository, "add", ".")
     _git(repository, "-c", "core.hooksPath=/dev/null", "commit", "-qm", "fixture candidate")
     head = _git(repository, "rev-parse", "HEAD")
+    if advanced_dev:
+        _git(repository, "checkout", "-qb", "dev", base)
+        unrelated.write_text("value = 3\n")
+        _git(repository, "add", ".")
+        _git(repository, "-c", "core.hooksPath=/dev/null", "commit", "-qm", "fixture advanced dev")
+        base = _git(repository, "rev-parse", "HEAD")
+        _git(repository, "checkout", "--detach", head)
     customer = tmp_path / "customer"
+    (customer / "cache").mkdir(parents=True)
     (customer / "venv/bin").mkdir(parents=True)
     (customer / "venv/bin/python").symlink_to(sys.executable)
     environment = os.environ | {
@@ -72,21 +90,24 @@ def test_deferred_gate_reviews_exact_staged_tree_and_propagates_failure(tmp_path
         ["bash", "-c", step["run"]], cwd=repository, env=environment, capture_output=True, text=True, check=False
     )
     assert result.returncode == gate_exit, result.stdout + result.stderr
+    assert not list((customer / "cache").iterdir())
     assert _git(repository, "rev-parse", "HEAD") == head
     assert not _git(repository, "status", "--porcelain")
 
 
 @pytest.mark.parametrize(
-    "platform,ci,deferral,expected",
+    "platform,ci,deferral,bundle,advanced_dev,expected",
     [
-        ("Darwin", "", "github-linux", 0),
-        ("Darwin", "true", "github-linux", 1),
-        ("Linux", "", "github-linux", 1),
-        ("Darwin", "", "invalid", 1),
+        ("Darwin", "", "github-linux", "specfact-code-review", False, 0),
+        ("Darwin", "true", "github-linux", "specfact-code-review", False, 1),
+        ("Linux", "", "github-linux", "specfact-code-review", False, 1),
+        ("Darwin", "", "invalid", "specfact-code-review", False, 1),
+        ("Darwin", "", "github-linux", "specfact-project", False, 1),
+        ("Darwin", "", "github-linux", "specfact-project", True, 1),
     ],
 )
 def test_narrow_local_deferral_retains_block2_and_cannot_run_in_ci(
-    tmp_path: Path, platform: str, ci: str, deferral: str, expected: int
+    tmp_path: Path, platform: str, ci: str, deferral: str, bundle: str, advanced_dev: bool, expected: int
 ) -> None:
     repository = tmp_path / "repository"
     repository.mkdir()
@@ -100,17 +121,26 @@ def test_narrow_local_deferral_retains_block2_and_cannot_run_in_ci(
         "llms.txt",
         "docs/reference/commands.generated.json",
         "docs/reference/commands.generated.md",
-        "packages/example/resources/example.py",
+        f"packages/{bundle}/resources/example.py",
         "openspec/changes/example/spec.md",
     ]
     for relative in files:
         path = repository / relative
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text("baseline\n")
+    capsule_manifest = repository / "packages/specfact-code-review/module-package.yaml"
+    capsule_manifest.parent.mkdir(parents=True, exist_ok=True)
+    capsule_manifest.write_text("version: 1\n")
     _git(repository, "add", ".")
     _git(repository, "-c", "core.hooksPath=/dev/null", "commit", "-qm", "fixture base")
+    _git(repository, "update-ref", "refs/remotes/origin/dev", "HEAD")
     worktree = tmp_path / "worktree"
     _git(repository, "worktree", "add", "-qb", "codex/fixture", str(worktree))
+    if advanced_dev:
+        capsule_manifest.write_text("version: 2\n")
+        _git(repository, "add", ".")
+        _git(repository, "-c", "core.hooksPath=/dev/null", "commit", "-qm", "fixture advanced dev")
+        _git(repository, "update-ref", "refs/remotes/origin/dev", "HEAD")
     for relative in files[-2:]:
         (worktree / relative).write_text("candidate\n")
     _git(worktree, "add", ".")
@@ -156,4 +186,4 @@ run_block2
         assert "DEFERRED" in result.stderr
         assert "contract-test-contracts" in invoked
     else:
-        assert "Capsule review deferral is restricted" in result.stderr
+        assert "Capsule review deferral" in result.stderr
