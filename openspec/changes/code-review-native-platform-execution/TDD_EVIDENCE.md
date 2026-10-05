@@ -2129,3 +2129,30 @@ variables, tracked-payload verification, timeout and authoritative UNKNOWN exits
 remain unchanged. The unchanged native controller-loss proof also passes on the
 physical ARM64 macOS 27 machine; macOS 14 still fails pre-trace startup and is
 not accepted. No fallback, signature bypass or release acceptance is claimed.
+
+## Controller imports and bounded startup diagnostics — 2026-10-05
+
+The reused independent review-agent found two additional subject/control paths.
+Three RED regressions preceded the fixes: a real interpreter loaded a subject
+CLI package from its current directory; inherited relative PYTHONPATH could
+restore that path; and missing-runtime bootstrap selected the subject checkout.
+The helper now uses Python safe-path mode, only reviewer bundle import paths and
+reviewer-anchored dependency bootstrap. No GitHub identity check is relaxed.
+
+Exact-head Linux execution advanced beyond candidate authentication and correctly
+rejected missing project preparation. This repository declares multiple Hatch
+environments. Five RED cases preceded explicit caller selection of its declared
+Hatch default environment through project-config; discovery remains unchanged.
+GREEN: 108 hosted recipe, customer assurance, helper and startup codec cases.
+
+macOS 14 still fails before the initial trace handshake; it is not accepted. A
+bounded fixed-bootstrap phase/errno record now identifies that failure without
+logging worker output or satisfying readiness, tracing or executable admission.
+The codec failed before implementation and passes afterward; the original
+controller-loss, file-budget and spawn-flag tests pass on the physical ARM64 Mac.
+The original five-second bounds, required 100 repetitions and resource/profile
+limits remain unchanged. Hosted diagnostics are required to establish the cause.
+
+Module payload checksums are refreshed without publisher keys. Only CI/CD signs
+the follow-up. Complete-boundary, independent installation and production flags
+remain false until their mandatory suites pass.

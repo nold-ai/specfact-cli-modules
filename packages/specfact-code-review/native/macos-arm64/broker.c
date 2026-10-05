@@ -315,6 +315,14 @@ static int owner_closed(uint32_t parent) {
     return poll(&fd, 1, 0) > 0 && (fd.revents & (POLLHUP | POLLERR | POLLNVAL));
 }
 
+static int startup_failure(uint32_t marker) {
+    uint32_t phase = specfact_startup_failure_phase(marker);
+    if (!phase) return 0;
+    fprintf(stderr, "{\"bootstrap_failure_phase\":%u,\"errno\":%u}\n",
+        phase, specfact_startup_failure_errno(marker));
+    return -(int)phase;
+}
+
 static int launch_worker(const char *capsule, int control, const struct specfact_request *request, struct worker *slot,
     uint32_t parent, const unsigned char *child_data, uint32_t child_length, int stdin_fd, int merge_stderr,
     int stream_directory) {
@@ -323,6 +331,8 @@ static int launch_worker(const char *capsule, int control, const struct specfact
     slot->temporary_fd = -1;
     slot->parent = parent;
     slot->grant = *request;
+    uint32_t marker = 0;
+    size_t marker_used = 0;
     char bootstrap[SPECFACT_MAX_PATH], target[SPECFACT_MAX_PATH], tool[SPECFACT_MAX_PATH], profile[SPECFACT_MAX_PATH];
     int written_bootstrap = snprintf(bootstrap, sizeof(bootstrap), "%s/bin/specfact-native-bootstrap", capsule);
     const char *target_format = request->plan == 1 ? "%s/bin/specfact-native-self-test"
@@ -453,11 +463,19 @@ static int launch_worker(const char *capsule, int control, const struct specfact
     if (slot->deadline_ns < startup_deadline) startup_deadline = slot->deadline_ns;
     while (!slot->traced && exec_timestamp() < startup_deadline && !controller_closed(control) && !owner_closed(parent)) {
         exceptions();
+        if (marker_used < sizeof(marker)) {
+            ssize_t count = read(marker_pipe[0], (char *)&marker + marker_used, sizeof(marker) - marker_used);
+            if (count > 0) marker_used += (size_t)count;
+            else if (count < 0 && errno != EAGAIN && errno != EINTR) { error = -6; goto failed; }
+        }
+        if (marker_used == sizeof(marker)) {
+            error = startup_failure(marker);
+            if (error) goto failed;
+            if (marker != SPECFACT_MARKER_READY) { error = -6; goto failed; }
+        }
         usleep(1000);
     }
     if (!slot->traced) { error = -5; goto failed; }
-    uint32_t marker = 0;
-    size_t marker_used = 0;
     while (marker_used < sizeof(marker) && exec_timestamp() < startup_deadline && !controller_closed(control) && !owner_closed(parent)) {
         exceptions();
         struct pollfd descriptor = {.fd = marker_pipe[0], .events = POLLIN | POLLHUP};
@@ -467,6 +485,10 @@ static int launch_worker(const char *capsule, int control, const struct specfact
         ssize_t count = read(marker_pipe[0], (char *)&marker + marker_used, sizeof(marker) - marker_used);
         if (count > 0) marker_used += (size_t)count;
         else if (!count || (errno != EAGAIN && errno != EINTR)) break;
+    }
+    if (marker_used == sizeof(marker)) {
+        error = startup_failure(marker);
+        if (error) goto failed;
     }
     if (marker_used != sizeof(marker) || marker != SPECFACT_MARKER_READY || controller_closed(control)) {
         error = -6;

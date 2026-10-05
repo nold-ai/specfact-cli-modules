@@ -390,6 +390,7 @@ Support SHALL be claimed only after a canonical signed publication passes fresh 
 - **WHEN** the candidate PR is updated
 - **THEN** CI reconstructs the exact event-bound candidate tree and stages its changes against the merge-base with the event-bound base in an isolated worktree
 - **AND** the unchanged pre-commit review helper runs as an ordinary user with its existing enforcement, timeout, integrity and sandbox checks, and any nonzero exit fails the required customer job
+- **AND** the controller excludes subject/current-directory imports and anchors missing-runtime bootstrap to the reviewer checkout
 - **AND** the reviewer payload stays in the unchanged event-authenticated checkout while the disposable subject index holds the candidate delta; the GITHUB_SHA and tracked-payload checks remain mandatory
 - **AND** the deferred review uses its own launcher-scoped cache and leaves the mandatory cold-customer cache empty
 - **AND** the local deferral requires a final staged candidate delta against its merge-base with the fetched dev baseline that schedules the capsule workflow
@@ -561,6 +562,13 @@ The macOS ARM64 backend SHALL use broker-owned direct workers, each traced and c
 - **THEN** no unconfined project code runs and independent observation finds no surviving governed worker after five seconds
 - **AND** 100 repetitions of each lifecycle race are required before admission
 
+#### Scenario: Bootstrap fails before the trace handshake
+
+- **GIVEN** the signed fixed bootstrap cannot establish tracing, resource limits or confinement
+- **WHEN** startup fails before the ready handshake
+- **THEN** the broker reports only bounded numeric bootstrap phase/error diagnostics through its private startup channel, rejects the launch and applies the original cleanup bound
+- **AND** a failure marker cannot satisfy readiness, trace ownership or executable admission; invalid/future marker phases are rejected and no raw worker output is published
+
 #### Scenario: Fixed trusted bootstrap owns the pre-trace interval
 
 - **GIVEN** an initial-distribution fixed bootstrap with default unblocked termination signals and no customer code or process-group changes before tracing
@@ -676,6 +684,13 @@ The native backend SHALL reuse portable project discovery and prepare dependenci
 - **WHEN** the caller invokes runtime inspect with JSON output
 - **THEN** the command SHALL return a structured diagnostic with candidates and required configuration fields
 - **AND** explicit project configuration SHALL allow the caller to repeat inspection without modifying repository setup
+
+#### Scenario: Hosted review selects its declared project environment
+
+- **WHEN** the deferred review caller reviews a repository with multiple Hatch environments
+- **THEN** the caller supplies an explicit project-config selecting the declared default environment
+- **AND** the pre-commit helper forwards the selection to the existing native review command without changing project discovery rules
+- **AND** unsuccessful preparation or analyzer execution still fails the hosted gate.
 
 ### Requirement: Equivalent execution on supported physical machines and full virtual machines
 Support SHALL depend on guest OS/build, CPU architecture, Python ABI and required kernel capabilities. A matching-architecture full VM SHALL be eligible for the same acceptance as a physical machine. VM detection SHALL NOT reject an otherwise supported environment or weaken isolation. Full-system CPU emulation SHALL be recorded as supplemental evidence; translated user-mode binaries SHALL NOT establish native acceptance for their translated architecture. Windows and Linux ARM64 remain follow-ups; this delivery covers macOS ARM64 and Linux x86-64.

@@ -126,7 +126,7 @@ def review_enforcement_mode() -> str:
 
 
 @require(lambda files: files is not None)
-@ensure(lambda result: result[:5] == [sys.executable, "-m", "specfact_cli.cli", "code", "review"])
+@ensure(lambda result: result[:6] == [sys.executable, "-P", "-m", "specfact_cli.cli", "code", "review"])
 @ensure(lambda result: "--json" in result and "--out" in result)
 @ensure(lambda result: REVIEW_JSON_OUT in result)
 def build_review_command(files: Sequence[str], *, enforcement: str | None = None) -> list[str]:
@@ -134,6 +134,7 @@ def build_review_command(files: Sequence[str], *, enforcement: str | None = None
     mode = enforcement or review_enforcement_mode()
     return [
         sys.executable,
+        "-P",
         "-m",
         "specfact_cli.cli",
         "code",
@@ -144,6 +145,11 @@ def build_review_command(files: Sequence[str], *, enforcement: str | None = None
         REVIEW_JSON_OUT,
         "--enforcement",
         mode,
+        *(
+            ["--project-config", os.environ["SPECFACT_CODE_REVIEW_PROJECT_CONFIG"]]
+            if os.environ.get("SPECFACT_CODE_REVIEW_PROJECT_CONFIG")
+            else []
+        ),
         *files,
     ]
 
@@ -190,11 +196,8 @@ def _run_review_subprocess(
     env["SPECFACT_MODULES_ROOTS"] = str((REPO_ROOT / "packages").resolve())
     package_src_roots = [path / "src" for path in sorted((REPO_ROOT / "packages").glob("specfact-*"))]
     prefixes = [str(path) for path in package_src_roots if path.is_dir()]
-    previous = env.get("PYTHONPATH", "").strip()
-    if previous:
-        prefixes.extend(entry for entry in previous.split(os.pathsep) if entry)
-    if prefixes:
-        env["PYTHONPATH"] = os.pathsep.join(dict.fromkeys(prefixes))
+    # Subject directories and inherited relative paths must never import controller code.
+    env["PYTHONPATH"] = os.pathsep.join(dict.fromkeys(prefixes))
     if enforcement == "changed":
         env["SPECFACT_CODE_REVIEW_CHANGED_DIFF"] = "cached"
     try:
@@ -547,8 +550,7 @@ def ensure_runtime_available() -> tuple[bool, str | None]:
     try:
         importlib.import_module("specfact_cli.cli")
     except ModuleNotFoundError:
-        root = _repo_root()
-        if ensure_core_dependency(root) != 0:
+        if ensure_core_dependency(REPO_ROOT) != 0:
             return (
                 False,
                 "Could not install local specfact-cli. Run `hatch run dev-deps` or set SPECFACT_CLI_REPO.",

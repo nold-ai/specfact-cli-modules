@@ -34,6 +34,12 @@ static int bounded_path(const char value[SPECFACT_MAX_PATH]) {
            strstr(value, "/../") == NULL && strstr(value, "/./") == NULL;
 }
 
+static int startup_failure(int marker_fd, int phase) {
+    uint32_t marker = specfact_startup_failure_marker((uint32_t)phase, (uint32_t)errno);
+    if (marker) (void)write(marker_fd, &marker, sizeof(marker));
+    return phase;
+}
+
 static int apply_limits(const struct specfact_request *request) {
     struct rlimit limit;
     limit.rlim_cur = limit.rlim_max = request->open_files;
@@ -168,19 +174,19 @@ int main(int argc, char **argv) {
         request.opcode != SPECFACT_LAUNCH || request.plan < 1 || request.plan > SPECFACT_MAX_PLAN ||
         !bounded_path(request.invocation) || !bounded_path(request.project) ||
         !bounded_path(request.output) || !bounded_path(request.temporary)) return 66;
-    if (ptrace(PT_TRACE_ME, 0, NULL, 0) || ptrace(PT_SIGEXC, 0, NULL, 0)) return 67;
-    if (apply_limits(&request)) return 68;
+    if (ptrace(PT_TRACE_ME, 0, NULL, 0) || ptrace(PT_SIGEXC, 0, NULL, 0)) return startup_failure(marker_fd, 67);
+    if (apply_limits(&request)) return startup_failure(marker_fd, 68);
 
     const char *capsule = getenv("SPECFACT_CAPSULE_ROOT");
     const char *target_path = getenv("SPECFACT_FIXED_TARGET");
     const char *tool_path = getenv("SPECFACT_FIXED_TOOL");
     const char *profile_path = getenv("SPECFACT_FIXED_PROFILE");
-    if (!capsule || !target_path || !tool_path || !profile_path) return 69;
+    if (!capsule || !target_path || !tool_path || !profile_path) return startup_failure(marker_fd, 69);
     int profile_fd = open(profile_path, O_RDONLY | O_NOFOLLOW);
     char profile[4096];
     ssize_t profile_size = profile_fd < 0 ? -1 : read(profile_fd, profile, sizeof(profile) - 1);
     if (profile_fd >= 0) close(profile_fd);
-    if (profile_size <= 0 || (size_t)profile_size >= sizeof(profile) - 1) return 69;
+    if (profile_size <= 0 || (size_t)profile_size >= sizeof(profile) - 1) return startup_failure(marker_fd, 69);
     profile[profile_size] = '\0';
     const char *parameters[2 * 24 + 1] = {
         "CAPSULE", capsule, "PROJECT", request.project, "OUTPUT", request.output,
@@ -191,7 +197,7 @@ int main(int argc, char **argv) {
     char ancestors[SPECFACT_PROFILE_ANCESTORS][SPECFACT_MAX_PATH];
     size_t ancestor_count = 0;
     if (append_ancestors(capsule, ancestors, &ancestor_count) ||
-        append_ancestors(request.invocation, ancestors, &ancestor_count)) return 69;
+        append_ancestors(request.invocation, ancestors, &ancestor_count)) return startup_failure(marker_fd, 69);
     for (size_t index = 0; index < ancestor_count; index++) {
         snprintf(ancestor_names[index], sizeof(ancestor_names[index]), "ANCESTOR%zu", index);
         parameters[14 + 2 * index] = ancestor_names[index];
@@ -208,9 +214,9 @@ int main(int argc, char **argv) {
     parameters[48] = NULL;
     void *sandbox_library = dlopen("/usr/lib/libsandbox.dylib", RTLD_NOW | RTLD_LOCAL);
     sandbox_init_type sandbox_init = sandbox_library ? (sandbox_init_type)dlsym(sandbox_library, "sandbox_init_with_parameters") : NULL;
-    if (!sandbox_init) return 70;
+    if (!sandbox_init) return startup_failure(marker_fd, 70);
     char *error = NULL;
-    if (sandbox_init(profile, 0, parameters, &error)) return 70;
+    if (sandbox_init(profile, 0, parameters, &error)) return startup_failure(marker_fd, 70);
     uint32_t marker = SPECFACT_MARKER_READY;
     if (write(marker_fd, &marker, sizeof(marker)) != sizeof(marker)) return 71;
     if (raise(SIGSTOP)) return 72;

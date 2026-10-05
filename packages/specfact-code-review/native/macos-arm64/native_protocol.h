@@ -37,6 +37,22 @@ struct specfact_uv_child_startup {
 };
 #define SPECFACT_MARKER_READY 0x52454144u
 
+/* Only fixed-bootstrap failures may use this bounded diagnostic record.
+ * It is never a ready, ownership or executable-admission marker. */
+static inline uint32_t specfact_startup_failure_marker(uint32_t phase, uint32_t error) {
+    if (phase < 67 || phase > 70 || error > UINT16_MAX) return 0;
+    return 0x53000000u | (phase << 16) | error;
+}
+
+static inline uint32_t specfact_startup_failure_phase(uint32_t marker) {
+    uint32_t phase = (marker >> 16) & 0xffu;
+    return (marker & 0xff000000u) == 0x53000000u && phase >= 67 && phase <= 70 ? phase : 0;
+}
+
+static inline uint32_t specfact_startup_failure_errno(uint32_t marker) {
+    return specfact_startup_failure_phase(marker) ? marker & UINT16_MAX : 0;
+}
+
 enum specfact_opcode { SPECFACT_LAUNCH = 1, SPECFACT_WAIT = 2, SPECFACT_CANCEL = 3 };
 
 struct __attribute__((packed)) specfact_request {

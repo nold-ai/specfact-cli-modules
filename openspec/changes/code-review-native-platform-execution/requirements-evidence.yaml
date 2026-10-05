@@ -342,6 +342,11 @@ requirements:
       kind: config_file
       locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
     verification_cases:
+    - case_id: 460-9-9
+      scenario_id: managed-native-process-boundary
+      method: inspection
+      intent: "Inspect planned acceptance: Bootstrap fails before the trace handshake."
+      observable: "A bounded phase/errno marker rejects startup without satisfying READY, tracing or image admission. Invalid/future phases fail closed, original cleanup remains mandatory, and raw output is not published. Focused executable proof remains separate from full release acceptance."
     - case_id: 460-9-1
       scenario_id: managed-native-process-boundary
       method: inspection
@@ -454,6 +459,11 @@ requirements:
       kind: config_file
       locator: openspec/changes/code-review-native-platform-execution/PROJECT_DRIVEN_PREPARATION_CONTRACT.md
     verification_cases:
+    - case_id: 460-15-3
+      scenario_id: prepare-unfamiliar-projects-from-discovered-or-caller-supplied-setup
+      method: inspection
+      intent: "Inspect planned acceptance: Hosted review selects its declared project environment."
+      observable: "The caller passes its declared Hatch default selection through project-config; ambiguity errors and incomplete-evidence failures remain enforced. Focused tests do not replace hosted capsule acceptance."
     - case_id: 460-12-1
       scenario_id: prepare-unfamiliar-projects-from-discovered-or-caller-supplied-setup
       method: inspection

@@ -153,9 +153,12 @@ jobs:
             review_paths+=("$path")
           done < <(git diff --cached --name-only --diff-filter=ACMR -z)
           test "${#review_paths[@]}" -gt 0
+          PROJECT_CONFIG="$CUSTOMER_ROOT/commit-review-project.json"
+          printf '%s\n' '{"manager":"hatch","environment":"default"}' > "$PROJECT_CONFIG"
           review_exit=0
           SPECFACT_CODE_REVIEW_CAPSULE_CACHE="$CUSTOMER_ROOT/commit-review-cache" \
             SPECFACT_CODE_REVIEW_SUBJECT_ROOT="$REVIEW_ROOT" \
+            SPECFACT_CODE_REVIEW_PROJECT_CONFIG="$PROJECT_CONFIG" \
             SPECFACT_CODE_REVIEW_ENFORCEMENT=changed \
             "$CUSTOMER_ROOT/venv/bin/python" "$GITHUB_WORKSPACE/scripts/pre_commit_code_review.py" "${review_paths[@]}" || review_exit=$?
           if [ "$review_exit" -ne 0 ]; then
