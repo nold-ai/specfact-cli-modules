@@ -706,25 +706,93 @@ def build_native_capsule(
     entitlements_inspector: Callable[[Path], object] = inspect_entitlements,
 ) -> BuildResult:
     """Build immutable candidate files; never mutate or complete the runtime root."""
-    if runtime_root.is_symlink():
-        raise ValueError("runtime root symlink forbidden")
-    root = runtime_root.resolve(strict=True)
-    destination = output_dir.absolute()
-    if destination == root or destination.is_relative_to(root):
-        raise ValueError("output directory must be outside runtime root")
-    if environment_id not in SUPPORTED_ENVIRONMENTS:
+    return _build_native_capsule(
+        CapsuleBuildInput(
+            runtime_root=runtime_root,
+            output_dir=output_dir,
+            closure=closure,
+            environment_id=environment_id,
+            backend=backend,
+            policy=policy,
+            analyzer_versions=analyzer_versions,
+            private_key=private_key,
+            signature_inspector=signature_inspector,
+            entitlements_inspector=entitlements_inspector,
+        )
+    )
+
+
+@dataclass(frozen=True)
+class CapsuleBuildInput:
+    """Explicit maintainer inputs; manifest signing remains optional and separate."""
+
+    runtime_root: Path
+    output_dir: Path
+    closure: Mapping[str, Sequence[str]]
+    environment_id: str
+    backend: str
+    policy: str
+    analyzer_versions: Mapping[str, str]
+    private_key: object | None
+    signature_inspector: Callable[[Path], dict[str, object]] = inspect_native_signature
+    entitlements_inspector: Callable[[Path], object] = inspect_entitlements
+
+
+@dataclass(frozen=True)
+class ArchivePayload:
+    sources: Mapping[str, Path | bytes]
+    file_records: Mapping[str, FileRecord]
+    closure: Mapping[str, list[str]]
+    native_signatures: Mapping[str, dict[str, object]]
+    native_image_count: int
+    archive_size: int
+
+
+def _validate_build_identities(inputs: CapsuleBuildInput) -> None:
+    if inputs.environment_id not in SUPPORTED_ENVIRONMENTS:
         raise ValueError("unsupported Darwin ARM64 environment")
-    if IDENTITY.fullmatch(backend) is None or IDENTITY.fullmatch(policy) is None:
+    if IDENTITY.fullmatch(inputs.backend) is None or IDENTITY.fullmatch(inputs.policy) is None:
         raise ValueError("backend and policy must be bounded identities")
-    if set(analyzer_versions) != ANALYZER_IDS or any(
+    if set(inputs.analyzer_versions) != ANALYZER_IDS or any(
         not isinstance(version, str) or ANALYZER_VERSION.fullmatch(version) is None
-        for version in analyzer_versions.values()
+        for version in inputs.analyzer_versions.values()
     ):
         raise ValueError("native analyzer version map is invalid")
 
+
+def _validated_build_paths(inputs: CapsuleBuildInput) -> tuple[Path, Path]:
+    if inputs.runtime_root.is_symlink():
+        raise ValueError("runtime root symlink forbidden")
+    root = inputs.runtime_root.resolve(strict=True)
+    destination = inputs.output_dir.absolute()
+    if destination == root or destination.is_relative_to(root):
+        raise ValueError("output directory must be outside runtime root")
+    return root, destination
+
+
+def _archive_file_records(sources: Mapping[str, Path | bytes], images: Mapping[str, Path]) -> dict[str, FileRecord]:
+    _limit(len(sources) > MAX_FILES, "file_count", len(sources), MAX_FILES)
+    records: dict[str, FileRecord] = {}
+    for name in sorted(sources):
+        source = sources[name]
+        size, digest = _hash_path(source) if isinstance(source, Path) else (len(source), sha256(source))
+        _limit(size > MAX_FILE_BYTES, "file_bytes", size, MAX_FILE_BYTES)
+        records[name] = {"size": size, "sha256": digest, "mode": 0o500 if name in images else 0o400}
+    total = sum(int(record["size"]) for record in records.values())
+    _limit(total > MAX_UNPACKED_BYTES, "payload_bytes", total, MAX_UNPACKED_BYTES)
+    return records
+
+
+def _archive_size(records: Mapping[str, FileRecord]) -> int:
+    size = sum(512 + ((int(record["size"]) + 511) // 512) * 512 for record in records.values()) + 1024
+    _limit(size > MAX_ARCHIVE_BYTES, "archive_bytes", size, MAX_ARCHIVE_BYTES)
+    return size
+
+
+def _prepare_archive_payload(root: Path, inputs: CapsuleBuildInput) -> ArchivePayload:
     files = _walk_runtime(root)
-    normalized_closure = _validate_closure(closure, files)
-    if "native-signing-v1" in normalized_closure:
+    closure = _validate_closure(inputs.closure, files)
+    if "native-signing-v1" in closure:
         raise ValueError("generated signing component collides with runtime input")
     _limit(len(files) + 1 > MAX_FILES, "file_count", len(files) + 1, MAX_FILES)
     input_bytes = sum(path.stat().st_size for path in files.values())
@@ -734,84 +802,90 @@ def build_native_capsule(
     images, _inventory = _native_images(root, files)
     if not images:
         raise ValueError("native capsule requires at least one Mach-O image")
-    signatures, signing_detail = _signing_metadata(images, signature_inspector, entitlements_inspector)
+    signatures, signing_detail = _signing_metadata(images, inputs.signature_inspector, inputs.entitlements_inspector)
     if any(
         name == "tools/git" or name.startswith(("licenses/managed-git/", "provenance/managed-git/")) for name in files
     ):
-        verify_managed_git_runtime(root, signature_inspector=signature_inspector)
-
+        verify_managed_git_runtime(root, signature_inspector=inputs.signature_inspector)
     metadata_name = "metadata/native-signing.json"
     if metadata_name in files:
         raise ValueError("generated signing metadata path collides with runtime input")
-    normalized_closure["native-signing-v1"] = [metadata_name]
+    closure["native-signing-v1"] = [metadata_name]
     sources: dict[str, Path | bytes] = {**files, metadata_name: signing_detail}
-    modes = {name: 0o500 if name in images else 0o400 for name in sources}
-    _limit(len(sources) > MAX_FILES, "file_count", len(sources), MAX_FILES)
-    file_records: dict[str, FileRecord] = {}
-    for name in sorted(sources):
-        source = sources[name]
-        size, digest = _hash_path(source) if isinstance(source, Path) else (len(source), sha256(source))
-        _limit(size > MAX_FILE_BYTES, "file_bytes", size, MAX_FILE_BYTES)
-        file_records[name] = {"size": size, "sha256": digest, "mode": modes[name]}
-    total = sum(int(record["size"]) for record in file_records.values())
-    _limit(total > MAX_UNPACKED_BYTES, "payload_bytes", total, MAX_UNPACKED_BYTES)
-    expected_archive_size = (
-        sum(512 + ((int(record["size"]) + 511) // 512) * 512 for record in file_records.values()) + 1024
-    )
-    _limit(expected_archive_size > MAX_ARCHIVE_BYTES, "archive_bytes", expected_archive_size, MAX_ARCHIVE_BYTES)
+    records = _archive_file_records(sources, images)
+    return ArchivePayload(sources, records, closure, signatures, len(images), _archive_size(records))
 
+
+def _planned_build_outputs(destination: Path, authenticated: bool) -> tuple[BuildResult, tuple[str, ...]]:
     outputs = BuildResult(
         archive=destination / "capsule.tar",
         manifest=destination / "manifest.json",
-        signature=destination / "manifest.sig" if private_key is not None else None,
+        signature=destination / "manifest.sig" if authenticated else None,
         summary=destination / "summary.json",
     )
-    output_names = ("capsule.tar", "manifest.json", "summary.json")
-    if private_key is not None:
-        output_names += ("manifest.sig",)
+    names = ("capsule.tar", "manifest.json", "summary.json")
+    if authenticated:
+        names += ("manifest.sig",)
     elif (destination / "manifest.sig").exists() or (destination / "manifest.sig").is_symlink():
         raise ValueError("unsigned output contains a stale signature sidecar")
-    with _exclusive_outputs(destination, output_names) as streams:
-        archive_size, archive_digest = _stream_archive(streams["capsule.tar"], sources, file_records)
-        if archive_size != expected_archive_size:
-            raise ValueError("deterministic USTAR size mismatch")
-        ordered_closure = {name: normalized_closure[name] for name in sorted(normalized_closure)}
-        document = {
-            "schema": "specfact-native-capsule-v1",
-            "os": "darwin",
-            "architecture": "arm64",
-            "environment_id": environment_id,
-            "abi": environment_id.rsplit("-", 1)[-1],
-            "backend": backend,
-            "policy": policy,
-            "analyzer_versions": {name: analyzer_versions[name] for name in sorted(analyzer_versions)},
-            "archive": {"size": archive_size, "sha256": archive_digest},
-            "files": file_records,
-            "closure": ordered_closure,
-            "closure_sha256": sha256(_canonical(ordered_closure)),
-            "native_signatures": signatures,
-        }
-        manifest_bytes = _canonical(document)
-        _limit(len(manifest_bytes) > MAX_MANIFEST, "manifest_bytes", len(manifest_bytes), MAX_MANIFEST)
-        signature = _sign(manifest_bytes, private_key) if private_key is not None else None
-        summary = {
-            "archive_sha256": document["archive"]["sha256"],
-            "archive_size": archive_size,
-            "environment_id": environment_id,
-            "file_count": len(sources),
-            "manifest_sha256": sha256(manifest_bytes),
-            "native_image_count": len(images),
-            "production_eligible": False,
-            "publication": "candidate-only",
-            "signing_mode": "adhoc",
-        }
+    return outputs, names
 
-        _write_output(streams["manifest.json"], manifest_bytes)
-        if signature is not None:
-            _write_output(streams["manifest.sig"], signature.encode("ascii"))
-        else:
-            summary["manifest_authenticated"] = False
-        _write_output(streams["summary.json"], _canonical(summary) + b"\n")
+
+def _capsule_document(inputs: CapsuleBuildInput, payload: ArchivePayload, archive: tuple[int, str]) -> dict[str, Any]:
+    size, digest = archive
+    closure = {name: payload.closure[name] for name in sorted(payload.closure)}
+    return {
+        "schema": "specfact-native-capsule-v1",
+        "os": "darwin",
+        "architecture": "arm64",
+        "environment_id": inputs.environment_id,
+        "abi": inputs.environment_id.rsplit("-", 1)[-1],
+        "backend": inputs.backend,
+        "policy": inputs.policy,
+        "analyzer_versions": {name: inputs.analyzer_versions[name] for name in sorted(inputs.analyzer_versions)},
+        "archive": {"size": size, "sha256": digest},
+        "files": payload.file_records,
+        "closure": closure,
+        "closure_sha256": sha256(_canonical(closure)),
+        "native_signatures": payload.native_signatures,
+    }
+
+
+def _write_build_documents(streams: Mapping[str, BinaryIO], inputs: CapsuleBuildInput, payload: ArchivePayload) -> None:
+    archive = _stream_archive(streams["capsule.tar"], payload.sources, payload.file_records)
+    if archive[0] != payload.archive_size:
+        raise ValueError("deterministic USTAR size mismatch")
+    document = _capsule_document(inputs, payload, archive)
+    manifest = _canonical(document)
+    _limit(len(manifest) > MAX_MANIFEST, "manifest_bytes", len(manifest), MAX_MANIFEST)
+    signature = _sign(manifest, inputs.private_key) if inputs.private_key is not None else None
+    summary = {
+        "archive_sha256": archive[1],
+        "archive_size": archive[0],
+        "environment_id": inputs.environment_id,
+        "file_count": len(payload.sources),
+        "manifest_sha256": sha256(manifest),
+        "native_image_count": payload.native_image_count,
+        "production_eligible": False,
+        "publication": "candidate-only",
+        "signing_mode": "adhoc",
+    }
+    _write_output(streams["manifest.json"], manifest)
+    if signature is not None:
+        _write_output(streams["manifest.sig"], signature.encode("ascii"))
+    else:
+        summary["manifest_authenticated"] = False
+    _write_output(streams["summary.json"], _canonical(summary) + b"\n")
+
+
+def _build_native_capsule(inputs: CapsuleBuildInput) -> BuildResult:
+    """Build immutable candidate files; never mutate or complete the runtime root."""
+    root, destination = _validated_build_paths(inputs)
+    _validate_build_identities(inputs)
+    payload = _prepare_archive_payload(root, inputs)
+    outputs, names = _planned_build_outputs(destination, inputs.private_key is not None)
+    with _exclusive_outputs(destination, names) as streams:
+        _write_build_documents(streams, inputs, payload)
     return outputs
 
 

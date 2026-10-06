@@ -2697,3 +2697,41 @@ All seven strict public-key filesystem signatures/version checks against
 origin/dev passed at 18e77026; no signed module payload changed in this follow-up.
 Hosted review/native acceptance remains required; local capsule review uses
 only the human-approved DEFERRED mechanism, never PASS.
+
+
+## 2026-10-06 bounded builder/workflow clean-code remediation
+
+Existing adapter diagnosis at pushed dc8eb069 found nine error findings. The
+maintainer builder's orchestration CC increased from origin/dev's CC28 to CC34,
+and its length from113 to121 lines; workflow tests introduced CC17/CC25/CC20 and
+an eight-parameter fixture. Before-refactor findings are retained privately in
+specfact460-complexity-red.jsonl. This is maintainability refactoring under the
+existing spec; no behavior/schema/limit is changed and no new behavioral test is
+used to mirror implementation.
+
+The builder now delegates bounded validation, file records, archive planning and
+document emission through immutable internal input/payload structures. Its
+existing ten named Python arguments and CLI remain compatible. A fresh controlled
+unsigned fixture matches pre-refactor archive, manifest and summary bytes exactly:
+archive8fc6c287bb1c81acb705482d5ec7a1356b86e4563e516962e82d2b36f06b1112,
+manifestc10f8fff9d9fb9e3158050e765695155c61fae402c6db5ccbb3d997d27a4d93a,
+summary36f6bcba01602736224ba2b49d7ec58258aac69db707a51b1f43f26006c05558.
+These are synthetic fixture identities, never release artifact identities.
+
+Workflow tests now separate trusted fixture setup, job isolation, reviewer scope/
+budgets, all five forbidden host routes, installed argument checks and rejected
+preparation. The same eight deferral cases and every prior assertion are retained.
+Signed registry metadata/checksum and deterministic builder consumer checks are
+separate complete tests. No enforcement, required analyzer, budget or host-control
+check is removed. Focused GREEN183; direct builder types and standard format/
+type/lint (zero errors/warnings, Pylint10), YAML and imports passed. The same bounded
+agent inspected the entire interacting refactor and reports no findings.
+
+Origin/dev extraction proves the two remaining builder errors (GitCC18 and the
+public ten-argument facade), and listed warning sites in existing builder/customer/
+Git tests, predate this request. The facade declaration is unchanged at line695;
+compatibility is retained instead of silently changing maintainer inputs. New
+phase functions and refactored workflow tests have no complexity/length/parameter
+finding. This is not a waiver or PASS for hosted review: all required current-head
+capsule evidence still must execute, and raw legacy findings remain evidence under
+the unchanged changed-line policy. The OpenSpec change and #460 remain incomplete.

@@ -143,6 +143,20 @@
     }
   },
   "base_commit": "b87159c4fbeab3a1282919823035c2109527d385",
+  "clean_code_refactor": {
+    "affected_tests_passed": 183,
+    "before_error_findings": 9,
+    "bounded_agent_review": "no findings",
+    "current_head_capsule_review": "required-not-yet-passed",
+    "introduced_complexity_errors": 0,
+    "production_eligible": false,
+    "public_builder_arguments_unchanged": true,
+    "remaining_origin_dev_builder_errors": [
+      "CC18:_git_identity",
+      "kiss.parameter-count.error:public-build_native_capsule"
+    ],
+    "synthetic_fixture_bytes_unchanged": true
+  },
   "complete_boundary": false,
   "date_europe_berlin": "2026-10-06",
   "draft_pull_request": "https://github.com/nold-ai/specfact-cli-modules/pull/498",

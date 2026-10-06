@@ -645,15 +645,12 @@ def test_customer_gate_always_adds_separate_targeted_regression(tmp_path, monkey
     assert calls == [(tmp_path, tmp_path / "cache")]
 
 
-def test_independent_reviewer_pin_is_installable_signed_published_baseline():
+def _published_reviewer_inputs():
     """An isolated reviewer pin must be installable through the actual registry."""
-    import hashlib
     import json
     import re
-    import tarfile
 
     import yaml
-    from packaging.specifiers import SpecifierSet
 
     root = Path(__file__).parents[2]
     workflow = yaml.load(
@@ -666,8 +663,27 @@ def test_independent_reviewer_pin_is_installable_signed_published_baseline():
     assert version is not None and core is not None, "reviewer identities must be literal released pins"
     registry = json.loads((root / "registry/index.json").read_text())
     entry = next(row for row in registry["modules"] if row["id"] == "nold-ai/specfact-code-review")
-    assert version.group(1) == entry["latest_version"], "pinned reviewer is absent from the published registry"
-    assert SpecifierSet(entry["core_compatibility"]).contains(core.group(1))
+    return root, installation, version.group(1), core.group(1), entry
+
+
+def test_independent_reviewer_pin_is_installable_signed_published_baseline():
+    from packaging.specifiers import SpecifierSet
+
+    _root, installation, version, core, entry = _published_reviewer_inputs()
+    assert version == entry["latest_version"], "pinned reviewer is absent from the published registry"
+    assert SpecifierSet(entry["core_compatibility"]).contains(core)
+    assert "env -i" in installation and "SPECFACT_MODULES_BRANCH=main" in installation
+    assert "SPECFACT_MODULES_ROOTS" not in installation
+    assert "SPECFACT_ALLOW_UNSIGNED" not in installation
+
+
+def test_published_reviewer_archive_matches_registry_checksum_and_signed_metadata():
+    import hashlib
+    import tarfile
+
+    import yaml
+
+    root, _installation, version, _core, entry = _published_reviewer_inputs()
     archive = root / "registry" / entry["download_url"]
     assert hashlib.sha256(archive.read_bytes()).hexdigest() == entry["checksum_sha256"]
     with tarfile.open(archive) as stream:
@@ -675,8 +691,5 @@ def test_independent_reviewer_pin_is_installable_signed_published_baseline():
         payload = stream.extractfile(manifest)
         assert payload is not None
         metadata = yaml.safe_load(payload.read())
-    assert str(metadata["version"]) == version.group(1)
+    assert str(metadata["version"]) == version
     assert metadata["integrity"]["signature"]
-    assert "env -i" in installation and "SPECFACT_MODULES_BRANCH=main" in installation
-    assert "SPECFACT_MODULES_ROOTS" not in installation
-    assert "SPECFACT_ALLOW_UNSIGNED" not in installation

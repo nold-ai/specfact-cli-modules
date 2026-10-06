@@ -86,7 +86,7 @@ def build_case(tmp_path: Path):
 
 
 def test_build_is_deterministic_and_manifest_is_consumer_compatible(build_case, tmp_path: Path) -> None:
-    _root, key, _closure, signing, invoke = build_case
+    _root, _key, _closure, _signing, invoke = build_case
     first = invoke()
     second = invoke(output_dir=tmp_path / "other")
 
@@ -94,6 +94,11 @@ def test_build_is_deterministic_and_manifest_is_consumer_compatible(build_case, 
     assert first.manifest.read_bytes() == second.manifest.read_bytes()
     assert first.signature is not None and second.signature is not None
     assert first.signature.read_bytes() == second.signature.read_bytes()
+
+
+def test_builder_manifest_and_signing_metadata_match_serialized_archive(build_case) -> None:
+    _root, _key, _closure, signing, invoke = build_case
+    first = invoke()
     document = json.loads(first.manifest.read_bytes())
     expected_archive_size = (
         sum(512 + ((record["size"] + 511) // 512) * 512 for record in document["files"].values()) + 1024
@@ -128,6 +133,11 @@ def test_build_is_deterministic_and_manifest_is_consumer_compatible(build_case, 
         "signing_mode": "adhoc",
     }
 
+
+def test_builder_signature_and_manifest_roundtrip_through_native_consumer(build_case, tmp_path: Path) -> None:
+    _root, key, _closure, signing, invoke = build_case
+    first = invoke()
+    assert first.signature is not None
     public_key = key.public_key().public_bytes(
         serialization.Encoding.PEM, serialization.PublicFormat.SubjectPublicKeyInfo
     )

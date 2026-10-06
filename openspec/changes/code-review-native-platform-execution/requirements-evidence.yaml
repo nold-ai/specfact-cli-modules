@@ -513,7 +513,7 @@ requirements:
       scenario_id: prepare-unfamiliar-projects-from-discovered-or-caller-supplied-setup
       method: test
       intent: "Independent review installs an available published baseline."
-      observable: "The workflow's literal signed marketplace reviewer pin exists in the published registry, admits its pinned core and has the recorded signed artifact. The isolated job retains no candidate module/unsigned overrides. Hosted installation/review is required separately."
+      observable: "The literal reviewer-pin test validates the published version and core; test_published_reviewer_archive_matches_registry_checksum_and_signed_metadata separately verifies the exact registry archive checksum and signed metadata. The isolated job retains no candidate module/unsigned overrides. Hosted installation/review is required separately."
     - case_id: 460-15-7
       scenario_id: prepare-unfamiliar-projects-from-discovered-or-caller-supplied-setup
       method: inspection

@@ -19,20 +19,7 @@ def _git(root: Path, *args: str) -> str:
     return subprocess.check_output(["git", "-C", str(root), *args], text=True).strip()
 
 
-@pytest.mark.parametrize("gate_exit", [0, 7])
-@pytest.mark.parametrize("advanced_dev", [False, True])
-def test_deferred_gate_reviews_exact_staged_tree_and_propagates_failure(
-    tmp_path: Path, gate_exit: int, advanced_dev: bool
-) -> None:
-    workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())
-    steps = workflow["jobs"]["customer"]["steps"]
-    step = next((item for item in steps if item.get("name") == STEP_NAME), None)
-    assert step is not None, "No blocking candidate commit review runs in hosted Linux CI"
-    assert step["if"] == "github.event_name == 'pull_request' && matrix.python == '3.12'"
-    assert not step.get("continue-on-error", False)
-    assert steps.index(step) > next(
-        i for i, item in enumerate(steps) if item.get("name", "").startswith("Allow user namespaces")
-    )
+def _deferred_review_repository(tmp_path: Path, advanced_dev: bool):
     repository = tmp_path / "repository"
     repository.mkdir()
     _git(repository, "init", "-q")
@@ -89,6 +76,24 @@ def test_deferred_gate_reviews_exact_staged_tree_and_propagates_failure(
         _git(repository, "-c", "core.hooksPath=/dev/null", "commit", "-qm", "fixture advanced dev")
         base = _git(repository, "rev-parse", "HEAD")
         _git(repository, "checkout", "--detach", head)
+    return repository, base, head
+
+
+@pytest.mark.parametrize("gate_exit", [0, 7])
+@pytest.mark.parametrize("advanced_dev", [False, True])
+def test_deferred_gate_reviews_exact_staged_tree_and_propagates_failure(
+    tmp_path: Path, gate_exit: int, advanced_dev: bool
+) -> None:
+    workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())
+    steps = workflow["jobs"]["customer"]["steps"]
+    step = next((item for item in steps if item.get("name") == STEP_NAME), None)
+    assert step is not None, "No blocking candidate commit review runs in hosted Linux CI"
+    assert step["if"] == "github.event_name == 'pull_request' && matrix.python == '3.12'"
+    assert not step.get("continue-on-error", False)
+    assert steps.index(step) > next(
+        i for i, item in enumerate(steps) if item.get("name", "").startswith("Allow user namespaces")
+    )
+    repository, base, head = _deferred_review_repository(tmp_path, advanced_dev)
     customer = tmp_path / "customer"
     (customer / "cache").mkdir(parents=True)
     (customer / "venv/bin").mkdir(parents=True)
@@ -115,29 +120,8 @@ def test_deferred_gate_reviews_exact_staged_tree_and_propagates_failure(
     assert not _git(repository, "status", "--porcelain")
 
 
-@pytest.mark.parametrize(
-    "platform,ci,deferral,bundle,advanced_dev,independent_review,expected",
-    [
-        ("Darwin", "", "github-linux", "specfact-code-review", False, True, 0),
-        ("Darwin", "", "github-linux", "specfact-code-review", False, False, 1),
-        ("Darwin", "", "github-linux", "specfact-code-review", False, "unstaged_restore", 1),
-        ("Darwin", "true", "github-linux", "specfact-code-review", False, True, 1),
-        ("Linux", "", "github-linux", "specfact-code-review", False, True, 1),
-        ("Darwin", "", "invalid", "specfact-code-review", False, True, 1),
-        ("Darwin", "", "github-linux", "specfact-project", False, True, 1),
-        ("Darwin", "", "github-linux", "specfact-project", True, True, 1),
-    ],
-)
-def test_narrow_local_deferral_retains_block2_and_cannot_run_in_ci(
-    tmp_path: Path,
-    platform: str,
-    ci: str,
-    deferral: str,
-    bundle: str,
-    advanced_dev: bool,
-    independent_review: bool | str,
-    expected: int,
-) -> None:
+def _deferral_worktree(tmp_path: Path, scenario):
+    _platform, _ci, _deferral, bundle, advanced_dev, independent_review, _expected = scenario
     repository = tmp_path / "repository"
     repository.mkdir()
     _git(repository, "init", "-q")
@@ -182,6 +166,25 @@ def test_narrow_local_deferral_retains_block2_and_cannot_run_in_ci(
     _git(worktree, "add", ".")
     if independent_review == "unstaged_restore":
         (worktree / ".github/workflows/capsule-customer-execution.yml").write_text(workflow_source)
+    return worktree
+
+
+@pytest.mark.parametrize(
+    "scenario",
+    [
+        ("Darwin", "", "github-linux", "specfact-code-review", False, True, 0),
+        ("Darwin", "", "github-linux", "specfact-code-review", False, False, 1),
+        ("Darwin", "", "github-linux", "specfact-code-review", False, "unstaged_restore", 1),
+        ("Darwin", "true", "github-linux", "specfact-code-review", False, True, 1),
+        ("Linux", "", "github-linux", "specfact-code-review", False, True, 1),
+        ("Darwin", "", "invalid", "specfact-code-review", False, True, 1),
+        ("Darwin", "", "github-linux", "specfact-project", False, True, 1),
+        ("Darwin", "", "github-linux", "specfact-project", True, True, 1),
+    ],
+)
+def test_narrow_local_deferral_retains_block2_and_cannot_run_in_ci(tmp_path: Path, scenario) -> None:
+    platform, ci, deferral, _bundle, _advanced_dev, _independent_review, expected = scenario
+    worktree = _deferral_worktree(tmp_path, scenario)
     calls = tmp_path / "calls"
     script = (REPO_ROOT / "scripts/pre-commit-quality-checks.sh").read_text().rsplit('main "$@"', 1)[0]
     recipe = (
@@ -238,72 +241,61 @@ def test_hosted_preparation_has_separate_bound_and_cannot_bypass_review() -> Non
     assert "continue-on-error" not in step
 
 
-def test_independent_reviewer_runs_in_fresh_job_without_candidate_host_code() -> None:
+def _independent_review_job():
     workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())
-    independent = workflow["jobs"].get("independent-review")
-    assert independent is not None, "Installed reviewer must not share a writable venv/HOME with candidate host code"
+    return workflow["jobs"].get("independent-review")
+
+
+def test_independent_reviewer_runs_in_fresh_job_without_candidate_host_code() -> None:
+    independent = _independent_review_job()
+    assert independent is not None, "Installed reviewer must not share writable venv/HOME with candidate host code"
     assert independent["runs-on"] == "ubuntu-24.04"
     assert independent["if"] == "github.event_name == 'pull_request'"
     assert not independent.get("needs"), "Candidate execution cannot suppress the independent review job"
-    steps = independent["steps"]
-    recipe = "\n".join(str(step.get("run", "")) for step in steps)
+    recipe = "\n".join(str(step.get("run", "")) for step in independent["steps"])
     assert "specfact-cli==0.55.4" in recipe
     assert "--version 0.51.0" in recipe
     assert "--source marketplace" in recipe
     assert "env -i" in recipe
-    assert "pre_commit_code_review.py" not in recipe
-    assert "link_dev_module.py" not in recipe
-    assert "SPECFACT_MODULES_ROOTS" not in recipe
-    assert "SPECFACT_ALLOW_UNSIGNED" not in recipe
-    assert "$GITHUB_WORKSPACE/scripts" not in recipe
+
+
+@pytest.mark.parametrize(
+    "forbidden",
+    [
+        "pre_commit_code_review.py",
+        "link_dev_module.py",
+        "SPECFACT_MODULES_ROOTS",
+        "SPECFACT_ALLOW_UNSIGNED",
+        "$GITHUB_WORKSPACE/scripts",
+    ],
+)
+def test_independent_reviewer_excludes_each_candidate_host_route(forbidden: str) -> None:
+    independent = _independent_review_job()
+    recipe = "\n".join(str(step.get("run", "")) for step in independent["steps"])
+    assert forbidden not in recipe
+
+
+def test_independent_reviewer_preserves_scope_budgets_and_preload_order() -> None:
+    independent = _independent_review_job()
+    recipe = "\n".join(str(step.get("run", "")) for step in independent["steps"])
     assert "timeout=300" in recipe and "timeout=1800" in recipe
     assert "--scope index --enforcement changed --bug-hunt" in recipe
     assert "discover_snapshot" in recipe and "prepare_runtime" in recipe
-    assert "runtime prepare --project-config" not in recipe, (
-        "Mutable worktree prep cannot prewarm immutable index identities"
-    )
+    assert "runtime prepare --project-config" not in recipe, "Mutable worktree prep cannot prewarm index identities"
     assert 'CommandRegistry.get_module_typer("code")' in recipe
     assert recipe.index('CommandRegistry.get_module_typer("code")') < recipe.index("os.chdir(sys.argv[1])")
-    for step in steps:
+
+
+def test_independent_reviewer_cannot_continue_after_failure_or_retain_credentials() -> None:
+    for step in _independent_review_job()["steps"]:
         assert not step.get("continue-on-error", False)
         if "checkout@" in step.get("uses", ""):
             assert step["with"]["persist-credentials"] is False
 
 
-@pytest.mark.parametrize(
-    "review_exit,preparation_status,fixture_reason",
-    [
-        (0, "PASS", "policy_parse_failure"),
-        (2, "PASS", "policy_parse_failure"),
-        (7, "PASS", "policy_parse_failure"),
-        (0, "UNKNOWN", "policy_parse_failure"),
-        (0, "UNKNOWN", "private/path\nsecret"),
-    ],
-)
-def test_isolated_reviewer_preloads_trusted_code_and_never_accepts_incomplete_preparation(
-    tmp_path: Path, review_exit: int, preparation_status: str, fixture_reason: str
-) -> None:
-    import json
-    import venv
-
-    workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())
-    job = workflow["jobs"]["independent-review"]
-    step = next(
-        item
-        for item in job["steps"]
-        if item.get("name") == "Prepare and review through the authenticated installed controller"
-    )
-    trusted = tmp_path / "trusted"
-    for name in ("home", "tmp", "subject"):
-        (trusted / name).mkdir(parents=True)
-    venv.create(trusted / "venv", with_pip=False)
-    interpreter = trusted / "venv/bin/python"
-    site = Path(
-        subprocess.check_output(
-            [str(interpreter), "-I", "-c", "import sysconfig;print(sysconfig.get_path('purelib'))"], text=True
-        ).strip()
-    )
-    modules = {
+def _isolated_reviewer_modules(review_case):
+    review_exit, preparation_status, fixture_reason = review_case
+    return {
         "specfact_cli/__init__.py": "",
         "specfact_cli/cli.py": (
             "import os,json\nfrom pathlib import Path\n"
@@ -355,6 +347,22 @@ def test_isolated_reviewer_preloads_trusted_code_and_never_accepts_incomplete_pr
             "def cleanup_scope_resolution(resolution): pass\n"
         ),
     }
+
+
+def _create_isolated_reviewer(tmp_path: Path, review_case):
+    trusted = tmp_path / "trusted"
+    for name in ("home", "tmp", "subject"):
+        (trusted / name).mkdir(parents=True)
+    import venv
+
+    venv.create(trusted / "venv", with_pip=False)
+    interpreter = trusted / "venv/bin/python"
+    site = Path(
+        subprocess.check_output(
+            [str(interpreter), "-I", "-c", "import sysconfig;print(sysconfig.get_path('purelib'))"], text=True
+        ).strip()
+    )
+    modules = _isolated_reviewer_modules(review_case)
     for name, content in modules.items():
         path = site / name
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -371,23 +379,59 @@ def test_isolated_reviewer_preloads_trusted_code_and_never_accepts_incomplete_pr
         "SPECFACT_MODULES_ROOTS": str(trusted / "subject"),
         "SPECFACT_ALLOW_UNSIGNED": "1",
     }
+    return trusted, environment
+
+
+@pytest.mark.parametrize(
+    "review_exit,preparation_status,fixture_reason",
+    [
+        (0, "PASS", "policy_parse_failure"),
+        (2, "PASS", "policy_parse_failure"),
+        (7, "PASS", "policy_parse_failure"),
+        (0, "UNKNOWN", "policy_parse_failure"),
+        (0, "UNKNOWN", "private/path\nsecret"),
+    ],
+)
+def test_isolated_reviewer_preloads_trusted_code_and_never_accepts_incomplete_preparation(
+    tmp_path: Path, review_exit: int, preparation_status: str, fixture_reason: str
+) -> None:
+    workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())
+    job = workflow["jobs"]["independent-review"]
+    step = next(
+        item
+        for item in job["steps"]
+        if item.get("name") == "Prepare and review through the authenticated installed controller"
+    )
+    trusted, environment = _create_isolated_reviewer(tmp_path, (review_exit, preparation_status, fixture_reason))
     result = subprocess.run(["bash", "-c", step["run"]], env=environment, text=True, capture_output=True, check=False)
     expected = review_exit if preparation_status == "PASS" else 1
     assert result.returncode == expected, result.stdout + result.stderr
     assert (trusted / "preloaded").exists()
     if preparation_status != "PASS":
-        assert not (trusted / "argv.json").exists()
-        assert not (trusted / "prepared").exists()
-        diagnostic = json.loads((trusted / "status.public.json").read_text())
-        assert diagnostic == {
-            "status": "INCOMPLETE",
-            "phase": "trusted_index_preparation",
-            "diagnostic": fixture_reason if fixture_reason == "policy_parse_failure" else "unstructured_reason",
-        }
-        assert diagnostic["diagnostic"] in result.stdout
-        if fixture_reason != "policy_parse_failure":
-            assert fixture_reason not in result.stdout
-        return
+        _assert_incomplete_preparation(trusted, result, fixture_reason)
+    else:
+        _assert_installed_review_arguments(trusted)
+
+
+def _assert_incomplete_preparation(trusted: Path, result, fixture_reason: str):
+    import json
+
+    assert not (trusted / "argv.json").exists()
+    assert not (trusted / "prepared").exists()
+    diagnostic = json.loads((trusted / "status.public.json").read_text())
+    assert diagnostic == {
+        "status": "INCOMPLETE",
+        "phase": "trusted_index_preparation",
+        "diagnostic": fixture_reason if fixture_reason == "policy_parse_failure" else "unstructured_reason",
+    }
+    assert diagnostic["diagnostic"] in result.stdout
+    if fixture_reason != "policy_parse_failure":
+        assert fixture_reason not in result.stdout
+
+
+def _assert_installed_review_arguments(trusted: Path):
+    import json
+
     assert (trusted / "prepared").read_text().splitlines() == ["base", "head"]
     args = json.loads((trusted / "argv.json").read_text())
     assert args[:3] == ["code", "review", "run"]
