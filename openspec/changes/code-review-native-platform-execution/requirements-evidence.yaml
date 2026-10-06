@@ -721,6 +721,11 @@ requirements:
       kind: config_file
       locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
     verification_cases:
+    - case_id: 460-19-2
+      scenario_id: fixture-owned-portable-test-observations
+      method: test
+      intent: Keep the immutable minimum-core smoke independent of developer pytest workers.
+      observable: A plugins-disabled pytest invocation reproduces the original unrecognized-worker-options exit4; the original serial reporting/import option override passes12workflow tests without plugin autoload. The137customer/deferred-review/workflow cases pass. The exact minimum-core test, pinned tag/commit/tree, dependency list and signed-capsule smoke remain unchanged; fresh three-ABI CI is required.
     - case_id: 460-19-1
       scenario_id: fixture-owned-portable-test-observations
       method: test

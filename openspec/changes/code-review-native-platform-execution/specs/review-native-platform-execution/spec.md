@@ -1031,3 +1031,10 @@ coverage and failure-evidence assertions.
 - **WHEN** this repository's pytest policy declares two workers and no worker restart
 - **THEN** all selected tests execute with the same collection, findings, failure policy and combined reviewer coverage evidence
 - **AND** worker loss remains incomplete/error, supported native proof CLI calls keep their existing deadlines and repetitions, and the capsule continues honoring each project's declared pytest policy
+
+
+#### Scenario: Minimum-core smoke remains independent of developer pytest plugins
+
+- **WHEN** the immutable minimum-core compatibility environment contains pytest and its existing minimal dependencies without xdist
+- **THEN** its explicit single-test smoke command uses the original serial reporting/import options and runs every existing assertion
+- **AND** repository reviewer tests retain the declared two-worker policy, immutable core identity and signed-capsule smoke requirements remain unchanged

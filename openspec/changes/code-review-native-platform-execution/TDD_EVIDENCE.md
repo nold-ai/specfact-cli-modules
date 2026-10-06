@@ -3939,3 +3939,30 @@ An intermediate evidence append accidentally overwrote this file with TOML;
 pre-push diff inspection caught it. This correction restores the entire previous
 Git history verbatim and appends only this section, retaining all prior failures
 and acceptance limits. No overwritten evidence is pushed or treated as authority.
+
+
+## Minimal core smoke isolation — 7 October 2026 (Europe/Berlin)
+
+At61a859ccthe three minimum-core cells fail before their smoke assertion with
+pytest usage exit4: the deliberately lean pinned environment lacks xdist and
+cannot parse repository-default worker flags. Completed Python3.12job
+112556888034log is `/private/tmp/specfact460-61a859cc-mincore312.private.log`.
+This is a test-harness plugin dependency error, not evidence of capsule/core
+incompatibility. It is retained as a failure.
+
+The specification precedes a plugins-disabled invocation with the old options;
+it reproduces the same exit4 (`/private/tmp/specfact460-mincore-plugin-independence-red.log`).
+The isolated single-test smoke now explicitly retains its original serial
+`-ra -v --import-mode=importlib` reporting/import configuration, with the same
+exact test selector and assertions. Immutable tag, commit/tree checks, existing
+minimal dependency list and signed-capsule smoke remain. The repository reviewer
+continues honoring its declared two-worker policy; no analyzer/test/deadline is
+removed or loosened.
+
+A plugins-disabled invocation with the corrected options passes12existing
+workflow cases in0.02s; the combined customer/deferred-review/workflow suite
+passes137tests in4.21s. Logs are
+`/private/tmp/specfact460-mincore-plugin-independence-{green,focused}.log`.
+Actionlint, strict OpenSpec and diff whitespace pass. This limited recipe fix
+requires fresh three-ABI minimum-core CI; existing full/SMART source evidence
+is unchanged. Current Linux reviewer jobs are still running at61a859cc.
