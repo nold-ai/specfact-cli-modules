@@ -115,7 +115,8 @@ def test_pytest_success_requires_coverage_evidence() -> None:
         validate_observation(observation, 0)
 
 
-def test_failed_pytest_startup_cannot_reuse_previous_observation(tmp_path, monkeypatch) -> None:
+@pytest.mark.parametrize("encoded", ["{}", '{"selectors": ["tests"]}'])
+def test_failed_pytest_startup_cannot_reuse_previous_observation(tmp_path, monkeypatch, encoded) -> None:
 
     observation = tmp_path / "pytest-observation.json"
     observation.write_text(
@@ -135,7 +136,7 @@ def test_failed_pytest_startup_cannot_reuse_previous_observation(tmp_path, monke
     )
     monkeypatch.setattr(portable_worker, "target_command", lambda *args: ["child"])
     monkeypatch.setattr(portable_worker.subprocess, "run", lambda *args, **kwargs: SimpleNamespace(returncode=0))
-    assert portable_worker.run_portable_pytest([tmp_path / "app.py"], ("portable-pytest-v2", "{}"))
+    assert portable_worker.run_portable_pytest([tmp_path / "app.py"], ("portable-pytest-v2", encoded))
     assert not observation.exists()
 
 
@@ -479,3 +480,20 @@ def test_portable_pytest_command_transmits_verified_module_names(monkeypatch):
     assert request["coverage_modules"] == ["standalone"]
     assert request["coverage_directories"] == []
     assert request["selectors"] == ["tests"]
+
+
+@pytest.mark.parametrize(
+    "encoded", ["", "[]", "null", "{}", '{"selectors": 0}', '{"selectors": [true]}', '{"selectors": [""]}']
+)
+def test_invalid_pytest_request_does_not_scan_ownership_or_launch(monkeypatch, encoded):
+    calls = []
+
+    def ownership(*_args, **_kwargs):
+        calls.append("ownership")
+        return CoverageBridge((), (), {}, {})
+
+    monkeypatch.setattr(portable_worker, "plan_installed_coverage", ownership)
+    monkeypatch.setattr(portable_worker, "target_command", lambda *_args: calls.append("launch"))
+    with pytest.raises(ValueError, match="project_pytest_request_invalid"):
+        _portable_pytest_command([], encoded)
+    assert calls == []

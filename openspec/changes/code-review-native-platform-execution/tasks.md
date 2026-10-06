@@ -196,3 +196,8 @@ Runbook and exact candidate limitations: [NATIVE_RELEASE.md](NATIVE_RELEASE.md).
 - [x] Diagnose repeated hosted review timeout without weakening its deadline; implement candidate-only bounded private profiling and public static-symbol summary.
 - [ ] Obtain hosted profile evidence and fix the measured bottleneck; require both exact-head Linux reviews and quality gates to pass.
 - [x] Correct observed native artifact mode loss and cp311 bootstrap-only setuptools before unchanged strict input admission; retain fresh hosted acceptance as pending.
+
+- [x] Obtain bounded hosted leaf samples and reproduce unnecessary ownership I/O for malformed pytest requests and empty attribution; preserve stale-observation rejection and valid mapping checks.
+- [ ] Verify fresh CI signing and both unchanged-budget reviewers after the ownership-I/O correction.
+
+- [x] Reproduce38synthetic observation cases reading host installed metadata; isolate their fixture ownership with permanent guards while retaining actual discovery and installed-attribution tests.

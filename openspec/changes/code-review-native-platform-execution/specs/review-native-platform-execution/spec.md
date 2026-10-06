@@ -94,6 +94,11 @@ The macOS backend SHALL preserve the exact released baseline's scope, findings, 
 - **WHEN** all required analyzer members execute
 - **THEN** introduced, fixed and unchanged findings and authoritative status/exit results agree; skipped, empty or UNKNOWN required evidence cannot pass acceptance
 
+#### Scenario: Invalid pytest requests are rejected before ownership I/O
+- **WHEN** the portable pytest adapter receives malformed JSON, a non-object request or missing/invalid selector strings
+- **THEN** it SHALL reject the request before scanning installed distribution RECORDs or constructing a target command; stale owned observations SHALL be cleared before any preparation failure
+- **AND** requests with no Python attribution inputs SHALL return an empty correspondence without scanning ownership metadata; valid nonempty selector requests SHALL retain the same complete ownership, byte identity, coverage mapping and target validation; analyzer budgets and required evidence SHALL remain unchanged.
+
 #### Scenario: Hosted preparation preserves immutable inputs and exact ABI locks
 - **WHEN** hosted artifact transport resets managed tool file permissions or CPython 3.11 venv creation adds bootstrap setuptools
 - **THEN** preparation restores read-only managed tool inventories and only their declared executable images before unchanged provenance validation
@@ -993,3 +998,15 @@ and recorded; system protections and quarantine SHALL remain enabled.
 - **GIVEN** a clean independent supported ARM64 environment and the signed module installed through the ordinary route
 - **WHEN** review runs on a dependency-bearing project cold and then offline
 - **THEN** the packaged catalog and standard anonymous GHCR client acquire and verify the exact final archive, all ten required analyzers execute, actual tests/plugins/coverage/native extensions are observed, and verified caches are reused without a local artifact override, development link, unsigned override, security disablement or customer signing
+
+### Requirement: Fixture-owned portable test observations
+
+Synthetic observation regression tests SHALL use fixture-owned installed metadata
+and guard against host distribution scans while preserving actual discovery,
+coverage and failure-evidence assertions.
+
+#### Scenario: Synthetic portable observations are independent of host installations
+
+- **WHEN** regression fixtures inject synthetic pytest observations and mock target execution
+- **THEN** their installed ownership context is fixture-owned, guarded against host distribution scans, and all coverage, phase-failure and retained-execution assertions still run
+- **AND** dedicated installed-ownership and actual native discovery/observer tests retain their real execution and identity checks

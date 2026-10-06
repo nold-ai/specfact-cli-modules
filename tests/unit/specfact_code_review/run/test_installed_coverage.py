@@ -689,3 +689,14 @@ def test_single_module_changed_after_execution_cannot_receive_credit(installed_s
     attributed, diagnostics = _normalize(project, bridge, raw)
     assert diagnostics[str(project.source)] == "source_identity_changed_after_execution"
     assert str(project.source) not in attributed["files"]
+
+
+@pytest.mark.parametrize("relative", [None, "README.md"])
+def test_empty_python_attribution_does_not_read_installed_metadata(tmp_path, monkeypatch, relative):
+    def unexpected_read(*_args):
+        pytest.fail("empty attribution scanned ownership metadata")
+
+    monkeypatch.setattr(installed_coverage, "_distribution_context", unexpected_read)
+    files = [] if relative is None else [tmp_path / relative]
+    bridge = installed_coverage.plan_installed_coverage(files, snapshot=tmp_path, site_packages=tmp_path / "site")
+    assert bridge == installed_coverage.CoverageBridge((), (), {}, {})

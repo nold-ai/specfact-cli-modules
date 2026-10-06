@@ -9,11 +9,19 @@ from types import SimpleNamespace
 
 import pytest
 
-from specfact_code_review.run import portable_worker, target_pytest
+from specfact_code_review.run import installed_coverage, portable_worker, target_pytest
 from specfact_code_review.run.portable_worker import select_test_paths, validate_observation
 from specfact_code_review.run.runner import _capsule_member_response
 from specfact_code_review.run.runtime_discovery import discover_project
 from specfact_code_review.run.runtime_models import ProjectRuntimeError
+
+
+@pytest.fixture(autouse=True)
+def reject_host_ownership_scan(monkeypatch):
+    def reject(*_args, **_kwargs):
+        pytest.fail("synthetic observations must not scan the host ownership metadata")
+
+    monkeypatch.setattr(installed_coverage, "_distribution_context", reject)
 
 
 OBSERVE_DISCOVERY = """
@@ -148,6 +156,11 @@ def _parse_recorded_observation(tmp_path: Path, observation: dict, monkeypatch) 
         "Path",
         lambda value: output if value == "/opt/specfact/tmp/pytest-observation.json" else Path(value),
     )
+    monkeypatch.setattr(
+        portable_worker,
+        "plan_installed_coverage",
+        lambda *_args, **_kwargs: installed_coverage.CoverageBridge((), (), {}, {}),
+    )
     monkeypatch.setattr(portable_worker, "target_command", lambda *_args: ["recorded-worker"])
 
     def recorded_worker(*_args, **_kwargs):
@@ -155,7 +168,9 @@ def _parse_recorded_observation(tmp_path: Path, observation: dict, monkeypatch) 
         return SimpleNamespace(returncode=observation["exit_code"])
 
     monkeypatch.setattr(portable_worker.subprocess, "run", recorded_worker)
-    return portable_worker.run_portable_pytest([tmp_path / "test_case.py"], ("portable-pytest-v2", "{}"))
+    return portable_worker.run_portable_pytest(
+        [tmp_path / "test_case.py"], ("portable-pytest-v2", '{"selectors": ["test_case.py"]}')
+    )
 
 
 def _assert_incomplete_setup(response: dict, findings: list) -> None:

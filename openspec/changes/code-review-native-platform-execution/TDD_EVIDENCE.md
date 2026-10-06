@@ -3727,3 +3727,101 @@ its mandatory macOS parser regression, corrected by the declared prerequisite.
 Both logs stay at `/private/tmp/specfact460-selected-coverage{,-green}.private.log`.
 Local Python3.14 timing cannot establish hosted Python3.12/sandbox equivalence.
 The exact hosted bottleneck remains unknown until useful leaf evidence arrives.
+
+
+## Hosted ownership-I/O correction — 7 October 2026 (Europe/Berlin)
+
+At c65b8a5e, independent job112532774667 and candidate job112532774779
+again fail the unchanged review deadline. Candidate replay yields53,055 sampled
+thread stacks. Its deepest-public entries include `_record_row`954 samples,
+`_execute_crosshair`1,192, and the controller subprocess waits. These counts
+span processes/threads, can overlap, and are not seconds or a causal attribution
+to CrossHair. Public summary: `/private/tmp/specfact460-c65b8a5e-profile.public.json`.
+Raw runner stacks remain private and are not acceptance authority.
+
+Concrete inspection finds installed ownership scanning before invalid request
+decoding and even when there are no Python attribution inputs. The specification
+precedes guarded regression tests: seven malformed/nonobject/invalid-selector
+requests must reject without RECORD I/O or target launch; empty/non-Python inputs
+must return the identical empty bridge without distribution inspection. RED
+logs are `/private/tmp/specfact460-pytest-request-io-red.log` and
+`/private/tmp/specfact460-empty-attribution-io-red.log`. Both guards fail on the
+previous implementation. The first correction also exposes the existing stale
+observation regression: preparation failures must clear the owned observation
+before preparing a command, not only before launch. Both malformed preparation
+and valid-request startup failure now retain that assertion.
+
+The corrected focused suite passes183tests in7.06s; explicit typing reports
+zero errors/warnings and direct AST/AI-bloat/ordinary Radon reports no findings.
+Logs: `/private/tmp/specfact460-pytest-request-io-{green,lint}.log` and
+`/private/tmp/specfact460-pytest-request-io-clean-code.json`. Valid nonempty
+requests retain full ownership, byte identity and target coverage checks. No
+analyzer, deadline or independent-review authority changes. Hosted contribution
+to the timeout remains a hypothesis until both fresh reviewers pass.
+
+The pending module version0.51.1 remains above target dev0.51.0; checksum
+refresh uses `--changed-only --base-ref origin/dev --allow-unsigned` with local
+private-key variables unset. This removes the stale signature and passes the
+feature-branch checksum/version gate for all seven modules. It is not signed
+release acceptance: existing same-repo PR CI must sign the fresh payload before
+strict public-key verification and a subsequent exact-head review run. No
+registry or publisher promotion occurs. Full/SMART final results follow.
+
+
+The initial full and SMART runs each expose27old synthetic fixtures passing
+`{}` into the now-validated request, yielding5,194passes/75skips and failures
+before their intended coverage/non-pass assertions. Their original logs remain
+`/private/tmp/specfact460-pytest-request-io-{full,smart}.log`; these are failures,
+not passing evidence. The evidence fixtures now supply `selectors:["."]` and
+the discovery fixture its actual `test_case.py` selector. Every observation,
+coverage, malformed-root and non-pass assertion is preserved. Final reruns use
+separate `-v2-` logs below.
+
+
+The corrected combined focused suite passes244tests in16.35s. The long native
+usage-error evidence test is then split into a subprocess setup helper and the
+original assertions, preserving actual exit4/configuration diagnostics and
+retained target execution. Its61fixture/discovery tests pass after extraction;
+direct AST/AI-bloat/ordinary Radon for all six modified Python files reports
+zero findings (`/private/tmp/specfact460-pytest-request-io-v2-clean-code.json`).
+Full/SMART reruns collect the same5,296tests before this fixture-only extraction;
+the separate rerun covers its final bytes.
+
+Native run37540557846 now passes managed tools and all three exact ABI archive
+builds, establishing correction of the previous immutable-Git/setuptools input
+failures. Nine exact-byte execution cells are running, not yet accepted.
+
+
+Further inspection identifies fixture-owned observations whose mocked target
+launch still scans the real installed runtime metadata. Autouse distribution
+guards fail38of61evidence/discovery cases on the prior fixture setup
+(`/private/tmp/specfact460-synthetic-ownership-red.log`), proving the extra I/O.
+Synthetic playback now supplies an explicit empty ownership bridge, matching
+its preexisting installation-free local context; every coverage/non-pass
+assertion and actual native subprocess discovery remains. The guards remain
+active so future fixtures cannot silently read the capsule's installed RECORDs.
+Dedicated installed-coverage/portable-worker/target-coverage tests retain real
+planner and attribution checks. This concrete fixture leak fits the hosted
+RECORD samples but its elapsed contribution still requires hosted confirmation.
+
+
+Before final fixture ownership isolation, full and SMART each pass5,221tests,
+75explicit skips,95subtests and five existing warnings in265.53s/264.69s.
+Final guarded fixture/ownership suite passes244tests in15.13s, lint/typing
+passes and direct clean-code findings are empty. Final full/SMART with permanent
+guards are running at `/private/tmp/specfact460-synthetic-ownership-{full,smart}.log`.
+
+
+Final guarded full and SMART each pass5,221tests,75explicit skips,95subtests
+and five existing warnings in259.05s/259.11s. Their `synthetic-ownership` logs
+are final-source evidence; final lint/typing, direct clean-code, feature checksum
+and version gate,28contracts, docs/YAML/import boundaries, staged requirements
+and strict OpenSpec pass. Normal implementation hooks ran with the owner-approved
+local ARM64 capsule review DEFERRED to unchanged blocking Linux CI, never PASS.
+The earlier specification amendment failed its newly required evidence mapping;
+460-19-1 adds that mapping and the next normal hook passes.
+
+Pre-push native baseline has tools plus all three archive builds PASS. Its nine
+execution cells have not completed. The fresh payload requires new source-bound
+CI signing and review; pushing necessarily supersedes this older concurrency
+group. No partial cell or diagnostic replay is counted as release acceptance.

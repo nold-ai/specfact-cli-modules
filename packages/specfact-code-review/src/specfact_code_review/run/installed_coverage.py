@@ -262,8 +262,10 @@ def _module_selectors(mappings: list[InstalledSource], site: Path) -> tuple[str,
 def plan_installed_coverage(files: list[Path], *, snapshot: Path, site_packages: Path) -> CoverageBridge:
     """Read sealed metadata without importing packages or changing native import paths."""
     snapshot, site = snapshot.resolve(), site_packages.resolve()
-    records, context = _distribution_context(snapshot, site)
     sources = {file.resolve() for file in files if file.suffix == ".py"}
+    if not sources:
+        return CoverageBridge((), (), {}, {})
+    records, context = _distribution_context(snapshot, site)
     mappings, directories, diagnostics = [], set(), {}
     for source in sorted(sources):
         if not source.is_relative_to(snapshot):

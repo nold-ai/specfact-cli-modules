@@ -10,7 +10,15 @@ from unittest.mock import Mock
 
 import pytest
 
-from specfact_code_review.run import portable_worker, runner, target_pytest
+from specfact_code_review.run import installed_coverage, portable_worker, runner, target_pytest
+
+
+@pytest.fixture(autouse=True)
+def reject_host_ownership_scan(monkeypatch):
+    def reject(*_args, **_kwargs):
+        pytest.fail("synthetic observations must not scan the host ownership metadata")
+
+    monkeypatch.setattr(installed_coverage, "_distribution_context", reject)
 
 
 def _record(nodeid, outcome="passed", phase="call", wasxfail="") -> dict[str, object]:
@@ -40,6 +48,11 @@ def _run(tmp_path, monkeypatch, observation, names=("src/app.py", "tests/test_ap
         "Path",
         lambda value: output if value == "/opt/specfact/tmp/pytest-observation.json" else Path(value),
     )
+    monkeypatch.setattr(
+        portable_worker,
+        "plan_installed_coverage",
+        lambda *_args, **_kwargs: installed_coverage.CoverageBridge((), (), {}, {}),
+    )
     monkeypatch.setattr(portable_worker, "target_command", lambda *args: ["observed-worker"])
 
     def execute(*_args, **_kwargs):
@@ -47,7 +60,7 @@ def _run(tmp_path, monkeypatch, observation, names=("src/app.py", "tests/test_ap
         return SimpleNamespace(returncode=observation["exit_code"])
 
     monkeypatch.setattr(portable_worker.subprocess, "run", execute)
-    return portable_worker.run_portable_pytest(files, ("portable-pytest-v2", "{}"))
+    return portable_worker.run_portable_pytest(files, ("portable-pytest-v2", '{"selectors": ["."]}'))
 
 
 @pytest.mark.parametrize(
@@ -228,7 +241,7 @@ def test_malformed_observed_root_is_an_actionable_diagnostic(tmp_path, monkeypat
     assert "project_pytest_root_missing_or_invalid" in findings[0].message
 
 
-def test_native_usage_error_retains_capsule_member_and_target_execution(tmp_path, monkeypatch):
+def _native_usage_error(tmp_path):
     (tmp_path / "pytest.ini").write_text("[pytest]\n")
     native_output = tmp_path / "native-observation.json"
     program = """
@@ -256,8 +269,12 @@ raise SystemExit(int(code))
         check=False,
         timeout=30,
     )
+    return native, json.loads(native_output.read_text())
+
+
+def test_native_usage_error_retains_capsule_member_and_target_execution(tmp_path, monkeypatch):
+    native, observation = _native_usage_error(tmp_path)
     assert native.returncode == 4, native.stdout + native.stderr
-    observation = json.loads(native_output.read_text())
     assert observation["pytest_root"] is None
     assert observation["records"] == []
     assert "--specfact-controlled-invalid-option" in native.stderr
@@ -267,7 +284,7 @@ raise SystemExit(int(code))
     monkeypatch.setattr(
         runner,
         "_load_capsule_request",
-        lambda _path: ("targeted-pytest-coverage", files, False, ("portable-pytest-v2", "{}"), False),
+        lambda _path: ("targeted-pytest-coverage", files, False, ("portable-pytest-v2", '{"selectors": ["."]}'), False),
     )
     monkeypatch.setattr(
         runner,

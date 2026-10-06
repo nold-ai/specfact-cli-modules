@@ -348,10 +348,18 @@ def _installed_coverage_findings(
 
 def _portable_pytest_command(files: list[Path], encoded: str) -> tuple[CoverageBridge, list[str]]:
     """Bind native measurement inputs to controller-verified installed ownership."""
+    try:
+        request = json.loads(encoded)
+    except ValueError as exc:
+        raise ValueError("project_pytest_request_invalid") from exc
+    if not isinstance(request, dict):
+        raise ValueError("project_pytest_request_invalid")
+    selectors = request.get("selectors")
+    if not isinstance(selectors, list) or any(not isinstance(value, str) or not value for value in selectors):
+        raise ValueError("project_pytest_request_invalid")
     bridge = plan_installed_coverage(
         files, snapshot=Path(".").resolve(), site_packages=Path("/opt/specfact/project-runtime/site-packages")
     )
-    request = json.loads(encoded)
     request["coverage_directories"] = [str(path) for path in bridge.directories]
     request["coverage_modules"] = list(bridge.modules)
     request["coverage_candidates"] = sorted(
@@ -371,8 +379,8 @@ def run_portable_pytest(files: list[Path], adapter_argv: tuple[str, ...]) -> lis
     from specfact_code_review.run.runner import evaluate_portable_pytest_coverage, resolve_portable_pytest_root
 
     try:
-        bridge, command = _portable_pytest_command(files, adapter_argv[1])
         Path("/opt/specfact/tmp/pytest-observation.json").unlink(missing_ok=True)
+        bridge, command = _portable_pytest_command(files, adapter_argv[1])
         completed = subprocess.run(command, text=True, capture_output=True, check=False, timeout=1200)
         observation = json.loads(Path("/opt/specfact/tmp/pytest-observation.json").read_text(encoding="utf-8"))
         records = observation["records"]
