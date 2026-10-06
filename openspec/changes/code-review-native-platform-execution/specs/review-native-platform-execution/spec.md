@@ -105,7 +105,7 @@ The macOS backend SHALL preserve the exact released baseline's scope, findings, 
 - **GIVEN** a required Linux capsule review has already failed its unchanged analysis deadline
 - **WHEN** a separate diagnostic replay samples the same staged subject and command
 - **THEN** it SHALL use a pinned external profiler without modifying the authenticated reviewer, increasing any acceptance budget or changing sandbox and test selection
-- **AND** raw stack profiles and command output SHALL remain private; public summaries SHALL contain only known tracked source paths, static declared function names and bounded sample counts
+- **AND** raw stack profiles and command output SHALL remain private; public summaries SHALL contain only known tracked source paths, static declared function names and bounded inclusive/deepest-public sample counts (at most20entries per view)
 - **AND** diagnostic results SHALL never replace the required failed gate or authorize publication
 
 #### Scenario: Synthetic enforcement tests use bounded isolated subjects

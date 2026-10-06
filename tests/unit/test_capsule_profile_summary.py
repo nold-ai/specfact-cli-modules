@@ -35,6 +35,7 @@ def test_profile_projects_only_static_tracked_symbols(monkeypatch, profiling_sub
         "status": "DIAGNOSTIC_ONLY",
         "samples": 2,
         "public_frames": [{"file": "public.py", "function": "slow_operation", "inclusive_samples": 2}],
+        "public_leaf_frames": [{"file": "public.py", "function": "slow_operation", "leaf_samples": 2}],
     }
     assert "private" not in json.dumps(result)
 
@@ -141,3 +142,22 @@ def test_profile_cli_does_not_print_rejected_private_input(monkeypatch, capsys, 
     output = capsys.readouterr()
     assert json.loads(output.out) == {"status": "DIAGNOSTIC_UNAVAILABLE"}
     assert output.err == ""
+
+
+def test_profile_deepest_public_counts_do_not_disappear_behind_waiting_ancestors(monkeypatch, profiling_subject):
+    subject, profile, data = profiling_subject
+    (subject / "public.py").write_text("def slow_operation():\n    pass\ndef inner_operation():\n    pass\n")
+    monkeypatch.setattr("scripts.capsule_profile_summary.tracked_python", lambda _root: [Path("public.py")])
+    data["shared"]["frames"].append({"file": "/private/customer/public.py", "name": "inner_operation"})
+    data["profiles"][0]["samples"] = [[0, 3, 1, 3], [0]]
+    profile.write_text(json.dumps(data))
+    result = summarize(profile, subject)
+    assert {row["function"]: row["inclusive_samples"] for row in result["public_frames"]} == {
+        "slow_operation": 2,
+        "inner_operation": 1,
+    }
+    assert {row["function"]: row["leaf_samples"] for row in result["public_leaf_frames"]} == {
+        "slow_operation": 1,
+        "inner_operation": 1,
+    }
+    assert "private" not in json.dumps(result)

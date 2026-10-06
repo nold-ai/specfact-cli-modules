@@ -3691,3 +3691,39 @@ lint/typing, signatures(all7), contracts(28), YAML/import boundaries, Actionlint
 shell syntax, strict OpenSpec and planned requirements pass. No test or analyzer
 is removed. The owner-approved local review remains DEFERRED to blocking
 exact-head Linux CI, never PASS; raw profiling is not acceptance evidence.
+
+
+## Hosted profile readback refinement — 7 October 2026 (Europe/Berlin)
+
+At56ff60b9, independent job112524988404 again times out; candidate
+job112524988393 times out at targeted-pytest-coverage. Its separate bounded
+profiling step completes successfully, yielding54,117 sampled thread stacks.
+The private job logs are `/private/tmp/specfact460-56ff60b9-{cp312,independent}.private.log`;
+only the static-symbol public summary is retained at
+`/private/tmp/specfact460-56ff60b9-profile.public.json`. Top20 inclusive entries
+are predominantly controller/wait ancestors. The capsule request has2,183
+inclusive samples, but this alone does not identify the expensive leaf call or
+establish elapsed attribution. This is real sandbox-worker evidence, not review
+acceptance; the raw profile is intentionally not uploaded or recoverable.
+
+The next bounded diagnostic refines readback, retaining at most20 inclusive
+entries plus20 deepest-public entries. Each validated stack preserves order;
+inclusive counts still deduplicate repeats, while the deepest admitted public
+frame receives one leaf sample. Private library/command/process labels never
+enter output. Specification precedes RED assertions for the missing field and
+ancestor/leaf distinction (`/private/tmp/specfact460-profile-leaf-red.log`).
+The refinement passes138release/CI/diagnostic tests, zero explicit typing
+warnings, zero direct clean-code findings, formatting/lint and strict OpenSpec.
+The existing required300-second gates and shorter280+5second diagnostic remain
+unchanged. Logs are `/private/tmp/specfact460-profile-leaf-green.log` and
+`/private/tmp/specfact460-profile-leaf-clean-code.json`.
+
+Supplementary local timing with coverage and the declared Rust prerequisite
+runs the expanded36-file selected inventory:1,622tests pass/one maintainer skip
+in28.66s (29.17s wall time). The command retains exit1 from the native global
+coverage threshold; this isolated selected suite is explicitly diagnostic-only,
+not a review PASS. The first diagnostic omitted the local Rust path and failed
+its mandatory macOS parser regression, corrected by the declared prerequisite.
+Both logs stay at `/private/tmp/specfact460-selected-coverage{,-green}.private.log`.
+Local Python3.14 timing cannot establish hosted Python3.12/sandbox equivalence.
+The exact hosted bottleneck remains unknown until useful leaf evidence arrives.

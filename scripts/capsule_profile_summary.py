@@ -75,31 +75,39 @@ def _profile_samples(profile: Any, total: int) -> list[Any]:
     return samples
 
 
-def _sample_symbols(sample: Any, frames: list[tuple[str, str] | None]) -> set[tuple[str, str]]:
+def _sample_symbols(sample: Any, frames: list[tuple[str, str] | None]) -> list[tuple[str, str]]:
     if not isinstance(sample, list) or len(sample) > MAXIMUM_DEPTH:
         raise ValueError("invalid sample depth")
     if any(type(index) is not int or not 0 <= index < len(frames) for index in sample):
         raise ValueError("invalid sample index")
-    return {frames[index] for index in sample if frames[index] is not None}
+    return [frames[index] for index in sample if frames[index] is not None]
 
 
-def _sample_counts(profiles: Any, frames: list[Any], symbols: dict[str, set[str]]) -> tuple[int, Counter]:
+def _sample_counts(profiles: Any, frames: list[Any], symbols: dict[str, set[str]]) -> tuple[int, Counter, Counter]:
     if not isinstance(profiles, list) or len(profiles) > MAXIMUM_FRAMES:
         raise ValueError("invalid sampled profiles")
     index = _symbol_index(symbols)
     public_frames = [_public_frame(frame, symbols, index) for frame in frames]
     counts: Counter = Counter()
+    leaves: Counter = Counter()
     total = 0
     for profile in profiles:
         samples = _profile_samples(profile, total)
         for sample in samples:
-            counts.update(_sample_symbols(sample, public_frames))
+            stack = _sample_symbols(sample, public_frames)
+            counts.update(set(stack))
+            leaves.update(stack[-1:])
         total += len(samples)
-    return total, counts
+    return total, counts, leaves
+
+
+def _rows(counts: Counter, label: str) -> list[dict[str, Any]]:
+    ordered = sorted(counts.items(), key=lambda item: (-item[1], item[0]))[:20]
+    return [{"file": file, "function": function, label: count} for (file, function), count in ordered]
 
 
 def summarize(profile: Path, repository: Path) -> dict[str, Any]:
-    """Return bounded inclusive sample counts without copying private profile fields."""
+    """Return bounded inclusive/deepest-public sample counts without copying private profile fields."""
     with profile.open("rb") as stream:
         payload = stream.read(MAXIMUM_BYTES + 1)
     if len(payload) > MAXIMUM_BYTES:
@@ -110,14 +118,12 @@ def summarize(profile: Path, repository: Path) -> dict[str, Any]:
     frames = data["shared"].get("frames")
     if not isinstance(frames, list) or len(frames) > MAXIMUM_FRAMES:
         raise ValueError("invalid frame count")
-    total, counts = _sample_counts(data.get("profiles"), frames, _public_symbols(repository))
-    ordered = sorted(counts.items(), key=lambda item: (-item[1], item[0]))[:20]
+    total, counts, leaves = _sample_counts(data.get("profiles"), frames, _public_symbols(repository))
     return {
         "status": "DIAGNOSTIC_ONLY",
         "samples": total,
-        "public_frames": [
-            {"file": file, "function": function, "inclusive_samples": count} for (file, function), count in ordered
-        ],
+        "public_frames": _rows(counts, "inclusive_samples"),
+        "public_leaf_frames": _rows(leaves, "leaf_samples"),
     }
 
 
