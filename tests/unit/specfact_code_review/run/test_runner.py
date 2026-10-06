@@ -7906,14 +7906,15 @@ def test_complete_native_snapshot_excludes_environments_but_keeps_project_data(t
         (directory / "unrelated.py").write_text("environment payload\n")
     data = tmp_path / "data"
     data.mkdir()
-    for name in runner_api._ANALYZER_SCAN_EXCLUDED_DIRECTORIES:
+    fixture_names = runner_api._ANALYZER_SCAN_EXCLUDED_DIRECTORIES | {"venv"}
+    for name in fixture_names:
         (data / name).write_bytes(b"ordinary project fixture")
     alias = tmp_path / "alias-data"
     alias.mkdir()
     (alias / "venv").symlink_to(data / "venv")
     entries = dict(runner_api._capture_native_snapshot(tmp_path, python_only=False))
     expected = {"test_app.py", "fixture.json", "alias-data/venv"}
-    expected.update(f"data/{name}" for name in runner_api._ANALYZER_SCAN_EXCLUDED_DIRECTORIES)
+    expected.update(f"data/{name}" for name in fixture_names)
     assert set(entries) == expected
     assert entries["data/venv"] == b"ordinary project fixture"
     assert entries["alias-data/venv"] == b"ordinary project fixture"

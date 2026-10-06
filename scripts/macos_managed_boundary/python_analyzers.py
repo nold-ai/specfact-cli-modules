@@ -261,11 +261,19 @@ def install_managed_git(candidate: dict[str, Any]) -> None:
 
 
 def inspect_managed_git_signature(path: Path, tools: Any) -> tuple[str, str]:
-    """Read the existing Git identity; never rewrite its reviewed signature."""
+    """Read a maintained image identity without rewriting its reviewed signature."""
     tools.command(["/usr/bin/codesign", "--verify", "--strict", str(path)])
     details = tools.command(["/usr/bin/codesign", "--display", "--verbose=4", str(path)]).stderr
     entitlements = tools.command(["/usr/bin/codesign", "--display", "--entitlements", ":-", str(path)]).stdout
     return details, entitlements
+
+
+def verify_managed_uv_candidate(payload: Path, candidate: dict[str, Any]) -> None:
+    if "managed_uv" in candidate:
+        from scripts import build_macos_managed_uv
+
+        if build_macos_managed_uv.validate_artifact(payload / "uv") != candidate["managed_uv"]:
+            raise ValueError("managed uv input changed during analyzer preparation")
 
 
 def prepare(root: Path, venv: Path, version: str, *, library_loading_experiment: bool = False) -> dict[str, Any]:
@@ -329,7 +337,7 @@ def prepare(root: Path, venv: Path, version: str, *, library_loading_experiment:
     signed = []
     for image in candidate["native_closure"]["images"]:
         path = payload / image["path"]
-        if image["path"] == "git/bin/git":
+        if image["path"] in {"git/bin/git", "uv/bin/uv"}:
             details, entitlements = inspect_managed_git_signature(path, tools)
         elif (path == candidate["target"] or path.name == "semgrep-core") and library_loading_experiment:
             entitlement_path = root / "interpreter-library-loading.plist"
@@ -383,6 +391,7 @@ def prepare(root: Path, venv: Path, version: str, *, library_loading_experiment:
     payload.chmod(0o555)
     candidate["inventory"] = exact_inventory(payload)
     candidate["native_closure"] = static_inventory(payload)
+    verify_managed_uv_candidate(payload, candidate)
     return candidate
 
 

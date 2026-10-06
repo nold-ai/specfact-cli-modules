@@ -53,6 +53,12 @@ def assert_completed_report(report: dict[str, Any]) -> None:
     rows = report.get("analyzer_evidence", [])
     if any(row.get("evidence_outcome") == "UNKNOWN" for row in rows):
         raise ValueError("external capsule member incomplete")
+    if any(
+        finding.get("category") == "tool_error"
+        or (finding.get("tool") == "pylint" and str(finding.get("rule", "")).startswith("F"))
+        for finding in report.get("findings", [])
+    ):
+        raise ValueError("external capsule failed analyzer diagnostic")
     _require_test_execution(rows)
     if len(rows) != len(EXPECTED_ANALYZERS) or {row["id"] for row in rows} != EXPECTED_ANALYZERS:
         raise ValueError("external capsule analyzer roster incomplete or duplicated")

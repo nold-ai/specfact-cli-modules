@@ -196,3 +196,34 @@ def test_native_candidate_matrix():
         assert result["cases"] == result["passed"] == 6
         assert result["production_approved"] is False
         assert result["signed_boundary_verified"] is False
+
+
+@pytest.mark.parametrize("version", ["3.11", "3.12", "3.13"])
+def test_stdlib_source_preserves_frozen_module_paths_and_zip_bytes(tmp_path, version):
+    import hashlib
+    import zipfile
+
+    module = candidate()
+    runtime = tmp_path / "input"
+    stdlib = runtime / "lib" / f"python{version}"
+    (stdlib / "collections").mkdir(parents=True)
+    (stdlib / "site-packages").mkdir()
+    sources = {
+        "os.py": b"pass\n",
+        "_collections_abc.py": b"class Iterable: pass\n",
+        "collections/__init__.py": b"pass\n",
+        "collections/abc.py": b"from _collections_abc import *\n",
+        "dataclasses.py": b"pass\n",
+    }
+    for name, content in sources.items():
+        (stdlib / name).write_bytes(content)
+    (stdlib / "site-packages/untrusted.py").write_bytes(b"untrusted")
+    destination = tmp_path / "payload"
+    (destination / "lib" / f"python{version}").mkdir(parents=True)
+    inputs = {}
+    module._stdlib(runtime, destination, version, inputs)
+    with zipfile.ZipFile(destination / "lib" / f"python{version.replace('.', '')}.zip") as archive:
+        for name, content in sources.items():
+            assert (destination / "lib" / f"python{version}" / name).read_bytes() == archive.read(name) == content
+            assert inputs[f"stdlib/{name}"] == hashlib.sha256(content).hexdigest()
+    assert not (destination / "lib" / f"python{version}/site-packages").exists()

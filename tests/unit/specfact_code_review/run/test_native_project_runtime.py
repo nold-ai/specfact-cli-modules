@@ -1514,3 +1514,72 @@ def test_poetry_generated_lock_receipt_binding_rejected(tmp_path, tamper):
     (acquired / "resolution.json").write_text(json.dumps(receipt))
     with pytest.raises(ProjectRuntimeError, match="resolution_binding_mismatch"):
         native_project_runtime._admit_poetry_resolution(acquired, request)
+
+
+@pytest.mark.parametrize("installed", [False, True])
+def test_generated_project_module_does_not_discard_verified_source_root(tmp_path, installed):
+    project = tmp_path / "project"
+    (project / "src/customer").mkdir(parents=True)
+    source = project / "src/customer/__init__.py"
+    source.write_bytes(b"VALUE=7\n")
+    artifacts = tmp_path / "artifacts"
+    artifacts.mkdir()
+    if installed:
+        (artifacts / "customer").mkdir()
+        (artifacts / "customer/__init__.py").write_bytes(b"VALUE=7\n")
+        (artifacts / "customer/_version.py").write_bytes(b"VERSION='generated'\n")
+    else:
+        with zipfile.ZipFile(artifacts / "customer-1-py3-none-any.whl", "w") as wheel:
+            wheel.writestr("customer/__init__.py", b"VALUE=7\n")
+            wheel.writestr("customer/_version.py", b"VERSION='generated'\n")
+    overlay = tmp_path / "overlay"
+    assert native_project_runtime._bound_source_roots(project, artifacts, installed=installed) == []
+    assert native_project_runtime._bound_source_roots(
+        project, artifacts, installed=installed, generated_destination=overlay
+    ) == ["src"]
+    assert (overlay / "src/customer/_version.py").read_bytes() == b"VERSION='generated'\n"
+    assert not (project / "src/customer/_version.py").exists()
+    assert native_project_runtime._bound_source_roots(project, artifacts, installed=installed) == []
+    source.write_bytes(b"VALUE=changed\n")
+    assert native_project_runtime._bound_source_roots(project, artifacts, installed=installed) == []
+
+
+def test_source_matching_budget_counts_only_matching_package_paths(tmp_path):
+    project = tmp_path / "project"
+    wheels = tmp_path / "wheels"
+    wheels.mkdir()
+    with zipfile.ZipFile(wheels / "customer-1-py3-none-any.whl", "w") as archive:
+        for index in range(320):
+            package = f"customer_{index}"
+            source = project / "src" / package / "__init__.py"
+            source.parent.mkdir(parents=True)
+            content = b"# " + b"x" * index + b"\n"
+            source.write_bytes(content)
+            archive.writestr(f"{package}/__init__.py", content)
+    assert native_project_runtime._bound_source_roots(project, wheels) == ["src"]
+
+
+def test_source_matching_uses_full_suffix_index_for_shared_package_tails(monkeypatch, tmp_path):
+    project = tmp_path / "project"
+    wheels = tmp_path / "wheels"
+    wheels.mkdir()
+    with zipfile.ZipFile(wheels / "customer-1-py3-none-any.whl", "w") as archive:
+        for index in range(3000):
+            package = f"customer_{index}/common"
+            source = project / "src" / package / "__init__.py"
+            source.parent.mkdir(parents=True)
+            source.write_bytes(b"VALUE=7\n")
+            archive.writestr(f"{package}/__init__.py", b"VALUE=7\n")
+    original = native_project_runtime.PurePosixPath
+
+    class CountedPath(original):
+        checks = 0
+
+        @property
+        def parts(self):
+            type(self).checks += 1
+            return super().parts
+
+    monkeypatch.setattr(native_project_runtime, "PurePosixPath", CountedPath)
+    assert native_project_runtime._bound_source_roots(project, wheels) == ["src"]
+    assert CountedPath.checks < 100000

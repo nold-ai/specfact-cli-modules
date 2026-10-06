@@ -9,6 +9,22 @@ and this project follows SemVer for bundle versions.
 
 ### Fixed
 
+- Preserve maintained `uv` image signatures and provenance during native capsule
+  preparation and reject missing or changed provenance before assembly. Align
+  worktree and native snapshot exclusion of nested local Python environments
+  with project preparation, retaining selected-input and alias rejection. Keep
+  native pytest execution and coverage observations in ordinary reports with
+  their existing project-origin authority. Materialize verified internal source
+  aliases before sealing private native preparation inputs; preserve empty
+  directories and executable modes, clean owned read-only copies, and reject
+  cycles or substitutions. Keep verified standard-library source at relocated
+  frozen-module paths for Pylint inference and classify fatal analyzer diagnostics
+  as incomplete evidence. Preserve byte-bound project source roots when built
+  wheels add generated modules by sealing them into private snapshot overlays,
+  retain ordinary source packages named `venv`, bound source matching for shared
+  package tails, and retain actually observed selectors from distributed pytest
+  phase records.
+
 - Prepare Code Review 0.51.1 to display distinct UNKNOWN analyzer diagnostics in
   ordinary terminal reports. Native capsule builders can emit unsigned final
   archive/manifest bytes for separate CI signing. Exclude controller-generated

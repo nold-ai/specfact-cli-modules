@@ -249,3 +249,63 @@ Full and SMART suites each pass5060 tests,75 explicit skips and95 subtests,
 with five existing warnings. Regular quality gates and the same bounded agent
 review pass. Local authoritative capsule review remains the human-approved
 DEFERRED gate; no hosted failure is waived and no native artifact is published.
+
+
+## Incomplete runtime logic correction — 6 October 2026
+
+Six reproduced runtime defects are corrected: maintained uv signature/provenance drift;
+inconsistent nested environment exclusion before ordinary changed enforcement;
+dropped native pytest observations; and rejection of valid contained source
+aliases before unfamiliar-project preparation; missing frozen standard-library
+source for Pylint inference; and fatal analyzer crashes reported as ordinary
+findings. Specs and meaningful failing tests
+preceded code; focused native preparation/worker/identity tests pass. The same
+bounded independent reviewer examines each correction; no external diff egress.
+
+Initial cp313 candidate module-command reports on physical macOS27.0.1 passed
+an insufficient completion check: changecost contained misclassified Pylint fatal
+crashes, and both projects exposed missing collections.abc source. Those earlier
+reports do not prove complete analyzer execution. The corrected candidate retains
+verified filesystem source alongside ZIP imports and reports any fatal diagnostic
+as tool_error. Corrected actual project commands complete all ten members with
+no tool errors or fatal Pylint findings, preserve actual failed tests, and pass
+offline reuse under unchanged budgets. Independent completion now rejects the
+previous misclassified fatal diagnostics.
+Fixture leases are not publisher authenticated. See TDD_EVIDENCE.md for exact
+root/digest, preserved failures and final quality gates.
+
+The released catalog has no native entries. Protected native release workflow,
+final supported OS/ABI archive matrix, full boundary admission and fresh signed
+independent installation remain incomplete; this checkpoint cannot close #460,
+archive the change or approve publication. Exact-head hosted Linux review remains
+blocking. Rollback reverts this unpublished source checkpoint and requires fresh
+CI manifest signing, preserving immutable previous artifacts and Linux support.
+
+
+## Actual four-manager runtime correction evidence
+
+Real pinned Requests/pip, Hatch, Flask/uv and Poetry candidate commands now complete
+all ten analyzers, actual targeted pytest/coverage and offline prepared-cache reuse.
+Hatch generated Python modules are sealed in a source overlay and projected only
+into the private snapshot; ordinary src/hatch/venv is retained while actual marked
+environments are excluded. Distributed Poetry observations retain actual test
+nodeids. Shared-tail matching is indexed and bounded; the mandatory introduced
+complexity regression is resolved through tested helper extraction.
+
+Cold preparation ranged 6.736–64.651 seconds and reviews 34.297–55.285 seconds for these
+four selected fixtures. Requests preserves its genuine type finding as FAIL;
+missing required evidence and fatal crashes are absent. Separate changecost proof
+retains actual failed tests. Exact counts and preserved failures are in
+TDD_EVIDENCE.md. Candidate fixture authentication/production eligibility remain
+false, and the final helper extraction is covered by focused tests rather than a
+new final archive identity. These runtime passes do not resolve the protected
+release pipeline, nine supported OS/ABI cells or installed-customer requirements.
+
+
+Stable final local runtime gates pass: 28 contracts; SMART and full each 5,109
+passed, 75 explicit skips and 95 subtests, with five existing warnings. Format,
+type, lint, YAML, import boundaries, candidate integrity/version and OpenSpec
+strict also pass. The same bounded reviewer reports no defects. Fresh module
+signature and exact-head hosted review remain CI follow-ups; local capsule
+review is DEFERRED under the prior human approval. These local results do not
+advance production or complete-boundary flags and cannot close #460.

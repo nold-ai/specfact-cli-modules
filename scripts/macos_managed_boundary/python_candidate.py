@@ -167,9 +167,12 @@ def _stdlib(runtime: Path, destination: Path, version: str, inputs: dict[str, st
                 entry = zipfile.ZipInfo(relative, (2026, 1, 1, 0, 0, 0))
                 entry.external_attr = 0o444 << 16
                 archive.writestr(entry, data)
-    # CPython getpath requires this prefix landmark even when using a stdlib ZIP.
-    landmark = _read_input(stdlib / "os.py", runtime)
-    (destination / "lib" / f"python{version}" / "os.py").write_bytes(landmark)
+                # Astroid resolves frozen module sources through relocated
+                # __file__ paths, which are ordinary files even with ZIP imports.
+                source = destination / "lib" / f"python{version}" / relative
+                source.parent.mkdir(parents=True, exist_ok=True)
+                source.write_bytes(data)
+                source.chmod(0o444)
 
 
 def prepare(root: Path, runtime: Path, version: str) -> dict[str, Any]:

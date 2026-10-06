@@ -23,7 +23,7 @@ from specfact_code_review.run import native_backend, native_execution, native_pr
 from specfact_code_review.run.native_project_catalog import resolve_project_artifact
 from specfact_code_review.run.runtime_artifacts import load_runtime, seal_runtime, validate_build_artifact
 from specfact_code_review.run.runtime_models import PreparedRuntime, ProjectPlan, ProjectRuntimeError, document_digest
-from specfact_code_review.run.runtime_sources import source_identity, verify_inputs
+from specfact_code_review.run.runtime_sources import is_excluded_source, source_identity, verify_inputs
 
 
 _MANAGER_VERSIONS = {"pip": "26.2.1", "hatch": "1.18.0", "uv": "0.12.13", "poetry": "2.4.3"}
@@ -1040,10 +1040,12 @@ def _prepare_project_on_demand(plan: ProjectPlan, runtime: Any, artifact: Path) 
             }:
                 raise ProjectRuntimeError("project_native_inventory_invalid")
             _record_native_inventory(runtime, metadata)
+            artifact.chmod(0o700)
             inventory = {
                 **metadata,
                 "pytest_arguments": [],
-                "source_roots": list(plan.source_roots) or _bound_source_roots(snapshot, project_wheels),
+                "source_roots": list(plan.source_roots)
+                or _bound_source_roots(snapshot, project_wheels, generated_destination=artifact / "source-overlay"),
                 "native_extensions": _admit_native_extensions(
                     site, capsule_root=Path(runtime.root), declared_count=count
                 ),
@@ -1148,6 +1150,40 @@ def _prepare_uv_on_demand(plan: ProjectPlan, runtime: Any, artifact: Path) -> di
         return inventory
 
 
+def _materialize_native_source_aliases(snapshot: Path) -> None:
+    """Project only verified copied source aliases into an ordinary private tree."""
+    if not any(path.is_symlink() for path in snapshot.rglob("*")):
+        return
+    from specfact_code_review.run.runner import _capture_native_snapshot
+
+    expected = source_identity(snapshot)
+    identity = _identity(snapshot.lstat())
+    directories: list[str] = []
+    entries = _capture_native_snapshot(snapshot, directories=directories, exclude_directory=is_excluded_source)
+    with tempfile.TemporaryDirectory(prefix=".materializing-", dir=snapshot.parent) as raw:
+        projection = Path(raw) / "snapshot"
+        projection.mkdir(mode=0o700)
+        for name in sorted(directories, key=lambda value: (len(PurePosixPath(value).parts), value)):
+            (projection / name).mkdir(mode=0o700)
+        for name, content in entries:
+            target = projection / name
+            target.write_bytes(content)
+            target.chmod(0o500 if (snapshot / name).stat().st_mode & 0o111 else 0o400)
+        _runtime_tree(projection)
+        if source_identity(snapshot) != expected or _identity(snapshot.lstat()) != identity:
+            raise ProjectRuntimeError("project_runtime_source_changed_during_copy")
+        original = Path(raw) / "original"
+        os.rename(snapshot, original)
+        try:
+            os.rename(projection, snapshot)
+        except BaseException:
+            os.rename(original, snapshot)
+            raise
+        for directory, _children, _files in os.walk(original, followlinks=False):
+            Path(directory).chmod(0o700, follow_symlinks=False)
+        shutil.rmtree(original)
+
+
 def _copy_native_snapshot(plan: ProjectPlan, destination: Path) -> None:
     from specfact_code_review.run.runtime_builder import copy_project
     from specfact_code_review.run.runtime_vcs import copy_vcs_context
@@ -1155,6 +1191,7 @@ def _copy_native_snapshot(plan: ProjectPlan, destination: Path) -> None:
     copy_project(plan.root, destination, include_vcs=False)
     if source_identity(destination) != plan.source_identity:
         raise ProjectRuntimeError("project_runtime_source_changed_during_copy")
+    _materialize_native_source_aliases(destination)
     if plan.vcs:
         copy_vcs_context(
             plan.vcs_repository or plan.root,
@@ -1332,9 +1369,14 @@ def _prepare_hatch_on_demand(plan: ProjectPlan, runtime: Any, artifact: Path) ->
         count = sum(
             path.suffix in {".so", ".dylib"} for path in runtime_native._macho_candidates(artifact / "site-packages")
         )
-        source_roots = list(plan.source_roots) or _bound_source_roots(snapshot, project_wheels)
+        artifact.chmod(0o700)
+        source_roots = list(plan.source_roots) or _bound_source_roots(
+            snapshot, project_wheels, generated_destination=artifact / "source-overlay"
+        )
         for member_wheels in workspace_wheels:
-            source_roots.extend(_bound_source_roots(snapshot, member_wheels))
+            source_roots.extend(
+                _bound_source_roots(snapshot, member_wheels, generated_destination=artifact / "source-overlay")
+            )
         inventory.update(
             source_roots=list(dict.fromkeys(source_roots)),
             pytest_arguments=[],
@@ -1561,8 +1603,10 @@ def _prepare_poetry_on_demand(plan: ProjectPlan, runtime: Any, artifact: Path) -
         count = sum(
             path.suffix in {".so", ".dylib"} for path in runtime_native._macho_candidates(artifact / "site-packages")
         )
+        artifact.chmod(0o700)
         inventory.update(
-            source_roots=list(plan.source_roots) or _bound_source_roots(snapshot, project_wheels),
+            source_roots=list(plan.source_roots)
+            or _bound_source_roots(snapshot, project_wheels, generated_destination=artifact / "source-overlay"),
             pytest_arguments=[],
             native_extensions=_admit_native_extensions(
                 artifact / "site-packages", capsule_root=Path(runtime.root), declared_count=count
@@ -1697,34 +1741,91 @@ def _read_preparation_document(path: Path) -> dict[str, Any]:
     return document
 
 
-def _bound_source_roots(project: Path, wheels: Path, *, installed: bool = False) -> list[str]:
-    """Infer source imports only from unambiguous byte matches with the built root."""
+def _source_suffix_index(project: Path) -> dict[tuple[str, ...], list[tuple[PurePosixPath, int]]]:
+    candidates: dict[tuple[str, ...], list[tuple[PurePosixPath, int]]] = {}
+    index_entries = 0
+    for relative, (kind, identity) in _runtime_tree(project).items():
+        path = PurePosixPath(relative)
+        if kind != "file" or path.suffix not in {".py", ".pyi"}:
+            continue
+        for offset in range(len(path.parts)):
+            index_entries += 1
+            if index_entries > _MAX_RUNTIME_FILES:
+                raise ProjectRuntimeError("project_native_source_root_bounds_exceeded:provide explicit source_roots")
+            candidates.setdefault(path.parts[offset:], []).append((path, identity[4]))
+    return candidates
+
+
+def _matching_source_roots(
+    project: Path, path: PurePosixPath, payload: bytes, candidates: list[tuple[PurePosixPath, int]]
+) -> list[tuple[str, ...]]:
+    return [
+        candidate.parts[: -len(path.parts)]
+        for candidate, size in candidates
+        if size == len(payload) and (project / candidate).read_bytes() == payload
+    ]
+
+
+def _generated_source_files(
+    packages: dict[str, set[tuple[str, ...]]], missing: list[tuple[PurePosixPath, bytes]], *, installed: bool
+) -> list[tuple[PurePosixPath, bytes]] | None:
+    generated: list[tuple[PurePosixPath, bytes]] = []
+    for path, payload in missing:
+        roots = packages.get(path.parts[0], set())
+        if not roots and installed:
+            continue
+        if len(roots) != 1:
+            return None
+        generated.append((PurePosixPath(*next(iter(roots))) / path, payload))
+    return generated
+
+
+def _write_generated_source_files(destination: Path, generated: list[tuple[PurePosixPath, bytes]]) -> None:
+    for path, payload in generated:
+        target = destination / path
+        target.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+        with target.open("xb") as stream:
+            stream.write(payload)
+        target.chmod(0o400)
+
+
+def _distinct_source_roots(packages: dict[str, set[tuple[str, ...]]]) -> list[str]:
+    return sorted({PurePosixPath(*root).as_posix() for roots in packages.values() for root in roots if root})
+
+
+def _bound_source_roots(
+    project: Path,
+    wheels: Path,
+    *,
+    installed: bool = False,
+    generated_destination: Path | None = None,
+) -> list[str]:
+    """Infer byte-bound imports while preserving missing built package modules."""
     if not wheels.is_dir():
         return []
-    sources = _runtime_tree(project)
-    candidates: dict[tuple[str, int], list[PurePosixPath]] = {}
-    for relative, (kind, identity) in sources.items():
-        path = PurePosixPath(relative)
-        if kind == "file" and path.suffix in {".py", ".pyi"}:
-            candidates.setdefault((path.name, identity[4]), []).append(path)
-    roots: set[str] = set()
+    candidates = _source_suffix_index(project)
+    packages: dict[str, set[tuple[str, ...]]] = {}
+    missing: list[tuple[PurePosixPath, bytes]] = []
     comparisons = 0
     files = _installed_python_files(wheels) if installed else _wheel_python_files(wheels)
     for path, payload in files:
-        matches = []
-        for candidate in candidates.get((path.name, len(payload)), ()):
-            comparisons += 1
-            if comparisons > _MAX_RUNTIME_FILES:
-                raise ProjectRuntimeError("project_native_source_root_bounds_exceeded:provide explicit source_roots")
-            if candidate.parts[-len(path.parts) :] == path.parts and (project / candidate).read_bytes() == payload:
-                matches.append(candidate.parts[: -len(path.parts)])
-        if not matches and installed:
+        represented = candidates.get(path.parts, [])
+        if not represented:
+            missing.append((path, payload))
             continue
+        comparisons += len(represented)
+        if comparisons > _MAX_RUNTIME_FILES:
+            raise ProjectRuntimeError("project_native_source_root_bounds_exceeded:provide explicit source_roots")
+        matches = _matching_source_roots(project, path, payload, represented)
         if len(matches) != 1:
             return []
-        if matches[0]:
-            roots.add(PurePosixPath(*matches[0]).as_posix())
-    return sorted(roots)
+        packages.setdefault(path.parts[0], set()).add(matches[0])
+    generated = _generated_source_files(packages, missing, installed=installed)
+    if generated is None or (generated and generated_destination is None):
+        return []
+    if generated_destination is not None:
+        _write_generated_source_files(generated_destination, generated)
+    return _distinct_source_roots(packages)
 
 
 def _installed_python_files(site: Path) -> Iterator[tuple[PurePosixPath, bytes]]:

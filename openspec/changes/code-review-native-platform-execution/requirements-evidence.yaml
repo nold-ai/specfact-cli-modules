@@ -67,6 +67,11 @@ requirements:
       kind: config_file
       locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
     verification_cases:
+    - case_id: 460-3-4
+      scenario_id: portable-review-semantics
+      method: test
+      intent: "Pylint fatal diagnostics remain incomplete analyzer evidence."
+      observable: "Six failing-before/passing-after regressions preserve fatal F0001/F0002/F0010 diagnostics as tool_error findings even outside selected paths, retaining ordinary findings. No internal analyzer crash may satisfy complete-report acceptance. Three independent checker regressions additionally reject fatal/style misclassification and tool errors despite complete member rows; genuine project findings remain accepted."
     - case_id: 460-3-1
       scenario_id: portable-review-semantics
       method: inspection
@@ -91,6 +96,11 @@ requirements:
       kind: config_file
       locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
     verification_cases:
+    - case_id: 460-4-15
+      scenario_id: verified-provisioning-and-offline-reuse
+      method: inspection
+      intent: "Inspect acceptance: Maintained manager images retain their verified provenance."
+      observable: "Focused managed uv regressions require byte-identical verified signatures through preparation, complete maintained-artifact revalidation after inventory, and missing/changed provenance rejection before assembly output. These bounded tests and maintainer observations do not establish final installed-customer acceptance or production publication."
     - case_id: 460-4-1
       scenario_id: verified-provisioning-and-offline-reuse
       method: inspection
@@ -499,6 +509,36 @@ requirements:
       kind: config_file
       locator: openspec/changes/code-review-native-platform-execution/PROJECT_DRIVEN_PREPARATION_CONTRACT.md
     verification_cases:
+    - case_id: 460-15-19
+      scenario_id: prepare-unfamiliar-projects-from-discovered-or-caller-supplied-setup
+      method: test
+      intent: "Ordinary source packages named venv remain reviewable."
+      observable: "Meaningful RED then GREEN preserves src/hatch/venv during native capture; directories with an actual pyvenv.cfg marker remain excluded by the shared predicate. Real Hatch candidate preparation and all ten analyzers complete without missing imports."
+    - case_id: 460-15-17
+      scenario_id: prepare-unfamiliar-projects-from-discovered-or-caller-supplied-setup
+      method: test
+      intent: "Native generated wheel modules preserve bound project source imports."
+      observable: "Meaningful RED tests require byte-bound roots, sealed generated Python overlays reachable from the private project snapshot, and collision rejection without checkout mutation. Size/byte mismatches and ambiguous copies reject. Exact suffix indexing handles 3,000 packages sharing common/__init__.py within the original 100,000 bound; index construction is separately bounded. Real Hatch candidate CLI executes five tests with offline reuse; authenticated final-byte acceptance remains separate."
+    - case_id: 460-15-18
+      scenario_id: prepare-unfamiliar-projects-from-discovered-or-caller-supplied-setup
+      method: test
+      intent: "Distributed native pytest retains actually observed selectors."
+      observable: "Three meaningful failing-before/passing-after regressions retain actually observed setup/call/teardown nodeids without coordinator collection events; an empty observer stays empty. No requested but unobserved selector or protected authority is fabricated. Actual Poetry proof is checked separately."
+    - case_id: 460-15-16
+      scenario_id: prepare-unfamiliar-projects-from-discovered-or-caller-supplied-setup
+      method: test
+      intent: "Native preparation materializes contained source aliases."
+      observable: "Focused native preparation regressions require internal file/directory and empty-directory materialization, original checkout preservation, executable source modes, owned read-only copy cleanup, cycle and copied-source substitution rejection, external alias rejection and environment exclusion. Runtime dependency inventories retain their no-link policy. Physical Requests acceptance is required separately."
+    - case_id: 460-15-14
+      scenario_id: prepare-unfamiliar-projects-from-discovered-or-caller-supplied-setup
+      method: test
+      intent: "Nested local environments do not block ordinary project review."
+      observable: "Six focused tests and existing worktree containment/mutation cases verify shared pyvenv.cfg exclusion, ordinary-directory rejection, tracked/selected environment input rejection, and alias rejection. These tests preserve source input identity; they do not admit release artifacts."
+    - case_id: 460-15-15
+      scenario_id: prepare-unfamiliar-projects-from-discovered-or-caller-supplied-setup
+      method: test
+      intent: "Native local pytest retains actual execution observations."
+      observable: "Seven failing-before/passing-after regressions exercise real adapter orchestration, completed response projection, failure exit preservation and absent/substituted/malformed/oversized artifacts. Native observations remain project-origin-v1 and cannot establish protected PR authority. Final installed-customer proof remains separate."
     - case_id: 460-15-11
       scenario_id: prepare-unfamiliar-projects-from-discovered-or-caller-supplied-setup
       method: test
@@ -582,6 +622,11 @@ requirements:
       kind: config_file
       locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
     verification_cases:
+    - case_id: 460-16-2
+      scenario_id: ci-only-native-artifact-assembly
+      method: test
+      intent: "Native standard-library source remains available for static inference."
+      observable: "Three ABI regressions require exact bounded source-byte equality between the captured source inventory, ZIP and relocated filesystem paths, excluding site-packages. Actual cp313 Astroid resolves frozen collections.abc, dataclasses, typing, inspect and abc in the rebuilt candidate; final archive matrix remains separate."
     - case_id: 460-16-1
       scenario_id: ci-only-native-artifact-assembly
       method: test

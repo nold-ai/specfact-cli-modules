@@ -70,6 +70,22 @@ Lock regeneration can select newer transitive dependencies and requires review;
 reproduction of the recorded run uses the committed locks. The minimum OS tag
 is a candidate constraint, not macOS 14 acceptance proof.
 
+## Relocated standard-library source
+
+The native CPython candidate retains the same bounded captured standard-library
+`.py` bytes in its deterministic ZIP and at their relocated filesystem paths.
+Astroid resolves frozen modules such as `collections.abc` through the filesystem
+path in `__file__`; a ZIP-only runtime can cause import errors or internal Pylint
+crashes despite successful ordinary Python imports. The input hashes and complete
+payload inventory bind both projections. Site-packages, test trees and source
+symlinks remain excluded. Captured hashes alone do not establish upstream or
+publisher authentication; final artifact admission still requires those checks.
+
+Fatal Pylint diagnostics are incomplete analyzer evidence. The independent corpus
+checker rejects fatal diagnostics and tool errors even when an older report labels
+a crash as a style finding. Actual project findings may remain FAIL after every
+analyzer completes.
+
 ## Run the ten real adapters
 
 Create an ignored JSON configuration using absolute paths:

@@ -150,3 +150,21 @@ replace sections 3, 4 or 6. Exact facts: DELIVERY_CHECKPOINT_2026-10-06.md.
 - [x] Reduce introduced builder/workflow complexity while preserving exact controlled archive/manifest/summary bytes and public maintainer arguments.
 - [x] Specify/reproduce fixed missing-report/timeout diagnostics and execution-error priority within the unchanged public200-location cap.
 - [x] Add explicit authenticated Darwin-only Z3 specfact.2 projection; preserve historical specfact.1 bytes, update only candidate Z3 lock/policy identities and pass all three complete offline closures and confined analyzer/parity fixtures. No production admission.
+
+
+### Incomplete runtime correction — 6 October 2026
+
+- [x] Specify and reproduce maintained uv signature/provenance drift; preserve verified bytes and reject changed/missing preparation or assembly receipts.
+- [x] Align nested Python environment exclusion across source capture and ordinary worktree identity, preserving selected/tracked input and alias rejection.
+- [x] Retain bounded native pytest execution and coverage observations in local CLI reports with project-origin-v1 authority.
+- [x] Materialize valid contained source aliases before native preparation sealing, preserving empty directories and source identity checks.
+- [x] Run initial real cp313 candidate module-command reviews and diagnose insufficient completion-checker PASS from Pylint fatal/style misclassification; retain actual offline/test/coverage observations without claiming release acceptance.
+- [x] Preserve executable modes and safely clean owned read-only source aliases with failing-before/passing-after regressions.
+- [x] Retain verified relocated frozen stdlib source for Astroid and classify every fatal Pylint diagnostic as incomplete evidence.
+- [x] Correct real Hatch source inference when generated wheel modules coexist with byte-identical project sources; retain size/byte/ambiguity rejection.
+- [x] Retain actually observed Poetry distributed-test selectors without inventing requested selectors or protected authority.
+- [x] Recheck actual four-manager cp313 project commands; retain fixture trust, actual findings and remaining final-byte acceptance limits.
+- [x] Preserve sealed generated imports and ordinary venv source packages; bound exact suffix matching and resolve measured introduced complexity.
+- [x] Record stable local current-source repository gates and bounded independent review.
+- [ ] Verify fresh CI signature and exact-head hosted review for the runtime correction.
+- [ ] Complete final current-source mandatory gates, CI-only module signing and exact-head blocking review; keep prior hosted failures.

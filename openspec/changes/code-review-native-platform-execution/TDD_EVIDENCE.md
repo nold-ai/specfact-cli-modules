@@ -2823,3 +2823,284 @@ Rollback removes the unpublished source/lock projection while preserving the
 historical derivative and all immutable evidence; never promote the rejected
 empty-entitlement archives. Final supported artifacts/catalog/publication and
 physical full-boundary proof remain open.
+
+
+## 2026-10-06 incomplete native runtime corrections
+
+The direct instruction to implement incomplete runtime logic authorizes these
+bounded corrections. Specs preceded production edits. Managed uv preparation
+re-signed a verified maintained executable, changing its hash from
+3b1a6d08d941bdb0934ab72804748ae5ddd2aeb35940ee93c7a8a44b67cef151
+to ae866acd9cf22058c3278513b5fd7f3392b4aa69b49c9159033d8e2b1f1d3bcd
+without replacing its receipt. Six meaningful RED regressions preceded the
+signature-preservation and post-inventory/assembly provenance checks; focused
+GREEN46 includes accepted assembly and rejection before output. Private logs:
+specfact460-managed-uv-red/green.log. All three complete CPython candidate inputs
+now include verified maintained uv and Git, unlike the earlier analyzer-only
+fixture roots. No publisher signing key or host-manager inference is used.
+
+Actual default changed enforcement failed before native analysis on changecost:
+worktree identity entered the ignored .changecost/verify-py311 environment while
+project preparation excluded it. Five meaningful REDs (one existing negative
+control passed) preceded shared pyvenv.cfg exclusion. Tracked/selected environment
+inputs and excluded/external aliases remain rejected. The surrounding suite
+caught an overbroad parent check for ordinary packages named venv; it was narrowed
+to actual environments, retaining the existing reachable-input mutation check.
+All32 worktree enforcement tests passed. Logs environment-identity-red/focused.
+
+Native adapter execution alone did not retain pytest observations in its report.
+Seven meaningful REDs preceded bounded ordinary-artifact capture before evaluator
+cleanup and projection only after completed replay. Project-origin-v1 remains
+explicit and native protected-range evidence remains ineligible. GREEN136 covers
+worker, native runner and assembly contracts. SMART subsequently caught the new
+projection test inheriting controller PYTHONPATH; its fixture now clears only the
+worker's existing unsafe environment list, without changing production admission.
+The earlier SMART failure (5079 passed,75 skipped) is preserved, never counted as
+PASS. No full suite ran after that failed prerequisite. Logs runtime-followup-smart
+and native-pytest-red/runtime-followup-focused.
+
+The pinned Requests repository reproduced project_native_runtime_symlink at the
+valid internal tests/certs/valid/ca -> ../expired/ca directory alias. Two meaningful
+RED cases (no indirection-free projection and copied-source substitution) preceded
+private materialization; the first cycle fixture checked the wrong existing error
+and is not counted as meaningful RED. A genuine sibling-directory cycle now rejects.
+A subsequent meaningful RED detected removal of an ordinary package named venv;
+projection now uses the exact preparation exclusion predicate. It preserves empty
+directories and never changes the original checkout. Native dependency runtime
+inventories still reject all aliases. Final focused GREEN122 in0.93s covers these
+corrections and existing preparation/capture contracts. Logs native-source-alias-red,
+native-source-alias-projection-red and runtime-final-focused.
+
+Physical candidate scope is ARM64 macOS27.0.1 (26A434), not the supported matrix.
+The observed native fixture lease binds real ad-hoc hardened binaries but is not
+authenticated by a publisher manifest. Current worker runtime digest
+fbc5bc0d59556de4d6d6aa1af153c3456f7da581cba66e01efdfdf1788b8da35,
+11126 regular files, cp313. Module CLI uses the real command/report implementation
+with only that fixture acquisition seam. No unsigned-module override is used.
+Changelog/source changes after that assembly are controller-side corrections;
+this is bounded runtime evidence, not final release-byte acceptance.
+
+Changecost uv cold preparation completed in25.747s; offline identity reuse passed.
+Full source CLI review with default changed enforcement completed in149.112s:
+all10 members reported ran, no reported UNKNOWN or tool errors. Subsequent
+diagnostic inspection found Pylint F0002 internal crashes misclassified as style;
+this initial completion-checker PASS is insufficient and is not runtime acceptance.
+Actual pytest observer retained842 collected selectors,315 call records and325
+coverage files, exit1, project-origin-v1. The existing external acceptance report
+checker passed its completion contract; it does not reinterpret failed tests as
+PASS or provide protected authority. Initial CLI harness mistakes (calling a
+callback directly, stale source-manifest rejection and wrong module entrypoint)
+are not attributed to native runtime execution and do not count as acceptance.
+
+Requests commit dae7ef63b4df6eded86637f251fc4e3a06c3b479 used real pip preparation,
+no project catalog entry, no host hooks/tests, cold13.317s and offline reuse PASS.
+Its selected production/test CLI run completed in32.813s: all10 analyzers ran,
+no UNKNOWN;24 collected/called tests,139 coverage files and pytest exit0. BasedPyright
+findings remain FAIL. Its Pylint collections.abc import failure was subsequently
+traced to missing frozen-module filesystem source, not accepted as a project
+defect. Safe summaries are private tmp
+specfact460-{changecost,requests}-current-cli.summary.json; detailed reports remain
+private. Complete manager/ABI/final-byte/customer acceptance is still required.
+
+Exact-head63e6e83 hosted status: macOS14/15/26 fixed boundary jobs all PASS,
+6 startup and20 control races per OS, each100 repetitions. Linux cp311/cp313 all
+five corpus entries PASS; cp312 deferred review FAIL with structured Semgrep errors,
+CrossHair timeout and pytest tool error. Independent signed0.51.0 review reaches
+the unchanged300s timeout. All minimum-core jobs PASS; downstream quality stops
+at its prerequisite. These failures remain blocking; no budget, roster, policy,
+cleanup bound or installed reviewer is waived or altered. Current-head signing
+and CI must repeat after this source change. Native catalog remains empty and
+publication/production/complete-boundary flags remain false.
+
+
+### Remaining source-copy and Pylint runtime logic — 6 October 2026
+
+The bounded reviewer identified executable-mode loss and failure cleaning owned
+0555 source-copy directories. Both reproduced (2 RED,5 passed) before fixes;
+GREEN7 preserves executable regular/alias files, non-executable data, unchanged
+customer directory modes and full owned temporary cleanup. No links are followed
+when granting cleanup permission in the discarded private copy.
+
+Inspection of actual candidate report findings invalidated the earlier assertion
+of complete changecost Pylint execution: F0002 internal crashes had been mapped
+to style, and both projects exposed collections.abc lookup errors. Direct real
+CPython/Astroid execution reproduced AstroidBuildingError for relocated
+lib/python3.13/_collections_abc.py, which was absent because only the ZIP held
+source. Three ABI source-projection tests and six fatal-diagnostic mapping tests
+failed meaningfully before implementation (RED9,26 passed,1 skipped). The builder
+now retains the exact captured bounded source bytes at relocated paths as well
+as the ZIP; no host input or third-party package fallback is admitted. Pylint
+F diagnostics remain tool_error even outside selected files, preserving ordinary
+findings and required incomplete-evidence semantics. Focused GREEN42,1 explicit
+maintainer skip. Private logs native-stdlib-pylint-red/green.log.
+
+The rebuilt real cp313 runtime digest is
+23efb3a4b24ee668b508c032ea4164f57b4df3bd1e52df55917f4c0052d90d8e,
+11758 regular files. Direct actual Astroid resolution now passes collections.abc,
+dataclasses, typing, inspect and abc. Production approval and manifest
+authentication remain false. The same bounded reviewer returned No findings,
+42 tests passed and1 explicit maintainer skip; installed-customer acceptance
+remains unverified.
+
+Before the final fixes, SMART passed5085 tests,75 skips and95 subtests; the
+subsequent full gate observed the two then-unfixed source-mode/cleanup tests
+failing (5085 passed,75 skipped). That historical failure is retained and does
+not count as a final PASS. Both failures have focused passing evidence; final
+required gates and real project commands are run against the corrected source.
+
+
+The independent corpus completion checker also reproduced three false accepts
+for tool errors or fatal Pylint diagnostics disguised as style/architecture;
+RED3 preceded rejection and GREEN50 includes genuine-finding positive controls.
+The bounded reviewer found no defects in this correction. Earlier reports are
+not retroactively accepted. Real cp311/cp312 assemblies with corrected source
+projection contain11860/11811 files with candidate-only digests
+a2a2e1b04adf45936c5ca702f9b430e70f88628c9cea14c4d0a876ade14a51d2
+and f23914f258f995bcf31d141ac6599c9e8574030e55f1edea85671714a9bc2204.
+All three actual isolated -I -S -B interpreters resolve the five stdlib inference
+modules. A standalone diagnostic initially omitted -B and generated bytecode in
+the private cp313 candidate; unchanged launch ownership checks rejected it. Only
+that diagnostic bytecode was removed, source/native bytes preserved, then the
+explicit no-bytecode probes and real project commands were checked again.
+
+Corrected physical cp313 changecost preparation25.222s, offline reuse PASS; full
+CLI review143.633s. All10 members execute with no fatal Pylint or tool-error
+findings, no UNKNOWN; actual pytest842 collected,315 calls,325 coverage files,
+exit1. Corrected Requests preparation15.085s, offline PASS; review36.591s,
+all10 members execute, no internal/import-resolution errors;24 tests,139 coverage
+files, pytest exit0. The stricter independent completion checker accepts both
+completed reports; actual project findings/test failures remain FAIL. Both
+reports bind cp313 runtime23efb3a4...90d8e and project-origin-v1 observations.
+This is candidate module-command evidence on unsupported supplementary macOS27,
+not final archive, installed-customer, complete-boundary or publisher proof.
+
+
+### Actual four-manager follow-up — 6 October 2026
+
+Pinned upstream Hatch d5f7bfe813dd4d81520def23b43f5d46aad1899c prepared in67.217s
+and reused offline, but pytest could not import hatch. Its built root wheel's
+generated version file discarded otherwise matching src roots; only backend/src
+remained. RED1,1 existing installed positive control preceded generated-wheel-only
+module handling; represented sources with changed sizes/bytes still reject, and
+matching ambiguous copies retain rejection. No name-only root inference is added.
+Bounded pytest-only diagnostic retained the actual ModuleNotFoundError and missing
+artifact rejection, rather than repeating the failed full acceptance unchanged.
+
+Pinned Flask d73fa1cdcbd8b1465c151db8924ba58b1dd14e35 completed real native uv
+preparation7.117s, offline reuse and all ten analyzers35.686s;19 actual test calls,
+161 coverage files, pytest exit0, strict complete-report checker PASS. Pinned
+Poetry be56ff07db06e9b82574648433ca228e4cac549b prepared53.298s, offline PASS;
+its59.372s review ran7 successful tests with856 coverage files but the report lost
+collection selectors because distributed plugins emitted only21 setup/call/teardown
+events. This was correctly rejected as incomplete acceptance. RED3 preceded
+retention of nodeids from actually observed test phases; empty observers remain
+empty and requested unobserved selectors are never supplied. GREEN89 surrounds
+Hatch runtime preparation and native pytest observations.
+
+The rebuilt cp313 candidate includes those worker changes, digest
+bc2a0a3bb089652b7b93964d5611c784acde99bca3395c53605965ce08327473,
+11758 regular files, manifest_authenticated=false and production_approved=false.
+Actual Hatch and Poetry commands are rechecked under unchanged budgets; final
+archive and installed-customer matrix remain pending.
+
+Before these two new corrections, final v3 SMART and full gates each passed5099
+tests,75 skips,95 subtests with5 existing warnings. These passes cover the earlier
+source, stdlib and fatal-diagnostic fixes; they do not cover the subsequently
+added Hatch/Poetry code. Final v4 mandatory gates are run on that corrected source.
+
+
+### Generated imports, bounded matching and real manager completion — 6 October 2026
+
+The bounded review found generated wheel Python modules could become unreachable
+when a source root shadows the installed regular package. RED stage and collision
+regressions preceded an immutable source-overlay in the prepared runtime, projected
+only into the owned private project snapshot. Existing originals cannot be
+replaced, only Python files enter the overlay, and source/ambiguity binding remains.
+A second actual Hatch failure was ModuleNotFoundError:hatch.venv: an ordinary
+source package named venv was statically excluded. Meaningful capture RED preceded
+removal of that name-only exclusion; real pyvenv.cfg environments remain excluded.
+Focused GREEN 131 covered surrounding snapshot, preparation and worker behavior.
+
+The review also reproduced comparison-budget exhaustion for unrelated package
+names and an uncharged quadratic shared-tail scan. The meaningful shared-tail RED
+uses 3,000 packages named customer_i/common/__init__.py and counted over 9 million
+candidate path reads. Full suffix indexing bounds construction and exact matching
+within the unchanged 100,000 cap; GREEN 115 covers strict bytes, ambiguity, generated
+imports, collision and ordinary environments. Measured Radon CC25 in the introduced
+combined helper required extraction; the final orchestration is CC11, extracted
+helpers CC2–6. The same reviewer found no defects in either correction or extraction.
+Logs source-tail-budget-red/green.log and source-helper-green.log remain private.
+
+A complete real four-manager candidate CLI pass binds runtime
+a12c8c15eddc27cc987a6f0b7d0910206d359fc98bf26270d880f5692c2c4f4d,
+11758 files. Every project completed ten members, no UNKNOWN, no tool_error or fatal
+Pylint findings, strict completion-check PASS and offline cache reuse PASS:
+
+| Actual pinned project / manager | Cold preparation (seconds) | Review (seconds) | Observed tests / coverage files | Pytest exit |
+| --- | ---: | ---: | ---: | ---: |
+| Requests / pip | 14.604 | 36.713 | 24 / 139 | 0 |
+| Hatch / Hatch | 64.651 | 38.551 | 5 / 479 | 0 |
+| Flask / uv | 6.736 | 34.297 | 19 / 161 | 0 |
+| Poetry / Poetry | 51.677 | 55.285 | 7 / 856 | 0 |
+
+The source revisions are those recorded above and in the unchanged pinned corpus.
+Requests reports a genuine BasedPyright finding and FAIL; the others report
+PASS_WITH_ADVISORY. Reports retain project-origin-v1. This candidate precedes the
+final helper/index extraction, which has focused regression proof; these are not
+final-source archive identities. The fixture lease is manifest_authenticated=false,
+production_approved=false, on supplementary macOS27.0.1. No native catalog, supported
+OS/ABI acceptance or ordinary installed-customer success follows from these passes.
+
+Before the latest overlay/index corrections, v4 SMART passed5104 tests,75 skips,
+95 subtests. The subsequent full gate passed5103 and failed one changed-line
+identity test while tracked source was being changed concurrently. The guard
+correctly returned UNKNOWN; it was not weakened. A stable focused rerun passed
+both affected changed-enforcement tests. Final gates are run only after all
+tracked code/spec/manifest edits stop; the historical full failure is not PASS.
+
+
+Final v6 SMART found one stale fixture, with 5,108 tests, 75 skips and 95 subtests
+passing. The original capture test derived ordinary data filenames from the live
+excluded-directory set, then unconditionally linked data/venv. Correct removal
+of name-only venv exclusion left that target absent. The fixture now explicitly
+creates venv as ordinary project data; exact capture inventory and both alias
+content assertions remain. Runtime dangling-alias rejection is unchanged. This
+failed gate is retained; focused proof and stable SMART/full reruns follow.
+
+
+With the corrected ordinary-data fixture, v7 SMART passed 5,109 tests,
+75 explicit skips and 95 subtests. Additional measured clean-code comparison
+found new environment ancestry raised identity orchestration CC9 to CC13.
+Extraction restores it to CC10 (predicate CC4). Optional pytest observation
+projection now belongs to the existing response constructor (CC8), restoring
+worker main to its prior CC13; no new legacy warning is introduced. UV
+verification and analyzer provenance projection are extracted at their natural
+boundaries: input CC38 and preparation CC29 remain at their prior values,
+assembly CC41 is below its prior CC42, and new helpers are CC3–7.
+Focused post-extraction GREEN: 116 tests, 3.12 seconds. This preserves actual
+observation authority, provenance rejection and assembler outputs; final stable
+gates follow these extractions. An initial focused command named a nonexistent
+test module and collected nothing; it is not passing evidence. The corrected
+command uses test_assemble_macos_native_capsule.py.
+
+
+### Stable final runtime checkpoint gates — 6 October 2026, Europe/Berlin
+
+Final v8 format, type (zero errors/warnings), lint (10.00/10), YAML,
+import-boundary, filesystem manifest integrity/version, OpenSpec strict,
+requirements planned mapping, publish pre-check and 28 contract tests pass.
+Final SMART and full suites each pass 5,109 tests, 75 explicit skips and
+95 subtests, with five existing fork deprecation warnings. Neither suite ran
+while tracked source changed. Native proof skips are not acceptance passes.
+The unchanged module compatibility range includes the actually exercised core
+0.55.4. The unpublished module remains 0.51.1; local checksum refresh is unsigned,
+with all publisher key variables removed. Fresh CI signature and hosted exact-head
+review remain required. One bounded agent's final extraction review found no
+defects; it did not independently rerun final suites or authenticate customer
+installation. Local authoritative capsule review is the existing human-approved
+DEFERRED gate, never PASS. No merge, publication or native admission occurred.
+
+Private logs: /private/tmp/specfact460-final-v8-{format,type,lint,yaml,imports,
+signature,openspec,requirements,contract,smart,full}.log. Real candidate manager
+reports and complete archive/installed-customer release limitations above remain
+separate from repository gate results.

@@ -113,6 +113,13 @@ The macOS backend SHALL preserve the exact released baseline's scope, findings, 
 - **THEN** the report retains the selected Darwin/ARM64 environment identity and native platform admission context
 - **AND** it does not label the failed run as a Linux capsule or imply that an analyzer ran
 
+#### Scenario: Pylint fatal diagnostics remain incomplete analyzer evidence
+
+- **WHEN** Pylint returns a fatal `F` diagnostic, including an internal crash or a diagnostic outside the selected source files
+- **THEN** the review retains a `tool_error` finding anchored to the selected source and preserves the fatal rule and diagnostic
+- **AND** ordinary project findings retain their existing mapping and cannot make the failed analyzer appear complete
+- **AND** independent corpus acceptance rejects tool errors and fatal Pylint findings even in an older report that labels the fatal finding as style
+
 ### Requirement: Verified provisioning and offline reuse
 
 Module-shipped files SHALL retain full-module signature/checksum verification. External native runtimes SHALL have an approved signed manifest binding artifact and installed-payload digests, OS, architecture, ABI, complete dependency closure, released policy identity and backend/profile version. Cache identity SHALL include those bindings. Provisioning, extraction and each launch including offline reuse SHALL verify the selected payload and admission policy, and prevent substitution between verification and use.
@@ -126,6 +133,14 @@ The signed native manifest SHALL bind the exact closed analyzer-version map used
 - **THEN** it reads bounded chunks rather than allocating the entire signed allowance in advance
 - **AND** compressed digest, complete uncompressed diff-ID, unpacked-byte and file-count limits, duplicate-path rejection and whiteout safety remain mandatory before application
 - **AND** historical Linux artifact identities, worker limits and acceptance thresholds remain unchanged
+
+#### Scenario: Maintained manager images retain their verified provenance
+
+- **GIVEN** a capsule candidate includes the reviewed managed uv image and its complete source, patch, license, and signed-binary provenance
+- **WHEN** analyzer preparation records native signatures and assembly copies the final runtime
+- **THEN** it verifies the existing ad-hoc hardened uv signature without re-signing or changing the bound executable
+- **AND** preparation revalidates the full maintained artifact after native inventory, while assembly rejects missing, changed, or substituted uv provenance before creating its output
+- **AND** optional maintainer inputs are never inferred from host PATH, and candidate observations cannot approve production publication
 
 #### Scenario: Cached native runtime
 
@@ -737,6 +752,30 @@ The native backend SHALL reuse portable project discovery and prepare dependenci
 - **THEN** the backend SHALL resolve and prepare its dependencies using authentic pinned manager semantics
 - **AND** SHALL retain independently available findings and report incomplete evidence if required preparation is unsupported
 
+#### Scenario: Native preparation materializes contained source aliases
+
+- **GIVEN** an unfamiliar project contains valid internal file or directory aliases, including empty directories
+- **WHEN** native preparation copies the source and verifies its discovered identity before any hook or acquisition
+- **THEN** it materializes those aliases into ordinary private files and directories within the unchanged native source limits
+- **AND** external aliases, excluded environments, cycles, path collisions, substitution during capture and changed source inputs remain rejected before execution
+- **AND** source executable bits are retained, owner-read-only source directories are handled within the owned private copy, the original checkout is unchanged and the sealed dependency runtime remains indirection-free
+
+#### Scenario: Native local pytest retains actual execution observations
+
+- **GIVEN** the confined native pytest adapter executes project tests and produces observer, JUnit and coverage artifacts
+- **WHEN** the worker completes replay and the ordinary command emits its versioned report
+- **THEN** analyzer evidence retains the actual collected selectors, phase records, process exit and coverage data before temporary artifacts are removed
+- **AND** the observations retain `project-origin-v1` provenance; they do not become protected PR evidence or override incomplete execution and genuine failed findings
+- **AND** absent, substituted or malformed artifacts remain incomplete evidence under the existing limits
+
+#### Scenario: Nested local environments do not block ordinary project review
+
+- **GIVEN** an unfamiliar project contains an ignored local Python environment identified by `pyvenv.cfg`, under an arbitrary nested directory
+- **WHEN** ordinary review captures worktree identity and the native source snapshot
+- **THEN** both exclude that environment using the same rule as project preparation, without reading or executing its installed dependencies
+- **AND** tracked or explicitly selected files inside an excluded environment remain incomplete inputs rather than silently disappearing
+- **AND** ordinary source directories, mutations to analyzer inputs, and aliases to outside or excluded inputs retain their existing rejection and identity checks
+
 #### Scenario: Caller resolves ambiguous discovery
 - **GIVEN** repository metadata admits multiple project managers or environments
 - **WHEN** the caller invokes runtime inspect with JSON output
@@ -828,6 +867,26 @@ The native backend SHALL reuse portable project discovery and prepare dependenci
 - **WHEN** a file in the runtime integration package changes
 - **THEN** the native matrix workflow is scheduled even when the basename does not start with native_
 
+#### Scenario: Native source capture preserves ordinary packages named venv
+
+- **WHEN** a project contains a regular Python source package named venv without a pyvenv.cfg marker
+- **THEN** native snapshot capture and worktree support identity retain its actual source bytes
+- **AND** real local environments still remain excluded by their marker, and tracked/selected environment inputs remain rejected
+
+#### Scenario: Distributed native pytest retains actually observed selectors
+
+- **WHEN** project pytest plugins provide actual test phase records without coordinator collection records
+- **THEN** native local execution observations retain the node identifiers observed in setup, call or teardown as collected selectors
+- **AND** an empty observer remains empty; no declared or requested but unobserved selectors may be invented
+
+#### Scenario: Native generated wheel modules preserve bound project source imports
+
+- **WHEN** a real built root wheel includes a generated module absent from the source checkout alongside byte-identical source modules
+- **THEN** native preparation retains source roots proven by unambiguous matching source bytes only when generated modules remain reachable through a sealed project-runtime overlay in private analyzer snapshots
+- **AND** the overlay contains only missing modules from the actual built root wheel, never overwrites customer source, and is bound by the project runtime inventory and identity
+- **AND** existing source modules with differing wheel bytes or ambiguous source matches still reject automatic root inference; no path is inferred only from its name
+- **AND** source matching indexes exact package-path suffixes with a bounded index construction budget; shared short path tails cannot trigger unbounded candidate scans
+
 ### Requirement: Equivalent execution on supported physical machines and full virtual machines
 Support SHALL depend on guest OS/build, CPU architecture, Python ABI and required kernel capabilities. A matching-architecture full VM SHALL be eligible for the same acceptance as a physical machine. VM detection SHALL NOT reject an otherwise supported environment or weaken isolation. Full-system CPU emulation SHALL be recorded as supplemental evidence; translated user-mode binaries SHALL NOT establish native acceptance for their translated architecture. Windows and Linux ARM64 remain follow-ups; this delivery covers macOS ARM64 and Linux x86-64.
 
@@ -847,3 +906,9 @@ Native build and test jobs SHALL emit deterministic final archive and canonical 
 - **WHEN** the maintainer or read-only build job selects unsigned assembly
 - **THEN** the builder emits the same deterministic archive and canonical manifest as the signed path, without calling a signer or creating a signature sidecar
 - **AND** the summary declares manifest authentication false and production eligibility false; only a separate protected CI signing step can authenticate the manifest
+
+#### Scenario: Native standard-library source remains available for static inference
+
+- **WHEN** the relocated native CPython closure supplies frozen or ZIP-loaded standard-library modules to Pylint and Astroid
+- **THEN** the same authenticated bounded standard-library source bytes also exist at their relocated filesystem paths, including `_collections_abc.py`, `collections/abc.py`, and dataclass dependencies
+- **AND** no host interpreter, site-packages, source symlink, or unrecorded fallback supplies those files

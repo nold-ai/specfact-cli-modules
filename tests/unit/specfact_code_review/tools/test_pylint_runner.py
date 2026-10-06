@@ -238,3 +238,30 @@ def test_run_pylint_rejects_startup_failure_with_clean_json(tmp_path: Path, monk
     assert findings[0].category == "tool_error"
     assert diagnostic in findings[0].message
     assert "78" in findings[0].message
+
+
+@mark.parametrize("fatal_path", ["selected", "outside"])
+@mark.parametrize("message_id", ["F0001", "F0002", "F0010"])
+def test_pylint_fatal_diagnostic_is_tool_error_even_outside_selection(
+    tmp_path: Path, monkeypatch: MonkeyPatch, fatal_path: str, message_id: str
+) -> None:
+    selected = tmp_path / "target.py"
+    payload = [
+        {"message-id": "W0702", "path": str(selected), "line": 3, "message": "Bare except"},
+        {
+            "message-id": message_id,
+            "path": str(selected if fatal_path == "selected" else tmp_path / "outside.py"),
+            "line": 0,
+            "message": "Fatal error while checking module; internal crash",
+        },
+    ]
+    monkeypatch.setattr(
+        subprocess, "run", Mock(return_value=completed_process("pylint", stdout=json.dumps(payload), returncode=17))
+    )
+    findings = run_pylint([selected])
+    fatal = next(finding for finding in findings if finding.rule == message_id)
+    assert fatal.category == "tool_error"
+    assert fatal.severity == "error"
+    assert fatal.file == str(selected)
+    assert "internal crash" in fatal.message
+    assert any(finding.rule == "W0702" and finding.category == "architecture" for finding in findings)
