@@ -3825,3 +3825,14 @@ Pre-push native baseline has tools plus all three archive builds PASS. Its nine
 execution cells have not completed. The fresh payload requires new source-bound
 CI signing and review; pushing necessarily supersedes this older concurrency
 group. No partial cell or diagnostic replay is counted as release acceptance.
+
+
+CI signs the fresh0.51.1runtime payload at6ba108b1d24daab47f38238e28863db1530c814b
+following implementatione96d73ccd52821a630bc624d948eb2a06401f434. Fast-forward
+readback verifies all seven modules with `--require-signature`, current filesystem
+payloads, version-bump comparison against origin/dev and the publisher public
+key; no local private key is read. The only signing diff is the manifest
+signature. Bot-head workflows report `action_required`; this substantive
+readback-evidence commit triggers ordinary exact-signed-payload PR checks.
+Required Linux reviews and native nine-cell acceptance remain pending; no
+workflow approval or publisher environment policy is bypassed.
