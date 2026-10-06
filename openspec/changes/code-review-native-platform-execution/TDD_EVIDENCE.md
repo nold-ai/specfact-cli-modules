@@ -3212,3 +3212,94 @@ capsule review is only the previously approved DEFERRED gate. Final logs are
 /private/tmp/specfact460-parser-final-{type,lint,yaml,openspec,smart,full}.log,
 corrected Requirements output and the followup-signature-dev/contract/imports
 logs. No native production flag, published support or completion is asserted.
+
+
+### Current-source native workflow and timeout progress — 2026-10-06
+
+The rebuilt e71e74c7 module-source candidate has identity
+ df8a9ee20f4a7828068b19d90979ee5ebb8af0bc8fc7c68bea46af2c50aa32ee,
+11,758 files, on supplementary physical macOS27.0.1/ARM64/cp313. All ten
+members complete without UNKNOWN/tool-error/fatal rows for the pinned
+Requests/pip, Hatch, Flask/uv and Poetry projects. Actual observed pytest
+calls/coverage files are24/139,5/479,19/161,7/856; pytest exits0 in all four.
+Cold preparation/review seconds are13.373/32.044,62.919/40.267,
+6.563/32.746 and51.721/52.163 respectively. Prepared offline reuse and the
+strict completion checker pass; source checkouts remain clean. Actual reported
+findings are retained, including Requests' BasedPyright FAIL. The native lease
+is an observed candidate fixture: manifest_authenticated=false and
+production_approved=false. This is current-source runtime proof for the
+preceding committed implementation, not final archive or installed-customer
+admission. Private summaries remain under specfact460-native-upstream-5v0slcd6
+and specfact460-final-logic-cp313.summary.json in /private/tmp.
+
+Fresh exact-head e71e74c7 hosted run37453978812 has passed Linux3.13 candidate
+customer/corpus acceptance and all three minimum-core checks. Linux3.12's
+staged review and the independently installed signed baseline hit the
+unchanged300-second analysis deadline. The candidate helper originally returns
+1 after TimeoutExpired, causing the public projector to say review_report_missing.
+This is a concrete diagnostic bug, not proof of which analyzer timed out.
+
+After specifying case460-15-22, the initial test edit targeted the wrong local
+variable; its1PASS is preserved as first-not-red, not failing evidence. Correcting
+the actual exit_code assertion to124 produces1FAIL/22deselected before changing
+production. The single return correction yields86PASS in6.88seconds across
+helper and trusted projector suites. Exit124 remains blocking and does not
+synthesize a report. Logs: specfact460-hook-timeout-distinct-{red,green}.log.
+
+Reuse is preferred over new observer infrastructure: the ordinary CLI already
+provides ReviewOptions.progress_callback, but capsule snapshot dispatch never
+calls it. Case460-15-23 specifies fixed public progress and bounded timeout
+projection. The real snapshot orchestration test fails before any dispatch
+because the callback is absent; two real TimeoutExpired paths also fail because
+the helper discards str/bytes partial stderr. Meaningful RED is3FAIL/4PASS;
+unknown/payload-bearing lines, oversized tails and missing stderr already pass
+negative privacy controls. Production now calls the existing callback before
+member checks and projects only the last exact known analyzer from at most
+65,536 stderr bytes/characters. It labels an analysis timeout, never execution
+success or authority. No callback is emitted for pre-existing unavailable
+member evidence. The unchanged300-second deadline and exit124 are retained.
+
+GREEN is447 helper/runner tests in37.50seconds. An initial combined invocation
+named a nonexistent workflow test path and ran zero tests; this is not passing
+verification. Corrected projector and final repository gates follow separately.
+Private logs: specfact460-capsule-progress-{red,green}.log. The authenticated
+independent baseline is unchanged and its deadline remains undiagnosed. These
+changes improve candidate diagnosis; they do not resolve analysis performance,
+complete protected native delivery, waive review budgets or authorize release.
+
+The completed e71e74c7 run also passes Linux3.11 candidate acceptance; cp312
+and independent timeouts keep the orchestrator and dependent quality jobs
+failed. No successful overall review is inferred. The bounded review agent
+reports No findings for the new timeout/callback/projection diff. Trusted
+workflow projector plus helper tests pass92 cases in6.92seconds. Type has zero
+errors/warnings, lint10.00/10, YAML/imports/OpenSpec strict and28contracts pass.
+The first integrity refresh used explicit manifests with --base-ref alone;
+that mode compares HEAD and correctly rejected unchanged unpublished0.51.1.
+The corrected --changed-only selection compares origin/dev, retains the required
+0.51.0→0.51.1 bump and refreshes only the altered Code Review payload checksum.
+Its signature is deliberately absent pending CI-only signing. Other six
+signatures verify with the paired public key; the initial verification omitted
+that key and is retained as a command failure, not cryptographic proof. The
+first Requirements invocation omitted its declared PYTHONPATH and failed import;
+the corrected command follows the existing CI recipe. No gate is weakened.
+Final SMART/full gates run with tracked files unchanged and follow below.
+
+The corrected planned Requirements gate passes (implementation evidence remains
+not-yet-available). SMART passes5,134tests/75skips/95subtests with five existing
+fork warnings in264.77seconds. Tracked files were stable during that run.
+
+Full GREEN is5,134passed/75skips/95subtests with five existing warnings in
+268.33seconds, again with stable tracked files. Existing native acceptance skips
+are not passes. The already verified Semgrep1.144.0 engine parses all41 changed
+Python files without structured errors; its25 raw legacy rows contain zero
+matches on added lines against HEAD or origin/dev. This is a bounded syntax/
+clean-rule diagnostic, not a replacement for the required ten-analyzer review.
+The first direct engine invocation omitted the existing parity recipe's
+--experimental switch, attempted its absent pysemgrep fallback and produced
+no JSON. It is retained as an invocation failure; the corrected explicit native
+frontend produces exit0/errors[]. Private outputs remain in the existing
+semgrep-1.144-diagnostic folder. Mandatory local capsule review remains the
+human-approved DEFERRED gate, never PASS. The changed0.51.1 checksum requires
+fresh CI-only signing. Final logs are specfact460-progress-{type,lint,yaml,
+imports,integrity-verify-corrected,contracts,openspec,smart,full}.log and corrected
+Requirements output under /private/tmp. No publisher key was used locally.

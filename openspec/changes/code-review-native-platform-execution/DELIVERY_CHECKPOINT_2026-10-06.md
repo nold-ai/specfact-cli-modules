@@ -331,3 +331,28 @@ Final follow-up SMART/full each pass5,127tests,75explicit skips and95subtests;
 all remaining applicable local gates and bounded reviews pass. Exact-head
 hosted review is still blocking. The signed module payload is unchanged by
 this workflow and test-only follow-up.
+
+
+## Runtime follow-up evidence
+
+CI-signed4ec4e942 followed the runtime correction; e71e74c7 preserves the older
+Semgrep parser contract. Current-source supplementary cp313 candidate identity
+`df8a9ee20f4a7828068b19d90979ee5ebb8af0bc8fc7c68bea46af2c50aa32ee`
+completes all ten members for real Requests/pip, Hatch, Flask/uv and Poetry,
+including observed test/coverage output and prepared offline reuse. It remains
+an unauthenticated candidate fixture on physical macOS27, not final installed
+native release proof. Exact counts/timings and private evidence are in
+TDD_EVIDENCE.md.
+
+At e71e74c7, Linux3.11/3.13 customer/corpus jobs, all three minimum-core jobs and
+macOS14/15/26 fixed boundary jobs pass. The cp312 staged review and independently
+installed baseline hit the unchanged300-second analysis deadline; dependent
+quality jobs fail. The new follow-up preserves distinct blocking timeout exit124
+and reuses the existing progress callback so only a bounded fixed last-analyzer
+identity can aid candidate diagnosis. It does not diagnose the unchanged
+independent baseline or resolve either deadline. Final SMART/full each pass
+5,134tests, with the existing75skips/five warnings/95subtests. The bounded
+review agent reports No findings. Fresh CI-only module signing and exact-head
+hosted review are required. Native release workflow, signed catalogs, exact
+nine-cell archives and independent ordinary installed customer proof remain
+open. Keep PR498 draft and #460 open; no merge, publication or archive occurs.

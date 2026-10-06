@@ -168,3 +168,5 @@ replace sections 3, 4 or 6. Exact facts: DELIVERY_CHECKPOINT_2026-10-06.md.
 - [x] Record stable local current-source repository gates and bounded independent review.
 - [ ] Verify fresh CI signature and exact-head hosted review for the runtime correction.
 - [ ] Complete final current-source mandatory gates, CI-only module signing and exact-head blocking review; keep prior hosted failures.
+
+- [x] Reproduce and preserve blocking timeout exit124; wire existing capsule progress and bounded fixed-analyzer timeout diagnostics without exposing raw content or changing budgets.

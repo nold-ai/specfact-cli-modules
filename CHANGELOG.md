@@ -23,7 +23,9 @@ and this project follows SemVer for bundle versions.
   wheels add generated modules by sealing them into private snapshot overlays,
   retain ordinary source packages named `venv`, bound source matching for shared
   package tails, and retain actually observed selectors from distributed pytest
-  phase records.
+  phase records. Connect capsule execution to the existing CLI progress callback
+  and preserve blocking timeout exit 124 with only a bounded, fixed analyzer
+  identity in hosted diagnostics; retain the 300-second analysis budget.
 
 - Prepare Code Review 0.51.1 to display distinct UNKNOWN analyzer diagnostics in
   ordinary terminal reports. Native capsule builders can emit unsigned final

@@ -810,6 +810,8 @@ The native backend SHALL reuse portable project discovery and prepare dependenci
 - **AND** incomplete execution findings SHALL precede ordinary findings within the same 200-location limit
 - **AND** a trusted independent analysis timeout or missing report SHALL expose only a fixed public status while retaining the original 300-second analysis budget
 - **AND** structured Semgrep failures MAY expose at most three recognized public error variant tags from bounded JSON details; unknown tags, variant payloads, raw messages and source excerpts SHALL remain private
+- **AND** the staged helper preserves the distinct analysis-timeout exit124 after the unchanged300-second deadline, so missing-report diagnostics cannot conceal the timeout; every timeout remains a blocking failure
+- **AND** capsule review SHALL reuse the existing progress callback before each analyzer check; timeout diagnostics MAY identify only the last recognized fixed analyzer from a bounded stderr tail, without copying raw tool output or claiming successful execution
 
 #### Scenario: Staged review activates bug-hunt
 

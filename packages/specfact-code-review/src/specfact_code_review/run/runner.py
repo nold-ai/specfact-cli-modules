@@ -2114,6 +2114,8 @@ def _run_capsule_snapshot(
         sealed_bugs_policy = settings.member_argv is not None and "semgrep-bugs" in settings.member_argv
         raw = (settings.unavailable_members or {}).get(member)
         if raw is None:
+            if options.progress_callback is not None:
+                options.progress_callback(f"Checking capsule analyzer {member}...")
             raw = _dispatch_capsule_member(
                 CapsuleMemberExecutionRequest(
                     runtime=runtime,

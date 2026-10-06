@@ -447,10 +447,49 @@ def test_main_timeout_fails_hook(monkeypatch: pytest.MonkeyPatch, capsys: pytest
 
     exit_code = module.main(["tests/unit/test_app.py"])
 
-    assert exit_code == 1
+    assert exit_code == 124
     err = capsys.readouterr().err
     assert "timed out after 300s" in err
     assert "tests/unit/test_app.py" in err
+
+
+@pytest.mark.parametrize(
+    ("partial_stderr", "analyzer"),
+    [
+        ("private tool content\nChecking capsule analyzer pylint...\n", "pylint"),
+        (b"Checking capsule analyzer ruff...\nprivate token\nChecking capsule analyzer contracts...\n", "contracts"),
+        ("Checking capsule analyzer private-token...\n", None),
+        ("Checking capsule analyzer pylint... private token\n", None),
+        ("Checking capsule analyzer ruff...\n" + "x" * 65_536, None),
+        (None, None),
+    ],
+)
+def test_review_timeout_projects_only_last_fixed_analyzer(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    tmp_path: Path,
+    partial_stderr: str | bytes | None,
+    analyzer: str | None,
+) -> None:
+    module = _load_script_module()
+
+    def fail(cmd: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        assert kwargs["timeout"] == 300
+        raise subprocess.TimeoutExpired(cmd, 300, stderr=partial_stderr)
+
+    monkeypatch.setattr(module.subprocess, "run", fail)
+    assert module._run_review_subprocess(["specfact"], tmp_path, [], enforcement="changed") is None
+    captured = capsys.readouterr()
+    diagnostics = [json.loads(line) for line in captured.err.splitlines() if line.startswith("{")]
+    expected = (
+        []
+        if analyzer is None
+        else [{"status": "INCOMPLETE", "phase": "review", "diagnostic": "analysis_timeout", "analyzer": analyzer}]
+    )
+    assert diagnostics == expected
+    assert "private" not in captured.err
+    assert "x" * 100 not in captured.err
+    assert captured.out == ""
 
 
 def test_run_review_subprocess_exposes_local_module_sources(monkeypatch: pytest.MonkeyPatch) -> None:

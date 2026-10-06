@@ -2627,6 +2627,33 @@ def test_sealed_target_bugs_policy_activates_semgrep_bugs_without_bug_hunt(monke
     assert result.evidence["semgrep-bugs"]["evidence_outcome"] == "PASS"
 
 
+def test_capsule_snapshot_reports_progress_before_member_check(monkeypatch: MonkeyPatch) -> None:
+    runner_api = _c14_runner()
+    observed: list[str] = []
+    checked: list[str] = []
+
+    def dispatch(request: Any, **_kwargs: object) -> dict[str, object]:
+        assert observed[-1] == f"Checking capsule analyzer {request.member}..."
+        checked.append(request.member)
+        return {"execution_state": "ran", "evidence_outcome": "PASS", "findings": [], "diagnostic": ""}
+
+    monkeypatch.setattr(runner_api, "_dispatch_capsule_member", dispatch)
+    unavailable = {"ruff": {"execution_state": "error", "evidence_outcome": "UNKNOWN", "findings": []}}
+    result = runner_api._run_capsule_snapshot(
+        SimpleNamespace(identity="sha256:" + "a" * 64),
+        snapshot_root=Path("/private/project"),
+        files=[Path("/private/project/src/app.py")],
+        options=runner_api.ReviewOptions(progress_callback=observed.append),
+        settings=runner_api.CapsuleSnapshotSettings(unavailable_members=unavailable),
+    )
+
+    expected = [member for member in runner_api.default_pr_range_profile().all_ids if member != "ruff"]
+    assert checked == expected
+    assert observed == [f"Checking capsule analyzer {member}..." for member in expected]
+    assert result.evidence["ruff"]["evidence_outcome"] == "UNKNOWN"
+    assert {result.evidence[member]["evidence_outcome"] for member in expected} == {"PASS"}
+
+
 def test_empty_capsule_snapshot_marks_every_member_not_applicable(monkeypatch: MonkeyPatch) -> None:
     runner_api = _c14_runner()
     monkeypatch.setattr(
