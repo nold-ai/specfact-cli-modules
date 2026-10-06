@@ -677,7 +677,7 @@ def test_independent_reviewer_pin_is_installable_signed_published_baseline():
     assert "SPECFACT_ALLOW_UNSIGNED" not in installation
 
 
-def test_published_reviewer_archive_matches_registry_checksum_and_signed_metadata():
+def test_published_reviewer_archive_matches_registry_checksum_and_authenticated_manifest():
     import hashlib
     import tarfile
 

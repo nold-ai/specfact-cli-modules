@@ -179,7 +179,7 @@ def test_client_authenticates_once_after_listener_becomes_ready(control, tmp_pat
 
 
 @pytest.mark.parametrize("changed_state", ["socket_missing", "socket_mode_pending", "socket_owner_invalid"])
-def test_refused_listener_rechecks_private_metadata_before_next_socket(control, tmp_path, changed_state):
+def test_refused_listener_rechecks_private_socket_identity_before_next_socket(control, tmp_path, changed_state):
     stream = Mock()
     stream.connect.side_effect = ConnectionRefusedError()
     with (
@@ -223,7 +223,7 @@ def test_failed_authentication_closes_stream_without_reconnecting(control, tmp_p
 
 
 @pytest.mark.parametrize("after_metadata", [16.0, 17.0])
-def test_metadata_checks_cannot_extend_connection_budget(control, tmp_path, after_metadata):
+def test_socket_identity_checks_cannot_extend_connection_budget(control, tmp_path, after_metadata):
     stream = Mock()
     with (
         patch.object(control.SOCKET, "_private_socket_state", return_value="private"),

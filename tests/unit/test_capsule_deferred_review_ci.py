@@ -706,3 +706,133 @@ def test_trusted_review_budget_timeout_retains_three_hundred_seconds_and_fixed_e
         exec(command, {})
     assert result.value.code == 124
     assert observed == [(["trusted-python", "trusted-reviewer.py"], 300, False)]
+
+
+@pytest.mark.parametrize("job_name", ["customer", "independent-review"])
+@pytest.mark.parametrize(
+    "details,expected",
+    [
+        (
+            [{"type": "Syntax error", "message": "PRIVATE_SOURCE"}, {"type": "Timeout"}, {"type": "SECRET_TYPE"}],
+            ["Syntax error", "Timeout"],
+        ),
+        (
+            [{"type": ["PartialParsing", "PRIVATE_SPAN"]}, {"type": "Fatal error", "private": "PRIVATE_TOKEN"}],
+            ["Fatal error", "PartialParsing"],
+        ),
+        (
+            [{"type": "Syntax error"}, {"type": "Timeout"}, {"type": "Fatal error"}, {"type": "Out of memory"}],
+            ["Fatal error", "Syntax error", "Timeout"],
+        ),
+    ],
+)
+def test_structured_semgrep_failure_projects_only_fixed_variant_tags(tmp_path: Path, job_name, details, expected):
+    import json
+
+    _git(tmp_path, "init", "-q")
+    (tmp_path / "public.py").write_text("value = 1\n")
+    _git(tmp_path, "add", "public.py")
+    report = tmp_path / ".specfact/code-review.json"
+    report.parent.mkdir()
+    finding = {
+        "file": "public.py",
+        "line": 1,
+        "severity": "error",
+        "category": "tool_error",
+        "tool": "semgrep",
+        "message": "semgrep returned structured errors; details=" + json.dumps(details),
+    }
+    report.write_text(json.dumps({"findings": [finding]}))
+    result = subprocess.run(
+        [sys.executable, "-c", _public_projector(job_name)], cwd=tmp_path, text=True, capture_output=True, check=False
+    )
+    assert result.returncode == 0, result.stderr
+    projected = json.loads(result.stdout)["finding_location"]
+    assert projected["failure_class"] == "structured_errors"
+    assert projected["semgrep_error_types"] == expected
+    assert "PRIVATE" not in result.stdout and "SECRET" not in result.stdout
+
+
+@pytest.mark.parametrize("job_name", ["customer", "independent-review"])
+@pytest.mark.parametrize(
+    "details",
+    [
+        '{"type":"Syntax error"}',
+        "not-json",
+        '[{"type":"SECRET_TYPE"}]',
+        '[{"type":"Syntax error"}]' + "PRIVATE" * 1000,
+        "[" * 1500 + "]" * 1500,
+    ],
+)
+def test_malformed_or_oversized_semgrep_details_keep_generic_public_cause(tmp_path: Path, job_name, details):
+    import json
+
+    _git(tmp_path, "init", "-q")
+    (tmp_path / "public.py").write_text("value = 1\n")
+    _git(tmp_path, "add", "public.py")
+    report = tmp_path / ".specfact/code-review.json"
+    report.parent.mkdir()
+    finding = {
+        "file": "public.py",
+        "line": 1,
+        "severity": "error",
+        "category": "tool_error",
+        "tool": "semgrep",
+        "message": "semgrep returned structured errors; details=" + details,
+    }
+    report.write_text(json.dumps({"findings": [finding]}))
+    result = subprocess.run(
+        [sys.executable, "-c", _public_projector(job_name)], cwd=tmp_path, text=True, capture_output=True, check=False
+    )
+    assert result.returncode == 0, result.stderr
+    projected = json.loads(result.stdout)["finding_location"]
+    assert projected["failure_class"] == "structured_errors"
+    assert "semgrep_error_types" not in projected
+    assert "PRIVATE" not in result.stdout and "SECRET" not in result.stdout
+
+
+@pytest.mark.parametrize("job_name", ["customer", "independent-review"])
+def test_semgrep_decoder_depth_failure_keeps_generic_public_cause(tmp_path: Path, job_name):
+    import json
+
+    _git(tmp_path, "init", "-q")
+    (tmp_path / "public.py").write_text("value = 1\n")
+    _git(tmp_path, "add", "public.py")
+    report = tmp_path / ".specfact/code-review.json"
+    report.parent.mkdir()
+    report.write_text(
+        json.dumps(
+            {
+                "findings": [
+                    {
+                        "file": "public.py",
+                        "line": 1,
+                        "severity": "error",
+                        "category": "tool_error",
+                        "tool": "semgrep",
+                        "message": "semgrep returned structured errors; details=DECODER_DEPTH_FAILURE",
+                    }
+                ]
+            }
+        )
+    )
+    fault = """import json
+_original_loads = json.loads
+def _depth_failure(value, *args, **kwargs):
+    if value == "DECODER_DEPTH_FAILURE":
+        raise RecursionError("PRIVATE_DECODER_TRACE")
+    return _original_loads(value, *args, **kwargs)
+json.loads = _depth_failure
+"""
+    result = subprocess.run(
+        [sys.executable, "-c", fault + _public_projector(job_name)],
+        cwd=tmp_path,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    projected = json.loads(result.stdout)["finding_location"]
+    assert projected["failure_class"] == "structured_errors"
+    assert "semgrep_error_types" not in projected
+    assert "PRIVATE" not in result.stdout and "PRIVATE" not in result.stderr

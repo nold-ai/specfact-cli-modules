@@ -96,7 +96,7 @@ def test_build_is_deterministic_and_manifest_is_consumer_compatible(build_case, 
     assert first.signature.read_bytes() == second.signature.read_bytes()
 
 
-def test_builder_manifest_and_signing_metadata_match_serialized_archive(build_case) -> None:
+def test_builder_manifest_and_signature_provenance_bind_archive(build_case) -> None:
     _root, _key, _closure, signing, invoke = build_case
     first = invoke()
     document = json.loads(first.manifest.read_bytes())

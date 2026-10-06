@@ -242,7 +242,7 @@ requirements:
       scenario_id: signed-customer-release-acceptance
       method: test
       intent: "Private socket metadata precedes listener readiness."
-      observable: "test_private_socket_connect_waits_only_for_refused_listener, test_metadata_checks_cannot_extend_connection_budget and related tests verify refusal-only fresh sockets, metadata rechecks, original seven-second budget including metadata work, close on deadline/error and one authentication. No job or fixture retry; hosted 100-repetition and cleanup acceptance remain required."
+      observable: "test_private_socket_connect_waits_only_for_refused_listener, test_socket_identity_checks_cannot_extend_connection_budget and related tests verify refusal-only fresh sockets, metadata rechecks, original seven-second budget including metadata work, close on deadline/error and one authentication. No job or fixture retry; hosted 100-repetition and cleanup acceptance remain required."
     - case_id: 460-8-23
       scenario_id: signed-customer-release-acceptance
       method: test
@@ -549,6 +549,16 @@ requirements:
       method: test
       intent: "Explicit matching tests resolve ambiguous source mapping."
       observable: "test_explicit_matching_test_resolves_duplicate_source_stems verifies order-independent explicit matching choices, multiple explicit tests and other retained tests; absent or unrelated explicit tests preserve ambiguity. Full discovery and strict coverage remain unchanged."
+    - case_id: 460-15-21
+      scenario_id: prepare-unfamiliar-projects-from-discovered-or-caller-supplied-setup
+      method: inspection
+      intent: "Preserved Linux analyzer can parse equivalent command-test callbacks."
+      observable: "The hash-verified official Semgrep1.144.0 ARM64 engine reproduces a syntax error at the keyword-only lambda in the touched command test; equivalent named keyword-only functions must remove that error without changing any review assertion or ignoring structured errors. Native static evidence is separate from exact-head Linux acceptance."
+    - case_id: 460-15-20
+      scenario_id: prepare-unfamiliar-projects-from-discovered-or-caller-supplied-setup
+      method: test
+      intent: "Hosted structured Semgrep failures retain a safe actionable variant."
+      observable: "Four meaningful RED cases and two injected decoder-failure RED cases precede fixed scalar and payload-bearing error-tag projection from bounded JSON details in both trusted inline diagnostic paths. Unknown types, payloads, source excerpts, malformed or oversized details remain private; structured outer errors take precedence over nested timeout text, the existing 200-location limit and review exit remain unchanged."
     - case_id: 460-15-13
       scenario_id: prepare-unfamiliar-projects-from-discovered-or-caller-supplied-setup
       method: test
@@ -558,7 +568,7 @@ requirements:
       scenario_id: prepare-unfamiliar-projects-from-discovered-or-caller-supplied-setup
       method: test
       intent: "Independent review installs an available published baseline."
-      observable: "The literal reviewer-pin test validates the published version and core; test_published_reviewer_archive_matches_registry_checksum_and_signed_metadata separately verifies the exact registry archive checksum and signed metadata. The isolated job retains no candidate module/unsigned overrides. Hosted installation/review is required separately."
+      observable: "The literal reviewer-pin test validates the published version and core; test_published_reviewer_archive_matches_registry_checksum_and_authenticated_manifest separately verifies the exact registry archive checksum and signed metadata. The isolated job retains no candidate module/unsigned overrides. Hosted installation/review is required separately."
     - case_id: 460-15-7
       scenario_id: prepare-unfamiliar-projects-from-discovered-or-caller-supplied-setup
       method: inspection

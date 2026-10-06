@@ -309,3 +309,25 @@ strict also pass. The same bounded reviewer reports no defects. Fresh module
 signature and exact-head hosted review remain CI follow-ups; local capsule
 review is DEFERRED under the prior human approval. These local results do not
 advance production or complete-boundary flags and cannot close #460.
+
+
+The runtime implementation is committed in ca1cf81f; the CI-signed exact head
+4ec4e942 verifies all seven module signatures. Hosted Linux3.11/3.13 customer
+and five-project corpus checks pass. Linux3.12 candidate review and the independent
+installed reviewer remain blocking (structured errors/incomplete analyzers and
+300-second timeout respectively). Native macOS14/15/26 fixed lifecycle fixtures
+pass; final archive OS/ABI acceptance remains outstanding. A bounded diagnostic
+follow-up exposes fixed public Semgrep variant tags and fixes six test-name
+findings; focused229 tests pass and the existing review agent finds no defects.
+This additional evidence does not establish delivery or publication readiness.
+
+The preserved Semgrep1.144.0 engine independently reproduces a syntax failure
+on a keyword-only lambda in the touched command tests. Equivalent named
+keyword-only callbacks retain every assertion and remove the structured error
+in the same41-file native static scan. Linux exact-head confirmation and the
+other incomplete analyzers remain required; no analysis budget changed.
+
+Final follow-up SMART/full each pass5,127tests,75explicit skips and95subtests;
+all remaining applicable local gates and bounded reviews pass. Exact-head
+hosted review is still blocking. The signed module payload is unchanged by
+this workflow and test-only follow-up.

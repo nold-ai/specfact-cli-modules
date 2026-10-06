@@ -3104,3 +3104,111 @@ Private logs: /private/tmp/specfact460-final-v8-{format,type,lint,yaml,imports,
 signature,openspec,requirements,contract,smart,full}.log. Real candidate manager
 reports and complete archive/installed-customer release limitations above remain
 separate from repository gate results.
+
+
+### Signed runtime follow-up and bounded hosted diagnostics — 6 October 2026, Europe/Berlin
+
+Runtime source commit ca1cf81f6915661c41bc781107a4b7907e9923c2 was committed
+through the normal hook pipeline and pushed to draft PR #498. Its CI signing
+follow-up 4ec4e942ae43e7705163dba573b384785fd6653e changes only the module
+signature; all seven filesystem payloads pass public-key signature verification.
+No publisher private key was used locally. The approved Darwin capsule review
+remained DEFERRED, never PASS.
+
+Exact-head orchestrator run 37447095674 failed. Linux customer cp311 and cp313
+passed cold/warm/alternate/targeted fixtures and their external-corpus artifacts
+contain status PASS with no failures. The cp312 blocking candidate review failed
+with structured Semgrep errors, Pylint timeout, incomplete CrossHair timeout and
+a pytest tool_error. Independent installed signed review timed out with exit124
+at the unchanged 300-second budget. No raw analysis report was uploaded; these
+finite diagnostics do not identify the underlying causes yet. All three minimum
+core jobs pass. Quality jobs remain failed by their prerequisites. Native run
+37447095490 passes fixed startup/control/lifecycle fixtures on macOS14/15/26;
+these are not final archives or the required OS/ABI acceptance matrix. Five
+bot-authored test runs were approved for execution, without PR approval, merge,
+promotion or signing-authority changes.
+
+New case460-15-20 first failed four genuine assertions for absent recognized
+Semgrep tags, while eight privacy controls passed. Both trusted inline projectors
+now expose at most three fixed public error-variant tags from bounded details;
+unknown names, variant payloads, source excerpts and raw messages stay private.
+Structured outer errors precede nested Timeout text. A first implementation
+failed two such precedence assertions before correction. Actual local CPython
+3.14.7 and 3.12.14 both parsed the 1,500-level bounded nesting control, so that
+control is not failing-first evidence. Explicit decoder-fault injection then
+failed two tests with a private RecursionError traceback; bounded fallback now
+catches it and retains the generic public cause. Existing exits, 300-second
+review deadline and 200-location cap are unchanged, and the independently
+installed review does not execute candidate helper scripts.
+
+Native candidate Semgrep1.175.0 scanned all41 changed Python files with exit0,
+no structured errors and six introduced naming matches in tests. Six test names
+were corrected without changing assertions; the same diagnostic now has zero
+introduced naming matches. This native version differs from the released Linux
+tool and does not resolve its structured errors or establish hosted acceptance.
+Focused follow-up GREEN is229 tests in8.55seconds. The existing bounded review
+agent reports No findings for the workflow/test diff; it did not rerun tests.
+Whitespace observations were corrected. Final local gates are recorded after
+all tracked edits stop. Protected native release workflow, final nine-cell
+archive acceptance, signed catalogs and independent native customer installation
+remain incomplete. No archive, publication or #460 closure is authorized by
+these partial results.
+
+Private diagnostic logs: specfact460-structured-semgrep-public-red.log,
+specfact460-structured-semgrep-decoder-red.log and
+specfact460-semgrep-diagnostic-final-green.log under /private/tmp. Historical
+failed gates remain retained rather than relabeled as successful.
+
+The first follow-up signature command omitted --version-check-base and compared
+against HEAD~1, the CI signature-only commit parent. Cryptographic checks passed
+all seven modules, but that default version comparison failed at unchanged0.51.1.
+The corrected command uses origin/dev, matching the normal hook policy. This
+invocation failure does not justify a second version bump or signature rewrite.
+
+
+The preserved Semgrep1.144.0 parser failure now has a concrete reproduction.
+The official PyPI ARM64 wheel is39,953,709bytes, SHA256
+a10b5076d50cdf5ebbec720580679d69a1172485d52f9fbf24b11af5e3676d0f
+(metadata https://pypi.org/pypi/semgrep/1.144.0/json, accessed2026-10-06).
+It was hash-verified and only its engine extracted into a private diagnostic
+folder; installed analyzer packages, locks and compatibility policies were
+unchanged. With metrics disabled, a private HOME and the unchanged90-second
+budget, the same41-source scan exits0 but reports Syntax error at the pre-existing
+keyword-only lambda at test_commands.py:721. The runtime correctly treats this
+structured error as incomplete despite exit0. Semgrep1.175.0 has no such error.
+Private equivalent-source controls show parentheses still fail, while positional
+lambda syntax parses but loses the keyword-only contract and was not adopted.
+
+After specifying case460-15-21, five local callbacks were replaced with nested
+named keyword-only functions. Every return value and test assertion is retained.
+The same Semgrep1.144.0 command now exits0 with errors[] and28 real findings;
+146 command/projector tests pass in7.40seconds. This is a real older-parser
+compatibility fix, not an error-filter waiver. Linux reproduction remains to be
+confirmed by exact-head hosted review; Pylint/CrossHair/pytest failures and the
+independent deadline remain unresolved. The earlier SMART follow-up passed
+5,127tests,75skips,95subtests and five existing warnings in264.75seconds before
+this additional callback syntax correction. Final stable gates follow below.
+
+The first private-copy comparison command used a nonexistent local config path
+and yielded non-JSON output; the corrected command used the original verified
+rule paths. That failed diagnostic is not passing parser evidence.
+
+The first new case mapping used a scenario title slug, while the current native
+Requirements import exposes requirement-level scenario identities. The existing
+gate rejected unknown-source-scenario. The sidecar now uses the established
+parent requirement identity, as every existing case does; the concrete scenario
+and parser proof remain explicit. No validator or acceptance rule was changed.
+
+
+Final parser-compatible follow-up gates: SMART5,127passed/75skips/95subtests
+in264.63seconds; full5,127passed/75skips/95subtests in267.70seconds. Both
+retain five existing fork warnings and ran with tracked files stable. Format,
+type (zero errors/warnings), lint10.00/10, YAML, imports, strict filesystem
+signatures/version against origin/dev, OpenSpec strict, corrected planned
+Requirements mapping and28contracts pass. The bounded callback review reports
+No findings and confirms all five keyword-only signatures, closures and
+assertions remain unchanged. Hosted exact-head review remains required; local
+capsule review is only the previously approved DEFERRED gate. Final logs are
+/private/tmp/specfact460-parser-final-{type,lint,yaml,openspec,smart,full}.log,
+corrected Requirements output and the followup-signature-dev/contract/imports
+logs. No native production flag, published support or completion is asserted.

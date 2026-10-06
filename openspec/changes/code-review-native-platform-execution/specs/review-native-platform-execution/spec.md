@@ -809,6 +809,7 @@ The native backend SHALL reuse portable project discovery and prepare dependenci
 - **AND** the diagnostic step SHALL preserve the review failure exit code
 - **AND** incomplete execution findings SHALL precede ordinary findings within the same 200-location limit
 - **AND** a trusted independent analysis timeout or missing report SHALL expose only a fixed public status while retaining the original 300-second analysis budget
+- **AND** structured Semgrep failures MAY expose at most three recognized public error variant tags from bounded JSON details; unknown tags, variant payloads, raw messages and source excerpts SHALL remain private
 
 #### Scenario: Staged review activates bug-hunt
 
@@ -886,6 +887,13 @@ The native backend SHALL reuse portable project discovery and prepare dependenci
 - **AND** the overlay contains only missing modules from the actual built root wheel, never overwrites customer source, and is bound by the project runtime inventory and identity
 - **AND** existing source modules with differing wheel bytes or ambiguous source matches still reject automatic root inference; no path is inferred only from its name
 - **AND** source matching indexes exact package-path suffixes with a bounded index construction budget; shared short path tails cannot trigger unbounded candidate scans
+
+#### Scenario: Preserved Linux analyzer parses reviewed test callbacks
+
+- **GIVEN** a native-runtime correction also touches the established command tests
+- **WHEN** the preserved Linux Semgrep1.144.0 scans those complete Python inputs
+- **THEN** test callbacks use equivalent supported syntax while retaining keyword-only invocation contracts and all existing assertions
+- **AND** structured parser failures remain incomplete evidence rather than being ignored, skipped or relabeled as successful execution
 
 ### Requirement: Equivalent execution on supported physical machines and full virtual machines
 Support SHALL depend on guest OS/build, CPU architecture, Python ABI and required kernel capabilities. A matching-architecture full VM SHALL be eligible for the same acceptance as a physical machine. VM detection SHALL NOT reject an otherwise supported environment or weaken isolation. Full-system CPU emulation SHALL be recorded as supplemental evidence; translated user-mode binaries SHALL NOT establish native acceptance for their translated architecture. Windows and Linux ARM64 remain follow-ups; this delivery covers macOS ARM64 and Linux x86-64.

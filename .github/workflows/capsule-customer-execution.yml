@@ -197,6 +197,36 @@ jobs:
                   codes = [token for token in tokens if token in public_codes]
                   if codes:
                       print(json.dumps({"analyzer": row["id"], "diagnostic_codes": codes}))
+              def _semgrep_error_types(message):
+                  if len(message) > 4096 or "details=" not in message:
+                      return []
+                  try:
+                      details = json.loads(message.rsplit("details=", 1)[1])
+                  except (ValueError, TypeError, RecursionError):
+                      return []
+                  if not isinstance(details, list):
+                      return []
+                  allowed = {
+                      "Lexical error", "Syntax error", "Other syntax error", "AST builder error",
+                      "Rule parse error", "SemgrepWarning", "SemgrepError", "InvalidRuleSchemaError",
+                      "UnknownLanguageError", "Invalid YAML", "Internal matching error",
+                      "Semgrep match found", "Too many matches", "Fatal error", "Timeout",
+                      "Out of memory", "Fixpoint timeout", "Stack overflow",
+                      "Timeout during interfile analysis", "OOM during interfile analysis",
+                      "Missing plugin", "Pattern parse error", "Incompatible rule",
+                      "PatternParseError", "PartialParsing", "IncompatibleRule", "DependencyResolutionError",
+                  }
+                  tags = set()
+                  for error in details[:3]:
+                      if not isinstance(error, dict):
+                          continue
+                      value = error.get("type")
+                      if isinstance(value, list) and value:
+                          value = value[0]
+                      if isinstance(value, str) and value in allowed:
+                          tags.add(value)
+                  return sorted(tags)
+
               tracked = set(subprocess.check_output(["git", "ls-files", "-z"], text=True).split("\0"))
               emitted = 0
               findings = sorted(data.get("findings", []), key=lambda row: not (isinstance(row, dict) and row.get("category") == "tool_error"))
@@ -221,8 +251,8 @@ jobs:
                       if location.get("category") == "tool_error":
                           message = finding.get("message")
                           classes = (
-                              ("timeout", "timeout"), ("timed out", "timeout"),
                               ("structured errors", "structured_errors"),
+                              ("timeout", "timeout"), ("timed out", "timeout"),
                               ("semgrep process failed", "process_failure"),
                               ("semgrep returned empty stdout", "empty_output"),
                               ("unrecognized crosshair output", "unrecognized_output"),
@@ -231,6 +261,10 @@ jobs:
                               for marker, classification in classes:
                                   if marker in message.lower():
                                       location["failure_class"] = classification
+                                      if classification == "structured_errors":
+                                          tags = _semgrep_error_types(message)
+                                          if tags:
+                                              location["semgrep_error_types"] = tags
                                       break
                       print(json.dumps({"finding_location": location}))
                       emitted += 1
@@ -430,6 +464,36 @@ jobs:
                   codes = [token for token in tokens if token in public_codes]
                   if codes:
                       print(json.dumps({"analyzer": row["id"], "diagnostic_codes": codes}))
+              def _semgrep_error_types(message):
+                  if len(message) > 4096 or "details=" not in message:
+                      return []
+                  try:
+                      details = json.loads(message.rsplit("details=", 1)[1])
+                  except (ValueError, TypeError, RecursionError):
+                      return []
+                  if not isinstance(details, list):
+                      return []
+                  allowed = {
+                      "Lexical error", "Syntax error", "Other syntax error", "AST builder error",
+                      "Rule parse error", "SemgrepWarning", "SemgrepError", "InvalidRuleSchemaError",
+                      "UnknownLanguageError", "Invalid YAML", "Internal matching error",
+                      "Semgrep match found", "Too many matches", "Fatal error", "Timeout",
+                      "Out of memory", "Fixpoint timeout", "Stack overflow",
+                      "Timeout during interfile analysis", "OOM during interfile analysis",
+                      "Missing plugin", "Pattern parse error", "Incompatible rule",
+                      "PatternParseError", "PartialParsing", "IncompatibleRule", "DependencyResolutionError",
+                  }
+                  tags = set()
+                  for error in details[:3]:
+                      if not isinstance(error, dict):
+                          continue
+                      value = error.get("type")
+                      if isinstance(value, list) and value:
+                          value = value[0]
+                      if isinstance(value, str) and value in allowed:
+                          tags.add(value)
+                  return sorted(tags)
+
               tracked = set(subprocess.check_output(["git", "ls-files", "-z"], text=True).split("\0"))
               emitted = 0
               findings = sorted(data.get("findings", []), key=lambda row: not (isinstance(row, dict) and row.get("category") == "tool_error"))
@@ -454,8 +518,8 @@ jobs:
                       if location.get("category") == "tool_error":
                           message = finding.get("message")
                           classes = (
-                              ("timeout", "timeout"), ("timed out", "timeout"),
                               ("structured errors", "structured_errors"),
+                              ("timeout", "timeout"), ("timed out", "timeout"),
                               ("semgrep process failed", "process_failure"),
                               ("semgrep returned empty stdout", "empty_output"),
                               ("unrecognized crosshair output", "unrecognized_output"),
@@ -464,6 +528,10 @@ jobs:
                               for marker, classification in classes:
                                   if marker in message.lower():
                                       location["failure_class"] = classification
+                                      if classification == "structured_errors":
+                                          tags = _semgrep_error_types(message)
+                                          if tags:
+                                              location["semgrep_error_types"] = tags
                                       break
                       print(json.dumps({"finding_location": location}))
                       emitted += 1

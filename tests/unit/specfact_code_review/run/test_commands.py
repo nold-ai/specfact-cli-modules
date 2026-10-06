@@ -716,10 +716,10 @@ def test_run_command_uses_git_diff_when_files_are_omitted(
     recorded: dict[str, object] = {}
     out = tmp_path / "review-report.json"
 
-    monkeypatch.setattr(
-        "specfact_code_review.run.commands._changed_files_from_git_diff",
-        lambda *, include_tests: [Path("tests/fixtures/review/clean_module.py")],
-    )
+    def _changed_paths(*, include_tests: bool) -> list[Path]:
+        return [Path("tests/fixtures/review/clean_module.py")]
+
+    monkeypatch.setattr("specfact_code_review.run.commands._changed_files_from_git_diff", _changed_paths)
 
     def fake_run_review(files: list[Path], **_kwargs: Any) -> ReviewReport:
         recorded["files"] = files
@@ -813,14 +813,15 @@ def test_run_command_supports_changed_scope_with_repeatable_path_filters(monkeyp
     monkeypatch.chdir(tmp_path)
 
     recorded: dict[str, object] = {}
-    monkeypatch.setattr(
-        "specfact_code_review.run.commands._changed_files_from_git_diff",
-        lambda *, include_tests: [
+
+    def _changed_paths(*, include_tests: bool) -> list[Path]:
+        return [
             package_file,
             test_file,
             Path("packages/specfact-backlog/src/specfact_backlog/commands.py"),
-        ],
-    )
+        ]
+
+    monkeypatch.setattr("specfact_code_review.run.commands._changed_files_from_git_diff", _changed_paths)
 
     def fake_run_review(files: list[Path], **_kwargs: Any) -> ReviewReport:
         recorded["files"] = files
@@ -857,10 +858,11 @@ def test_run_command_passes_simplify_focus_after_scope_resolution(monkeypatch: A
     )
     monkeypatch.chdir(tmp_path)
     recorded: dict[str, object] = {}
-    monkeypatch.setattr(
-        "specfact_code_review.run.commands._changed_files_from_git_diff",
-        lambda *, include_tests: [package_file],
-    )
+
+    def _changed_paths(*, include_tests: bool) -> list[Path]:
+        return [package_file]
+
+    monkeypatch.setattr("specfact_code_review.run.commands._changed_files_from_git_diff", _changed_paths)
 
     def fake_run_review(files: list[Path], **kwargs: Any) -> ReviewReport:
         recorded["files"] = files
@@ -1400,10 +1402,11 @@ def test_run_command_ignores_dot_specfact_in_changed_scope(monkeypatch: Any, tmp
     monkeypatch.chdir(tmp_path)
 
     recorded: dict[str, list[Path]] = {}
-    monkeypatch.setattr(
-        "specfact_code_review.run.commands._changed_files_from_git_diff",
-        lambda *, include_tests: [ignored_file, package_file],
-    )
+
+    def _changed_paths(*, include_tests: bool) -> list[Path]:
+        return [ignored_file, package_file]
+
+    monkeypatch.setattr("specfact_code_review.run.commands._changed_files_from_git_diff", _changed_paths)
 
     def fake_run_review(files: list[Path], **_kwargs: Any) -> ReviewReport:
         recorded["files"] = files
@@ -1429,10 +1432,11 @@ def test_run_command_ignores_hidden_directory_in_changed_scope(monkeypatch: Any,
     monkeypatch.chdir(tmp_path)
 
     recorded: dict[str, list[Path]] = {}
-    monkeypatch.setattr(
-        "specfact_code_review.run.commands._changed_files_from_git_diff",
-        lambda *, include_tests: [ignored_file, package_file],
-    )
+
+    def _changed_paths(*, include_tests: bool) -> list[Path]:
+        return [ignored_file, package_file]
+
+    monkeypatch.setattr("specfact_code_review.run.commands._changed_files_from_git_diff", _changed_paths)
 
     def fake_run_review(files: list[Path], **_kwargs: Any) -> ReviewReport:
         recorded["files"] = files

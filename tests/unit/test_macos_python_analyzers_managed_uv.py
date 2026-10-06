@@ -71,7 +71,7 @@ def _prepare_case(monkeypatch, tmp_path, artifact):
     return root, commands
 
 
-def test_preparation_preserves_verified_manager_image(monkeypatch, tmp_path, uv_artifact):
+def test_preparation_preserves_verified_uv_image(monkeypatch, tmp_path, uv_artifact):
     root, commands = _prepare_case(monkeypatch, tmp_path, uv_artifact)
     before = (uv_artifact / "bin/uv").read_bytes()
     candidate = analyzers.prepare(root, tmp_path / "venv", "3.13")
@@ -81,7 +81,7 @@ def test_preparation_preserves_verified_manager_image(monkeypatch, tmp_path, uv_
     assert candidate["signed_images"][0]["sha256"] == candidate["managed_uv"]["binary_sha256"]
 
 
-def test_preparation_rejects_manager_mutation_during_native_inventory(monkeypatch, tmp_path, uv_artifact):
+def test_preparation_rejects_uv_artifact_mutation_during_native_inventory(monkeypatch, tmp_path, uv_artifact):
     root, _commands = _prepare_case(monkeypatch, tmp_path, uv_artifact)
     calls = 0
 
