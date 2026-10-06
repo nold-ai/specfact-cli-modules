@@ -81,8 +81,10 @@ jobs:
         with:
           name: native-managed-tools
           path: ${{ runner.temp }}/tools
-      - name: Restore the fixed executable bits after artifact transport
-        run: chmod 0555 "$RUNNER_TEMP/tools/managed-uv/bin/uv" "$RUNNER_TEMP/tools/managed-git/bin/git"
+      - name: Restore the fixed immutable modes after artifact transport
+        run: |
+          chmod 0555 "$RUNNER_TEMP/tools/managed-uv/bin/uv" "$RUNNER_TEMP/tools/managed-git/bin/git"
+          chmod -R a-w "$RUNNER_TEMP/tools/managed-uv" "$RUNNER_TEMP/tools/managed-git"
       - name: Prepare hash-pinned CPython, analyzers, Node and Z3
         env:
           ABI: ${{ matrix.abi }}

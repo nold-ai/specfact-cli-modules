@@ -3597,3 +3597,97 @@ All29focused enforcement tests pass after that grouping, and direct changed-line
 AST/AI-bloat/Radon adapters return zero findings. Format, default typing/lint and
 strict OpenSpec pass. Required300-second hosted review is still pending fresh
 source; these local tests are not a substituted capsule review PASS.
+
+
+## Bounded hosted timeout profiling — 6 October 2026 (Europe/Berlin)
+
+At609b72f8, fresh orchestrator37534332122 again fails candidate cp312
+job112511410095 and independent signed job112511409991 with analysis_timeout.
+The candidate marker remains targeted-pytest-coverage. Both3.11/3.13 customer
+jobs pass; all three quality jobs fail at the required customer prerequisite,
+before lint/tests. All macOS14/15/26 fixed boundary jobs pass. The preceding
+native tools job112498499046 actually completed successfully in30m13s; its
+following build jobs were superseded by the609b72f8 push. Current native tools
+job112511470796 is still running at this observation. These facts replace the
+earlier pending observations; the local fixture timing improvement did not
+resolve the hosted timeout, and no hosted review PASS is claimed.
+
+After two failed hosted attempts, the next evidence step is a separate,
+non-authoritative candidate-only profiling replay. The original required review
+continues to fail with its unchanged300-second outer analysis budget. Only
+following that failure, a separately installed/hash-pinned py-spy0.4.2 wheel
+samples the same staged subject and helper command as the ordinary runner user.
+GNU timeout stops the diagnostic at280seconds with a5second final kill bound.
+Authenticated reviewer code, sandbox permissions, test selection and independent
+signed reviewer are unchanged. No root profiling, ptrace policy change or raw
+profile upload is used. Raw stdout/stderr/stacks remain runner-private; a stdlib
+data-only helper emits at most20 known tracked public source/functions with
+inclusive sample counts, not elapsed seconds. Malformed indexes, oversized
+profiles, ambiguous suffixes and linked sources fail closed or are omitted.
+DIAGNOSTIC_ONLY/DIAGNOSTIC_UNAVAILABLE cannot authorize merge or publication.
+
+Specification/evidence mapping preceded tests. Initial import RED is retained
+in `/private/tmp/specfact460-profile-summary-red.log`; the absent workflow
+step gives a separate RED in `/private/tmp/specfact460-profile-workflow-red.log`.
+The new helper and recipe pass86focused tests (including the existing real
+staged-tree/failure-propagation tests), explicit script typing with zero
+diagnostics, Actionlint and direct AST/AI-bloat/ordinary Radon with zero findings.
+Logs are `/private/tmp/specfact460-profile-green.log` and
+`/private/tmp/specfact460-profile-clean-code.json`. Strict OpenSpec and planned
+requirements evidence gates pass; planned maturity is not release acceptance.
+The local candidate runbook now explicitly supplies required SOURCE_SHA.
+Final mandatory gates and the next hosted diagnostic result follow.
+
+
+## Hosted native input corrections — 7 October 2026 (Europe/Berlin)
+
+Native run37534331581 tools completed successfully, then all three archive builds
+failed before execution. Completed private logs are retained at
+`/private/tmp/specfact460-native-{112521945682,112521945756,112521945818}.private.log`.
+cp312/cp313 reject `Git input must be immutable with one executable image`;
+cp311 first rejects `installed distribution does not match ABI lock`.
+
+The download action resets artifact files to0644/directories0755. Restoring only
+the two executable bits left provenance/license inputs writable. Preparation now
+removes all write bits from both managed-tool trees and restores only the two
+fixed declared executable images. The unchanged Git validator checks exact
+inventory, immutable modes, executable exclusivity, provenance and bytes.
+
+CPython3.11 venv bootstrap additionally seeds setuptools, which none of the
+reviewed ABI locks admits. Fresh actual cp311 reproduction produces bootstrap
+setuptools79.0.1; the exact fresh-venv uninstall command leaves only bootstrap
+pip. The cp311 preparation recipe now removes only setuptools before the
+unchanged hash-pinned installation. It does not add that ambient dependency to
+the lock or relax installed-distribution/RECORD admission. Reproduction/removal
+uses `/private/tmp/specfact460-native-bootstrap-reproduction` and
+`/private/tmp/specfact460-native-bootstrap-removal.log`.
+
+The specification precedes two RED regressions retained at
+`/private/tmp/specfact460-native-transport-red.log`. Executing the actual hosted
+restore recipe against transported-style inputs now passes immutable admission
+with identical bytes; an extra executable remains rejected. Together with
+native release, profiling and existing staged/independent CI tests,137tests pass
+in7.77s (`/private/tmp/specfact460-native-transport-green.log`). Explicit typing,
+Actionlint for both workflows, shell syntax and direct AST/AI-bloat/ordinary
+Radon pass with zero findings. Source receipt, signing controls, reviewed pins,
+analysis deadlines and Linux prerequisite failures remain unchanged.
+
+Primary references, accessed7October2026:
+- https://github.com/actions/download-artifact#maintaining-file-permissions
+- https://docs.python.org/3.12/library/venv.html (setuptools ceases to be a venv core dependency in3.12)
+- https://github.com/benfred/py-spy/tree/v0.4.2 (external child/subprocess profiling; raw memory-derived stacks remain private)
+
+Final pre-push full/SMART results and fresh hosted observations follow. Existing
+review failures and unexecuted nine-cell acceptance remain outstanding.
+
+
+Pre-push gates: SMART5,207 passed/75 skips/95subtests/five existing warnings
+in249.56s, then full5,208 passed/75 skips/95subtests/five existing warnings
+in255.37s. SMART collected before the final private-input CLI guard was added;
+full collected before the two hosted native recipe regressions were added.
+The final137focused tests cover those additions and all release/diagnostic
+recipes; the final subset rerun also passes after import formatting. Final
+lint/typing, signatures(all7), contracts(28), YAML/import boundaries, Actionlint,
+shell syntax, strict OpenSpec and planned requirements pass. No test or analyzer
+is removed. The owner-approved local review remains DEFERRED to blocking
+exact-head Linux CI, never PASS; raw profiling is not acceptance evidence.

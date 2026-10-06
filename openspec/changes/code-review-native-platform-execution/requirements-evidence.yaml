@@ -67,6 +67,16 @@ requirements:
       kind: config_file
       locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
     verification_cases:
+    - case_id: 460-3-7
+      scenario_id: portable-review-semantics
+      method: test
+      intent: Hosted transport and cp311 bootstrap preparation preserve strict input validation.
+      observable: Executed artifact restore recipe passes actual immutable Git file validation without byte changes; unexpected executables remain rejected. Fresh cp311 preparation removes bootstrap setuptools before unchanged hash-pinned installation and lock admission.
+    - case_id: 460-3-6
+      scenario_id: portable-review-semantics
+      method: test
+      intent: Failed hosted reviews expose bounded profiling without granting acceptance.
+      observable: Diagnostic summary tests reject malformed, oversized and substituted fields; only static tracked public symbols and sample counts survive. Workflow checks retain the required 300-second failure and a shorter independently stopped diagnostic replay; no raw profile is uploaded.
     - case_id: 460-3-5
       scenario_id: portable-review-semantics
       method: test

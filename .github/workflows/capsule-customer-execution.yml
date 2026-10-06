@@ -134,6 +134,7 @@ jobs:
           EOF
           sudo apparmor_parser -r "$profile"
       - name: Run deferred candidate commit review without weakening enforcement
+        id: deferred_review
         if: github.event_name == 'pull_request' && matrix.python == '3.12'
         shell: bash
         env:
@@ -273,6 +274,53 @@ jobs:
           PY
           fi
           exit "$review_exit"
+      - name: Profile failed candidate review privately
+        if: failure() && steps.deferred_review.outcome == 'failure'
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(id -u)" -ne 0
+          unset GITHUB_TOKEN GH_TOKEN PYTHONPATH
+          REVIEW_ROOT="$CUSTOMER_ROOT/staged-review"
+          PROJECT_CONFIG="$CUSTOMER_ROOT/commit-review-project.toml"
+          if [ ! -d "$REVIEW_ROOT" ] || [ ! -f "$PROJECT_CONFIG" ]; then
+            echo '{"status":"DIAGNOSTIC_UNAVAILABLE"}'
+            exit 1
+          fi
+          # Separate pinned profiler; authenticated reviewer and its deadline stay unchanged.
+          "$CUSTOMER_ROOT/venv/bin/python" -m venv "$CUSTOMER_ROOT/profile-venv"
+          printf '%s\n' 'py-spy==0.4.2 --hash=sha256:aeb0323409199c785f730645e9f4bb7a7b9ca2c481f2c331a55642b5d13fa52f' \
+            > "$CUSTOMER_ROOT/profile-requirements.txt"
+          "$CUSTOMER_ROOT/profile-venv/bin/python" -m pip install \
+            --only-binary=:all: --no-deps --require-hashes \
+            -r "$CUSTOMER_ROOT/profile-requirements.txt" \
+            > "$CUSTOMER_ROOT/profile-install.private.log" 2>&1
+          cd "$REVIEW_ROOT"
+          review_paths=()
+          while IFS= read -r -d '' path; do
+            review_paths+=("$path")
+          done < <(git diff --cached --name-only --diff-filter=ACMR -z)
+          test "${#review_paths[@]}" -gt 0
+          profile_exit=0
+          SPECFACT_CODE_REVIEW_CAPSULE_CACHE="$CUSTOMER_ROOT/commit-review-cache" \
+            SPECFACT_CODE_REVIEW_SUBJECT_ROOT="$REVIEW_ROOT" \
+            SPECFACT_CODE_REVIEW_PROJECT_CONFIG="$PROJECT_CONFIG" \
+            SPECFACT_CODE_REVIEW_ENFORCEMENT=changed \
+            timeout --signal=INT --kill-after=5s 280s \
+            "$CUSTOMER_ROOT/profile-venv/bin/py-spy" record \
+            --rate 10 --idle --subprocesses --format speedscope \
+            --output "$CUSTOMER_ROOT/commit-review-profile.private.json" -- \
+            "$CUSTOMER_ROOT/venv/bin/python" \
+            "$GITHUB_WORKSPACE/scripts/pre_commit_code_review.py" "${review_paths[@]}" \
+            > "$CUSTOMER_ROOT/commit-review-profile.private.stdout" \
+            2> "$CUSTOMER_ROOT/commit-review-profile.private.stderr" || profile_exit=$?
+          # The replay cannot replace the failed required review. Raw stacks stay runner-private.
+          if [ ! -f "$CUSTOMER_ROOT/commit-review-profile.private.json" ]; then
+            printf '{"status":"DIAGNOSTIC_UNAVAILABLE","exit":%s}\n' "$profile_exit"
+            exit 1
+          fi
+          "$CUSTOMER_ROOT/venv/bin/python" "$GITHUB_WORKSPACE/scripts/capsule_profile_summary.py" \
+            --profile "$CUSTOMER_ROOT/commit-review-profile.private.json" --repository "$REVIEW_ROOT"
       - name: Exercise cold and warm fixtures and modules repository
         shell: bash
         run: |

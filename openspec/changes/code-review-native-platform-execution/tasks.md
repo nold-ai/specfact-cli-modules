@@ -192,3 +192,7 @@ Runbook and exact candidate limitations: [NATIVE_RELEASE.md](NATIVE_RELEASE.md).
 - [x] Identify exact-head Linux timeout failures and measure the unchanged targeted inventory.
 - [x] Reproduce accidental caller-checkout hashing in synthetic enforcement contracts; isolate subjects while preserving all assertions and real identity/security coverage.
 - [ ] Pass fresh exact-head staged and independent signed review within existing budgets; retain timeout outcomes until verified.
+
+- [x] Diagnose repeated hosted review timeout without weakening its deadline; implement candidate-only bounded private profiling and public static-symbol summary.
+- [ ] Obtain hosted profile evidence and fix the measured bottleneck; require both exact-head Linux reviews and quality gates to pass.
+- [x] Correct observed native artifact mode loss and cp311 bootstrap-only setuptools before unchanged strict input admission; retain fresh hosted acceptance as pending.

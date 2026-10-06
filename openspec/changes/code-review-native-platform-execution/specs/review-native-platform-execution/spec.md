@@ -94,6 +94,20 @@ The macOS backend SHALL preserve the exact released baseline's scope, findings, 
 - **WHEN** all required analyzer members execute
 - **THEN** introduced, fixed and unchanged findings and authoritative status/exit results agree; skipped, empty or UNKNOWN required evidence cannot pass acceptance
 
+#### Scenario: Hosted preparation preserves immutable inputs and exact ABI locks
+- **WHEN** hosted artifact transport resets managed tool file permissions or CPython 3.11 venv creation adds bootstrap setuptools
+- **THEN** preparation restores read-only managed tool inventories and only their declared executable images before unchanged provenance validation
+- **AND** it removes bootstrap-only setuptools from the fresh cp311 maintainer venv before installing the unchanged hash-pinned ABI lock
+- **AND** unexpected distributions, altered bytes, extra executables and writable delivered inputs remain rejected; no validator or signing requirement is bypassed.
+
+#### Scenario: Failed hosted reviews receive bounded non-authoritative profiling
+
+- **GIVEN** a required Linux capsule review has already failed its unchanged analysis deadline
+- **WHEN** a separate diagnostic replay samples the same staged subject and command
+- **THEN** it SHALL use a pinned external profiler without modifying the authenticated reviewer, increasing any acceptance budget or changing sandbox and test selection
+- **AND** raw stack profiles and command output SHALL remain private; public summaries SHALL contain only known tracked source paths, static declared function names and bounded sample counts
+- **AND** diagnostic results SHALL never replace the required failed gate or authorize publication
+
 #### Scenario: Synthetic enforcement tests use bounded isolated subjects
 
 - **GIVEN** unit tests replace analyzer execution with synthetic complete evidence

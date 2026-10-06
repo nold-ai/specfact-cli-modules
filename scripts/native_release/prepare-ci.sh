@@ -46,4 +46,9 @@ fetch_sha256 https://files.pythonhosted.org/packages/01/9a/cdb6db09d6aff6a803a94
 fetch_sha256 https://github.com/Z3Prover/z3/releases/download/z3-5.1.0/z3-5.1.0-arm64-osx-13.3.zip "$INPUT_ROOT/z3.zip" 81d29e934fd863079a74af35eecaeaef8047e0e12414d33ca322b358d68383db
 python -m scripts.native_z3_wheel "$INPUT_ROOT/z3.whl" "$INPUT_ROOT/z3-projection" --release-archive "$INPUT_ROOT/z3.zip" --darwin-only
 "$INPUT_ROOT/python/bin/python3" -m venv "$INPUT_ROOT/venv"
+if [ "$MODE" = cp311 ]; then
+    # 3.11 venv seeds setuptools; it is absent from the reviewed analyzer lock.
+    # Remove only that bootstrap package in this fresh maintainer-owned venv.
+    "$INPUT_ROOT/venv/bin/python" -m pip uninstall --yes setuptools
+fi
 "$INPUT_ROOT/venv/bin/python" -m pip install --require-hashes --find-links "$INPUT_ROOT/z3-projection" -r "scripts/native_analyzer_inputs/darwin-arm64-$MODE.txt"

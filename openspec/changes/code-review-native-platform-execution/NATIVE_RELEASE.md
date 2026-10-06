@@ -103,6 +103,7 @@ From this attached worktree, with its verified Hatch environment, a new local
 candidate demonstration can be run with a fresh output directory:
 
 ```sh
+SOURCE_SHA="$(git rev-parse HEAD)" \
 PYTHONPATH="$PWD/packages/specfact-code-review/src:$PWD" \
   hatch run python -m scripts.native_release.acceptance --mode candidate \
   --artifact /private/tmp/specfact460-release-cli-cp312/darwin-arm64-cp312 \
