@@ -186,3 +186,9 @@ replace sections 3, 4 or 6. Exact facts: DELIVERY_CHECKPOINT_2026-10-06.md.
 - [ ] Configure reviewed protected signing/staging environments and prepare human promotion with immutable identities; do not auto-merge or publish.
 
 Runbook and exact candidate limitations: [NATIVE_RELEASE.md](NATIVE_RELEASE.md). Implementation checkmarks do not replace pending release acceptance.
+
+### PR Actions correction — 6 October 2026
+
+- [x] Identify exact-head Linux timeout failures and measure the unchanged targeted inventory.
+- [x] Reproduce accidental caller-checkout hashing in synthetic enforcement contracts; isolate subjects while preserving all assertions and real identity/security coverage.
+- [ ] Pass fresh exact-head staged and independent signed review within existing budgets; retain timeout outcomes until verified.

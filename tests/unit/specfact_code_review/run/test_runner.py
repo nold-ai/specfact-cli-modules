@@ -2123,8 +2123,25 @@ def test_capsule_review_rejects_unsupported_assurance_kind_before_runtime(
         runner_api.run_capsule_review([source], assurance_kind=assurance_kind)
 
 
+@pytest.fixture
+def isolated_enforcement_subject(monkeypatch: MonkeyPatch, tmp_path: Path) -> None:
+    """Synthetic evidence contracts must not hash the real checkout."""
+    monkeypatch.chdir(tmp_path)
+    source = tmp_path / _finding(tool="ruff", rule="E501").file
+    source.parent.mkdir(parents=True)
+    source.write_text("VALUE = 1\n", encoding="utf-8")
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src/app.py").write_text("VALUE = 1\n", encoding="utf-8")
+    runner_api = _c14_runner()
+    monkeypatch.setattr(
+        runner_api,
+        "_git_visible_worktree_paths",
+        lambda _root: pytest.fail("synthetic enforcement borrowed the caller checkout"),
+    )
+
+
 def test_capsule_review_changed_enforcement_keeps_unchanged_blocker_advisory(
-    monkeypatch: MonkeyPatch,
+    monkeypatch: MonkeyPatch, isolated_enforcement_subject: None
 ) -> None:
     runner_api = _c14_runner()
     finding = _finding(tool="ruff", rule="E501", severity="error", category="style")
@@ -2145,39 +2162,28 @@ def test_capsule_review_changed_enforcement_keeps_unchanged_blocker_advisory(
     model_readback = ReviewReport.model_validate_json(report.model_dump_json())
     ruff_evidence = next(item for item in model_readback.analyzer_evidence or [] if item["id"] == "ruff")
 
+    assert [(item.assurance_status, item.ci_exit_code, item.overall_verdict) for item in (report, model_readback)] == [
+        ("PASS", 0, "PASS_WITH_ADVISORY"),
+        ("PASS", 0, "PASS_WITH_ADVISORY"),
+    ]
     assert (
-        report.assurance_status,
-        report.ci_exit_code,
-        report.overall_verdict,
         report.enforcement_mode,
         "legacy blocking" in (report.enforcement_summary or ""),
         readback.status,
         readback.ci_exit_code,
-        model_readback.assurance_status,
-        model_readback.overall_verdict,
-        model_readback.ci_exit_code,
-        ruff_evidence["evidence_outcome"],
-        ruff_evidence["pre_enforcement_evidence_outcome"],
-        ruff_evidence["enforcement_disposition"],
-    ) == (
-        "PASS",
-        0,
-        "PASS_WITH_ADVISORY",
-        "changed",
-        True,
-        "PASS",
-        0,
-        "PASS",
-        "PASS_WITH_ADVISORY",
-        0,
-        "PASS",
-        "FAIL",
-        "unchanged_blockers_advisory",
-    )
+    ) == ("changed", True, "PASS", 0)
+    assert {
+        key: ruff_evidence[key]
+        for key in ("evidence_outcome", "pre_enforcement_evidence_outcome", "enforcement_disposition")
+    } == {
+        "evidence_outcome": "PASS",
+        "pre_enforcement_evidence_outcome": "FAIL",
+        "enforcement_disposition": "unchanged_blockers_advisory",
+    }
 
 
 def test_capsule_review_changed_enforcement_preserves_unexplained_member_failure(
-    monkeypatch: MonkeyPatch,
+    monkeypatch: MonkeyPatch, isolated_enforcement_subject: None
 ) -> None:
     runner_api = _c14_runner()
     runtime = SimpleNamespace(identity="sha256:" + "a" * 64)
@@ -2203,7 +2209,7 @@ def test_capsule_review_changed_enforcement_preserves_unexplained_member_failure
 
 
 def test_capsule_review_changed_enforcement_preserves_failure_without_retained_blocker(
-    monkeypatch: MonkeyPatch,
+    monkeypatch: MonkeyPatch, isolated_enforcement_subject: None
 ) -> None:
     runner_api = _c14_runner()
     finding = _finding(tool="ruff", rule="E501", severity="error", category="style")
@@ -2231,7 +2237,9 @@ def test_capsule_review_changed_enforcement_preserves_failure_without_retained_b
     )
 
 
-def test_capsule_review_changed_enforcement_blocks_changed_line(monkeypatch: MonkeyPatch) -> None:
+def test_capsule_review_changed_enforcement_blocks_changed_line(
+    monkeypatch: MonkeyPatch, isolated_enforcement_subject: None
+) -> None:
     runner_api = _c14_runner()
     finding = _finding(tool="ruff", rule="E501", severity="error", category="style")
     runtime = SimpleNamespace(identity="sha256:" + "a" * 64)
@@ -2306,7 +2314,7 @@ def test_capsule_review_changed_enforcement_preserves_fail_without_changed_line_
 
 
 def test_capsule_review_changed_enforcement_preserves_pass_without_changed_line_evidence(
-    monkeypatch: MonkeyPatch,
+    monkeypatch: MonkeyPatch, isolated_enforcement_subject: None
 ) -> None:
     runner_api = _c14_runner()
     runtime = SimpleNamespace(identity="sha256:" + "a" * 64)

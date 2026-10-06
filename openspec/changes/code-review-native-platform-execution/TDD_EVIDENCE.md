@@ -3550,3 +3550,50 @@ requirements: `/private/tmp/specfact460-release-requirements.{json,md}`.
 
 No final acceptance checkmark, production flag, issue closure, automatic merge,
 publication or OpenSpec archive is inferred from these repository gate results.
+
+
+## PR Actions timeout diagnosis and fixture correction — 6 October 2026 (Europe/Berlin)
+
+At eeedb18c, orchestrator37530542945 fails cp312 staged job112498571408 and
+independent signed job112498571534 at the existing300-second outer deadline.
+The candidate's final fixed public marker is targeted-pytest-coverage. Private
+sanitized job logs are retained at
+`/private/tmp/specfact460-eeedb18c-{cp312,independent}.private.log`.
+These markers do not alone establish the precise hosted bottleneck. Module
+signatures, requirements, docs, minimum-core and all three fixed native boundary
+jobs pass; the new native tools build is still running at this observation.
+
+Read-only planning selects35test files/1,597tests for the61changed Python files.
+The unchanged selected suite passes locally in54.39s, with five synthetic
+changed-enforcement tests taking5.23–5.89s each. Their analyzer execution is
+mocked, but they nevertheless bind the entire real caller's checkout repeatedly
+through `_worktree_analysis_identity`. The baseline and index controls in an
+installed review can make this redundant work more expensive; that hosted
+contribution remains a hypothesis until fresh CI completion.
+
+The portable-review specification now requires these synthetic contracts to use
+bounded isolated subjects while preserving real identity/security tests. A
+fail-on-real-Git-inventory fixture guard first produces five failures in
+`/private/tmp/specfact460-enforcement-fixture-red.log`. Supplying actual tiny
+standalone source files and an isolated working directory then passes all29
+matching tests in3.25s. The same35-file selected inventory, with no tests removed,
+passes1,597tests/one pre-existing maintainer skip in27.63s after the correction.
+The relevant source-identity, mutation, cached-index, real capsule and customer
+checks are unchanged. No300-second deadline, inner analyzer timeout, blocking
+exit124, authenticated reviewer or review subject is replaced or weakened.
+
+The new fixture initially lacked its separate src parent; that setup error was
+corrected before passing evidence. Timing logs are
+`/private/tmp/specfact460-review-selected-duration{,-green}.log`. Typing/lint and
+strict OpenSpec pass. Direct local clean-code adapters find no introduced fixture
+finding; this is not hosted capsule-review authority. Final gates and fresh-head
+CI results follow; do not infer green PR status from the local speed improvement.
+
+Fixture-correction gates: full5,185 passed/75 explicit skips/95subtests/five
+existing warnings in278.76s; SMART the same in277.36s; contracts28 passed.
+The touched advisory-readback test's size guidance was subsequently resolved by
+grouping identical report/model checks; all13previous asserted values remain.
+All29focused enforcement tests pass after that grouping, and direct changed-line
+AST/AI-bloat/Radon adapters return zero findings. Format, default typing/lint and
+strict OpenSpec pass. Required300-second hosted review is still pending fresh
+source; these local tests are not a substituted capsule review PASS.

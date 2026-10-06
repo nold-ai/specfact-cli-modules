@@ -67,6 +67,11 @@ requirements:
       kind: config_file
       locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
     verification_cases:
+    - case_id: 460-3-5
+      scenario_id: portable-review-semantics
+      method: test
+      intent: Synthetic enforcement tests do not borrow the real checkout as an identity fixture.
+      observable: A fail-on-real-Git-inventory fixture guard preserves all five enforcement/readback assertions against a minimal standalone source; actual identity security tests remain unchanged. Local timing is diagnostic, not hosted acceptance.
     - case_id: 460-3-4
       scenario_id: portable-review-semantics
       method: test

@@ -94,6 +94,13 @@ The macOS backend SHALL preserve the exact released baseline's scope, findings, 
 - **WHEN** all required analyzer members execute
 - **THEN** introduced, fixed and unchanged findings and authoritative status/exit results agree; skipped, empty or UNKNOWN required evidence cannot pass acceptance
 
+#### Scenario: Synthetic enforcement tests use bounded isolated subjects
+
+- **GIVEN** unit tests replace analyzer execution with synthetic complete evidence
+- **WHEN** they verify changed-line enforcement, retained failures or report readback
+- **THEN** they SHALL use a minimal isolated source fixture rather than repeatedly hashing the caller's entire checkout
+- **AND** all existing enforcement assertions and real snapshot-identity, mutation and installed-customer checks SHALL remain required; no timeout, test inventory or sandbox gate may be weakened
+
 #### Scenario: OS dependent project tests
 
 - **GIVEN** a project intentionally behaves differently on macOS and Linux
