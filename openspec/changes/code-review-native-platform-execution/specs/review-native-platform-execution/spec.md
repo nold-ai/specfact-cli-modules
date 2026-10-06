@@ -142,6 +142,14 @@ The signed native manifest SHALL bind the exact closed analyzer-version map used
 - **AND** preparation revalidates the full maintained artifact after native inventory, while assembly rejects missing, changed, or substituted uv provenance before creating its output
 - **AND** optional maintainer inputs are never inferred from host PATH, and candidate observations cannot approve production publication
 
+#### Scenario: Managed uv build launches retain the fixed channel budget
+
+- **GIVEN** a confined Hatch or uv build invokes the bound Python image with valid arguments and an inherited private environment
+- **WHEN** XML serialization alone would exceed the existing 4096-byte managed request frame
+- **THEN** managed uv serializes the unchanged launch document as a binary property list accepted by the existing broker parser
+- **AND** the final wire request, individual strings, argument/environment counts, owned-handle lifecycle and execution grants retain their existing bounds; oversized binary requests fail before channel use
+- **AND** managed uv provenance binds the changed bridge source and its newly built ad-hoc hardened executable; prior executable receipts are not reused for altered bytes
+
 #### Scenario: Cached native runtime
 
 - **GIVEN** a complete approved cache for the selected OS, ABI and policy

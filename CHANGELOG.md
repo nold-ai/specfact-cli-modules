@@ -9,6 +9,12 @@ and this project follows SemVer for bundle versions.
 
 ### Fixed
 
+- Encode managed uv Python launches as binary property lists so XML overhead
+  cannot exhaust the existing 4096-byte broker frame during confined Hatch
+  builds. Preserve arguments, private environments, native parser validation,
+  field limits and channel budgets; bind the changed bridge to newly built uv
+  provenance. Final archive acceptance remains required.
+
 - Preserve maintained `uv` image signatures and provenance during native capsule
   preparation and reject missing or changed provenance before assembly. Align
   worktree and native snapshot exclusion of nested local Python environments

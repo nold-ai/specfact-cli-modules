@@ -69,7 +69,7 @@ fn exchange(opcode: u16, handle: u32, payload: &[u8]) -> io::Result<(u32, i32, V
 }
 
 fn xml(value: &str) -> io::Result<String> {
-    if value.chars().any(|c| c < ' ' && !matches!(c, '\n' | '\r' | '\t')) {
+    if value.len() >= PAYLOAD || value.chars().any(|c| c < ' ' && !matches!(c, '\n' | '\r' | '\t')) {
         return Err(unsupported("invalid argument string"));
     }
     Ok(value.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;"))
@@ -77,6 +77,60 @@ fn xml(value: &str) -> io::Result<String> {
 
 fn text(value: &str) -> io::Result<String> {
     Ok(format!("<string>{}</string>", xml(value)?))
+}
+
+#[cfg(target_os = "macos")]
+mod property_list {
+    use super::{unsupported, PAYLOAD};
+    use std::ffi::c_void;
+    use std::io;
+    use std::ptr;
+
+    #[link(name = "CoreFoundation", kind = "framework")]
+    unsafe extern "C" {
+        fn CFDataCreate(allocator: *const c_void, bytes: *const u8, length: isize) -> *const c_void;
+        fn CFPropertyListCreateWithData(allocator: *const c_void, data: *const c_void, options: usize,
+            format: *mut isize, error: *mut *const c_void) -> *const c_void;
+        fn CFPropertyListCreateData(allocator: *const c_void, document: *const c_void, format: isize,
+            options: usize, error: *mut *const c_void) -> *const c_void;
+        fn CFDataGetLength(data: *const c_void) -> isize;
+        fn CFDataGetBytePtr(data: *const c_void) -> *const u8;
+        fn CFRelease(value: *const c_void);
+    }
+
+    struct Owned(*const c_void);
+    impl Owned {
+        fn checked(value: *const c_void) -> io::Result<Self> {
+            if value.is_null() { return Err(unsupported("invalid launch property list")); }
+            Ok(Self(value))
+        }
+    }
+    impl Drop for Owned {
+        fn drop(&mut self) { unsafe { CFRelease(self.0); } }
+    }
+
+    pub fn encode(xml: &[u8]) -> io::Result<Vec<u8>> {
+        // CoreFoundation is already the broker's property-list parser. Only
+        // serialization changes; no execution selector or grant is rewritten.
+        unsafe {
+            let input = Owned::checked(CFDataCreate(ptr::null(), xml.as_ptr(), xml.len() as isize))?;
+            let document = Owned::checked(CFPropertyListCreateWithData(ptr::null(), input.0, 0,
+                ptr::null_mut(), ptr::null_mut()))?;
+            let output = Owned::checked(CFPropertyListCreateData(ptr::null(), document.0, 200, 0, ptr::null_mut()))?;
+            let length = CFDataGetLength(output.0);
+            if length <= 0 || length as usize > PAYLOAD { return Err(unsupported("request exceeds bounds")); }
+            let bytes = CFDataGetBytePtr(output.0);
+            if bytes.is_null() { return Err(unsupported("invalid launch property list")); }
+            Ok(std::slice::from_raw_parts(bytes, length as usize).to_vec())
+        }
+    }
+}
+
+#[cfg(not(target_os = "macos"))]
+mod property_list {
+    pub fn encode(_xml: &[u8]) -> std::io::Result<Vec<u8>> {
+        Err(super::unsupported("managed uv requires macOS"))
+    }
 }
 
 fn roots() -> io::Result<Vec<(&'static str, PathBuf)>> {
@@ -175,8 +229,7 @@ fn document(command: &Command) -> io::Result<Vec<u8>> {
     body.push_str("</array><key>python_prefix</key>"); body.push_str(&text(&prefix)?);
     body.push_str("<key>python_alias</key>"); body.push_str(&text(&alias)?);
     body.push_str("</dict></plist>");
-    if body.len() > PAYLOAD { return Err(unsupported("request exceeds bounds")); }
-    Ok(body.into_bytes())
+    property_list::encode(body.as_bytes())
 }
 
 pub fn output(command: &Command) -> io::Result<Output> {
@@ -214,6 +267,28 @@ mod tests {
     fn arguments_remain_literal_xml_data() {
         assert_eq!(text("print('<x>&')").unwrap(), "<string>print('&lt;x&gt;&amp;')</string>");
         assert!(text("bad\0argument").is_err());
+    }
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn managed_python_launch_retains_large_xml_fields_in_fixed_frame() {
+        let capsule = PathBuf::from(std::env::var("SPECFACT_MANAGED_CAPSULE").unwrap());
+        let mut command = Command::new(capsule.join("python/bin/python3"));
+        command.args(["-c", &format!("print({:?})", "<literal>&".repeat(70))]);
+        command.current_dir(std::env::var("SPECFACT_MANAGED_PROJECT").unwrap());
+        for index in 0..30 {
+            command.env(format!("BUILD_SETTING_{index}"), "literal<&>".repeat(10));
+        }
+        let payload = document(&command).unwrap();
+        assert!(payload.len() <= PAYLOAD);
+        assert!(payload.starts_with(b"bplist00"));
+        println!("REQUEST={}", payload.iter().map(|value| format!("{value:02x}")).collect::<String>());
+        command.env("OVERSIZED_STRING", "x".repeat(PAYLOAD));
+        assert!(document(&command).is_err());
+        command.env_remove("OVERSIZED_STRING");
+        for index in 0..30 {
+            command.env(format!("BUILD_SETTING_{index}"), format!("{index}:{}", "distinct large value".repeat(100)));
+        }
+        assert!(document(&command).is_err());
     }
     #[test]
     fn requests_are_bounded_before_channel_use() {

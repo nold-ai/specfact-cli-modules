@@ -170,3 +170,6 @@ replace sections 3, 4 or 6. Exact facts: DELIVERY_CHECKPOINT_2026-10-06.md.
 - [ ] Complete final current-source mandatory gates, CI-only module signing and exact-head blocking review; keep prior hosted failures.
 
 - [x] Reproduce and preserve blocking timeout exit124; wire existing capsule progress and bounded fixed-analyzer timeout diagnostics without exposing raw content or changing budgets.
+
+- [x] Reproduce actual cp311 Hatch hook launch failure and compact managed uv requests with native parser/literal round-trip and unchanged-budget rejection tests.
+- [x] Rebuild the changed managed uv image, verify full provenance, and repeat exact archive manager execution; retain old candidate failures.

@@ -3303,3 +3303,120 @@ human-approved DEFERRED gate, never PASS. The changed0.51.1 checksum requires
 fresh CI-only signing. Final logs are specfact460-progress-{type,lint,yaml,
 imports,integrity-verify-corrected,contracts,openspec,smart,full}.log and corrected
 Requirements output under /private/tmp. No publisher key was used locally.
+
+## Managed uv fixed-frame build launch correction — 2026-10-06 Europe/Berlin
+
+The exact unsigned5a0c443b cp311 archive round-trip reached actual pinned Hatch
+preparation, but the upstream installer failed with
+`project_native_managed_process_incomplete:request exceeds bounds`. A private
+read-only broker-output observer reproduced the failure through the unchanged
+confined hook; no installed reviewer or execution grant was modified.
+
+After specifying case460-15-24, the new native regression compiled the real Rust
+bridge and reproduced the same frame failure: **1FAIL/13deselected**,
+`/private/tmp/specfact460-uv-frame-red.log`. The production change uses existing
+CoreFoundation serialization to emit binary property lists, preserving every
+argument/environment field. The actual native broker parser accepts the compact
+payload with spaces/Unicode roots. XML exceeds4096bytes while the final binary
+frame fits; individually oversized strings and oversized final binary payloads
+still fail before channel use. Frame/count/output/resource limits are unchanged.
+
+The initial native parser suite passes14tests; the parser, managed-uv builder
+integrity and analyzer provenance suites pass28tests in1.30s. Logs:
+`/private/tmp/specfact460-uv-frame-green.log` and
+`/private/tmp/specfact460-uv-frame-provenance-green.log`. The reviewed bridge pin
+was updated to actual changed source bytes. A newly built executable and real
+Hatch command acceptance are pending, so old executable receipts and5a archives
+are preserved as historical candidates, not presented as corrected artifacts.
+
+Exact5a LinuxCI run37458400647 isFAIL: cp311/cp313 customer/corpus and all three
+minimum-core jobs pass; cp312 candidate review completes but Pylint/CrossHair
+reach their unchanged deadlines and targeted pytest has unusable evidence. The
+independently installed signed baseline reaches the outer300-second deadline.
+Quality jobs fail at prerequisites. Fixed boundary run37458400298 passes on
+macOS14/15/26; it does not test final Python archives. No release flag, catalog,
+publication or issue-completion claim follows from these observations.
+
+The offline locked upstream build completed through the existing reviewed builder.
+Full maintained-input validation and actual native inspection pass for the new
+uv executable SHA256
+`2469006ee4df6dc43658d0739c18f6fb57ea01d655e2ba0221adc7665bc0a5f8`;
+it retains ad-hoc hardened signing under `ai.nold.specfact.managed-uv`.
+The changed bridge SHA256 is
+`22171d8ccb60b004d94039c762c1ad986dcf87034b44d5615440401e70b75198`.
+The historical executable receipt is rejected because its bridge source differs.
+No publisher key or local manifest signature is used.
+
+Three fresh brokers were compiled against the actual Python/direct-tool/uv/Git
+designated requirements, then three unsigned capsules were assembled and streamed
+through the existing extractor. Exact archive SHA256 identities:
+
+| ABI | Archive SHA256 |
+| --- | --- |
+| cp311 | `1a95b270374991047c44d88df5fc7174c6c96a8a2acd409b1e27fea7297fa3d7` |
+| cp312 | `618c80b1219d3307cd9d030f255a7fd682e748f3bc9412bb698a6fe3bb5ae2da` |
+| cp313 | `0129ccf5fa0d251f0abd8f1bff894d1e161350b5375e6a18b9ef5b7888c419a2` |
+
+Every extraction verifies exact bytes, inventory and36actual native signatures.
+Manifest authentication is deliberately not performed. The source evidence binds
+5a0c443b plus working-tree diff SHA256
+`7c0d7a19b379b58d2fc9bfe49372fba11b7764b4a210d05b5b4ed3adb68664dc`;
+post-build evidence prose does not replace those captured inputs. The initial
+extractor helper launch lacked the module source path and failed to import; only
+the corrected explicit-PYTHONPATH launch establishes extraction success.
+
+Actual cp311 Hatch preparation/review now completes all ten analyzers, five tests
+and480coverage files with offline reuse; the prior hook failure is resolved.
+Cp311 Flask/uv and Poetry also complete. Requests/pip completes all ten members
+for each ABI, with24observed tests and139coverage files; its real BasedPyright
+finding and FAIL exit are retained. These private-cache, explicit fixture-lease
+checks on physical macOS27.0.1 are candidate evidence, not normal installed
+customer authentication or the required macOS14/15/26 final-artifact matrix.
+Remaining ABI manager results will be recorded separately when completed.
+
+Final stable-patch SMART passes5,135tests/75skips/95subtests/five existingwarnings
+in275.82s; full passes the same counts in296.47s. Format/type/lint/YAML/imports,
+28contract tests, strict OpenSpec, planned requirements, all7payload/version
+integrity checks and bounded independent review pass. The changed0.51.1 module
+has checksum-only metadata pending CI signing; existing6signatures verify.
+The review agent reports No findings. The known Linux review failures, protected
+native release path, signed catalogs and independent installed native acceptance
+remain blocking; no release/publication/completion flag changes.
+
+The corrected exact-archive manager probes complete **12/12**: Requests/pip,
+Hatch, Flask/uv and Poetry on cp311/cp312/cp313. Every case completes all ten
+analyzers and prepared offline reuse, with actual project-origin tests/coverage
+observed; no required UNKNOWN or tool failure is hidden. Requests keeps its
+existing BasedPyright FAIL; the other slices report PASS_WITH_ADVISORY. These are
+explicit unsigned fixture-lease probes on the supplementary macOS27 host.
+
+| ABI | Manager/project | Cold preparation(s) | Review(s) | Observed calls | Coverage files |
+| --- | --- | ---: | ---: | ---: | ---: |
+| cp311 | hatch/hatch | 61.438 | 41.53 | 5 | 480 |
+| cp311 | pip/requests | 13.585 | 33.185 | 24 | 139 |
+| cp311 | poetry/poetry | 52.479 | 57.387 | 7 | 877 |
+| cp311 | uv/flask | 6.55 | 33.731 | 19 | 161 |
+| cp312 | hatch/hatch | 64.563 | 38.762 | 5 | 480 |
+| cp312 | pip/requests | 15.72 | 39.005 | 24 | 139 |
+| cp312 | poetry/poetry | 49.825 | 52.927 | 7 | 857 |
+| cp312 | uv/flask | 6.822 | 33.378 | 19 | 161 |
+| cp313 | hatch/hatch | 63.701 | 38.147 | 5 | 479 |
+| cp313 | pip/requests | 14.815 | 39.145 | 24 | 139 |
+| cp313 | poetry/poetry | 54.571 | 54.389 | 7 | 856 |
+| cp313 | uv/flask | 6.985 | 35.953 | 19 | 161 |
+
+Private fixed-field aggregate: `/private/tmp/specfact460-uv-frame-complete-matrix-evidence.json`.
+Original failed5a cp311 Hatch evidence and all old candidate archives remain
+preserved. These12project runs do not replace clean/defective full boundary
+acceptance, macOS14/15/26 matrix, anonymous signed acquisition or independent
+installed-customer proof.
+
+The corrected exact cp313 archive also completes the physical `changecost`
+full-scope candidate CLI in143.146s after24.574s cold preparation, with verified
+prepared offline reuse. All ten analyzers run with no requiredUNKNOWN. Actual
+project-origin pytest observations retain842collected nodes,315call records,
+325coverage files and process exit1. Overall review remainsFAIL; project findings
+and the actual nonpassing test outcome are preserved. This candidate fixture
+lease does not authenticate the manifest or exercise normal installed native
+acquisition. Private summary:
+`/private/tmp/specfact460-uv-frame-changecost-cli.summary.json`.

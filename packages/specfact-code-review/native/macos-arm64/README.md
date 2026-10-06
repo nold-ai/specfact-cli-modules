@@ -21,3 +21,12 @@ The checked-in component is an implementation candidate. Physical CPython 3.11
 proof executes all ten analyzers on selected pip/Hatch/uv/Poetry slices; the
 complete supported OS/ABI, boundary and independent installation acceptance
 remain required before production admission.
+
+Managed uv serializes Python child requests with CoreFoundation's binary property
+list format, already accepted by the broker. XML escaping and repeated private
+settings must not consume the fixed 4096-byte wire budget. Literal arguments and
+fields retain the broker's existing bounds; oversized binary requests fail before
+channel use. This encoding requires no new customer dependency. The native
+round-trip regression compiles the bridge with Rust and parses its output with
+the actual broker request parser, including spaces/Unicode roots and rejection
+controls; run maintainer tests with the build toolchain available on PATH.

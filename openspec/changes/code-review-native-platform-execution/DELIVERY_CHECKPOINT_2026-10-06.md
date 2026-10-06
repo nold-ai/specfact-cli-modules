@@ -356,3 +356,31 @@ review agent reports No findings. Fresh CI-only module signing and exact-head
 hosted review are required. Native release workflow, signed catalogs, exact
 nine-cell archives and independent ordinary installed customer proof remain
 open. Keep PR498 draft and #460 open; no merge, publication or archive occurs.
+
+## Managed uv frame correction
+
+A new exact-archive cp311 Hatch run exposed managed uv's XML launch document
+exceeding the fixed4096-byte request frame. The actual Rust/native parser
+regression fails before implementation, then passes with existing CoreFoundation
+binary serialization and unchanged wire/field/resource limits. The newly built
+uv and its bridge source pass provenance and actual ad-hoc hardened signature
+verification; three brokers bind its new designated requirement and three
+unsigned archive payloads pass extraction/inventory/native-signature checks.
+Actual cp311 Hatch/pip/uv/Poetry reviews now complete, and Requests/pip completes
+for all three ABIs with real findings retained. Remaining manager probes are
+pending; every artifact remains unauthenticated candidate evidence on macOS27.
+
+SMART/full each pass5,135tests,75skips and95subtests; all other applicable local
+gates and bounded review pass. Exact5a LinuxCI remainsFAIL at the cp312 required
+review and independent signed baseline; quality jobs stop at those prerequisites.
+Its macOS14/15/26 boundary fixtures pass, not final archive acceptance. The new
+runtime patch requires fresh CI-only signing and hosted checks. Details and
+immutable historical failures remain in TDD_EVIDENCE.md. Keep PR498 draft and
+#460 open; native protected release/catalog and ordinary independent installed
+customer acceptance are incomplete.
+
+The corrected archive manager matrix completes12/12project slices: all four
+managers on all three ABIs, with actual tests/coverage, all ten analyzers and
+prepared offline reuse. Existing project findings remain visible. This closes
+the diagnosed build-launch frame failure only; no production/complete-boundary
+flag or installed native support claim changes.

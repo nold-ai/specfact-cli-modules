@@ -127,3 +127,53 @@ def test_native_uv_request_uses_only_offline_private_grants(parser, tmp_path, mu
         strings = result.stdout[8:].split(b"\0")
         assert (argc, envc) == (2, 0)
         assert strings == [str(roots[0]).encode(), b"venv", str(roots[2] / "environment").encode(), b""]
+
+
+def test_managed_uv_compact_launch_round_trips_through_native_parser(parser, tmp_path):
+    import os
+    import shutil
+
+    rustc = shutil.which("rustc")
+    assert rustc is not None, "native managed uv regression requires a Rust compiler"
+    binary = tmp_path / "managed-uv-tests"
+    subprocess.run(
+        [rustc, "--edition=2021", "--test", str(NATIVE / "uv_managed.rs"), "-o", str(binary)],
+        check=True,
+        capture_output=True,
+        timeout=60,
+    )
+    roots = tuple(tmp_path / (name + " space λ") for name in ("project", "output", "temporary"))
+    for root in roots:
+        root.mkdir()
+    capsule = tmp_path / "capsule"
+    (capsule / "python/bin").mkdir(parents=True)
+    environment = {"PATH": os.defpath, "SPECFACT_MANAGED_CAPSULE": str(capsule)}
+    environment.update(
+        {
+            "SPECFACT_MANAGED_" + name.upper(): str(root)
+            for name, root in zip(("project", "output", "temporary"), roots, strict=True)
+        }
+    )
+    result = subprocess.run(
+        [str(binary), "--exact", "tests::managed_python_launch_retains_large_xml_fields_in_fixed_frame", "--nocapture"],
+        env=environment,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    assert result.returncode == 0, result.stderr + result.stdout
+    encoded = next(line.removeprefix("REQUEST=") for line in result.stdout.splitlines() if line.startswith("REQUEST="))
+    payload = bytes.fromhex(encoded)
+    document = plistlib.loads(payload)
+    assert len(plistlib.dumps(document)) > 4096
+    assert len(payload) <= 4096
+    assert document["program"] == "python" and document["cwd"] == "project"
+    assert document["argv"] == ["-c", 'print("' + "<literal>&" * 70 + '")']
+    for index in range(30):
+        assert document["environment"][f"BUILD_SETTING_{index}"] == "literal<&>" * 10
+    request = tmp_path / "request.plist"
+    request.write_bytes(payload)
+    parsed = subprocess.run(
+        [str(parser), str(request), *(str(root) for root in roots)], capture_output=True, timeout=10
+    )
+    assert parsed.returncode == 0

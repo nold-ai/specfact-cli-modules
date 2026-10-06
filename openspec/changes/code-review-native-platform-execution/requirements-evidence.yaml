@@ -554,6 +554,11 @@ requirements:
       method: inspection
       intent: "Preserved Linux analyzer can parse equivalent command-test callbacks."
       observable: "The hash-verified official Semgrep1.144.0 ARM64 engine reproduces a syntax error at the keyword-only lambda in the touched command test; equivalent named keyword-only functions must remove that error without changing any review assertion or ignoring structured errors. Native static evidence is separate from exact-head Linux acceptance."
+    - case_id: 460-15-24
+      scenario_id: prepare-unfamiliar-projects-from-discovered-or-caller-supplied-setup
+      method: test
+      intent: "Managed uv build launch encoding preserves the fixed channel budget."
+      observable: "test_managed_uv_compact_launch_round_trips_through_native_parser compiles the actual Rust bridge, reproduces oversized XML before implementation, decodes the compact binary request, preserves every literal argument/environment field and passes the real CoreFoundation broker parser with spaces/Unicode roots. Oversized strings and final binary requests remain rejected before channel use. Newly built uv provenance must bind the changed bridge and executable."
     - case_id: 460-15-23
       scenario_id: prepare-unfamiliar-projects-from-discovered-or-caller-supplied-setup
       method: test
