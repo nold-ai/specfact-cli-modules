@@ -930,3 +930,45 @@ Native build and test jobs SHALL emit deterministic final archive and canonical 
 - **WHEN** the relocated native CPython closure supplies frozen or ZIP-loaded standard-library modules to Pylint and Astroid
 - **THEN** the same authenticated bounded standard-library source bytes also exist at their relocated filesystem paths, including `_collections_abc.py`, `collections/abc.py`, and dataclass dependencies
 - **AND** no host interpreter, site-packages, source symlink, or unrecorded fallback supplies those files
+
+
+### Requirement: Protected native release and authenticated catalog
+
+Native release tooling SHALL validate the exact deterministic archive, native
+signing metadata and supported-platform acceptance before protected CI signs
+the unchanged manifest. Signing SHALL execute reviewed protected workflow code
+without executing candidate content or exposing keys to build/test jobs. Catalog
+resources SHALL bind the authenticated manifest and immutable anonymous GHCR
+blob using the existing consumer format. Human promotion remains separate.
+
+#### Scenario: Candidate code cannot control signing authority
+
+- **GIVEN** an unsigned artifact and its exact supported-matrix acceptance
+- **WHEN** protected CI signs it
+- **THEN** branch/workflow/source identity and all required evidence are checked before key access; PR, unprotected, substituted, incomplete or stale inputs fail without signing or publication
+
+#### Scenario: Signed catalog round-trip preserves final bytes
+
+- **GIVEN** accepted cp311/cp312/cp313 archives and CI-authenticated manifests
+- **WHEN** catalog preparation runs
+- **THEN** each entry contains only matching manifest/signature/public-key resources and the dedicated immutable GHCR archive digest/size; altered archives, foreign keys, duplicate ABI inputs and partial output are rejected
+
+### Requirement: Initial ad-hoc loader and installation acceptance
+
+The initial ARM64 distribution SHALL use verified ad-hoc hardened native images
+and SpecFact-authenticated manifests without Apple membership. Only CPython and
+Semgrep Core may carry disable-library-validation. Every other native image must
+have empty entitlements. A normal first-run trust warning MAY be acknowledged
+and recorded; system protections and quarantine SHALL remain enabled.
+
+#### Scenario: Loader entitlement substitution fails before release
+
+- **GIVEN** final archive signing metadata
+- **WHEN** a control component, unrelated tool or library gains an entitlement or a required loader loses its exact entitlement
+- **THEN** release validation rejects the artifact before signing or catalog creation
+
+#### Scenario: Independent customer acquires and reuses the capsule
+
+- **GIVEN** a clean independent supported ARM64 environment and the signed module installed through the ordinary route
+- **WHEN** review runs on a dependency-bearing project cold and then offline
+- **THEN** the packaged catalog and standard anonymous GHCR client acquire and verify the exact final archive, all ten required analyzers execute, actual tests/plugins/coverage/native extensions are observed, and verified caches are reused without a local artifact override, development link, unsigned override, security disablement or customer signing

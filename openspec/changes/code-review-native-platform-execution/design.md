@@ -199,3 +199,30 @@ with SDK MIG decoding. BSD unit mocks retain historical transition checks only;
 they are not a runtime fallback or proof of the Mach transport. Startup/analyzer
 fixtures retain their separate evidence. Exact signed hosted acceptance remains
 mandatory before any support claim.
+
+
+## Owner-approved release continuation — 6 October 2026
+
+The owner explicitly requested implementation of the three remaining delivery
+issues: protected release/catalog, exact loader acceptance, and independent
+ordinary installation. Paid Apple membership, Developer ID and notarization
+remain optional #488. A normal first-run trust warning is acceptable for this
+initial release; record its actual presence and acknowledgement. Do not strip
+quarantine or disable system protections. Integrity, native signing, confinement,
+dependency separation, resource limits and cleanup requirements remain mandatory.
+
+Reuse the existing deterministic assembler, native cache, GHCR blob reader and
+managed broker. Freeze the initial library profile to disable-library-validation
+only on CPython and Semgrep Core; all other native images retain empty
+entitlements. Secret-free build/acceptance precedes protected data-only manifest
+signing. Signing/publishing code executes only from a protected reviewed ref;
+candidate payloads are data and are never executed with the publisher key.
+
+The first complete slice is cp312 final-byte release validation and signed
+catalog acquisition, followed by three ABIs and all supported macOS cells.
+Independent installation uses the signed module's packaged catalog and standard
+client, with cold anonymous acquisition and offline reuse. Test fixture keys and
+local artifact overrides establish unit evidence only. Human merge/promotion
+remains required; a prepared workflow or green fixture does not mean publication.
+No new core interface is planned. Maintainer builds may use existing SDK/Rust
+tools; customers need no build tools, container engine, admin or Apple account.

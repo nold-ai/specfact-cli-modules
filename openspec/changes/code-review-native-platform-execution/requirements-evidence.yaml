@@ -656,4 +656,33 @@ requirements:
       scenario_id: ci-only-native-artifact-assembly
       method: test
       intent: "Build final archive bytes without manifest signing authority."
-      observable: "test_unsigned_build_preserves_final_bytes_without_signer and test_unsigned_build_still_rejects_invalid_native_signature pass; keyless output preserves archive/manifest bytes and native checks. Protected release workflow, CI signing and publication remain unimplemented and cannot be inferred from this test."
+      observable: "test_unsigned_build_preserves_final_bytes_without_signer and test_unsigned_build_still_rejects_invalid_native_signature pass; keyless output preserves archive/manifest bytes and native checks. This historical keyless-builder test does not verify the later protected release workflow, CI signing or publication; current implementation and pending execution are mapped separately in 460-17-1 and NATIVE_RELEASE.md."
+
+  openspec:code-review-native-platform-execution:review-native-platform-execution:protected-native-release-and-authenticated-catalog:
+    rationale: Exact final-byte integrity and protected signing precede immutable catalog admission.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#460
+    touchpoints:
+    - id: native-release-spec
+      kind: config_file
+      locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
+    verification_cases:
+    - case_id: 460-17-1
+      scenario_id: protected-native-release-and-authenticated-catalog
+      method: test
+      intent: Reject candidate authority, substituted final bytes and incomplete acceptance before signing.
+      observable: Release validator and signed catalog round-trip tests bind archive, manifest, source and matrix. Fixture tests are not CI signing or publication evidence.
+  openspec:code-review-native-platform-execution:review-native-platform-execution:initial-ad-hoc-loader-and-installation-acceptance:
+    rationale: The owner accepts ordinary first-launch trust warnings without weakening execution or integrity boundaries.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#460
+    touchpoints:
+    - id: native-installation-spec
+      kind: config_file
+      locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
+    verification_cases:
+    - case_id: 460-18-1
+      scenario_id: initial-ad-hoc-loader-and-installation-acceptance
+      method: test
+      intent: Reject broadened entitlements and observe ordinary signed cold/offline installation.
+      observable: Exact loader-profile tests and independent installed-customer workflow retain actual system trust state and findings; no installation pass is inferred from mocks.

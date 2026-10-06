@@ -3470,3 +3470,83 @@ Keep PR498 draft and #460 open. Protected native build/accept/sign/stage,
 authenticated catalog entries, final nine-cell archive acceptance and ordinary
 independent signed installation remain incomplete. No merge, publication,
 production admission, issue close or OpenSpec archive occurs.
+
+
+## Owner-approved native delivery implementation — 6 October 2026 (Europe/Berlin)
+
+The owner requested implementation of the three remaining release/loader/customer
+items and expressly accepted normal first-run trust warnings without an Apple
+Developer account. No merge or publication was authorized. Specs/design/proposal/
+requirements were synchronized before new behavior; strict OpenSpec validation
+passed. The linked issue remained OPEN/Todo with complete public metadata. Work
+remains in the attached codex worktree and draft PR498.
+
+New release tooling/workflows have 49 focused passing tests. Failing-before logs
+in `/private/tmp/specfact460-release-*-red.log` retain archive/profile validation,
+protected source/key boundaries, incomplete/mismatched matrix rejection, unsigned
+or substituted upload rejection, duplicate JSON and boolean-type rejection,
+exclusive staging against an empty-output race, missing/weak environment rules,
+actual extension-phase schema, required private copy modes, and read-only trust
+observation regressions. Ephemeral unit keys cannot establish publisher authority.
+The orchestration wrapper reuses existing tested builders; its additional input
+validation tests are not represented as a failing-first new runtime experiment.
+
+A bounded independent reviewer identified the missing clean-CI Node staging
+parent, insufficient final-byte lifecycle binding, and a five-second clock that
+started after waiting for controller exit. All were corrected. The fake-clock
+six-second disappearance case demonstrably failed before the deadline correction
+and passes after it. The reviewer confirmed the deadline fix with three passing
+boundary tests and no further finding in that bounded correction scope.
+
+The new cp312 build entry point assembled real native archive bytes, identical to
+the previous manifest/archive digests in NATIVE_RELEASE.md. All three actual ABI
+archives pass strict archive and narrow loader validation. The new acceptance
+CLI exercised actual consumer authentication with an explicitly ephemeral fixture
+key, real archive extraction/codesign, cold/offline cache verification, actual
+Flask preparation and all ten module-command analyzers. The cp312 v4 report
+records 20 collected/20 called tests, 162 coverage files and a passed real
+MarkupSafe extension test. An initial extension checker mistakenly used an
+outcome string rather than the actual boolean passed field; its RED regression
+and successful v4 rerun retain that failure honestly.
+
+The post-correction delivered cp312 component proof at
+`/private/tmp/specfact460-release-delivered-boundary-cp312-v3/delivered-boundary.json`
+passes 100 actual repetitions each of controller loss, bootstrap failure and
+exception-port denial. Source/provenance SHA-256 values bind the exact delivered
+broker/bootstrap/verifier/self-test/policy bytes. The harness neither compiles nor
+patches nor re-signs those components. Cleanup observation time is included in
+the unchanged five-second deadline. This physical Mac is 27.0.1/26A434; local
+receipts explicitly cannot replace macOS14/15/26 hosted proof or ordinary signed
+customer installation.
+
+Direct local AST/AI-bloat/ordinary Radon adapters report zero findings after
+introduced complexity warnings were resolved. An attempted direct sealed
+full-result Radon pass cannot reconcile upstream CLI omission of constant-only
+modules; it is incomplete local authority, not PASS. The unchanged required
+capsule review remains DEFERRED to exact-head GitHub Linux under prior owner
+approval. No hosted timeout budget or required analyzer gate was weakened.
+Explicit script typing reports zero errors/warnings, Actionlint validates both
+actual workflows, and the CI preparation shell passes bash syntax validation.
+Final repository gate outcomes and the exact commit/CI state follow below.
+
+No native protected environment or signing key was configured, no candidate blob
+was uploaded, no authenticated production catalog entry was installed and no
+normal customer PASS is claimed. Existing official module assets are unchanged;
+all seven existing signatures continue to verify against the public root. The
+implemented normal-customer gate forbids developer overrides/credentials and
+records actual quarantine attributes without changing them. Visual first-run
+dialog observation remains unavailable in unattended CLI evidence. #460 remains
+open, the PR remains draft, and OpenSpec archive is pending actual acceptance.
+
+Final implementation gates: full 5,185 passed/75 skipped/95 subtests/five existing
+warnings in311.06s; SMART the same counts in311.27s; contracts28 passed. Format,
+default lint/type (Pylint10.00/10), explicit new-script typing, YAML/imports,
+Actionlint, bash syntax and all seven required module signatures pass. Strict
+OpenSpec validation passes. Requirements gate passes at planned maturity and
+correctly retains implementation evidence not-yet-available for complete release
+acceptance. Logs: `/private/tmp/specfact460-release-{full,smart,contract,lint}-final.log`;
+new-script diagnostics: `/private/tmp/specfact460-release-script-type-final.log`;
+requirements: `/private/tmp/specfact460-release-requirements.{json,md}`.
+
+No final acceptance checkmark, production flag, issue closure, automatic merge,
+publication or OpenSpec archive is inferred from these repository gate results.

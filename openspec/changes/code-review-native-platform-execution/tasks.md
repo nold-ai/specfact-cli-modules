@@ -173,3 +173,16 @@ replace sections 3, 4 or 6. Exact facts: DELIVERY_CHECKPOINT_2026-10-06.md.
 
 - [x] Reproduce actual cp311 Hatch hook launch failure and compact managed uv requests with native parser/literal round-trip and unchanged-budget rejection tests.
 - [x] Rebuild the changed managed uv image, verify full provenance, and repeat exact archive manager execution; retain old candidate failures.
+
+
+### Owner-approved release implementation continuation — 6 October 2026
+
+- [x] Record explicit acceptance of normal initial trust warnings while retaining all integrity/boundary gates and optional Apple follow-up.
+- [x] Implement exact archive/profile/acceptance validation, protected data-only signing and authenticated catalog preparation with RED/GREEN tests.
+- [x] Implement reproducible secret-free native builds and all nine final-byte acceptance jobs; prove the real cp312 build and local execution.
+- [ ] Execute and pass all nine hosted final-byte acceptance cells at the reviewed source identity.
+- [x] Implement independent signed installed-customer cold/offline execution, exact composition comparison and read-only quarantine observation; preserve unattended dialog limits.
+- [ ] Execute independent ordinary installation after approved public catalog/module publication and record actual trust behavior.
+- [ ] Configure reviewed protected signing/staging environments and prepare human promotion with immutable identities; do not auto-merge or publish.
+
+Runbook and exact candidate limitations: [NATIVE_RELEASE.md](NATIVE_RELEASE.md). Implementation checkmarks do not replace pending release acceptance.
