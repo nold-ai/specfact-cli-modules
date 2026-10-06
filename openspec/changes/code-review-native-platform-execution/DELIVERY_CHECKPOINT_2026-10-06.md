@@ -384,3 +384,24 @@ managers on all three ABIs, with actual tests/coverage, all ten analyzers and
 prepared offline reuse. Existing project findings remain visible. This closes
 the diagnosed build-launch frame failure only; no production/complete-boundary
 flag or installed native support claim changes.
+
+
+## Signed runtime and test review follow-up
+
+Managed uv correction964ceda0 and CI signature88f91ca9 verify all seven module
+signatures. All12candidate manager/ABI slices and physical changecost execution
+complete with actual findings retained; artifact authentication and production
+approval remain false. The two introduced Z3 test complexity/nesting warnings
+are reproduced and removed without weakening provenance or tamper assertions;
+38focused tests and bounded review pass. Final SMART/full each pass5,136tests,
+75skips and95subtests (266.30s/267.11s). No native payload changed in this
+subsequent test-only correction.
+
+At88f91ca9, both required cp312 and independent installed reviews fail at the
+unchanged300-second outer deadline; the candidate last reports targeted pytest.
+Required signatures, requirements, docs, all minimum-core jobs, Linux3.13
+customer and all macOS14/15/26 fixed boundary jobs pass. Linux3.11 is pending
+at this checkpoint. Preserve failures and require the test follow-up's own
+exact-head gates. Final archives, protected native release/catalog and normal
+independent signed installation remain unaccepted. Keep PR498 draft and #460
+open. Full details and proof limits are in TDD_EVIDENCE.md.

@@ -3420,3 +3420,53 @@ and the actual nonpassing test outcome are preserved. This candidate fixture
 lease does not authenticate the manifest or exercise normal installed native
 acquisition. Private summary:
 `/private/tmp/specfact460-uv-frame-changecost-cli.summary.json`.
+
+
+## Z3 test review cleanup and signed-runtime CI — 6 October 2026 (Europe/Berlin)
+
+Normal hooks committed the managed uv runtime correction as
+`964ceda0c1f57515eedeece64e9869dca1c82b41`; CI-only module signing followed as
+`88f91ca9f27092385a5c02159adf2c44ae5759e6`. The worktree fast-forwarded cleanly
+and required public-key/payload/version verification passes all seven modules.
+No local publisher key or archive authentication was used.
+
+The prior cp312 hosted public locations contain two introduced Z3 test warnings:
+CC13 at line339 and kiss.nesting.warning at line378. The existing full-result
+Radon adapter reproduces both in `/private/tmp/specfact460-z3-review-red.json`.
+Splitting receipt verification from identity assertions and separating license
+mutation from four flat payload mutations retains every provenance, false
+admission, RECORD, digest and reject-before-output assertion. The same adapter
+returns no findings for the changed test section in
+`/private/tmp/specfact460-z3-review-green.json`; all38Z3 tests pass. The bounded
+existing review agent reports No findings and confirms preserved assertions,
+with no product, authentication, budget or authority changes. This inspection
+of capped public locations is not complete hosted review assurance.
+
+Final format/type/lint pass, including no type diagnostics and Pylint10.00/10.
+SMART and full each pass5,136tests,75explicit skips,95subtests and five existing
+warnings, taking266.30s and267.11s respectively. These repeat gates are justified
+by the confirmed review findings and changed test structure. Native candidate
+payloads are unchanged by the test-only follow-up; their12/12manager/ABI and
+physical changecost observations above remain candidate evidence.
+
+Exact signed-runtime orchestrator37468195895 fails: independent installed
+review job112285254663 reaches the unchanged300-second analysis_timeout, and
+cp312 staged review job112285254779 also reaches that outer deadline. Its last
+fixed public analyzer marker is targeted-pytest-coverage; this does not establish
+the underlying cause. Private logs are retained at
+`/private/tmp/specfact460-88f91ca9-{independent,cp312}.private.sanitized.log`.
+The prior5a per-analyzer Pylint/CrossHair/pytest failures remain historical
+evidence, not substituted for this current timeout outcome. No failed job was
+manually rerun and no budget changed.
+
+At88f91ca9, all three minimum-core jobs, required signatures, requirements,
+docs and macOS14/15/26 fixed boundary fixtures pass; Linux3.13 customer
+job112285254767 passes. Linux3.11 is still running at this checkpoint.
+The boundary workflow37468195615 tests fixed startup/control fixtures, not
+accepted final archives. The test-only follow-up requires its own exact-head
+CI; neither local DEFERRED review nor these partial results authorize merging.
+
+Keep PR498 draft and #460 open. Protected native build/accept/sign/stage,
+authenticated catalog entries, final nine-cell archive acceptance and ordinary
+independent signed installation remain incomplete. No merge, publication,
+production admission, issue close or OpenSpec archive occurs.

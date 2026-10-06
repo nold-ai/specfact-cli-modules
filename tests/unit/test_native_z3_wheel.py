@@ -336,10 +336,15 @@ def test_darwin_projection_omits_exact_foreign_payload_and_retains_native_source
     packager.verify_record(files, prefix)
 
 
-def test_projection_provenance_binds_omissions_and_license_without_admission(tmp_path, packager, projection_inputs):
+@pytest.fixture(name="projection_receipt")
+def fixture_projection_receipt(tmp_path, packager, projection_inputs):
     path, release, original = projection_inputs
     wheel = packager.prepare(path, tmp_path / "projected", release_archive=release, darwin_only=True)
-    receipt = json.loads(wheel.with_suffix(".provenance.json").read_bytes())
+    return wheel, json.loads(wheel.with_suffix(".provenance.json").read_bytes()), original
+
+
+def test_projection_provenance_retains_verification_without_admission(projection_receipt):
+    _, receipt, _ = projection_receipt
     assert receipt["schema_version"] == 4
     assert receipt["license_payload_complete"] is True
     assert receipt["z3_source_and_native_license_verified"] is True
@@ -347,6 +352,10 @@ def test_projection_provenance_binds_omissions_and_license_without_admission(tmp
     assert not any(name.endswith(".dll") for name in receipt["unchanged_members"])
     assert receipt["admission_gaps"] == []
     assert receipt["dependency_admitted"] is False and receipt["production_eligible"] is False
+
+
+def test_projection_provenance_binds_omissions_and_license(packager, projection_receipt):
+    wheel, receipt, original = projection_receipt
     assert receipt["output"]["sha256"] == hashlib.sha256(wheel.read_bytes()).hexdigest()
     assert receipt["upstream"]["sha256"] == packager.UPSTREAM_SHA256
     for name, identity in receipt["omitted_members"].items():
@@ -374,32 +383,38 @@ def test_projection_without_authenticated_release_rejects_before_output(tmp_path
     assert not (tmp_path / "projected").exists()
 
 
-@pytest.mark.parametrize("defect", ["changed_dll", "missing_dll", "extra_dll", "changed_source", "changed_license"])
+@pytest.mark.parametrize(
+    "mutation",
+    [("foreign", b"changed"), ("foreign", None), ("z3/lib/unknown.dll", b"unreviewed"), ("z3/z3.py", b"changed")],
+    ids=["changed_dll", "missing_dll", "extra_dll", "changed_source"],
+)
 def test_projection_rejects_unreviewed_payload_before_output(
-    tmp_path, packager, projection_inputs, monkeypatch, defect
+    tmp_path, packager, projection_inputs, monkeypatch, mutation
 ):
     path, release, original = projection_inputs
-    if defect == "changed_license":
-        license_input = tmp_path / "tampered-license.txt"
-        license_input.write_bytes(b"unverified text")
-        monkeypatch.setattr(packager, "LICENSE_INPUT", license_input)
+    member, replacement = mutation
+    name = next(name for name in original if name.endswith(".dll")) if member == "foreign" else member
+    files = dict(original)
+    if replacement is None:
+        del files[name]
     else:
-        foreign = next(name for name in original if name.endswith(".dll"))
-        files = dict(original)
-        if defect == "changed_dll":
-            files[foreign] += b"changed"
-        elif defect == "missing_dll":
-            del files[foreign]
-        elif defect == "extra_dll":
-            files["z3/lib/unknown.dll"] = b"unreviewed"
-        else:
-            files["z3/z3.py"] += b"changed"
-        record_name = packager.UPSTREAM_DIST_INFO + "/RECORD"
-        files[record_name] = record({k: v for k, v in files.items() if k != record_name}, record_name)
-        with zipfile.ZipFile(path, "w") as archive:
-            for name, data in files.items():
-                archive.writestr(name, data)
-        monkeypatch.setattr(packager, "UPSTREAM_SHA256", hashlib.sha256(path.read_bytes()).hexdigest())
+        files[name] = replacement
+    record_name = packager.UPSTREAM_DIST_INFO + "/RECORD"
+    files[record_name] = record({k: v for k, v in files.items() if k != record_name}, record_name)
+    with zipfile.ZipFile(path, "w") as archive:
+        for name, data in files.items():
+            archive.writestr(name, data)
+    monkeypatch.setattr(packager, "UPSTREAM_SHA256", hashlib.sha256(path.read_bytes()).hexdigest())
+    with pytest.raises(ValueError):
+        packager.prepare(path, tmp_path / "projected", release_archive=release, darwin_only=True)
+    assert not (tmp_path / "projected").exists()
+
+
+def test_projection_rejects_changed_license_before_output(tmp_path, packager, projection_inputs, monkeypatch):
+    path, release, _ = projection_inputs
+    license_input = tmp_path / "tampered-license.txt"
+    license_input.write_bytes(b"unverified text")
+    monkeypatch.setattr(packager, "LICENSE_INPUT", license_input)
     with pytest.raises(ValueError):
         packager.prepare(path, tmp_path / "projected", release_archive=release, darwin_only=True)
     assert not (tmp_path / "projected").exists()
