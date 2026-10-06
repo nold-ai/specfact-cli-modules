@@ -84,6 +84,13 @@ Production backend approval SHALL follow harmless native feasibility tests of th
 - **AND** repetition counts, architecture, build/profile identity, exact failure and observer cleanup MUST be recorded; 100 repetitions per lifecycle race are required before positive admission
 - **AND** no privileged helper, process polling or cooperative PID report may substitute for a mechanism establishing descendant ownership
 
+#### Scenario: Cleanup tolerates an observed process exiting before signal delivery
+
+- **WHEN** the native proof observes the same owned process identity but that process exits before the cleanup signal arrives
+- **THEN** only the resulting process-not-found error is tolerated, earlier proof failures remain visible and remaining teardown runs
+- **AND** absent or changed identities are not signaled, while permission and other cleanup errors still fail
+
+
 ### Requirement: Portable review semantics
 
 The macOS backend SHALL preserve the exact released baseline's scope, findings, differential classification and verdict/exit semantics. C15 delivery is independent. New platform evidence SHALL have explicitly versioned producer/consumer compatibility, and local evidence SHALL NOT acquire protected PR authority by declaring an identity.

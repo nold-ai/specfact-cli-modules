@@ -3836,3 +3836,55 @@ signature. Bot-head workflows report `action_required`; this substantive
 readback-evidence commit triggers ordinary exact-signed-payload PR checks.
 Required Linux reviews and native nine-cell acceptance remain pending; no
 workflow approval or publisher environment policy is bypassed.
+
+
+## Hosted native proof teardown race — 7 October 2026 (Europe/Berlin)
+
+Signed-head97359e22macOS15boundary job112547218993 fails solely in the
+exception-self-test finally block: identity observation sees the owned broker,
+but the broker exits before SIGKILL, producing ProcessLookupError. Actual
+exception-port denial and five-second worker cleanup assertions precede teardown.
+Private log: `/private/tmp/specfact460-97359e22-boundary15.private.log`. This
+failure is retained, not relabeled PASS. Specification and regression guards
+precede cleanup changes; `/private/tmp/specfact460-broker-cleanup-race-red.log`
+has three failing missing-contract tests before implementation.
+
+Cleanup now tolerates only process-not-found after an exact identity match.
+Tests also require permission errors to propagate and absent/reused identities
+never to receive a signal. The proof harness is separated into protocol setup,
+positive/failure controls, held-worker assertions and measured controller loss;
+all original wire values, assertions and five-second deadline remain. Partial
+process identities stay captured by the outer finally before assertions.
+The delivered component path remains byte-for-byte copy-only and100repetitions
+per lifecycle/exception case; its acceptance assertions do not change.
+
+Initial focused boundary/receipt tests pass222/three explicit native skips.
+Actual local native proofs plus delivered-boundary unit tests pass9tests after
+refactoring (`/private/tmp/specfact460-broker-cleanup-race-native-typed.log`);
+local macOS27.0.1 is supplementary, not the supported hosted matrix. Direct
+clean-code passes after resolving legacy proof-function complexity and length;
+normal lint additionally requires stdlib suppress and bound loop captures.
+Earlier intermediate parse/type/lint failures remain in `broker-cleanup-race`
+logs and do not establish passing evidence. Final full/SMART and lint follow.
+No module payload, signature, runtime boundary or reviewer budget changes.
+
+
+Final cleanup-correction full and SMART pass5,224tests/75explicit skips/
+95subtests/five existing warnings in259.59s/258.80s. Final native/unit subset
+passes9tests in3.66s, including retention of a prior proof failure through an
+already-exited cleanup. Normal hooks pass final lint/typing, staged requirements,
+28contracts, docs/YAML/imports, and the unchanged seven strict module signatures.
+Direct full-file AST/AI-bloat/ordinary Radon has zero findings after phase helpers
+and compact unchanged request encoding. Full runs collect before the final
+stdlib-suppress/bound-capture spelling and original-failure assertion; the
+final native subset verifies those final bytes.
+
+At97359e22the independent reviewer job112547359085 still reports
+analysis_timeout. Candidate job112547359287also fails required review and its
+bounded diagnostic replay is running. This proves the ownership fixes alone
+are insufficient, despite the concrete guarded I/O defects. Read-only current
+selector inspection chooses40test files, with Hatch/default and unchanged
+`-ra -v --import-mode=importlib`; no whole `tests` operand is selected. The
+manual Hatch-script expansion hypothesis does not apply to the capsule engine,
+which consumes exported extra-args and selected paths. No tests are dropped
+and no project configuration or budget is changed to hide the failure.

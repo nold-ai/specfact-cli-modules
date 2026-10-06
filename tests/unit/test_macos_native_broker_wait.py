@@ -12,6 +12,7 @@ import subprocess
 import sys
 import tempfile
 import time
+from contextlib import suppress
 from pathlib import Path
 
 
@@ -32,6 +33,38 @@ def _receive(channel: socket.socket) -> tuple[int, int, int, int, int, int]:
             raise RuntimeError("broker closed before reply")
         data.extend(chunk)
     return REPLY.unpack(data)
+
+
+def _assert_bootstrap_failure(parent, broker, invocation: Path, reply) -> None:
+    assert reply == (0x53464E31, 1, 1, 168)
+    diagnostic = json.loads((invocation / "broker.log").read_text())
+    assert diagnostic["bootstrap_failure_phase"] == 68
+    assert diagnostic["errno"] != 0
+    assert not (invocation / "temporary/native-self-test.pid").exists()
+    parent.close()
+    assert broker.wait(timeout=5) == 0
+    print("REJECTED_BEFORE_READY", flush=True)
+
+
+def _hold_worker(parent, broker, temporary: Path, handle: int) -> None:
+    marker = temporary / "native-self-test.pid"
+    deadline = time.monotonic() + 5
+    while not marker.is_file() and time.monotonic() < deadline:
+        time.sleep(0.01)
+    assert marker.is_file(), "held worker did not report its PID"
+    worker = int(marker.read_text().strip())
+    print(json.dumps({"broker": broker.pid, "worker": worker, "handle": handle}), flush=True)
+    parent.sendall(REQUEST.pack(0x53464E31, 1, 2, 0, handle, 900_000, 0, 0, 0, 0, b"", b"", b"", b""))
+    print("WAIT_SENT", flush=True)
+    _receive(parent)  # The parent kills this CLI while the worker is held.
+    raise AssertionError("held worker unexpectedly completed WAIT")
+
+
+def _launch_request(invocation: Path) -> bytes:
+    paths = (
+        _path(path) for path in (invocation, invocation / "project", invocation / "output", invocation / "temporary")
+    )
+    return REQUEST.pack(0x53464E31, 1, 1, 1, 0, 900_000, 1024, 16 << 30, 16 << 20, 8 << 20, *paths)
 
 
 def _controller(capsule: Path, invocation: Path, *, fail_limits: bool = False) -> None:
@@ -62,51 +95,17 @@ def _controller(capsule: Path, invocation: Path, *, fail_limits: bool = False) -
         timeout=5,
     )
     os.kill(broker.pid, signal.SIGCONT)
-    project, output, temporary = (invocation / name for name in ("project", "output", "temporary"))
-    parent.sendall(
-        REQUEST.pack(
-            0x53464E31,
-            1,
-            1,
-            1,
-            0,
-            900_000,
-            1024,
-            16 << 30,
-            16 << 20,
-            8 << 20,
-            _path(invocation),
-            _path(project),
-            _path(output),
-            _path(temporary),
-        )
-    )
+    temporary = invocation / "temporary"
+    parent.sendall(_launch_request(invocation))
     magic, version, code, handle, _status, detail = _receive(parent)
     if fail_limits:
-        assert (magic, version, code, detail) == (0x53464E31, 1, 1, 168)
-        diagnostic = json.loads((invocation / "broker.log").read_text())
-        assert diagnostic["bootstrap_failure_phase"] == 68
-        assert diagnostic["errno"] != 0
-        assert not (temporary / "native-self-test.pid").exists()
-        parent.close()
-        assert broker.wait(timeout=5) == 0
-        print("REJECTED_BEFORE_READY", flush=True)
+        _assert_bootstrap_failure(parent, broker, invocation, (magic, version, code, detail))
         return
     assert (magic, version, code, detail) == (0x53464E31, 1, 0, 0), (
         (magic, version, code, detail),
         (invocation / "broker.log").read_text(),
     )
-    marker = temporary / "native-self-test.pid"
-    deadline = time.monotonic() + 5
-    while not marker.is_file() and time.monotonic() < deadline:
-        time.sleep(0.01)
-    assert marker.is_file(), "held worker did not report its PID"
-    worker = int(marker.read_text().strip())
-    print(json.dumps({"broker": broker.pid, "worker": worker, "handle": handle}), flush=True)
-    parent.sendall(REQUEST.pack(0x53464E31, 1, 2, 0, handle, 900_000, 0, 0, 0, 0, b"", b"", b"", b""))
-    print("WAIT_SENT", flush=True)
-    _receive(parent)  # The parent kills this CLI while the worker is held.
-    raise AssertionError("held worker unexpectedly completed WAIT")
+    _hold_worker(parent, broker, temporary, handle)
 
 
 def _line(process: subprocess.Popen[str], timeout: float) -> str:
@@ -136,6 +135,137 @@ def _identity(pid: int) -> str | None:
     return observed.stdout.strip() or None
 
 
+def _cleanup_owned_process(pid: int | None, birth: str | None) -> None:
+    if pid is None or birth is None or _identity(pid) != birth:
+        return
+    with suppress(ProcessLookupError):
+        os.kill(pid, signal.SIGKILL)
+
+
+def test_cleanup_tolerates_owned_process_exit_between_observation_and_signal(monkeypatch):
+    monkeypatch.setattr(sys.modules[__name__], "_identity", lambda _pid: "observed-birth")
+    signaled = []
+
+    def signal_exited(pid, value):
+        signaled.append((pid, value))
+        raise ProcessLookupError("owned process has exited")
+
+    monkeypatch.setattr(os, "kill", signal_exited)
+    _cleanup_owned_process(42, "observed-birth")
+    import pytest
+
+    with pytest.raises(AssertionError, match="original proof failure"):
+        try:
+            raise AssertionError("original proof failure")
+        finally:
+            _cleanup_owned_process(42, "observed-birth")
+    assert signaled == [(42, signal.SIGKILL)] * 2
+
+
+def test_cleanup_preserves_permission_failure(monkeypatch):
+    import pytest
+
+    monkeypatch.setattr(sys.modules[__name__], "_identity", lambda _pid: "observed-birth")
+
+    def denied(*_args):
+        raise PermissionError("controlled denial")
+
+    monkeypatch.setattr(os, "kill", denied)
+    with pytest.raises(PermissionError, match="controlled denial"):
+        _cleanup_owned_process(42, "observed-birth")
+
+
+def test_cleanup_does_not_signal_absent_or_reused_identity(monkeypatch):
+    calls = []
+    monkeypatch.setattr(os, "kill", lambda *args: calls.append(args))
+    for observed in (None, "other-birth"):
+        monkeypatch.setattr(sys.modules[__name__], "_identity", lambda _pid, expected=observed: expected)
+        for pid, birth in ((None, "observed-birth"), (42, None), (42, "observed-birth")):
+            _cleanup_owned_process(pid, birth)
+    assert calls == []
+
+
+def _prepare_invocation(root: Path, probe_exceptions: bool) -> tuple[Path, Path]:
+    capsule, invocation = root / "capsule", root / "invocation"
+    capsule.mkdir(mode=0o700)
+    invocation.mkdir(mode=0o700)
+    for name, mode in (("project", 0o500), ("output", 0o700), ("temporary", 0o700)):
+        (invocation / name).mkdir(mode=mode)
+    (invocation / "temporary/hold").touch()
+    requirement = root / "python.requirement"
+    requirement.write_text('cdhash H"0000000000000000000000000000000000000000"\n')
+    subprocess.run(
+        [str(SOURCE / "build.sh")],
+        check=True,
+        timeout=60,
+        capture_output=True,
+        env={
+            **os.environ,
+            "SPECFACT_NATIVE_BUILD_DIR": str(capsule),
+            "SPECFACT_PYTHON_REQUIREMENT_FILE": str(requirement),
+        },
+    )
+    if probe_exceptions:
+        positive = root / "positive"
+        positive.mkdir()
+        (positive / "exception-port-probe").touch()
+        completed = subprocess.run(
+            [str(capsule / "bin/specfact-native-self-test"), str(positive)],
+            capture_output=True,
+            timeout=5,
+            check=False,
+        )
+        assert completed.returncode == 37
+        values = json.loads((positive / "exception-port-results.json").read_text())
+        assert values == [0, 0, 0, 0], "exception-port positive controls are not valid"
+        (invocation / "temporary/exception-port-probe").touch()
+    for path in capsule.rglob("*"):
+        path.chmod(0o700 if path.is_dir() else 0o500)
+    return capsule, invocation
+
+
+def _assert_held_controller(
+    controller, invocation: Path, probe_exceptions: bool, identities: tuple[int, str | None, str | None]
+) -> str:
+    worker_pid, birth, broker_birth = identities
+    if probe_exceptions:
+        values = json.loads((invocation / "temporary/exception-port-results.json").read_text())
+        assert len(values) == 4 and all(value != 0 for value in values), "exception-port change escaped confinement"
+    assert birth, "worker was not independently visible after launch"
+    assert broker_birth, "broker was not independently visible after launch"
+    assert _line(controller, 5) == "WAIT_SENT"
+    time.sleep(0.1)
+    assert controller.poll() is None and _identity(worker_pid) == birth
+    return birth
+
+
+def _assert_worker_dies_with_controller(controller, worker_pid: int, birth: str) -> None:
+    started = time.monotonic()
+    controller.kill()
+    controller.wait(timeout=2)
+    deadline = started + 5
+    observed_absent_at = None
+    while time.monotonic() < deadline:
+        if _identity(worker_pid) != birth:
+            observed_absent_at = time.monotonic()
+            break
+        time.sleep(0.02)
+    assert observed_absent_at is not None, "worker survived controller death during WAIT for five seconds"
+    assert observed_absent_at - started <= 5
+
+
+def _stop_controller(controller) -> None:
+    if controller.poll() is None:
+        controller.kill()
+        controller.wait(timeout=2)
+
+
+def _close_streams(controller) -> None:
+    for stream in (controller.stdout, controller.stderr):
+        if stream:
+            stream.close()
+
+
 def _exercise_controller(*, fail_limits: bool = False, probe_exceptions: bool = False) -> None:
     """A 900-second WAIT cannot hide controller death from the signed broker."""
     if sys.platform != "darwin" or os.uname().machine != "arm64" or os.environ.get("SPECFACT_NATIVE_CONTROL") != "1":
@@ -144,41 +274,7 @@ def _exercise_controller(*, fail_limits: bool = False, probe_exceptions: bool = 
         pytest.skip("explicit physical ARM64 native broker run")
     with tempfile.TemporaryDirectory(dir="/private/tmp", prefix="sf-native-wait-") as directory:
         root = Path(directory).resolve()
-        capsule, invocation = root / "capsule", root / "invocation"
-        capsule.mkdir(mode=0o700)
-        invocation.mkdir(mode=0o700)
-        for name, mode in (("project", 0o500), ("output", 0o700), ("temporary", 0o700)):
-            (invocation / name).mkdir(mode=mode)
-        (invocation / "temporary/hold").touch()
-        requirement = root / "python.requirement"
-        requirement.write_text('cdhash H"0000000000000000000000000000000000000000"\n')
-        subprocess.run(
-            [str(SOURCE / "build.sh")],
-            check=True,
-            timeout=60,
-            capture_output=True,
-            env={
-                **os.environ,
-                "SPECFACT_NATIVE_BUILD_DIR": str(capsule),
-                "SPECFACT_PYTHON_REQUIREMENT_FILE": str(requirement),
-            },
-        )
-        if probe_exceptions:
-            positive = root / "positive"
-            positive.mkdir()
-            (positive / "exception-port-probe").touch()
-            completed = subprocess.run(
-                [str(capsule / "bin/specfact-native-self-test"), str(positive)],
-                capture_output=True,
-                timeout=5,
-                check=False,
-            )
-            assert completed.returncode == 37
-            values = json.loads((positive / "exception-port-results.json").read_text())
-            assert values == [0, 0, 0, 0], "exception-port positive controls are not valid"
-            (invocation / "temporary/exception-port-probe").touch()
-        for path in capsule.rglob("*"):
-            path.chmod(0o700 if path.is_dir() else 0o500)
+        capsule, invocation = _prepare_invocation(root, probe_exceptions)
         controller = subprocess.Popen(
             [
                 sys.executable,
@@ -201,42 +297,15 @@ def _exercise_controller(*, fail_limits: bool = False, probe_exceptions: bool = 
                 return
             launched = json.loads(_line(controller, 20))
             worker_pid, broker_pid = launched["worker"], launched["broker"]
-            if probe_exceptions:
-                values = json.loads((invocation / "temporary/exception-port-results.json").read_text())
-                assert len(values) == 4 and all(value != 0 for value in values), (
-                    "exception-port change escaped confinement"
-                )
             birth = _identity(worker_pid)
             broker_birth = _identity(broker_pid)
-            assert birth, "worker was not independently visible after launch"
-            assert broker_birth, "broker was not independently visible after launch"
-            assert _line(controller, 5) == "WAIT_SENT"
-            time.sleep(0.1)
-            assert controller.poll() is None and _identity(worker_pid) == birth
-            started = time.monotonic()
-            controller.kill()
-            controller.wait(timeout=2)
-            deadline = started + 5
-            observed_absent_at = None
-            while time.monotonic() < deadline:
-                if _identity(worker_pid) != birth:
-                    observed_absent_at = time.monotonic()
-                    break
-                time.sleep(0.02)
-            assert observed_absent_at is not None, "worker survived controller death during WAIT for five seconds"
-            assert observed_absent_at - started <= 5
+            birth = _assert_held_controller(controller, invocation, probe_exceptions, (worker_pid, birth, broker_birth))
+            _assert_worker_dies_with_controller(controller, worker_pid, birth)
         finally:
-            if controller.poll() is None:
-                controller.kill()
-                controller.wait(timeout=2)
-            if worker_pid is not None and birth is not None and _identity(worker_pid) == birth:
-                os.kill(worker_pid, signal.SIGKILL)
-            if broker_pid is not None and broker_birth is not None and _identity(broker_pid) == broker_birth:
-                os.kill(broker_pid, signal.SIGKILL)
-            if controller.stdout:
-                controller.stdout.close()
-            if controller.stderr:
-                controller.stderr.close()
+            _stop_controller(controller)
+            _cleanup_owned_process(worker_pid, birth)
+            _cleanup_owned_process(broker_pid, broker_birth)
+            _close_streams(controller)
 
 
 def test_cli_death_during_wait_kills_worker_within_five_seconds() -> None:

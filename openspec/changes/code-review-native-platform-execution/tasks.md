@@ -201,3 +201,6 @@ Runbook and exact candidate limitations: [NATIVE_RELEASE.md](NATIVE_RELEASE.md).
 - [ ] Verify fresh CI signing and both unchanged-budget reviewers after the ownership-I/O correction.
 
 - [x] Reproduce38synthetic observation cases reading host installed metadata; isolate their fixture ownership with permanent guards while retaining actual discovery and installed-attribution tests.
+
+- [x] Diagnose hosted macOS15 proof teardown PID-exit race; retain identity checks, actual denial/deadline assertions and strict unexpected-error failures.
+- [ ] Pass fresh supported boundary jobs after proof cleanup correction.

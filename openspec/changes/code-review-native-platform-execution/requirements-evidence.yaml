@@ -33,6 +33,11 @@ requirements:
       method: inspection
       intent: "Inspect acceptance: Kernel RPC denial retains exception endpoints."
       observable: "KERN_DENIED and KERN_NO_ACCESS still require unchanged independently read set/swap/clear endpoint snapshots and normal exit; actual signed controls run on ARM64. Lifecycle repetition requirements are unchanged."
+    - case_id: 460-2-11
+      scenario_id: native-isolation-capability-evidence
+      method: test
+      intent: Preserve proof assertions when an owned process exits between cleanup identity observation and signaling.
+      observable: Cleanup catches only ProcessLookupError; regression tests retain permission failures and reject absent or changed identities. Actual local controller-loss, bootstrap-failure and exception-denial proofs pass with unchanged numeric protocol, positive controls and five-second deadline. Hosted supported cells remain separate acceptance.
     - case_id: 460-2-1
       scenario_id: native-isolation-capability-evidence
       method: inspection
