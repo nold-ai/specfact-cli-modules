@@ -725,4 +725,4 @@ requirements:
       scenario_id: fixture-owned-portable-test-observations
       method: test
       intent: Guard synthetic observation playback against host RECORD scans while preserving all actual discovery and evidence assertions.
-      observable: Autouse guards fail 38 prior evidence/discovery cases; explicit fixture bridges pass all 244 portable observation, worker, ownership and target coverage tests. Actual native observer subprocesses and dedicated ownership checks remain; hosted elapsed benefit requires fresh CI.
+      observable: Autouse guards fail 38 prior evidence/discovery cases; explicit fixture bridges pass all 244 portable observation, worker, ownership and target coverage tests. The native-alias-API regression passes under the actual reviewer plugin after fixture context isolation with original diagnostic/record/threshold assertions. Two declared repository workers and disabled restarts retain all 1752 selected tests and actual combined coverage locally; final full/SMART and hosted timing remain independently required. Actual native observer subprocesses and dedicated ownership checks remain.

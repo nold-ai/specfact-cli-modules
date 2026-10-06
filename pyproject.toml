@@ -136,7 +136,9 @@ reportAttributeAccessIssue = false
 
 [tool.pytest.ini_options]
 minversion = "8.4.2"
-addopts = "-ra -v --import-mode=importlib"
+# Keep repository review tests within bounded analysis budgets without omitting tests.
+# Use -n 0 when a local debugging session needs one process.
+addopts = "-ra -v --import-mode=importlib -n 2 --max-worker-restart=0"
 pythonpath = [
     "src",
     "packages/specfact-project/src",

@@ -535,6 +535,7 @@ def test_direct_snapshot_row_cannot_erase_post_plan_identity_change(installed_pr
 
 
 def test_missing_native_alias_api_retains_observation_and_origin_diagnostic(monkeypatch, tmp_path):
+    monkeypatch.setitem(sys.modules, "_specfact_target_coverage", SimpleNamespace(active_plugin=lambda: None))
     monkeypatch.setattr(target_pytest, "SNAPSHOT_ROOT", tmp_path)
     observer = target_pytest.Observer()
     observer.coverage_origin["candidates"] = ["/opt/specfact/project-runtime/site-packages/pkg/app.py"]

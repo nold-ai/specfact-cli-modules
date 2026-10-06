@@ -3888,3 +3888,54 @@ selector inspection chooses40test files, with Hatch/default and unchanged
 manual Hatch-script expansion hypothesis does not apply to the capsule engine,
 which consumes exported extra-args and selected paths. No tests are dropped
 and no project configuration or budget is changed to hide the failure.
+
+
+## Final hosted leaf readback and bounded test policy — 7 October 2026 (Europe/Berlin)
+
+The completed97359e22candidate replay yields54,619thread samples. RECORD
+scanning is no longer a top20leaf, CrossHair has126leaf samples (previous1,192),
+and portable pytest has1,194, discovery subprocess observation358 and target
+bootstrap573. Counts span threads/processes, overlap and are not elapsed
+seconds. Public summary: `/private/tmp/specfact460-97359e22-profile.public.json`;
+required review remains failed. Both Python3.11/3.13 customer cells and all
+minimum-core cells pass; all quality cells fail the customer prerequisite.
+Fixed macOS14/26boundary cells pass; macOS15has the retained teardown race.
+
+Actual reviewer-plugin execution of the exact40-file current selector inventory
+with two workers first fails the existing missing-native-alias-API fixture:
+it consumes the active reviewer plugin instead of its fake native API.
+`/private/tmp/specfact460-selected-parallel.private.log` retains1failure/
+1,751passes/four skips, not a PASS. Fixture-owned helper context now forces that
+unit observation's intended fake API without disabling real measurement hooks;
+its original records/root/threshold/origin-unavailable assertions remain.
+The same40files then pass1,752tests/four skips in19.86s (20.21s wall) with actual
+reviewer coverage and two workers, no restarts; log is
+`/private/tmp/specfact460-selected-parallel-v2.private.log`. LocalPython3.14
+timing is diagnostic only and cannot establish hosted equivalence.
+
+Repository pytest policy explicitly declares two workers and zero restarts
+using already-declared pytest-xdist3.8.0. Generic capsule policy, selectors,
+coverage, native proof CLI and deadlines/repetitions stay unchanged. Worker
+loss remains an error; `-n0` allows serial local debugging. Primary flag reference:
+https://pytest-xdist.readthedocs.io/en/stable/distribution.html (accessed7October2026
+Europe/Berlin). The specification and retained hosted deadline/active-plugin
+failures precede the fixture/policy corrections; no failing review is waived.
+
+Final two-worker full and SMART each pass5,224tests/75explicit skips/95subtests/
+five existing warnings in158.47s/152.36s. Logs:
+`/private/tmp/specfact460-parallel-policy-{full,smart}.log`. The same40-file
+reviewer-plugin suite also passes1,752tests/four skips serially in46.06s
+(46.83s wall); two workers pass in19.86s. These runs have different concurrent
+local loads and are not a controlled hosted speed ratio. Actual local native
+proofs with two workers pass9tests in5.63s. Final lint/typing and direct clean-code
+for both affected test modules pass without findings; normal implementation
+hooks pass, including staged requirements,28contracts, docs/YAML/imports and
+checksum/version verification. Owner-approved local capsule review remains
+DEFERRED to blocking Linux, never PASS. Module payloads are unchanged after
+CI signing; all seven public-key signatures remain valid. Fresh exact-head
+Linux and supported native acceptance remain required before merge.
+
+An intermediate evidence append accidentally overwrote this file with TOML;
+pre-push diff inspection caught it. This correction restores the entire previous
+Git history verbatim and appends only this section, retaining all prior failures
+and acceptance limits. No overwritten evidence is pushed or treated as authority.

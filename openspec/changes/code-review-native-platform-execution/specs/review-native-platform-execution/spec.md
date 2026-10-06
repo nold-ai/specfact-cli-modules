@@ -1017,3 +1017,17 @@ coverage and failure-evidence assertions.
 - **WHEN** regression fixtures inject synthetic pytest observations and mock target execution
 - **THEN** their installed ownership context is fixture-owned, guarded against host distribution scans, and all coverage, phase-failure and retained-execution assertions still run
 - **AND** dedicated installed-ownership and actual native discovery/observer tests retain their real execution and identity checks
+
+
+#### Scenario: Synthetic observer API failures cannot consume active reviewer state
+
+- **WHEN** a unit observation simulates a missing native coverage API while the real reviewer plugin is active
+- **THEN** the unit observation uses its fixture plugin context and retains the same records, threshold and origin-unavailable diagnostic
+- **AND** the active reviewer continues measuring the actual test process tree
+
+
+#### Scenario: Repository review tests retain complete evidence with bounded parallelism
+
+- **WHEN** this repository's pytest policy declares two workers and no worker restart
+- **THEN** all selected tests execute with the same collection, findings, failure policy and combined reviewer coverage evidence
+- **AND** worker loss remains incomplete/error, supported native proof CLI calls keep their existing deadlines and repetitions, and the capsule continues honoring each project's declared pytest policy
