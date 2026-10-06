@@ -8,7 +8,7 @@ mcp==1.29.0
 pylint==4.0.7
 crosshair-tool==0.0.109
 icontract==2.7.1
-z3-solver==5.1.0.0+specfact.1
+z3-solver==5.1.0.0+specfact.2
 pytest==9.0.3
 pytest-cov==7.1.0
 coverage==7.15.4

@@ -184,6 +184,11 @@ requirements:
       method: inspection
       intent: "Inspect planned acceptance: Policy-admissible replacement is verified."
       observable: "native execution may proceed without satisfying the new selection from a superseded cache. Planned maturity only; future native execution evidence is required by FEASIBILITY.md and tasks.md; no runtime pass is claimed."
+    - case_id: 460-6-4
+      scenario_id: dependency-source-admission
+      method: inspection
+      intent: "Verify explicit authenticated Darwin-only Z3 projection and preserved historical derivative."
+      observable: "test_native_z3_wheel.py rejects unreviewed/missing foreign payload, source/release/license tampering and absent release inputs before output; every retained byte, omission, license and regenerated RECORD is bound, default specfact.1 bytes stay identical, and all three candidate locks select the observed specfact.2 hash. Candidate compatibility is separate from final dependency/production admission."
   openspec:code-review-native-platform-execution:review-native-platform-execution:native-project-runtime-preparation:
     rationale: Define macOS ARM64 acceptance without claiming unexecuted runtime proof.
     stakeholder_refs:
@@ -508,7 +513,7 @@ requirements:
       scenario_id: prepare-unfamiliar-projects-from-discovered-or-caller-supplied-setup
       method: test
       intent: "Hosted failure exposes bounded public finding locations."
-      observable: "test_failed_candidate_diagnostics_expose_only_bounded_tracked_locations executes the real workflow diagnostic code; private/untracked paths, messages, invalid lines and severity are withheld and at most 200 locations are emitted. test_both_failed_reviews_project_fixed_analyzer_identity_without_private_text covers candidate and independent trusted inline projections with finite public values. Arbitrary analyzer identifiers/tokens remain private. Existing recipe tests preserve review failure propagation."
+      observable: "test_failed_candidate_diagnostics_expose_only_bounded_tracked_locations executes the real workflow diagnostic code; private/untracked paths, messages, invalid lines and severity are withheld and at most 200 locations are emitted. test_both_failed_reviews_project_fixed_analyzer_identity_without_private_text covers candidate and independent trusted inline projections with finite public values. Arbitrary analyzer identifiers/tokens remain private. Existing recipe tests preserve review failure propagation. Required execution failures precede ordinary rows within the same cap; missing-report and trusted timeout statuses are fixed public values."
     - case_id: 460-15-10
       scenario_id: prepare-unfamiliar-projects-from-discovered-or-caller-supplied-setup
       method: test

@@ -20,7 +20,7 @@ from scripts import native_node_package as node
 ROOT = Path(__file__).resolve().parents[2]
 CANDIDATE_SEMGREP = "1.175.0"
 VERSION_POLICY_INPUT = Path(__file__).resolve().with_name("candidate-version-policy.json")
-VERSION_POLICY_SHA256 = "b8f9366ab7df7367d6d7c518afd369d88c43f969d2f058926350c62f9850a31e"
+VERSION_POLICY_SHA256 = "f95986d5dd36bec439c37a753d90c438df08b27186e83b61ec93fb441fa2c451"
 
 
 def npm_evidence(files: dict[str, tuple[bytes, int]]) -> dict:

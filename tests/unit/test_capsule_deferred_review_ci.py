@@ -581,7 +581,7 @@ def test_both_failed_reviews_project_fixed_analyzer_identity_without_private_tex
     result = subprocess.run([sys.executable, "-c", code], cwd=tmp_path, capture_output=True, text=True, check=False)
     assert result.returncode == 0, result.stderr
     rows = [json.loads(line)["finding_location"] for line in result.stdout.splitlines()]
-    assert rows[0] == {
+    assert rows[1] == {
         "file": "public.py",
         "line": 1,
         "severity": "error",
@@ -589,5 +589,120 @@ def test_both_failed_reviews_project_fixed_analyzer_identity_without_private_tex
         "tool": "radon",
         "rule": "CC34",
     }
-    assert rows[1]["failure_class"] == "timeout"
+    assert rows[0]["failure_class"] == "timeout"
     assert "PRIVATE" not in result.stdout
+
+
+def _public_projector(job_name):
+    workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())
+    name = STEP_NAME if job_name == "customer" else "Prepare and review through the authenticated installed controller"
+    recipe = next(step["run"] for step in workflow["jobs"][job_name]["steps"] if step.get("name") == name)
+    return recipe.rsplit("- <<'PY'\n", 1)[1].split("\nPY\n", 1)[0]
+
+
+@pytest.mark.parametrize("job_name", ["customer", "independent-review"])
+def test_public_tool_errors_cannot_disappear_after_two_hundred_ordinary_findings(tmp_path: Path, job_name):
+    import json
+
+    _git(tmp_path, "init", "-q")
+    (tmp_path / "public.py").write_text("value = 1\n")
+    _git(tmp_path, "add", "public.py")
+    report = tmp_path / ".specfact/code-review.json"
+    report.parent.mkdir()
+    rows = [{"file": "public.py", "line": n, "severity": "info"} for n in range(1, 220)]
+    rows.append(
+        {
+            "file": "public.py",
+            "line": 1,
+            "severity": "error",
+            "category": "tool_error",
+            "tool": "pytest",
+            "message": "PRIVATE_SECRET",
+        }
+    )
+    report.write_text(json.dumps({"findings": rows}))
+    result = subprocess.run(
+        [sys.executable, "-c", _public_projector(job_name)], cwd=tmp_path, capture_output=True, text=True, check=False
+    )
+    projected = [json.loads(line)["finding_location"] for line in result.stdout.splitlines()]
+    assert result.returncode == 0, result.stderr
+    assert len(projected) == 200
+    assert projected[0]["category"] == "tool_error" and projected[0]["tool"] == "pytest"
+    assert "PRIVATE" not in result.stdout
+
+
+@pytest.mark.parametrize("job_name", ["customer", "independent-review"])
+@pytest.mark.parametrize("review_exit,diagnostic", [("1", "review_report_missing"), ("124", "analysis_timeout")])
+def test_missing_review_report_has_fixed_public_cause(tmp_path: Path, job_name, review_exit, diagnostic):
+    import json
+
+    environment = dict(os.environ, REVIEW_PUBLIC_EXIT=review_exit)
+    result = subprocess.run(
+        [sys.executable, "-c", _public_projector(job_name)],
+        cwd=tmp_path,
+        env=environment,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    assert json.loads(result.stdout) == {"status": "INCOMPLETE", "phase": "review", "diagnostic": diagnostic}
+
+
+@pytest.mark.parametrize("job_name", ["customer", "independent-review"])
+@pytest.mark.parametrize(
+    "message,failure_class",
+    [
+        ("semgrep returned structured errors PRIVATE", "structured_errors"),
+        ("semgrep process failed PRIVATE", "process_failure"),
+        ("semgrep returned empty stdout PRIVATE", "empty_output"),
+        ("Unrecognized CrossHair output PRIVATE", "unrecognized_output"),
+    ],
+)
+def test_public_execution_classification_never_prints_raw_messages(tmp_path: Path, job_name, message, failure_class):
+    import json
+
+    _git(tmp_path, "init", "-q")
+    (tmp_path / "public.py").write_text("value = 1\n")
+    _git(tmp_path, "add", "public.py")
+    report = tmp_path / ".specfact/code-review.json"
+    report.parent.mkdir()
+    report.write_text(
+        json.dumps(
+            {
+                "findings": [
+                    {"file": "public.py", "line": 1, "severity": "error", "category": "tool_error", "message": message}
+                ]
+            }
+        )
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", _public_projector(job_name)], cwd=tmp_path, capture_output=True, text=True, check=False
+    )
+    assert result.returncode == 0, result.stderr
+    row = json.loads(result.stdout)["finding_location"]
+    assert row["failure_class"] == failure_class
+    assert "PRIVATE" not in result.stdout
+
+
+def test_trusted_review_budget_timeout_retains_three_hundred_seconds_and_fixed_exit(monkeypatch):
+    import re
+
+    recipe = next(
+        step["run"]
+        for step in _independent_review_job()["steps"]
+        if step.get("name") == "Prepare and review through the authenticated installed controller"
+    )
+    command = re.findall(r"-I -c \\\n\s*'([^']+)'", recipe)[-1]
+    observed = []
+
+    def timeout(args, *, timeout, check):
+        observed.append((args, timeout, check))
+        raise subprocess.TimeoutExpired(args, timeout, stderr="PRIVATE_SECRET")
+
+    monkeypatch.setattr(subprocess, "run", timeout)
+    monkeypatch.setattr(sys, "argv", ["-c", "trusted-python", "trusted-reviewer.py"])
+    with pytest.raises(SystemExit) as result:
+        exec(command, {})
+    assert result.value.code == 124
+    assert observed == [(["trusted-python", "trusted-reviewer.py"], 300, False)]

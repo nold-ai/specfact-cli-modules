@@ -19,19 +19,29 @@ and 3.13.14. Absolute paths below are placeholders to replace, not PATH lookups.
 
 1. Package the authenticated Node/BasedPyright archives using the linked runbook.
 2. Download the Z3 wheel from `UPSTREAM_URL` in `scripts/native_z3_wheel.py`.
-   The offline preparation command verifies its pinned hash, corrects only
-   documented metadata and records downstream provenance:
+   Also obtain the exact ARM64 release ZIP named in the authenticated license
+   provenance. The explicit Darwin-only command verifies both pinned hashes,
+   preserves native/source bytes, omits the ten reviewed Windows DLLs and copies
+   the release-linked MIT license into the new versioned wheel:
 
    ```sh
    /absolute/python scripts/native_z3_wheel.py \
      /absolute/inputs/z3_solver-5.1.0.0-py3-none-macosx_13_0_arm64.whl \
-     /absolute/new-z3-candidate
+     /absolute/new-z3-candidate \
+     --release-archive /absolute/inputs/z3-5.1.0-arm64-osx-13.3.zip \
+     --darwin-only
    ```
 
    The output directory must not exist. The downstream distribution is visibly
-   named `z3-solver==5.1.0.0+specfact.1`; its native/source/license bytes are
-   unchanged. Normal resolution must use this version, not a renamed upstream
-   archive or a resolver bypass.
+   named `z3-solver==5.1.0.0+specfact.2`; its retained native/source bytes are
+   unchanged. The observed wheel SHA-256 is
+   `03eb2624d4d19d06020e9a6c5823cf8ac4f6b3fcb0a73e25ef2514d1129982bd`.
+   The three locks select that exact candidate; the other pins in the closure of
+   94 distributions stay unchanged. Normal resolution must use this version without a resolver
+   bypass. Omitting `--darwin-only` preserves the historical specfact.1 bytes.
+   Missing or altered release/source/license/foreign-payload linkage fails before
+   output. The projection does not license or redistribute omitted DLLs and does
+   not grant dependency or production admission.
 3. Create a native environment and install the matching lock, for example:
 
    ```sh
@@ -132,12 +142,12 @@ Raw emitted IDs remain exact. Raw invalid-pattern Python/native exit and scanned
 1.175.0. The owner-authorized versioned adapter below preserves the released
 result semantics using independently measured target discovery; raw errors remain.
 
-The authenticated upstream Z3 wheel contains **no license file** despite MIT
+The historical authenticated upstream Z3 wheel contains **no license file** despite MIT
 METADATA. The sidecar records the missing in-wheel text (`license_payload_complete=false`)
 and hashes all 39 unchanged members; the wheel remains byte-identical to the
-existing correction. It does not fabricate or insert license text. Final license
-admission requires separately authenticated redistribution terms, including the
-bundled Windows DLL payloads. Existing source/native preservation and correct
+existing correction. It does not fabricate or insert license text. The new explicit specfact.2 projection above includes the authenticated license
+and omits those exact DLL identities. Final dependency/production admission
+still requires complete native compatibility and final-artifact acceptance. Existing source/native preservation and correct
 RECORD/metadata are evidence, not dependency admission.
 
 Exact dependency-task contract and measured scope are in

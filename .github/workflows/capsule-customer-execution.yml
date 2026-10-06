@@ -175,13 +175,17 @@ jobs:
             "$CUSTOMER_ROOT/venv/bin/python" "$GITHUB_WORKSPACE/scripts/pre_commit_code_review.py" "${review_paths[@]}" || review_exit=$?
           if [ "$review_exit" -ne 0 ]; then
             # Print bounded codes/public locations; raw reports, receipts and logs stay private.
-            "$CUSTOMER_ROOT/venv/bin/python" - <<'PY'
+            REVIEW_PUBLIC_EXIT="$review_exit" "$CUSTOMER_ROOT/venv/bin/python" - <<'PY'
           import json
           import os
           import subprocess
           from pathlib import Path
 
           report = Path(os.environ.get("REVIEW_PUBLIC_REPORT", ".specfact/code-review.json"))
+          if os.environ.get("REVIEW_PUBLIC_EXIT") == "124":
+              print(json.dumps({"status": "INCOMPLETE", "phase": "review", "diagnostic": "analysis_timeout"}))
+          if not report.is_file() and os.environ.get("REVIEW_PUBLIC_EXIT") != "124":
+              print(json.dumps({"status": "INCOMPLETE", "phase": "review", "diagnostic": "review_report_missing"}))
           if report.is_file():
               data = json.loads(report.read_text())
               public_analyzers = {"ruff", "radon", "semgrep-clean", "ai-bloat-ast", "ast-clean-code", "basedpyright", "pylint", "contracts", "semgrep-bugs", "targeted-pytest-coverage"}
@@ -195,7 +199,8 @@ jobs:
                       print(json.dumps({"analyzer": row["id"], "diagnostic_codes": codes}))
               tracked = set(subprocess.check_output(["git", "ls-files", "-z"], text=True).split("\0"))
               emitted = 0
-              for finding in data.get("findings", []):
+              findings = sorted(data.get("findings", []), key=lambda row: not (isinstance(row, dict) and row.get("category") == "tool_error"))
+              for finding in findings:
                   if not isinstance(finding, dict):
                       continue
                   file, line, severity = (finding.get(key) for key in ("file", "line", "severity"))
@@ -215,8 +220,18 @@ jobs:
                               location[key] = value
                       if location.get("category") == "tool_error":
                           message = finding.get("message")
-                          if isinstance(message, str) and any(marker in message.lower() for marker in ("timeoutexpired", "timed out", "timeout")):
-                              location["failure_class"] = "timeout"
+                          classes = (
+                              ("timeout", "timeout"), ("timed out", "timeout"),
+                              ("structured errors", "structured_errors"),
+                              ("semgrep process failed", "process_failure"),
+                              ("semgrep returned empty stdout", "empty_output"),
+                              ("unrecognized crosshair output", "unrecognized_output"),
+                          )
+                          if isinstance(message, str):
+                              for marker, classification in classes:
+                                  if marker in message.lower():
+                                      location["failure_class"] = classification
+                                      break
                       print(json.dumps({"finding_location": location}))
                       emitted += 1
                       if emitted == 200:
@@ -382,20 +397,28 @@ jobs:
           fi
           review_exit=0
           "${trusted_env[@]}" "$TRUSTED_ROOT/venv/bin/python" -I -c \
-            'import subprocess,sys; sys.exit(subprocess.run(sys.argv[1:],timeout=300,check=False).returncode)' \
+            'import subprocess,sys
+          try:
+              sys.exit(subprocess.run(sys.argv[1:],timeout=300,check=False).returncode)
+          except subprocess.TimeoutExpired:
+              sys.exit(124)' \
             "$TRUSTED_ROOT/venv/bin/python" -I "$TRUSTED_ROOT/reviewer.py" \
             "$TRUSTED_ROOT/subject" code review run --scope index --enforcement changed --bug-hunt \
             --project-config "$TRUSTED_ROOT/project.toml" --json --out "$TRUSTED_ROOT/review.private.json" \
             > "$TRUSTED_ROOT/review.private.log" 2>&1 || review_exit=$?
           if [ "$review_exit" -ne 0 ]; then
             cd "$TRUSTED_ROOT/subject"
-            "${trusted_env[@]}" REVIEW_PUBLIC_REPORT="$TRUSTED_ROOT/review.private.json" "$TRUSTED_ROOT/venv/bin/python" -I - <<'PY'
+            "${trusted_env[@]}" REVIEW_PUBLIC_REPORT="$TRUSTED_ROOT/review.private.json" REVIEW_PUBLIC_EXIT="$review_exit" "$TRUSTED_ROOT/venv/bin/python" -I - <<'PY'
           import json
           import os
           import subprocess
           from pathlib import Path
 
           report = Path(os.environ.get("REVIEW_PUBLIC_REPORT", ".specfact/code-review.json"))
+          if os.environ.get("REVIEW_PUBLIC_EXIT") == "124":
+              print(json.dumps({"status": "INCOMPLETE", "phase": "review", "diagnostic": "analysis_timeout"}))
+          if not report.is_file() and os.environ.get("REVIEW_PUBLIC_EXIT") != "124":
+              print(json.dumps({"status": "INCOMPLETE", "phase": "review", "diagnostic": "review_report_missing"}))
           if report.is_file():
               data = json.loads(report.read_text())
               public_analyzers = {"ruff", "radon", "semgrep-clean", "ai-bloat-ast", "ast-clean-code", "basedpyright", "pylint", "contracts", "semgrep-bugs", "targeted-pytest-coverage"}
@@ -409,7 +432,8 @@ jobs:
                       print(json.dumps({"analyzer": row["id"], "diagnostic_codes": codes}))
               tracked = set(subprocess.check_output(["git", "ls-files", "-z"], text=True).split("\0"))
               emitted = 0
-              for finding in data.get("findings", []):
+              findings = sorted(data.get("findings", []), key=lambda row: not (isinstance(row, dict) and row.get("category") == "tool_error"))
+              for finding in findings:
                   if not isinstance(finding, dict):
                       continue
                   file, line, severity = (finding.get(key) for key in ("file", "line", "severity"))
@@ -429,8 +453,18 @@ jobs:
                               location[key] = value
                       if location.get("category") == "tool_error":
                           message = finding.get("message")
-                          if isinstance(message, str) and any(marker in message.lower() for marker in ("timeoutexpired", "timed out", "timeout")):
-                              location["failure_class"] = "timeout"
+                          classes = (
+                              ("timeout", "timeout"), ("timed out", "timeout"),
+                              ("structured errors", "structured_errors"),
+                              ("semgrep process failed", "process_failure"),
+                              ("semgrep returned empty stdout", "empty_output"),
+                              ("unrecognized crosshair output", "unrecognized_output"),
+                          )
+                          if isinstance(message, str):
+                              for marker, classification in classes:
+                                  if marker in message.lower():
+                                      location["failure_class"] = classification
+                                      break
                       print(json.dumps({"finding_location": location}))
                       emitted += 1
                       if emitted == 200:

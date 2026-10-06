@@ -143,6 +143,10 @@ replace sections 3, 4 or 6. Exact facts: DELIVERY_CHECKPOINT_2026-10-06.md.
 - [x] Correct the hosted independent reviewer's unavailable literal version pin to the signed published 0.51.0 baseline; retain isolation and all required review execution.
 - [x] Reproduce and correct staged bug-hunt activation and explicit matching-test ambiguity; preserve required coverage and analysis budgets.
 - [x] Add bounded tracked public finding locations and fixed native connection failure classes so hosted failures remain diagnosable without publishing private reports.
-- [ ] Obtain current-head hosted review completion and resolve every valid changed finding; macOS15 authentication failure and final native acceptance remain open.
+- [ ] Obtain current-head hosted review completion and resolve every valid changed finding; fixed macOS14/15/26 boundary fixtures passed at dc8eb069, while final native and physical-Mac acceptance remain open.
 
 - [x] Open draft PR #498 toward dev under the explicit local capsule-only deferral; keep hosted review and human merge/promotion pending.
+
+- [x] Reduce introduced builder/workflow complexity while preserving exact controlled archive/manifest/summary bytes and public maintainer arguments.
+- [x] Specify/reproduce fixed missing-report/timeout diagnostics and execution-error priority within the unchanged public200-location cap.
+- [x] Add explicit authenticated Darwin-only Z3 specfact.2 projection; preserve historical specfact.1 bytes, update only candidate Z3 lock/policy identities and pass all three complete offline closures and confined analyzer/parity fixtures. No production admission.

@@ -12,8 +12,9 @@ Darwin ARM64, macOS **27.0.1 (26A434)**; it cannot substitute for macOS 14/15/26
 
 ## Repository and public status
 
-Worktree branch: `codex/finish-460-macos-arm64`, based on updated origin/dev
-`b87159c4fbeab3a1282919823035c2109527d385`. Origin/main was
+Worktree branch: `codex/finish-460-macos-arm64`, created from origin/dev
+`b87159c4fbeab3a1282919823035c2109527d385` and subsequently rebased onto
+`74d3fd4dd6f9b171f18857abcc8f659c80d686e9` (documentation-only #494). Origin/main was
 `d13a5c0ca69b21fdbbfdeefdb2435a43b4774c40`. Their file trees agree; main adds only
 its release merge commit. The protected primary checkout was not edited.
 
@@ -220,3 +221,31 @@ functions. Required clean-code remediation and four incomplete analyzer results
 remain blockers. Final archives, protected signing/staging, all nine native
 OS/ABI cells and fresh default-protection independent installation remain
 unproven. #460 stays open; no promotion/publication/archive is authorized.
+
+
+## Current follow-up evidence — 6 October 2026
+
+At dc8eb069, ARM64 macOS14/15/26 fixed startup/control suites all passed: six
+startup and20 control races per OS, each100 repetitions. Linux cp311/cp313
+customer fixtures and all five upstream corpus entries passed; all three
+minimum-core checks passed. cp312 required review and independent signed review
+remain failed, with current-head review required. Historical failures above are
+retained; these new passes cover their specific fixed-fixture/candidate scope.
+
+Introduced builder/workflow complexity is refactored without changing the
+controlled fixture archive/manifest/summary bytes or ten public builder inputs.
+Hosted diagnostics now prioritize tool errors within the200-location cap and
+classify missing reports/trusted300s timeouts using fixed public values.
+
+The explicit Darwin-only Z3 specfact.2 derivative is82436032 bytes, SHA256
+03eb2624d4d19d06020e9a6c5823cf8ac4f6b3fcb0a73e25ef2514d1129982bd.
+It preserves29 original retained members, omits only ten authenticated foreign
+DLL identities and carries the release-linked license. Historical specfact.1
+remains byte-identical. All three complete candidate locks resolve offline and
+pass dependency checks, actual Z3 import/solve and confined10-analyzer/20-case/
+14-Semgrep-parity fixtures. Dependency and production admission remain false.
+
+Full and SMART suites each pass5060 tests,75 explicit skips and95 subtests,
+with five existing warnings. Regular quality gates and the same bounded agent
+review pass. Local authoritative capsule review remains the human-approved
+DEFERRED gate; no hosted failure is waived and no native artifact is published.

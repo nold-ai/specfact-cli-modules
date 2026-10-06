@@ -290,3 +290,116 @@ def test_license_replacement_before_output_is_not_relabelled_as_verified(tmp_pat
     with pytest.raises(ValueError, match="license digest"):
         packager.prepare(path, tmp_path / "out", release_archive=tmp_path / "unused.zip")
     assert not (tmp_path / "out").exists()
+
+
+@pytest.fixture(name="projection_inputs")
+def fixture_projection_inputs(tmp_path, packager, monkeypatch):
+    evidence: dict = packager.reviewed_license_inputs()
+    foreign = {name: ("inert foreign payload:" + name).encode() for name in evidence["unlinked_non_darwin_payload"]}
+
+    def project_source(files):
+        del files["z3_solver-5.1.0.0.data/data/LICENSE.txt"]
+        files.update(foreign)
+
+    path, original = source(tmp_path, packager, monkeypatch, change=project_source)
+    evidence = dict(
+        evidence,
+        tagged_source_sha256=hashlib.sha256(original["z3/z3.py"]).hexdigest(),
+        unlinked_non_darwin_payload={
+            name: {"sha256": hashlib.sha256(data).hexdigest(), "size": len(data)} for name, data in foreign.items()
+        },
+    )
+    monkeypatch.setattr(packager, "reviewed_license_inputs", lambda: evidence)
+    release = tmp_path / "authenticated-fixture-release.zip"
+    with zipfile.ZipFile(release, "w") as archive:
+        archive.writestr(evidence["license_release_member"], packager.LICENSE_INPUT.read_bytes())
+        for name, data in original.items():
+            if member := packager._release_member(name):
+                archive.writestr(member, data)
+    monkeypatch.setattr(packager, "RELEASE_SHA256", hashlib.sha256(release.read_bytes()).hexdigest())
+    return path, release, original
+
+
+def test_darwin_projection_omits_exact_foreign_payload_and_retains_native_source(tmp_path, packager, projection_inputs):
+    path, release, original = projection_inputs
+    wheel = packager.prepare(path, tmp_path / "projected", release_archive=release, darwin_only=True)
+    assert wheel.name == "z3_solver-5.1.0.0+specfact.2-py3-none-macosx_14_0_arm64.whl"
+    files = packager.read_members(wheel.read_bytes())
+    assert not any(name.endswith(".dll") for name in files)
+    for name, content in original.items():
+        if not name.endswith(".dll") and not name.startswith(packager.UPSTREAM_DIST_INFO + "/"):
+            assert files[name] == content
+    prefix = "z3_solver-5.1.0.0+specfact.2.dist-info"
+    assert files[prefix + "/licenses/LICENSE.txt"] == packager.LICENSE_INPUT.read_bytes()
+    assert b"Version: 5.1.0.0+specfact.2\n" in files[prefix + "/METADATA"]
+    assert b"License-File: licenses/LICENSE.txt\n" in files[prefix + "/METADATA"]
+    packager.verify_record(files, prefix)
+
+
+def test_projection_provenance_binds_omissions_and_license_without_admission(tmp_path, packager, projection_inputs):
+    path, release, original = projection_inputs
+    wheel = packager.prepare(path, tmp_path / "projected", release_archive=release, darwin_only=True)
+    receipt = json.loads(wheel.with_suffix(".provenance.json").read_bytes())
+    assert receipt["schema_version"] == 4
+    assert receipt["license_payload_complete"] is True
+    assert receipt["z3_source_and_native_license_verified"] is True
+    assert len(receipt["omitted_members"]) == 10
+    assert not any(name.endswith(".dll") for name in receipt["unchanged_members"])
+    assert receipt["admission_gaps"] == []
+    assert receipt["dependency_admitted"] is False and receipt["production_eligible"] is False
+    assert receipt["output"]["sha256"] == hashlib.sha256(wheel.read_bytes()).hexdigest()
+    assert receipt["upstream"]["sha256"] == packager.UPSTREAM_SHA256
+    for name, identity in receipt["omitted_members"].items():
+        assert identity == {"sha256": hashlib.sha256(original[name]).hexdigest(), "size": len(original[name])}
+    license_identity = receipt["licenses"]["z3_solver-5.1.0.0+specfact.2.dist-info/licenses/LICENSE.txt"]
+    assert license_identity["sha256"] == packager.LICENSE_SHA256
+
+
+def test_projection_is_deterministic_and_historical_derivative_remains_available(tmp_path, packager, projection_inputs):
+    path, release, original = projection_inputs
+    first = packager.prepare(path, tmp_path / "one", release_archive=release, darwin_only=True)
+    second = packager.prepare(path, tmp_path / "two", release_archive=release, darwin_only=True)
+    assert first.read_bytes() == second.read_bytes()
+    assert first.with_suffix(".provenance.json").read_bytes() == second.with_suffix(".provenance.json").read_bytes()
+    legacy = packager.prepare(path, tmp_path / "legacy")
+    assert legacy.name == packager.OUTPUT_FILENAME
+    legacy_files = packager.read_members(legacy.read_bytes())
+    assert all(legacy_files[name] == data for name, data in original.items() if name.endswith(".dll"))
+
+
+def test_projection_without_authenticated_release_rejects_before_output(tmp_path, packager, projection_inputs):
+    path, _, _ = projection_inputs
+    with pytest.raises(ValueError, match="release archive required"):
+        packager.prepare(path, tmp_path / "projected", darwin_only=True)
+    assert not (tmp_path / "projected").exists()
+
+
+@pytest.mark.parametrize("defect", ["changed_dll", "missing_dll", "extra_dll", "changed_source", "changed_license"])
+def test_projection_rejects_unreviewed_payload_before_output(
+    tmp_path, packager, projection_inputs, monkeypatch, defect
+):
+    path, release, original = projection_inputs
+    if defect == "changed_license":
+        license_input = tmp_path / "tampered-license.txt"
+        license_input.write_bytes(b"unverified text")
+        monkeypatch.setattr(packager, "LICENSE_INPUT", license_input)
+    else:
+        foreign = next(name for name in original if name.endswith(".dll"))
+        files = dict(original)
+        if defect == "changed_dll":
+            files[foreign] += b"changed"
+        elif defect == "missing_dll":
+            del files[foreign]
+        elif defect == "extra_dll":
+            files["z3/lib/unknown.dll"] = b"unreviewed"
+        else:
+            files["z3/z3.py"] += b"changed"
+        record_name = packager.UPSTREAM_DIST_INFO + "/RECORD"
+        files[record_name] = record({k: v for k, v in files.items() if k != record_name}, record_name)
+        with zipfile.ZipFile(path, "w") as archive:
+            for name, data in files.items():
+                archive.writestr(name, data)
+        monkeypatch.setattr(packager, "UPSTREAM_SHA256", hashlib.sha256(path.read_bytes()).hexdigest())
+    with pytest.raises(ValueError):
+        packager.prepare(path, tmp_path / "projected", release_archive=release, darwin_only=True)
+    assert not (tmp_path / "projected").exists()

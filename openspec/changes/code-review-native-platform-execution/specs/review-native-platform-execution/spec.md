@@ -263,6 +263,15 @@ The full native closure SHALL satisfy released dependency policy independently o
 - **WHEN** all admission, integrity and platform tests pass
 - **THEN** native execution may proceed without satisfying the new selection from a superseded cache
 
+#### Scenario: Explicit Darwin-only Z3 derivative preserves authenticated retained bytes
+
+- **GIVEN** the pinned upstream wheel includes ten byte-identified Windows DLLs without verified redistribution terms
+- **WHEN** a maintainer explicitly requests the versioned Darwin-only derivative with the pinned upstream release archive
+- **THEN** preparation SHALL authenticate wheel, release, source/native linkage and license before output, omit only the exact reviewed DLL identities, and include the authenticated license in the new wheel
+- **AND** the derivative SHALL have a distinct version, filename, complete RECORD and provenance binding every unchanged retained byte, omitted member and added license
+- **AND** missing or altered linkage, unknown DLLs, license tampering or an absent release archive SHALL reject before output
+- **AND** the historical metadata-only derivative SHALL remain reproducible, and no derivative alone SHALL grant dependency or production admission
+
 ### Requirement: Native project runtime preparation
 
 The macOS backend SHALL carry forward pip/pip-tools, Hatch, uv and Poetry discovery, source selection, pytest plugins and coverage from #473. Acquisition, build hooks, preparation and analysis SHALL each have explicit trust, filesystem, process and network boundaries. Mach-O/dyld dependency handling SHALL replace Linux ELF assumptions for macOS. The trusted control domain SHALL remain separate from project code and extensions.
@@ -759,6 +768,8 @@ The native backend SHALL reuse portable project discovery and prepare dependenci
 - **AND** diagnostics MAY include only fixed public analyzer/category/rule identities and fixed failure classifications; independent review SHALL use trusted inline projection, never candidate host scripts
 - **AND** raw findings, messages, private absolute paths, receipts and tool logs SHALL remain private
 - **AND** the diagnostic step SHALL preserve the review failure exit code
+- **AND** incomplete execution findings SHALL precede ordinary findings within the same 200-location limit
+- **AND** a trusted independent analysis timeout or missing report SHALL expose only a fixed public status while retaining the original 300-second analysis budget
 
 #### Scenario: Staged review activates bug-hunt
 

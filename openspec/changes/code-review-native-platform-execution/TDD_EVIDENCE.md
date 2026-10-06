@@ -2735,3 +2735,91 @@ phase functions and refactored workflow tests have no complexity/length/paramete
 finding. This is not a waiver or PASS for hosted review: all required current-head
 capsule evidence still must execute, and raw legacy findings remain evidence under
 the unchanged changed-line policy. The OpenSpec change and #460 remain incomplete.
+
+
+Final refactor gates at ea93ce54: serial SMART **5035 passed, 75 skipped,
+five warnings, 95 subtests** in248.93s; full **5035 passed** with the same
+skip/warning/subtest counts in258.71s. Logs specfact460-refactor-smart/full.log.
+OpenSpec strict and all seven strict public-key filesystem signatures/version
+checks against origin/dev passed. Normal hooks and28 contracts passed; local
+capsule review remains the approved DEFERRED gate.
+
+Fresh hosted boundary run37391623966 at dc8eb069 passed macOS14.8.9,15.7.9
+and26.6.2 on ARM64: each startup receipt completed six races at100 repetitions
+and each control receipt completed20 races at100 repetitions, retaining the
+original independent cleanup bound. These are fixed broker fixtures, not the
+final capsule/ABI matrix or physical-Mac acceptance; production flags stay false.
+Current orchestrator37391624311 has all three minimum-core checks passed; cp312
+deferred review still fails with semgrep-clean/contracts/semgrep-bugs/targeted-
+pytest-coverage incomplete. Its200-location public cap hid later tool errors.
+Independent signed0.51.0 installation/preparation succeeded but review exited1
+with no report projection; exact cause remains unknown. cp311/cp313 customer
+jobs remain in progress when this checkpoint is recorded. No budget is raised.
+
+## 2026-10-06 bounded incomplete-execution diagnostic correction
+
+Specification preceded15 meaningful failing regressions (30 passed) in
+specfact460-diagnostics-priority-red.log. The projectors preserve the200 public
+location cap and finite identity allowlists, but prioritize execution failures
+so later required analyzers cannot disappear behind ordinary findings. Known
+Semgrep structured/process/empty-output and CrossHair unrecognized-output
+messages map only to fixed classes; private text stays private. Missing reports
+produce a fixed INCOMPLETE status. The independently installed review wrapper
+catches TimeoutExpired as exit124 under the unchanged300s budget; only that
+fixed class is public, and the original failure is retained. No candidate host
+helper, report upload, analyzer omission or budget relaxation is introduced.
+
+
+## 2026-10-06 explicit Darwin-only Z3 derivative and final checkpoint gates
+
+The direct finish-460 instruction authorizes reconciliation of Z3 provenance.
+The parent amendment preserves the existing metadata-only specfact.1 artifact
+and requires explicit selection of a distinct specfact.2 Darwin projection,
+authenticated release/source/native/license linkage and exact foreign omissions.
+Spec preceded9 projection failures /28 passes, and then5 lock-policy failures /
+9 passes, in specfact460-z3-projection-red.log and specfact460-z3-lock-red.log.
+GREEN51 in0.27s; meaningful rejection cases cover absent release, altered/missing/
+extra DLLs, altered source/license and output-before-authentication.
+
+Two actual upstream-wheel/release preparations produce the same wheel and
+provenance. Specfact.2 wheel82436032 bytes, SHA256
+03eb2624d4d19d06020e9a6c5823cf8ac4f6b3fcb0a73e25ef2514d1129982bd.
+The new wheel retains29 original non-metadata members, omits only the ten exact
+reviewed DLL identities, and carries the authenticated MIT text in dist-info
+licenses with correct License-File metadata/RECORD. No MIT claim covers omitted
+DLLs. Real historical specfact.1 reproduces unchanged hash
+af669755eabd97268a4141983a391cb4a832116d5a2c3cf04a4c53c7650ce72c.
+All other candidate closure pins stay unchanged. Fresh scratch clones of all
+three native environments completed normal full hash-locked uv sync offline,
+pip check and actual Z3 import/solve; no no-deps/resolver bypass or old-worktree
+mutation. GitHub API rechecked immutable upstream commit0b6cdcdb signature as
+valid on2026-10-06. Existing authenticated license/provenance inputs stay frozen.
+
+The actual confined library-loading experiment with the new full lock closure
+passed10/10 analyzers,20/20 clean/defective cases and14/14 versioned Semgrep
+parity cases for each of cp311/cp312/cp313 on physical macOS27.0.1 ARM64.
+Native scratch roots sf-analyzers-311-e6pgdipc,312-1y9gjbeh,313-g76mptve retain
+private receipts. These are candidate fixture results, not final archives, the
+supported-OS/ABI matrix, upstream manager corpus or independently installed
+customer acceptance. All production/dependency/complete-boundary flags stay false.
+
+The same bounded independent agent found no introduced defect in diagnostics
+or Z3 projection/lock/provenance handling. Diagnostic GREEN107 in6.70s.
+Mandatory serial SMART **5060 passed,75 skipped,five warnings,95 subtests**
+in257.55s and full **5060 passed** with identical counts in259.53s. Regular
+format/types/lint (zero errors/warnings,Pylint10),YAML,imports and strict OpenSpec
+passed. Logs specfact460-projection-smart/full/lint.log. Earlier published
+reviewer failures remain failures; exact-head hosted review still blocks merge.
+
+Completed dc8eb069 Linux artifacts11382485918(cp311) and11381794925(cp313)
+verify all five external entries PASS (flask,hatch,hatch-detached,poetry,requests)
+across the four managers, in addition to customer fixtures. cp312 and independent
+installed review failed; downstream quality stopped at its required customer
+prerequisite, never at local lint. All three minimum-core checks passed.
+
+This continuation consumed native fixture and full-suite runs and additional
+multi-GB scratch copies, with no paid service or publisher key used locally.
+Rollback removes the unpublished source/lock projection while preserving the
+historical derivative and all immutable evidence; never promote the rejected
+empty-entitlement archives. Final supported artifacts/catalog/publication and
+physical full-boundary proof remain open.
