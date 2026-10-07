@@ -199,3 +199,27 @@ def test_stdlib_source_preserves_frozen_module_paths_and_zip_bytes(tmp_path, ver
             assert (destination / "lib" / f"python{version}" / name).read_bytes() == archive.read(name) == content
             assert inputs[f"stdlib/{name}"] == hashlib.sha256(content).hexdigest()
     assert not (destination / "lib" / f"python{version}/site-packages").exists()
+
+
+@pytest.mark.parametrize("kind", ["minimal", "analyzers"])
+def test_profiles_retain_broker_exception_denials_without_unknown_operations(tmp_path, kind):
+    import re
+
+    from scripts.macos_managed_boundary import python_analyzers
+
+    module = candidate()
+    (tmp_path / "bin").mkdir()
+    target = tmp_path / "bin/python3.11"
+    target.write_text("fixture")
+    if kind == "minimal":
+        policy = module.profile(tmp_path)
+    else:
+        (tmp_path / "domain").mkdir()
+        prepared = {"payload": tmp_path, "signed_images": [{"path": "bin/python3.11"}]}
+        policy = python_analyzers.plan_profile(prepared, tmp_path / "domain", tmp_path, target)
+    worker = SOURCE.with_name("control_worker.c").read_text()
+    definition = worker.split("#define CONTROL_EXCEPTION_PORT_POLICY", 1)[1].split("/*", 1)[0]
+    expected = "".join(re.findall(r'"([^"\n]*)"', definition))
+    assert expected and expected in policy
+    assert "(deny default)" in policy
+    assert policy.count("(deny mach-task-exception-port-set)") == 1

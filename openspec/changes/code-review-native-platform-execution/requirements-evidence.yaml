@@ -28,6 +28,11 @@ requirements:
       kind: config_file
       locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
     verification_cases:
+    - case_id: 460-2-12
+      scenario_id: native-isolation-capability-evidence
+      method: test
+      intent: Retain compatible exception-port denial in both Python fixture profiles.
+      observable: Both profile builders must match the existing broker's unconditional four RPC denials and guarded newer operation; required older-kernel native execution remains separate evidence and no grants or budgets change.
     - case_id: 460-15-6
       scenario_id: native-isolation-capability-evidence
       method: inspection

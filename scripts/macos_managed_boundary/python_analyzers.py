@@ -405,7 +405,7 @@ def plan_profile(candidate: dict[str, Any], domain: Path, stage: Path, target: P
     system = " ".join(f"(subpath {python._literal(path)})" for path in python.SYSTEM_ROOTS)
     native = " ".join(f"(literal {python._literal(payload / item['path'])})" for item in candidate["signed_images"])
     return (
-        "(version 1)(deny default)(deny process-fork)(deny mach-task-exception-port-set)(allow signal (target self))"
+        "(version 1)(deny default)(deny process-fork)" + python.EXCEPTION_PORT_POLICY + "(allow signal (target self))"
         '(allow sysctl-read (sysctl-name "kern.ostype") (sysctl-name "kern.osrelease")'
         ' (sysctl-name "kern.version") (sysctl-name "kern.hostname") (sysctl-name "hw.machine")'
         ' (sysctl-name "vm.pagesize") (sysctl-name "hw.pagesize_compat") (sysctl-name "hw.pagesize") (sysctl-name "hw.ncpu") (sysctl-name "hw.activecpu"))'

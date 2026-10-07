@@ -32,6 +32,12 @@ SYSTEM_ROOTS = (
     "/System/Volumes/Preboot/Cryptexes/OS/usr/lib",
 )
 PROFILE_VERSION = "specfact-cpython-candidate-profile-v1"
+# Reuse the broker's exception-port denial on kernels without the newer operation.
+EXCEPTION_PORT_POLICY = (
+    "(deny syscall-mig (kernel-mig-routine task_set_exception_ports task_swap_exception_ports "
+    "thread_set_exception_ports thread_swap_exception_ports))"
+    "(when (defined? 'mach-task-exception-port-set)(deny mach-task-exception-port-set))"
+)
 MAX_FILES = 10000
 MAX_BYTES = 128 * 1024 * 1024
 ENTRY = """import sys, time, os
@@ -234,7 +240,7 @@ def profile(payload: Path) -> str:
     system = " ".join(f"(subpath {_literal(path)})" for path in SYSTEM_ROOTS)
     executable = next((payload / "bin").iterdir())
     return (
-        "(version 1)(deny default)(deny mach-task-exception-port-set)(allow signal (target self))"
+        "(version 1)(deny default)" + EXCEPTION_PORT_POLICY + "(allow signal (target self))"
         '(allow file-read* (literal "/"))'
         f"(allow file-read* {literals})"
         f"(allow file-map-executable (literal {_literal(executable)}) {system})"

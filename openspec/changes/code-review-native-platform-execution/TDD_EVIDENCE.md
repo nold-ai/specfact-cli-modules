@@ -4368,3 +4368,39 @@ existing single read-only reviewer finds no defect and confirms unchanged gates.
 Final full and SMART each pass19required host cases followed by5280portable
 cases,71declared skips,95subtests and5existing warnings (142.44s /143.06s). Fresh hosted failure
 classification remains required; these labels are clues, not startup acceptance.
+
+
+## Python profile compatibility correction — 2026-10-07 (Europe/Berlin)
+
+Exact0381b7fac571784476d0ffff6d7dd033d38264c1 tools job113013929699
+(run37686023721) fails before CPython entry. Fixed public projection reports
+output_class=profile_initialization,stage=output_encoding,worker_exited=true,
+worker_signalled=false,entry_marker_present=false. Raw output remains private.
+This proves sandbox initialization failed, not its underlying compiler cause.
+
+Source inspection identifies a definite compatibility inconsistency: both Python
+fixture profiles name mach-task-exception-port-set unconditionally, while the
+already-measured broker retains all four unconditional exception-port RPC denials
+and guards the newer operation with defined?. Reuse that exact existing policy
+in both Python builders. This adds no allow, changes no budgets and retains the
+newer-operation denial wherever defined; protected native execution remains required.
+
+Specification preceded two focused regressions. Both fail against their missing
+canonical broker policy(0.81s), then pass after the shared policy correction; the
+combined candidate/context suite passes25cases(0.70s). The private exact minimal
+PBS3.11 fixture subsequently passes all6cases, with the unchanged cleanup and
+denial assertions. The bounded agent verifies canonical denial-policy equality
+and unchanged grants/budgets, with no findings. Local/newer-kernel proof does
+not establish macOS14 remediation; fresh required hosted execution follows.
+Private evidence logs: /private/tmp/specfact460-exception-profile-{red2,green}.log
+and /private/tmp/specfact460-exception-profile-native.private.log.
+
+Final correction verification: format, typing0errors/0warnings,lint10.00/10,
+manifests/imports,strictOpenSpec,stagedplannedrequirements,28contracts and all
+seven strict public-key signatures pass. AST/AI-bloat return0findings; Radon
+and pinnedSemgrep return0changed-line findings (unchanged existing observations
+are retained, not suppressed). Full:19hostcases then5282portable cases/71declared
+skips/95subtests/5existingwarnings(149.21s). SMART:same counts(141.63s).
+The signed module payload/checksum is unchanged. Normal hooks reuse only the
+approved local Darwin capsule-review deferral; exact-head hosted Linux remains
+mandatory. Hosted macOS14 profile compilation/remediation remains pending.

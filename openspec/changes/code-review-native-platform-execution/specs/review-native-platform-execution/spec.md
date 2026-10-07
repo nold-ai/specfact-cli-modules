@@ -32,6 +32,13 @@ Production backend approval SHALL follow harmless native feasibility tests of th
 - **WHEN** tests exercise authorized reads/writes and prohibited host reads/writes, outbound and listening network operations, inherited descriptors and child processes
 - **THEN** allowed operations succeed and denied operations fail for the intended policy reason; helper startup or parser failure is not successful confinement evidence
 
+#### Scenario: Python fixture profiles retain exception-port denial on older kernels
+
+- **GIVEN** a required minimal CPython or analyzer fixture on a supported older macOS kernel
+- **WHEN** its build-owned sandbox profile is compiled before CPython execution
+- **THEN** the profile SHALL retain unconditional denial of all task/thread exception-port set and swap RPCs and conditionally name the newer exception-port operation only when defined, using the existing broker policy
+- **AND** file, process, network, resource, startup and cleanup permissions and bounds SHALL remain unchanged; host-only or newer-kernel success is not acceptance for the required older-kernel run
+
 #### Scenario: Kernel RPC denial retains exception endpoints
 
 - **WHEN** the signed control fixture receives KERN_DENIED or KERN_NO_ACCESS from exception-port swapping
