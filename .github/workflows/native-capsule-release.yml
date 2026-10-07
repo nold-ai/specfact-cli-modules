@@ -10,6 +10,8 @@ on:
       - scripts/*macos*native*.py
       - scripts/build_macos_managed_*.py
       - packages/specfact-code-review/**
+      - tests/native/proof_python_candidate_matrix.py
+      - tests/unit/test_macos_python_candidate_source.py
       - .github/workflows/native-capsule-release.yml
   workflow_dispatch:
     inputs:
@@ -43,6 +45,25 @@ jobs:
           python-version: "3.13"
           architecture: arm64
       - run: python -m pip install specfact-cli==0.55.4 cryptography==50.0.2
+      - name: Prove minimal CPython boundary for all three retained ABIs
+        run: |
+          python -m pip install pytest==9.1.1 pytest-xdist==3.8.0 pytest-cov==7.1.0
+          for abi in cp311 cp312 cp313; do
+            mkdir -m 700 "$RUNNER_TEMP/proof-work-$abi"
+            ln -s "$GITHUB_WORKSPACE/scripts" "$RUNNER_TEMP/proof-work-$abi/scripts"
+            (cd "$RUNNER_TEMP/proof-work-$abi" && bash scripts/native_release/prepare-ci.sh "$abi" "$RUNNER_TEMP/proof-$abi")
+          done
+          SPECFACT_CPYTHON_CANDIDATE_INPUTS="$(python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          root = Path(os.environ["RUNNER_TEMP"])
+          print(json.dumps({version: str(root / ("proof-cp" + version.replace(".", "")) / "python")
+                            for version in ("3.11", "3.12", "3.13")}))
+          PY
+          )"
+          export SPECFACT_CPYTHON_CANDIDATE_INPUTS
+          python -m pytest -n 0 tests/native/proof_python_candidate_matrix.py
       - name: Reproduce managed uv and Git without signing secrets
         run: bash scripts/native_release/prepare-ci.sh tools "$RUNNER_TEMP/inputs"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02

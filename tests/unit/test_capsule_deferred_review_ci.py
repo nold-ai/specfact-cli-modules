@@ -2,13 +2,10 @@
 
 from __future__ import annotations
 
-import json
 import os
 import subprocess
 import sys
-import venv
 from pathlib import Path
-from string import Template
 
 import pytest
 import yaml
@@ -18,210 +15,8 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 STEP_NAME = "Run deferred candidate commit review without weakening enforcement"
 
 
-_DEFERRED_REVIEW_SCRIPT = (
-    "import os, subprocess, sys\n"
-    "from pathlib import Path\n"
-    "assert os.environ['SPECFACT_CODE_REVIEW_ENFORCEMENT'] == 'changed'\n"
-    "import tomllib\n"
-    "config = Path(os.environ['SPECFACT_CODE_REVIEW_PROJECT_CONFIG'])\n"
-    "assert tomllib.loads(config.read_text()) == {'manager': 'hatch', 'environment': 'default'}\n"
-    "assert Path(os.environ['SPECFACT_CODE_REVIEW_SUBJECT_ROOT']).resolve() == Path.cwd()\n"
-    "assert not {'GITHUB_TOKEN', 'GH_TOKEN', 'PYTHONPATH'} & os.environ.keys()\n"
-    "from pathlib import Path\n"
-    "cache = Path(os.environ['SPECFACT_CODE_REVIEW_CAPSULE_CACHE'])\n"
-    "assert cache == Path(os.environ['CUSTOMER_ROOT']) / 'commit-review-cache'\n"
-    "cache.mkdir(parents=True, exist_ok=True)\n"
-    "(cache / 'verified-fixture-blob').write_text('fixture')\n"
-    "assert sys.argv[1:] == ['packages/example/src/example.py']\n"
-    "assert open(sys.argv[1]).read() == 'value = 2\\n'\n"
-    "assert subprocess.check_output(['git', 'diff', '--cached', '--name-only'], text=True).strip() == sys.argv[1]\n"
-    "assert not subprocess.check_output(['git', 'diff', '--name-only'])\n"
-    "raise SystemExit(int(os.environ['FIXTURE_GATE_EXIT']))\n"
-)
-
-_PREPARATION_CLI_SCRIPT = (
-    "import os,sys\n"
-    "assert sys.argv[1:7] == ['code','review','runtime','prepare','--scope','index']\n"
-    "assert os.environ['SPECFACT_MODULES_REPO'] == os.environ['GITHUB_WORKSPACE']\n"
-    "assert os.environ['SPECFACT_CODE_REVIEW_CAPSULE_CACHE'].endswith('/commit-review-cache')\n"
-    "print('{}')\n"
-)
-
-_BLOCK2_HATCH_FIXTURE = (
-    "\n"
-    'uname() { if [[ "${1:-}" == "-m" ]]; then echo arm64; else echo "$FIXTURE_PLATFORM"; fi; }\n'
-    "hatch() {\n"
-    '  printf \'%s\\n\' "$*" >> "$FIXTURE_CALLS"\n'
-    '  if [[ "$*" == *pre_commit_code_review.py* ]]; then return 99; fi\n'
-    '  if [[ "$*" == *contract-test-status* ]]; then return 1; fi\n'
-    "  return 0\n"
-    "}\n"
-    "run_block2\n"
-)
-
-_TRUSTED_BOOTSTRAP_LAUNCHER = (
-    "            import subprocess,sys\n"
-    "            from pathlib import Path\n"
-    "            result=subprocess.run([sys.executable,*sys.argv[1:]],check=False)\n"
-    "            if result.returncode:\n"
-    "                raise SystemExit(result.returncode)\n"
-    "            target=Path(sys.argv[-1])\n"
-    "            site=next((target/'lib').glob('python*/site-packages'))\n"
-    "            (site/'pip/__main__.py').write_text(\n"
-    "                \"import sys\\nassert sys.argv[1:]==['install','--no-cache-dir','specfact-cli==0.55.4']\\n\"\n"
-    "            )\n"
-    "            core=site/'specfact_cli'\n"
-    "            core.mkdir()\n"
-    "            (core/'__init__.py').write_text('')\n"
-    "            (core/'cli.py').write_text(\n"
-    "                \"import sys\\nassert sys.argv[1:]==['module','install','nold-ai/specfact-code-review',\"\n"
-    "                \"'--scope','user','--version','0.51.0','--source','marketplace']\\n\"\n"
-    "            )\n"
-    "            "
-)
-
-_ISOLATED_REVIEWER_TEMPLATES = {
-    "specfact_cli/__init__.py": "",
-    "specfact_cli/cli.py": "import os,json\n"
-    "from pathlib import Path\n"
-    "root=Path(os.environ['HOME']).parent\n"
-    "assert Path.cwd() == root, 'core discovery entered the candidate subject'\n"
-    "assert not "
-    "{'PYTHONPATH','GITHUB_TOKEN','GH_TOKEN','SPECFACT_MODULES_ROOTS','SPECFACT_ALLOW_UNSIGNED'} "
-    "& os.environ.keys()\n"
-    "def app(*,args):\n"
-    "    assert Path.cwd() == root/'subject'\n"
-    "    (root/'argv.json').write_text(json.dumps(args))\n"
-    "    raise SystemExit($REVIEW_EXIT)\n",
-    "specfact_cli/registry/__init__.py": "import os\n"
-    "from pathlib import Path\n"
-    "class CommandRegistry:\n"
-    "    @classmethod\n"
-    "    def get_module_typer(cls,name):\n"
-    "        root=Path(os.environ['HOME']).parent\n"
-    "        assert name=='code' and Path.cwd()==root\n"
-    "        (root/'preloaded').touch()\n",
-    "specfact_code_review/__init__.py": "",
-    "specfact_code_review/run/__init__.py": "",
-    "specfact_code_review/run/portable_snapshot.py": "def "
-    "discover_snapshot(root,*,config_path,source_snapshot):\n"
-    "    assert root==source_snapshot.root and "
-    "config_path.is_file()\n"
-    "    return source_snapshot\n",
-    "specfact_code_review/run/runtime_builder.py": "import os\n"
-    "from pathlib import Path\n"
-    "def prepare_runtime(plan,*,runtime):\n"
-    "    root=Path(os.environ['HOME']).parent\n"
-    "    assert (root/'preloaded').exists()\n"
-    "    with (root/'prepared').open('a') as out: "
-    "out.write(plan.root.name+'\\n')\n",
-    "specfact_code_review/run/runtime_interpreter.py": "def select_environment(plan,*,current): return current\n",
-    "specfact_code_review/run/runner.py": "def _capsule_environment_id(): return 'linux-x86_64-cp312'\n"
-    "def _prepare_capsule_runtime(*,environment_id): return object(),''\n"
-    "def _cleanup_capsule_runtime(runtime): pass\n",
-    "specfact_code_review/run/scope.py": "from types import SimpleNamespace\n"
-    "def ScopeRequest(**kw): return SimpleNamespace(**kw)\n"
-    "def resolve_scope(request):\n"
-    "    assert request.scope=='index' and "
-    "request.portable_project_runtime\n"
-    "    return "
-    "SimpleNamespace(status=$STATUS,reason=$REASON,base_snapshot=SimpleNamespace(root=request.repository/'base'),head_snapshot=SimpleNamespace(root=request.repository/'head'))\n"
-    "def cleanup_scope_resolution(resolution): pass\n",
-}
-
-_FIXED_ANALYZER_FINDING_ROWS = [
-    {
-        "file": "public.py",
-        "line": 1,
-        "severity": "error",
-        "category": "clean_code",
-        "tool": "radon",
-        "rule": "CC34",
-        "message": "PRIVATE_MESSAGE",
-    },
-    {
-        "file": "public.py",
-        "line": 2,
-        "severity": "error",
-        "category": "tool_error",
-        "tool": "semgrep",
-        "rule": "tool_error",
-        "message": "TimeoutExpired PRIVATE_SECRET",
-    },
-    {
-        "file": "public.py",
-        "line": 3,
-        "severity": "error",
-        "category": "PRIVATE_CATEGORY",
-        "tool": "PRIVATE_TOOL",
-        "rule": "PRIVATE_RULE",
-        "message": "PRIVATE_SECRET",
-    },
-]
-
-_DEPTH_FAILURE_FINDING_ROWS = [
-    {
-        "file": "public.py",
-        "line": 1,
-        "severity": "error",
-        "category": "tool_error",
-        "tool": "semgrep",
-        "message": "semgrep returned structured errors; details=DECODER_DEPTH_FAILURE",
-    }
-]
-
-
-def _write_public_report(root, findings):
-    _git(root, "init", "-q")
-    (root / "public.py").write_text("value = 1\n")
-    _git(root, "add", "public.py")
-    report = root / ".specfact/code-review.json"
-    report.parent.mkdir()
-    report.write_text(json.dumps({"findings": findings}))
-
-
 def _git(root: Path, *args: str) -> str:
     return subprocess.check_output(["git", "-C", str(root), *args], text=True).strip()
-
-
-def _write_deferred_fixture_sources(repository):
-    target = repository / "packages/example/src/example.py"
-    target.parent.mkdir(parents=True)
-    target.write_text("value = 1\n")
-    unrelated = target.with_name("unrelated.py")
-    unrelated.write_text("value = 1\n")
-    script = repository / "scripts/pre_commit_code_review.py"
-    script.parent.mkdir()
-    script.write_text(_DEFERRED_REVIEW_SCRIPT)
-    controller = repository / "packages/specfact-code-review/src/specfact_cli"
-    controller.mkdir(parents=True)
-    (controller / "__init__.py").write_text("")
-    (controller / "cli.py").write_text(_PREPARATION_CLI_SCRIPT)
-    return target, unrelated
-
-
-def _deferred_review_repository(tmp_path: Path, advanced_dev: bool):
-    repository = tmp_path / "repository"
-    repository.mkdir()
-    _git(repository, "init", "-q")
-    _git(repository, "config", "user.email", "fixture@example.invalid")
-    _git(repository, "config", "user.name", "Fixture")
-    target, unrelated = _write_deferred_fixture_sources(repository)
-    _git(repository, "add", ".")
-    _git(repository, "-c", "core.hooksPath=/dev/null", "commit", "-qm", "fixture base")
-    base = _git(repository, "rev-parse", "HEAD")
-    target.write_text("value = 2\n")
-    _git(repository, "add", ".")
-    _git(repository, "-c", "core.hooksPath=/dev/null", "commit", "-qm", "fixture candidate")
-    head = _git(repository, "rev-parse", "HEAD")
-    if advanced_dev:
-        _git(repository, "checkout", "-qb", "dev", base)
-        unrelated.write_text("value = 3\n")
-        _git(repository, "add", ".")
-        _git(repository, "-c", "core.hooksPath=/dev/null", "commit", "-qm", "fixture advanced dev")
-        base = _git(repository, "rev-parse", "HEAD")
-        _git(repository, "checkout", "--detach", head)
-    return repository, base, head
 
 
 @pytest.mark.parametrize("gate_exit", [0, 7])
@@ -238,10 +33,66 @@ def test_deferred_gate_reviews_exact_staged_tree_and_propagates_failure(
     assert steps.index(step) > next(
         i for i, item in enumerate(steps) if item.get("name", "").startswith("Allow user namespaces")
     )
-    repository, base, head = _deferred_review_repository(tmp_path, advanced_dev)
+    repository = tmp_path / "repository"
+    repository.mkdir()
+    _git(repository, "init", "-q")
+    _git(repository, "config", "user.email", "fixture@example.invalid")
+    _git(repository, "config", "user.name", "Fixture")
+    target = repository / "packages/example/src/example.py"
+    target.parent.mkdir(parents=True)
+    target.write_text("value = 1\n")
+    unrelated = target.with_name("unrelated.py")
+    unrelated.write_text("value = 1\n")
+    script = repository / "scripts/pre_commit_code_review.py"
+    script.parent.mkdir()
+    script.write_text(
+        "import os, subprocess, sys\n"
+        "from pathlib import Path\n"
+        "assert os.environ['SPECFACT_CODE_REVIEW_ENFORCEMENT'] == 'changed'\n"
+        "import tomllib\n"
+        "config = Path(os.environ['SPECFACT_CODE_REVIEW_PROJECT_CONFIG'])\n"
+        "assert tomllib.loads(config.read_text()) == {'manager': 'hatch', 'environment': 'default'}\n"
+        "assert Path(os.environ['SPECFACT_CODE_REVIEW_SUBJECT_ROOT']).resolve() == Path.cwd()\n"
+        "assert not {'GITHUB_TOKEN', 'GH_TOKEN', 'PYTHONPATH'} & os.environ.keys()\n"
+        "from pathlib import Path\n"
+        "cache = Path(os.environ['SPECFACT_CODE_REVIEW_CAPSULE_CACHE'])\n"
+        "assert cache == Path(os.environ['CUSTOMER_ROOT']) / 'commit-review-cache'\n"
+        "cache.mkdir(parents=True, exist_ok=True)\n"
+        "(cache / 'verified-fixture-blob').write_text('fixture')\n"
+        "assert sys.argv[1:] == ['packages/example/src/example.py']\n"
+        "assert open(sys.argv[1]).read() == 'value = 2\\n'\n"
+        "assert subprocess.check_output(['git', 'diff', '--cached', '--name-only'], text=True).strip() == sys.argv[1]\n"
+        "assert not subprocess.check_output(['git', 'diff', '--name-only'])\n"
+        "raise SystemExit(int(os.environ['FIXTURE_GATE_EXIT']))\n"
+    )
+    controller = repository / "packages/specfact-code-review/src/specfact_cli"
+    controller.mkdir(parents=True)
+    (controller / "__init__.py").write_text("")
+    (controller / "cli.py").write_text(
+        "import os,sys\n"
+        "assert sys.argv[1:7] == ['code','review','runtime','prepare','--scope','index']\n"
+        "assert os.environ['SPECFACT_MODULES_REPO'] == os.environ['GITHUB_WORKSPACE']\n"
+        "assert os.environ['SPECFACT_CODE_REVIEW_CAPSULE_CACHE'].endswith('/commit-review-cache')\n"
+        "print('{}')\n"
+    )
+    _git(repository, "add", ".")
+    _git(repository, "-c", "core.hooksPath=/dev/null", "commit", "-qm", "fixture base")
+    base = _git(repository, "rev-parse", "HEAD")
+    target.write_text("value = 2\n")
+    _git(repository, "add", ".")
+    _git(repository, "-c", "core.hooksPath=/dev/null", "commit", "-qm", "fixture candidate")
+    head = _git(repository, "rev-parse", "HEAD")
+    if advanced_dev:
+        _git(repository, "checkout", "-qb", "dev", base)
+        unrelated.write_text("value = 3\n")
+        _git(repository, "add", ".")
+        _git(repository, "-c", "core.hooksPath=/dev/null", "commit", "-qm", "fixture advanced dev")
+        base = _git(repository, "rev-parse", "HEAD")
+        _git(repository, "checkout", "--detach", head)
     customer = tmp_path / "customer"
     (customer / "cache").mkdir(parents=True)
-    venv.create(customer / "venv", with_pip=False)
+    (customer / "venv/bin").mkdir(parents=True)
+    (customer / "venv/bin/python").symlink_to(sys.executable)
     environment = os.environ | {
         "CUSTOMER_ROOT": str(customer),
         "GITHUB_WORKSPACE": str(repository),
@@ -264,8 +115,29 @@ def test_deferred_gate_reviews_exact_staged_tree_and_propagates_failure(
     assert not _git(repository, "status", "--porcelain")
 
 
-def _deferral_worktree(tmp_path: Path, scenario):
-    _platform, _ci, _deferral, bundle, advanced_dev, independent_review, _expected = scenario
+@pytest.mark.parametrize(
+    "platform,ci,deferral,bundle,advanced_dev,independent_review,expected",
+    [
+        ("Darwin", "", "github-linux", "specfact-code-review", False, True, 0),
+        ("Darwin", "", "github-linux", "specfact-code-review", False, False, 1),
+        ("Darwin", "", "github-linux", "specfact-code-review", False, "unstaged_restore", 1),
+        ("Darwin", "true", "github-linux", "specfact-code-review", False, True, 1),
+        ("Linux", "", "github-linux", "specfact-code-review", False, True, 1),
+        ("Darwin", "", "invalid", "specfact-code-review", False, True, 1),
+        ("Darwin", "", "github-linux", "specfact-project", False, True, 1),
+        ("Darwin", "", "github-linux", "specfact-project", True, True, 1),
+    ],
+)
+def test_narrow_local_deferral_retains_block2_and_cannot_run_in_ci(
+    tmp_path: Path,
+    platform: str,
+    ci: str,
+    deferral: str,
+    bundle: str,
+    advanced_dev: bool,
+    independent_review: bool | str,
+    expected: int,
+) -> None:
     repository = tmp_path / "repository"
     repository.mkdir()
     _git(repository, "init", "-q")
@@ -310,47 +182,21 @@ def _deferral_worktree(tmp_path: Path, scenario):
     _git(worktree, "add", ".")
     if independent_review == "unstaged_restore":
         (worktree / ".github/workflows/capsule-customer-execution.yml").write_text(workflow_source)
-    return worktree
-
-
-def _assert_block2_trace(invoked, expected, stderr):
-    for command in [
-        "generate-command-overview",
-        "check-command-overview",
-        "check-command-contract",
-        "check-core-documentation-accountability",
-        "check-docs-commands.py",
-        "check-prompt-commands.py",
-        "requirements_evidence_gate.py --staged",
-    ]:
-        assert command in invoked
-    assert "pre_commit_code_review.py" not in invoked
-    if expected == 0:
-        assert "DEFERRED" in stderr
-        assert "contract-test-contracts" in invoked
-    else:
-        assert "Capsule review deferral" in stderr
-
-
-@pytest.mark.parametrize(
-    "scenario",
-    [
-        ("Darwin", "", "github-linux", "specfact-code-review", False, True, 0),
-        ("Darwin", "", "github-linux", "specfact-code-review", False, False, 1),
-        ("Darwin", "", "github-linux", "specfact-code-review", False, "unstaged_restore", 1),
-        ("Darwin", "true", "github-linux", "specfact-code-review", False, True, 1),
-        ("Linux", "", "github-linux", "specfact-code-review", False, True, 1),
-        ("Darwin", "", "invalid", "specfact-code-review", False, True, 1),
-        ("Darwin", "", "github-linux", "specfact-project", False, True, 1),
-        ("Darwin", "", "github-linux", "specfact-project", True, True, 1),
-    ],
-)
-def test_narrow_local_deferral_retains_block2_and_cannot_run_in_ci(tmp_path: Path, scenario) -> None:
-    platform, ci, deferral, _bundle, _advanced_dev, _independent_review, expected = scenario
-    worktree = _deferral_worktree(tmp_path, scenario)
     calls = tmp_path / "calls"
     script = (REPO_ROOT / "scripts/pre-commit-quality-checks.sh").read_text().rsplit('main "$@"', 1)[0]
-    recipe = script + _BLOCK2_HATCH_FIXTURE
+    recipe = (
+        script
+        + r"""
+uname() { if [[ "${1:-}" == "-m" ]]; then echo arm64; else echo "$FIXTURE_PLATFORM"; fi; }
+hatch() {
+  printf '%s\n' "$*" >> "$FIXTURE_CALLS"
+  if [[ "$*" == *pre_commit_code_review.py* ]]; then return 99; fi
+  if [[ "$*" == *contract-test-status* ]]; then return 1; fi
+  return 0
+}
+run_block2
+"""
+    )
     environment = os.environ | {
         "FIXTURE_PLATFORM": platform,
         "FIXTURE_CALLS": str(calls),
@@ -363,7 +209,22 @@ def test_narrow_local_deferral_retains_block2_and_cannot_run_in_ci(tmp_path: Pat
     )
     assert result.returncode == expected, result.stdout + result.stderr
     invoked = calls.read_text()
-    _assert_block2_trace(invoked, expected, result.stderr)
+    for command in [
+        "generate-command-overview",
+        "check-command-overview",
+        "check-command-contract",
+        "check-core-documentation-accountability",
+        "check-docs-commands.py",
+        "check-prompt-commands.py",
+        "requirements_evidence_gate.py --staged",
+    ]:
+        assert command in invoked
+    assert "pre_commit_code_review.py" not in invoked
+    if expected == 0:
+        assert "DEFERRED" in result.stderr
+        assert "contract-test-contracts" in invoked
+    else:
+        assert "Capsule review deferral" in result.stderr
 
 
 def test_hosted_preparation_has_separate_bound_and_cannot_bypass_review() -> None:
@@ -377,65 +238,61 @@ def test_hosted_preparation_has_separate_bound_and_cannot_bypass_review() -> Non
     assert "continue-on-error" not in step
 
 
-def _independent_review_job():
-    workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())
-    return workflow["jobs"].get("independent-review")
-
-
 def test_independent_reviewer_runs_in_fresh_job_without_candidate_host_code() -> None:
-    independent = _independent_review_job()
-    assert independent is not None, "Installed reviewer must not share writable venv/HOME with candidate host code"
+    workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())
+    independent = workflow["jobs"].get("independent-review")
+    assert independent is not None, "Installed reviewer must not share a writable venv/HOME with candidate host code"
     assert independent["runs-on"] == "ubuntu-24.04"
     assert independent["if"] == "github.event_name == 'pull_request'"
     assert not independent.get("needs"), "Candidate execution cannot suppress the independent review job"
-    recipe = "\n".join(str(step.get("run", "")) for step in independent["steps"])
+    steps = independent["steps"]
+    recipe = "\n".join(str(step.get("run", "")) for step in steps)
     assert "specfact-cli==0.55.4" in recipe
-    assert "--version 0.51.0" in recipe
+    assert "--version 0.50.1" in recipe
     assert "--source marketplace" in recipe
     assert "env -i" in recipe
-
-
-@pytest.mark.parametrize(
-    "forbidden",
-    [
-        "pre_commit_code_review.py",
-        "link_dev_module.py",
-        "SPECFACT_MODULES_ROOTS",
-        "SPECFACT_ALLOW_UNSIGNED",
-        "$GITHUB_WORKSPACE/scripts",
-    ],
-)
-def test_independent_reviewer_excludes_each_candidate_host_route(forbidden: str) -> None:
-    independent = _independent_review_job()
-    recipe = "\n".join(str(step.get("run", "")) for step in independent["steps"])
-    assert forbidden not in recipe
-
-
-def test_independent_reviewer_preserves_scope_budgets_and_preload_order() -> None:
-    independent = _independent_review_job()
-    recipe = "\n".join(str(step.get("run", "")) for step in independent["steps"])
+    assert "pre_commit_code_review.py" not in recipe
+    assert "link_dev_module.py" not in recipe
+    assert "SPECFACT_MODULES_ROOTS" not in recipe
+    assert "SPECFACT_ALLOW_UNSIGNED" not in recipe
+    assert "$GITHUB_WORKSPACE/scripts" not in recipe
     assert "timeout=300" in recipe and "timeout=1800" in recipe
     assert "--scope index --enforcement changed --bug-hunt" in recipe
     assert "discover_snapshot" in recipe and "prepare_runtime" in recipe
-    assert "runtime prepare --project-config" not in recipe, "Mutable worktree prep cannot prewarm index identities"
+    assert "runtime prepare --project-config" not in recipe, (
+        "Mutable worktree prep cannot prewarm immutable index identities"
+    )
     assert 'CommandRegistry.get_module_typer("code")' in recipe
     assert recipe.index('CommandRegistry.get_module_typer("code")') < recipe.index("os.chdir(sys.argv[1])")
-
-
-def test_independent_reviewer_cannot_continue_after_failure_or_retain_credentials() -> None:
-    for step in _independent_review_job()["steps"]:
+    for step in steps:
         assert not step.get("continue-on-error", False)
         if "checkout@" in step.get("uses", ""):
             assert step["with"]["persist-credentials"] is False
 
 
-def _isolated_reviewer_modules(review_case):
-    review_exit, preparation_status, fixture_reason = review_case
-    replacements = {"REVIEW_EXIT": str(review_exit), "STATUS": repr(preparation_status), "REASON": repr(fixture_reason)}
-    return {name: Template(source).substitute(replacements) for name, source in _ISOLATED_REVIEWER_TEMPLATES.items()}
+@pytest.mark.parametrize(
+    "review_exit,preparation_status,fixture_reason",
+    [
+        (0, "PASS", "policy_parse_failure"),
+        (2, "PASS", "policy_parse_failure"),
+        (7, "PASS", "policy_parse_failure"),
+        (0, "UNKNOWN", "policy_parse_failure"),
+        (0, "UNKNOWN", "private/path\nsecret"),
+    ],
+)
+def test_isolated_reviewer_preloads_trusted_code_and_never_accepts_incomplete_preparation(
+    tmp_path: Path, review_exit: int, preparation_status: str, fixture_reason: str
+) -> None:
+    import json
+    import venv
 
-
-def _create_isolated_reviewer(tmp_path: Path, review_case):
+    workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())
+    job = workflow["jobs"]["independent-review"]
+    step = next(
+        item
+        for item in job["steps"]
+        if item.get("name") == "Prepare and review through the authenticated installed controller"
+    )
     trusted = tmp_path / "trusted"
     for name in ("home", "tmp", "subject"):
         (trusted / name).mkdir(parents=True)
@@ -446,7 +303,58 @@ def _create_isolated_reviewer(tmp_path: Path, review_case):
             [str(interpreter), "-I", "-c", "import sysconfig;print(sysconfig.get_path('purelib'))"], text=True
         ).strip()
     )
-    modules = _isolated_reviewer_modules(review_case)
+    modules = {
+        "specfact_cli/__init__.py": "",
+        "specfact_cli/cli.py": (
+            "import os,json\nfrom pathlib import Path\n"
+            "root=Path(os.environ['HOME']).parent\n"
+            "assert Path.cwd() == root, 'core discovery entered the candidate subject'\n"
+            "assert not {'PYTHONPATH','GITHUB_TOKEN','GH_TOKEN','SPECFACT_MODULES_ROOTS','SPECFACT_ALLOW_UNSIGNED'} & os.environ.keys()\n"
+            "def app(*,args):\n"
+            "    assert Path.cwd() == root/'subject'\n"
+            "    (root/'argv.json').write_text(json.dumps(args))\n"
+            f"    raise SystemExit({review_exit})\n"
+        ),
+        "specfact_cli/registry/__init__.py": (
+            "import os\nfrom pathlib import Path\n"
+            "class CommandRegistry:\n"
+            "    @classmethod\n"
+            "    def get_module_typer(cls,name):\n"
+            "        root=Path(os.environ['HOME']).parent\n"
+            "        assert name=='code' and Path.cwd()==root\n"
+            "        (root/'preloaded').touch()\n"
+        ),
+        "specfact_code_review/__init__.py": "",
+        "specfact_code_review/run/__init__.py": "",
+        "specfact_code_review/run/portable_snapshot.py": (
+            "def discover_snapshot(root,*,config_path,source_snapshot):\n"
+            "    assert root==source_snapshot.root and config_path.is_file()\n"
+            "    return source_snapshot\n"
+        ),
+        "specfact_code_review/run/runtime_builder.py": (
+            "import os\nfrom pathlib import Path\n"
+            "def prepare_runtime(plan,*,runtime):\n"
+            "    root=Path(os.environ['HOME']).parent\n"
+            "    assert (root/'preloaded').exists()\n"
+            "    with (root/'prepared').open('a') as out: out.write(plan.root.name+'\\n')\n"
+        ),
+        "specfact_code_review/run/runtime_interpreter.py": "def select_environment(plan,*,current): return current\n",
+        "specfact_code_review/run/runner.py": (
+            "def _capsule_environment_id(): return 'linux-x86_64-cp312'\n"
+            "def _prepare_capsule_runtime(*,environment_id): return object(),''\n"
+            "def _cleanup_capsule_runtime(runtime): pass\n"
+        ),
+        "specfact_code_review/run/scope.py": (
+            "from types import SimpleNamespace\n"
+            "def ScopeRequest(**kw): return SimpleNamespace(**kw)\n"
+            "def resolve_scope(request):\n"
+            "    assert request.scope=='index' and request.portable_project_runtime\n"
+            f"    return SimpleNamespace(status={preparation_status!r},reason={fixture_reason!r},"
+            "base_snapshot=SimpleNamespace(root=request.repository/'base'),"
+            "head_snapshot=SimpleNamespace(root=request.repository/'head'))\n"
+            "def cleanup_scope_resolution(resolution): pass\n"
+        ),
+    }
     for name, content in modules.items():
         path = site / name
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -463,55 +371,23 @@ def _create_isolated_reviewer(tmp_path: Path, review_case):
         "SPECFACT_MODULES_ROOTS": str(trusted / "subject"),
         "SPECFACT_ALLOW_UNSIGNED": "1",
     }
-    return trusted, environment
-
-
-@pytest.mark.parametrize(
-    "review_exit,preparation_status,fixture_reason",
-    [
-        (0, "PASS", "policy_parse_failure"),
-        (2, "PASS", "policy_parse_failure"),
-        (7, "PASS", "policy_parse_failure"),
-        (0, "UNKNOWN", "policy_parse_failure"),
-        (0, "UNKNOWN", "private/path\nsecret"),
-    ],
-)
-def test_isolated_reviewer_preloads_trusted_code_and_never_accepts_incomplete_preparation(
-    tmp_path: Path, review_exit: int, preparation_status: str, fixture_reason: str
-) -> None:
-    workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())
-    job = workflow["jobs"]["independent-review"]
-    step = next(
-        item
-        for item in job["steps"]
-        if item.get("name") == "Prepare and review through the authenticated installed controller"
-    )
-    trusted, environment = _create_isolated_reviewer(tmp_path, (review_exit, preparation_status, fixture_reason))
     result = subprocess.run(["bash", "-c", step["run"]], env=environment, text=True, capture_output=True, check=False)
     expected = review_exit if preparation_status == "PASS" else 1
     assert result.returncode == expected, result.stdout + result.stderr
     assert (trusted / "preloaded").exists()
     if preparation_status != "PASS":
-        _assert_incomplete_preparation(trusted, result, fixture_reason)
-    else:
-        _assert_installed_review_arguments(trusted)
-
-
-def _assert_incomplete_preparation(trusted: Path, result, fixture_reason: str):
-    assert not (trusted / "argv.json").exists()
-    assert not (trusted / "prepared").exists()
-    diagnostic = json.loads((trusted / "status.public.json").read_text())
-    assert diagnostic == {
-        "status": "INCOMPLETE",
-        "phase": "trusted_index_preparation",
-        "diagnostic": fixture_reason if fixture_reason == "policy_parse_failure" else "unstructured_reason",
-    }
-    assert diagnostic["diagnostic"] in result.stdout
-    if fixture_reason != "policy_parse_failure":
-        assert fixture_reason not in result.stdout
-
-
-def _assert_installed_review_arguments(trusted: Path):
+        assert not (trusted / "argv.json").exists()
+        assert not (trusted / "prepared").exists()
+        diagnostic = json.loads((trusted / "status.public.json").read_text())
+        assert diagnostic == {
+            "status": "INCOMPLETE",
+            "phase": "trusted_index_preparation",
+            "diagnostic": fixture_reason if fixture_reason == "policy_parse_failure" else "unstructured_reason",
+        }
+        assert diagnostic["diagnostic"] in result.stdout
+        if fixture_reason != "policy_parse_failure":
+            assert fixture_reason not in result.stdout
+        return
     assert (trusted / "prepared").read_text().splitlines() == ["base", "head"]
     args = json.loads((trusted / "argv.json").read_text())
     assert args[:3] == ["code", "review", "run"]
@@ -534,7 +410,28 @@ def test_trusted_bootstrap_cannot_import_candidate_venv_module(tmp_path: Path) -
     launcher_dir = tmp_path / "launcher"
     launcher_dir.mkdir()
     launcher = launcher_dir / "python"
-    launcher.write_text(f"#!{sys.executable}\n" + textwrap.dedent(_TRUSTED_BOOTSTRAP_LAUNCHER))
+    launcher.write_text(
+        f"#!{sys.executable}\n"
+        + textwrap.dedent("""\
+            import subprocess,sys
+            from pathlib import Path
+            result=subprocess.run([sys.executable,*sys.argv[1:]],check=False)
+            if result.returncode:
+                raise SystemExit(result.returncode)
+            target=Path(sys.argv[-1])
+            site=next((target/'lib').glob('python*/site-packages'))
+            (site/'pip/__main__.py').write_text(
+                "import sys\\nassert sys.argv[1:]==['install','--no-cache-dir','specfact-cli==0.55.4']\\n"
+            )
+            core=site/'specfact_cli'
+            core.mkdir()
+            (core/'__init__.py').write_text('')
+            (core/'cli.py').write_text(
+                "import sys\\nassert sys.argv[1:]==['module','install','nold-ai/specfact-code-review',"
+                "'--scope','user','--version','0.50.1','--source','marketplace']\\n"
+            )
+            """)
+    )
     launcher.chmod(0o700)
     runner_temp = tmp_path / "runner"
     runner_temp.mkdir()
@@ -548,569 +445,3 @@ def test_trusted_bootstrap_cannot_import_candidate_venv_module(tmp_path: Path) -
     )
     assert not marker.exists(), "Candidate code executed on the trusted bootstrap host"
     assert result.returncode == 0, result.stdout + result.stderr
-
-
-def test_failed_candidate_diagnostics_expose_only_bounded_tracked_locations(tmp_path: Path) -> None:
-    workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())
-    step = next(item for item in workflow["jobs"]["customer"]["steps"] if item.get("name") == STEP_NAME)
-    code = step["run"].rsplit("- <<'PY'\n", 1)[1].split("\nPY\n", 1)[0]
-    _git(tmp_path, "init", "-q")
-    source = tmp_path / "public.py"
-    source.write_text("value = 1\n")
-    _git(tmp_path, "add", "public.py")
-    report = tmp_path / ".specfact/code-review.json"
-    report.parent.mkdir()
-    report.write_text(
-        json.dumps(
-            {
-                "analyzer_evidence": [{"id": "PRIVATE_ANALYZER", "diagnostic": "PRIVATE_TOKEN"}],
-                "findings": [
-                    {"file": "public.py", "line": 12, "severity": "warning", "message": "PRIVATE_MESSAGE"},
-                    {"file": "/private/SECRET.py", "line": 1, "severity": "error"},
-                    {"file": "untracked_SECRET.py", "line": 1, "severity": "error"},
-                    {"file": "public.py", "line": True, "severity": "error"},
-                    {"file": "public.py", "line": 0, "severity": "error"},
-                    {"file": "public.py", "line": 1, "severity": "PRIVATE_SEVERITY"},
-                    *[{"file": "public.py", "line": line, "severity": "info"} for line in range(20, 225)],
-                ],
-            }
-        )
-    )
-    result = subprocess.run([sys.executable, "-c", code], cwd=tmp_path, capture_output=True, text=True, check=False)
-    assert result.returncode == 0, result.stderr
-    rows = [json.loads(line)["finding_location"] for line in result.stdout.splitlines()]
-    assert len(rows) == 200
-    assert rows[0] == {"file": "public.py", "line": 12, "severity": "warning"}
-    assert "PRIVATE" not in result.stdout and "SECRET" not in result.stdout
-
-
-@pytest.mark.parametrize("job_name", ["customer", "independent-review"])
-def test_both_failed_reviews_project_fixed_analyzer_identity_without_private_text(
-    tmp_path: Path, job_name: str
-) -> None:
-    code = _public_projector(job_name)
-    _write_public_report(tmp_path, _FIXED_ANALYZER_FINDING_ROWS)
-    result = subprocess.run([sys.executable, "-c", code], cwd=tmp_path, capture_output=True, text=True, check=False)
-    assert result.returncode == 0, result.stderr
-    rows = [json.loads(line)["finding_location"] for line in result.stdout.splitlines()]
-    assert rows[1] == {
-        "file": "public.py",
-        "line": 1,
-        "severity": "error",
-        "category": "clean_code",
-        "tool": "radon",
-        "rule": "CC34",
-    }
-    assert rows[0]["failure_class"] == "timeout"
-    assert "PRIVATE" not in result.stdout
-
-
-def _public_projector(job_name):
-    workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())
-    name = STEP_NAME if job_name == "customer" else "Prepare and review through the authenticated installed controller"
-    recipe = next(step["run"] for step in workflow["jobs"][job_name]["steps"] if step.get("name") == name)
-    return recipe.rsplit("- <<'PY'\n", 1)[1].split("\nPY\n", 1)[0]
-
-
-@pytest.mark.parametrize("job_name", ["customer", "independent-review"])
-def test_public_tool_errors_cannot_disappear_after_two_hundred_ordinary_findings(tmp_path: Path, job_name):
-    _git(tmp_path, "init", "-q")
-    (tmp_path / "public.py").write_text("value = 1\n")
-    _git(tmp_path, "add", "public.py")
-    report = tmp_path / ".specfact/code-review.json"
-    report.parent.mkdir()
-    rows = [{"file": "public.py", "line": n, "severity": "info"} for n in range(1, 220)]
-    rows.append(
-        {
-            "file": "public.py",
-            "line": 1,
-            "severity": "error",
-            "category": "tool_error",
-            "tool": "pytest",
-            "message": "PRIVATE_SECRET",
-        }
-    )
-    report.write_text(json.dumps({"findings": rows}))
-    result = subprocess.run(
-        [sys.executable, "-c", _public_projector(job_name)], cwd=tmp_path, capture_output=True, text=True, check=False
-    )
-    projected = [json.loads(line)["finding_location"] for line in result.stdout.splitlines()]
-    assert result.returncode == 0, result.stderr
-    assert len(projected) == 200
-    assert projected[0]["category"] == "tool_error" and projected[0]["tool"] == "pytest"
-    assert "PRIVATE" not in result.stdout
-
-
-@pytest.mark.parametrize("job_name", ["customer", "independent-review"])
-@pytest.mark.parametrize("review_exit,diagnostic", [("1", "review_report_missing"), ("124", "analysis_timeout")])
-def test_missing_review_report_has_fixed_public_cause(tmp_path: Path, job_name, review_exit, diagnostic):
-    environment = dict(os.environ, REVIEW_PUBLIC_EXIT=review_exit)
-    result = subprocess.run(
-        [sys.executable, "-c", _public_projector(job_name)],
-        cwd=tmp_path,
-        env=environment,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    assert result.returncode == 0, result.stderr
-    assert json.loads(result.stdout) == {"status": "INCOMPLETE", "phase": "review", "diagnostic": diagnostic}
-
-
-@pytest.mark.parametrize("job_name", ["customer", "independent-review"])
-@pytest.mark.parametrize(
-    "message,failure_class",
-    [
-        ("semgrep returned structured errors PRIVATE", "structured_errors"),
-        ("semgrep process failed PRIVATE", "process_failure"),
-        ("semgrep returned empty stdout PRIVATE", "empty_output"),
-        ("Unrecognized CrossHair output PRIVATE", "unrecognized_output"),
-    ],
-)
-def test_public_execution_classification_never_prints_raw_messages(tmp_path: Path, job_name, message, failure_class):
-    _git(tmp_path, "init", "-q")
-    (tmp_path / "public.py").write_text("value = 1\n")
-    _git(tmp_path, "add", "public.py")
-    report = tmp_path / ".specfact/code-review.json"
-    report.parent.mkdir()
-    report.write_text(
-        json.dumps(
-            {
-                "findings": [
-                    {"file": "public.py", "line": 1, "severity": "error", "category": "tool_error", "message": message}
-                ]
-            }
-        )
-    )
-    result = subprocess.run(
-        [sys.executable, "-c", _public_projector(job_name)], cwd=tmp_path, capture_output=True, text=True, check=False
-    )
-    assert result.returncode == 0, result.stderr
-    row = json.loads(result.stdout)["finding_location"]
-    assert row["failure_class"] == failure_class
-    assert "PRIVATE" not in result.stdout
-
-
-def test_trusted_review_budget_timeout_retains_three_hundred_seconds_and_fixed_exit(monkeypatch, tmp_path):
-    import re
-    import runpy
-
-    recipe = next(
-        step["run"]
-        for step in _independent_review_job()["steps"]
-        if step.get("name") == "Prepare and review through the authenticated installed controller"
-    )
-    command = re.findall(r"-I -c \\\n\s*'([^']+)'", recipe)[-1]
-    wrapper = tmp_path / "trusted_review_budget.py"
-    wrapper.write_text(command)
-    observed = []
-
-    def timeout(args, *, timeout, check):
-        observed.append((args, timeout, check))
-        raise subprocess.TimeoutExpired(args, timeout, stderr="PRIVATE_SECRET")
-
-    monkeypatch.setattr(subprocess, "run", timeout)
-    monkeypatch.setattr(sys, "argv", ["-c", "trusted-python", "trusted-reviewer.py"])
-    with pytest.raises(SystemExit) as result:
-        runpy.run_path(str(wrapper), run_name="__main__")
-    assert result.value.code == 124
-    assert observed == [(["trusted-python", "trusted-reviewer.py"], 300, False)]
-
-
-@pytest.mark.parametrize("job_name", ["customer", "independent-review"])
-@pytest.mark.parametrize(
-    "details,expected",
-    [
-        (
-            [{"type": "Syntax error", "message": "PRIVATE_SOURCE"}, {"type": "Timeout"}, {"type": "SECRET_TYPE"}],
-            ["Syntax error", "Timeout"],
-        ),
-        (
-            [{"type": ["PartialParsing", "PRIVATE_SPAN"]}, {"type": "Fatal error", "private": "PRIVATE_TOKEN"}],
-            ["Fatal error", "PartialParsing"],
-        ),
-        (
-            [{"type": "Syntax error"}, {"type": "Timeout"}, {"type": "Fatal error"}, {"type": "Out of memory"}],
-            ["Fatal error", "Syntax error", "Timeout"],
-        ),
-    ],
-)
-def test_structured_semgrep_failure_projects_only_fixed_variant_tags(tmp_path: Path, job_name, details, expected):
-    _git(tmp_path, "init", "-q")
-    (tmp_path / "public.py").write_text("value = 1\n")
-    _git(tmp_path, "add", "public.py")
-    report = tmp_path / ".specfact/code-review.json"
-    report.parent.mkdir()
-    finding = {
-        "file": "public.py",
-        "line": 1,
-        "severity": "error",
-        "category": "tool_error",
-        "tool": "semgrep",
-        "message": "semgrep returned structured errors; details=" + json.dumps(details),
-    }
-    report.write_text(json.dumps({"findings": [finding]}))
-    result = subprocess.run(
-        [sys.executable, "-c", _public_projector(job_name)], cwd=tmp_path, text=True, capture_output=True, check=False
-    )
-    assert result.returncode == 0, result.stderr
-    projected = json.loads(result.stdout)["finding_location"]
-    assert projected["failure_class"] == "structured_errors"
-    assert projected["semgrep_error_types"] == expected
-    assert "PRIVATE" not in result.stdout and "SECRET" not in result.stdout
-
-
-@pytest.mark.parametrize("job_name", ["customer", "independent-review"])
-@pytest.mark.parametrize(
-    "details",
-    [
-        '{"type":"Syntax error"}',
-        "not-json",
-        '[{"type":"SECRET_TYPE"}]',
-        '[{"type":"Syntax error"}]' + "PRIVATE" * 1000,
-        "[" * 1500 + "]" * 1500,
-    ],
-)
-def test_malformed_or_oversized_semgrep_details_keep_generic_public_cause(tmp_path: Path, job_name, details):
-    _git(tmp_path, "init", "-q")
-    (tmp_path / "public.py").write_text("value = 1\n")
-    _git(tmp_path, "add", "public.py")
-    report = tmp_path / ".specfact/code-review.json"
-    report.parent.mkdir()
-    finding = {
-        "file": "public.py",
-        "line": 1,
-        "severity": "error",
-        "category": "tool_error",
-        "tool": "semgrep",
-        "message": "semgrep returned structured errors; details=" + details,
-    }
-    report.write_text(json.dumps({"findings": [finding]}))
-    result = subprocess.run(
-        [sys.executable, "-c", _public_projector(job_name)], cwd=tmp_path, text=True, capture_output=True, check=False
-    )
-    assert result.returncode == 0, result.stderr
-    projected = json.loads(result.stdout)["finding_location"]
-    assert projected["failure_class"] == "structured_errors"
-    assert "semgrep_error_types" not in projected
-    assert "PRIVATE" not in result.stdout and "SECRET" not in result.stdout
-
-
-@pytest.mark.parametrize("job_name", ["customer", "independent-review"])
-def test_semgrep_decoder_depth_failure_keeps_generic_public_cause(tmp_path: Path, job_name):
-    _write_public_report(tmp_path, _DEPTH_FAILURE_FINDING_ROWS)
-    fault = """import json
-_original_loads = json.loads
-def _depth_failure(value, *args, **kwargs):
-    if value == "DECODER_DEPTH_FAILURE":
-        raise RecursionError("PRIVATE_DECODER_TRACE")
-    return _original_loads(value, *args, **kwargs)
-json.loads = _depth_failure
-"""
-    result = subprocess.run(
-        [sys.executable, "-c", fault + _public_projector(job_name)],
-        cwd=tmp_path,
-        text=True,
-        capture_output=True,
-        check=False,
-    )
-    assert result.returncode == 0, result.stderr
-    projected = json.loads(result.stdout)["finding_location"]
-    assert projected["failure_class"] == "structured_errors"
-    assert "semgrep_error_types" not in projected
-    assert "PRIVATE" not in result.stdout and "PRIVATE" not in result.stderr
-
-
-@pytest.mark.parametrize("job_name", ["customer", "independent-review"])
-@pytest.mark.parametrize(
-    "message,code",
-    [
-        ("project_pytest_coverage_worker_missing; PRIVATE", "project_pytest_coverage_worker_missing"),
-        ("project_pytest_coverage_evidence_unavailable:PRIVATE", "project_pytest_coverage_evidence_unavailable"),
-        ("project_pytest_execution_incomplete:exit=4 PRIVATE", "project_pytest_execution_incomplete"),
-        ("project_pytest_root_outside_snapshot", "project_pytest_root_outside_snapshot"),
-        ("project_pytest_root_missing_or_invalid; PRIVATE", "project_pytest_root_missing_or_invalid"),
-        ("project_pytest_collection_error; PRIVATE", "project_pytest_collection_error"),
-        ("project_pytest_coverage_diagnostic_invalid:PRIVATE", "project_pytest_coverage_diagnostic_invalid"),
-        ("project_pytest_coverage_policy_invalid:PRIVATE", "project_pytest_coverage_policy_invalid"),
-        ("project_pytest_coverage_candidate_invalid:PRIVATE", "project_pytest_coverage_candidate_invalid"),
-        (
-            "project_pytest_installed_coverage_directory_invalid:PRIVATE",
-            "project_pytest_installed_coverage_directory_invalid",
-        ),
-        (
-            "project_pytest_installed_coverage_module_invalid:PRIVATE",
-            "project_pytest_installed_coverage_module_invalid",
-        ),
-        ("[Errno 2] PRIVATE_PATH", "file_missing"),
-        ("[Errno 13] PRIVATE_PATH", "permission_denied"),
-        ("PRIVATE project_pytest_execution_incomplete", None),
-        ("project_pytest_execution_incomplete_PRIVATE", None),
-        ("PRIVATE_UNKNOWN", None),
-    ],
-)
-def test_public_pytest_failure_codes_withhold_private_payload(tmp_path: Path, job_name, message, code):
-    _git(tmp_path, "init", "-q")
-    (tmp_path / "public.py").write_text("value = 1\n")
-    _git(tmp_path, "add", "public.py")
-    report = tmp_path / ".specfact/code-review.json"
-    report.parent.mkdir()
-    report.write_text(
-        json.dumps(
-            {
-                "findings": [
-                    {
-                        "file": "public.py",
-                        "line": 1,
-                        "severity": "error",
-                        "category": "tool_error",
-                        "tool": "pytest",
-                        "message": message,
-                    }
-                ]
-            }
-        )
-    )
-    result = subprocess.run(
-        [sys.executable, "-c", _public_projector(job_name)],
-        cwd=tmp_path,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    assert result.returncode == 0, result.stderr
-    projected = json.loads(result.stdout)["finding_location"]
-    assert projected.get("diagnostic_code") == code
-    assert "PRIVATE" not in result.stdout
-
-
-@pytest.mark.parametrize(
-    "progress,analyzer",
-    [
-        ("PRIVATE\nChecking capsule analyzer contracts...\n", "contracts"),
-        (
-            "Checking capsule analyzer pylint...\nPRIVATE\nChecking capsule analyzer targeted-pytest-coverage...\n",
-            "targeted-pytest-coverage",
-        ),
-        ("Checking capsule analyzer PRIVATE...\n", None),
-        ("PRIVATE Checking capsule analyzer pylint...\n", None),
-        ("Checking capsule analyzer pylint...\n" + "X" * 65537, None),
-    ],
-)
-def test_independent_timeout_projects_only_bounded_exact_progress(tmp_path: Path, progress, analyzer):
-    log = tmp_path / "progress.private.log"
-    log.write_text(progress)
-    environment = dict(os.environ, REVIEW_PUBLIC_EXIT="124", REVIEW_PUBLIC_PROGRESS=str(log))
-    result = subprocess.run(
-        [sys.executable, "-c", _public_projector("independent-review")],
-        cwd=tmp_path,
-        env=environment,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    assert result.returncode == 0, result.stderr
-    row = json.loads(result.stdout)
-    assert row["diagnostic"] == "analysis_timeout"
-    assert row.get("analyzer") == analyzer
-    assert "PRIVATE" not in result.stdout
-
-
-@pytest.mark.parametrize("job_name", ["customer", "independent-review"])
-@pytest.mark.parametrize("rule", ["TEST_OUTCOME_NOT_PASS", "TEST_COVERAGE_POLICY_FAILED"])
-def test_public_testing_findings_survive_ordinary_location_cap(tmp_path: Path, job_name, rule):
-    rows = [{"file": "public.py", "line": n, "severity": "info"} for n in range(1, 220)]
-    rows.append(
-        {
-            "file": "public.py",
-            "line": 1,
-            "severity": "error",
-            "category": "testing",
-            "tool": "pytest",
-            "rule": rule,
-            "message": "PRIVATE_TRACE_WITH_PARAMETERS",
-        }
-    )
-    _write_public_report(tmp_path, rows)
-    result = subprocess.run(
-        [sys.executable, "-c", _public_projector(job_name)],
-        cwd=tmp_path,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    projected = [json.loads(line)["finding_location"] for line in result.stdout.splitlines()]
-    assert result.returncode == 0, result.stderr
-    assert len(projected) == 200
-    assert projected[0].get("category") == "testing"
-    assert projected[0].get("rule") == rule
-    assert "PRIVATE" not in result.stdout
-
-
-def test_deferred_host_fixture_does_not_alias_managed_caller_python(tmp_path: Path, monkeypatch):
-    managed = tmp_path / "managed-python"
-    managed.write_text("#!/bin/sh\nexit 78\n")
-    managed.chmod(0o755)
-    monkeypatch.setattr(sys, "executable", str(managed))
-    test_deferred_gate_reviews_exact_staged_tree_and_propagates_failure(tmp_path, 0, False)
-
-
-@pytest.mark.parametrize("job_name", ["customer", "independent-review"])
-@pytest.mark.parametrize(
-    "outcome,phase,xfail", [("failed", "call", False), ("skipped", "setup", False), ("passed", "call", True)]
-)
-def test_public_test_observations_identify_only_tracked_source_functions(tmp_path, job_name, outcome, phase, xfail):
-    suffix = " with an xfail marker." if xfail else "."
-    finding = {
-        "file": "public.py",
-        "line": 1,
-        "severity": "error",
-        "category": "testing",
-        "tool": "pytest",
-        "rule": "TEST_OUTCOME_NOT_PASS",
-        "message": f"Test public.py::test_public_case[PRIVATE_PARAMETER::test_inner[PRIVATE_NESTED]] {outcome} during {phase}{suffix}",
-    }
-    _write_public_report(tmp_path, [finding])
-    (tmp_path / "public.py").write_text("def test_public_case():\n    pass\ndef test_inner():\n    pass\n")
-    result = subprocess.run(
-        [sys.executable, "-c", _public_projector(job_name)],
-        cwd=tmp_path,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    assert result.returncode == 0, result.stderr
-    row = json.loads(result.stdout)["finding_location"]
-    assert row.get("test_outcome") == outcome
-    assert row.get("test_phase") == phase
-    assert row.get("test_xfail") is xfail
-    assert row.get("test_function") == "test_public_case"
-    assert "PRIVATE" not in result.stdout
-
-
-@pytest.mark.parametrize("job_name", ["customer", "independent-review"])
-@pytest.mark.parametrize(
-    "message",
-    [
-        "Test public.py::PRIVATE_FUNCTION[PRIVATE_PARAMETER] failed during call.",
-        "Test /private/SECRET.py::test_public_case failed during call.",
-        "Test public.py::test_public_case failed during PRIVATE_PHASE.",
-        "Test public.py::test_public_case[" + "PRIVATE" * 1000 + "] failed during call.",
-    ],
-)
-def test_public_test_observations_reject_private_or_malformed_identity(tmp_path, job_name, message):
-    finding = {
-        "file": "public.py",
-        "line": 1,
-        "severity": "error",
-        "category": "testing",
-        "tool": "pytest",
-        "rule": "TEST_OUTCOME_NOT_PASS",
-        "message": message,
-    }
-    _write_public_report(tmp_path, [finding])
-    (tmp_path / "public.py").write_text("def test_public_case():\n    pass\n")
-    result = subprocess.run(
-        [sys.executable, "-c", _public_projector(job_name)],
-        cwd=tmp_path,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    assert result.returncode == 0, result.stderr
-    row = json.loads(result.stdout)["finding_location"]
-    assert "test_function" not in row
-    assert "PRIVATE" not in result.stdout and "SECRET" not in result.stdout
-
-
-def _write_public_phase_record_report(root, nodeid, detail):
-    finding = {
-        "file": "public.py",
-        "line": 1,
-        "severity": "error",
-        "category": "testing",
-        "tool": "pytest",
-        "rule": "TEST_OUTCOME_NOT_PASS",
-        "message": f"Test {nodeid} failed during call.",
-    }
-    _write_public_report(root, [finding])
-    (root / "public.py").write_text("def test_public_case():\n    pass\n")
-    report = root / ".specfact/code-review.json"
-    data = json.loads(report.read_text())
-    records = [
-        {"nodeid": nodeid, "phase": "setup", "outcome": "failed", "detail": "E PermissionError: PRIVATE_SETUP"},
-        {"nodeid": nodeid, "phase": "call", "outcome": "failed", "detail": detail},
-    ]
-    data["analyzer_evidence"] = [{"id": "targeted-pytest-coverage", "target_execution": {"records": records}}]
-    report.write_text(json.dumps(data))
-
-
-@pytest.mark.parametrize("job_name", ["customer", "independent-review"])
-@pytest.mark.parametrize(
-    "failure_case",
-    [
-        ("E FileNotFoundError: [Errno 2] PRIVATE_PATH", "FileNotFoundError", None, None),
-        ("E subprocess.CalledProcessError: PRIVATE_COMMAND", "CalledProcessError", None, None),
-        (
-            "E RuntimeError: project_python_option_unsupported:-I; PRIVATE_TRACE",
-            "RuntimeError",
-            "project_python_option_unsupported",
-            "-I",
-        ),
-        ("E PRIVATE_EXCEPTION: PRIVATE_TRACE", None, None, None),
-    ],
-)
-def test_public_test_failure_class_uses_matching_record_only(tmp_path, job_name, failure_case):
-    detail, exception, diagnostic, option = failure_case
-    _write_public_phase_record_report(tmp_path, "public.py::test_public_case[PRIVATE_PARAMETER]", detail)
-    result = subprocess.run(
-        [sys.executable, "-c", _public_projector(job_name)],
-        cwd=tmp_path,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    assert result.returncode == 0, result.stderr
-    row = json.loads(result.stdout)["finding_location"]
-    assert row.get("test_failure_class") == exception
-    assert row.get("test_diagnostic") == diagnostic
-    assert row.get("python_option") == option
-    assert "PRIVATE" not in result.stdout and "PermissionError" not in result.stdout
-
-
-@pytest.mark.parametrize("job_name", ["customer", "independent-review"])
-@pytest.mark.parametrize("snapshot", ["head", "base", "head_and_base"])
-def test_public_test_failure_reads_immutable_snapshot_records(tmp_path, job_name, snapshot):
-    nodeid = "public.py::test_public_case[PRIVATE_PARAMETER]"
-    _write_public_phase_record_report(tmp_path, nodeid, "E FileNotFoundError: PRIVATE_PATH")
-    report = tmp_path / ".specfact/code-review.json"
-    data = json.loads(report.read_text())
-    evidence = data["analyzer_evidence"][0]
-    execution = evidence.pop("target_execution")
-    selected = "head" if snapshot == "head_and_base" else snapshot
-    evidence[selected] = {"target_execution": execution}
-    if snapshot == "head_and_base":
-        evidence["base"] = {
-            "target_execution": {
-                "records": [
-                    {
-                        "nodeid": nodeid,
-                        "phase": "call",
-                        "outcome": "failed",
-                        "detail": "E PermissionError: PRIVATE_BASE",
-                    },
-                ]
-            }
-        }
-    report.write_text(json.dumps(data))
-    result = subprocess.run(
-        [sys.executable, "-c", _public_projector(job_name)],
-        cwd=tmp_path,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    assert result.returncode == 0, result.stderr
-    row = json.loads(result.stdout)["finding_location"]
-    assert row.get("test_failure_class") == "FileNotFoundError"
-    assert "PRIVATE" not in result.stdout and "PermissionError" not in result.stdout

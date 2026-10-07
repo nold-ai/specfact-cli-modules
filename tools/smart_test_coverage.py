@@ -11,7 +11,29 @@ from dev_bootstrap_support import ROOT, ensure_core_dependency
 
 
 def _run_pytest(extra_args: list[str]) -> int:
-    cmd = [sys.executable, "-m", "pytest", "tests", *extra_args]
+    # Separate explicit proofs from parent discovery so pytest collects them once.
+    host = subprocess.run(
+        [sys.executable, "-m", "pytest", "tests/host/proof_capsule_deferred_review_ci.py", *extra_args],
+        cwd=ROOT,
+        check=False,
+    )
+    if host.returncode:
+        return host.returncode
+    # Baseline proof versions stay immutable for index review; run their current contexts.
+    baseline_proofs = (
+        "tests/unit/test_capsule_deferred_review_ci.py",
+        "tests/unit/test_macos_managed_uv_child.py",
+        "tests/unit/test_macos_native_broker_wait.py",
+        "tests/unit/test_macos_python_candidate.py",
+    )
+    cmd = [
+        sys.executable,
+        "-m",
+        "pytest",
+        "tests",
+        *("--ignore=" + proof for proof in baseline_proofs),
+        *extra_args,
+    ]
     return subprocess.run(cmd, cwd=ROOT, check=False).returncode
 
 

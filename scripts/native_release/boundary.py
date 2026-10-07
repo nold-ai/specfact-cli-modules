@@ -11,7 +11,7 @@ import tempfile
 import time
 from pathlib import Path
 
-from tests.unit import test_macos_native_broker_wait as harness
+from tests.native import proof_macos_native_broker_wait as harness
 
 
 COMPONENT_FILES = frozenset(

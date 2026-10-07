@@ -4245,3 +4245,58 @@ Only changed unpublished module 0.51.1's filesystem checksum is refreshed locall
 Source fix 14c738cf43ff43b19a6cff9a8a9391eeb705bd8b passes normal commit hooks (28 contracts in 4.01 s; approved local capsule review DEFERRED). Signature workflow 37585303049 completes SUCCESS and appends f177e906f688a72915689d84634b885131d569d1. The verified diff adds only the manifest signature; source bytes, module version and checksum d688d26265448c66e9bfeca02fe6ac5932c1d3670d642e7f0b32d78d1989d1e7 remain unchanged. Fast-forward readback plus public-key --require-signature --payload-from-filesystem --enforce-version-bump --version-check-base origin/dev verifies all seven manifests (`/private/tmp/specfact460-autofix-signed-readback.log`). No local private key or publication is used.
 
 The consolidated CodeRabbit GitHub annotation PRRT_kwDORVEFbs6pygT8 is resolved after pushing the verified two-record documentation correction; summary comment6032841628 records the fixes and limits. The other two defects originate from the completed CLI review, with no corresponding GitHub thread invented. This substantive evidence follow-up preserves the exact verified source/signature bytes and starts normal current-head acceptance. Current Linux fixture-context/deadline failures remain open pending the recorded test-context decision; no stale or skipped review is described as green.
+
+
+## Approved required proof contexts — 2026-10-07 (Europe/Berlin)
+
+The maintainer's “yes approved” authorizes separating host/macOS proofs from
+confined portable discovery while retaining every assertion. It also authorizes
+the bounded CodeRabbit destination review: the committed 2aea48da→082e8b6d CLI
+review completed with zero findings over15files. Current paginated GitHub thread
+readback reports zero unresolved current annotations.
+
+Specification and failing regressions preceded entrypoint changes: initial three
+context checks FAIL3 in0.16s; native-job, package-marker ambiguity, exclusive ABI
+preparation and host invocation regressions each separately FAIL before their
+fixes. Separate host execution is required: pytest parent-directory plus explicit
+child-file discovery omitted all19hostcases; --keep-duplicates repeated them.
+Full and SMART now invoke the proof separately before the portable suite, keeping
+both actual exit statuses. No pytest discovery or installed-controller policy is
+weakened. Empty namespace package markers are removed after the installed0.51.0
+selection probe reproduces their ambiguity. Each native ABI preparation has its
+own fresh cwd, retaining exclusive Node output ownership and existing input hashes.
+
+The four obsolete baseline modules are byte-identical to origin/dev; canonical
+host wrappers ignore only those versions. All81 original top-level test/helper
+ASTs are retained, normalizing only nine cross-module public helper identifiers.
+One copied test selector is renamed from copies_data to copies_runtime_bytes to
+satisfy the introduced whole-file naming check; its entire body is unchanged.
+The read-only reviewer independently confirms assertion preservation and that all
+nine newly added Python files select four portable files under installed0.51.0,
+with no proof or obsolete baseline fixture selected. Proof-only selection remains
+an error. Required macOS jobs explicitly execute parser/broker proofs on all three
+OS labels and all three minimal CPython ABI inputs; hosted execution remains due.
+
+Focused final context/portable/host tests PASS154 in13.03s before the selector-only
+rename. Full host entrypoint executes19hostcases separately, then5275portable cases
+PASS /71declared skips /95subtests in139.57s, with5existing fork warnings. SMART
+executes the same19hostcases and5275portable cases in157.19s. Native parser PASS14
+in1.41s with real SDK/Rust; all three real broker CLI proofs exit0. Format, typing
+(0errors/0warnings), lint, YAML, imports,28contracts, strict OpenSpec and actionlint
+PASS. AST, AI-bloat and Radon return0findings for all introduced context modules.
+Pinned Semgrep1.144.0 reports0errors; two remaining tools print findings are on
+unchanged baseline lines. Strict public-key filesystem/version signatures PASS7;
+this change alters no signed module payload.
+
+Fresh historical final-wheel acceptance is now verified from native run
+37585571068: all9cells and all8checks percellPASS. Receipts bind merge65cafbd5e0a2a008b3aba0835a8fd38cb0f83e2d, whose parents are dev74d3fd4dd6f9b171f18857abcc8f659c80d686e9 and PR082e8b6dae8d0b333315d8927d4770a92fda1853.
+Per-ABI archive/manifest hashes are identical across macOS14/15/26. This proves the
+corrected wheel/runtime bytes in staging; it is neither protected publication nor
+ordinary signed customer installation. Fresh context-head CI is still required.
+
+The existing authenticated0.51.0 controller additionally reproduces ambiguous
+selection for the changed run/commands.py with two baseline test_commands.py
+stems. Candidate explicit-match correction is absent from that immutable published
+reviewer. Previously observed Pylint30s and independent300s deadlines remain
+required. No published reviewer modification, skip-to-PASS conversion, deadline
+increase, automatic merge/publication/issue closure/OpenSpec archive is performed.

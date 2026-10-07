@@ -107,7 +107,7 @@ def test_second_exec_is_terminated_not_readmitted():
         module.verify_status({**status, "signal": 0}, {"exec": 123, "verified_ns": 100, "held": False}, 123, "reexec")
 
 
-def test_prepare_copies_data_without_candidate_execution(tmp_path, monkeypatch):
+def test_prepare_copies_runtime_bytes_without_candidate_execution(tmp_path, monkeypatch):
     module = candidate()
     runtime = tmp_path / "input"
     (runtime / "bin").mkdir(parents=True)
@@ -170,29 +170,32 @@ def test_inventory_rejects_byte_and_entry_substitution(tmp_path):
         module.verify_inventory(tmp_path, original)
 
 
-def test_native_candidate_matrix():
-    import os
-    import platform
-    import tempfile
+@pytest.mark.parametrize("version", ["3.11", "3.12", "3.13"])
+def test_stdlib_source_preserves_frozen_module_paths_and_zip_bytes(tmp_path, version):
+    import hashlib
+    import zipfile
 
-    selected = os.environ.get("SPECFACT_CPYTHON_CANDIDATE_INPUTS")
-    if not selected:
-        pytest.skip("maintainer-only native inputs not selected")
-    assert platform.system() == "Darwin" and platform.machine() == "arm64"
     module = candidate()
-    import json
-
-    inputs = json.loads(selected)
-    assert set(inputs) == {"3.11", "3.12", "3.13"}
-    for version, runtime in sorted(inputs.items()):
-        # Retain private raw diagnostics even after a failed measurement.
-        root = Path(tempfile.mkdtemp(prefix="sf-python-pytest-", dir="/private/tmp"))
-        with (root / "diagnostics.log").open("w") as stream:
-            from contextlib import redirect_stdout
-
-            with redirect_stdout(stream):
-                result = module.run(root, Path(runtime), version)
-        assert result["candidate_passed"] is True
-        assert result["cases"] == result["passed"] == 6
-        assert result["production_approved"] is False
-        assert result["signed_boundary_verified"] is False
+    runtime = tmp_path / "input"
+    stdlib = runtime / "lib" / f"python{version}"
+    (stdlib / "collections").mkdir(parents=True)
+    (stdlib / "site-packages").mkdir()
+    sources = {
+        "os.py": b"pass\n",
+        "_collections_abc.py": b"class Iterable: pass\n",
+        "collections/__init__.py": b"pass\n",
+        "collections/abc.py": b"from _collections_abc import *\n",
+        "dataclasses.py": b"pass\n",
+    }
+    for name, content in sources.items():
+        (stdlib / name).write_bytes(content)
+    (stdlib / "site-packages/untrusted.py").write_bytes(b"untrusted")
+    destination = tmp_path / "payload"
+    (destination / "lib" / f"python{version}").mkdir(parents=True)
+    inputs = {}
+    module._stdlib(runtime, destination, version, inputs)
+    with zipfile.ZipFile(destination / "lib" / f"python{version.replace('.', '')}.zip") as archive:
+        for name, content in sources.items():
+            assert (destination / "lib" / f"python{version}" / name).read_bytes() == archive.read(name) == content
+            assert inputs[f"stdlib/{name}"] == hashlib.sha256(content).hexdigest()
+    assert not (destination / "lib" / f"python{version}/site-packages").exists()

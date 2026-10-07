@@ -1104,3 +1104,16 @@ coverage and failure-evidence assertions.
 - **WHEN** the hook timeout test simulates the existing 300-second review deadline
 - **THEN** report preparation and subprocess working-directory assertions use the fixture-owned temporary repository and cannot consume or modify the active reviewer's report
 - **AND** timeout exit124 and the existing diagnostic and selected-file assertions remain mandatory
+
+
+### Requirement: Repository proof contexts retain every required assertion
+
+The repository SHALL execute every retained assertion in a required context that supplies its real host or native prerequisites while preserving independent confined portable review.
+
+#### Scenario: Repository proof contexts retain every required assertion
+
+- **GIVEN** the maintainer-approved separation of ordinary-host/macOS proofs from confined Linux tests
+- **WHEN** the repository runs capsule review, full/SMART host verification and native boundary acceptance
+- **THEN** existing filename discovery selects portable regression modules for confined execution while required host/macOS jobs explicitly execute retained proof modules with their actual prerequisites
+- **AND** unchanged baseline proof files are preserved; revised proof assertions, mutation identities, 100-repetition lifecycle requirements and five-second cleanup bounds are retained in their appropriate required contexts
+- **AND** no authenticated installed reviewer is modified, no test failure or skip becomes PASS, and no deadline, security boundary or acceptance requirement is relaxed

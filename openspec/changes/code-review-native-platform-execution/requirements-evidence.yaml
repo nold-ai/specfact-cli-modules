@@ -791,3 +791,18 @@ requirements:
       method: test
       intent: Guard synthetic observation playback against host RECORD scans while preserving all actual discovery and evidence assertions.
       observable: Autouse guards fail 38 prior evidence/discovery cases; explicit fixture bridges pass all 244 portable observation, worker, ownership and target coverage tests. The native-alias-API regression passes under the actual reviewer plugin after fixture context isolation with original diagnostic/record/threshold assertions. Two declared repository workers and disabled restarts retain all 1752 selected tests and actual combined coverage locally; final full/SMART and hosted timing remain independently required. Actual native observer subprocesses and dedicated ownership checks remain.
+
+  openspec:code-review-native-platform-execution:review-native-platform-execution:repository-proof-contexts-retain-every-required-assertion:
+    rationale: Host and native fixture evidence requires its real execution context, while portable tests remain independently confined.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#460
+    touchpoints:
+    - id: required-proof-contexts
+      kind: config_file
+      locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
+    verification_cases:
+    - case_id: 460-20-1
+      scenario_id: repository-proof-contexts-retain-every-required-assertion
+      method: test
+      intent: Keep all current assertions in required host or native jobs and retain rejection of proof-only portable selection.
+      observable: Three context regressions fail before entrypoint changes; the required CPython-job regression separately fails before workflow wiring. Focused tests and assertion-preservation checks verify the revised contexts. Exact-head hosted evidence remains required; no skipped assertion or local deferral establishes PASS.
