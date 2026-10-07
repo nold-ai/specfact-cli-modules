@@ -126,6 +126,12 @@ The macOS backend SHALL preserve the exact released baseline's scope, findings, 
 - **THEN** machine-readable CLI and broker proof results use explicit serialized stdout records with the same values, flush points and failure exits; parser mutation cases use a named fixed replacement inventory with every original native parser assertion; the trusted timeout fixture executes the saved wrapper as a named module with every original budget/exit assertion
 - **AND** source naming remains specific, no review rule is disabled, and native permissions, byte identities and protocol limits remain unchanged
 
+#### Scenario: Hosted review fixtures separate fixed payloads from scenario logic
+
+- **WHEN** hosted review tests materialize fixed scripts, isolated reviewer stubs and tracked reports
+- **THEN** named fixed payloads and shared report setup preserve every source script, sandbox/bootstrap assertion, parameter case, private-output assertion and review failure result
+- **AND** the scenario functions remain focused without suppressing informational clean-code findings
+
 #### Scenario: Hosted incomplete pytest exposes only fixed diagnostic classes
 
 - **WHEN** a required hosted review reports a pytest tool error

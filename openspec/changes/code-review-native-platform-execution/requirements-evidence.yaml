@@ -599,6 +599,11 @@ requirements:
       method: test
       intent: "Hosted structured Semgrep failures retain a safe actionable variant."
       observable: "Four meaningful RED cases and two injected decoder-failure RED cases precede fixed scalar and payload-bearing error-tag projection from bounded JSON details in both trusted inline diagnostic paths. Unknown types, payloads, source excerpts, malformed or oversized details remain private; structured outer errors take precedence over nested timeout text, the existing 200-location limit and review exit remain unchanged."
+    - case_id: 460-15-32
+      scenario_id: prepare-unfamiliar-projects-from-discovered-or-caller-supplied-setup
+      method: test
+      intent: Remove informational fixture bloat while preserving actual recipe execution and failure assertions.
+      observable: Six direct AI-bloat informational rows precede extraction of named fixed scripts, template stubs and shared tracked-report setup. Exact previously rendered isolated module bytes match for three representative success/failure/private-reason cases. The original120focused cases and eight local-deferral parameter scenarios pass; AST, AI-bloat and fixture Radon return zero findings, with no suppressions. The68-file pinned clean/bloat/bug scan has no added-line matches or parse errors. Hosted independent/candidate review remains separately required.
     - case_id: 460-15-31
       scenario_id: prepare-unfamiliar-projects-from-discovered-or-caller-supplied-setup
       method: test

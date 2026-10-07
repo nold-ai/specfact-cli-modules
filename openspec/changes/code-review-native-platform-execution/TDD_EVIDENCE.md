@@ -4082,3 +4082,39 @@ Five delivered archive CI cells at61a859ccnow pass: macOS14/cp312/cp313,
 macOS15/cp313, and macOS26/cp312/cp313. Four cells remain running; no final matrix
 or public installation pass is inferred. Final hooks and exact-head CI are still
 required, and the Pylint timeout remains unresolved.
+
+
+## Focused hosted fixture logic — 7 October 2026 (Europe/Berlin)
+
+The broadened direct pass retains six AI-bloat loc-vs-complexity informational
+rows in the deferred-review fixture module (not the previous five-file subset).
+Spec precedes the direct RED inventory in
+`/private/tmp/specfact460-fixture-bloat-red.log`. Fixed script payloads are now
+named constants; isolated fixture modules use named templates with explicit
+literal replacements. The exact formerly rendered module bytes match for
+three success/failure/private-reason inputs. File materialization and Git branch
+transitions are separate fixture responsibilities. Shared tracked-report setup
+removes duplicated construction while preserving real inline projector execution.
+Command trace assertions remain intact in a dedicated assertion helper.
+
+An initial extraction accidentally attached the existing eight-case parameter
+decorator to that helper:112tests pass but the scenario test errors because its
+fixture is missing. This is retained in
+`/private/tmp/specfact460-fixture-bloat-green.log`, not called GREEN. Restoring
+the decorator to the scenario retains all120focused cases, passing in4.34s in
+`/private/tmp/specfact460-fixture-bloat-final-green.log`. Typing has zero errors/
+warnings. Touched AST and AI-bloat, and full fixture Radon, return zero findings.
+The unchanged three pinned Semgrep rule packs scan all68changed Python files:
+zero parse errors,29legacy raw rows and zero added-line matches in
+`/private/tmp/specfact460-fixture-final-semgrep.private.json`. No rule, severity,
+private-output guard, installed-reviewer boundary, test or budget is weakened.
+Final stable full/SMART and hooks follow before push; supported native matrix
+and exact-head hosted review remain independently required.
+
+
+Final stable full and SMART each pass5,245tests/75explicit skips/95subtests/
+five existing warnings in157.65s/158.25s, with tracked source/config stable:
+`/private/tmp/specfact460-fixture-final-{full,smart}.log`. No test case was lost
+in fixture extraction. Required Linux review remains deferred locally and must
+complete on the pushed exact head; native source bytes and signed module payload
+are unchanged by these fixture-only corrections. Normal hooks follow before push.

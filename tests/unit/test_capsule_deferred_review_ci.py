@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import json
 import os
 import subprocess
 import sys
 from pathlib import Path
+from string import Template
 
 import pytest
 import yaml
@@ -15,8 +17,186 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 STEP_NAME = "Run deferred candidate commit review without weakening enforcement"
 
 
+_DEFERRED_REVIEW_SCRIPT = (
+    "import os, subprocess, sys\n"
+    "from pathlib import Path\n"
+    "assert os.environ['SPECFACT_CODE_REVIEW_ENFORCEMENT'] == 'changed'\n"
+    "import tomllib\n"
+    "config = Path(os.environ['SPECFACT_CODE_REVIEW_PROJECT_CONFIG'])\n"
+    "assert tomllib.loads(config.read_text()) == {'manager': 'hatch', 'environment': 'default'}\n"
+    "assert Path(os.environ['SPECFACT_CODE_REVIEW_SUBJECT_ROOT']).resolve() == Path.cwd()\n"
+    "assert not {'GITHUB_TOKEN', 'GH_TOKEN', 'PYTHONPATH'} & os.environ.keys()\n"
+    "from pathlib import Path\n"
+    "cache = Path(os.environ['SPECFACT_CODE_REVIEW_CAPSULE_CACHE'])\n"
+    "assert cache == Path(os.environ['CUSTOMER_ROOT']) / 'commit-review-cache'\n"
+    "cache.mkdir(parents=True, exist_ok=True)\n"
+    "(cache / 'verified-fixture-blob').write_text('fixture')\n"
+    "assert sys.argv[1:] == ['packages/example/src/example.py']\n"
+    "assert open(sys.argv[1]).read() == 'value = 2\\n'\n"
+    "assert subprocess.check_output(['git', 'diff', '--cached', '--name-only'], text=True).strip() == sys.argv[1]\n"
+    "assert not subprocess.check_output(['git', 'diff', '--name-only'])\n"
+    "raise SystemExit(int(os.environ['FIXTURE_GATE_EXIT']))\n"
+)
+
+_PREPARATION_CLI_SCRIPT = (
+    "import os,sys\n"
+    "assert sys.argv[1:7] == ['code','review','runtime','prepare','--scope','index']\n"
+    "assert os.environ['SPECFACT_MODULES_REPO'] == os.environ['GITHUB_WORKSPACE']\n"
+    "assert os.environ['SPECFACT_CODE_REVIEW_CAPSULE_CACHE'].endswith('/commit-review-cache')\n"
+    "print('{}')\n"
+)
+
+_BLOCK2_HATCH_FIXTURE = (
+    "\n"
+    'uname() { if [[ "${1:-}" == "-m" ]]; then echo arm64; else echo "$FIXTURE_PLATFORM"; fi; }\n'
+    "hatch() {\n"
+    '  printf \'%s\\n\' "$*" >> "$FIXTURE_CALLS"\n'
+    '  if [[ "$*" == *pre_commit_code_review.py* ]]; then return 99; fi\n'
+    '  if [[ "$*" == *contract-test-status* ]]; then return 1; fi\n'
+    "  return 0\n"
+    "}\n"
+    "run_block2\n"
+)
+
+_TRUSTED_BOOTSTRAP_LAUNCHER = (
+    "            import subprocess,sys\n"
+    "            from pathlib import Path\n"
+    "            result=subprocess.run([sys.executable,*sys.argv[1:]],check=False)\n"
+    "            if result.returncode:\n"
+    "                raise SystemExit(result.returncode)\n"
+    "            target=Path(sys.argv[-1])\n"
+    "            site=next((target/'lib').glob('python*/site-packages'))\n"
+    "            (site/'pip/__main__.py').write_text(\n"
+    "                \"import sys\\nassert sys.argv[1:]==['install','--no-cache-dir','specfact-cli==0.55.4']\\n\"\n"
+    "            )\n"
+    "            core=site/'specfact_cli'\n"
+    "            core.mkdir()\n"
+    "            (core/'__init__.py').write_text('')\n"
+    "            (core/'cli.py').write_text(\n"
+    "                \"import sys\\nassert sys.argv[1:]==['module','install','nold-ai/specfact-code-review',\"\n"
+    "                \"'--scope','user','--version','0.51.0','--source','marketplace']\\n\"\n"
+    "            )\n"
+    "            "
+)
+
+_ISOLATED_REVIEWER_TEMPLATES = {
+    "specfact_cli/__init__.py": "",
+    "specfact_cli/cli.py": "import os,json\n"
+    "from pathlib import Path\n"
+    "root=Path(os.environ['HOME']).parent\n"
+    "assert Path.cwd() == root, 'core discovery entered the candidate subject'\n"
+    "assert not "
+    "{'PYTHONPATH','GITHUB_TOKEN','GH_TOKEN','SPECFACT_MODULES_ROOTS','SPECFACT_ALLOW_UNSIGNED'} "
+    "& os.environ.keys()\n"
+    "def app(*,args):\n"
+    "    assert Path.cwd() == root/'subject'\n"
+    "    (root/'argv.json').write_text(json.dumps(args))\n"
+    "    raise SystemExit($REVIEW_EXIT)\n",
+    "specfact_cli/registry/__init__.py": "import os\n"
+    "from pathlib import Path\n"
+    "class CommandRegistry:\n"
+    "    @classmethod\n"
+    "    def get_module_typer(cls,name):\n"
+    "        root=Path(os.environ['HOME']).parent\n"
+    "        assert name=='code' and Path.cwd()==root\n"
+    "        (root/'preloaded').touch()\n",
+    "specfact_code_review/__init__.py": "",
+    "specfact_code_review/run/__init__.py": "",
+    "specfact_code_review/run/portable_snapshot.py": "def "
+    "discover_snapshot(root,*,config_path,source_snapshot):\n"
+    "    assert root==source_snapshot.root and "
+    "config_path.is_file()\n"
+    "    return source_snapshot\n",
+    "specfact_code_review/run/runtime_builder.py": "import os\n"
+    "from pathlib import Path\n"
+    "def prepare_runtime(plan,*,runtime):\n"
+    "    root=Path(os.environ['HOME']).parent\n"
+    "    assert (root/'preloaded').exists()\n"
+    "    with (root/'prepared').open('a') as out: "
+    "out.write(plan.root.name+'\\n')\n",
+    "specfact_code_review/run/runtime_interpreter.py": "def select_environment(plan,*,current): return current\n",
+    "specfact_code_review/run/runner.py": "def _capsule_environment_id(): return 'linux-x86_64-cp312'\n"
+    "def _prepare_capsule_runtime(*,environment_id): return object(),''\n"
+    "def _cleanup_capsule_runtime(runtime): pass\n",
+    "specfact_code_review/run/scope.py": "from types import SimpleNamespace\n"
+    "def ScopeRequest(**kw): return SimpleNamespace(**kw)\n"
+    "def resolve_scope(request):\n"
+    "    assert request.scope=='index' and "
+    "request.portable_project_runtime\n"
+    "    return "
+    "SimpleNamespace(status=$STATUS,reason=$REASON,base_snapshot=SimpleNamespace(root=request.repository/'base'),head_snapshot=SimpleNamespace(root=request.repository/'head'))\n"
+    "def cleanup_scope_resolution(resolution): pass\n",
+}
+
+_FIXED_ANALYZER_FINDING_ROWS = [
+    {
+        "file": "public.py",
+        "line": 1,
+        "severity": "error",
+        "category": "clean_code",
+        "tool": "radon",
+        "rule": "CC34",
+        "message": "PRIVATE_MESSAGE",
+    },
+    {
+        "file": "public.py",
+        "line": 2,
+        "severity": "error",
+        "category": "tool_error",
+        "tool": "semgrep",
+        "rule": "tool_error",
+        "message": "TimeoutExpired PRIVATE_SECRET",
+    },
+    {
+        "file": "public.py",
+        "line": 3,
+        "severity": "error",
+        "category": "PRIVATE_CATEGORY",
+        "tool": "PRIVATE_TOOL",
+        "rule": "PRIVATE_RULE",
+        "message": "PRIVATE_SECRET",
+    },
+]
+
+_DEPTH_FAILURE_FINDING_ROWS = [
+    {
+        "file": "public.py",
+        "line": 1,
+        "severity": "error",
+        "category": "tool_error",
+        "tool": "semgrep",
+        "message": "semgrep returned structured errors; details=DECODER_DEPTH_FAILURE",
+    }
+]
+
+
+def _write_public_report(root, findings):
+    _git(root, "init", "-q")
+    (root / "public.py").write_text("value = 1\n")
+    _git(root, "add", "public.py")
+    report = root / ".specfact/code-review.json"
+    report.parent.mkdir()
+    report.write_text(json.dumps({"findings": findings}))
+
+
 def _git(root: Path, *args: str) -> str:
     return subprocess.check_output(["git", "-C", str(root), *args], text=True).strip()
+
+
+def _write_deferred_fixture_sources(repository):
+    target = repository / "packages/example/src/example.py"
+    target.parent.mkdir(parents=True)
+    target.write_text("value = 1\n")
+    unrelated = target.with_name("unrelated.py")
+    unrelated.write_text("value = 1\n")
+    script = repository / "scripts/pre_commit_code_review.py"
+    script.parent.mkdir()
+    script.write_text(_DEFERRED_REVIEW_SCRIPT)
+    controller = repository / "packages/specfact-code-review/src/specfact_cli"
+    controller.mkdir(parents=True)
+    (controller / "__init__.py").write_text("")
+    (controller / "cli.py").write_text(_PREPARATION_CLI_SCRIPT)
+    return target, unrelated
 
 
 def _deferred_review_repository(tmp_path: Path, advanced_dev: bool):
@@ -25,43 +205,7 @@ def _deferred_review_repository(tmp_path: Path, advanced_dev: bool):
     _git(repository, "init", "-q")
     _git(repository, "config", "user.email", "fixture@example.invalid")
     _git(repository, "config", "user.name", "Fixture")
-    target = repository / "packages/example/src/example.py"
-    target.parent.mkdir(parents=True)
-    target.write_text("value = 1\n")
-    unrelated = target.with_name("unrelated.py")
-    unrelated.write_text("value = 1\n")
-    script = repository / "scripts/pre_commit_code_review.py"
-    script.parent.mkdir()
-    script.write_text(
-        "import os, subprocess, sys\n"
-        "from pathlib import Path\n"
-        "assert os.environ['SPECFACT_CODE_REVIEW_ENFORCEMENT'] == 'changed'\n"
-        "import tomllib\n"
-        "config = Path(os.environ['SPECFACT_CODE_REVIEW_PROJECT_CONFIG'])\n"
-        "assert tomllib.loads(config.read_text()) == {'manager': 'hatch', 'environment': 'default'}\n"
-        "assert Path(os.environ['SPECFACT_CODE_REVIEW_SUBJECT_ROOT']).resolve() == Path.cwd()\n"
-        "assert not {'GITHUB_TOKEN', 'GH_TOKEN', 'PYTHONPATH'} & os.environ.keys()\n"
-        "from pathlib import Path\n"
-        "cache = Path(os.environ['SPECFACT_CODE_REVIEW_CAPSULE_CACHE'])\n"
-        "assert cache == Path(os.environ['CUSTOMER_ROOT']) / 'commit-review-cache'\n"
-        "cache.mkdir(parents=True, exist_ok=True)\n"
-        "(cache / 'verified-fixture-blob').write_text('fixture')\n"
-        "assert sys.argv[1:] == ['packages/example/src/example.py']\n"
-        "assert open(sys.argv[1]).read() == 'value = 2\\n'\n"
-        "assert subprocess.check_output(['git', 'diff', '--cached', '--name-only'], text=True).strip() == sys.argv[1]\n"
-        "assert not subprocess.check_output(['git', 'diff', '--name-only'])\n"
-        "raise SystemExit(int(os.environ['FIXTURE_GATE_EXIT']))\n"
-    )
-    controller = repository / "packages/specfact-code-review/src/specfact_cli"
-    controller.mkdir(parents=True)
-    (controller / "__init__.py").write_text("")
-    (controller / "cli.py").write_text(
-        "import os,sys\n"
-        "assert sys.argv[1:7] == ['code','review','runtime','prepare','--scope','index']\n"
-        "assert os.environ['SPECFACT_MODULES_REPO'] == os.environ['GITHUB_WORKSPACE']\n"
-        "assert os.environ['SPECFACT_CODE_REVIEW_CAPSULE_CACHE'].endswith('/commit-review-cache')\n"
-        "print('{}')\n"
-    )
+    target, unrelated = _write_deferred_fixture_sources(repository)
     _git(repository, "add", ".")
     _git(repository, "-c", "core.hooksPath=/dev/null", "commit", "-qm", "fixture base")
     base = _git(repository, "rev-parse", "HEAD")
@@ -169,6 +313,25 @@ def _deferral_worktree(tmp_path: Path, scenario):
     return worktree
 
 
+def _assert_block2_trace(invoked, expected, stderr):
+    for command in [
+        "generate-command-overview",
+        "check-command-overview",
+        "check-command-contract",
+        "check-core-documentation-accountability",
+        "check-docs-commands.py",
+        "check-prompt-commands.py",
+        "requirements_evidence_gate.py --staged",
+    ]:
+        assert command in invoked
+    assert "pre_commit_code_review.py" not in invoked
+    if expected == 0:
+        assert "DEFERRED" in stderr
+        assert "contract-test-contracts" in invoked
+    else:
+        assert "Capsule review deferral" in stderr
+
+
 @pytest.mark.parametrize(
     "scenario",
     [
@@ -187,19 +350,7 @@ def test_narrow_local_deferral_retains_block2_and_cannot_run_in_ci(tmp_path: Pat
     worktree = _deferral_worktree(tmp_path, scenario)
     calls = tmp_path / "calls"
     script = (REPO_ROOT / "scripts/pre-commit-quality-checks.sh").read_text().rsplit('main "$@"', 1)[0]
-    recipe = (
-        script
-        + r"""
-uname() { if [[ "${1:-}" == "-m" ]]; then echo arm64; else echo "$FIXTURE_PLATFORM"; fi; }
-hatch() {
-  printf '%s\n' "$*" >> "$FIXTURE_CALLS"
-  if [[ "$*" == *pre_commit_code_review.py* ]]; then return 99; fi
-  if [[ "$*" == *contract-test-status* ]]; then return 1; fi
-  return 0
-}
-run_block2
-"""
-    )
+    recipe = script + _BLOCK2_HATCH_FIXTURE
     environment = os.environ | {
         "FIXTURE_PLATFORM": platform,
         "FIXTURE_CALLS": str(calls),
@@ -212,22 +363,7 @@ run_block2
     )
     assert result.returncode == expected, result.stdout + result.stderr
     invoked = calls.read_text()
-    for command in [
-        "generate-command-overview",
-        "check-command-overview",
-        "check-command-contract",
-        "check-core-documentation-accountability",
-        "check-docs-commands.py",
-        "check-prompt-commands.py",
-        "requirements_evidence_gate.py --staged",
-    ]:
-        assert command in invoked
-    assert "pre_commit_code_review.py" not in invoked
-    if expected == 0:
-        assert "DEFERRED" in result.stderr
-        assert "contract-test-contracts" in invoked
-    else:
-        assert "Capsule review deferral" in result.stderr
+    _assert_block2_trace(invoked, expected, result.stderr)
 
 
 def test_hosted_preparation_has_separate_bound_and_cannot_bypass_review() -> None:
@@ -295,58 +431,8 @@ def test_independent_reviewer_cannot_continue_after_failure_or_retain_credential
 
 def _isolated_reviewer_modules(review_case):
     review_exit, preparation_status, fixture_reason = review_case
-    return {
-        "specfact_cli/__init__.py": "",
-        "specfact_cli/cli.py": (
-            "import os,json\nfrom pathlib import Path\n"
-            "root=Path(os.environ['HOME']).parent\n"
-            "assert Path.cwd() == root, 'core discovery entered the candidate subject'\n"
-            "assert not {'PYTHONPATH','GITHUB_TOKEN','GH_TOKEN','SPECFACT_MODULES_ROOTS','SPECFACT_ALLOW_UNSIGNED'} & os.environ.keys()\n"
-            "def app(*,args):\n"
-            "    assert Path.cwd() == root/'subject'\n"
-            "    (root/'argv.json').write_text(json.dumps(args))\n"
-            f"    raise SystemExit({review_exit})\n"
-        ),
-        "specfact_cli/registry/__init__.py": (
-            "import os\nfrom pathlib import Path\n"
-            "class CommandRegistry:\n"
-            "    @classmethod\n"
-            "    def get_module_typer(cls,name):\n"
-            "        root=Path(os.environ['HOME']).parent\n"
-            "        assert name=='code' and Path.cwd()==root\n"
-            "        (root/'preloaded').touch()\n"
-        ),
-        "specfact_code_review/__init__.py": "",
-        "specfact_code_review/run/__init__.py": "",
-        "specfact_code_review/run/portable_snapshot.py": (
-            "def discover_snapshot(root,*,config_path,source_snapshot):\n"
-            "    assert root==source_snapshot.root and config_path.is_file()\n"
-            "    return source_snapshot\n"
-        ),
-        "specfact_code_review/run/runtime_builder.py": (
-            "import os\nfrom pathlib import Path\n"
-            "def prepare_runtime(plan,*,runtime):\n"
-            "    root=Path(os.environ['HOME']).parent\n"
-            "    assert (root/'preloaded').exists()\n"
-            "    with (root/'prepared').open('a') as out: out.write(plan.root.name+'\\n')\n"
-        ),
-        "specfact_code_review/run/runtime_interpreter.py": "def select_environment(plan,*,current): return current\n",
-        "specfact_code_review/run/runner.py": (
-            "def _capsule_environment_id(): return 'linux-x86_64-cp312'\n"
-            "def _prepare_capsule_runtime(*,environment_id): return object(),''\n"
-            "def _cleanup_capsule_runtime(runtime): pass\n"
-        ),
-        "specfact_code_review/run/scope.py": (
-            "from types import SimpleNamespace\n"
-            "def ScopeRequest(**kw): return SimpleNamespace(**kw)\n"
-            "def resolve_scope(request):\n"
-            "    assert request.scope=='index' and request.portable_project_runtime\n"
-            f"    return SimpleNamespace(status={preparation_status!r},reason={fixture_reason!r},"
-            "base_snapshot=SimpleNamespace(root=request.repository/'base'),"
-            "head_snapshot=SimpleNamespace(root=request.repository/'head'))\n"
-            "def cleanup_scope_resolution(resolution): pass\n"
-        ),
-    }
+    replacements = {"REVIEW_EXIT": str(review_exit), "STATUS": repr(preparation_status), "REASON": repr(fixture_reason)}
+    return {name: Template(source).substitute(replacements) for name, source in _ISOLATED_REVIEWER_TEMPLATES.items()}
 
 
 def _create_isolated_reviewer(tmp_path: Path, review_case):
@@ -414,8 +500,6 @@ def test_isolated_reviewer_preloads_trusted_code_and_never_accepts_incomplete_pr
 
 
 def _assert_incomplete_preparation(trusted: Path, result, fixture_reason: str):
-    import json
-
     assert not (trusted / "argv.json").exists()
     assert not (trusted / "prepared").exists()
     diagnostic = json.loads((trusted / "status.public.json").read_text())
@@ -430,8 +514,6 @@ def _assert_incomplete_preparation(trusted: Path, result, fixture_reason: str):
 
 
 def _assert_installed_review_arguments(trusted: Path):
-    import json
-
     assert (trusted / "prepared").read_text().splitlines() == ["base", "head"]
     args = json.loads((trusted / "argv.json").read_text())
     assert args[:3] == ["code", "review", "run"]
@@ -454,28 +536,7 @@ def test_trusted_bootstrap_cannot_import_candidate_venv_module(tmp_path: Path) -
     launcher_dir = tmp_path / "launcher"
     launcher_dir.mkdir()
     launcher = launcher_dir / "python"
-    launcher.write_text(
-        f"#!{sys.executable}\n"
-        + textwrap.dedent("""\
-            import subprocess,sys
-            from pathlib import Path
-            result=subprocess.run([sys.executable,*sys.argv[1:]],check=False)
-            if result.returncode:
-                raise SystemExit(result.returncode)
-            target=Path(sys.argv[-1])
-            site=next((target/'lib').glob('python*/site-packages'))
-            (site/'pip/__main__.py').write_text(
-                "import sys\\nassert sys.argv[1:]==['install','--no-cache-dir','specfact-cli==0.55.4']\\n"
-            )
-            core=site/'specfact_cli'
-            core.mkdir()
-            (core/'__init__.py').write_text('')
-            (core/'cli.py').write_text(
-                "import sys\\nassert sys.argv[1:]==['module','install','nold-ai/specfact-code-review',"
-                "'--scope','user','--version','0.51.0','--source','marketplace']\\n"
-            )
-            """)
-    )
+    launcher.write_text(f"#!{sys.executable}\n" + textwrap.dedent(_TRUSTED_BOOTSTRAP_LAUNCHER))
     launcher.chmod(0o700)
     runner_temp = tmp_path / "runner"
     runner_temp.mkdir()
@@ -501,8 +562,6 @@ def test_failed_candidate_diagnostics_expose_only_bounded_tracked_locations(tmp_
     _git(tmp_path, "add", "public.py")
     report = tmp_path / ".specfact/code-review.json"
     report.parent.mkdir()
-    import json
-
     report.write_text(
         json.dumps(
             {
@@ -531,53 +590,8 @@ def test_failed_candidate_diagnostics_expose_only_bounded_tracked_locations(tmp_
 def test_both_failed_reviews_project_fixed_analyzer_identity_without_private_text(
     tmp_path: Path, job_name: str
 ) -> None:
-    import json
-
-    workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())
-    name = STEP_NAME if job_name == "customer" else "Prepare and review through the authenticated installed controller"
-    recipe = next(step["run"] for step in workflow["jobs"][job_name]["steps"] if step.get("name") == name)
-    # The independent projector runs as trusted inline Python in its fresh job.
-    code = recipe.rsplit("- <<'PY'\n", 1)[1].split("\nPY\n", 1)[0]
-    _git(tmp_path, "init", "-q")
-    (tmp_path / "public.py").write_text("value = 1\n")
-    _git(tmp_path, "add", "public.py")
-    report = tmp_path / ".specfact/code-review.json"
-    report.parent.mkdir()
-    report.write_text(
-        json.dumps(
-            {
-                "findings": [
-                    {
-                        "file": "public.py",
-                        "line": 1,
-                        "severity": "error",
-                        "category": "clean_code",
-                        "tool": "radon",
-                        "rule": "CC34",
-                        "message": "PRIVATE_MESSAGE",
-                    },
-                    {
-                        "file": "public.py",
-                        "line": 2,
-                        "severity": "error",
-                        "category": "tool_error",
-                        "tool": "semgrep",
-                        "rule": "tool_error",
-                        "message": "TimeoutExpired PRIVATE_SECRET",
-                    },
-                    {
-                        "file": "public.py",
-                        "line": 3,
-                        "severity": "error",
-                        "category": "PRIVATE_CATEGORY",
-                        "tool": "PRIVATE_TOOL",
-                        "rule": "PRIVATE_RULE",
-                        "message": "PRIVATE_SECRET",
-                    },
-                ]
-            }
-        )
-    )
+    code = _public_projector(job_name)
+    _write_public_report(tmp_path, _FIXED_ANALYZER_FINDING_ROWS)
     result = subprocess.run([sys.executable, "-c", code], cwd=tmp_path, capture_output=True, text=True, check=False)
     assert result.returncode == 0, result.stderr
     rows = [json.loads(line)["finding_location"] for line in result.stdout.splitlines()]
@@ -602,8 +616,6 @@ def _public_projector(job_name):
 
 @pytest.mark.parametrize("job_name", ["customer", "independent-review"])
 def test_public_tool_errors_cannot_disappear_after_two_hundred_ordinary_findings(tmp_path: Path, job_name):
-    import json
-
     _git(tmp_path, "init", "-q")
     (tmp_path / "public.py").write_text("value = 1\n")
     _git(tmp_path, "add", "public.py")
@@ -634,8 +646,6 @@ def test_public_tool_errors_cannot_disappear_after_two_hundred_ordinary_findings
 @pytest.mark.parametrize("job_name", ["customer", "independent-review"])
 @pytest.mark.parametrize("review_exit,diagnostic", [("1", "review_report_missing"), ("124", "analysis_timeout")])
 def test_missing_review_report_has_fixed_public_cause(tmp_path: Path, job_name, review_exit, diagnostic):
-    import json
-
     environment = dict(os.environ, REVIEW_PUBLIC_EXIT=review_exit)
     result = subprocess.run(
         [sys.executable, "-c", _public_projector(job_name)],
@@ -660,8 +670,6 @@ def test_missing_review_report_has_fixed_public_cause(tmp_path: Path, job_name, 
     ],
 )
 def test_public_execution_classification_never_prints_raw_messages(tmp_path: Path, job_name, message, failure_class):
-    import json
-
     _git(tmp_path, "init", "-q")
     (tmp_path / "public.py").write_text("value = 1\n")
     _git(tmp_path, "add", "public.py")
@@ -730,8 +738,6 @@ def test_trusted_review_budget_timeout_retains_three_hundred_seconds_and_fixed_e
     ],
 )
 def test_structured_semgrep_failure_projects_only_fixed_variant_tags(tmp_path: Path, job_name, details, expected):
-    import json
-
     _git(tmp_path, "init", "-q")
     (tmp_path / "public.py").write_text("value = 1\n")
     _git(tmp_path, "add", "public.py")
@@ -768,8 +774,6 @@ def test_structured_semgrep_failure_projects_only_fixed_variant_tags(tmp_path: P
     ],
 )
 def test_malformed_or_oversized_semgrep_details_keep_generic_public_cause(tmp_path: Path, job_name, details):
-    import json
-
     _git(tmp_path, "init", "-q")
     (tmp_path / "public.py").write_text("value = 1\n")
     _git(tmp_path, "add", "public.py")
@@ -796,29 +800,7 @@ def test_malformed_or_oversized_semgrep_details_keep_generic_public_cause(tmp_pa
 
 @pytest.mark.parametrize("job_name", ["customer", "independent-review"])
 def test_semgrep_decoder_depth_failure_keeps_generic_public_cause(tmp_path: Path, job_name):
-    import json
-
-    _git(tmp_path, "init", "-q")
-    (tmp_path / "public.py").write_text("value = 1\n")
-    _git(tmp_path, "add", "public.py")
-    report = tmp_path / ".specfact/code-review.json"
-    report.parent.mkdir()
-    report.write_text(
-        json.dumps(
-            {
-                "findings": [
-                    {
-                        "file": "public.py",
-                        "line": 1,
-                        "severity": "error",
-                        "category": "tool_error",
-                        "tool": "semgrep",
-                        "message": "semgrep returned structured errors; details=DECODER_DEPTH_FAILURE",
-                    }
-                ]
-            }
-        )
-    )
+    _write_public_report(tmp_path, _DEPTH_FAILURE_FINDING_ROWS)
     fault = """import json
 _original_loads = json.loads
 def _depth_failure(value, *args, **kwargs):
@@ -856,8 +838,6 @@ json.loads = _depth_failure
     ],
 )
 def test_public_pytest_failure_codes_withhold_private_payload(tmp_path: Path, job_name, message, code):
-    import json
-
     _git(tmp_path, "init", "-q")
     (tmp_path / "public.py").write_text("value = 1\n")
     _git(tmp_path, "add", "public.py")
@@ -906,8 +886,6 @@ def test_public_pytest_failure_codes_withhold_private_payload(tmp_path: Path, jo
     ],
 )
 def test_independent_timeout_projects_only_bounded_exact_progress(tmp_path: Path, progress, analyzer):
-    import json
-
     log = tmp_path / "progress.private.log"
     log.write_text(progress)
     environment = dict(os.environ, REVIEW_PUBLIC_EXIT="124", REVIEW_PUBLIC_PROGRESS=str(log))
