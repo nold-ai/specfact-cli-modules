@@ -152,3 +152,43 @@ actionlint,28contracts and staged planned requirements pass. AST, AI-bloat,
 Radon and pinned Semgrep report0findings/0errors in changed Python scope.
 The signed runtime checksum is unchanged. Exact-head hosted review remains
 required; these local passes do not establish namespace or sealed acceptance.
+
+## Verified core CLI stdout correction — 2026-10-08 (Europe/Berlin)
+
+Diagnostic head df790309 CP312job113035668519 reports both descriptors absent.
+Kernel capture/prefix continuity succeed; all matching denial observations are
+false. This new run stops before analysis, and cannot attribute the older failure.
+Real core0.55.4 cli_main prints version/Started/Finished around JSON. An exact
+clean-index invocation is invalid JSON while containing the scope object; direct
+registered app invocation returns valid NOT_APPLICABLE JSON without acquisition.
+Raw stdout/stderr remain private under /private/tmp/specfact460-index-*.
+
+Specification precedes the decorated-core fixture and outcome cases. Before the
+workflow correction:10failed/34passed (6.13s), private CLI-json RED log. After
+using trusted app(args=...) with identical scope/config/environment/1800-second
+bound:65focused host/portable/bootstrap cases pass (7.15s). Fixed outcomes and
+supplied/present flags distinguish invalid JSON from not-applicable scope and
+missing descriptor fields/files; no raw text/paths are published. Bounded reviewer
+checks app registration/lazy-loading and retained admission/failure exits. Format,
+type/lint/actionlint/OpenSpec, AST/AI-bloat/Radon and pinned Semgrep pass, with
+zero changed Python findings. Full/SMART each pass19host cases followed by5018portable cases,75declared
+skips,95subtests,5existing warnings (256.98s/249.49s). They collect before the
+following eight new independent projection cases; final focused execution verifies
+those programs separately. Normal hooks and fresh exact-head hosted review follow.
+
+Independent df790309 job113035668532 fails after preparation returns0. Its old
+final review command hides raw output and emits no preparation classifier, so
+actual review cause is not yet known. The separate failure-only projector keeps
+original exit/300-second budget and adds only bounded standard-library observations.
+Eight projection regressions fail before adding it(0.53s), and eight identity
+schema regressions fail before adding allowlisted analyzer IDs(0.58s). Both direct
+and nested error/UNKNOWN, findings-only failure, missing/invalid/oversized reports,
+timeout-marker observations and private-token/identity suppression are covered.
+The early test CC13 warning is resolved with complete expected-object assertions,
+retaining every field. Final focused73cases pass(6.93s), including the new independent projection cases.
+Final typing0errors/0warnings, lint10.00/10, format/actionlint/strict OpenSpec,
+AST/AI-bloat/Radon and pinned Semgrep0findings/0errors pass. The bounded agent
+finds no defect and verifies fixed-ID suppression/nested observations and retained
+exit/deadline/isolation. Normal hooks run at commit; exact-head hosted execution
+remains required. Signed runtime bytes remain unchanged. Raw logs/reports
+remain private; booleans/codes cannot establish attribution or acceptance.

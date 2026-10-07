@@ -60,3 +60,15 @@ confined targeted discovery SHALL not select those proof-only host fixtures.
 - **WHEN** preparation exits successfully without both index runtime descriptors or namespace setup fails
 - **THEN** the job remains failing and publishes only fixed preparation status, descriptor-presence and kernel-audit denial booleans, with raw paths/logs remaining private
 - **AND** authenticated controller provenance, descriptor binding, namespaces, grants and deadlines remain unchanged
+
+#### Scenario: Core CLI decoration is separate from preparation JSON
+
+- **WHEN** pinned core0.55.4 prints its version and timing around CLI output
+- **THEN** hosted preparation invokes the trusted app entry point with the same index scope, project configuration and preparation deadline to obtain undecorated JSON
+- **AND** bounded report outcomes distinguish invalid JSON, not-applicable scope and missing descriptor fields/files without publishing raw output or accepting incomplete preparation
+
+#### Scenario: Independent review fails after successful preparation
+
+- **WHEN** the authenticated installed reviewer reaches analysis then exits unsuccessfully
+- **THEN** preserve its exit and300-second bound, and publish only finite report outcome/verdict fields, evidence/finding booleans and known diagnostic observations and allowlisted analyzer identities including nested base/head evidence
+- **AND** raw reports/logs remain private; missing or malformed reports and observed timeout markers never establish acceptance

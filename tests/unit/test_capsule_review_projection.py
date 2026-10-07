@@ -83,6 +83,8 @@ def _write_preparation_fixture(tmp_path, case):
         payload = {"status": "NOT_APPLICABLE", "runtimes": {}}
     elif case == "missing_base":
         payload["runtimes"].pop("base")
+    elif case == "missing_files":
+        descriptor.unlink()
     report = tmp_path / "preparation.private.json"
     report.write_text("not-json/private" if case == "invalid" else json.dumps(payload))
     return report
@@ -91,10 +93,11 @@ def _write_preparation_fixture(tmp_path, case):
 @pytest.mark.parametrize(
     "case,expected",
     [
-        ("prepared", (0, "PREPARED", True, True)),
-        ("not_applicable", (1, "INCOMPLETE", False, False)),
-        ("missing_base", (1, "INCOMPLETE", False, True)),
-        ("invalid", (1, "INCOMPLETE", False, False)),
+        ("prepared", (0, "PREPARED", "prepared", True, True, True, True)),
+        ("not_applicable", (1, "INCOMPLETE", "not_applicable", False, False, False, False)),
+        ("missing_base", (1, "INCOMPLETE", "missing_descriptor_fields", False, True, False, True)),
+        ("invalid", (1, "INCOMPLETE", "invalid_json", False, False, False, False)),
+        ("missing_files", (1, "INCOMPLETE", "missing_descriptor_files", True, True, False, False)),
     ],
 )
 def test_successful_index_preparation_requires_both_descriptors(tmp_path, monkeypatch, case, expected):
@@ -106,11 +109,14 @@ def test_successful_index_preparation_requires_both_descriptors(tmp_path, monkey
     program = step["run"].split("<<'PY_PREPARATION'\n", 1)[1].split("\nPY_PREPARATION", 1)[0]
     monkeypatch.setenv("PREPARATION_REPORT", str(_write_preparation_fixture(tmp_path, case)))
     result = _run_projector(tmp_path, program)
-    code, status, base, head = expected
+    code, status, outcome, base_supplied, head_supplied, base, head = expected
     assert result.returncode == code
     assert json.loads(result.stdout) == {
         "status": status,
         "phase": "index_preparation",
+        "report_outcome": outcome,
+        "base_descriptor_supplied": base_supplied,
+        "head_descriptor_supplied": head_supplied,
         "base_descriptor_present": base,
         "head_descriptor_present": head,
     }
@@ -207,3 +213,84 @@ def test_namespace_audit_retains_only_fixed_observation_booleans(tmp_path, monke
         "userns_denial_observed",
     )
     assert public == dict(zip(keys, flags, strict=True))
+
+
+def _write_independent_failure_fixture(tmp_path, case):
+    import json
+
+    report = {"assurance_status": "FAIL", "overall_verdict": "FAIL", "findings": [], "analyzer_evidence": []}
+    if case == "findings":
+        report["findings"] = [{"category": "correctness", "message": "private-token"}]
+    elif case in {"nested", "direct"}:
+        row = {
+            "id": "pylint",
+            "execution_state": "error",
+            "evidence_outcome": "UNKNOWN",
+            "diagnostic": "namespace_unavailable:private-token",
+        }
+        report["analyzer_evidence"] = (
+            [{"id": "pylint", "diagnostic": "snapshot_member_incomplete", "head": row}] if case == "nested" else [row]
+        )
+        report["analyzer_evidence"].append({**row, "id": "private-token"})
+    elif case == "tool_error":
+        report["findings"] = [{"category": "tool_error", "message": "private-token"}]
+    path = tmp_path / "review.private.json"
+    path.write_text(
+        "invalid/private-token"
+        if case == "invalid"
+        else "x" * (2 * 1024 * 1024 + 1)
+        if case == "oversized"
+        else json.dumps(report)
+    )
+    if case in {"missing", "timeout"}:
+        path.unlink()
+    log = tmp_path / "review.private.log"
+    log.write_text("TimeoutExpired:private-token" if case == "timeout" else "unclassified/private-token")
+    return path, log
+
+
+def _expected_review_projection(expected):
+    outcome, flags, codes = expected
+    verdict = "FAIL" if outcome == "structured_report" else "UNAVAILABLE"
+    keys = ("findings_present", "tool_error_present", "execution_error_present", "unknown_evidence_present")
+    return {
+        "phase": "independent_review",
+        "report_outcome": outcome,
+        "assurance_status": verdict,
+        "overall_verdict": verdict,
+        "diagnostic_observations": codes,
+        "error_analyzers": ["pylint"] if flags[2] else [],
+        "unknown_analyzers": ["pylint"] if flags[3] else [],
+        **dict(zip(keys, flags, strict=True)),
+    }
+
+
+@pytest.mark.parametrize(
+    "case,expected",
+    [
+        ("findings", ("structured_report", (True, False, False, False), ["unclassified"])),
+        ("nested", ("structured_report", (False, False, True, True), ["namespace_unavailable"])),
+        ("direct", ("structured_report", (False, False, True, True), ["namespace_unavailable"])),
+        ("tool_error", ("structured_report", (True, True, False, False), ["unclassified"])),
+        ("missing", ("missing_report", (False, False, False, False), ["unclassified"])),
+        ("invalid", ("invalid_json", (False, False, False, False), ["unclassified"])),
+        ("oversized", ("oversized_report", (False, False, False, False), ["unclassified"])),
+        ("timeout", ("missing_report", (False, False, False, False), ["timeout_marker_observed"])),
+    ],
+)
+def test_independent_review_failure_keeps_nested_evidence_and_private_tokens(tmp_path, monkeypatch, case, expected):
+    import json
+
+    steps = independent_review_job()["steps"]
+    selected = [step for step in steps if step.get("name") == "Project independent review failure privately"]
+    assert len(selected) == 1
+    step = selected[0]
+    assert step["if"] == "failure() && steps.independent_review.outcome == 'failure'"
+    program = step["run"].split("<<'PY_REVIEW_FAILURE'\n", 1)[1].split("\nPY_REVIEW_FAILURE", 1)[0]
+    report, log = _write_independent_failure_fixture(tmp_path, case)
+    monkeypatch.setenv("REVIEW_REPORT", str(report))
+    monkeypatch.setenv("REVIEW_LOG", str(log))
+    result = _run_projector(tmp_path, program)
+    assert result.returncode == 0
+    assert json.loads(result.stdout) == _expected_review_projection(expected)
+    assert "private-token" not in result.stdout + result.stderr

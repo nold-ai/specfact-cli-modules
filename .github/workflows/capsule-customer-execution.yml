@@ -175,7 +175,8 @@ jobs:
             PYTHONPATH="$GITHUB_WORKSPACE/packages/specfact-code-review/src" \
             "$CUSTOMER_ROOT/venv/bin/python" -I -c \
               'import subprocess,sys; sys.exit(subprocess.run(sys.argv[1:],timeout=1800,check=False).returncode)' \
-              "$CUSTOMER_ROOT/venv/bin/python" -B -P -m specfact_cli.cli \
+              "$CUSTOMER_ROOT/venv/bin/python" -B -P -c \
+              'import sys; from specfact_cli.cli import app; app(args=sys.argv[1:])' \
               code review runtime prepare --scope index --project-config "$PROJECT_CONFIG" --json \
               > "$CUSTOMER_ROOT/commit-review-preparation.private.json"
           PREPARATION_REPORT="$CUSTOMER_ROOT/commit-review-preparation.private.json" \
@@ -185,22 +186,34 @@ jobs:
           from pathlib import Path
 
           present = {side: False for side in ("base", "head")}
+          supplied = dict(present)
+          outcome = "unreadable_report"
           try:
-              path = Path(os.environ["PREPARATION_REPORT"])
-              with path.open("rb") as stream:
+              with Path(os.environ["PREPARATION_REPORT"]).open("rb") as stream:
                   data = stream.read(2 * 1024 * 1024 + 1)
               if len(data) > 2 * 1024 * 1024:
-                  raise ValueError("private preparation bound exceeded")
-              result = json.loads(data)
-              runtimes = result.get("runtimes", {}) if isinstance(result, dict) else {}
-              for side in present:
-                  value = runtimes.get(side, {}) if isinstance(runtimes, dict) else {}
-                  descriptor = value.get("descriptor") if isinstance(value, dict) else None
-                  present[side] = isinstance(descriptor, str) and Path(descriptor).is_file() and not Path(descriptor).is_symlink()
+                  outcome = "oversized_report"
+              else:
+                  result = json.loads(data)
+                  if not isinstance(result, dict):
+                      outcome = "invalid_report_shape"
+                  elif result.get("status") == "NOT_APPLICABLE":
+                      outcome = "not_applicable"
+                  else:
+                      runtimes = result.get("runtimes", {})
+                      for side in present:
+                          value = runtimes.get(side, {}) if isinstance(runtimes, dict) else {}
+                          descriptor = value.get("descriptor") if isinstance(value, dict) else None
+                          supplied[side] = isinstance(descriptor, str) and bool(descriptor)
+                          present[side] = supplied[side] and Path(descriptor).is_file() and not Path(descriptor).is_symlink()
+                      outcome = "prepared" if all(present.values()) else "missing_descriptor_files" if all(supplied.values()) else "missing_descriptor_fields"
+          except json.JSONDecodeError:
+              outcome = "invalid_json"
           except (OSError, ValueError, KeyError):
-              pass
-          prepared = all(present.values())
+              outcome = "unreadable_report"
+          prepared = outcome == "prepared"
           print(json.dumps({"status": "PREPARED" if prepared else "INCOMPLETE", "phase": "index_preparation",
+              "report_outcome": outcome, "base_descriptor_supplied": supplied["base"], "head_descriptor_supplied": supplied["head"],
               "base_descriptor_present": present["base"], "head_descriptor_present": present["head"]}))
           raise SystemExit(0 if prepared else 1)
           PY_PREPARATION
@@ -356,6 +369,7 @@ jobs:
           EOF
           sudo apparmor_parser -r "$TRUSTED_ROOT/capsule.apparmor"
       - name: Prepare and review through the authenticated installed controller
+        id: independent_review
         shell: bash
         run: |
           set -euo pipefail
@@ -447,9 +461,78 @@ jobs:
             fi
             exit 1
           fi
+          touch "$TRUSTED_ROOT/review-attempted"
           "${trusted_env[@]}" "$TRUSTED_ROOT/venv/bin/python" -I -c \
             'import subprocess,sys; sys.exit(subprocess.run(sys.argv[1:],timeout=300,check=False).returncode)' \
             "$TRUSTED_ROOT/venv/bin/python" -I "$TRUSTED_ROOT/reviewer.py" \
             "$TRUSTED_ROOT/subject" code review run --scope index --enforcement changed --bug-hunt \
             --project-config "$TRUSTED_ROOT/project.toml" --json --out "$TRUSTED_ROOT/review.private.json" \
             > "$TRUSTED_ROOT/review.private.log" 2>&1
+      - name: Project independent review failure privately
+        if: failure() && steps.independent_review.outcome == 'failure'
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f "$TRUSTED_ROOT/review-attempted" || exit 0
+          REVIEW_REPORT="$TRUSTED_ROOT/review.private.json" REVIEW_LOG="$TRUSTED_ROOT/review.private.log" \
+            "$TRUSTED_ROOT/venv/bin/python" -I - <<'PY_REVIEW_FAILURE'
+          import json
+          import os
+          from pathlib import Path
+
+          report = {}
+          outcome = "unreadable_report"
+          try:
+              with Path(os.environ["REVIEW_REPORT"]).open("rb") as stream:
+                  data = stream.read(2 * 1024 * 1024 + 1)
+              if len(data) > 2 * 1024 * 1024:
+                  outcome = "oversized_report"
+              else:
+                  value = json.loads(data)
+                  if isinstance(value, dict) and isinstance(value.get("findings"), list) and isinstance(value.get("analyzer_evidence"), list):
+                      report, outcome = value, "structured_report"
+                  else:
+                      outcome = "invalid_report_shape"
+          except FileNotFoundError:
+              outcome = "missing_report"
+          except json.JSONDecodeError:
+              outcome = "invalid_json"
+          except (OSError, ValueError):
+              pass
+          rows = [row for row in report.get("analyzer_evidence", [])[:10] if isinstance(row, dict)]
+          nodes = rows + [row[side] for row in rows for side in ("base", "head") if isinstance(row.get(side), dict)]
+          diagnostics = [node.get("diagnostic", "") for node in nodes if isinstance(node.get("diagnostic", ""), str)]
+          if outcome != "structured_report":
+              try:
+                  with Path(os.environ["REVIEW_LOG"]).open("rb") as stream:
+                      stream.seek(0, 2)
+                      stream.seek(max(0, stream.tell() - 8192))
+                      diagnostics.append(stream.read(8192).decode("utf-8", errors="replace"))
+              except OSError:
+                  pass
+          findings = report.get("findings", [])
+          diagnostics += [finding["message"] for finding in findings if isinstance(finding, dict) and finding.get("category") == "tool_error" and isinstance(finding.get("message"), str)]
+          allowed = ("ai-bloat-ast", "ast-clean-code", "basedpyright", "contracts", "pylint", "radon", "ruff", "semgrep-clean", "semgrep-bugs", "targeted-pytest-coverage")
+          members = [(row.get("id"), [row] + [row[side] for side in ("base", "head") if isinstance(row.get(side), dict)]) for row in rows if row.get("id") in allowed]
+          errors = sorted({name for name, group in members if any(node.get("execution_state") == "error" for node in group)})
+          unknowns = sorted({name for name, group in members if any(node.get("evidence_outcome") == "UNKNOWN" for node in group)})
+          markers = {"namespace_unavailable": "namespace_unavailable",
+              "capsule_materialization_failed": "capsule_materialization_failed",
+              "analyzer_reported_incomplete_execution": "analyzer_reported_incomplete_execution",
+              "project_runtime_prepare_failed": "project_runtime_prepare_failed",
+              "local_pytest_inventory_failed": "local_pytest_inventory_failed",
+              "project_test_selection_ambiguous": "project_test_selection_ambiguous",
+              "TimeoutExpired": "timeout_marker_observed"}
+          codes = [code for marker, code in markers.items() if any(marker in text for text in diagnostics)]
+          assurance = report.get("assurance_status")
+          verdict = report.get("overall_verdict")
+          print(json.dumps({"phase": "independent_review", "report_outcome": outcome,
+              "assurance_status": assurance if assurance in ("PASS", "FAIL", "UNKNOWN", "NOT_APPLICABLE") else "UNAVAILABLE",
+              "overall_verdict": verdict if verdict in ("PASS", "PASS_WITH_ADVISORY", "FAIL") else "UNAVAILABLE",
+              "findings_present": bool(findings),
+              "tool_error_present": any(isinstance(finding, dict) and finding.get("category") == "tool_error" for finding in findings),
+              "execution_error_present": any(node.get("execution_state") == "error" for node in nodes),
+              "unknown_evidence_present": report.get("has_unknown_required_evidence") is True or any(node.get("evidence_outcome") == "UNKNOWN" for node in nodes),
+              "error_analyzers": errors, "unknown_analyzers": unknowns,
+              "diagnostic_observations": codes or ["unclassified"]}))
+          PY_REVIEW_FAILURE

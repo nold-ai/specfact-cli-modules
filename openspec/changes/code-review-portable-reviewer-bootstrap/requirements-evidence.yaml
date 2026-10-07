@@ -43,5 +43,5 @@ requirements:
     - case_id: reviewer-bootstrap-4
       scenario_id: reviewer-installation-and-host-proofs-retain-ordinary-context
       method: test
-      intent: Verify prepared base/head descriptors and bounded preparation/kernel failure observations.
+      intent: Verify undecorated preparation JSON, prepared base/head descriptors and bounded preparation/kernel failure observations.
       observable: Missing descriptors, stale audit records, rotation and failed captures cannot establish preparation or attribute a denial; only fixed statuses and booleans are public, with all failing exits and kernel gates retained.

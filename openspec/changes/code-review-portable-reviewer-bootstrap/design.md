@@ -52,3 +52,24 @@ exact prefix continuity, then inspect only an8192-byte new-record tail. Bound
 known-launcher/numeric descriptor names; publish only observation booleans. Log
 rotation/capture failure means observations unavailable, not missing-denial proof.
 These observations neither verify launcher attribution nor establish acceptance.
+
+Exact df790309 diagnostics stop before analysis with both descriptors absent and
+no observed audit denial. Real core0.55.4 cli_main emits version/timing around
+JSON; strict json.loads fails. Use the same registered trusted app(args=...) entry
+shape as the independent wrapper with unchanged command arguments, environment,
+1800-second preparation timeout and failure propagation. Core startup decoration
+is outside the app; module admission and ordinary Typer exits remain in it.
+Report only fixed preparation outcomes and supplied/present booleans to separate
+invalid JSON, not-applicable scope and missing descriptor fields/files. The local
+clean-index reproduction proves JSON framing; it does not prove hosted preparation
+or remediation of the historical namespace failure.
+
+The independent df790309 job113035668532 gets past preparation and fails in
+review; its final output had no public projection. Keep its original exit and
+300-second invocation unchanged. Mark analysis attempted only after successful
+preparation, then use a failure-only diagnostic step importing standard library
+under -I. Bound report reads to2MiB and fallback log tails to8192bytes. Project
+finite verdict/outcome fields, actual booleans, ten protocol analyzer identities
+and known marker observations across aggregate/head/base rows and tool-error
+messages. Unknown names/raw messages are never copied. The prior failed step
+remains failing even when projection succeeds; observations are not acceptance.

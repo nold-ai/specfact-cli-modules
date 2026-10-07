@@ -6,4 +6,6 @@
 - [x] Prepare a draft reviewer-update PR for human merge/promotion.
 - [x] Correct the observed retired install pin and retain required host/portable proofs.
 - [x] Retain bounded private/public diagnosis for repeated namespace preparation failure.
+- [x] Correct verified core CLI decoration of preparation JSON with unchanged app inputs.
+- [x] Project the verified independent failure after preparation with fixed nested evidence observations.
 - [ ] After separately authorized promotion, verify exact #498 sealed execution.

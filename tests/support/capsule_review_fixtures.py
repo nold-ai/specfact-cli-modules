@@ -59,15 +59,20 @@ _DEFERRED_REVIEW_SCRIPT = (
 
 
 _PREPARATION_CLI_SCRIPT = (
-    "import os,sys\n"
-    "assert sys.argv[1:7] == ['code','review','runtime','prepare','--scope','index']\n"
-    "assert os.environ['SPECFACT_MODULES_REPO'] == os.environ['GITHUB_WORKSPACE']\n"
-    "assert os.environ['SPECFACT_CODE_REVIEW_CAPSULE_CACHE'].endswith('/commit-review-cache')\n"
+    "import os,sys,json\n"
     "from pathlib import Path\n"
-    "import json\n"
-    "descriptor=Path(os.environ['CUSTOMER_ROOT'])/'fixture-descriptor.json'\n"
-    "descriptor.write_text('{}')\n"
-    "print(json.dumps({'runtimes':{side:{'descriptor':str(descriptor)} for side in ('base','head')}}))\n"
+    "def app(*,args):\n"
+    "    assert args[:6] == ['code','review','runtime','prepare','--scope','index']\n"
+    "    assert os.environ['SPECFACT_MODULES_REPO'] == os.environ['GITHUB_WORKSPACE']\n"
+    "    assert os.environ['SPECFACT_CODE_REVIEW_CAPSULE_CACHE'].endswith('/commit-review-cache')\n"
+    "    descriptor=Path(os.environ['CUSTOMER_ROOT'])/'fixture-descriptor.json'\n"
+    "    descriptor.write_text('{}')\n"
+    "    print(json.dumps({'runtimes':{side:{'descriptor':str(descriptor)} for side in ('base','head')}}))\n"
+    "if __name__ == '__main__':\n"
+    "    print('SpecFact CLI - v0.55.4')\n"
+    "    print('Started: fixture')\n"
+    "    app(args=sys.argv[1:])\n"
+    "    print('Finished: fixture')\n"
 )
 
 
