@@ -67,3 +67,20 @@ LineSet objects, both full duplicate groups and ordered locations compare equal:
 two uncached pair passes6.343s versus cached0.771s,75hash misses/11025hits.
 The regression wrapper fixture also preserves complete messages/statistics/exit.
 These host measurements do not establish sealed Linux30-second acceptance.
+
+
+Draft PR#499 is created. CI bot commit72310f2fc210aa6c70c4e6faa6f6a0a8db073216
+adds only the Code Review manifest signature; its source checksum remains
+21f6686ae2f3d25479a866b0e7b371b8826fbd662332a5f7422182f2c3f91fa2. After
+inspecting that exact one-line diff, ff-only incorporation and explicit public-key
+--require-signature filesystem/version readback pass all seven modules. This
+human follow-up starts normal exact-head CI; no signed payload bytes change.
+
+CodeRabbit's public committed review reports a minor suggestion to restrict
+explicit tests to the default discovered candidate set. That restriction would
+remove legitimate explicit pytest files outside testpaths. Correspondence already
+intersects the discovered matches, so a non-candidate cannot waive ambiguity:
+(matches & explicit) equals (matches & (explicit & candidates)) because every
+match is in candidates. Preserve the old explicit-file semantics; the existing
+unrelated-match regression still rejects unresolved ambiguity. No code change
+is warranted by that suggestion. Final reviewer completion remains pending.

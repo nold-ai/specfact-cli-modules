@@ -9,7 +9,7 @@ and this project follows SemVer for bundle versions.
 
 ### Fixed
 
-- Prepare Code Review0.51.1 portable reviewer bootstrap: corresponding explicit
+- Prepare Code Review 0.51.1 portable reviewer bootstrap: corresponding explicit
   tests resolve source-basename ambiguity before fallback selection. The pinned
   Pylint wrapper caches immutable similarity windows only within one bounded
   invocation and restores upstream state on all exits. Required checks, jobs,
