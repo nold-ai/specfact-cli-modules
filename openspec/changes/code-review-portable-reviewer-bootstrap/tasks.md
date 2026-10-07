@@ -8,4 +8,5 @@
 - [x] Retain bounded private/public diagnosis for repeated namespace preparation failure.
 - [x] Correct verified core CLI decoration of preparation JSON with unchanged app inputs.
 - [x] Project the verified independent failure after preparation with fixed nested evidence observations.
+- [x] Retain fixed CrossHair failure classes and suppress unknown candidate diagnostic tokens.
 - [ ] After separately authorized promotion, verify exact #498 sealed execution.

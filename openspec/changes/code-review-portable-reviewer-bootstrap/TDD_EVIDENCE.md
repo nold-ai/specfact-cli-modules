@@ -192,3 +192,30 @@ finds no defect and verifies fixed-ID suppression/nested observations and retain
 exit/deadline/isolation. Normal hooks run at commit; exact-head hosted execution
 remains required. Signed runtime bytes remain unchanged. Raw logs/reports
 remain private; booleans/codes cannot establish attribution or acceptance.
+
+## Remaining contracts failure: fixed observations — 2026-10-08 (Europe/Berlin)
+
+Exact0485eaa5 run37694851883 CP312job113044012871 reports PREPARED with
+both descriptors supplied/present. Kernel capture/prefix continuity succeed;
+all matching denial observations are false. Contracts then reports incomplete
+execution with exit1. Independentjob113044012853 gets past preparation and hits
+its300-second wrapper with missing report and observed TimeoutExpired marker;
+this does not attribute timeout to any analyzer. Original report is not retained
+in uploaded artifacts, so the contract cause is still unknown.
+
+Spec precedes six CrossHair-class regressions:6RED/33deselected(0.34s) before
+projection code. Unknown-token privacy then fails6cases(0.47s) before replacing
+permissive regex tokens with fixed controller/analyzer allowlists. The candidate
+failure projector imports only standard library under-I, bounds raw report reads
+to2MiB, emits at most10protocol rows and5deduplicated CrossHair classes with at
+most6fixed exception observations. Tool/category filters suppress unrelated
+findings. Original exits, all execution/grant/deadline settings and signed payload
+are unchanged. Final79focused host/portable/bootstrap cases pass(7.02s); direct
+AST/AI-bloat/Radon report0findings, and bounded agent review finds no defect.
+Prior full/SMART5018passes predate these six diagnostic-only cases; focused
+execution verifies all affected host recipes and exact projector programs. Fresh
+hosted results remain required; no underlying runtime remedy is yet justified.
+
+Format, typing0errors/0warnings, lint10.00/10, actionlint, strict OpenSpec and
+pinned Semgrep0findings/0errors pass for this correction. Normal hooks run at
+commit with the approved capsule-only DEFERRED label; hosted review is required.

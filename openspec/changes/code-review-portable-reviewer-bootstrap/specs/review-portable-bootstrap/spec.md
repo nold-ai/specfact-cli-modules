@@ -72,3 +72,9 @@ confined targeted discovery SHALL not select those proof-only host fixtures.
 - **WHEN** the authenticated installed reviewer reaches analysis then exits unsuccessfully
 - **THEN** preserve its exit and300-second bound, and publish only finite report outcome/verdict fields, evidence/finding booleans and known diagnostic observations and allowlisted analyzer identities including nested base/head evidence
 - **AND** raw reports/logs remain private; missing or malformed reports and observed timeout markers never establish acceptance
+
+#### Scenario: Candidate contracts provide incomplete execution
+
+- **WHEN** contracts fail after successful preparation
+- **THEN** project only fixed CrossHair controller-error classes and exception-marker observations from tool_error findings, preserving the original failing exit and all analyzer budgets
+- **AND** unrelated tools/categories and raw message suffixes remain private; observations do not establish causation or acceptance

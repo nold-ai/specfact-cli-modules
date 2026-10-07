@@ -73,3 +73,11 @@ finite verdict/outcome fields, actual booleans, ten protocol analyzer identities
 and known marker observations across aggregate/head/base rows and tool-error
 messages. Unknown names/raw messages are never copied. The prior failed step
 remains failing even when projection succeeds; observations are not acceptance.
+
+The0485head verifies both prepared descriptors, then candidate contracts becomes
+incomplete. Independent review times out without a report, preventing attribution.
+Extend only post-failure observations: match the four controller-fixed CrossHair
+error prefixes and fixed exception markers, never raw suffixes. The candidate
+projector is isolated under-I with2MiB read bounds, fixed protocol IDs/codes and
+at most five deduplicated class rows. Unknown metadata cannot escape through
+regex tokens. No analysis, grant or deadline change is justified by this evidence.

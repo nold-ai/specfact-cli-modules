@@ -70,7 +70,7 @@ def _run_projector(tmp_path, program):
 
     path = tmp_path / "projector.py"
     path.write_text(program)
-    return subprocess.run([sys.executable, str(path)], capture_output=True, text=True, check=False)
+    return subprocess.run([sys.executable, str(path)], capture_output=True, text=True, check=False, cwd=tmp_path)
 
 
 def _write_preparation_fixture(tmp_path, case):
@@ -293,4 +293,63 @@ def test_independent_review_failure_keeps_nested_evidence_and_private_tokens(tmp
     result = _run_projector(tmp_path, program)
     assert result.returncode == 0
     assert json.loads(result.stdout) == _expected_review_projection(expected)
+    assert "private-token" not in result.stdout + result.stderr
+
+
+@pytest.mark.parametrize(
+    "message,tool,category,expected",
+    [
+        (
+            "CrossHair timed out before mandatory evidence completed.",
+            "crosshair",
+            "tool_error",
+            ("crosshair_timeout_observed", []),
+        ),
+        (
+            "CrossHair process error: ModuleNotFoundError: private-token",
+            "crosshair",
+            "tool_error",
+            ("crosshair_process_error_observed", ["module_not_found_observed"]),
+        ),
+        (
+            "Unrecognized CrossHair output: private-token",
+            "crosshair",
+            "tool_error",
+            ("crosshair_unrecognized_output_observed", []),
+        ),
+        (
+            "Unable to execute CrossHair: PermissionError: private-token",
+            "crosshair",
+            "tool_error",
+            ("crosshair_execute_error_observed", ["permission_error_observed"]),
+        ),
+        ("CrossHair process error: private-token", "pylint", "tool_error", None),
+        ("CrossHair process error: private-token", "crosshair", "contracts", None),
+    ],
+)
+def test_candidate_crosshair_failure_emits_only_fixed_classes(tmp_path, message, tool, category, expected):
+    import json
+
+    workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())
+    step = next(item for item in workflow["jobs"]["customer"]["steps"] if item.get("name") == STEP_NAME)
+    assert "PY_CANDIDATE_FAILURE" in step["run"]
+    program = step["run"].split("<<'PY_CANDIDATE_FAILURE'\n", 1)[1].split("\nPY_CANDIDATE_FAILURE", 1)[0]
+    root = tmp_path / ".specfact"
+    root.mkdir()
+    (root / "code-review.json").write_text(
+        json.dumps(
+            {
+                "analyzer_evidence": [{"id": "private-token", "diagnostic": "private-token:private/path"}],
+                "findings": [{"tool": tool, "category": category, "message": message}],
+            }
+        )
+    )
+    result = _run_projector(tmp_path, program)
+    assert result.returncode == 0
+    output = (
+        []
+        if expected is None
+        else [{"analyzer": "contracts", "diagnostic_class": expected[0], "exception_observations": expected[1]}]
+    )
+    assert [json.loads(line) for line in result.stdout.splitlines()] == output
     assert "private-token" not in result.stdout + result.stderr

@@ -225,20 +225,57 @@ jobs:
             "$CUSTOMER_ROOT/venv/bin/python" "$GITHUB_WORKSPACE/scripts/pre_commit_code_review.py" "${review_paths[@]}" || review_exit=$?
           if [ "$review_exit" -ne 0 ]; then
             # Print only bounded reason codes; raw reports, receipts and tool logs stay private.
-            "$CUSTOMER_ROOT/venv/bin/python" - <<'PY'
+            "$CUSTOMER_ROOT/venv/bin/python" -I - <<'PY_CANDIDATE_FAILURE'
           import json
-          import re
           from pathlib import Path
 
           report = Path(".specfact/code-review.json")
           if report.is_file():
-              data = json.loads(report.read_text())
-              for row in data.get("analyzer_evidence", []):
+              data = {}
+              try:
+                  with report.open("rb") as stream:
+                      payload = stream.read(2 * 1024 * 1024 + 1)
+                  if len(payload) > 2 * 1024 * 1024:
+                      raise ValueError("private report bound exceeded")
+                  value = json.loads(payload)
+                  if not isinstance(value, dict):
+                      raise ValueError("private report shape invalid")
+                  data = value
+              except (OSError, ValueError, RecursionError):
+                  print(json.dumps({"analyzer": "contracts", "diagnostic_class": "candidate_report_unavailable"}))
+              allowed = ("ai-bloat-ast", "ast-clean-code", "basedpyright", "contracts", "pylint", "radon", "ruff", "semgrep-clean", "semgrep-bugs", "targeted-pytest-coverage")
+              known = ("analyzer_reported_incomplete_execution", "namespace_unavailable", "capsule_materialization_failed", "snapshot_member_incomplete", "project_runtime_prepare_failed", "project_test_selection_ambiguous", "local_pytest_inventory_failed")
+              rows = data.get("analyzer_evidence", [])
+              for row in rows[:10] if isinstance(rows, list) else []:
+                  if not isinstance(row, dict) or row.get("id") not in allowed:
+                      continue
                   tokens = str(row.get("diagnostic", "")).split(":")[:3]
-                  codes = [token for token in tokens if re.fullmatch(r"[a-zA-Z0-9_.-]{1,96}", token)]
+                  codes = [token for token in tokens if token in known]
                   if codes:
-                      print(json.dumps({"analyzer": row.get("id"), "diagnostic_codes": codes}))
-          PY
+                      print(json.dumps({"analyzer": row["id"], "diagnostic_codes": codes}))
+              classes = {
+                  "CrossHair timed out before mandatory evidence completed.": "crosshair_timeout_observed",
+                  "CrossHair process error:": "crosshair_process_error_observed",
+                  "Unrecognized CrossHair output:": "crosshair_unrecognized_output_observed",
+                  "Unable to execute CrossHair:": "crosshair_execute_error_observed",
+              }
+              exceptions = {"ModuleNotFoundError": "module_not_found_observed",
+                  "ImportError": "import_error_observed", "SyntaxError": "syntax_error_observed",
+                  "PermissionError": "permission_error_observed", "TypeError": "type_error_observed",
+                  "FileNotFoundError": "file_not_found_observed"}
+              observations = {}
+              findings = data.get("findings", [])
+              for finding in findings if isinstance(findings, list) else []:
+                  if not isinstance(finding, dict) or finding.get("category") != "tool_error" or finding.get("tool") != "crosshair":
+                      continue
+                  message = finding.get("message", "")
+                  if not isinstance(message, str):
+                      continue
+                  code = next((code for prefix, code in classes.items() if message.startswith(prefix)), "unclassified_crosshair_error_observed")
+                  observations.setdefault(code, set()).update(code for marker, code in exceptions.items() if marker in message)
+              for code, observed in sorted(observations.items()):
+                  print(json.dumps({"analyzer": "contracts", "diagnostic_class": code, "exception_observations": sorted(observed)}))
+          PY_CANDIDATE_FAILURE
           fi
           exit "$review_exit"
       - name: Collect namespace audit evidence privately
