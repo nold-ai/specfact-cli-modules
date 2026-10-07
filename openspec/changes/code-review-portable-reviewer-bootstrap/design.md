@@ -39,3 +39,16 @@ assertions are retained, with forbidden routes parametrized. Both full and SMART
 entry points preserve either failing exit. No empty package markers or confined
 host execution are introduced. This correction changes no signed runtime payload,
 analyzer budget, authorization route or required failure condition.
+
+Two successive hosted heads expose the same verified-descriptor Linux offline
+installation namespace failure before any analyzer executes. Do not repeat an
+unchanged failed gate or move capability flags without evidence. Require both
+base/head descriptors in successful index-preparation JSON; NOT_APPLICABLE exit0
+cannot prewarm a later required review. On independent preparation failure,
+project only fixed failure classes from an8192-byte private tail. For deferred
+review, capture private kernel audit snapshots using the existing CI administrator
+role; no customer or analyzer permission changes. Require successful captures and
+exact prefix continuity, then inspect only an8192-byte new-record tail. Bound
+known-launcher/numeric descriptor names; publish only observation booleans. Log
+rotation/capture failure means observations unavailable, not missing-denial proof.
+These observations neither verify launcher attribution nor establish acceptance.

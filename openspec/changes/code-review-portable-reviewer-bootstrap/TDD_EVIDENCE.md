@@ -120,3 +120,35 @@ The earlier c3c head candidate3.12 receipt fails closed before analysis during
 offline installation:namespace_unavailable (loopback RTM_NEWADDR denied). It
 contains no completed analyzer evidence, so it cannot establish clean results.
 No namespace policy or budget is changed; fresh CI will run on the pin correction.
+
+
+## Repeated namespace failure: bounded diagnosis — 2026-10-07 (Europe/Berlin)
+
+Fresh8ee966a7 run37688067509 job113021549981 repeats the same verified
+launcher a2ebece7de53332b15b956749a0a96b680a4298ebd57675c1e47bea96968f2c0
+loopback RTM_NEWADDR denial during offline installation. All10analyzers are
+ERROR/UNKNOWN with0findings; no completed analysis exists. Independent job
+113021550037 passes corrected installation, then fails opaque preparation.
+CP311/13 pass the repository fixtures and reach external-corpus execution.
+
+Bounded source review finds no descriptor/profile-path mismatch or justified
+capability-order remedy. Exit0preparation alone is inconclusive because index
+NOT_APPLICABLE can return empty runtimes. Add required descriptor-presence
+validation and bounded private failure/kernel projections; preserve all grants,
+deadlines, original exits and descriptor launch binding. Four preparation, four
+private-failure and three initial kernel-projection cases fail before programs
+are added. Stale-record and numeric-name regressions cover the agent's two
+diagnostic findings; exact prefix continuity and current/baseline capture success
+resolve them. Rotation and failed capture also yield unavailable observations.
+Final focused suite:19host+45portable/bootstrap cases pass(6.93s). Agent reports
+no remaining diagnostic findings. Captured booleans are observations, not verified
+launcher attribution, missing-denial proof or acceptance. Raw kernel logs, paths
+and exception text remain runner-private. Full and SMART each pass19required host cases followed by5017portable cases,
+75declared skips,95subtests and5existing warnings (260.19s/254.54s).
+The full runs preceded the test harness-only replacement of exec with real
+subprocess execution; the final focused64cases verify those exact programs.
+Final typing reports0errors/0warnings; lint10.00/10, formatting, YAML, imports,
+actionlint,28contracts and staged planned requirements pass. AST, AI-bloat,
+Radon and pinned Semgrep report0findings/0errors in changed Python scope.
+The signed runtime checksum is unchanged. Exact-head hosted review remains
+required; these local passes do not establish namespace or sealed acceptance.

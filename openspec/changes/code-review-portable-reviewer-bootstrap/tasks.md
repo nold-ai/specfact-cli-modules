@@ -5,4 +5,5 @@
 - [x] Verify parity, all quality gates and module checksum/version/signature flow.
 - [x] Prepare a draft reviewer-update PR for human merge/promotion.
 - [x] Correct the observed retired install pin and retain required host/portable proofs.
+- [x] Retain bounded private/public diagnosis for repeated namespace preparation failure.
 - [ ] After separately authorized promotion, verify exact #498 sealed execution.

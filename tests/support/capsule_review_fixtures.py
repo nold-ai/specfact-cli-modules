@@ -63,7 +63,11 @@ _PREPARATION_CLI_SCRIPT = (
     "assert sys.argv[1:7] == ['code','review','runtime','prepare','--scope','index']\n"
     "assert os.environ['SPECFACT_MODULES_REPO'] == os.environ['GITHUB_WORKSPACE']\n"
     "assert os.environ['SPECFACT_CODE_REVIEW_CAPSULE_CACHE'].endswith('/commit-review-cache')\n"
-    "print('{}')\n"
+    "from pathlib import Path\n"
+    "import json\n"
+    "descriptor=Path(os.environ['CUSTOMER_ROOT'])/'fixture-descriptor.json'\n"
+    "descriptor.write_text('{}')\n"
+    "print(json.dumps({'runtimes':{side:{'descriptor':str(descriptor)} for side in ('base','head')}}))\n"
 )
 
 

@@ -53,3 +53,10 @@ confined targeted discovery SHALL not select those proof-only host fixtures.
 - **WHEN** an explicit ordinary-host proof fails
 - **THEN** full and SMART entrypoints preserve its failing exit before portable pytest
 - **AND** immutable baseline test bytes remain available while current assertions run in the required host proof; no failure becomes PASS
+
+#### Scenario: Failed hosted preparation retains bounded public evidence
+
+- **GIVEN** the mandatory candidate or independently installed reviewer preparation
+- **WHEN** preparation exits successfully without both index runtime descriptors or namespace setup fails
+- **THEN** the job remains failing and publishes only fixed preparation status, descriptor-presence and kernel-audit denial booleans, with raw paths/logs remaining private
+- **AND** authenticated controller provenance, descriptor binding, namespaces, grants and deadlines remain unchanged

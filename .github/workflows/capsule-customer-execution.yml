@@ -133,7 +133,18 @@ jobs:
           }
           EOF
           sudo apparmor_parser -r "$profile"
+      - name: Record kernel audit boundary privately
+        if: github.event_name == 'pull_request' && matrix.python == '3.12'
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          audit_exit=0
+          { sudo dmesg --color=never; } > "$CUSTOMER_ROOT/namespace-audit-baseline.private.log" \
+            2> "$CUSTOMER_ROOT/namespace-audit-baseline.private.stderr" || audit_exit=$?
+          echo "NAMESPACE_AUDIT_BASELINE_CAPTURED=$([ "$audit_exit" -eq 0 ] && echo 1 || echo 0)" >> "$GITHUB_ENV"
       - name: Run deferred candidate commit review without weakening enforcement
+        id: deferred_review
         if: github.event_name == 'pull_request' && matrix.python == '3.12'
         shell: bash
         env:
@@ -167,6 +178,32 @@ jobs:
               "$CUSTOMER_ROOT/venv/bin/python" -B -P -m specfact_cli.cli \
               code review runtime prepare --scope index --project-config "$PROJECT_CONFIG" --json \
               > "$CUSTOMER_ROOT/commit-review-preparation.private.json"
+          PREPARATION_REPORT="$CUSTOMER_ROOT/commit-review-preparation.private.json" \
+            "$CUSTOMER_ROOT/venv/bin/python" -I - <<'PY_PREPARATION'
+          import json
+          import os
+          from pathlib import Path
+
+          present = {side: False for side in ("base", "head")}
+          try:
+              path = Path(os.environ["PREPARATION_REPORT"])
+              with path.open("rb") as stream:
+                  data = stream.read(2 * 1024 * 1024 + 1)
+              if len(data) > 2 * 1024 * 1024:
+                  raise ValueError("private preparation bound exceeded")
+              result = json.loads(data)
+              runtimes = result.get("runtimes", {}) if isinstance(result, dict) else {}
+              for side in present:
+                  value = runtimes.get(side, {}) if isinstance(runtimes, dict) else {}
+                  descriptor = value.get("descriptor") if isinstance(value, dict) else None
+                  present[side] = isinstance(descriptor, str) and Path(descriptor).is_file() and not Path(descriptor).is_symlink()
+          except (OSError, ValueError, KeyError):
+              pass
+          prepared = all(present.values())
+          print(json.dumps({"status": "PREPARED" if prepared else "INCOMPLETE", "phase": "index_preparation",
+              "base_descriptor_present": present["base"], "head_descriptor_present": present["head"]}))
+          raise SystemExit(0 if prepared else 1)
+          PY_PREPARATION
           review_exit=0
           SPECFACT_CODE_REVIEW_CAPSULE_CACHE="$CUSTOMER_ROOT/commit-review-cache" \
             SPECFACT_CODE_REVIEW_SUBJECT_ROOT="$REVIEW_ROOT" \
@@ -191,6 +228,50 @@ jobs:
           PY
           fi
           exit "$review_exit"
+      - name: Collect namespace audit evidence privately
+        if: failure() && steps.deferred_review.outcome == 'failure'
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          audit_exit=0
+          { sudo dmesg --color=never; } > "$CUSTOMER_ROOT/namespace-audit.private.log" \
+            2> "$CUSTOMER_ROOT/namespace-audit.private.stderr" || audit_exit=$?
+          NAMESPACE_AUDIT="$CUSTOMER_ROOT/namespace-audit.private.log" \
+            NAMESPACE_AUDIT_BASELINE="$CUSTOMER_ROOT/namespace-audit-baseline.private.log" \
+            NAMESPACE_AUDIT_CAPTURED="$([ "$audit_exit" -eq 0 ] && echo 1 || echo 0)" \
+            EXPECTED_LAUNCHER_PROFILE=specfact-customer-commit-review \
+            "$CUSTOMER_ROOT/venv/bin/python" -I - <<'PY_NAMESPACE'
+          import json
+          import os
+          import re
+          from pathlib import Path
+
+          logs = {}
+          try:
+              for name in ("NAMESPACE_AUDIT_BASELINE", "NAMESPACE_AUDIT"):
+                  with Path(os.environ[name]).open("rb") as stream:
+                      logs[name] = stream.read(16 * 1024 * 1024 + 1)
+                  if len(logs[name]) > 16 * 1024 * 1024:
+                      raise ValueError("private audit bound exceeded")
+              before, after = logs["NAMESPACE_AUDIT_BASELINE"], logs["NAMESPACE_AUDIT"]
+              boundary = os.environ.get("NAMESPACE_AUDIT_BASELINE_CAPTURED") == "1" and os.environ["NAMESPACE_AUDIT_CAPTURED"] == "1" and after.startswith(before)
+              text = after[len(before):][-8192:].decode("utf-8", errors="replace") if boundary else ""
+          except (OSError, ValueError, KeyError):
+              boundary, text = False, ""
+          records = [line for line in text.splitlines() if 'apparmor="DENIED"' in line and ('comm="bwrap-static"' in line or re.search(r'comm="[0-9]{1,10}"', line) is not None)]
+          expected = 'profile="' + os.environ["EXPECTED_LAUNCHER_PROFILE"] + '"'
+          print(json.dumps({"phase": "namespace_audit",
+              "audit_captured": os.environ["NAMESPACE_AUDIT_CAPTURED"] == "1",
+              "audit_boundary_available": boundary,
+              "apparmor_denial_audit_observed": bool(records),
+              "launcher_name_audit_observed": any('comm="bwrap-static"' in line for line in records),
+              "numeric_descriptor_name_audit_observed": any(re.search(r'comm="[0-9]{1,10}"', line) is not None for line in records),
+              "expected_profile_audit_observed": any(expected in line for line in records),
+              "unconfined_profile_audit_observed": any('profile="unconfined"' in line for line in records),
+              "net_admin_denial_observed": any('capname="net_admin"' in line for line in records),
+              "userns_denial_observed": any('operation="userns_create"' in line for line in records)}))
+          PY_NAMESPACE
       - name: Exercise cold and warm fixtures and modules repository
         shell: bash
         run: |
@@ -342,6 +423,25 @@ jobs:
             "$TRUSTED_ROOT/subject" prepare-index "$TRUSTED_ROOT/project.toml" \
             > "$TRUSTED_ROOT/preparation.private.log" 2>&1; then
             echo "Independent signed reviewer preparation failed; no acceptance."
+            PREPARATION_LOG="$TRUSTED_ROOT/preparation.private.log" \
+              "$TRUSTED_ROOT/venv/bin/python" -I - <<'PY_FAILURE'
+          import json
+          import os
+          from pathlib import Path
+
+          try:
+              with Path(os.environ["PREPARATION_LOG"]).open("rb") as stream:
+                  stream.seek(0, 2)
+                  stream.seek(max(0, stream.tell() - 8192))
+                  text = stream.read(8192).decode("utf-8", errors="replace")
+          except OSError:
+              text = ""
+          markers = {"namespace_unavailable": "capsule_namespace_unavailable",
+              "project_test_selection_ambiguous": "test_selection_ambiguous",
+              "project_runtime_prepare_failed": "project_runtime_preparation_failed"}
+          code = next((code for marker, code in markers.items() if marker in text), "unclassified_preparation_failure")
+          print(json.dumps({"status": "INCOMPLETE", "phase": "trusted_index_preparation", "diagnostic": code}))
+          PY_FAILURE
             if [ -f "$TRUSTED_ROOT/status.public.json" ]; then
               cat "$TRUSTED_ROOT/status.public.json"
             fi
