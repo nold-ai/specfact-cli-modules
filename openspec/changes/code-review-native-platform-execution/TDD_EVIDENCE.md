@@ -4351,3 +4351,20 @@ extractions. AST/AI-bloat/Radon return0on changed small helpers. Pinned Semgrep
 has0errors and only the pre-existing fixture print finding on unchanged code.
 Typing/lint pass with0errors/warnings and10.00/10. Fresh hosted diagnostic and
 exact-head capsule review remain required; this is not acceptance or publication.
+
+
+The fffa6856 hosted tools job113006304974 (run37683804287) now proves the
+macOS14 clean3.11 failure is output_encoding, with worker_exited=true,
+worker_signalled=false and entry_marker_present=false. This identifies broker
+rejection of pre-entry startup output, not the underlying startup error. Retain
+that distinction; do not infer a new sandbox permission or weaken encoding.
+
+A subsequent spec/RED→GREEN adds five fixed startup classes only: profile
+initialization, Python initialization, Python path configuration, loader and
+unclassified, based on literal fixture error prefixes.26focused cases and the
+actual6native cases pass; invalid/future values cannot disclose raw payloads.
+Typing/lint (0errors/warnings,10.00/10) and direct AST/AI-bloat/Radon pass. The
+existing single read-only reviewer finds no defect and confirms unchanged gates.
+Final full and SMART each pass19required host cases followed by5280portable
+cases,71declared skips,95subtests and5existing warnings (142.44s /143.06s). Fresh hosted failure
+classification remains required; these labels are clues, not startup acceptance.

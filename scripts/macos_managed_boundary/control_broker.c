@@ -92,15 +92,24 @@ static void control_state(const struct worker *item) {
     errno = saved;
 }
 
+/* Only fixed fixture prefixes are classified; raw output remains private. */
+static const char *control_output_class(const struct worker *item) {
+    if (strstr(item->output, "candidate-profile-failure:")) return "profile_initialization";
+    if (strstr(item->output, "Fatal Python error:")) return "python_initialization";
+    if (strstr(item->output, "Python path configuration:")) return "python_path_configuration";
+    if (strstr(item->output, "dyld[")) return "loader";
+    return "unclassified";
+}
+
 /* Finite private proof diagnostics never admit output or alter a rejection. */
 static void control_result(const struct worker *item, const char *stage) {
     if (!item) return;
     int saved = errno;
     printf("{\"control_result\":%d,\"stage\":\"%s\",\"worker_exited\":%s,"
-        "\"worker_signalled\":%s,\"entry_marker_present\":%s}\n", item->pid, stage,
+        "\"worker_signalled\":%s,\"entry_marker_present\":%s,\"output_class\":\"%s\"}\n", item->pid, stage,
         item->reaped && WIFEXITED(item->status) ? "true" : "false",
         item->reaped && WIFSIGNALED(item->status) ? "true" : "false",
-        strstr(item->output, "python-entry-ns=") ? "true" : "false");
+        strstr(item->output, "python-entry-ns=") ? "true" : "false", control_output_class(item));
     fflush(stdout);
     errno = saved;
 }

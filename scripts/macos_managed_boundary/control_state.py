@@ -7,6 +7,9 @@ from typing import Any
 
 
 STATE_FIELDS = ("wait_accepted", "wait_pending", "worker_reaped", "output_closed")
+OUTPUT_CLASSES = frozenset(
+    ("profile_initialization", "python_initialization", "python_path_configuration", "loader", "unclassified")
+)
 RESULT_FIELDS = ("worker_exited", "worker_signalled", "entry_marker_present")
 RESULT_STAGES = frozenset(
     ("entered", "queued", "output_encoding", "response_size", "queue_capacity", "session_deadline")
@@ -72,7 +75,13 @@ def project_worker_result(item: object) -> dict[str, object]:
         return {}
     if not all(isinstance(item.get(field), bool) for field in RESULT_FIELDS):
         return {}
-    return {"stage": stage, **{field: item[field] for field in RESULT_FIELDS}}
+    result = {"stage": stage, **{field: item[field] for field in RESULT_FIELDS}}
+    if "output_class" in item:
+        kind = item["output_class"]
+        if not isinstance(kind, str) or kind not in OUTPUT_CLASSES:
+            return {}
+        result["output_class"] = kind
+    return result
 
 
 def last_worker_result(events: str, history: list[dict[str, Any]], phase: str) -> dict[str, object]:

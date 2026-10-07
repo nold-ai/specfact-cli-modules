@@ -193,3 +193,20 @@ def test_native_result_projection_rejects_unknown_stages_and_nonboolean_fields(t
         }
         assert STATE.last_worker_result(json.dumps({"control_result": 321, **invalid}), history, "request-wait") == {}
     assert STATE.last_worker_result("[" * 4000, history, "request-wait") == {}
+
+
+def test_native_output_class_projection_rejects_unknown_payloads():
+    from scripts.macos_managed_boundary.control import STATE
+
+    _, fields = _result_fixture()
+    for kind in (
+        "profile_initialization",
+        "python_initialization",
+        "python_path_configuration",
+        "loader",
+        "unclassified",
+    ):
+        classified = {**fields, "output_class": kind}
+        assert STATE.project_worker_result({**classified, "raw": "/private/value"}) == classified
+    for payload in ("/private/value", [], False):
+        assert STATE.project_worker_result({**fields, "output_class": payload}) == {}

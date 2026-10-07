@@ -1128,5 +1128,5 @@ The repository SHALL execute every retained assertion in a required context that
 #### Scenario: Native pending-result rejection remains identifiable
 
 - **WHEN** the original bounded native broker rejects output encoding, response size, queue capacity or its session deadline during a recorded WAIT
-- **THEN** fixture diagnostics retain only a matching worker's fixed stage and actual exit-class/entry-marker booleans
+- **THEN** fixture diagnostics retain only a matching worker's fixed stage, a fixed startup-output classification and actual exit-class/entry-marker booleans
 - **AND** no payload bytes, authority, process identity or exception message becomes public; every original limit and failure exit remains blocking
