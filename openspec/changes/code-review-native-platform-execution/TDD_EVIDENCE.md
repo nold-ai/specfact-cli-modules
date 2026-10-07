@@ -4118,3 +4118,35 @@ five existing warnings in157.65s/158.25s, with tracked source/config stable:
 in fixture extraction. Required Linux review remains deferred locally and must
 complete on the pushed exact head; native source bytes and signed module payload
 are unchanged by these fixture-only corrections. Normal hooks follow before push.
+
+
+## Supported native candidate matrix GREEN — 7 October 2026, 02:38 Europe/Berlin
+
+Workflow37548070020for PR head61a859ccade53adb33fc828fded777d933d8ad14
+completesSUCCESS: toolchain, all three ABI archives and all nine delivered
+execution cells. Source receipts bind the actual PR merge checkout
+b37c9d31aca09474ad4d979f5c5a4a553e661430, whose parents are target dev
+74d3fd4dd6f9b171f18857abcc8f659c80d686e9and that PR head. This is actual
+candidate merge-tree execution, not protected-main publication authority or a
+new-head pass. Three separate fixed-boundary supported jobs also pass.
+
+Downloaded9small acceptance receipts in
+`/private/tmp/specfact460-native61-receipts` have the exact3×3matrix, arm64,
+the same source merge SHA and all eight checks true: all ten analyzers, cold
+extraction, loader profile, native boundary, offline reuse, project coverage,
+project extensions and project tests. Archive/manifest SHA pairs match across
+all three OS cells for each ABI:
+
+- cp311:c75ced8232b441cf20ae8aae437d00a59dd05f7408e178aa209f43bcf5c04492 /
+  2f5ecf17409c141cd1262991417b11b9c43a9dc98be5c92d0655f56626d8419f
+- cp312:b264b37119bfaa796d9f9fb4e145c6a67829348c7dd8102b7b2829e98d1be6e3 /
+  d904de0e748583eac975cf6605cfae6470f65007b433aa50e3a5fb361d70a96b
+- cp313:122a727c5585ca6d0c617e35c3ce67cd62ae80f292347dabeeeb7e9622273358 /
+  64d8a2f6fe5141be656225814620711f9d655d07e371eb056853211d907e770a
+
+Observed OS14.8.9/23J631,15.7.9/24G830and26.6.2/25G83. No production publisher
+key or ordinary signed native installation is inferred. Protected environments,
+signing/catalog promotion and independent ordinary installation remain pending.
+The subsequent CI/fixture-only correction head still requires its own Linux
+review, minimum-core and native checks. The baseline native success is retained
+before pushing, avoiding cancellation of this completed evidence.
