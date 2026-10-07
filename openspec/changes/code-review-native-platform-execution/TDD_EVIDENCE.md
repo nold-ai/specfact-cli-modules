@@ -4324,3 +4324,30 @@ The maintainer separately approves preparing a small authenticated reviewer-upda
 PR covering explicit test selection and a tested Pylint optimization. This does
 not authorize automatic merge/publication or modification of installed reviewers.
 Existing #498 stays separate from the reviewer bootstrap worktree on updated dev.
+
+
+## Bounded native WAIT result diagnostic — 7 October 2026 (Europe/Berlin)
+
+Head 8eeae6d4's hosted macOS14 minimal CPython3.11 clean case fails at
+request-wait after output_closed, wait_accepted, wait_pending and worker_reaped
+are all true. Exact authenticated PBS3.11 bytes pass locally6/6; the cause remains
+unknown. Encoding and serialized-response size are distinct rejection paths,
+so no permission, output/frame, deadline or cleanup gate is changed.
+
+Specification precedes a meaningful RED for missing last_worker_result, then
+finite per-worker entered/queued/output_encoding/response_size/queue_capacity/
+session_deadline observations. Status projection permits only worker_exited,
+worker_signalled and entry_marker_present booleans. It binds to this client's
+recorded failing WAIT and rejects foreign identities, malformed/unknown stages
+and non-boolean fields. No raw bytes, exception payload, PID, handle, authority or
+path becomes public; every rejection still terminates at the original gate.
+
+Focused25tests pass. The actual native broker compiles and all6minimal CPython
+cases pass using the exact authenticated3.11 input. A bounded read-only reviewer
+finds no defect; tests do not yet exercise every C rejection path. Full host entry
+passes19cases followed by5278portable cases/71declared skips/95subtests in156.85s
+before equivalent helper/test extraction; final focused coverage verifies those
+extractions. AST/AI-bloat/Radon return0on changed small helpers. Pinned Semgrep
+has0errors and only the pre-existing fixture print finding on unchanged code.
+Typing/lint pass with0errors/warnings and10.00/10. Fresh hosted diagnostic and
+exact-head capsule review remain required; this is not acceptance or publication.

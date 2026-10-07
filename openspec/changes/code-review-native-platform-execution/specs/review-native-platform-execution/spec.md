@@ -1122,5 +1122,11 @@ The repository SHALL execute every retained assertion in a required context that
 #### Scenario: Native proof failures retain bounded context
 
 - **WHEN** a required native CPython proof fails on a hosted OS after local success
-- **THEN** its public diagnostic contains only the declared ABI, fixed fixture case/failure phase and existing boolean worker-state fields from a bounded fixture-owned log
+- **THEN** its public diagnostic contains only the declared ABI, fixed fixture case/failure phase, existing boolean worker-state fields and a fixed result rejection stage with exit-class/entry-marker booleans from a bounded fixture-owned log
 - **AND** raw output, exception payloads, authority, filesystem paths and process identities remain private; the original proof failure still fails the required job
+
+#### Scenario: Native pending-result rejection remains identifiable
+
+- **WHEN** the original bounded native broker rejects output encoding, response size, queue capacity or its session deadline during a recorded WAIT
+- **THEN** fixture diagnostics retain only a matching worker's fixed stage and actual exit-class/entry-marker booleans
+- **AND** no payload bytes, authority, process identity or exception message becomes public; every original limit and failure exit remains blocking

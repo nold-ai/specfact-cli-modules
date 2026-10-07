@@ -394,9 +394,8 @@ class Invocation:
         }
         path = _write_diagnostic(record)
         marker = {"failed_case": self.case, "failure_phase": phase, "failure_origin": origin, "diagnostic": str(path)}
-        state = STATE.last_worker_state(record["events"], record["requests"], phase) if origin else {}
-        if state:
-            marker["last_worker_state"] = state
+        if origin:
+            marker.update(STATE.wait_observations(record["events"], record["requests"], phase))
         socket_state = error.__dict__.get("_native_socket_state")
         if (
             origin

@@ -131,3 +131,65 @@ def test_native_failure_projection_rejects_non_scalar_identity(tmp_path):
         (tmp_path / "diagnostics.log").write_text(json.dumps(raw) + "\n")
         assert native_failure_summary(tmp_path, "3.11") == {"abi": "3.11"}
     assert native_failure_summary(tmp_path, "/private/value") == {}
+
+
+def _result_fixture():
+    history = [{"opcode": 1, "response": {"handle": 9, "pid": 321}}, {"opcode": 2, "fields": {"handle": 9}}]
+    fields = {
+        "stage": "output_encoding",
+        "worker_exited": True,
+        "worker_signalled": False,
+        "entry_marker_present": True,
+    }
+    return history, fields
+
+
+def _write_result_marker(root, fields):
+    import json
+
+    marker = {
+        "failed_case": "python-clean",
+        "failure_phase": "request-wait",
+        "last_worker_result": fields,
+        "raw": "/private/value",
+    }
+    (root / "diagnostics.log").write_text(json.dumps(marker))
+
+
+def test_native_result_projection_requires_matching_worker(tmp_path):
+    import json
+
+    from scripts.macos_managed_boundary.control import STATE
+    from tests.native.proof_python_candidate_matrix import native_failure_summary
+
+    history, fields = _result_fixture()
+    events = json.dumps({"control_result": 321, **fields, "raw": "/private/value"})
+    assert STATE.wait_observations(events, history, "request-wait") == {"last_worker_result": fields}
+    assert STATE.last_worker_result(events, history, "request-wait") == fields
+    assert STATE.last_worker_result(events, history, "request-launch") == {}
+    assert STATE.last_worker_result(events.replace("321", "999"), history, "request-wait") == {}
+    _write_result_marker(tmp_path, fields)
+    assert native_failure_summary(tmp_path, "3.11") == {
+        "abi": "3.11",
+        "case": "python-clean",
+        "phase": "request-wait",
+        "result": fields,
+    }
+
+
+def test_native_result_projection_rejects_unknown_stages_and_nonboolean_fields(tmp_path):
+    import json
+
+    from scripts.macos_managed_boundary.control import STATE
+    from tests.native.proof_python_candidate_matrix import native_failure_summary
+
+    history, fields = _result_fixture()
+    for invalid in ({**fields, "stage": "/private/value"}, {**fields, "stage": []}, {**fields, "worker_exited": 1}):
+        _write_result_marker(tmp_path, invalid)
+        assert native_failure_summary(tmp_path, "3.11") == {
+            "abi": "3.11",
+            "case": "python-clean",
+            "phase": "request-wait",
+        }
+        assert STATE.last_worker_result(json.dumps({"control_result": 321, **invalid}), history, "request-wait") == {}
+    assert STATE.last_worker_result("[" * 4000, history, "request-wait") == {}

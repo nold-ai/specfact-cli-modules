@@ -16,8 +16,18 @@ def _fixture_log_tail(root: Path) -> str:
         return ""
 
 
+def _native_fixture_identity(marker: dict) -> dict[str, object]:
+    from scripts.macos_managed_boundary.control import FAILURE_PHASES
+
+    case, phase = marker.get("failed_case"), marker.get("failure_phase")
+    cases = {"python-" + name for name in ("clean", "defective", "denials", "trap", "reexec", "loop")}
+    if not isinstance(case, str) or not isinstance(phase, str) or case not in cases or phase not in FAILURE_PHASES:
+        return {}
+    return {"case": case, "phase": phase}
+
+
 def _native_failure_marker(line: str) -> dict[str, object]:
-    from scripts.macos_managed_boundary.control import FAILURE_PHASES, STATE
+    from scripts.macos_managed_boundary.control import STATE
 
     try:
         marker = json.loads(line)
@@ -25,14 +35,14 @@ def _native_failure_marker(line: str) -> dict[str, object]:
         return {}
     if not isinstance(marker, dict):
         return {}
-    case, phase = marker.get("failed_case"), marker.get("failure_phase")
-    cases = {"python-" + name for name in ("clean", "defective", "denials", "trap", "reexec", "loop")}
-    if not isinstance(case, str) or not isinstance(phase, str) or case not in cases or phase not in FAILURE_PHASES:
+    projected = _native_fixture_identity(marker)
+    if not projected:
         return {}
-    projected: dict[str, object] = {"case": case, "phase": phase}
     state = marker.get("last_worker_state")
     if isinstance(state, dict) and all(isinstance(state.get(field), bool) for field in STATE.STATE_FIELDS):
         projected["state"] = {field: state[field] for field in STATE.STATE_FIELDS}
+    if result := STATE.project_worker_result(marker.get("last_worker_result")):
+        projected["result"] = result
     return projected
 
 
