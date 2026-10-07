@@ -27,3 +27,16 @@ requirements:
       method: test
       intent: Compare actual same-object duplicate results and restore/clear on all exits.
       observable: Missing cache regressions fail before implementation; upstream parity, eviction and teardown are required. Full sealed #498 timing remains a separate promotion check.
+  openspec:code-review-portable-reviewer-bootstrap:review-portable-bootstrap:reviewer-installation-and-host-proofs-retain-ordinary-context:
+    rationale: Actual hosted CI cannot install retired 0.50.1; reuse the owner-approved proof context separation without waiving assertions.
+    stakeholder_refs: [nold-ai/specfact-cli-modules#460]
+    touchpoints:
+    - id: reviewer-installation
+      kind: config_file
+      locator: openspec/changes/code-review-portable-reviewer-bootstrap/specs/review-portable-bootstrap/spec.md
+    verification_cases:
+    - case_id: reviewer-bootstrap-3
+      scenario_id: reviewer-installation-and-host-proofs-retain-ordinary-context
+      method: test
+      intent: Validate available reviewer installation and mandatory ordinary-host failure propagation.
+      observable: Retired pin fails hosted installation; explicit host proof retains all old assertions, target selection omits its proof-only filename and failure remains blocking.

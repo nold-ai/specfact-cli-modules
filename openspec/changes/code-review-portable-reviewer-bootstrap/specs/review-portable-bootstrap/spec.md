@@ -33,3 +33,23 @@ LineSet/minimum-line keys within one invocation and retain upstream results.
 - **WHEN** an invocation completes, raises or exits after cache eviction
 - **THEN** the upstream function is restored and all cached objects are released
 - **AND** no invocation can reuse another invocation's cache
+
+
+### Requirement: Reviewer installation and host proofs retain ordinary context
+
+The blocking independent reviewer SHALL install the currently available signed
+0.51.0 release through the unchanged ordinary marketplace route. Required
+ordinary-host recipe assertions SHALL execute explicitly in full and SMART tests;
+confined targeted discovery SHALL not select those proof-only host fixtures.
+
+#### Scenario: Retired reviewer pin prevents review execution
+
+- **WHEN** the former 0.50.1 pin is absent from the live registry
+- **THEN** select the available authenticated 0.51.0 without overriding signatures
+- **AND** retain every existing hosted-recipe, isolation, deadline and error assertion
+
+#### Scenario: Host recipe failure remains blocking
+
+- **WHEN** an explicit ordinary-host proof fails
+- **THEN** full and SMART entrypoints preserve its failing exit before portable pytest
+- **AND** immutable baseline test bytes remain available while current assertions run in the required host proof; no failure becomes PASS

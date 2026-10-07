@@ -2,7 +2,7 @@
 
 Owner explicitly approved preparation of a separate reviewer-update PR for human
 merge/promotion. It covers the verified explicit-test selection bug and tested
-Pylint optimization only. No release is published, installed authenticated
+Pylint optimization and the subsequently verified retired CI installation pin. No release is published, installed authenticated
 reviewers are unchanged, and #498 exact sealed acceptance remains pending.
 
 ## Specification → RED → implementation → GREEN
@@ -83,4 +83,40 @@ intersects the discovered matches, so a non-candidate cannot waive ambiguity:
 (matches & explicit) equals (matches & (explicit & candidates)) because every
 match is in candidates. Preserve the old explicit-file semantics; the existing
 unrelated-match regression still rejects unresolved ambiguity. No code change
-is warranted by that suggestion. Final reviewer completion remains pending.
+is warranted by that suggestion. The public committed review completed; this suggestion is independently non-actionable.
+
+
+## Verified independent-installation CI correction
+
+Normal head c3c27ef986061d712c00caf72677f30baf466a7c run37684791456
+failed before analysis: the independent installation step requested marketplace
+0.50.1, which is absent from the registry. Use signed released0.51.0, retaining
+its ordinary-user authenticated installation route and unchanged budgets.
+The updated pin assertion and fake CLI first failed:2failed/18passed
+(6.77s), private log /private/tmp/specfact460-bootstrap-pin-red.log.
+The three SMART exit-propagation regressions then failed against the old single
+portable entry point, before implementing required host-first execution; private
+log /private/tmp/specfact460-bootstrap-host-entry-red.log.
+
+Reuse the owner-approved context separation rather than editing the immutable
+baseline proof file:19 required host cases pass(5.92s), and the nine portable
+structural cases plus21 bootstrap cases pass(0.53s). The bounded read-only agent
+verified all55 original assertions retained, baseline bytes equal origin/dev,
+no new package markers, unchanged runtime corrections, and installed0.51.0
+selecting only portable test modules. Both required host and portable failing
+exits propagate; no proof is waived. Logs remain private. Final suite and
+quality results are recorded below after completion.
+
+Final correction quality gates: format, typing(0errors/0warnings), lint10.00/10,
+manifests, import boundaries, strict seven-module signatures, strict OpenSpec,
+actionlint,28contracts and30 focused cases pass. Direct AST/AI-bloat/Radon report
+zero findings. Pinned Semgrep reports zero changed-line findings; its two
+print-in-src observations are byte-identical baseline SMART status/check prints
+shifted by11lines, explicitly compared against origin/dev. Full test execution
+passes19 required host cases then5002portable cases/75declaredskips/95subtests/
+5existingwarnings(260.49s). Final SMART also passes19required host cases then5002portable cases/75declaredskips/95subtests/5existingwarnings(265.77s). Staged planned requirements pass.
+
+The earlier c3c head candidate3.12 receipt fails closed before analysis during
+offline installation:namespace_unavailable (loopback RTM_NEWADDR denied). It
+contains no completed analyzer evidence, so it cannot establish clean results.
+No namespace policy or budget is changed; fresh CI will run on the pin correction.

@@ -29,3 +29,13 @@ follow-up. Native PR #498 must rebase and use 0.51.2 after human promotion; its
 current unpublished 0.51.1 is not promoted alongside this small bootstrap. The
 previously approved local Darwin review deferral remains DEFERRED to blocking
 exact-head GitHub Linux, with every other normal hook required.
+
+The first normal reviewer PR CI run failed before analysis because the independent
+job pinned marketplace 0.50.1, absent from the registry. Use released 0.51.0, already
+used by the native PR. Reuse the owner-approved proof context separation: retain
+the immutable baseline unit file, run the current 19 host cases explicitly before
+the portable suite, and retain nine portable structural cases. All 55 original
+assertions are retained, with forbidden routes parametrized. Both full and SMART
+entry points preserve either failing exit. No empty package markers or confined
+host execution are introduced. This correction changes no signed runtime payload,
+analyzer budget, authorization route or required failure condition.

@@ -1,5 +1,7 @@
 """Prove explicit selection and bounded upstream Pylint result parity."""
 
+from pathlib import Path
+
 import pytest
 from pylint.checkers import symilar
 
@@ -133,3 +135,29 @@ def test_runtime_wrapper_preserves_messages_statistics_and_exit_status(tmp_path,
     assert reporter.messages == expected_reporter.messages
     assert vars(actual.linter.stats) == vars(expected.linter.stats)
     assert actual.linter.msg_status == expected.linter.msg_status
+
+
+@pytest.mark.parametrize("codes,expected,calls", [([9], 9, 1), ([0, 7], 7, 2), ([0, 0], 0, 2)])
+def test_smart_entry_preserves_required_host_and_portable_failures(codes, expected, calls, monkeypatch):
+    import importlib.util
+    from types import SimpleNamespace
+
+    root = Path(__file__).resolve().parents[4]
+    monkeypatch.syspath_prepend(str(root / "tools"))
+    spec = importlib.util.spec_from_file_location("bootstrap_smart", root / "tools/smart_test_coverage.py")
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    invoked = []
+    results = iter(codes)
+
+    def run(command, **_options):
+        invoked.append(command)
+        return SimpleNamespace(returncode=next(results))
+
+    monkeypatch.setattr(module.subprocess, "run", run)
+    assert module._run_pytest([]) == expected
+    assert len(invoked) == calls
+    assert "tests/host/proof_capsule_deferred_review_ci.py" in invoked[0]
+    if calls == 2:
+        assert "--ignore=tests/unit/test_capsule_deferred_review_ci.py" in invoked[1]

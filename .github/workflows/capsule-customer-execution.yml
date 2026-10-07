@@ -251,7 +251,7 @@ jobs:
           env -i HOME="$TRUSTED_ROOT/home" TMPDIR="$TRUSTED_ROOT/tmp" \
             PATH="$TRUSTED_ROOT/venv/bin:/usr/bin:/bin" SPECFACT_MODULES_BRANCH=main \
             "$TRUSTED_ROOT/venv/bin/python" -I -m specfact_cli.cli \
-            module install nold-ai/specfact-code-review --scope user --version 0.50.1 --source marketplace
+            module install nold-ai/specfact-code-review --scope user --version 0.51.0 --source marketplace
       - name: Capture immutable candidate subject without executing its host code
         shell: bash
         run: |

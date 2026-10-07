@@ -16,6 +16,8 @@ reviewer-update PR on 2026-10-07 for human merge/promotion.
   256 object/minimum-line keys, restoring the original function and clearing entries
   on every exit. Retain checkers, pair order, jobs, return codes and deadlines.
 - Prepare the signed module patch release from dev, separately from native #498.
+- Correct the retired independent-review installation pin to authenticated 0.51.0,
+  retaining all host assertions through the already approved context separation.
 
 ## Impact
 
@@ -23,4 +25,5 @@ Refs nold-ai/specfact-cli-modules#460; prerequisite for PR #498. No core change,
 authenticated installed patch, rule disablement, new CI deadline, automatic merge
 or publication. Human-reviewed authenticated promotion and subsequent exact #498
 Linux timing remain required. Bootstrap preparation is bounded to the selection
-helper, Pylint wrapper, regression tests and normal release/evidence metadata.
+helper, Pylint wrapper, regression tests, the verified installation-pin correction
+and its required host/portable proof entry points, plus release/evidence metadata.
