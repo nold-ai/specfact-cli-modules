@@ -609,6 +609,11 @@ requirements:
       method: test
       intent: Resolve introduced parser complexity, machine-output and naming findings without changing protocol assertions.
       observable: The pinned Semgrep1.144.0 frontend reproduces five introduced rows and then returns zero findings/errors on the same four files. Radon reproduces the large-frame proofCC16; separate setup/assertion helpers and fixed forbidden-request replacements remove all UV fixture Radon findings. All native parser mutation IDs, XML value/size assertions, process status checks and deadlines remain. Serialized CLI stdout values/exits are unchanged. The146focused and90follow-up cases pass, with unchanged rules and payloads. The complete68-file pinned clean/bloat/bug scan has no added-line findings or parse errors after correcting five further broker/timeout-fixture rows. Actual physical broker proof passes9cases; stable full/SMART each pass5245tests. Hosted exact-head Linux review remains required.
+    - case_id: 460-15-36
+      scenario_id: prepare-unfamiliar-projects-from-discovered-or-caller-supplied-setup
+      method: test
+      intent: Distinguish actual assertion failures from unavailable test contexts without exposing private node IDs.
+      observable: Six outcome/function regressions and ten fixed coverage-prefix regressions fail before both inline projectors expose finite outcome/phase/xfail values and source-validated public function identity. Eight malformed/private/oversized message cases and eight matching/mismatched-phase exception cases remain private where required; six exception-class assertions fail before implementation. Function discovery parses only bounded tracked Python inside the subject, never imports candidate code. Existing 200-location cap, review exits, inventory, trusted reviewer and all deadlines remain unchanged; exact-head CI is still required.
     - case_id: 460-15-35
       scenario_id: prepare-unfamiliar-projects-from-discovered-or-caller-supplied-setup
       method: test

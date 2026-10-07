@@ -177,6 +177,8 @@ jobs:
           if [ "$review_exit" -ne 0 ]; then
             # Print bounded codes/public locations; raw reports, receipts and logs stay private.
             REVIEW_PUBLIC_EXIT="$review_exit" "$CUSTOMER_ROOT/venv/bin/python" - <<'PY'
+          import ast
+          import re
           import json
           import os
           import subprocess
@@ -228,6 +230,61 @@ jobs:
                           tags.add(value)
                   return sorted(tags)
 
+              test_failure_details = {}
+              for analyzer in data.get("analyzer_evidence", []):
+                  if not isinstance(analyzer, dict) or analyzer.get("id") != "targeted-pytest-coverage":
+                      continue
+                  execution = analyzer.get("target_execution")
+                  records = execution.get("records", []) if isinstance(execution, dict) else []
+                  if not isinstance(records, list):
+                      continue
+                  for record in records[:20_000]:
+                      if not isinstance(record, dict):
+                          continue
+                      key = tuple(record.get(field) for field in ("nodeid", "outcome", "phase"))
+                      detail = record.get("detail")
+                      if all(isinstance(value, str) and len(value) <= 4096 for value in key) and isinstance(detail, str) and len(detail) <= 65_536:
+                          test_failure_details[key] = detail
+
+              def _public_test_failure(nodeid, outcome, phase):
+                  detail = test_failure_details.get((nodeid, outcome, phase), "")
+                  exception = re.search(r"^E\s+(?:subprocess\.)?(AssertionError|FileNotFoundError|PermissionError|CalledProcessError|RuntimeError|ImportError|ModuleNotFoundError|TypeError|ValueError)(?=:|\s|$)", detail, re.MULTILINE)
+                  failure = {"test_failure_class": exception.group(1)} if exception else {}
+                  for option in ("-I", "-E", "-S"):
+                      if "project_python_option_unsupported:" + option + ";" in detail:
+                          failure.update(test_diagnostic="project_python_option_unsupported", python_option=option)
+                          break
+                  return failure
+
+              source_test_functions = {}
+              def _public_test_observation(finding, file):
+                  message = finding.get("message")
+                  if not isinstance(message, str) or len(message) > 4096:
+                      return {}
+                  match = re.fullmatch(r"Test (.+) (passed|failed|skipped) during (setup|call|teardown)( with an xfail marker)?\.", message)
+                  if match is None:
+                      return {}
+                  nodeid, outcome, phase, xfail = match.groups()
+                  observation = {"test_outcome": outcome, "test_phase": phase, "test_xfail": bool(xfail)}
+                  observation.update(_public_test_failure(nodeid, outcome, phase))
+                  if not nodeid.startswith(file + "::"):
+                      return observation
+                  if file not in source_test_functions:
+                      functions = set()
+                      source = Path(file)
+                      try:
+                          source.resolve().relative_to(Path.cwd().resolve())
+                          if source.suffix == ".py" and not source.is_symlink() and source.stat().st_size <= 2_097_152:
+                              tree = ast.parse(source.read_text(encoding="utf-8"))
+                              functions = {node.name for node in ast.walk(tree) if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name.startswith("test_")}
+                      except (OSError, ValueError, SyntaxError, UnicodeError, RecursionError):
+                          pass
+                      source_test_functions[file] = functions
+                  function = nodeid.rsplit("::", 1)[-1].split("[", 1)[0]
+                  if function in source_test_functions[file]:
+                      observation["test_function"] = function
+                  return observation
+
               tracked = set(subprocess.check_output(["git", "ls-files", "-z"], text=True).split("\0"))
               emitted = 0
               def _finding_priority(row):
@@ -253,6 +310,8 @@ jobs:
                           value = finding.get(key)
                           if isinstance(value, str) and value in allowed:
                               location[key] = value
+                      if location.get("tool") == "pytest" and location.get("rule") == "TEST_OUTCOME_NOT_PASS":
+                          location.update(_public_test_observation(finding, file))
                       if location.get("category") == "tool_error":
                           message = finding.get("message")
                           classes = (
@@ -266,6 +325,9 @@ jobs:
                               pytest_codes = {
                                   "project_pytest_request_invalid", "project_pytest_configuration_or_collection_failed",
                                   "project_pytest_collection_error", "project_pytest_root_missing_or_invalid",
+                                  "project_pytest_coverage_diagnostic_invalid", "project_pytest_coverage_policy_invalid",
+                                  "project_pytest_coverage_candidate_invalid", "project_pytest_installed_coverage_directory_invalid",
+                                  "project_pytest_installed_coverage_module_invalid",
                                   "project_pytest_root_outside_snapshot",
                                   "project_pytest_collection_failed", "project_pytest_execution_incomplete",
                                   "project_pytest_unexecuted", "project_pytest_coverage_missing",
@@ -516,6 +578,8 @@ jobs:
           if [ "$review_exit" -ne 0 ]; then
             cd "$TRUSTED_ROOT/subject"
             "${trusted_env[@]}" REVIEW_PUBLIC_REPORT="$TRUSTED_ROOT/review.private.json" REVIEW_PUBLIC_EXIT="$review_exit" REVIEW_PUBLIC_PROGRESS="$TRUSTED_ROOT/review.private.log" "$TRUSTED_ROOT/venv/bin/python" -I - <<'PY'
+          import ast
+          import re
           import json
           import os
           import subprocess
@@ -583,6 +647,61 @@ jobs:
                           tags.add(value)
                   return sorted(tags)
 
+              test_failure_details = {}
+              for analyzer in data.get("analyzer_evidence", []):
+                  if not isinstance(analyzer, dict) or analyzer.get("id") != "targeted-pytest-coverage":
+                      continue
+                  execution = analyzer.get("target_execution")
+                  records = execution.get("records", []) if isinstance(execution, dict) else []
+                  if not isinstance(records, list):
+                      continue
+                  for record in records[:20_000]:
+                      if not isinstance(record, dict):
+                          continue
+                      key = tuple(record.get(field) for field in ("nodeid", "outcome", "phase"))
+                      detail = record.get("detail")
+                      if all(isinstance(value, str) and len(value) <= 4096 for value in key) and isinstance(detail, str) and len(detail) <= 65_536:
+                          test_failure_details[key] = detail
+
+              def _public_test_failure(nodeid, outcome, phase):
+                  detail = test_failure_details.get((nodeid, outcome, phase), "")
+                  exception = re.search(r"^E\s+(?:subprocess\.)?(AssertionError|FileNotFoundError|PermissionError|CalledProcessError|RuntimeError|ImportError|ModuleNotFoundError|TypeError|ValueError)(?=:|\s|$)", detail, re.MULTILINE)
+                  failure = {"test_failure_class": exception.group(1)} if exception else {}
+                  for option in ("-I", "-E", "-S"):
+                      if "project_python_option_unsupported:" + option + ";" in detail:
+                          failure.update(test_diagnostic="project_python_option_unsupported", python_option=option)
+                          break
+                  return failure
+
+              source_test_functions = {}
+              def _public_test_observation(finding, file):
+                  message = finding.get("message")
+                  if not isinstance(message, str) or len(message) > 4096:
+                      return {}
+                  match = re.fullmatch(r"Test (.+) (passed|failed|skipped) during (setup|call|teardown)( with an xfail marker)?\.", message)
+                  if match is None:
+                      return {}
+                  nodeid, outcome, phase, xfail = match.groups()
+                  observation = {"test_outcome": outcome, "test_phase": phase, "test_xfail": bool(xfail)}
+                  observation.update(_public_test_failure(nodeid, outcome, phase))
+                  if not nodeid.startswith(file + "::"):
+                      return observation
+                  if file not in source_test_functions:
+                      functions = set()
+                      source = Path(file)
+                      try:
+                          source.resolve().relative_to(Path.cwd().resolve())
+                          if source.suffix == ".py" and not source.is_symlink() and source.stat().st_size <= 2_097_152:
+                              tree = ast.parse(source.read_text(encoding="utf-8"))
+                              functions = {node.name for node in ast.walk(tree) if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name.startswith("test_")}
+                      except (OSError, ValueError, SyntaxError, UnicodeError, RecursionError):
+                          pass
+                      source_test_functions[file] = functions
+                  function = nodeid.rsplit("::", 1)[-1].split("[", 1)[0]
+                  if function in source_test_functions[file]:
+                      observation["test_function"] = function
+                  return observation
+
               tracked = set(subprocess.check_output(["git", "ls-files", "-z"], text=True).split("\0"))
               emitted = 0
               def _finding_priority(row):
@@ -608,6 +727,8 @@ jobs:
                           value = finding.get(key)
                           if isinstance(value, str) and value in allowed:
                               location[key] = value
+                      if location.get("tool") == "pytest" and location.get("rule") == "TEST_OUTCOME_NOT_PASS":
+                          location.update(_public_test_observation(finding, file))
                       if location.get("category") == "tool_error":
                           message = finding.get("message")
                           classes = (
@@ -621,6 +742,9 @@ jobs:
                               pytest_codes = {
                                   "project_pytest_request_invalid", "project_pytest_configuration_or_collection_failed",
                                   "project_pytest_collection_error", "project_pytest_root_missing_or_invalid",
+                                  "project_pytest_coverage_diagnostic_invalid", "project_pytest_coverage_policy_invalid",
+                                  "project_pytest_coverage_candidate_invalid", "project_pytest_installed_coverage_directory_invalid",
+                                  "project_pytest_installed_coverage_module_invalid",
                                   "project_pytest_root_outside_snapshot",
                                   "project_pytest_collection_failed", "project_pytest_execution_incomplete",
                                   "project_pytest_unexecuted", "project_pytest_coverage_missing",

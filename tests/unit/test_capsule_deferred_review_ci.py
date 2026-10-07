@@ -831,6 +831,17 @@ json.loads = _depth_failure
         ("project_pytest_root_outside_snapshot", "project_pytest_root_outside_snapshot"),
         ("project_pytest_root_missing_or_invalid; PRIVATE", "project_pytest_root_missing_or_invalid"),
         ("project_pytest_collection_error; PRIVATE", "project_pytest_collection_error"),
+        ("project_pytest_coverage_diagnostic_invalid:PRIVATE", "project_pytest_coverage_diagnostic_invalid"),
+        ("project_pytest_coverage_policy_invalid:PRIVATE", "project_pytest_coverage_policy_invalid"),
+        ("project_pytest_coverage_candidate_invalid:PRIVATE", "project_pytest_coverage_candidate_invalid"),
+        (
+            "project_pytest_installed_coverage_directory_invalid:PRIVATE",
+            "project_pytest_installed_coverage_directory_invalid",
+        ),
+        (
+            "project_pytest_installed_coverage_module_invalid:PRIVATE",
+            "project_pytest_installed_coverage_module_invalid",
+        ),
         ("[Errno 2] PRIVATE_PATH", "file_missing"),
         ("[Errno 13] PRIVATE_PATH", "permission_denied"),
         ("PRIVATE project_pytest_execution_incomplete", None),
@@ -942,3 +953,126 @@ def test_deferred_host_fixture_does_not_alias_managed_caller_python(tmp_path: Pa
     managed.chmod(0o755)
     monkeypatch.setattr(sys, "executable", str(managed))
     test_deferred_gate_reviews_exact_staged_tree_and_propagates_failure(tmp_path, 0, False)
+
+
+@pytest.mark.parametrize("job_name", ["customer", "independent-review"])
+@pytest.mark.parametrize(
+    "outcome,phase,xfail", [("failed", "call", False), ("skipped", "setup", False), ("passed", "call", True)]
+)
+def test_public_test_observations_identify_only_tracked_source_functions(tmp_path, job_name, outcome, phase, xfail):
+    suffix = " with an xfail marker." if xfail else "."
+    finding = {
+        "file": "public.py",
+        "line": 1,
+        "severity": "error",
+        "category": "testing",
+        "tool": "pytest",
+        "rule": "TEST_OUTCOME_NOT_PASS",
+        "message": f"Test public.py::test_public_case[PRIVATE_PARAMETER] {outcome} during {phase}{suffix}",
+    }
+    _write_public_report(tmp_path, [finding])
+    (tmp_path / "public.py").write_text("def test_public_case():\n    pass\n")
+    result = subprocess.run(
+        [sys.executable, "-c", _public_projector(job_name)],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    row = json.loads(result.stdout)["finding_location"]
+    assert row.get("test_outcome") == outcome
+    assert row.get("test_phase") == phase
+    assert row.get("test_xfail") is xfail
+    assert row.get("test_function") == "test_public_case"
+    assert "PRIVATE" not in result.stdout
+
+
+@pytest.mark.parametrize("job_name", ["customer", "independent-review"])
+@pytest.mark.parametrize(
+    "message",
+    [
+        "Test public.py::PRIVATE_FUNCTION[PRIVATE_PARAMETER] failed during call.",
+        "Test /private/SECRET.py::test_public_case failed during call.",
+        "Test public.py::test_public_case failed during PRIVATE_PHASE.",
+        "Test public.py::test_public_case[" + "PRIVATE" * 1000 + "] failed during call.",
+    ],
+)
+def test_public_test_observations_reject_private_or_malformed_identity(tmp_path, job_name, message):
+    finding = {
+        "file": "public.py",
+        "line": 1,
+        "severity": "error",
+        "category": "testing",
+        "tool": "pytest",
+        "rule": "TEST_OUTCOME_NOT_PASS",
+        "message": message,
+    }
+    _write_public_report(tmp_path, [finding])
+    (tmp_path / "public.py").write_text("def test_public_case():\n    pass\n")
+    result = subprocess.run(
+        [sys.executable, "-c", _public_projector(job_name)],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    row = json.loads(result.stdout)["finding_location"]
+    assert "test_function" not in row
+    assert "PRIVATE" not in result.stdout and "SECRET" not in result.stdout
+
+
+def _write_public_phase_record_report(root, nodeid, detail):
+    finding = {
+        "file": "public.py",
+        "line": 1,
+        "severity": "error",
+        "category": "testing",
+        "tool": "pytest",
+        "rule": "TEST_OUTCOME_NOT_PASS",
+        "message": f"Test {nodeid} failed during call.",
+    }
+    _write_public_report(root, [finding])
+    (root / "public.py").write_text("def test_public_case():\n    pass\n")
+    report = root / ".specfact/code-review.json"
+    data = json.loads(report.read_text())
+    records = [
+        {"nodeid": nodeid, "phase": "setup", "outcome": "failed", "detail": "E PermissionError: PRIVATE_SETUP"},
+        {"nodeid": nodeid, "phase": "call", "outcome": "failed", "detail": detail},
+    ]
+    data["analyzer_evidence"] = [{"id": "targeted-pytest-coverage", "target_execution": {"records": records}}]
+    report.write_text(json.dumps(data))
+
+
+@pytest.mark.parametrize("job_name", ["customer", "independent-review"])
+@pytest.mark.parametrize(
+    "failure_case",
+    [
+        ("E FileNotFoundError: [Errno 2] PRIVATE_PATH", "FileNotFoundError", None, None),
+        ("E subprocess.CalledProcessError: PRIVATE_COMMAND", "CalledProcessError", None, None),
+        (
+            "E RuntimeError: project_python_option_unsupported:-I; PRIVATE_TRACE",
+            "RuntimeError",
+            "project_python_option_unsupported",
+            "-I",
+        ),
+        ("E PRIVATE_EXCEPTION: PRIVATE_TRACE", None, None, None),
+    ],
+)
+def test_public_test_failure_class_uses_matching_record_only(tmp_path, job_name, failure_case):
+    detail, exception, diagnostic, option = failure_case
+    _write_public_phase_record_report(tmp_path, "public.py::test_public_case[PRIVATE_PARAMETER]", detail)
+    result = subprocess.run(
+        [sys.executable, "-c", _public_projector(job_name)],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    row = json.loads(result.stdout)["finding_location"]
+    assert row.get("test_failure_class") == exception
+    assert row.get("test_diagnostic") == diagnostic
+    assert row.get("python_option") == option
+    assert "PRIVATE" not in result.stdout and "PermissionError" not in result.stdout

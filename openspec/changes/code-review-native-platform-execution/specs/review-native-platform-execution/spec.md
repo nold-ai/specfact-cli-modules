@@ -1062,7 +1062,7 @@ coverage and failure-evidence assertions.
 
 - **WHEN** a failed review contains test outcome or coverage failures after more than 200 ordinary findings
 - **THEN** both inline public projections retain tool errors first and test failures next, include only fixed test rule identifiers, and keep the same 200-location cap
-- **AND** raw test names, parameter values, traces and exception messages remain private; required review exits and deadlines remain unchanged
+- **AND** raw node IDs, parameter values, traces and exception messages remain private; required review exits and deadlines remain unchanged
 
 
 #### Scenario: Lean documentation CI does not inherit developer worker plugins
@@ -1077,3 +1077,13 @@ coverage and failure-evidence assertions.
 - **WHEN** the hosted recipe regression runs inside a managed project Python worker whose sys.executable is the attachment-preserving launcher
 - **THEN** its simulated ordinary CI environment owns a real isolated fixture venv interpreter and executes the unchanged trusted -I bootstrap and all staged-tree/failure assertions
 - **AND** the fixture does not alias the managed caller launcher, relax managed argument rejection, or change actual capsule runtime or trusted installation policy
+
+
+#### Scenario: Hosted test diagnostics identify only public source functions
+
+- **WHEN** a required review reports a nonpassing test observation
+- **THEN** both bounded inline projections retain only the finite outcome, phase and xfail flag, plus a function name independently present in the tracked public Python source
+- **AND** raw node IDs, parameter values, private names and traces remain private; malformed or oversized messages and unsafe source paths cannot add function identity
+- **AND** required review exits, test inventory, the 200-location limit and execution deadlines remain unchanged
+
+- **AND** a matching controller-owned phase record may add only a fixed exception class or the existing managed Python option rejection code; unrelated phase records and raw exception payloads remain private
