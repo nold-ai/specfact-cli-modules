@@ -1070,3 +1070,10 @@ coverage and failure-evidence assertions.
 - **WHEN** Docs Review installs its pinned lean dependencies without xdist
 - **THEN** its original five test files execute with explicit serial reporting/import options, preserve pipeline failure propagation, and do not inherit repository worker arguments
 - **AND** full repository review retains its declared worker and coverage policy
+
+
+#### Scenario: Hosted bootstrap fixtures own an ordinary interpreter
+
+- **WHEN** the hosted recipe regression runs inside a managed project Python worker whose sys.executable is the attachment-preserving launcher
+- **THEN** its simulated ordinary CI environment owns a real isolated fixture venv interpreter and executes the unchanged trusted -I bootstrap and all staged-tree/failure assertions
+- **AND** the fixture does not alias the managed caller launcher, relax managed argument rejection, or change actual capsule runtime or trusted installation policy

@@ -6,6 +6,7 @@ import json
 import os
 import subprocess
 import sys
+import venv
 from pathlib import Path
 from string import Template
 
@@ -240,8 +241,7 @@ def test_deferred_gate_reviews_exact_staged_tree_and_propagates_failure(
     repository, base, head = _deferred_review_repository(tmp_path, advanced_dev)
     customer = tmp_path / "customer"
     (customer / "cache").mkdir(parents=True)
-    (customer / "venv/bin").mkdir(parents=True)
-    (customer / "venv/bin/python").symlink_to(sys.executable)
+    venv.create(customer / "venv", with_pip=False)
     environment = os.environ | {
         "CUSTOMER_ROOT": str(customer),
         "GITHUB_WORKSPACE": str(repository),
@@ -439,8 +439,6 @@ def _create_isolated_reviewer(tmp_path: Path, review_case):
     trusted = tmp_path / "trusted"
     for name in ("home", "tmp", "subject"):
         (trusted / name).mkdir(parents=True)
-    import venv
-
     venv.create(trusted / "venv", with_pip=False)
     interpreter = trusted / "venv/bin/python"
     site = Path(
@@ -936,3 +934,11 @@ def test_public_testing_findings_survive_ordinary_location_cap(tmp_path: Path, j
     assert projected[0].get("category") == "testing"
     assert projected[0].get("rule") == rule
     assert "PRIVATE" not in result.stdout
+
+
+def test_deferred_host_fixture_does_not_alias_managed_caller_python(tmp_path: Path, monkeypatch):
+    managed = tmp_path / "managed-python"
+    managed.write_text("#!/bin/sh\nexit 78\n")
+    managed.chmod(0o755)
+    monkeypatch.setattr(sys, "executable", str(managed))
+    test_deferred_gate_reviews_exact_staged_tree_and_propagates_failure(tmp_path, 0, False)
