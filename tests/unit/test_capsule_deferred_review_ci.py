@@ -685,8 +685,9 @@ def test_public_execution_classification_never_prints_raw_messages(tmp_path: Pat
     assert "PRIVATE" not in result.stdout
 
 
-def test_trusted_review_budget_timeout_retains_three_hundred_seconds_and_fixed_exit(monkeypatch):
+def test_trusted_review_budget_timeout_retains_three_hundred_seconds_and_fixed_exit(monkeypatch, tmp_path):
     import re
+    import runpy
 
     recipe = next(
         step["run"]
@@ -694,6 +695,8 @@ def test_trusted_review_budget_timeout_retains_three_hundred_seconds_and_fixed_e
         if step.get("name") == "Prepare and review through the authenticated installed controller"
     )
     command = re.findall(r"-I -c \\\n\s*'([^']+)'", recipe)[-1]
+    wrapper = tmp_path / "trusted_review_budget.py"
+    wrapper.write_text(command)
     observed = []
 
     def timeout(args, *, timeout, check):
@@ -703,7 +706,7 @@ def test_trusted_review_budget_timeout_retains_three_hundred_seconds_and_fixed_e
     monkeypatch.setattr(subprocess, "run", timeout)
     monkeypatch.setattr(sys, "argv", ["-c", "trusted-python", "trusted-reviewer.py"])
     with pytest.raises(SystemExit) as result:
-        exec(command, {})
+        runpy.run_path(str(wrapper), run_name="__main__")
     assert result.value.code == 124
     assert observed == [(["trusted-python", "trusted-reviewer.py"], 300, False)]
 

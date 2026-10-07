@@ -6,6 +6,7 @@ import argparse
 import json
 import os
 import subprocess
+import sys
 from pathlib import Path
 
 from scripts import assemble_macos_native_capsule as assembler, build_macos_native_capsule as builder
@@ -89,7 +90,7 @@ def main() -> int:
     parser.add_argument("--version", choices=("3.11", "3.12", "3.13"), required=True)
     args = parser.parse_args()
     args.work.mkdir(mode=0o700)
-    print(assemble_candidate(args.work.resolve(), args.venv.resolve(), args.version))
+    sys.stdout.write(str(assemble_candidate(args.work.resolve(), args.venv.resolve(), args.version)) + "\n")
     return 0
 
 

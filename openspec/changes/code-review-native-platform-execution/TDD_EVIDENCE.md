@@ -4020,3 +4020,65 @@ reference: https://pylint.pycqa.org/en/stable/user_guide/usage/run.html (accesse
 `/private/tmp/specfact460-diagnostic-final-full.log`. SMART was started while
 the temporary worker config was present; it is supplementary only and cannot
 establish final-tree acceptance.
+
+
+## Introduced clean-review corrections — 7 October 2026 (Europe/Berlin)
+
+At61a859ccsix bounded reported locations directly intersect added Python lines:
+CC16in the large managed-uv frame test, four print-in-src warnings in CLI entry
+points, and the generic naming regex in the empty-attribution test. The report
+is capped at200rows; this is not a complete finding inventory. The source delta
+and direct pinned analyzer reproduction precede correction and remain RED.
+
+The Semgrep1.144.0 ARM64 wheel's previously hash-verified native binary reproduces
+all five warnings. It requires the `osemgrep` argv0 frontend and `--experimental`;
+an initial semgrep-core-mode invocation rejects that option and produces no
+JSON. No successful scan is inferred from that invocation. Corrected frontend
+reports are `/private/tmp/specfact460-clean-locations-{red,green}.private.json`;
+the same files now have zero errors and findings with unchanged clean rules.
+
+CLI outputs are machine wire records (JSON, artifact path or fixed public status),
+so explicit serialized stdout writes retain exactly the same newline, value and
+failure exit without introducing logging prefixes or exposing private exception
+text. The empty-attribution test name now describes distribution RECORD scans.
+The actual uv large-frame test separates compilation/setup from frame assertions;
+all XML payload sizes,30large values, child return codes and native parser checks
+remain. A fixed replacement inventory also simplifies the forbidden-request
+fixture while retaining all original parameter IDs/expected failures. Initial
+refactor retained theCC16large-frame function; the corrected split has zero
+Radon findings for the whole UV fixture file. Actual native parser and selected
+CLI/ownership tests pass146cases in2.19s in
+`/private/tmp/specfact460-clean-locations-final-green.log`. An initial invocation
+named a nonexistent release test file and collected zero; it is not GREEN.
+
+Touched AST and AI-bloat return no findings; typing reports zero errors/warnings.
+An initial direct AI-bloat call used a nonexistent function name; the corrected
+`run_ai_bloat` invocation returns no findings. Ruff import order corrections
+precede final verification. Two delivered archive CI cells at61a859ccpass on
+macOS14/Python3.12and3.13, including real extensions/all analyzers/offline reuse.
+The other seven supported cells and both required Linux reviews remain separate
+acceptance. Final full/SMART and hooks follow below before push.
+
+
+The complete pinned clean/bloat/bug scan of all68changed Python files exposes
+five further added-line rows beyond the hosted200-row cap: three broker proof
+prints, one cleanup-test name and the timeout test's directexec. All are retained
+in `/private/tmp/specfact460-clean-full-semgrep.private.json`. Broker stdout
+now retains exact records/newlines plus explicit flushes. The timeout fixture
+executes the saved trusted wrapper as a named module using runpy, preserving
+both300-second invocation and exit124 assertions. The PID test name is specific.
+The corrected whole scan retains29legacy raw rows and has zero added-line
+findings or parse errors; it does not replace the required analyzer composition.
+`/private/tmp/specfact460-clean-full-semgrep-final.private.json` is private.
+
+Follow-up projector/broker/boundary tests pass90cases with three explicit native
+skips. An explicit physical broker/boundary invocation separately passes all9
+cases in3.97s (`/private/tmp/specfact460-clean-proof-native-green.log`). The prior
+full run144.65s overlaps adaptive source changes, so it is supplementary only.
+Stable final full and SMART each pass5,245tests/75explicit skips/95subtests/five
+existing warnings in159.24s/157.67s, with source/config unchanged throughout.
+Logs: `/private/tmp/specfact460-clean-final-stable-{full,smart}.log`.
+Five delivered archive CI cells at61a859ccnow pass: macOS14/cp312/cp313,
+macOS15/cp313, and macOS26/cp312/cp313. Four cells remain running; no final matrix
+or public installation pass is inferred. Final hooks and exact-head CI are still
+required, and the Pylint timeout remains unresolved.

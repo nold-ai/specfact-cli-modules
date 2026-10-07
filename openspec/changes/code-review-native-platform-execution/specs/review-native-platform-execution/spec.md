@@ -120,6 +120,12 @@ The macOS backend SHALL preserve the exact released baseline's scope, findings, 
 - **AND** raw stack profiles and command output SHALL remain private; public summaries SHALL contain only known tracked source paths, static declared function names and bounded inclusive/deepest-public sample counts (at most20entries per view)
 - **AND** diagnostic results SHALL never replace the required failed gate or authorize publication
 
+#### Scenario: Native release CLI and parser fixtures retain clean review behavior
+
+- **WHEN** review checks the native release CLI, public profile output and managed uv parser regression fixtures
+- **THEN** machine-readable CLI and broker proof results use explicit serialized stdout records with the same values, flush points and failure exits; parser mutation cases use a named fixed replacement inventory with every original native parser assertion; the trusted timeout fixture executes the saved wrapper as a named module with every original budget/exit assertion
+- **AND** source naming remains specific, no review rule is disabled, and native permissions, byte identities and protocol limits remain unchanged
+
 #### Scenario: Hosted incomplete pytest exposes only fixed diagnostic classes
 
 - **WHEN** a required hosted review reports a pytest tool error

@@ -6,6 +6,7 @@ import argparse
 import ast
 import json
 import subprocess
+import sys
 from collections import Counter
 from pathlib import Path
 from typing import Any
@@ -135,9 +136,9 @@ def main() -> int:
     try:
         result = summarize(args.profile, args.repository)
     except (OSError, ValueError, SyntaxError, RecursionError, subprocess.SubprocessError):
-        print(json.dumps({"status": "DIAGNOSTIC_UNAVAILABLE"}))
+        sys.stdout.write(json.dumps({"status": "DIAGNOSTIC_UNAVAILABLE"}) + "\n")
         return 1
-    print(json.dumps(result))
+    sys.stdout.write(json.dumps(result) + "\n")
     return 0
 
 

@@ -693,7 +693,7 @@ def test_single_module_changed_after_execution_cannot_receive_credit(installed_s
 
 
 @pytest.mark.parametrize("relative", [None, "README.md"])
-def test_empty_python_attribution_does_not_read_installed_metadata(tmp_path, monkeypatch, relative):
+def test_empty_python_attribution_does_not_scan_distribution_records(tmp_path, monkeypatch, relative):
     def unexpected_read(*_args):
         pytest.fail("empty attribution scanned ownership metadata")
 

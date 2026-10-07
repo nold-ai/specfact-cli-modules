@@ -43,7 +43,8 @@ def _assert_bootstrap_failure(parent, broker, invocation: Path, reply) -> None:
     assert not (invocation / "temporary/native-self-test.pid").exists()
     parent.close()
     assert broker.wait(timeout=5) == 0
-    print("REJECTED_BEFORE_READY", flush=True)
+    sys.stdout.write("REJECTED_BEFORE_READY\n")
+    sys.stdout.flush()
 
 
 def _hold_worker(parent, broker, temporary: Path, handle: int) -> None:
@@ -53,9 +54,11 @@ def _hold_worker(parent, broker, temporary: Path, handle: int) -> None:
         time.sleep(0.01)
     assert marker.is_file(), "held worker did not report its PID"
     worker = int(marker.read_text().strip())
-    print(json.dumps({"broker": broker.pid, "worker": worker, "handle": handle}), flush=True)
+    sys.stdout.write(json.dumps({"broker": broker.pid, "worker": worker, "handle": handle}) + "\n")
+    sys.stdout.flush()
     parent.sendall(REQUEST.pack(0x53464E31, 1, 2, 0, handle, 900_000, 0, 0, 0, 0, b"", b"", b"", b""))
-    print("WAIT_SENT", flush=True)
+    sys.stdout.write("WAIT_SENT\n")
+    sys.stdout.flush()
     _receive(parent)  # The parent kills this CLI while the worker is held.
     raise AssertionError("held worker unexpectedly completed WAIT")
 
@@ -142,7 +145,7 @@ def _cleanup_owned_process(pid: int | None, birth: str | None) -> None:
         os.kill(pid, signal.SIGKILL)
 
 
-def test_cleanup_tolerates_owned_process_exit_between_observation_and_signal(monkeypatch):
+def test_cleanup_tolerates_owned_pid_exit_between_observation_and_signal(monkeypatch):
     monkeypatch.setattr(sys.modules[__name__], "_identity", lambda _pid: "observed-birth")
     signaled = []
 

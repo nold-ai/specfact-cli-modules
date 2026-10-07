@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import sys
 from typing import Any
 
 import requests
@@ -71,7 +72,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--name", choices=NAMES, required=True)
     check_environment(parser.parse_args().name)
-    print("Protected release environment verified.")
+    sys.stdout.write("Protected release environment verified.\n")
     return 0
 
 
