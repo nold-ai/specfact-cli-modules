@@ -1,0 +1,29 @@
+schema_version: '2'
+maturity: planned
+requirements:
+  openspec:code-review-portable-reviewer-bootstrap:review-portable-bootstrap:explicit-correspondence-resolves-source-basename-ambiguity:
+    rationale: The immutable reviewer requires unambiguous explicit correspondence rather than an unrelated-test waiver.
+    stakeholder_refs: [nold-ai/specfact-cli-modules#460]
+    touchpoints:
+    - id: explicit-test-correspondence
+      kind: config_file
+      locator: openspec/changes/code-review-portable-reviewer-bootstrap/specs/review-portable-bootstrap/spec.md
+    verification_cases:
+    - case_id: reviewer-bootstrap-1
+      scenario_id: explicit-correspondence-resolves-source-basename-ambiguity
+      method: test
+      intent: Preserve order-independent explicit matches and reject absent or unrelated matches.
+      observable: Failing regression evidence precedes the selection change; no test failure is promoted to PASS.
+  openspec:code-review-portable-reviewer-bootstrap:review-portable-bootstrap:similarity-hash-caching-preserves-upstream-review-results:
+    rationale: Reuse immutable upstream windows while preserving findings and all execution guards.
+    stakeholder_refs: [nold-ai/specfact-cli-modules#460]
+    touchpoints:
+    - id: bounded-upstream-hashes
+      kind: config_file
+      locator: openspec/changes/code-review-portable-reviewer-bootstrap/specs/review-portable-bootstrap/spec.md
+    verification_cases:
+    - case_id: reviewer-bootstrap-2
+      scenario_id: similarity-hash-caching-preserves-upstream-review-results
+      method: test
+      intent: Compare actual same-object duplicate results and restore/clear on all exits.
+      observable: Missing cache regressions fail before implementation; upstream parity, eviction and teardown are required. Full sealed #498 timing remains a separate promotion check.

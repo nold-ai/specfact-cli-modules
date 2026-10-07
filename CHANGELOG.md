@@ -7,6 +7,14 @@ and this project follows SemVer for bundle versions.
 
 ## [Unreleased]
 
+### Fixed
+
+- Prepare Code Review0.51.1 portable reviewer bootstrap: corresponding explicit
+  tests resolve source-basename ambiguity before fallback selection. The pinned
+  Pylint wrapper caches immutable similarity windows only within one bounded
+  invocation and restores upstream state on all exits. Required checks, jobs,
+  findings and deadlines remain unchanged; publication requires human promotion.
+
 ### Added
 
 - Declare the capsule controller cryptography dependency, accept matching

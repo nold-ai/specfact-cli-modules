@@ -39,9 +39,11 @@ def _strings(value: object) -> tuple[str, ...]:
     return ()
 
 
-def _matching_source_tests(relative: str, candidates: set[str]) -> set[str]:
+def _matching_source_tests(relative: str, candidates: set[str], explicit_tests: set[str]) -> set[str]:
     stem = Path(relative).stem
     matches = {candidate for candidate in candidates if Path(candidate).name in {f"test_{stem}.py", f"{stem}_test.py"}}
+    if selected := matches & explicit_tests:
+        return selected
     if len(matches) > 1:
         raise ProjectRuntimeError(f"project_test_selection_ambiguous:{relative}; include explicit test paths")
     return matches
@@ -138,13 +140,16 @@ def select_test_paths(plan: ProjectPlan, files: list[Path], *, full: bool) -> tu
     roots = _strings(plan.pytest_config.get("testpaths")) or (".",)
     patterns = _strings(plan.pytest_config.get("python_files", ["test_*.py", "*_test.py"]))
     candidates = _test_candidates(plan, roots, patterns)
-    selected = set()
-    for path in files:
-        relative = path.resolve().relative_to(plan.root).as_posix()
-        if any(fnmatch.fnmatch(path.name, pattern) for pattern in patterns):
-            selected.add(relative)
-        else:
-            selected.update(_matching_source_tests(relative, candidates))
+    relative_paths = [path.resolve().relative_to(plan.root).as_posix() for path in files]
+    explicit_tests = {
+        relative
+        for relative in relative_paths
+        if any(fnmatch.fnmatch(Path(relative).name, pattern) for pattern in patterns)
+    }
+    selected = set(explicit_tests)
+    for relative in relative_paths:
+        if relative not in explicit_tests:
+            selected.update(_matching_source_tests(relative, candidates, explicit_tests))
     if not selected:
         raise ProjectRuntimeError("project_test_selection_empty: include corresponding test files")
     return tuple(sorted(selected))

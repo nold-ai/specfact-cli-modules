@@ -1,0 +1,69 @@
+# Reviewer bootstrap evidence — 7 October 2026 (Europe/Berlin)
+
+Owner explicitly approved preparation of a separate reviewer-update PR for human
+merge/promotion. It covers the verified explicit-test selection bug and tested
+Pylint optimization only. No release is published, installed authenticated
+reviewers are unchanged, and #498 exact sealed acceptance remains pending.
+
+## Specification → RED → implementation → GREEN
+
+The active specification and planned requirements mapping preceded code.
+Before implementation, all 17 focused selection/cache cases failed (0.61 s)
+because explicit source matches remained ambiguous and the cache was absent.
+Private local log: /private/tmp/specfact460-bootstrap-red.log.
+The first parity comparison exposed identity-only SuccessiveLinesLimits equality;
+its test now compares every hash key/file/index/window and start/end bound rather
+than requiring independently allocated upstream objects to be identical.
+
+The 17 cases then pass alongside the existing portable-worker and target-launch
+regressions: 149 passed (9.28 s). Additional full RuntimeRun coverage passes:
+all messages (including real R0801), every statistics field and exit status match
+uncached execution. All 18 focused bootstrap cases pass; together with existing portable-worker and
+target-launch regressions, the final focused suite passes 150 cases (8.09 s). The cache computes each
+of four immutable windows once rather than repeating for each pair; minima,
+disabled-line filtering, eviction and RuntimeError/SystemExit teardown remain
+covered. This is correctness/operation-count evidence, not sealed timing acceptance.
+
+Format, typing (zero errors/warnings), lint (10.00/10), manifests/import boundaries,
+publish precheck, 28 contracts and strict OpenSpec validation pass. Pinned Semgrep
+1.144.0 reports zero findings/errors on the three changed Python files. Direct
+AST, AI-bloat and Radon checks also report zero findings. The reviewer agent found
+no defect in the narrow implementation; it explicitly retained sealed timing as
+pending. SMART: 5,009 passed / 75 declared native or maintainer skips / 95 subtests,
+5 existing fork warnings (261.97 s). Full: 5,010 passed / 75 declared skips / 95 subtests / 5 existing warnings
+(298.76 s). The additional wrapper test accounts for the count difference;
+Final SMART: 5,010 passed / 75 declared skips / 95 subtests / 5 existing
+warnings (274.60 s). Normal hooks pass with local capsule review explicitly
+DEFERRED; staged planned requirements pass without claiming implementation
+acceptance. Required exact-head hosted review remains pending.
+
+Code Review is prepared as 0.51.1 from released dev 0.51.0. Checksum refresh removes
+both local private-signing environment variables. Explicit repository public-key
+filesystem/version verification passes seven manifests; this changed module is
+unsigned pending the CI signature-only follow-up. Existing modules are verified,
+not waived due to a fresh worktree's missing public-key configuration.
+
+The prior owner-approved ARM64 Darwin feature-worktree exception is reused:
+SPECFACT_CODE_REVIEW_DEFER_TO_CI=github-linux defers only local capsule review,
+reports DEFERRED, and requires exact-head GitHub Linux acceptance. Every other
+normal hook executes. No gate, deadline, analyzer or rule is suppressed.
+
+## Promotion and rollback
+
+Prepare a draft PR for human review. No automatic merge/publication, fabricated
+registry archive identity, issue closure or OpenSpec archive. After independently
+authorized reviewer promotion, rebase #498 and bump it to 0.51.2 before obtaining
+fresh exact-head installed/sealed acceptance. Rollback uses a corrective module
+release while immutable historical artifacts and Linux support are retained.
+
+
+Supplementary actual #498 workload: all75Python files are reviewed with pinned
+Pylint4.0.7 and the same project configuration. One fresh uncached process takes
+17.303s and the cached process16.369s, with identical870message counts,
+statistics and exit30. Non-R0801 diagnostics are exactly equal. Seven R0801
+messages vary; a second unchanged uncached process also varies (19.480s), so
+cross-process raw duplicate text is not a parity oracle. On the exact same75
+LineSet objects, both full duplicate groups and ordered locations compare equal:
+two uncached pair passes6.343s versus cached0.771s,75hash misses/11025hits.
+The regression wrapper fixture also preserves complete messages/statistics/exit.
+These host measurements do not establish sealed Linux30-second acceptance.
