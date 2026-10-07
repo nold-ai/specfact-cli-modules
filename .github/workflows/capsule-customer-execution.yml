@@ -230,7 +230,11 @@ jobs:
 
               tracked = set(subprocess.check_output(["git", "ls-files", "-z"], text=True).split("\0"))
               emitted = 0
-              findings = sorted(data.get("findings", []), key=lambda row: not (isinstance(row, dict) and row.get("category") == "tool_error"))
+              def _finding_priority(row):
+                  category = row.get("category") if isinstance(row, dict) else None
+                  return {"tool_error": 0, "testing": 1}.get(category, 2) if isinstance(category, str) else 2
+
+              findings = sorted(data.get("findings", []), key=_finding_priority)
               for finding in findings:
                   if not isinstance(finding, dict):
                       continue
@@ -243,7 +247,7 @@ jobs:
                       public_values = {
                           "category": {"clean_code", "security", "type_safety", "contracts", "testing", "style", "architecture", "tool_error", "naming", "kiss", "yagni", "dry", "solid", "ai_bloat"},
                           "tool": {"ruff", "radon", "radon-kiss", "semgrep", "ast", "basedpyright", "pylint", "contract_runner", "crosshair", "pytest"},
-                          "rule": {"tool_error", "MISSING_ICONTRACT", "CROSSHAIR_COUNTEREXAMPLE", "CROSSHAIR_INCOMPLETE_EVIDENCE", "kiss.loc.error", "kiss.loc.warning", "kiss.nesting.error", "kiss.nesting.warning", "kiss.parameter-count.error", "kiss.parameter-count.warning", *(f"CC{number}" for number in range(1, 1001))},
+                          "rule": {"tool_error", "TEST_OUTCOME_NOT_PASS", "TEST_COVERAGE_POLICY_FAILED", "MISSING_ICONTRACT", "CROSSHAIR_COUNTEREXAMPLE", "CROSSHAIR_INCOMPLETE_EVIDENCE", "kiss.loc.error", "kiss.loc.warning", "kiss.nesting.error", "kiss.nesting.warning", "kiss.parameter-count.error", "kiss.parameter-count.warning", *(f"CC{number}" for number in range(1, 1001))},
                       }
                       for key, allowed in public_values.items():
                           value = finding.get(key)
@@ -261,6 +265,8 @@ jobs:
                           if isinstance(message, str) and location.get("tool") == "pytest":
                               pytest_codes = {
                                   "project_pytest_request_invalid", "project_pytest_configuration_or_collection_failed",
+                                  "project_pytest_collection_error", "project_pytest_root_missing_or_invalid",
+                                  "project_pytest_root_outside_snapshot",
                                   "project_pytest_collection_failed", "project_pytest_execution_incomplete",
                                   "project_pytest_unexecuted", "project_pytest_coverage_missing",
                                   "project_pytest_coverage_evidence_unavailable", "project_pytest_coverage_worker_missing",
@@ -579,7 +585,11 @@ jobs:
 
               tracked = set(subprocess.check_output(["git", "ls-files", "-z"], text=True).split("\0"))
               emitted = 0
-              findings = sorted(data.get("findings", []), key=lambda row: not (isinstance(row, dict) and row.get("category") == "tool_error"))
+              def _finding_priority(row):
+                  category = row.get("category") if isinstance(row, dict) else None
+                  return {"tool_error": 0, "testing": 1}.get(category, 2) if isinstance(category, str) else 2
+
+              findings = sorted(data.get("findings", []), key=_finding_priority)
               for finding in findings:
                   if not isinstance(finding, dict):
                       continue
@@ -592,7 +602,7 @@ jobs:
                       public_values = {
                           "category": {"clean_code", "security", "type_safety", "contracts", "testing", "style", "architecture", "tool_error", "naming", "kiss", "yagni", "dry", "solid", "ai_bloat"},
                           "tool": {"ruff", "radon", "radon-kiss", "semgrep", "ast", "basedpyright", "pylint", "contract_runner", "crosshair", "pytest"},
-                          "rule": {"tool_error", "MISSING_ICONTRACT", "CROSSHAIR_COUNTEREXAMPLE", "CROSSHAIR_INCOMPLETE_EVIDENCE", "kiss.loc.error", "kiss.loc.warning", "kiss.nesting.error", "kiss.nesting.warning", "kiss.parameter-count.error", "kiss.parameter-count.warning", *(f"CC{number}" for number in range(1, 1001))},
+                          "rule": {"tool_error", "TEST_OUTCOME_NOT_PASS", "TEST_COVERAGE_POLICY_FAILED", "MISSING_ICONTRACT", "CROSSHAIR_COUNTEREXAMPLE", "CROSSHAIR_INCOMPLETE_EVIDENCE", "kiss.loc.error", "kiss.loc.warning", "kiss.nesting.error", "kiss.nesting.warning", "kiss.parameter-count.error", "kiss.parameter-count.warning", *(f"CC{number}" for number in range(1, 1001))},
                       }
                       for key, allowed in public_values.items():
                           value = finding.get(key)
@@ -610,6 +620,8 @@ jobs:
                           if isinstance(message, str) and location.get("tool") == "pytest":
                               pytest_codes = {
                                   "project_pytest_request_invalid", "project_pytest_configuration_or_collection_failed",
+                                  "project_pytest_collection_error", "project_pytest_root_missing_or_invalid",
+                                  "project_pytest_root_outside_snapshot",
                                   "project_pytest_collection_failed", "project_pytest_execution_incomplete",
                                   "project_pytest_unexecuted", "project_pytest_coverage_missing",
                                   "project_pytest_coverage_evidence_unavailable", "project_pytest_coverage_worker_missing",

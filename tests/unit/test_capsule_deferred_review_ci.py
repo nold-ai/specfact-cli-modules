@@ -830,6 +830,9 @@ json.loads = _depth_failure
         ("project_pytest_coverage_worker_missing; PRIVATE", "project_pytest_coverage_worker_missing"),
         ("project_pytest_coverage_evidence_unavailable:PRIVATE", "project_pytest_coverage_evidence_unavailable"),
         ("project_pytest_execution_incomplete:exit=4 PRIVATE", "project_pytest_execution_incomplete"),
+        ("project_pytest_root_outside_snapshot", "project_pytest_root_outside_snapshot"),
+        ("project_pytest_root_missing_or_invalid; PRIVATE", "project_pytest_root_missing_or_invalid"),
+        ("project_pytest_collection_error; PRIVATE", "project_pytest_collection_error"),
         ("[Errno 2] PRIVATE_PATH", "file_missing"),
         ("[Errno 13] PRIVATE_PATH", "permission_denied"),
         ("PRIVATE project_pytest_execution_incomplete", None),
@@ -901,4 +904,35 @@ def test_independent_timeout_projects_only_bounded_exact_progress(tmp_path: Path
     row = json.loads(result.stdout)
     assert row["diagnostic"] == "analysis_timeout"
     assert row.get("analyzer") == analyzer
+    assert "PRIVATE" not in result.stdout
+
+
+@pytest.mark.parametrize("job_name", ["customer", "independent-review"])
+@pytest.mark.parametrize("rule", ["TEST_OUTCOME_NOT_PASS", "TEST_COVERAGE_POLICY_FAILED"])
+def test_public_testing_findings_survive_ordinary_location_cap(tmp_path: Path, job_name, rule):
+    rows = [{"file": "public.py", "line": n, "severity": "info"} for n in range(1, 220)]
+    rows.append(
+        {
+            "file": "public.py",
+            "line": 1,
+            "severity": "error",
+            "category": "testing",
+            "tool": "pytest",
+            "rule": rule,
+            "message": "PRIVATE_TRACE_WITH_PARAMETERS",
+        }
+    )
+    _write_public_report(tmp_path, rows)
+    result = subprocess.run(
+        [sys.executable, "-c", _public_projector(job_name)],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    projected = [json.loads(line)["finding_location"] for line in result.stdout.splitlines()]
+    assert result.returncode == 0, result.stderr
+    assert len(projected) == 200
+    assert projected[0].get("category") == "testing"
+    assert projected[0].get("rule") == rule
     assert "PRIVATE" not in result.stdout

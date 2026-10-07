@@ -609,6 +609,16 @@ requirements:
       method: test
       intent: Resolve introduced parser complexity, machine-output and naming findings without changing protocol assertions.
       observable: The pinned Semgrep1.144.0 frontend reproduces five introduced rows and then returns zero findings/errors on the same four files. Radon reproduces the large-frame proofCC16; separate setup/assertion helpers and fixed forbidden-request replacements remove all UV fixture Radon findings. All native parser mutation IDs, XML value/size assertions, process status checks and deadlines remain. Serialized CLI stdout values/exits are unchanged. The146focused and90follow-up cases pass, with unchanged rules and payloads. The complete68-file pinned clean/bloat/bug scan has no added-line findings or parse errors after correcting five further broker/timeout-fixture rows. Actual physical broker proof passes9cases; stable full/SMART each pass5245tests. Hosted exact-head Linux review remains required.
+    - case_id: 460-15-34
+      scenario_id: prepare-unfamiliar-projects-from-discovered-or-caller-supplied-setup
+      method: test
+      intent: Repair lean Docs Review pytest invocation after repository parallel policy changes.
+      observable: Hosted Docs Review job112573148858 exits4 before collection due to missing xdist. The original exact five-file command reproduces exit4 with plugin autoload disabled; a workflow contract fails before explicit serial addopts. The corrected command preserves all five test files and PIPESTATUS failure propagation; repository review workers and dependencies remain unchanged. Exact-head hosted documentation gates remain required.
+    - case_id: 460-15-33
+      scenario_id: prepare-unfamiliar-projects-from-discovered-or-caller-supplied-setup
+      method: test
+      intent: Keep required test failures visible within bounded hosted diagnostics.
+      observable: Four location-cap assertions fail before both inline projections prioritize testing after tool errors; fixed outcome and coverage policy rule identifiers survive while traces remain private. Six additional RED cases cover the existing collection-error and pytest-root diagnostic prefixes. Existing 200-location limit, trusted reviewer, failure exits and deadlines remain unchanged; exact-head CI remains required.
     - case_id: 460-15-29
       scenario_id: prepare-unfamiliar-projects-from-discovered-or-caller-supplied-setup
       method: test

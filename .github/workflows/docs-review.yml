@@ -124,7 +124,7 @@ jobs:
         run: |
           mkdir -p logs/docs-review
           DOCS_REVIEW_LOG="logs/docs-review/docs-review_$(date -u +%Y%m%d_%H%M%S).log"
-          python -m pytest \
+          python -m pytest -o "addopts=-ra -v --import-mode=importlib" \
             tests/unit/docs/test_docs_review.py \
             tests/unit/docs/test_code_review_docs_parity.py \
             tests/unit/test_core_documentation_accountability.py \

@@ -1056,3 +1056,17 @@ coverage and failure-evidence assertions.
 - **WHEN** the immutable minimum-core compatibility environment contains pytest and its existing minimal dependencies without xdist
 - **THEN** its explicit single-test smoke command uses the original serial reporting/import options and runs every existing assertion
 - **AND** repository reviewer tests retain the declared two-worker policy, immutable core identity and signed-capsule smoke requirements remain unchanged
+
+
+#### Scenario: Hosted test failures survive the public diagnostic location cap
+
+- **WHEN** a failed review contains test outcome or coverage failures after more than 200 ordinary findings
+- **THEN** both inline public projections retain tool errors first and test failures next, include only fixed test rule identifiers, and keep the same 200-location cap
+- **AND** raw test names, parameter values, traces and exception messages remain private; required review exits and deadlines remain unchanged
+
+
+#### Scenario: Lean documentation CI does not inherit developer worker plugins
+
+- **WHEN** Docs Review installs its pinned lean dependencies without xdist
+- **THEN** its original five test files execute with explicit serial reporting/import options, preserve pipeline failure propagation, and do not inherit repository worker arguments
+- **AND** full repository review retains its declared worker and coverage policy
