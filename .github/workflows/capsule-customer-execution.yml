@@ -234,17 +234,18 @@ jobs:
               for analyzer in data.get("analyzer_evidence", []):
                   if not isinstance(analyzer, dict) or analyzer.get("id") != "targeted-pytest-coverage":
                       continue
-                  execution = analyzer.get("target_execution")
-                  records = execution.get("records", []) if isinstance(execution, dict) else []
-                  if not isinstance(records, list):
-                      continue
-                  for record in records[:20_000]:
-                      if not isinstance(record, dict):
+                  for side in (analyzer.get("head"), analyzer, analyzer.get("base")):
+                      execution = side.get("target_execution") if isinstance(side, dict) else None
+                      records = execution.get("records", []) if isinstance(execution, dict) else []
+                      if not isinstance(records, list):
                           continue
-                      key = tuple(record.get(field) for field in ("nodeid", "outcome", "phase"))
-                      detail = record.get("detail")
-                      if all(isinstance(value, str) and len(value) <= 4096 for value in key) and isinstance(detail, str) and len(detail) <= 65_536:
-                          test_failure_details[key] = detail
+                      for record in records[:20_000]:
+                          if not isinstance(record, dict):
+                              continue
+                          key = tuple(record.get(field) for field in ("nodeid", "outcome", "phase"))
+                          detail = record.get("detail")
+                          if all(isinstance(value, str) and len(value) <= 4096 for value in key) and isinstance(detail, str) and len(detail) <= 65_536:
+                              test_failure_details.setdefault(key, detail)
 
               def _public_test_failure(nodeid, outcome, phase):
                   detail = test_failure_details.get((nodeid, outcome, phase), "")
@@ -280,7 +281,7 @@ jobs:
                       except (OSError, ValueError, SyntaxError, UnicodeError, RecursionError):
                           pass
                       source_test_functions[file] = functions
-                  function = nodeid.rsplit("::", 1)[-1].split("[", 1)[0]
+                  function = nodeid[len(file) + 2:].split("[", 1)[0].rsplit("::", 1)[-1]
                   if function in source_test_functions[file]:
                       observation["test_function"] = function
                   return observation
@@ -651,17 +652,18 @@ jobs:
               for analyzer in data.get("analyzer_evidence", []):
                   if not isinstance(analyzer, dict) or analyzer.get("id") != "targeted-pytest-coverage":
                       continue
-                  execution = analyzer.get("target_execution")
-                  records = execution.get("records", []) if isinstance(execution, dict) else []
-                  if not isinstance(records, list):
-                      continue
-                  for record in records[:20_000]:
-                      if not isinstance(record, dict):
+                  for side in (analyzer.get("head"), analyzer, analyzer.get("base")):
+                      execution = side.get("target_execution") if isinstance(side, dict) else None
+                      records = execution.get("records", []) if isinstance(execution, dict) else []
+                      if not isinstance(records, list):
                           continue
-                      key = tuple(record.get(field) for field in ("nodeid", "outcome", "phase"))
-                      detail = record.get("detail")
-                      if all(isinstance(value, str) and len(value) <= 4096 for value in key) and isinstance(detail, str) and len(detail) <= 65_536:
-                          test_failure_details[key] = detail
+                      for record in records[:20_000]:
+                          if not isinstance(record, dict):
+                              continue
+                          key = tuple(record.get(field) for field in ("nodeid", "outcome", "phase"))
+                          detail = record.get("detail")
+                          if all(isinstance(value, str) and len(value) <= 4096 for value in key) and isinstance(detail, str) and len(detail) <= 65_536:
+                              test_failure_details.setdefault(key, detail)
 
               def _public_test_failure(nodeid, outcome, phase):
                   detail = test_failure_details.get((nodeid, outcome, phase), "")
@@ -697,7 +699,7 @@ jobs:
                       except (OSError, ValueError, SyntaxError, UnicodeError, RecursionError):
                           pass
                       source_test_functions[file] = functions
-                  function = nodeid.rsplit("::", 1)[-1].split("[", 1)[0]
+                  function = nodeid[len(file) + 2:].split("[", 1)[0].rsplit("::", 1)[-1]
                   if function in source_test_functions[file]:
                       observation["test_function"] = function
                   return observation

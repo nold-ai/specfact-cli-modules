@@ -413,8 +413,10 @@ class _AcquisitionTarInfo(tarfile.TarInfo):
         maximum = _MAX_ACQUISITION_ARCHIVE_BYTES + 1024 * _MAX_ACQUISITION_FILES
         metadata = {tarfile.XHDTYPE, tarfile.XGLTYPE, tarfile.GNUTYPE_LONGNAME, tarfile.GNUTYPE_LONGLINK}
         chain = getattr(source, "_specfact_acquisition_metadata_chain", 0) + 1 if self.type in metadata else 0
+        # Extension metadata always requires a following physical header.
+        maximum_headers = 2 * _MAX_ACQUISITION_FILES - int(self.type in metadata)
         if (
-            count > 2 * _MAX_ACQUISITION_FILES
+            count > maximum_headers
             or source.fileobj.tell() > maximum
             or chain > 64
             or self.size < 0

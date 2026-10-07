@@ -428,10 +428,20 @@ def test_main_missing_report_still_returns_exit_code_and_warns(
     assert ".specfact/code-review.json" in err
 
 
-def test_main_timeout_fails_hook(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
+def test_main_timeout_fails_hook(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], tmp_path: Path
+) -> None:
     """Subprocess timeout must fail the hook with a clear message."""
     module = _load_script_module()
-    repo_root = Path(__file__).resolve().parents[3]
+    repo_root = tmp_path
+
+    original_prepare = module._prepare_report_path
+
+    def _prepare_owned_report(root: Path) -> Path:
+        assert root == tmp_path, "timeout fixture must not prepare the active reviewer's report"
+        return original_prepare(root)
+
+    monkeypatch.setattr(module, "_prepare_report_path", _prepare_owned_report)
 
     def _fake_ensure() -> tuple[bool, str | None]:
         return True, None

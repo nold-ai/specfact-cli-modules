@@ -609,6 +609,21 @@ requirements:
       method: test
       intent: Resolve introduced parser complexity, machine-output and naming findings without changing protocol assertions.
       observable: The pinned Semgrep1.144.0 frontend reproduces five introduced rows and then returns zero findings/errors on the same four files. Radon reproduces the large-frame proofCC16; separate setup/assertion helpers and fixed forbidden-request replacements remove all UV fixture Radon findings. All native parser mutation IDs, XML value/size assertions, process status checks and deadlines remain. Serialized CLI stdout values/exits are unchanged. The146focused and90follow-up cases pass, with unchanged rules and payloads. The complete68-file pinned clean/bloat/bug scan has no added-line findings or parse errors after correcting five further broker/timeout-fixture rows. Actual physical broker proof passes9cases; stable full/SMART each pass5245tests. Hosted exact-head Linux review remains required.
+    - case_id: 460-15-39
+      scenario_id: prepare-unfamiliar-projects-from-discovered-or-caller-supplied-setup
+      method: test
+      intent: Keep the hook timeout fixture from modifying the active review report.
+      observable: A report-directory ownership guard fails against the original real-checkout fixture on Python3.12 and3.14. The fixture-owned temporary repository retains cwd, timeout300, exit124, message and selected-file assertions. Actual hook behavior and deadlines remain unchanged.
+    - case_id: 460-15-38
+      scenario_id: prepare-unfamiliar-projects-from-discovered-or-caller-supplied-setup
+      method: test
+      intent: Stop recursive acquisition metadata before decoding beyond the physical header limit.
+      observable: The original regression fails on Python3.12; valid nonempty global PAX headers and a portable physical-header observation also reproduce five decoded headers against the unchanged four-header limit on Python3.14. Rejecting extension metadata at the exhausted boundary prevents a fifth decode; a positive exact-boundary archive preserves both original file payloads. No archive limit, authentication check or review deadline is relaxed.
+    - case_id: 460-15-37
+      scenario_id: prepare-unfamiliar-projects-from-discovered-or-caller-supplied-setup
+      method: test
+      intent: Preserve public test diagnostics for immutable evidence and parameter scope separators.
+      observable: Twelve regressions fail before both inline projections support matching head/direct/base phase records and remove the parameter section before parsing class/function separators. Matching head records take precedence over conflicting base records; parameters, nested names and raw exception payloads remain private. Corrected focused suite passes156cases; the existing bounded projection and failure exits remain unchanged.
     - case_id: 460-15-36
       scenario_id: prepare-unfamiliar-projects-from-discovered-or-caller-supplied-setup
       method: test

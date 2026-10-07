@@ -968,10 +968,10 @@ def test_public_test_observations_identify_only_tracked_source_functions(tmp_pat
         "category": "testing",
         "tool": "pytest",
         "rule": "TEST_OUTCOME_NOT_PASS",
-        "message": f"Test public.py::test_public_case[PRIVATE_PARAMETER] {outcome} during {phase}{suffix}",
+        "message": f"Test public.py::test_public_case[PRIVATE_PARAMETER::test_inner[PRIVATE_NESTED]] {outcome} during {phase}{suffix}",
     }
     _write_public_report(tmp_path, [finding])
-    (tmp_path / "public.py").write_text("def test_public_case():\n    pass\n")
+    (tmp_path / "public.py").write_text("def test_public_case():\n    pass\ndef test_inner():\n    pass\n")
     result = subprocess.run(
         [sys.executable, "-c", _public_projector(job_name)],
         cwd=tmp_path,
@@ -1075,4 +1075,42 @@ def test_public_test_failure_class_uses_matching_record_only(tmp_path, job_name,
     assert row.get("test_failure_class") == exception
     assert row.get("test_diagnostic") == diagnostic
     assert row.get("python_option") == option
+    assert "PRIVATE" not in result.stdout and "PermissionError" not in result.stdout
+
+
+@pytest.mark.parametrize("job_name", ["customer", "independent-review"])
+@pytest.mark.parametrize("snapshot", ["head", "base", "head_and_base"])
+def test_public_test_failure_reads_immutable_snapshot_records(tmp_path, job_name, snapshot):
+    nodeid = "public.py::test_public_case[PRIVATE_PARAMETER]"
+    _write_public_phase_record_report(tmp_path, nodeid, "E FileNotFoundError: PRIVATE_PATH")
+    report = tmp_path / ".specfact/code-review.json"
+    data = json.loads(report.read_text())
+    evidence = data["analyzer_evidence"][0]
+    execution = evidence.pop("target_execution")
+    selected = "head" if snapshot == "head_and_base" else snapshot
+    evidence[selected] = {"target_execution": execution}
+    if snapshot == "head_and_base":
+        evidence["base"] = {
+            "target_execution": {
+                "records": [
+                    {
+                        "nodeid": nodeid,
+                        "phase": "call",
+                        "outcome": "failed",
+                        "detail": "E PermissionError: PRIVATE_BASE",
+                    },
+                ]
+            }
+        }
+    report.write_text(json.dumps(data))
+    result = subprocess.run(
+        [sys.executable, "-c", _public_projector(job_name)],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    row = json.loads(result.stdout)["finding_location"]
+    assert row.get("test_failure_class") == "FileNotFoundError"
     assert "PRIVATE" not in result.stdout and "PermissionError" not in result.stdout

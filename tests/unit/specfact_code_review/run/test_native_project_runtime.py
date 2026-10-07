@@ -868,22 +868,53 @@ def test_acquisition_archive_bounds_global_headers_even_without_file_members(mon
         for _ in range(20):
             member = tarfile.TarInfo("metadata")
             member.type = tarfile.XGLTYPE
-            output.addfile(member)
+            payload = b"14 comment=ok\n"
+            member.size = len(payload)
+            output.addfile(member, io.BytesIO(payload))
         member = tarfile.TarInfo("bundle/file")
         member.mode = 0o600
         output.addfile(member)
     monkeypatch.setattr(native_project_runtime, "_MAX_ACQUISITION_FILES", 2)
     calls = []
     original = tarfile.TarInfo.frombuf.__func__
+    physical_headers = []
+    original_member = native_project_runtime._AcquisitionTarInfo._proc_member
 
     def observe(cls, *arguments):
         calls.append(1)
         return original(cls, *arguments)
 
+    def observe_member(member, source):
+        physical_headers.append(member.type)
+        return original_member(member, source)
+
     monkeypatch.setattr(tarfile.TarInfo, "frombuf", classmethod(observe))
+    monkeypatch.setattr(native_project_runtime._AcquisitionTarInfo, "_proc_member", observe_member)
     with pytest.raises(ProjectRuntimeError, match="project_native_acquisition_archive_invalid"):
         native_project_runtime._extract_acquisition_archive(archive, tmp_path / "extracted")
     assert len(calls) <= 4
+    assert len(physical_headers) == 4
+    assert not (tmp_path / "extracted").exists()
+
+
+def test_acquisition_archive_accepts_regular_member_at_exact_header_limit(monkeypatch, tmp_path):
+    archive = tmp_path / "exact-headers.tar.gz"
+    with tarfile.open(archive, "w:gz", format=tarfile.USTAR_FORMAT) as output:
+        for name, payload in (("first", b"first bytes"), ("last", b"last bytes")):
+            metadata = tarfile.TarInfo("metadata")
+            metadata.type = tarfile.XGLTYPE
+            metadata_payload = b"14 comment=ok\n"
+            metadata.size = len(metadata_payload)
+            output.addfile(metadata, io.BytesIO(metadata_payload))
+            member = tarfile.TarInfo(f"bundle/{name}")
+            member.mode = 0o600
+            member.size = len(payload)
+            output.addfile(member, io.BytesIO(payload))
+    monkeypatch.setattr(native_project_runtime, "_MAX_ACQUISITION_FILES", 2)
+    destination = tmp_path / "extracted"
+    native_project_runtime._extract_acquisition_archive(archive, destination)
+    assert (destination / "first").read_bytes() == b"first bytes"
+    assert (destination / "last").read_bytes() == b"last bytes"
 
 
 def test_rejects_bundle_when_combined_files_exceed_limit(monkeypatch: Any, tmp_path: Path) -> None:

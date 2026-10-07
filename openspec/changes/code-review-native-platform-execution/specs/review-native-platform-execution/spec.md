@@ -859,6 +859,12 @@ The native backend SHALL reuse portable project discovery and prepare dependenci
 - **AND** candidate manifests, helper scripts, module roots, unsigned overrides and dynamic candidate version selection SHALL NOT choose the reviewer
 - **AND** an unavailable or incompatible published baseline SHALL fail the job rather than falling back to candidate source
 
+#### Scenario: Acquisition metadata stops before exceeding the physical header limit
+
+- **WHEN** authenticated dependency acquisition encounters repeated global or per-file metadata headers
+- **THEN** it rejects extension metadata that would require decoding a following physical header beyond the existing limit, before delegating recursive metadata processing
+- **AND** valid archives whose final regular member exactly reaches that limit still extract their original file bytes on supported Python versions
+
 #### Scenario: Hosted failure exposes bounded public finding locations
 
 - **WHEN** candidate or independently installed review fails in the public repository
@@ -1087,3 +1093,12 @@ coverage and failure-evidence assertions.
 - **AND** required review exits, test inventory, the 200-location limit and execution deadlines remain unchanged
 
 - **AND** a matching controller-owned phase record may add only a fixed exception class or the existing managed Python option rejection code; unrelated phase records and raw exception payloads remain private
+
+- **AND** immutable index/range observations are read from bounded head/base evidence with matching head records preferred, and test parameter sections are removed before parsing source function scope separators
+
+
+#### Scenario: Hook timeout regression owns its report directory
+
+- **WHEN** the hook timeout test simulates the existing 300-second review deadline
+- **THEN** report preparation and subprocess working-directory assertions use the fixture-owned temporary repository and cannot consume or modify the active reviewer's report
+- **AND** timeout exit124 and the existing diagnostic and selected-file assertions remain mandatory
