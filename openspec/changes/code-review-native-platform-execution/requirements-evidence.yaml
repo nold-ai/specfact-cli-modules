@@ -599,6 +599,11 @@ requirements:
       method: test
       intent: "Hosted structured Semgrep failures retain a safe actionable variant."
       observable: "Four meaningful RED cases and two injected decoder-failure RED cases precede fixed scalar and payload-bearing error-tag projection from bounded JSON details in both trusted inline diagnostic paths. Unknown types, payloads, source excerpts, malformed or oversized details remain private; structured outer errors take precedence over nested timeout text, the existing 200-location limit and review exit remain unchanged."
+    - case_id: 460-15-29
+      scenario_id: prepare-unfamiliar-projects-from-discovered-or-caller-supplied-setup
+      method: test
+      intent: Diagnose incomplete hosted pytest and independent timeout without disclosing private output.
+      observable: Ten missing fixed-prefix assertions and two missing timeout-stage assertions fail before the projector change. Both inline projectors emit only finite pytest diagnostic prefixes or fixed errno classes; the independent timeout emits only the last exact known marker from a65,536-byte private tail. Spoofed prefixes, payloads and out-of-tail markers remain private. Required exits, deadlines and200-location cap remain unchanged. Fresh CI is required;120focused tests pass.
     - case_id: 460-15-13
       scenario_id: prepare-unfamiliar-projects-from-discovered-or-caller-supplied-setup
       method: test

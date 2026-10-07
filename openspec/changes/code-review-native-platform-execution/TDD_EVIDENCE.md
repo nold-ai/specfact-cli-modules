@@ -3966,3 +3966,29 @@ passes137tests in4.21s. Logs are
 Actionlint, strict OpenSpec and diff whitespace pass. This limited recipe fix
 requires fresh three-ABI minimum-core CI; existing full/SMART source evidence
 is unchanged. Current Linux reviewer jobs are still running at61a859cc.
+
+
+## Hosted review root-cause projection — 7 October 2026 (Europe/Berlin)
+
+Corrected diagnosis at61a859cc: the candidate required review completes and
+reports Pylint timeout plus incomplete targeted-pytest evidence, followed by
+bounded code findings. It is not an overall analysis_timeout. Its diagnostic
+replay also completes before the280-second cutoff. The independent installed
+reviewer still reports actual300-second analysis_timeout. Earlier commentary
+mistakenly treated both as overall timeout; no pass or exception is inferred.
+
+Spec precedes ten RED fixed-pytest-prefix assertions and two RED timeout-stage
+assertions. The public projections now emit only finite anchored pytest codes
+or fixed file-missing/permission-denied classes; raw details stay private.
+The independent timeout reads at most65,536bytes from its private log tail,
+projects only the last exact allowlisted analyzer marker, and retains exit124.
+Unknown/spoofed codes, payloads, unknown markers and out-of-tail markers stay
+private. No analyzer, signed reviewer, source selection or budget is changed.
+RED logs: `/private/tmp/specfact460-pytest-diagnostic-red.log` and
+`/private/tmp/specfact460-independent-progress-red.log`. Focused real inline
+workflow execution, profile and orchestrator tests pass120cases in4.31s in
+`/private/tmp/specfact460-pytest-diagnostic-green.log`. Actionlint and touched
+Ruff checks pass. Native boundary jobs on macOS14,15and26 all pass including
+100repetitions; all three native ABI archive build jobs pass. Nine delivered
+archive execution jobs remain running. These diagnostics require fresh CI and
+cannot replace the failed required review or final acceptance.

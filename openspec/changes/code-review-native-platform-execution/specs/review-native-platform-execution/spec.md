@@ -120,6 +120,12 @@ The macOS backend SHALL preserve the exact released baseline's scope, findings, 
 - **AND** raw stack profiles and command output SHALL remain private; public summaries SHALL contain only known tracked source paths, static declared function names and bounded inclusive/deepest-public sample counts (at most20entries per view)
 - **AND** diagnostic results SHALL never replace the required failed gate or authorize publication
 
+#### Scenario: Hosted incomplete pytest exposes only fixed diagnostic classes
+
+- **WHEN** a required hosted review reports a pytest tool error
+- **THEN** its public projection may emit only allowlisted fixed diagnostic prefixes and fixed missing-file/permission classes
+- **AND** the independent timeout may identify the last exact allowlisted analyzer progress marker from a bounded private log tail; paths, exception text, unknown codes and payloads remain private; the 200-location cap, required reviewer, deadlines and original exit remain unchanged
+
 #### Scenario: Synthetic enforcement tests use bounded isolated subjects
 
 - **GIVEN** unit tests replace analyzer execution with synthetic complete evidence

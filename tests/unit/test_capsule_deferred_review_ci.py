@@ -836,3 +836,88 @@ json.loads = _depth_failure
     assert projected["failure_class"] == "structured_errors"
     assert "semgrep_error_types" not in projected
     assert "PRIVATE" not in result.stdout and "PRIVATE" not in result.stderr
+
+
+@pytest.mark.parametrize("job_name", ["customer", "independent-review"])
+@pytest.mark.parametrize(
+    "message,code",
+    [
+        ("project_pytest_coverage_worker_missing; PRIVATE", "project_pytest_coverage_worker_missing"),
+        ("project_pytest_coverage_evidence_unavailable:PRIVATE", "project_pytest_coverage_evidence_unavailable"),
+        ("project_pytest_execution_incomplete:exit=4 PRIVATE", "project_pytest_execution_incomplete"),
+        ("[Errno 2] PRIVATE_PATH", "file_missing"),
+        ("[Errno 13] PRIVATE_PATH", "permission_denied"),
+        ("PRIVATE project_pytest_execution_incomplete", None),
+        ("project_pytest_execution_incomplete_PRIVATE", None),
+        ("PRIVATE_UNKNOWN", None),
+    ],
+)
+def test_public_pytest_failure_codes_withhold_private_payload(tmp_path: Path, job_name, message, code):
+    import json
+
+    _git(tmp_path, "init", "-q")
+    (tmp_path / "public.py").write_text("value = 1\n")
+    _git(tmp_path, "add", "public.py")
+    report = tmp_path / ".specfact/code-review.json"
+    report.parent.mkdir()
+    report.write_text(
+        json.dumps(
+            {
+                "findings": [
+                    {
+                        "file": "public.py",
+                        "line": 1,
+                        "severity": "error",
+                        "category": "tool_error",
+                        "tool": "pytest",
+                        "message": message,
+                    }
+                ]
+            }
+        )
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", _public_projector(job_name)],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    projected = json.loads(result.stdout)["finding_location"]
+    assert projected.get("diagnostic_code") == code
+    assert "PRIVATE" not in result.stdout
+
+
+@pytest.mark.parametrize(
+    "progress,analyzer",
+    [
+        ("PRIVATE\nChecking capsule analyzer contracts...\n", "contracts"),
+        (
+            "Checking capsule analyzer pylint...\nPRIVATE\nChecking capsule analyzer targeted-pytest-coverage...\n",
+            "targeted-pytest-coverage",
+        ),
+        ("Checking capsule analyzer PRIVATE...\n", None),
+        ("PRIVATE Checking capsule analyzer pylint...\n", None),
+        ("Checking capsule analyzer pylint...\n" + "X" * 65537, None),
+    ],
+)
+def test_independent_timeout_projects_only_bounded_exact_progress(tmp_path: Path, progress, analyzer):
+    import json
+
+    log = tmp_path / "progress.private.log"
+    log.write_text(progress)
+    environment = dict(os.environ, REVIEW_PUBLIC_EXIT="124", REVIEW_PUBLIC_PROGRESS=str(log))
+    result = subprocess.run(
+        [sys.executable, "-c", _public_projector("independent-review")],
+        cwd=tmp_path,
+        env=environment,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    row = json.loads(result.stdout)
+    assert row["diagnostic"] == "analysis_timeout"
+    assert row.get("analyzer") == analyzer
+    assert "PRIVATE" not in result.stdout
