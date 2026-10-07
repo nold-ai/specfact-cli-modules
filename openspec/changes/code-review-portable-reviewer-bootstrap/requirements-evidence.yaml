@@ -58,3 +58,16 @@ requirements:
       method: test
       intent: Preserve command and deadlines, arm before attachment, cancel on every exit, and suppress private stack tokens.
       observable: Six sampler/privacy regressions and the actual workflow projector fail before implementation;129 focused cases pass afterward. Hosted observations remain pending and do not establish a root cause.
+  openspec:code-review-portable-reviewer-bootstrap:review-portable-bootstrap:invalid-pytest-requests-avoid-response-only-setup:
+    rationale: Decode malformed requests before installed coverage planning and defer unused response imports without reducing contract coverage.
+    stakeholder_refs: [nold-ai/specfact-cli-modules#460]
+    touchpoints:
+    - id: request-first-portable-pytest
+      kind: config_file
+      locator: openspec/changes/code-review-portable-reviewer-bootstrap/specs/review-portable-bootstrap/spec.md
+    verification_cases:
+    - case_id: reviewer-bootstrap-6
+      scenario_id: invalid-pytest-requests-avoid-response-only-setup
+      method: test
+      intent: Preserve valid request fields, coverage findings, setup-error handling and uncaught import errors while avoiding unused setup.
+      observable: Three setup-order regressions fail before code; the valid request parity case passes. Hosted timing remains necessary to determine contribution to the timeout.

@@ -90,3 +90,25 @@ dispatch, checker flags, namespaces and existing deadlines.
 - **THEN** sample only that domain every five seconds and cancel on all exits
 - **AND** inspect at most64KiB of captured stderr, publishing only fixed frame-presence observations and preserving UNKNOWN/error
 - **AND** do not copy raw stack paths, names or messages; remove sampling after diagnosis and verify the actual correction separately
+
+### Requirement: Invalid pytest requests avoid response-only setup
+
+The portable pytest adapter SHALL decode its request before installed coverage
+planning and load response-only controller helpers only when child observations
+need them. Selected contracts, coverage ownership checks, command options and
+all execution deadlines SHALL remain unchanged.
+
+#### Scenario: Malformed JSON cannot prepare a test command
+
+- **WHEN** a correctly tagged request contains malformed JSON
+- **THEN** preserve the existing JSON parsing failure as incomplete tool evidence without coverage planning, response-helper imports or child execution
+
+#### Scenario: Runtime setup fails before child observations
+
+- **WHEN** command preparation fails with an existing caught error
+- **THEN** preserve its error finding without loading unused response-only helpers
+
+#### Scenario: Valid observation needs controller response helpers
+
+- **WHEN** a valid request executes the confined child and provides observations
+- **THEN** preserve command arguments, coverage bridge fields, findings and all existing coverage/completion checks; load trusted response helpers before resolving the observed root

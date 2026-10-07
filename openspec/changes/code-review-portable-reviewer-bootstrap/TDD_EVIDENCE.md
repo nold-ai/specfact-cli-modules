@@ -250,3 +250,35 @@ committed CodeRabbit review follow; local capsule review remains approved DEFERR
 Candidate checksum refresh uses released origin/dev comparison with both private
 key environment variables removed. Code Review remains unpublished0.51.1; CI-only
 signature follow-up is required. No authenticated installed bytes are modified.
+
+
+## Request-first portable pytest setup — 2026-10-08 Europe/Berlin
+
+Exact bb474e44 CP312 job113066295319 prepares both descriptors and times out
+in CrossHair; the bounded samples identify run_portable_pytest and symbolic_search.
+Independent job113066295210 reports missing_report/timeout_marker_observed without
+analyzer attribution. No matching audit denials are observed. These facts do not
+yet establish which operation causes the timeout.
+
+After specification, three meaningful regressions fail before implementation:
+malformed JSON performs coverage setup; malformed/setup-failed requests import
+response helpers before any child observation. The valid-input parity fixture
+passes. RED:3failed/1passed/84deselected(0.16s), private log
+/private/tmp/specfact460-crosshair-setup-red.log.
+The fix decodes JSON before planning installed coverage and loads the two broad
+runner response helpers only after observation validation needs them. The public
+postcondition, coverage ownership, command arguments, checker selection and all
+budgets remain unchanged. Final focused GREEN138passes(1.46s). Additional
+valid-response and uncaught ImportError regressions retain existing policy/error
+behavior while verifying response imports follow actual child completion.
+Sealed timing comparison remains required: setup reduction is verified, its
+contribution to the30-second timeout is still a hypothesis.
+
+Final full/SMART each pass19 mandatory host cases followed by5047portable tests,
+75declared skips,95subtests and five existing warnings(278.05s/277.17s).
+Format, typing0errors/0warnings, lint10.00/10, manifests/imports,28contracts,
+planned requirements, strict OpenSpec and seven candidate filesystem checksum/
+version validations pass. AST, AI-bloat, Radon and pinned Semgrep report zero
+findings for both changed Python files. The existing CI-only signing workflow
+will add the candidate signature after push. Normal commit hooks follow with
+only local ARM64 capsule review approved DEFERRED to hosted Linux.

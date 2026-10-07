@@ -93,3 +93,16 @@ A finally-only profiler cannot survive the existing timeout kill; repeated full
 review without changed evidence is unsuitable. Remove temporary instrumentation
 after the actual bottleneck is demonstrated and corrected. Independently installed
 0.51.0 cannot use candidate instrumentation; its timeout remains unattributed.
+
+Sealedbb474e44 observations include run_portable_pytest and symbolic_search, with
+both runtime descriptors prepared and no matching audit denial. This identifies
+the selected contract entrypoint, not its hottest line. Source inspection verifies
+that its valid-tag branch imports the large runner before any request parsing;
+_portable_pytest_command plans installed coverage before json.loads. Reorder those
+existing operations: decode first, then retain coverage planning/command construction;
+defer the two response-only runner imports until observed records need them.
+Malformed JSON and caught setup failures can terminate without either unnecessary
+setup operation. Preserve the wrapper @ensure and all child/domain/coverage gates.
+Extracting only its postcondition to a pure helper would reduce selected coverage,
+so reject that approach. This is a tested setup correction; its contribution to
+the30-second timeout remains a hypothesis until sealed comparison succeeds.

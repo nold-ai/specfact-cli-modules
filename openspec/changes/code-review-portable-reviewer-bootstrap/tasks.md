@@ -10,5 +10,6 @@
 - [x] Project the verified independent failure after preparation with fixed nested evidence observations.
 - [x] Retain fixed CrossHair failure classes and suppress unknown candidate diagnostic tokens.
 - [ ] Identify the sealed CrossHair bottleneck within unchanged execution guards.
+- [ ] Verify request-first/response-late setup against sealed CrossHair timing.
 - [ ] Fix the demonstrated cause and remove temporary sampling.
 - [ ] After separately authorized promotion, verify exact #498 sealed execution.
