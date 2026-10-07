@@ -3992,3 +3992,31 @@ Ruff checks pass. Native boundary jobs on macOS14,15and26 all pass including
 100repetitions; all three native ABI archive build jobs pass. Nine delivered
 archive execution jobs remain running. These diagnostics require fresh CI and
 cannot replace the failed required review or final acceptance.
+
+
+## Pylint parallel benchmark rejected — 7 October 2026 (Europe/Berlin)
+
+Diagnostic native-configuration Pylint4.0.7 on the same68Python files completes
+with one process in17.76s and two in12.36s. Both retain actual finding exit30
+and848raw findings. All823non-R0801findings match exactly; six duplicate message
+bodies differ in ordering among25R0801rows, already excluded by unchanged
+reviewer filtering. These local runs do not prove sealed execution. Reports:
+`/private/tmp/specfact460-pylint-native-workers{1,2}.private.json`.
+
+The existing parallel runtime-root fixture passes10cases in3.18s, but explicitly
+substitutes the native interpreter launcher. The delivered worker profile denies
+process-fork and requires broker-managed process launches. Pylint's standard
+ProcessPoolExecutor is not broker-managed, so declaring two workers cannot be
+accepted from this fixture or benchmark. The proposed local config/spec/sidecar
+changes were withdrawn before commit or push. No worker grant, timeout or checker
+is changed. The real hosted Pylint timeout remains unresolved.
+
+Initial projected-policy diagnostic attempts reject the executable init hook
+or fail usage for `--errors-only=no`; they are not acceptance evidence. The
+successful bench uses native repository configuration. Primary process-pool
+reference: https://pylint.pycqa.org/en/stable/user_guide/usage/run.html (accessed
+7October2026 Europe/Berlin). Diagnostic-only full suite passes5,245tests/75skips/
+95subtests/five existing warnings in143.57s in
+`/private/tmp/specfact460-diagnostic-final-full.log`. SMART was started while
+the temporary worker config was present; it is supplementary only and cannot
+establish final-tree acceptance.
