@@ -806,3 +806,9 @@ requirements:
       method: test
       intent: Keep all current assertions in required host or native jobs and retain rejection of proof-only portable selection.
       observable: Three context regressions fail before entrypoint changes; the required CPython-job regression separately fails before workflow wiring. Focused tests and assertion-preservation checks verify the revised contexts. Exact-head hosted evidence remains required; no skipped assertion or local deferral establishes PASS.
+
+    - case_id: 460-20-2
+      scenario_id: repository-proof-contexts-retain-every-required-assertion
+      method: test
+      intent: Diagnose an OS-specific native failure without exporting raw diagnostics or changing acceptance.
+      observable: The hosted macOS14 proof fails with EOF during WAIT, while the exact authenticated CPython3.11 input passes six cases locally. Missing helper and malformed non-scalar identity regressions fail before projection; fixed case/phase/boolean fields pass with original proof failures still blocking. Hosted cause remains to be established.

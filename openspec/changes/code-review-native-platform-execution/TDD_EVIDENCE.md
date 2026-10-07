@@ -4260,8 +4260,8 @@ context checks FAIL3 in0.16s; native-job, package-marker ambiguity, exclusive AB
 preparation and host invocation regressions each separately FAIL before their
 fixes. Separate host execution is required: pytest parent-directory plus explicit
 child-file discovery omitted all19hostcases; --keep-duplicates repeated them.
-Full and SMART now invoke the proof separately before the portable suite, keeping
-both actual exit statuses. No pytest discovery or installed-controller policy is
+Full and SMART now invoke the proof separately before the portable suite, returning the host failure without running the portable suite; after host success,
+the portable exit status is returned. No pytest discovery or installed-controller policy is
 weakened. Empty namespace package markers are removed after the installed0.51.0
 selection probe reproduces their ambiguity. Each native ABI preparation has its
 own fresh cwd, retaining exclusive Node output ownership and existing input hashes.
@@ -4300,3 +4300,27 @@ stems. Candidate explicit-match correction is absent from that immutable publish
 reviewer. Previously observed Pylint30s and independent300s deadlines remain
 required. No published reviewer modification, skip-to-PASS conversion, deadline
 increase, automatic merge/publication/issue closure/OpenSpec archive is performed.
+
+
+### Exact-head context diagnosis and bounded native follow-up — 2026-10-07
+
+Head14aff915: required native parser/broker steps pass on macOS14/15/26; the
+new minimal CPython proof in tools job112978610168 fails with EOFError during
+WAIT. All original assertions remain required. The exact SHA-256-pinned
+CPython3.11.16 input independently passes6/6cases locally on the physical ARM64
+host; that is not macOS14 evidence. No new sysctl/profile grant is inferred.
+A fixed-field failure projection is specified and tested: initial helper import
+FAIL before implementation; malformed scalar identities FAIL before type guards.
+Raw8KiBfixture-log tails/paths/authority stay private; public output contains only
+declared ABI, fixed case/phase and existing four boolean wait-state fields. The
+original error is retained privately and the required proof still fails. The
+hosted cause remains unknown pending fresh diagnosis. The20focused portable
+context/Python-source tests pass before the annotation-only type correction.
+
+CodeRabbit completes context-only14aff915 review with one minor evidence wording
+finding: host failure prevents portable execution; after host success the portable
+status is returned. Documentation is corrected, with entrypoints unchanged.
+The maintainer separately approves preparing a small authenticated reviewer-update
+PR covering explicit test selection and a tested Pylint optimization. This does
+not authorize automatic merge/publication or modification of installed reviewers.
+Existing #498 stays separate from the reviewer bootstrap worktree on updated dev.

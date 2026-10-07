@@ -1117,3 +1117,10 @@ The repository SHALL execute every retained assertion in a required context that
 - **THEN** existing filename discovery selects portable regression modules for confined execution while required host/macOS jobs explicitly execute retained proof modules with their actual prerequisites
 - **AND** unchanged baseline proof files are preserved; revised proof assertions, mutation identities, 100-repetition lifecycle requirements and five-second cleanup bounds are retained in their appropriate required contexts
 - **AND** no authenticated installed reviewer is modified, no test failure or skip becomes PASS, and no deadline, security boundary or acceptance requirement is relaxed
+
+
+#### Scenario: Native proof failures retain bounded context
+
+- **WHEN** a required native CPython proof fails on a hosted OS after local success
+- **THEN** its public diagnostic contains only the declared ABI, fixed fixture case/failure phase and existing boolean worker-state fields from a bounded fixture-owned log
+- **AND** raw output, exception payloads, authority, filesystem paths and process identities remain private; the original proof failure still fails the required job

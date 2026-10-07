@@ -88,3 +88,46 @@ def test_all_three_python_native_inputs_are_required_in_the_secret_free_job():
     assert not job.get("continue-on-error", False)
     assert "environment" not in job
     assert "secrets." not in recipes
+
+
+def test_native_failure_projection_contains_only_fixed_case_and_boolean_state(tmp_path):
+    import json
+
+    from tests.native.proof_python_candidate_matrix import native_failure_summary
+
+    state = {"wait_accepted": True, "wait_pending": False, "worker_reaped": True, "output_closed": True}
+    raw = {
+        "failed_case": "python-clean",
+        "failure_phase": "request-wait",
+        "last_worker_state": state,
+        "diagnostic": "/private/raw",
+        "failure_origin": True,
+        "pid": 123,
+    }
+    (tmp_path / "diagnostics.log").write_text(json.dumps(raw) + "\n")
+    assert native_failure_summary(tmp_path, "3.11") == {
+        "abi": "3.11",
+        "case": "python-clean",
+        "phase": "request-wait",
+        "state": state,
+    }
+    raw["failed_case"] = "/private/untrusted"
+    (tmp_path / "diagnostics.log").write_text(json.dumps(raw) + "\n")
+    assert native_failure_summary(tmp_path, "3.11") == {"abi": "3.11"}
+    raw["failed_case"] = "python-clean"
+    raw["last_worker_state"]["wait_pending"] = 1
+    (tmp_path / "diagnostics.log").write_text(json.dumps(raw) + "\n")
+    assert native_failure_summary(tmp_path, "3.11") == {"abi": "3.11", "case": "python-clean", "phase": "request-wait"}
+
+
+def test_native_failure_projection_rejects_non_scalar_identity(tmp_path):
+    import json
+
+    from tests.native.proof_python_candidate_matrix import native_failure_summary
+
+    for field in ("failed_case", "failure_phase"):
+        raw: dict[str, object] = {"failed_case": "python-clean", "failure_phase": "request-wait"}
+        raw[field] = []
+        (tmp_path / "diagnostics.log").write_text(json.dumps(raw) + "\n")
+        assert native_failure_summary(tmp_path, "3.11") == {"abi": "3.11"}
+    assert native_failure_summary(tmp_path, "/private/value") == {}
