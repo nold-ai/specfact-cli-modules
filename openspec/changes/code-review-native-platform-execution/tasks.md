@@ -134,7 +134,8 @@ replace sections 3, 4 or 6. Exact facts: DELIVERY_CHECKPOINT_2026-10-06.md.
 - [x] Run full unit/contract/smart suites and bounded independent security/defect review; these do not complete the UNKNOWN capsule review gate.
 - [ ] Complete current-head Linux CI and obtain a non-UNKNOWN required SpecFact review; any local deferral requires explicit human approval under the quality rule.
 - [ ] Admit exact native loader entitlements, complete dependency policies and four-manager upstream corpus with final artifact bytes.
-- [ ] Add the protected native build/accept/sign/stage workflow and its protected environment; all signing remains CI-only and candidate code cannot control signing authority.
+- [x] Implement the native build/accept/sign/stage workflow in `.github/workflows/native-capsule-release.yml`; protected release acceptance remains open.
+- [ ] Configure and verify its protected native release environment and signing authority; all signing remains CI-only and candidate code cannot control signing authority.
 - [ ] Populate authenticated cp311/cp312/cp313 catalog resources from accepted, CI-signed immutable GHCR artifact identities.
 - [ ] Pass final-artifact macOS 14/15/26 x cp311/cp312/cp313 and independent signed installation, cold/offline reuse, physical changecost/unrelated project and Linux regression.
 - [ ] Open reviewed implementation PR to dev after applicable gate/approved-deferral handling; complete current-head findings and human merge/promotion review.

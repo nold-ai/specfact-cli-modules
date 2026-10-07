@@ -35,7 +35,9 @@ and 3.13.14. Absolute paths below are placeholders to replace, not PATH lookups.
    The output directory must not exist. The downstream distribution is visibly
    named `z3-solver==5.1.0.0+specfact.2`; its retained native/source bytes are
    unchanged. The observed wheel SHA-256 is
-   `03eb2624d4d19d06020e9a6c5823cf8ac4f6b3fcb0a73e25ef2514d1129982bd`.
+   `81d7e08869fc34877ad9b1315de5bb5398792bc8858f44e45c38a974f310f7e7`.
+   Its `License-File: LICENSE.txt` declaration resolves relative to the wheel
+   `dist-info/licenses/` directory to the retained authenticated license.
    The three locks select that exact candidate; the other pins in the closure of
    94 distributions stay unchanged. Normal resolution must use this version without a resolver
    bypass. Omitting `--darwin-only` preserves the historical specfact.1 bytes.

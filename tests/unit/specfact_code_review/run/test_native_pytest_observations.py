@@ -151,3 +151,40 @@ def test_native_pytest_records_bind_actual_selectors_without_collection_events(t
     assert observed["collected"] == ["tests/test_value.py::test_value"]
     observer.write_text("[]")
     assert native_worker._capture_pytest_observation(result, transport)["collected"] == []
+
+
+def _capture_result(transport, records):
+    paths = [transport.temporary / name for name in ("coverage.json", "observer.json", "junit.xml")]
+    paths[0].write_text('{"files": {"pkg/example.py": {}}}')
+    paths[1].write_text(json.dumps(records))
+    paths[2].write_text("<testsuite/>")
+    return subprocess.CompletedProcess([], 0, "", ""), *paths
+
+
+@pytest.mark.parametrize(
+    "record",
+    [
+        {"phase": "call"},
+        {"nodeid": None, "phase": "call"},
+        {"nodeid": True, "phase": "setup"},
+        {"nodeid": 17, "phase": "collection"},
+        {"nodeid": [], "phase": "teardown"},
+        {"nodeid": {}, "phase": "custom"},
+    ],
+    ids=["missing", "null", "boolean", "integer", "list", "object"],
+)
+def test_native_pytest_observations_reject_malformed_node_identity(tmp_path: Path, record: dict) -> None:
+    transport = _transport(tmp_path)
+    result = _capture_result(transport, [record])
+    with pytest.raises(native_worker.WorkerContractError, match=r"observer.*node"):
+        native_worker._capture_pytest_observation(result, transport)
+
+
+def test_native_pytest_observations_preserve_exact_valid_node_identity(tmp_path: Path) -> None:
+    transport = _transport(tmp_path)
+    nodeid = "tests/test_value.py::test_value[parameter::nested]"
+    records = [{"nodeid": nodeid, "phase": phase} for phase in ("collection", "setup", "call", "teardown")]
+    observed = native_worker._capture_pytest_observation(_capture_result(transport, records), transport)
+    assert observed["collected"] == [nodeid]
+    assert observed["records"] == records
+    assert observed["result_provenance"] == "project-origin-v1"

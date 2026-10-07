@@ -219,6 +219,11 @@ requirements:
       method: inspection
       intent: "Inspect planned acceptance: Policy-admissible replacement is verified."
       observable: "native execution may proceed without satisfying the new selection from a superseded cache. Planned maturity only; future native execution evidence is required by FEASIBILITY.md and tasks.md; no runtime pass is claimed."
+    - case_id: 460-15-41
+      scenario_id: dependency-source-admission
+      method: test
+      intent: Resolve declared wheel license paths to authenticated retained bytes.
+      observable: Metadata and provenance regressions fail against licenses/LICENSE.txt; corrected LICENSE.txt resolves relative to dist-info/licenses to the authenticated license member. Three exact-hash lock regressions fail before all ABI locks bind two identical authenticated rebuilds. The legacy derivative stays byte-identical; native release admission remains separate.
     - case_id: 460-6-4
       scenario_id: dependency-source-admission
       method: inspection
@@ -609,6 +614,11 @@ requirements:
       method: test
       intent: Resolve introduced parser complexity, machine-output and naming findings without changing protocol assertions.
       observable: The pinned Semgrep1.144.0 frontend reproduces five introduced rows and then returns zero findings/errors on the same four files. Radon reproduces the large-frame proofCC16; separate setup/assertion helpers and fixed forbidden-request replacements remove all UV fixture Radon findings. All native parser mutation IDs, XML value/size assertions, process status checks and deadlines remain. Serialized CLI stdout values/exits are unchanged. The146focused and90follow-up cases pass, with unchanged rules and payloads. The complete68-file pinned clean/bloat/bug scan has no added-line findings or parse errors after correcting five further broker/timeout-fixture rows. Actual physical broker proof passes9cases; stable full/SMART each pass5245tests. Hosted exact-head Linux review remains required.
+    - case_id: 460-15-40
+      scenario_id: prepare-unfamiliar-projects-from-discovered-or-caller-supplied-setup
+      method: test
+      intent: Reject malformed observer node identities before capture and preserve exact valid strings.
+      observable: Six meaningful failing-before regressions reject missing/null/boolean/integer/list/object nodeids with WorkerContractError; a positive parameterized identity preserves exact collected and raw record strings without coercion. Empty genuine inventories stay empty. No selector, protected evidence, confinement or acceptance policy changes.
     - case_id: 460-15-39
       scenario_id: prepare-unfamiliar-projects-from-discovered-or-caller-supplied-setup
       method: test

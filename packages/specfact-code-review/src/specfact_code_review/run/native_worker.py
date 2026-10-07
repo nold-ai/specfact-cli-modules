@@ -701,12 +701,10 @@ def _capture_pytest_observation(result: Any, transport: ReplayTransport) -> dict
         raise WorkerContractError("native pytest coverage artifact is invalid")
     if not isinstance(records, list) or not all(isinstance(record, dict) for record in records):
         raise WorkerContractError("native pytest observer artifact is invalid")
+    if not all(isinstance(record.get("nodeid"), str) for record in records):
+        raise WorkerContractError("native pytest observer node identity is invalid")
     collected = sorted(
-        {
-            str(record["nodeid"])
-            for record in records
-            if record.get("phase") in {"collection", "setup", "call", "teardown"}
-        }
+        {record["nodeid"] for record in records if record.get("phase") in {"collection", "setup", "call", "teardown"}}
     )
     return {
         "collected": collected,

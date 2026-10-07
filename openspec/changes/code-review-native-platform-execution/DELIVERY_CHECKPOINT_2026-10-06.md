@@ -135,10 +135,13 @@ runtimes. All private output was retained outside authenticated module paths.
 
 ## Remaining delivery and rollback
 
-The protected native build/accept/sign/stage workflow is still absent. GitHub
-public environment metadata read on 2026-10-06 showed only github-pages; a native
-release/signing protection environment is not configured. No signing authority
-was tested or requested. Final dependency/profile admission and authentic
+As of 2026-10-07 (Europe/Berlin), the native build/accept/sign/stage workflow
+is implemented in `.github/workflows/native-capsule-release.yml`. GitHub public
+environment metadata read on 2026-10-07 still showed only github-pages; the
+native release/signing protection environment remains unconfigured. Native
+release signing authority and protected promotion have not been tested or
+requested. This updates workflow availability without changing the historical
+2026-10-06 acceptance results. Final dependency/profile admission and authentic
 four-manager upstream corpus remain open, as do the final-byte 14/15/26 x three
 ABI matrix, physical changecost/unrelated project, and clean independent signed
 module installation with cold anonymous GHCR acquisition and offline reuse.

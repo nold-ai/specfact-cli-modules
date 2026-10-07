@@ -332,7 +332,7 @@ def test_darwin_projection_omits_exact_foreign_payload_and_retains_native_source
     prefix = "z3_solver-5.1.0.0+specfact.2.dist-info"
     assert files[prefix + "/licenses/LICENSE.txt"] == packager.LICENSE_INPUT.read_bytes()
     assert b"Version: 5.1.0.0+specfact.2\n" in files[prefix + "/METADATA"]
-    assert b"License-File: licenses/LICENSE.txt\n" in files[prefix + "/METADATA"]
+    assert b"License-File: LICENSE.txt\n" in files[prefix + "/METADATA"]
     packager.verify_record(files, prefix)
 
 
@@ -354,6 +354,19 @@ def test_projection_provenance_retains_verification_without_admission(projection
     assert receipt["dependency_admitted"] is False and receipt["production_eligible"] is False
 
 
+def test_projection_license_declaration_resolves_to_authenticated_member(packager, projection_receipt):
+    from email.parser import BytesParser
+
+    wheel, _receipt, _original = projection_receipt
+    files = packager.read_members(wheel.read_bytes())
+    prefix = packager.DARWIN_DIST_INFO
+    metadata = BytesParser().parsebytes(files[prefix + "/METADATA"])
+    declared = metadata.get_all("License-File")
+    assert declared is not None
+    assert declared == ["LICENSE.txt"]
+    assert files[prefix + "/licenses/" + declared[0]] == packager.LICENSE_INPUT.read_bytes()
+
+
 def test_projection_provenance_binds_omissions_and_license(packager, projection_receipt):
     wheel, receipt, original = projection_receipt
     assert receipt["output"]["sha256"] == hashlib.sha256(wheel.read_bytes()).hexdigest()
@@ -362,6 +375,7 @@ def test_projection_provenance_binds_omissions_and_license(packager, projection_
         assert identity == {"sha256": hashlib.sha256(original[name]).hexdigest(), "size": len(original[name])}
     license_identity = receipt["licenses"]["z3_solver-5.1.0.0+specfact.2.dist-info/licenses/LICENSE.txt"]
     assert license_identity["sha256"] == packager.LICENSE_SHA256
+    assert receipt["corrections"]["METADATA.License-File"] == "LICENSE.txt"
 
 
 def test_projection_is_deterministic_and_historical_derivative_remains_available(tmp_path, packager, projection_inputs):

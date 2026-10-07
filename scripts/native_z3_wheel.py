@@ -376,7 +376,7 @@ def _projected_members(upstream: dict[str, bytes], supplemental: dict, license_d
     header, separator, body = metadata.partition(b"\n\n")
     if not separator:
         raise ValueError("missing derivative metadata header")
-    result[DARWIN_DIST_INFO + "/METADATA"] = header + b"\nLicense-File: licenses/LICENSE.txt\n\n" + body
+    result[DARWIN_DIST_INFO + "/METADATA"] = header + b"\nLicense-File: LICENSE.txt\n\n" + body
     result[DARWIN_DIST_INFO + "/licenses/LICENSE.txt"] = license_data
     return _recorded_members(result, DARWIN_DIST_INFO)
 
@@ -412,7 +412,7 @@ def _projection_provenance(data: bytes, upstream: dict[str, bytes], supplemental
         "output": {"filename": DARWIN_OUTPUT_FILENAME, "sha256": hashlib.sha256(data).hexdigest()},
         "corrections": {
             "METADATA.Version": {"from": "5.1.0.0", "to": "5.1.0.0+specfact.2"},
-            "METADATA.License-File": "licenses/LICENSE.txt",
+            "METADATA.License-File": "LICENSE.txt",
             "WHEEL.Tag": {"from": "py3-none-macosx_13_3_arm64", "to": "py3-none-macosx_14_0_arm64"},
             "WHEEL.Root-Is-Purelib": {"from": True, "to": False},
             "dist-info": {"from": UPSTREAM_DIST_INFO, "to": DARWIN_DIST_INFO},

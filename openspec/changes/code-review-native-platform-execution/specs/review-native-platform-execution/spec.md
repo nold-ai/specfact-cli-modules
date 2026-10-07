@@ -343,6 +343,7 @@ The full native closure SHALL satisfy released dependency policy independently o
 - **WHEN** a maintainer explicitly requests the versioned Darwin-only derivative with the pinned upstream release archive
 - **THEN** preparation SHALL authenticate wheel, release, source/native linkage and license before output, omit only the exact reviewed DLL identities, and include the authenticated license in the new wheel
 - **AND** the derivative SHALL have a distinct version, filename, complete RECORD and provenance binding every unchanged retained byte, omitted member and added license
+- **AND** each License-File header SHALL resolve relative to the wheel dist-info/licenses directory to the authenticated retained license member; provenance and every ABI hash lock SHALL bind the corrected final bytes
 - **AND** missing or altered linkage, unknown DLLs, license tampering or an absent release archive SHALL reject before output
 - **AND** the historical metadata-only derivative SHALL remain reproducible, and no derivative alone SHALL grant dependency or production admission
 
@@ -946,6 +947,7 @@ The native backend SHALL reuse portable project discovery and prepare dependenci
 - **WHEN** project pytest plugins provide actual test phase records without coordinator collection records
 - **THEN** native local execution observations retain the node identifiers observed in setup, call or teardown as collected selectors
 - **AND** an empty observer remains empty; no declared or requested but unobserved selectors may be invented
+- **AND** every observer record SHALL have a string node identifier before capture or response projection; missing or non-string identifiers SHALL fail the worker contract, and valid identifiers SHALL remain unchanged without string coercion
 
 #### Scenario: Native generated wheel modules preserve bound project source imports
 

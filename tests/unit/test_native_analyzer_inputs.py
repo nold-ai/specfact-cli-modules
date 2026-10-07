@@ -39,7 +39,7 @@ def test_hashed_native_closure(abi):
         assert hashes, name
         if name in pins:
             assert requirement.specifier == Requirement(pins[name]).specifier
-    assert "03eb2624d4d19d06020e9a6c5823cf8ac4f6b3fcb0a73e25ef2514d1129982bd" in locked["z3-solver"]
+    assert "81d7e08869fc34877ad9b1315de5bb5398792bc8858f44e45c38a974f310f7e7" in locked["z3-solver"]
 
 
 def test_candidate_policy_floors_and_analyzer_baseline():
