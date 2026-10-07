@@ -9,4 +9,6 @@
 - [x] Correct verified core CLI decoration of preparation JSON with unchanged app inputs.
 - [x] Project the verified independent failure after preparation with fixed nested evidence observations.
 - [x] Retain fixed CrossHair failure classes and suppress unknown candidate diagnostic tokens.
+- [ ] Identify the sealed CrossHair bottleneck within unchanged execution guards.
+- [ ] Fix the demonstrated cause and remove temporary sampling.
 - [ ] After separately authorized promotion, verify exact #498 sealed execution.

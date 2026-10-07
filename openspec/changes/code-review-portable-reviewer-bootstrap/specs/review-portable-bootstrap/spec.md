@@ -78,3 +78,15 @@ confined targeted discovery SHALL not select those proof-only host fixtures.
 - **WHEN** contracts fail after successful preparation
 - **THEN** project only fixed CrossHair controller-error classes and exception-marker observations from tool_error findings, preserving the original failing exit and all analyzer budgets
 - **AND** unrelated tools/categories and raw message suffixes remain private; observations do not establish causation or acceptance
+
+### Requirement: Sealed timeout diagnosis retains execution guards
+
+Temporary candidate CrossHair sampling SHALL retain selected inputs, module
+dispatch, checker flags, namespaces and existing deadlines.
+
+#### Scenario: CrossHair times out after successful preparation
+
+- **WHEN** the existing CrossHair target reaches its unchanged timeout
+- **THEN** sample only that domain every five seconds and cancel on all exits
+- **AND** inspect at most64KiB of captured stderr, publishing only fixed frame-presence observations and preserving UNKNOWN/error
+- **AND** do not copy raw stack paths, names or messages; remove sampling after diagnosis and verify the actual correction separately

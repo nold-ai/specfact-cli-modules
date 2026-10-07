@@ -81,3 +81,15 @@ error prefixes and fixed exception markers, never raw suffixes. The candidate
 projector is isolated under-I with2MiB read bounds, fixed protocol IDs/codes and
 at most five deduplicated class rows. Unknown metadata cannot escape through
 regex tokens. No analysis, grant or deadline change is justified by this evidence.
+
+Approved bounded milestone (2026-10-08): sample only the existing CrossHair target
+with stdlib faulthandler every five seconds, before runtime attachment and through
+its unchanged module dispatch. Cancel sampling on every exit. Captured stderr
+remains private; after a timeout inspect only its final64KiB and expose fixed
+frame-presence observations for bootstrap, imports, symbolic search and known
+portable-worker contract entrypoints. Samples are observations, not attribution
+or acceptance. Do not add permissions, paths, checker flags or deadlines.
+A finally-only profiler cannot survive the existing timeout kill; repeated full
+review without changed evidence is unsuitable. Remove temporary instrumentation
+after the actual bottleneck is demonstrated and corrected. Independently installed
+0.51.0 cannot use candidate instrumentation; its timeout remains unattributed.

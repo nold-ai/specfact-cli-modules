@@ -219,3 +219,34 @@ hosted results remain required; no underlying runtime remedy is yet justified.
 Format, typing0errors/0warnings, lint10.00/10, actionlint, strict OpenSpec and
 pinned Semgrep0findings/0errors pass for this correction. Normal hooks run at
 commit with the approved capsule-only DEFERRED label; hosted review is required.
+
+## Approved bounded CrossHair diagnosis — 2026-10-08 Europe/Berlin
+
+Owner approved identifying and correcting the demonstrated root cause inside the
+existing sealed runtime. Exact5425 CP312 prepares both descriptors, then reports
+crosshair_timeout_observed; independent installed0.51.0 reports missing_report
+and timeout_marker_observed. Neither result attributes the performance cause.
+
+After specification, six meaningful sampler/privacy tests fail before code
+(0.13s); one bounded-tail budget regression already passes. The actual workflow
+projector separately fails before code(1.31s). Captured logs:
+/private/tmp/specfact460-crosshair-profile-red.log and
+/private/tmp/specfact460-crosshair-projector-red.log.
+After implementation,129 focused cases pass(7.02s), including actual main wiring
+before runtime attachment and preservation of SystemExit1/module args,
+normal/error teardown, string/byte stderr, unknown/older token suppression and
+30/120-second timeout/2/10-second per-path command parity. Final tail/observations
+are bounded and fixed; raw stacks are never published. This is temporary candidate
+instrumentation, not installed acceptance or a runtime fix. Remove it after
+diagnosis. Full passes19host cases, then5041portable/75skips/95subtests/five existing
+warnings(263.80s). SMART passes the same counts(257.33s). Format, zero-error/warning
+typing, lint10.00/10, manifests/imports,28contracts, actionlint, planned requirements,
+strict OpenSpec and formal filesystem checksum/version verification of7modules
+pass. AST/AI-bloat/pinned Semgrep are clean; Radon reports only unchanged legacy
+functions. Bounded independent review finds no defect. Actual sealed sampler
+operation/overhead and hosted observations remain pending. Normal hooks and public
+committed CodeRabbit review follow; local capsule review remains approved DEFERRED.
+
+Candidate checksum refresh uses released origin/dev comparison with both private
+key environment variables removed. Code Review remains unpublished0.51.1; CI-only
+signature follow-up is required. No authenticated installed bytes are modified.

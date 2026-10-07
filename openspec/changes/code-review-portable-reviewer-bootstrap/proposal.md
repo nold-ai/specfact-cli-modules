@@ -27,3 +27,8 @@ or publication. Human-reviewed authenticated promotion and subsequent exact #498
 Linux timing remain required. Bootstrap preparation is bounded to the selection
 helper, Pylint wrapper, regression tests, the verified installation-pin correction
 and its required host/portable proof entry points, plus release/evidence metadata.
+
+The owner explicitly approved bounded sealed CrossHair diagnosis and a verified
+root-cause correction on 2026-10-08. Existing selected contracts, checker options,
+30/120-second adapter bounds and300-second analysis bound remain unchanged.
+Temporary sampling is candidate evidence and must be removed after diagnosis.

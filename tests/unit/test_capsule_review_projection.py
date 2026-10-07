@@ -353,3 +353,37 @@ def test_candidate_crosshair_failure_emits_only_fixed_classes(tmp_path, message,
     )
     assert [json.loads(line) for line in result.stdout.splitlines()] == output
     assert "private-token" not in result.stdout + result.stderr
+
+
+def test_candidate_stack_observations_retain_only_fixed_codes(tmp_path):
+    import json
+
+    workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())
+    step = next(item for item in workflow["jobs"]["customer"]["steps"] if item.get("name") == STEP_NAME)
+    program = step["run"].split("<<'PY_CANDIDATE_FAILURE'\n", 1)[1].split("\nPY_CANDIDATE_FAILURE", 1)[0]
+    root = tmp_path / ".specfact"
+    root.mkdir()
+    (root / "code-review.json").write_text(
+        json.dumps(
+            {
+                "findings": [
+                    {
+                        "category": "tool_error",
+                        "tool": "crosshair",
+                        "message": "CrossHair timed out before mandatory evidence completed. sampled_frames=select_test_paths,symbolic_search,private-token",
+                    }
+                ]
+            }
+        )
+    )
+    result = _run_projector(tmp_path, program)
+    assert result.returncode == 0
+    assert [json.loads(line) for line in result.stdout.splitlines()] == [
+        {
+            "analyzer": "contracts",
+            "diagnostic_class": "crosshair_timeout_observed",
+            "exception_observations": [],
+            "profile_observations": ["select_test_paths", "symbolic_search"],
+        }
+    ]
+    assert "private-token" not in result.stdout + result.stderr
