@@ -265,6 +265,8 @@ def _expected_review_projection(expected):
     }
     if outcome == "oversized_report":
         projection["report_header_observed"] = False
+        projection["error_analyzer_sides"] = {}
+        projection["crosshair_failure_observations"] = []
     return projection
 
 
@@ -528,4 +530,54 @@ def test_oversized_analyzer_inventory_preserves_complete_prior_rows(tmp_path, mo
     assert value["report_header_observed"] is observed
     assert value["error_analyzers"] == value["unknown_analyzers"] == (["contracts"] if observed else [])
     assert value["findings_present"] is False
+    assert "private-token" not in result.stdout + result.stderr
+
+
+@pytest.mark.parametrize(
+    "case,expected_sides,expected_classes",
+    [
+        (
+            "contracts",
+            {"contracts": ["base"]},
+            ["crosshair_process_error_observed", "value_error_observed", "wrong_parameter_order_observed"],
+        ),
+        ("other_tool", {"contracts": ["base"]}, []),
+        ("diagnostic_bound", {}, []),
+    ],
+)
+def test_large_private_report_projects_contract_failure_classes_without_acceptance(
+    tmp_path, monkeypatch, case, expected_sides, expected_classes
+):
+    import json
+
+    root = _large_report_fixture()
+    root["analyzer_evidence"][0]["head"] = {"execution_state": "ran", "evidence_outcome": "PASS"}
+    root["analyzer_evidence"][0]["base"]["target_execution"] = {"inventory": "x" * (2 * 1024 * 1024)}
+    root["findings"] = [
+        {
+            "category": "tool_error",
+            "tool": "crosshair" if case == "contracts" else "ruff",
+            "message": "CrossHair process error: ValueError: wrong parameter order: private-token",
+        }
+    ]
+    if case == "diagnostic_bound":
+        root["findings"][0]["message"] += "x" * (32 * 1024 * 1024)
+    report, log = _write_independent_failure_fixture(tmp_path, "missing")
+    report.write_text(json.dumps(root))
+    monkeypatch.setenv("REVIEW_REPORT", str(report))
+    monkeypatch.setenv("REVIEW_LOG", str(log))
+    step = next(
+        step
+        for step in independent_review_job()["steps"]
+        if step.get("name") == "Project independent review failure privately"
+    )
+    program = step["run"].split("<<'PY_REVIEW_FAILURE'\n", 1)[1].split("\nPY_REVIEW_FAILURE", 1)[0]
+    result = _run_projector(tmp_path, program)
+    assert result.returncode == 0
+    value = json.loads(result.stdout)
+    policy = (value["report_outcome"], value["assurance_status"], value["overall_verdict"], value["findings_present"])
+    assert policy == ("oversized_report", "UNAVAILABLE", "UNAVAILABLE", False)
+    assert value["report_header_observed"] is bool(expected_sides)
+    assert value["error_analyzer_sides"] == expected_sides
+    assert value["crosshair_failure_observations"] == expected_classes
     assert "private-token" not in result.stdout + result.stderr

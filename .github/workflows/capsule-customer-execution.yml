@@ -518,125 +518,72 @@ jobs:
           import os
           from pathlib import Path
 
-          def json_space(text, cursor):
-              while cursor < len(text) and text[cursor] in " \t\r\n":
-                  cursor += 1
-              return cursor
+          def unique_json_object(pairs):
+              value = {}
+              for key, item in pairs:
+                  if key in value:
+                      raise ValueError("duplicate JSON field")
+                  value[key] = item
+              return value
 
-          def row_prefix_is_incomplete(text, error):
-              import re
+          def complete_private_report(data):
+              value = json.loads(data, object_pairs_hook=unique_json_object)
+              if not isinstance(value, dict):
+                  return {}
+              if not isinstance(value.get("findings"), list) or not isinstance(value.get("analyzer_evidence"), list):
+                  return {}
+              return value
 
-              tail = text[error.pos:]
-              partial = {
-                  "Expecting value": tail in ("t", "tr", "tru", "f", "fa", "fal", "fals", "n", "nu", "nul", "-"),
-                  "Expecting ',' delimiter": error.pos > 0 and text[error.pos - 1] in "0123456789" and tail in (".", "e", "E", "e+", "e-", "E+", "E-"),
+          def crosshair_failure_observations(findings):
+              markers = {
+                  "CrossHair timed out before mandatory evidence completed.": "crosshair_timeout_observed",
+                  "CrossHair process error:": "crosshair_process_error_observed",
+                  "Unrecognized CrossHair output:": "crosshair_unrecognized_output_observed",
+                  "Unable to execute CrossHair:": "crosshair_execute_error_observed",
+                  "ModuleNotFoundError": "module_not_found_observed",
+                  "ImportError": "import_error_observed", "SyntaxError": "syntax_error_observed",
+                  "PermissionError": "permission_error_observed", "TypeError": "type_error_observed",
+                  "FileNotFoundError": "file_not_found_observed", "ValueError": "value_error_observed",
+                  "wrong parameter order": "wrong_parameter_order_observed",
               }
-              partial_escape = error.msg.endswith("uXXXX escape") and re.fullmatch(r"u[0-9a-fA-F]{0,3}", tail) is not None
-              return error.pos == len(text) or error.msg == "Unterminated string starting at" or partial.get(error.msg, False) or partial_escape
+              observed = set()
+              for finding in findings[:10000]:
+                  if not isinstance(finding, dict) or finding.get("category") != "tool_error" or finding.get("tool") != "crosshair":
+                      continue
+                  message = finding.get("message", "")
+                  if isinstance(message, str):
+                      observed.update(code for marker, code in markers.items() if marker in message)
+              return sorted(observed)
 
-          def analyzer_row(text, cursor, decoder):
-              try:
-                  row, cursor = decoder.raw_decode(text, cursor)
-              except json.JSONDecodeError as exc:
-                  if row_prefix_is_incomplete(text, exc):
-                      return None, None
-                  raise
-              if not isinstance(row, dict):
-                  raise ValueError("invalid analyzer row")
-              return row, json_space(text, cursor)
-
-          def analyzer_rows(text, cursor, decoder):
-              if text[cursor] != "[":
-                  raise ValueError("invalid analyzer header")
-              rows, cursor = [], cursor + 1
-              for _ in range(10):
-                  cursor = json_space(text, cursor)
-                  if cursor == len(text):
-                      return rows, None
-                  if text[cursor] == "]":
-                      if rows:
-                          raise ValueError("trailing analyzer comma")
-                      return rows, cursor + 1
-                  row, cursor = analyzer_row(text, cursor, decoder)
-                  if cursor is None:
-                      return rows, None
-                  if cursor == len(text):
-                      return [*rows, row], None
-                  if text[cursor] not in ",]":
-                      raise ValueError("invalid analyzer delimiter")
-                  rows.append(row)
-                  if text[cursor] == "]":
-                      return rows, cursor + 1
-                  cursor += 1
-              raise ValueError("analyzer row limit")
-
-          def header_field(text, cursor, decoder):
-              key, cursor = decoder.raw_decode(text, json_space(text, cursor))
-              if not isinstance(key, str):
-                  raise ValueError("invalid header key")
-              cursor = json_space(text, cursor)
-              if text[cursor] != ":":
-                  raise ValueError("invalid header delimiter")
-              cursor = json_space(text, cursor + 1)
-              if key == "findings":
-                  if text[cursor] != "[":
-                      raise ValueError("invalid findings header")
-                  return key, None, cursor
-              if key == "analyzer_evidence":
-                  value, cursor = analyzer_rows(text, cursor, decoder)
-                  if cursor is None:
-                      return key, value, cursor
-              else:
-                  value, cursor = decoder.raw_decode(text, cursor)
-              cursor = json_space(text, cursor)
-              if text[cursor] != ",":
-                  raise ValueError("incomplete report header")
-              return key, value, cursor + 1
-
-          def report_header(data):
-              import codecs
-
-              try:
-                  text = codecs.getincrementaldecoder("utf-8")().decode(data, final=False)
-                  cursor = json_space(text, 0)
-                  if text[cursor] != "{":
-                      return {}
-                  cursor, seen, observed = cursor + 1, set(), {}
-                  decoder = json.JSONDecoder()
-                  for _ in range(64):
-                      key, value, cursor = header_field(text, cursor, decoder)
-                      if key in seen:
-                          return {}
-                      seen.add(key)
-                      if key == "findings":
-                          return observed if isinstance(observed.get("analyzer_evidence"), list) else {}
-                      if key in ("analyzer_evidence", "has_unknown_required_evidence"):
-                          observed[key] = value
-                      if cursor is None:
-                          return observed if value else {}
-              except (ValueError, IndexError, RecursionError):
-                  pass
-              return {}
+          def incomplete_sides(members):
+              observed = {}
+              for name, group in members:
+                  row = group[0]
+                  for side in ("base", "head"):
+                      node = row.get(side)
+                      if isinstance(node, dict) and (node.get("execution_state") == "error" or node.get("evidence_outcome") == "UNKNOWN"):
+                          observed.setdefault(name, set()).add(side)
+              return {name: sorted(sides) for name, sides in sorted(observed.items())}
 
           report, header = {}, {}
           outcome = "unreadable_report"
+          diagnostic_bound = 32 * 1024 * 1024
           try:
               with Path(os.environ["REVIEW_REPORT"]).open("rb") as stream:
-                  data = stream.read(2 * 1024 * 1024 + 1)
+                  data = stream.read(diagnostic_bound + 1)
               if len(data) > 2 * 1024 * 1024:
                   outcome = "oversized_report"
-                  header = report_header(data[:2 * 1024 * 1024])
+                  if len(data) <= diagnostic_bound:
+                      header = complete_private_report(data)
               else:
-                  value = json.loads(data)
-                  if isinstance(value, dict) and isinstance(value.get("findings"), list) and isinstance(value.get("analyzer_evidence"), list):
-                      report, outcome = value, "structured_report"
-                  else:
-                      outcome = "invalid_report_shape"
+                  report = complete_private_report(data)
+                  outcome = "structured_report" if report else "invalid_report_shape"
           except FileNotFoundError:
               outcome = "missing_report"
           except json.JSONDecodeError:
-              outcome = "invalid_json"
-          except (OSError, ValueError):
+              if outcome != "oversized_report":
+                  outcome = "invalid_json"
+          except (OSError, ValueError, RecursionError):
               pass
           evidence_source = report if outcome == "structured_report" else header
           rows = [row for row in evidence_source.get("analyzer_evidence", [])[:10] if isinstance(row, dict)]
@@ -677,5 +624,7 @@ jobs:
               "diagnostic_observations": codes or ["unclassified"]}
           if outcome == "oversized_report":
               projected["report_header_observed"] = bool(header)
+              projected["error_analyzer_sides"] = incomplete_sides(members)
+              projected["crosshair_failure_observations"] = crosshair_failure_observations(header.get("findings", []))
           print(json.dumps(projected))
           PY_REVIEW_FAILURE

@@ -415,3 +415,34 @@ findings for the actual final reader and tests; pinned Semgrep retains only
 the documented existing structured-stdout exception. Signed payloads are
 unchanged; formal strict signatures/checksum/version validation is repeated
 before normal amended commit hooks. Public review and exact-head CI follow.
+
+
+## Complete private diagnostic report — 2026-10-08 Europe/Berlin
+
+Installed0.51.0 run37713711290 job113105307584 now establishes contract
+error/UNKNOWN with a complete root header; the old2MiB prefix still cannot
+reach tool-error findings after a large analyzer inventory. It does not yet
+establish a specific contract failure class. Specification precedes three
+new failing regressions(3failed/62deselected,0.95s), covering actual CrossHair
+classification, another tool with identical text and a report beyond the
+private diagnostic cap. A complete standard-library JSON parse replaces
+custom prefix parsing. The existing2MiB oversized threshold still makes
+assurance/verdict unavailable and findings_present false. Only this private
+failure-diagnostic read increases to32MiB; analysis deadlines, failing exit,
+grants, authenticated installed bytes and acceptance gates are unchanged.
+Duplicate fields/malformed JSON are rejected; at most10analyzer rows and
+10000findings are inspected for finite analyzer/side/class observations.
+No raw report fields, source paths or failure messages are emitted.
+
+Final focused84cases pass(8.70s). Full/SMART each pass19mandatory host proofs
+plus5069portable tests,75declared skips,95subtests and five existing warnings
+(256.47s/255.81s). The final test only groups unchanged policy assertions;
+focused validation is repeated after simplifying its actual CC13 finding.
+Worktree-installed AST/AI-bloat/Radon now have zero findings. Pinned Semgrep
+has only the existing documented structured-stdout transport exception and
+zero errors. Format, typing0errors/0warnings, lint10.00/10, manifests/imports,
+28contracts, actionlint, planned requirements, strict OpenSpec and seven strict
+filesystem signature/checksum/version checks pass. Signed assets are unchanged.
+Public committed review and fresh hosted exact-head attribution follow push.
+Both PRs have zero unresolved current threads at this triage. Their quality
+failures occur at signature/customer prerequisites before actual quality stages.

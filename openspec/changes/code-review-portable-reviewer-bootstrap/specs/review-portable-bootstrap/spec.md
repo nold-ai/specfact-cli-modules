@@ -119,9 +119,10 @@ all execution deadlines SHALL remain unchanged.
 - **THEN** remove the temporary stack sampler and its failure projection before promotion
 - **AND** retain native module argv, exit codes, existing30/120-second process bounds and2/10-second path bounds; timeouts remain error/UNKNOWN without exposing captured stderr
 
-#### Scenario: Oversized independent report retains bounded header observations
+#### Scenario: Oversized independent report retains bounded private diagnostics
 
-- **WHEN** installed review writes a report exceeding the existing2MiB diagnostic read bound
-- **THEN** retain oversized_report and unavailable assurance/verdict while projecting only complete root analyzer fields or complete analyzer rows from the same bounded prefix
-- **AND** reject duplicate/malformed header structure and incomplete row contents; retain earlier complete analyzer rows when a later inventory exceeds the prefix, including cuts inside valid JSON literals or Unicode escapes; ignore nested spoofed header keys and private fields, and never treat partial observations as accepted report evidence
-- **AND** preserve the installed controller, original failing exit, grants, checker arguments and deadlines
+- **WHEN** installed review writes a report exceeding the existing2MiB projection threshold
+- **THEN** retain oversized_report and unavailable assurance/verdict while parsing a complete private diagnostic report up to32MiB with the standard-library JSON decoder
+- **AND** reject invalid or duplicate JSON fields, ignore nested spoofed header keys, bound analyzer rows and finding inspection, and emit only finite known analyzer/snapshot-side/failure-class observations
+- **AND** report unavailable diagnostics beyond32MiB; never treat oversized diagnostics as accepted report evidence or disclose private fields
+- **AND** preserve the installed controller, original failing exit, grants, checker arguments and all established analysis deadlines
