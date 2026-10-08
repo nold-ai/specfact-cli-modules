@@ -427,3 +427,105 @@ def test_oversized_independent_report_preserves_only_complete_root_header(tmp_pa
     )
     assert value["findings_present"] is False
     assert "private-token" not in result.stdout + result.stderr
+
+
+def _literal_prefix_report(row, token, cut):
+    import json
+
+    prefix = '{"analyzer_evidence":[' + json.dumps(row) + ',{"target_execution":{"padding":"'
+    middle = '","value":'
+    padding = 2 * 1024 * 1024 - len((prefix + middle).encode()) - cut
+    return prefix + "x" * padding + middle + token + '}}],"findings":[]}'
+
+
+def _oversized_analyzer_payload(case):
+    import json
+
+    row = _large_report_fixture()["analyzer_evidence"][0]
+    literals = {
+        "cut_true": ("true", 3),
+        "cut_false": ("false", 4),
+        "cut_null": ("null", 3),
+        "cut_exponent": ("1e2", 2),
+        "cut_fraction": ("1.2", 2),
+        "cut_negative": ("-1", 1),
+        "cut_escape": ('"\\u1234"', 5),
+        "invalid_literal": ("truX", 4),
+        "invalid_exponent": ("1eX", 3),
+        "invalid_escape": ('"\\u1Z"', 5),
+    }
+    if case in literals:
+        return _literal_prefix_report(row, *literals[case])
+    inventory = "é" if case == "unicode_inventory" else "x"
+    large_row = {"id": "targeted-pytest-coverage", "target_execution": {"inventory": inventory * (2 * 1024 * 1024)}}
+    payload = json.dumps({"analyzer_evidence": [row, large_row], "findings": []}, ensure_ascii=False)
+    if case == "invalid_row":
+        payload = '{"analyzer_evidence":[' + json.dumps(row) + ",private-token" + "x" * (2 * 1024 * 1024)
+    if case == "duplicate_root":
+        payload = '{"analyzer_evidence":[],"analyzer_evidence":[' + json.dumps(row) + "," + json.dumps(large_row)
+    if case in ("trailing_comma", "trailing_comma_ten"):
+        count = 10 if case == "trailing_comma_ten" else 1
+        payload = (
+            '{"analyzer_evidence":['
+            + ",".join([json.dumps(row)] * count)
+            + ',],"findings":["'
+            + "x" * (2 * 1024 * 1024)
+        )
+    return payload
+
+
+@pytest.mark.parametrize(
+    "case",
+    [
+        "truncated_inventory",
+        "unicode_inventory",
+        "invalid_row",
+        "duplicate_root",
+        "trailing_comma",
+        "trailing_comma_ten",
+        "cut_true",
+        "cut_false",
+        "cut_null",
+        "cut_exponent",
+        "cut_fraction",
+        "cut_negative",
+        "cut_escape",
+        "invalid_literal",
+        "invalid_exponent",
+        "invalid_escape",
+    ],
+)
+def test_oversized_analyzer_inventory_preserves_complete_prior_rows(tmp_path, monkeypatch, case):
+    import json
+
+    payload = _oversized_analyzer_payload(case)
+    report, log = _write_independent_failure_fixture(tmp_path, "missing")
+    report.write_text(payload)
+    monkeypatch.setenv("REVIEW_REPORT", str(report))
+    monkeypatch.setenv("REVIEW_LOG", str(log))
+    step = next(
+        step
+        for step in independent_review_job()["steps"]
+        if step.get("name") == "Project independent review failure privately"
+    )
+    program = step["run"].split("<<'PY_REVIEW_FAILURE'\n", 1)[1].split("\nPY_REVIEW_FAILURE", 1)[0]
+    result = _run_projector(tmp_path, program)
+    assert result.returncode == 0
+    value = json.loads(result.stdout)
+    assert value["report_outcome"] == "oversized_report"
+    assert value["assurance_status"] == value["overall_verdict"] == "UNAVAILABLE"
+    observed = case in (
+        "truncated_inventory",
+        "unicode_inventory",
+        "cut_true",
+        "cut_false",
+        "cut_null",
+        "cut_exponent",
+        "cut_fraction",
+        "cut_negative",
+        "cut_escape",
+    )
+    assert value["report_header_observed"] is observed
+    assert value["error_analyzers"] == value["unknown_analyzers"] == (["contracts"] if observed else [])
+    assert value["findings_present"] is False
+    assert "private-token" not in result.stdout + result.stderr

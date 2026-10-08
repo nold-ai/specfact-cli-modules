@@ -350,3 +350,68 @@ signature/checksum/version checks pass. The diagnostic-only change does not
 alter signed module payloads; the existing0.51.1 signature remains valid.
 Normal hooks follow with approved local capsule-only DEFERRED and mandatory
 exact-head hosted review. Public committed CodeRabbit review follows push.
+
+
+## Complete rows before a large analyzer inventory — 2026-10-08 Europe/Berlin
+
+Run37709238224 job113091006580 passes exact-head candidate commit review,
+while installed0.51.0 job113091006648 reports oversized_report with no complete
+analyzer header observed. This does not establish an analyzer cause. The
+released report places analyzer_evidence before findings, and analyzer rows
+can embed complete pytest inventories. A bounded reader requiring the entire
+array discards complete earlier rows when a later inventory exceeds its prefix.
+After specification, two large-inventory regressions fail; malformed row and
+duplicate-root parity cases already pass(2failed/2passed/46deselected,0.91s).
+The observer consumes at most10complete JSON analyzer objects, retains earlier
+complete objects only when the next object is truncated by the prefix, and
+rejects invalid row tokens/delimiters and duplicate root keys. Incomplete object
+contents are never projected. Every observation still comes from the original
+2MiB prefix; oversized status and unavailable verdict/assurance stay mandatory.
+No installed bytes, review argv, grants, acceptance or deadlines change.
+Focused69host/projector cases pass(7.09s). Fresh hosted attribution is pending.
+The hypothesized large-inventory explanation is not yet confirmed by that run.
+
+Final full/SMART each pass19required host cases followed by5054portable tests,
+75declared skips,95subtests and five existing warnings(253.48s/254.72s).
+Format, typing0errors/0warnings, lint10.00/10, manifests/imports,28contracts,
+actionlint, planned requirements, strict OpenSpec and seven strict signature/
+filesystem checksum/version checks pass. AST/AI-bloat/Radon find no issues;
+pinned Semgrep retains only the documented structured-stdout exception.
+Normal hooks follow with approved local capsule-only DEFERRED; exact-head
+hosted execution and public committed CodeRabbit remain required.
+
+Before push, malformed trailing-comma arrays reveal an additional regression at
+both one and ten rows; each focused case fails before its rejection correction.
+The empty-array branch and final row-limit boundary now reject trailing commas.
+The unpublished complete-row commit will be amended through normal hooks after
+final verification; no unverified corner-case implementation is pushed.
+
+Final focused71cases pass(7.04s), including both malformed-array regressions
+(RED1failure/50deselected,0.81s; RED1failure/51deselected,0.34s).
+A final scan explicitly selects the worktree-installed analyzer executables.
+The earlier ambient-path Radon check did not establish the embedded reader’s
+complexity; the explicit scan found CC13 in analyzer_rows. Factoring one-row
+decoding removes it; the real final reader and tests have zero AST/AI-bloat/
+Radon findings with the worktree tool path. Final full/SMART reruns follow.
+
+
+Independent final review identifies valid literal cuts at the byte bound as
+a retention defect. After specification,7valid literal cases fail and3malformed
+parity cases pass(1.13s): true/false/null, exponent/fraction/negative numbers
+and Unicode escape prefixes must preserve earlier complete objects. Only exact
+end-of-prefix valid literal fragments are admitted; malformed suffixes remain
+rejected. Final81focused host/projector cases pass. No raw literal or row data
+is copied publicly; no acceptance/read/analysis budget changes. The correction
+is folded into the unpublished complete-row commit before public review.
+Previous full/SMART5056-case runs pass(261.28s/259.32s), but precede this literal
+fix; final verification of the additional cases follows.
+
+Final literal-aware full/SMART each pass19required host cases followed by5066
+portable tests,75declared skips,95subtests and five existing warnings
+(263.22s/263.46s). Focused81cases pass(7.24s). Format, typing0errors/0warnings,
+lint10.00/10, manifests/imports,28contracts, actionlint, planned requirements
+and strict OpenSpec pass. Worktree-installed AST/AI-bloat/Radon have zero
+findings for the actual final reader and tests; pinned Semgrep retains only
+the documented existing structured-stdout exception. Signed payloads are
+unchanged; formal strict signatures/checksum/version validation is repeated
+before normal amended commit hooks. Public review and exact-head CI follow.

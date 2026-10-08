@@ -122,6 +122,6 @@ all execution deadlines SHALL remain unchanged.
 #### Scenario: Oversized independent report retains bounded header observations
 
 - **WHEN** installed review writes a report exceeding the existing2MiB diagnostic read bound
-- **THEN** retain oversized_report and unavailable assurance/verdict while projecting only complete root analyzer-header observations from the same bounded prefix
-- **AND** reject duplicate/incomplete/malformed header structure, ignore nested spoofed header keys and private fields, and never treat a partial header as accepted report evidence
+- **THEN** retain oversized_report and unavailable assurance/verdict while projecting only complete root analyzer fields or complete analyzer rows from the same bounded prefix
+- **AND** reject duplicate/malformed header structure and incomplete row contents; retain earlier complete analyzer rows when a later inventory exceeds the prefix, including cuts inside valid JSON literals or Unicode escapes; ignore nested spoofed header keys and private fields, and never treat partial observations as accepted report evidence
 - **AND** preserve the installed controller, original failing exit, grants, checker arguments and deadlines

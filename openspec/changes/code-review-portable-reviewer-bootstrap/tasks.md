@@ -13,5 +13,5 @@
 - [x] Verify request-first/response-late setup against the unchanged sealed candidate gate.
 - [x] Fix the demonstrated setup defect and remove temporary sampling.
 - [x] Verify production payload without the sampler in fresh hosted candidate CI.
-- [ ] Diagnose independent installed review from bounded oversized report headers, retaining unavailable assurance.
+- [ ] Diagnose independent installed review from bounded complete analyzer rows in oversized reports, retaining unavailable assurance.
 - [ ] After separately authorized promotion, verify exact #498 sealed execution.

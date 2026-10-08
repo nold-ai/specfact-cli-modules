@@ -49,7 +49,7 @@ requirements:
       scenario_id: reviewer-installation-and-host-proofs-retain-ordinary-context
       method: test
       intent: Preserve oversized-report failure and unavailable assurance while projecting complete bounded root-header observations.
-      observable: Seven meaningful regressions precede code; Unicode, nested spoofing, duplicate keys and malformed/incomplete headers retain privacy. Hosted observations and cause remain unverified.
+      observable: Seven meaningful regressions precede code; Unicode, nested spoofing, duplicate keys and malformed/incomplete headers retain privacy. Hosted complete-header observation is unavailable; two failing large-inventory regressions precede complete-row projection, with malformed/duplicate parity retained. Fresh attribution remains unverified.
   openspec:code-review-portable-reviewer-bootstrap:review-portable-bootstrap:sealed-timeout-diagnosis-retains-execution-guards:
     rationale: User approved bounded diagnosis of the verified sealed CrossHair timeout without changing analysis guards.
     stakeholder_refs: [nold-ai/specfact-cli-modules#460]

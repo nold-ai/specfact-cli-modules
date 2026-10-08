@@ -523,6 +523,53 @@ jobs:
                   cursor += 1
               return cursor
 
+          def row_prefix_is_incomplete(text, error):
+              import re
+
+              tail = text[error.pos:]
+              partial = {
+                  "Expecting value": tail in ("t", "tr", "tru", "f", "fa", "fal", "fals", "n", "nu", "nul", "-"),
+                  "Expecting ',' delimiter": error.pos > 0 and text[error.pos - 1] in "0123456789" and tail in (".", "e", "E", "e+", "e-", "E+", "E-"),
+              }
+              partial_escape = error.msg.endswith("uXXXX escape") and re.fullmatch(r"u[0-9a-fA-F]{0,3}", tail) is not None
+              return error.pos == len(text) or error.msg == "Unterminated string starting at" or partial.get(error.msg, False) or partial_escape
+
+          def analyzer_row(text, cursor, decoder):
+              try:
+                  row, cursor = decoder.raw_decode(text, cursor)
+              except json.JSONDecodeError as exc:
+                  if row_prefix_is_incomplete(text, exc):
+                      return None, None
+                  raise
+              if not isinstance(row, dict):
+                  raise ValueError("invalid analyzer row")
+              return row, json_space(text, cursor)
+
+          def analyzer_rows(text, cursor, decoder):
+              if text[cursor] != "[":
+                  raise ValueError("invalid analyzer header")
+              rows, cursor = [], cursor + 1
+              for _ in range(10):
+                  cursor = json_space(text, cursor)
+                  if cursor == len(text):
+                      return rows, None
+                  if text[cursor] == "]":
+                      if rows:
+                          raise ValueError("trailing analyzer comma")
+                      return rows, cursor + 1
+                  row, cursor = analyzer_row(text, cursor, decoder)
+                  if cursor is None:
+                      return rows, None
+                  if cursor == len(text):
+                      return [*rows, row], None
+                  if text[cursor] not in ",]":
+                      raise ValueError("invalid analyzer delimiter")
+                  rows.append(row)
+                  if text[cursor] == "]":
+                      return rows, cursor + 1
+                  cursor += 1
+              raise ValueError("analyzer row limit")
+
           def header_field(text, cursor, decoder):
               key, cursor = decoder.raw_decode(text, json_space(text, cursor))
               if not isinstance(key, str):
@@ -535,7 +582,12 @@ jobs:
                   if text[cursor] != "[":
                       raise ValueError("invalid findings header")
                   return key, None, cursor
-              value, cursor = decoder.raw_decode(text, cursor)
+              if key == "analyzer_evidence":
+                  value, cursor = analyzer_rows(text, cursor, decoder)
+                  if cursor is None:
+                      return key, value, cursor
+              else:
+                  value, cursor = decoder.raw_decode(text, cursor)
               cursor = json_space(text, cursor)
               if text[cursor] != ",":
                   raise ValueError("incomplete report header")
@@ -560,6 +612,8 @@ jobs:
                           return observed if isinstance(observed.get("analyzer_evidence"), list) else {}
                       if key in ("analyzer_evidence", "has_unknown_required_evidence"):
                           observed[key] = value
+                      if cursor is None:
+                          return observed if value else {}
               except (ValueError, IndexError, RecursionError):
                   pass
               return {}
