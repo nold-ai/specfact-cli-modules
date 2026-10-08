@@ -9,6 +9,8 @@ and this project follows SemVer for bundle versions.
 
 ### Fixed
 
+- Include the trusted CrossHair adapter in prepared-runtime cache identity so adapter-only corrections invalidate stale offline reuse.
+
 - Preserve contract parsing for callable pytest class markers in pinned CrossHair
   0.0.109 without dropping real method contracts or changing registered overrides.
   Restore compatibility lookups on all exits; required review timeout diagnosis

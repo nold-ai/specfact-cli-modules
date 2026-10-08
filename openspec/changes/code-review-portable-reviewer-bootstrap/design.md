@@ -163,3 +163,12 @@ The protected candidate review enables it; native exact-field request schema and
 independent installed reviewer remain unchanged. This adds diagnostic transport,
 not permissions, paths, checker options, deadlines or acceptance. Preserve every
 ordinary no-sampler proof and remove temporary transport before promotion.
+
+
+Review follow-up retains sampling privacy on completed error exits by removing
+only the standard-library five-second dump blocks before constructing a finding.
+The original native error remains available and mandatory incomplete evidence
+remains error/UNKNOWN. Ordinary mode retains its existing stderr handling. Include
+target_crosshair.py in the existing prepared-runtime builder digest so a later
+adapter-only correction invalidates warm/offline policy identity consistently
+with the Pylint and pytest helpers. No new runtime authority or cache bypass.

@@ -131,5 +131,19 @@ requirements:
     - case_id: reviewer-bootstrap-12
       scenario_id: temporary-diagnosis-preserves-ordinary-dispatch
       method: test
-      intent: Retain default request bytes, restrict an actual boolean to contracts, restore scoped state, consume child metadata, cancel samples on all exits and suppress private stack tokens.
+      intent: Retain default request bytes, restrict an actual boolean to contracts, restore scoped state, consume child metadata, cancel samples on all exits, preserve completed native errors and suppress private stack tokens including quoted filenames.
       observable: Seventeen behavior assertions and three new scoped-helper interface cases fail before code; ordinary-mode cases initially pass. Current hosted gate/no-sampler/CLI/timeout and finite privacy proofs remain mandatory. Sampled observations are not production acceptance.
+
+  openspec:code-review-portable-reviewer-bootstrap:review-portable-bootstrap:crosshair-adapter-updates-invalidate-prepared-runtimes:
+    rationale: The trusted adapter executes in prepared runtimes and every later policy correction must invalidate stale cache reuse.
+    stakeholder_refs: [nold-ai/specfact-cli-modules#460]
+    touchpoints:
+    - id: crosshair-runtime-identity
+      kind: config_file
+      locator: openspec/changes/code-review-portable-reviewer-bootstrap/specs/review-portable-bootstrap/spec.md
+    verification_cases:
+    - case_id: reviewer-bootstrap-13
+      scenario_id: crosshair-adapter-updates-invalidate-prepared-runtimes
+      method: test
+      intent: Prove unchanged-policy warm reuse and adapter-only offline invalidation with fixed source, worker and Git inputs.
+      observable: Existing policy-invalidation test fails with the newly selected adapter before changing the cache input list.

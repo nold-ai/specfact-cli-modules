@@ -269,9 +269,39 @@ def _run_crosshair(files: list[Path], *, bug_hunt: bool) -> list[ReviewFinding]:
     if isinstance(result, ReviewFinding):
         return [result]
     if result.returncode not in {0, 1} or (result.returncode == 1 and not result.stdout.strip()):
-        diagnostic = (result.stderr or result.stdout or f"process exit {result.returncode}").strip()
+        diagnostic = _crosshair_process_diagnostic(result)
         return [_crosshair_unknown(files[0], f"CrossHair process error: {diagnostic}")]
     return _parse_crosshair_findings(result.stdout or "", files)
+
+
+def _without_crosshair_samples(stderr: str) -> str:
+    """Remove only the opted-in five-second faulthandler dump blocks."""
+    retained = []
+    in_sample = False
+    for line in stderr.splitlines(keepends=True):
+        if line.rstrip("\r\n") == "Timeout (0:00:05)!":
+            in_sample = True
+        elif in_sample and (
+            not line.strip()
+            or line.strip() in {"<no Python frame>", "..."}
+            or re.fullmatch(r"(?:Current thread|Thread) 0x[0-9a-fA-F]+ \(most recent call first\):\s*", line)
+            or re.fullmatch(r'  File "[^\n]+", line [0-9]+ in [^\n]+\s*', line)
+        ):
+            continue
+        else:
+            in_sample = False
+            retained.append(line)
+    return "".join(retained)
+
+
+def _crosshair_process_diagnostic(result: subprocess.CompletedProcess[str]) -> str:
+    stderr = result.stderr or ""
+    frames = []
+    if os.environ.get("SPECFACT_CODE_REVIEW_CROSSHAIR_STACK_SAMPLES") == "1":
+        frames = _crosshair_sampled_frames(stderr)
+        stderr = _without_crosshair_samples(stderr)
+    diagnostic = (stderr or result.stdout or f"process exit {result.returncode}").strip()
+    return diagnostic + (" sampled_frames=" + ",".join(frames) if frames else "")
 
 
 def _execute_crosshair(files: list[Path], *, bug_hunt: bool) -> subprocess.CompletedProcess[str] | ReviewFinding:
@@ -304,7 +334,7 @@ def _crosshair_sampled_frames(stderr: bytes | str | None) -> list[str]:
     tail = stderr[-65536:] if stderr else ""
     if isinstance(tail, bytes):
         tail = tail.decode("utf-8", errors="replace")
-    frames = re.findall(r'File "([^"\n]+)", line [0-9]+ in ([a-zA-Z_][a-zA-Z_0-9]*)', tail)
+    frames = re.findall(r'File "([^\n]+)", line [0-9]+ in ([a-zA-Z_][a-zA-Z_0-9]*)', tail)
     known = {
         ("target_bootstrap.py", "_configure_runtime"): "bootstrap_attachment",
         ("target_bootstrap.py", "_configure_member_site"): "project_site_attachment",

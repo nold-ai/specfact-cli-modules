@@ -194,3 +194,20 @@ ordinary runtime and acceptance policy.
 - **AND** reject non-boolean or true-for-another-member requests; restore sealed-parent state, consume the child marker before attachment, arm five-second stdlib sampling only in this opt-in path and cancel on every exit
 - **AND** preserve ordinary request bytes, no-sampler dispatch, stderr-discard timeout behavior, exact CLI arguments, analyzer selection and2/10-second path and30/120-second process budgets
 - **AND** project only allowlisted frame-presence codes from the private64KiB stderr tail and retain error/UNKNOWN/original failing exit; diagnostics are not acceptance and temporary transport is removed before promotion
+
+
+#### Scenario: Sampled processes exit with an error before the deadline
+- **GIVEN** opted-in CrossHair has emitted standard-library five-second samples
+- **WHEN** it completes with an error or with exit1 and empty analysis stdout
+- **THEN** remove only sampled traceback blocks before constructing its error finding, including frames whose legal filenames contain double quotes
+- **AND** preserve the actual original process error, error/UNKNOWN, ordinary-mode stderr semantics and finite sampled-frame observations
+
+### Requirement: CrossHair adapter updates invalidate prepared runtimes
+
+Prepared portable runtime identity SHALL include the trusted CrossHair adapter.
+
+#### Scenario: A later adapter correction changes offline reuse policy
+- **GIVEN** the source, worker identity, Git identity and all other preparation inputs remain fixed
+- **WHEN** only target_crosshair.py changes after a runtime has been cached
+- **THEN** derive a different cache identity and reject reuse of the stale prepared runtime in offline mode
+- **AND** retain warm reuse when every builder-policy input is unchanged

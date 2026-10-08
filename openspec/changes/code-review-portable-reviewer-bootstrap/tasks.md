@@ -27,3 +27,7 @@
 - [x] Specify and implement the approved renewed default-off private sampling route with failing-first lifecycle, request parity and finite privacy proofs.
 - [ ] Collect fresh protected exact-head sampled observations, establish the remaining runtime cause and implement a parity-preserving correction.
 - [ ] Remove the renewed temporary transport and verify fresh ordinary no-sampler sealed acceptance before promotion.
+
+- [x] Reproduce and fix the verified adapter-only prepared-runtime cache-identity annotation.
+- [x] Reproduce and fix sampled completed-error privacy while retaining original native errors and ordinary-mode stderr parity.
+- [ ] Verify final review fixes in protected exact-head CI and resolve their addressed PR annotation after push.

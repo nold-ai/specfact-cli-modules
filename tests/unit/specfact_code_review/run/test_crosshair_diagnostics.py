@@ -232,3 +232,56 @@ def test_sealed_parent_marker_is_scoped_and_restored(monkeypatch, failure):
     else:
         invoke()
     assert runner.os.environ[MARKER] == "previous"
+
+
+SAMPLE = (
+    "Timeout (0:00:05)!\n"
+    "Thread 0x000000abcd (most recent call first):\n"
+    '  File "/private/SAMPLE_SECRET/crosshair/core.py", line 123 in gen_args\n'
+    '  File "/private/SAMPLE_SECRET/private.py", line 456 in SAMPLE_SECRET_FUNCTION\n'
+    "\n"
+)
+
+
+@pytest.mark.parametrize("exit_code", [1, 2])
+@pytest.mark.parametrize("quoted_filename", [False, True])
+def test_completed_error_strips_samples_and_retains_native_error(monkeypatch, exit_code, quoted_filename):
+    monkeypatch.setenv(MARKER, "1")
+    native_error = "Traceback (most recent call last):\nTypeError: original constructor error\n"
+    sample = SAMPLE.replace("/private/SAMPLE_SECRET/", '/private/SAMPLE_SECRET"quoted/') if quoted_filename else SAMPLE
+    monkeypatch.setattr(contract_runner, "skip_if_tool_missing", lambda *args: [])
+    monkeypatch.setattr(contract_runner, "analyzer_command", lambda argv: argv)
+    monkeypatch.setattr(
+        contract_runner.subprocess,
+        "run",
+        Mock(return_value=subprocess.CompletedProcess("crosshair", exit_code, "", sample + native_error + sample)),
+    )
+    finding = contract_runner._run_crosshair([Path("source.py")], bug_hunt=False)[0]
+    assert finding.execution_state == "error" and finding.evidence_outcome == "UNKNOWN"
+    assert finding.message == (
+        "CrossHair process error: " + native_error.strip() + " sampled_frames=argument_generation"
+    )
+    assert "SAMPLE_SECRET" not in finding.message and "Timeout (" not in finding.message
+
+
+def test_completed_error_with_only_samples_retains_failed_exit(monkeypatch):
+    monkeypatch.setenv(MARKER, "1")
+    monkeypatch.setattr(contract_runner, "skip_if_tool_missing", lambda *args: [])
+    monkeypatch.setattr(contract_runner, "analyzer_command", lambda argv: argv)
+    monkeypatch.setattr(
+        contract_runner.subprocess, "run", Mock(return_value=subprocess.CompletedProcess("crosshair", 1, "", SAMPLE))
+    )
+    finding = contract_runner._run_crosshair([Path("source.py")], bug_hunt=False)[0]
+    assert finding.execution_state == "error" and finding.evidence_outcome == "UNKNOWN"
+    assert finding.message == "CrossHair process error: process exit 1 sampled_frames=argument_generation"
+
+
+def test_ordinary_completed_error_retains_original_stderr(monkeypatch):
+    monkeypatch.delenv(MARKER, raising=False)
+    monkeypatch.setattr(contract_runner, "skip_if_tool_missing", lambda *args: [])
+    monkeypatch.setattr(contract_runner, "analyzer_command", lambda argv: argv)
+    monkeypatch.setattr(
+        contract_runner.subprocess, "run", Mock(return_value=subprocess.CompletedProcess("crosshair", 2, "", SAMPLE))
+    )
+    finding = contract_runner._run_crosshair([Path("source.py")], bug_hunt=False)[0]
+    assert finding.message == "CrossHair process error: " + SAMPLE.strip()

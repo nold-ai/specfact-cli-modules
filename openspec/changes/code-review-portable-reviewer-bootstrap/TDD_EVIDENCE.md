@@ -685,3 +685,76 @@ draft checksum e0b9e2fae43684a5cb2066b10fd521b6e9e0e5c9f5568fffdddd0aa8b9c32073
 passes all7filesystem checksum/version gates against origin/dev. No private
 signing key is accessed. Fresh protected diagnostics and ordinary installed
 acceptance remain pending; local capsule review remains explicitly DEFERRED.
+
+
+## Review follow-up: cache identity and completed-error privacy — 2026-10-08 Europe/Berlin
+
+Public committed CodeRabbit0.9.0 review through5eb41e29 completes with two major
+findings. Independently validate the sampled completed-error privacy claim: an
+opted-in process error could copy sampler blocks into a finding. Correct it by
+removing only five-second faulthandler dump blocks, preserving the original native
+error and error/UNKNOWN. The dispatch-mock claim is invalid: the test enters the
+real target_crosshair.py adapter, which calls the mocked shared runpy.run_module
+for final CLI dispatch. Existing actual argv/lifetime assertions and all25cases
+pass; no test or assertion is removed and no exception/waiver is used.
+
+Current connector threadPRRT_kwDORVEFbs6qkNe3 independently demonstrates missing
+CrossHair adapter policy in _BUILDER_FILES. Add it to the existing builder digest.
+The existing offline cache test holds source/worker/Git identity fixed, proves
+unchanged warm reuse and changes only the adapter after caching.
+
+Spec/design and requirements precede tests. Before production:4genuine RED/
+28PASS in0.86s, comprising adapter-only stale cache reuse and three sampled error
+exits; ordinary completed stderr handling already passes. After correction all
+76affected-module/dispatch cases pass0.64s. Actual changed-line AST/AI-bloat/Radon
+have0findings. Pinned Semgrep has1unchanged baseline test-name finding at line100
+of test_runtime_builder.py, outside the changed policy-invalidation parameter
+list; no changed-line finding. Typing0errors/0warnings, lint10.00/10,7schemas/import
+boundaries,28contracts, strict OpenSpec and planned requirements pass.
+
+The pre-existing CI workflow adds signature-only child0f8a379e to5eb41e29. Inspect
+its one-line manifest signature addition, fast-forward only, and strictly verify
+all7signatures/payloads against origin/dev. No private key is accessed. Original
+source-identical run37849276401 is cancelled after the child starts; no acceptance
+is claimed. Signed-head run37849313316 attempt2 runs after maintainer djm81 rerun;
+approval POSTs succeed. Required job113559131690 remains in its review phase.
+Fresh protected observations and ordinary installed/native acceptance are pending.
+
+Actual standard-library sample followed by a failed Python process also passes
+the completed-error privacy control: sampler headers/frames are removed and the
+original TypeError remains. The first standalone harness invocation lacked its
+source import path and did not execute; adding explicit PYTHONPATH corrects the
+harness. This local control is not sealed acceptance.
+
+
+### Quoted sample-frame follow-up — 2026-10-09 Europe/Berlin
+
+Bounded review reproduces a legal quoted-filename privacy defect with actual
+CPython3.12.13 faulthandler output. Pause the verification process before tracked
+edits: partial full run3301PASS/14SKIP170.00s is interrupted; SMART is not completed.
+No failure is waived or passing final run claimed. Extend the spec and regressions
+before code: quoted cases2RED/plain cases2PASS in0.24s. Correct both sample parsing
+patterns to consume the filename through the final frame delimiter, including
+embedded quotes, without crossing newlines. All78affected cases pass0.81s.
+Actual exact CPython3.12.13 quoted compiled filename plus5-second sampler and
+native TypeError passes: private sample token removed, nativeerror retained and
+only finite argument_generation emitted. Typing0errors/0warnings, lint10.00/10,
+strict OpenSpec and actual changed AST/AI-bloat/Radon pass. Bounded verification
+finds the issue resolved with no remaining findings in the correction. Final
+stable-tree full/SMART restart after the refreshed draft checksum.
+
+Signed-head independent job113559131656 finishes with missing_report and
+ timeout_marker_observed; its authenticated installed0.51.0 remains unchanged.
+Required candidate job113559131690 still runs. No installed/native acceptance
+or hosted bottleneck attribution is claimed from local controls.
+
+Final corrected cache/privacy full and SMART both PASS:19mandatory host proofs
+plus5131portable tests/75declared skips/95subtests/five existing warnings,
+258.06s/256.02s. Every ordinary no-sampler, source-ownership and assurance assertion
+passes. Approved draft checksum verifies all7modules; no private key is accessed.
+Required signed-head job113559131690 finishes with CrossHair timeout and finite
+observations installed_coverage_planning, portable_pytest_command,
+run_portable_pytest, symbolic_search. Constructor exceptions are absent. These
+observations narrow a follow-up setup diagnosis; they are not acceptance or proof
+of any decoded input. Independent installed0.51.0 still lacks a report/observes
+a timeout; CP311/CP313 external corpus execution is still pending.
