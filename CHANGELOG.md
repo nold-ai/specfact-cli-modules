@@ -9,6 +9,12 @@ and this project follows SemVer for bundle versions.
 
 ### Fixed
 
+- Correct pinned CrossHair 0.0.109 constructor parameter ordering and implicit
+  receiver handling while preserving real arguments, upstream merge behavior
+  and CLI lifetime. Retain both snapshots' incomplete tool errors and reject
+  failure exits without analysis output. Existing deadlines and isolation
+  remain required; signed reviewer promotion is still pending.
+
 - Prepare Code Review 0.51.1 portable reviewer bootstrap: corresponding explicit
   tests resolve source-basename ambiguity before fallback selection. The pinned
   Pylint wrapper caches immutable similarity windows only within one bounded

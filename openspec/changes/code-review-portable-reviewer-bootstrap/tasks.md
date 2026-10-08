@@ -17,3 +17,6 @@
 - [ ] After separately authorized promotion, verify exact #498 sealed execution.
 
 - [ ] Retain both-snapshot incomplete tool errors and reject CrossHair failure exits without analysis output; verify protected candidate execution before promotion.
+
+- [x] Reproduce the hosted wrong-parameter-order CrossHair failure on the exact pinned interpreter/analyzer and implement the bounded constructor compatibility adapter with argument/default/annotation parity and native CLI restoration.
+- [ ] Verify the corrected constructor adapter on a fresh protected exact-head candidate review before promotion.

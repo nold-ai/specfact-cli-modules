@@ -94,3 +94,16 @@ requirements:
       method: test
       intent: Reject failure exit1 without analysis stdout whether stderr is present or absent.
       observable: Two meaningful failures precede correction; error/UNKNOWN is retained while existing valid counterexample and side-effect output tests pass.
+  openspec:code-review-portable-reviewer-bootstrap:review-portable-bootstrap:pinned-constructor-analysis-preserves-real-arguments:
+    rationale: Hosted candidate CrossHair process error matches the independently reproduced pinned constructor signature defect.
+    stakeholder_refs: [nold-ai/specfact-cli-modules#460]
+    touchpoints:
+    - id: pinned-constructor-dispatch
+      kind: config_file
+      locator: openspec/changes/code-review-portable-reviewer-bootstrap/specs/review-portable-bootstrap/spec.md
+    verification_cases:
+    - case_id: reviewer-bootstrap-10
+      scenario_id: pinned-constructor-analysis-preserves-real-arguments
+      method: test
+      intent: Retain all real constructor arguments, upstream collision precedence and native CLI lifecycle under pinned compatibility dispatch.
+      observable: Meaningful argument-loss and invalid-order regressions precede code; argument/default/annotation parity, unsupported-version rejection and restoration on normal/error/SystemExit are required. Actual pinned CLI counterexample and fresh sealed candidate acceptance remain separate production proof.

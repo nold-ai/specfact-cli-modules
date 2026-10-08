@@ -6,6 +6,7 @@ from pathlib import Path
 from unittest.mock import Mock
 
 import pytest
+from crosshair import core
 
 from specfact_code_review.run import target_bootstrap
 from specfact_code_review.tools import contract_runner
@@ -37,6 +38,8 @@ def test_production_dispatch_preserves_attachment_argv_and_exit_without_sampling
         target_bootstrap.sys, "argv", ["bootstrap", "crosshair", "check", "--per_path_timeout", "2", "source.py"]
     )
     events = []
+    original = core.get_constructor_signature
+    monkeypatch.setattr(target_bootstrap, "BUILTIN", Path(target_bootstrap.__file__).parents[2])
     monkeypatch.setattr(target_bootstrap, "_configure_runtime", lambda domain: events.append(("attached", domain)))
 
     def dispatch(module, **kwargs):
@@ -47,6 +50,7 @@ def test_production_dispatch_preserves_attachment_argv_and_exit_without_sampling
     with pytest.raises(SystemExit) as raised:
         target_bootstrap.main()
     assert raised.value.code == 1
+    assert core.get_constructor_signature is original
     assert events == [
         ("attached", "crosshair"),
         (

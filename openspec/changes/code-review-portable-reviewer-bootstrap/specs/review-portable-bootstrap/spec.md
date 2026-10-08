@@ -143,3 +143,22 @@ The reviewer SHALL preserve incomplete tool execution as error/UNKNOWN evidence 
 - **WHEN** CrossHair exits1 without analysis stdout, including a constructor crash reported only on stderr
 - **THEN** report error/UNKNOWN tool evidence with the original diagnostic instead of returning clean findings
 - **AND** preserve valid counterexample/side-effect output handling and existing process/path analysis bounds
+
+### Requirement: Pinned constructor analysis preserves real arguments
+
+The pinned CrossHair0.0.109 dispatch SHALL correct constructor receiver merging
+and invalid parameter ordering without discarding real arguments, altering
+upstream intersection precedence or changing analyzer selection and deadlines.
+
+#### Scenario: Constructors require valid parameter ordering
+
+- **WHEN** constructor analysis merges variadic and keyword parameters or differing self/cls receivers
+- **THEN** remove only implicit receivers before intersection and stable-order final parameters by kind while retaining upstream merge behavior, defaults and annotations
+- **AND** preserve explicit class signatures, positional-only inputs, inherited constructors and static/bound initialization arguments
+
+#### Scenario: Native CLI completes or fails
+
+- **WHEN** the existing pinned CrossHair CLI returns, raises or exits
+- **THEN** preserve native argv, result/error behavior and restore the original constructor resolver on every exit
+- **AND** keep the cloned upstream intersection local, preserve signature validation, and reject unsupported dependency versions without claiming clean analysis
+- **AND** run the same analyzer-owned imports, namespaces, contracts, flags and2/10-second path and30/120-second process bounds; retain incomplete error/UNKNOWN on checker failure

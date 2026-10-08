@@ -554,3 +554,74 @@ failure evidence, not attribution to the local constructor defect. Both PRs
 have zero unresolved current threads. Existing signatures are retained and
 no merge/publication occurs. A new diagnostic-only committed head must receive
 fresh exact-head candidate review and public committed CodeRabbit analysis.
+
+
+## Pinned CrossHair constructor correction — 2026-10-08 Europe/Berlin
+
+Diagnostic-onlyf0e3fa0d protected run37836889921 job113516135984 verifies both
+prepared descriptors, then records contracts analyzer_reported_incomplete_execution
+and crosshair_process_error_observed with value_error_observed and
+wrong_parameter_order_observed. The installed0.51.0 job113516135892 separately
+reaches its unchanged300-second analysis deadline with missing_report and
+ timeout_marker_observed. Its timeout remains unclassified and is not claimed
+as remediation by a candidate-only patch. Public committed CodeRabbit review
+of the diagnostic diff completesreview_completed,0findings.
+
+After the spec/design/mapping, the first fixture run lacks the CrossHair test
+dependency (collection error, not RED evidence). Declare the existing analyzer
+pin crosshair-tool==0.0.109 in Hatch's development test dependencies and recreate
+its dependency state serially before parallel verification. No installed
+reviewer or toolchain lock bytes change. Correct an overly strict explicit
+signature identity check to upstream signature equality before production.
+Final meaningful RED is10failed/4parityPASS(0.20s): actual argument loss,
+invalid-order variadics/collision, scoped restoration and unsupported-version
+rejection. Implement the existing trusted bootstrap/adapter dispatch pattern.
+Clone the upstream intersection using copied globals and a local validated
+Signature constructor that stable-orders final parameters; preserve the original
+merge assignments/collision precedence. Strip actual implicit receivers before
+intersection, preserving inherited, positional-only, static/bound __init__,
+bound __new__, explicit signatures/defaults/annotations and variadic parameters.
+Patch only core.get_constructor_signature per invocation, restore in finally,
+and retain native CLI selection/flags/exit. Exact0.0.109 version guard refuses
+unsupported analyzers as incomplete execution rather than claiming clean review.
+
+The initial full/SMART each have one fixture mismatch (5089PASS/75skip/95subtests,
+285.10s/283.71s): the earlier no-sampler dispatch proof uses the absent/opt wrapper.
+Bind that proof to the actual trusted source without removing any original
+attachment/argv/exit assertions and add resolver restoration. It then detects
+run_path changing argv[0]; a meaningful focused failure precedes correction.
+Forward the original entry program through the trusted adapter globals before
+native run_module. Stop superseded test runs; no failing fixture is waived.
+Replace the new callback's CC19 branching with explicit expected Parameter
+objects retaining all defaults/annotations/kinds, and type annotation/default
+values as objects rather than ignoring type errors. Final focused189cases pass
+(16.07s), type-check0errors/0warnings and lint10.00/10. Actual installed AST and
+AI-bloat have no findings; Radon has no changed findings (two unchanged bootstrap
+baseline findings). Pinned Semgrep has0findings/0errors across adapter/bootstrap
+and both dispatch test files. Bounded subagent review finds no actionable issues;
+production core consumers use the patched lookup, with namedtuple, variadic-only
+and unknown-signature parity checked separately.
+
+The final production adapter on exact CPython3.12.13/CrossHair0.0.109 returns
+exit1 with an actual structured Path-contract counterexample, empty stderr and
+no invalid-order error within existing10-second path/120-second process limits.
+No AST source transformation, global Signature mutation, sample profiler,
+permission/contract/selection weakening or analysis budget increase is used.
+Corrected trusted source refreshes the draft0.51.1checksum to
+sha256:e68dde822406b78aea0acb7c94271aef5a4f643e6f103e2ae55a06ecc8693d16
+under explicit user approval. Pass None to the checksum helper: no local signing
+key is loaded and stale signature is removed. All seven dev-target filesystem
+checksum/version checks pass; existing CI signature-only behavior is inspected
+separately if it runs. Human merge/promotion and installed/native acceptance are
+still outstanding; fresh exact-head sealed review and public committed review
+are required before completion.
+
+Final corrected-argv full/SMART each pass19required host proofs plus5090portable
+tests,75declared skips,95subtests and five existing warnings(293.13s/291.25s).
+Focused189PASS, typing0errors/0warnings, lint10.00/10, manifest schema/import
+boundaries,28contracts, actionlint, strict OpenSpec and planned requirements pass.
+Final exact pinned CLI still produces the real Path counterexample with empty
+stderr; final pinned Semgrep has0findings/0errors. All seven approved draft
+filesystem checksum/version checks pass. Protected current-head candidate review,
+public committed CodeRabbit review and any signature-only CI child are pending
+following the normal-hook commit/push; local capsule review is DEFERRED, never PASS.

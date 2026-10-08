@@ -117,3 +117,22 @@ This supports the combined correction, not attribution to one operation alone.
 Independent installed0.51.0 job113073036863 still lacks a report and observes
 a timeout marker without analyzer attribution. Remove temporary sampling before
 promotion and require a fresh production run.
+
+
+Hosted root cause (2026-10-08 Europe/Berlin): diagnostic-onlyf0e3fa0d job113516135984
+prepares both bound snapshots, then records CrossHair process error with ValueError
+and wrong_parameter_order observations. Exact pinned CPython3.12.13/CrossHair0.0.109
+reproduces that constructor crash; released reporting previously hid base errors
+or treated exit1/empty stdout as clean. A dependency bump is insufficient:0.0.111
+retains the same helper algorithm. Reuse the existing trusted Pylint/bootstrap
+adapter pattern for a small pinned constructor compatibility context. Clone the
+upstream intersection function with copied globals and a local Signature factory
+that stable-orders final parameters, preserving collision precedence and validation.
+Remove receiver arguments before intersection: __new__ receives an implicit class
+even when bound; static/bound __init__ already resolves only real inputs. Preserve
+explicit signatures/defaults/annotations, restore only core.get_constructor_signature
+in finally and forward the unchanged CLI. No new broker, installed-reviewer patch,
+analysis deadline or permission is introduced. Actual pinned CLI counterexample
+and fresh exact-head sealed review are required; the independent released0.51.0
+timeout is a separate unremediated release prerequisite. User-approved checksum
+refresh/signing follow-up policy applies to the modified trusted payload.

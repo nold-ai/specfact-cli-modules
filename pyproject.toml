@@ -36,6 +36,7 @@ dependencies = [
     "ruff>=0.14.2",
     "semgrep>=1.144.0",
     "pylint==4.0.7",
+    "crosshair-tool==0.0.109",
     "pre-commit>=3.7.0",
     "typer>=0.20.0",
     "pyyaml>=6.0.3",
