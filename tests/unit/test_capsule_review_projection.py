@@ -581,3 +581,50 @@ def test_large_private_report_projects_contract_failure_classes_without_acceptan
     assert value["error_analyzer_sides"] == expected_sides
     assert value["crosshair_failure_observations"] == expected_classes
     assert "private-token" not in result.stdout + result.stderr
+
+
+@pytest.mark.parametrize(
+    "case,expected_classes",
+    [
+        ("contracts", ["value_error_observed", "wrong_parameter_order_observed"]),
+        ("other_tool", None),
+        ("diagnostic_bound", None),
+    ],
+)
+def test_candidate_large_report_retains_unavailable_marker_and_fixed_failure_classes(tmp_path, case, expected_classes):
+    import json
+
+    workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())
+    step = next(item for item in workflow["jobs"]["customer"]["steps"] if item.get("name") == STEP_NAME)
+    program = step["run"].split("<<'PY_CANDIDATE_FAILURE'\n", 1)[1].split("\nPY_CANDIDATE_FAILURE", 1)[0]
+    root = tmp_path / ".specfact"
+    root.mkdir()
+    size = 32 if case == "diagnostic_bound" else 2
+    (root / "code-review.json").write_text(
+        json.dumps(
+            {
+                "private_inventory": "x" * (size * 1024 * 1024),
+                "analyzer_evidence": [],
+                "findings": [
+                    {
+                        "category": "tool_error",
+                        "tool": "ruff" if case == "other_tool" else "crosshair",
+                        "message": "CrossHair process error: ValueError: wrong parameter order: private-token",
+                    }
+                ],
+            }
+        )
+    )
+    result = _run_projector(tmp_path, program)
+    expected = [{"analyzer": "contracts", "diagnostic_class": "candidate_report_unavailable"}]
+    if expected_classes is not None:
+        expected.append(
+            {
+                "analyzer": "contracts",
+                "diagnostic_class": "crosshair_process_error_observed",
+                "exception_observations": expected_classes,
+            }
+        )
+    assert result.returncode == 0
+    assert [json.loads(line) for line in result.stdout.splitlines()] == expected
+    assert "private-token" not in result.stdout + result.stderr

@@ -229,18 +229,28 @@ jobs:
           import json
           from pathlib import Path
 
+          def unique_candidate_json_object(pairs):
+              value = {}
+              for key, item in pairs:
+                  if key in value:
+                      raise ValueError("duplicate private JSON field")
+                  value[key] = item
+              return value
+
           report = Path(".specfact/code-review.json")
           if report.is_file():
               data = {}
               try:
                   with report.open("rb") as stream:
-                      payload = stream.read(2 * 1024 * 1024 + 1)
-                  if len(payload) > 2 * 1024 * 1024:
-                      raise ValueError("private report bound exceeded")
-                  value = json.loads(payload)
+                      payload = stream.read(32 * 1024 * 1024 + 1)
+                  if len(payload) > 32 * 1024 * 1024:
+                      raise ValueError("private diagnostic bound exceeded")
+                  value = json.loads(payload, object_pairs_hook=unique_candidate_json_object)
                   if not isinstance(value, dict):
                       raise ValueError("private report shape invalid")
                   data = value
+                  if len(payload) > 2 * 1024 * 1024:
+                      print(json.dumps({"analyzer": "contracts", "diagnostic_class": "candidate_report_unavailable"}))
               except (OSError, ValueError, RecursionError):
                   print(json.dumps({"analyzer": "contracts", "diagnostic_class": "candidate_report_unavailable"}))
               allowed = ("ai-bloat-ast", "ast-clean-code", "basedpyright", "contracts", "pylint", "radon", "ruff", "semgrep-clean", "semgrep-bugs", "targeted-pytest-coverage")
@@ -262,10 +272,11 @@ jobs:
               exceptions = {"ModuleNotFoundError": "module_not_found_observed",
                   "ImportError": "import_error_observed", "SyntaxError": "syntax_error_observed",
                   "PermissionError": "permission_error_observed", "TypeError": "type_error_observed",
-                  "FileNotFoundError": "file_not_found_observed"}
+                  "FileNotFoundError": "file_not_found_observed", "ValueError": "value_error_observed",
+                  "wrong parameter order": "wrong_parameter_order_observed"}
               observations = {}
               findings = data.get("findings", [])
-              for finding in findings if isinstance(findings, list) else []:
+              for finding in findings[:10000] if isinstance(findings, list) else []:
                   if not isinstance(finding, dict) or finding.get("category") != "tool_error" or finding.get("tool") != "crosshair":
                       continue
                   message = finding.get("message", "")

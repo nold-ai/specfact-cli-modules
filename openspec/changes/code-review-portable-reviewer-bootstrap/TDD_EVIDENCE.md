@@ -507,3 +507,50 @@ No private key is read and no authenticated installed reviewer is modified.
 Do not merge or publish automatically. A fresh valid CI signature remains a
 release prerequisite. Public committed review and exact-head hosted verification
 follow the normal-hook commit and authorized PR push.
+
+
+## Signed production review and candidate private diagnostic bound — 2026-10-08 Europe/Berlin
+
+The existing PR workflow adds signature-onlye0cc2f54 todf9230a1. All seven
+strict signatures/filesystem checksums/version gates pass for the unchanged
+86c8e594payload. Public committed review ofdf9230a1 completesreview_completed
+with0findings. In run37833646841, job113505891002 now fails the required review
+and emits only candidate_report_unavailable: its old2MiB diagnostic cap conceals
+large-report tool errors, so no analyzer cause is established from this result.
+After specification, the actual large candidate-report classification regression
+fails; other-tool privacy and beyond32MiB parity remain passing. Reuse the same
+complete32MiB private diagnostic strategy already tested for independent review;
+retain candidate_report_unavailable for reports above2MiB and the original
+failing exit. Reject duplicate/invalid JSON, inspect at most10analyzer rows and
+10000findings, and print only closed failure classes/exception observations.
+No installed bytes, payload assets, grants, checker argv or analysis budgets
+change. Do not conflate a diagnostic failure with the underlying analyzer cause.
+
+A scratch actual-CLI reproduction on exact pinned CPython3.12.13/CrossHair0.0.109
+confirms Path constructor ValueError on stderr with no analysis stdout. A scratch
+receiver-before-merge/variadic-order correction produces an actual Path-contract
+counterexample within the same10/120s bounds. Named argument preservation also
+requires removing each receiver before merging; sorting then final stripping is
+unsafe. These are local library facts; no production compatibility shim or
+authenticated installed reviewer mutation is made without hosted attribution.
+
+Candidate diagnostic validation:87canonical host/projector cases pass(8.40s).
+Full/SMART each pass19required host proofs and5076portable tests,75declared skips,
+95subtests and five existing warnings(261.02s/258.22s). Format, type-check
+0errors/0warnings, lint10.00/10, manifest schema/import boundaries,28contracts,
+actionlint, strict OpenSpec and planned requirements pass. Actual installed
+AST/AI-bloat/Radon report zero findings across both projectors and zero changed
+test findings. Pinned Semgrep reports only the documented structured JSON stdout
+transport exception; no other findings or analysis errors. All seven strict
+signature/filesystem checksum/version checks pass: this workflow/test correction
+does not change signed module assets. A mistakenly selected immutable baseline
+fixture file retains six known stale-recipe failures; canonical mandatory host
+proofs execute current assertions and pass, and full/SMART preserve that policy.
+No baseline fixture bytes or existing assertion is removed.
+
+Latest installed0.51.0 job113505891187 exits after its existing300-second analysis
+deadline with missing_report/timeout_marker_observed. This is fresh installed
+failure evidence, not attribution to the local constructor defect. Both PRs
+have zero unresolved current threads. Existing signatures are retained and
+no merge/publication occurs. A new diagnostic-only committed head must receive
+fresh exact-head candidate review and public committed CodeRabbit analysis.
