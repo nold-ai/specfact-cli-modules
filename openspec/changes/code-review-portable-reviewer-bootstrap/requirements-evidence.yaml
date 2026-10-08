@@ -120,3 +120,16 @@ requirements:
       method: test
       intent: Preserve actual class-method contracts and registered hashable lookup semantics while rejecting impossible unhashable registry keys without a crash.
       observable: Genuine parser and lookup regressions precede implementation; actual pytest marker parsing, hashable override parity, custom hash failure propagation and restoration on all exits are required. Hosted customer acceptance remains separate.
+  openspec:code-review-portable-reviewer-bootstrap:review-portable-bootstrap:temporary-diagnosis-preserves-ordinary-dispatch:
+    rationale: Reuse the user-approved bounded private sampling milestone while preserving the ordinary no-sampler execution and all analysis guards.
+    stakeholder_refs: [nold-ai/specfact-cli-modules#460]
+    touchpoints:
+    - id: default-off-private-crosshair-diagnosis
+      kind: config_file
+      locator: openspec/changes/code-review-portable-reviewer-bootstrap/specs/review-portable-bootstrap/spec.md
+    verification_cases:
+    - case_id: reviewer-bootstrap-12
+      scenario_id: temporary-diagnosis-preserves-ordinary-dispatch
+      method: test
+      intent: Retain default request bytes, restrict an actual boolean to contracts, restore scoped state, consume child metadata, cancel samples on all exits and suppress private stack tokens.
+      observable: Seventeen behavior assertions and three new scoped-helper interface cases fail before code; ordinary-mode cases initially pass. Current hosted gate/no-sampler/CLI/timeout and finite privacy proofs remain mandatory. Sampled observations are not production acceptance.

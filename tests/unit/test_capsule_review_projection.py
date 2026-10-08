@@ -628,3 +628,31 @@ def test_candidate_large_report_retains_unavailable_marker_and_fixed_failure_cla
     assert result.returncode == 0
     assert [json.loads(line) for line in result.stdout.splitlines()] == expected
     assert "private-token" not in result.stdout + result.stderr
+
+
+def test_candidate_sample_projection_suppresses_unknown_frame_codes(tmp_path):
+    import json
+
+    workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())
+    step = next(item for item in workflow["jobs"]["customer"]["steps"] if item.get("name") == STEP_NAME)
+    program = step["run"].split("<<'PY_CANDIDATE_FAILURE'\n", 1)[1].split("\nPY_CANDIDATE_FAILURE", 1)[0]
+    root = tmp_path / ".specfact"
+    root.mkdir()
+    (root / "code-review.json").write_text(
+        json.dumps(
+            {
+                "findings": [
+                    {
+                        "category": "tool_error",
+                        "tool": "crosshair",
+                        "message": "CrossHair timed out before mandatory evidence completed. sampled_frames=argument_generation,PRIVATE_TOKEN,run_portable_pytest",
+                    }
+                ]
+            }
+        )
+    )
+    result = _run_projector(tmp_path, program)
+    rows = [json.loads(line) for line in result.stdout.splitlines()]
+    assert result.returncode == 0
+    assert rows[-1]["sampled_frame_observations"] == ["argument_generation", "run_portable_pytest"]
+    assert "PRIVATE_TOKEN" not in result.stdout + result.stderr

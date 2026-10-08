@@ -23,3 +23,7 @@
 
 - [x] Reproduce and correct the CP311/CP313 Requests callable pytest-marker registry crash while retaining actual method contracts, hashable overrides and native lookup restoration.
 - [ ] Verify the marker correction in fresh exact-head customer corpus execution; retain the separate CP312 required review timeout as unresolved.
+
+- [x] Specify and implement the approved renewed default-off private sampling route with failing-first lifecycle, request parity and finite privacy proofs.
+- [ ] Collect fresh protected exact-head sampled observations, establish the remaining runtime cause and implement a parity-preserving correction.
+- [ ] Remove the renewed temporary transport and verify fresh ordinary no-sampler sealed acceptance before promotion.

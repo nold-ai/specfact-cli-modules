@@ -150,3 +150,16 @@ in core and condition_parser and restore them on all exits. The CP312 required
 candidate timeout is a separate unremediated defect; this corpus correction cannot
 establish its cause or acceptance. Local CP314 Path copying and CP312 Literal
 construction observations remain unsealed diagnostics, with no speculative fixes.
+
+
+Renewed temporary diagnosis reuses the explicitly approved sampling milestone.
+There is no existing child toggle: target_command clears the environment. The
+smallest route adds an optional true boolean only to the existing Linux private
+contracts request; default bytes are unchanged. Validate the field as bool and
+permit true only for contracts. Scope/restore a fixed sealed-parent marker, forward
+it only to the CrossHair child and consume it before attachment. Use the same
+5-second stdlib sampler and bounded64KiB finite frame projector only when opted in.
+The protected candidate review enables it; native exact-field request schema and
+independent installed reviewer remain unchanged. This adds diagnostic transport,
+not permissions, paths, checker options, deadlines or acceptance. Preserve every
+ordinary no-sampler proof and remove temporary transport before promotion.

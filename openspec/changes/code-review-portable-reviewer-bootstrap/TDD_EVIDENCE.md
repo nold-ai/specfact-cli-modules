@@ -643,3 +643,45 @@ tests/75declared skips/95subtests/5existing warnings,325.54s/326.55s. Every exis
 assurance assertion passes, including the earlier changed-review failure. No
 production or test waiver was introduced. The prior concurrent-edit attribution
 remains a hypothesis; no additional assurance logic change is warranted.
+
+
+## Renewed sealed timeout diagnosis — 2026-10-08 Europe/Berlin
+
+The current exact-head required CP312 job reaches the unchanged CrossHair bound
+without a constructor exception. Local unsealed type/model experiments do not
+attribute the hosted timeout and none are added to production. Reuse the approved
+bounded standard-library sampling milestone with an explicit private contracts
+boolean. This temporary route is default-off and must be removed before promotion;
+raw stacks stay private, finite frame-presence observations are not attribution
+or acceptance, and all original failures and deadlines remain blocking.
+
+Spec/design and requirement reviewer-bootstrap-12 precede tests. Before source
+edits, the expanded regression set produces20RED/6PASS in0.75s:17behavior
+assertions plus3missing scoped-helper interfaces. Cases cover strict boolean
+validation, contracts-only transport, default request parity, sample lifecycle
+including attachment/runtime/SystemExit, CLI/deadline parity,64KiB private-tail
+bounds, finite public privacy projection and parent environment restoration.
+After implementation,223focused cases pass15.86s, including the mandatory current
+hosted-gate proof, unchanged ordinary no-sampler dispatch and timeout assertions.
+All25diagnostic cases pass after fixture-only clean-code corrections. No immutable
+baseline proof is modified or newly waived. Typing0errors/0warnings, lint10.00/10,
+actionlint, strict OpenSpec and planned requirements pass. Pinned Semgrep has
+0findings/0errors. Bounded independent and defect-first source reviews find no
+issues. Final changed-line scans and stable-tree full/SMART evidence follow.
+
+The separately reported Rosetta home-cache writes are not attribution for the
+current required hosted failure: job113529947148 is a GitHub-hosted ubuntu-24.04
+x64 runner, with no emulator/container selected in this workflow. Preserve the
+no-write assertions; emulated local evidence needs its own native control run.
+
+Final stable diagnostic-tree full/SMART both PASS:19mandatory host proofs plus
+5124portable tests,75declared skips,95subtests and five existing warnings,
+275.82s/262.33s. Final AST/AI-bloat/Radon have0changed findings; baseline totals
+are1/15/52. The extracted fixtures resolve test-length/parameter-count findings
+without removing assertions. Final pinned fixture Semgrep also has0findings/0errors.
+Format, typing0errors/0warnings, lint10.00/10,7manifest schemas/import boundaries,
+28contracts, actionlint, strict OpenSpec and planned requirements pass. Approved
+draft checksum e0b9e2fae43684a5cb2066b10fd521b6e9e0e5c9f5568fffdddd0aa8b9c32073
+passes all7filesystem checksum/version gates against origin/dev. No private
+signing key is accessed. Fresh protected diagnostics and ordinary installed
+acceptance remain pending; local capsule review remains explicitly DEFERRED.

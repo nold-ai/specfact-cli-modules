@@ -180,3 +180,17 @@ lookup crash, while retaining all other contract parsers and registered override
 
 - **WHEN** the native pinned CLI returns, raises or exits
 - **THEN** restore both core and condition-parser lookup aliases on every exit, retain dependency-version rejection, and preserve argv, contracts, namespaces and existing analysis budgets
+
+
+### Requirement: Temporary diagnosis preserves ordinary dispatch
+
+The temporary sealed diagnostic route SHALL remain default-off and preserve every
+ordinary runtime and acceptance policy.
+
+#### Scenario: Renewed sealed diagnosis is default-off
+
+- **WHEN** the protected candidate controller explicitly enables temporary stack diagnosis for the observed remaining CrossHair timeout
+- **THEN** transport one actual boolean only through the existing read-only Linux contracts request and a fixed CrossHair-only environment marker, without native schema or permission changes
+- **AND** reject non-boolean or true-for-another-member requests; restore sealed-parent state, consume the child marker before attachment, arm five-second stdlib sampling only in this opt-in path and cancel on every exit
+- **AND** preserve ordinary request bytes, no-sampler dispatch, stderr-discard timeout behavior, exact CLI arguments, analyzer selection and2/10-second path and30/120-second process budgets
+- **AND** project only allowlisted frame-presence codes from the private64KiB stderr tail and retain error/UNKNOWN/original failing exit; diagnostics are not acceptance and temporary transport is removed before promotion

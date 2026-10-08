@@ -117,6 +117,11 @@ def target_command(module: str, arguments: list[str]) -> list[str]:
         "--setenv",
         "SPECFACT_TARGET_PYTEST",
         "1" if module == "pytest-observe" else "0",
+        *(
+            ["--setenv", "SPECFACT_CODE_REVIEW_CROSSHAIR_STACK_SAMPLES", "1"]
+            if module == "crosshair" and os.environ.get("SPECFACT_CODE_REVIEW_CROSSHAIR_STACK_SAMPLES") == "1"
+            else []
+        ),
         "--chdir",
         "/opt/specfact/snapshot",
         *interpreter_command(
