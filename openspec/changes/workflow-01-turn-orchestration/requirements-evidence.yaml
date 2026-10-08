@@ -69,13 +69,6 @@ requirements:
         intent: 'Inspect planned scenario: A thread is outdated but its finding is not verified fixed.'
         observable: the thread remains unresolved; only a verified fix receives a commit/check reply and resolution.
           Planning inspection only; runtime implementation, execution and signed acceptance remain pending.
-      - case_id: bounded-and-recoverable-external-effects-compact-pr-repair-handoff-retains-authority-and-budget-inspection
-        scenario_id: bounded-and-recoverable-external-effects
-        method: inspection
-        intent: 'Inspect planned scenario: Compact PR repair handoff retains authority and budget.'
-        observable: one writer retains the same authority and consumed budget; boundary drift broadens review and
-          current-head affected-gate rechecks before external writes. Planning inspection only; runtime implementation,
-          execution and signed acceptance remain pending.
   openspec:workflow-01-turn-orchestration:turn-workflow-orchestration:portable-deterministic-orchestration:
     rationale: Map the existing workflow proposal to planned inspection without claiming runtime evidence.
     stakeholder_refs:
@@ -325,6 +318,13 @@ requirements:
         intent: 'Inspect planned scenario: Boundary changes during a correction batch.'
         observable: review broadens, all affected gates are rebound to current inputs and uncertain applicability
           selects the complete lane within the same controller budget. Planning inspection only; runtime implementation,
+          execution and signed acceptance remain pending.
+      - case_id: compact-repair-handoffs-preserve-coverage-compact-pr-repair-handoff-retains-authority-and-budget-inspection
+        scenario_id: compact-repair-handoffs-preserve-coverage
+        method: inspection
+        intent: 'Inspect planned scenario: Compact PR repair handoff retains authority and budget.'
+        observable: one writer retains the same authority and consumed budget; boundary drift broadens review and
+          current-head affected-gate rechecks before external writes. Planning inspection only; runtime implementation,
           execution and signed acceptance remain pending.
   openspec:workflow-01-turn-orchestration:turn-workflow-orchestration:honest-delivery-overhead-evaluation:
     rationale: Inspect approved planning acceptance without claiming runtime or signed release evidence.

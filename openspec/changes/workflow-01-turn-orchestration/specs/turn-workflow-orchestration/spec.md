@@ -192,6 +192,12 @@ Guidance SHALL keep one writer, batch compatible fixes and reuse existing handof
 - **WHEN** the next review/recheck is selected
 - **THEN** review broadens, all affected gates are rebound to current inputs and uncertain applicability selects the complete lane within the same controller budget.
 
+#### Scenario: Compact PR repair handoff retains authority and budget
+
+- **GIVEN** an authorized PR correction batch and consumed shared controller budget
+- **WHEN** repair hands off its delta, affected assumptions, remaining findings and original evidence references
+- **THEN** one writer retains the same authority and consumed budget; boundary drift broadens review and current-head affected-gate rechecks before external writes.
+
 ### Requirement: Honest Delivery Overhead Evaluation
 
 Guidance SHALL reuse existing records and distinguish token categories, billed charges, elapsed time, active effort and waiting with units and source references. Missing values SHALL remain unknown. Bounded trials SHALL report early discoveries, later escapes, correction batches and overhead without claiming causal or monetary savings. No ledger, schema or automatic collection SHALL be introduced by this amendment.

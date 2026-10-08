@@ -53,9 +53,3 @@ The controller SHALL default to five repair rounds, a 60-minute elapsed budget, 
 - **GIVEN** an outdated thread without current validating evidence
 - **WHEN** authorized resolution is considered
 - **THEN** the thread remains unresolved; only a verified fix receives a commit/check reply and resolution.
-
-#### Scenario: Compact PR repair handoff retains authority and budget
-
-- **GIVEN** an authorized PR correction batch and consumed shared controller budget
-- **WHEN** repair hands off its delta, affected assumptions, remaining findings and original evidence references
-- **THEN** one writer retains the same authority and consumed budget; boundary drift broadens review and current-head affected-gate rechecks before external writes.
