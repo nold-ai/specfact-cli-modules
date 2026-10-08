@@ -282,3 +282,30 @@ version validations pass. AST, AI-bloat, Radon and pinned Semgrep report zero
 findings for both changed Python files. The existing CI-only signing workflow
 will add the candidate signature after push. Normal commit hooks follow with
 only local ARM64 capsule review approved DEFERRED to hosted Linux.
+
+
+## Verified setup correction and sampler removal — 2026-10-08 Europe/Berlin
+
+Run37703624491 job113073036925 passes deferred candidate commit review and
+cold/warm fixtures under unchanged guards. Independent installed0.51.0
+job113073036863 reports missing_report/timeout_marker_observed without analyzer
+attribution. The combined setup correction is supported by changed-input hosted
+evidence; neither operation is separately isolated.
+After specification, five production regressions fail before sampler removal
+(0.11s; /private/tmp/specfact460-sampler-removal-red.log): normal dispatch must
+retain attachment/argv/exit without sampling; byte/string timeout stderr must
+remain private with UNKNOWN/error and exact30/120s process +2/10s path bounds.
+Temporary sampling, its fixed frame helper/projection and temporary-only tests
+are removed. Production regression coverage retains the policy assertions.
+The local source probe ends before usable analysis with a signature ValueError
+(1.75s); it does not reproduce or establish sealed performance.
+
+Production focused GREEN153passes(6.63s). Full/SMART each pass19required host
+cases followed by5043portable tests,75declared skips,95subtests and five existing
+warnings(254.89s/255.67s). Format, typing0errors/0warnings, lint10.00/10, manifests,
+imports,28contracts, actionlint, planned requirements, strict OpenSpec and seven
+filesystem checksum/version checks pass. AST/AI-bloat/pinned Semgrep are clean;
+Radon reports only unchanged baseline functions. target_bootstrap and
+contract_runner are byte-identical to origin/dev after profiler removal.
+Normal hooks follow with approved local capsule-only DEFERRED and mandatory
+hosted review. No private signing keys are used; CI signature follow-up required.

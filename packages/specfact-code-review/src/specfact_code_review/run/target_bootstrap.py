@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import builtins
-import faulthandler
 import importlib.machinery
 import importlib.metadata
 import importlib.util
@@ -17,7 +16,6 @@ import site
 import sys
 import sysconfig
 from collections.abc import Mapping
-from contextlib import contextmanager
 from pathlib import Path
 from types import ModuleType
 
@@ -344,19 +342,6 @@ def _project_python_command(arguments: list[str]) -> tuple[list[str], dict[str, 
     return launcher["interpreter_command"](["-s", *arguments]), environment
 
 
-@contextmanager
-def _crosshair_stack_samples(module: str):
-    """Temporary candidate observations; preserve command, domain and deadline."""
-    if module != "crosshair":
-        yield
-        return
-    faulthandler.dump_traceback_later(5, repeat=True, file=sys.stderr)
-    try:
-        yield
-    finally:
-        faulthandler.cancel_dump_traceback_later()
-
-
 def main() -> None:
     """Enter an isolated analyzer or hand native Python arguments to its interpreter."""
     module = sys.argv.pop(1)
@@ -368,18 +353,17 @@ def main() -> None:
     observer_path = str(BUILTIN / "specfact_code_review/run/target_pytest.py")
     pylint_path = str(BUILTIN / "specfact_code_review/run/target_pylint.py")
     snapshot_root = SNAPSHOT
-    with _crosshair_stack_samples(module):
-        try:
-            _configure_runtime(module)
-        except (RuntimeError, ImportError) as exc:
-            sys.stderr.write(f"{exc}\n")
-            raise SystemExit(78) from exc
-        if module == "pytest-observe":
-            run_path(observer_path, run_name="__main__")
-        elif module == "pylint":
-            run_path(pylint_path, init_globals={"SNAPSHOT_ROOT": snapshot_root}, run_name="__main__")
-        else:
-            run_module(module, run_name="__main__", alter_sys=True)
+    try:
+        _configure_runtime(module)
+    except (RuntimeError, ImportError) as exc:
+        sys.stderr.write(f"{exc}\n")
+        raise SystemExit(78) from exc
+    if module == "pytest-observe":
+        run_path(observer_path, run_name="__main__")
+    elif module == "pylint":
+        run_path(pylint_path, init_globals={"SNAPSHOT_ROOT": snapshot_root}, run_name="__main__")
+    else:
+        run_module(module, run_name="__main__", alter_sys=True)
 
 
 if __name__ == "__main__":

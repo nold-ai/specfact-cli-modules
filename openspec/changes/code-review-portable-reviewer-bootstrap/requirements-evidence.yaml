@@ -57,7 +57,7 @@ requirements:
       scenario_id: sealed-timeout-diagnosis-retains-execution-guards
       method: test
       intent: Preserve command and deadlines, arm before attachment, cancel on every exit, and suppress private stack tokens.
-      observable: Six sampler/privacy regressions and the actual workflow projector fail before implementation;129 focused cases pass afterward. Hosted observations remain pending and do not establish a root cause.
+      observable: Temporary sampler/privacy regressions precede diagnosis. The combined setup correction passes hosted candidate commit review; five production policy regressions precede sampler removal. Production hosted validation remains required.
   openspec:code-review-portable-reviewer-bootstrap:review-portable-bootstrap:invalid-pytest-requests-avoid-response-only-setup:
     rationale: Decode malformed requests before installed coverage planning and defer unused response imports without reducing contract coverage.
     stakeholder_refs: [nold-ai/specfact-cli-modules#460]
@@ -70,4 +70,4 @@ requirements:
       scenario_id: invalid-pytest-requests-avoid-response-only-setup
       method: test
       intent: Preserve valid request fields, coverage findings, setup-error handling and uncaught import errors while avoiding unused setup.
-      observable: Three setup-order regressions fail before code; the valid request parity case passes. Hosted timing remains necessary to determine contribution to the timeout.
+      observable: Three setup-order regressions fail before code; valid request parity and response coverage pass. The combined correction passes hosted candidate commit review; removal of sampling requires fresh production evidence.

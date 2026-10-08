@@ -112,3 +112,9 @@ all execution deadlines SHALL remain unchanged.
 
 - **WHEN** a valid request executes the confined child and provides observations
 - **THEN** preserve command arguments, coverage bridge fields, findings and all existing coverage/completion checks; load trusted response helpers before resolving the observed root
+
+#### Scenario: Production dispatch follows completed diagnosis
+
+- **WHEN** the candidate commit review passes after the runtime setup correction
+- **THEN** remove the temporary stack sampler and its failure projection before promotion
+- **AND** retain native module argv, exit codes, existing30/120-second process bounds and2/10-second path bounds; timeouts remain error/UNKNOWN without exposing captured stderr

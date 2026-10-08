@@ -106,3 +106,14 @@ setup operation. Preserve the wrapper @ensure and all child/domain/coverage gate
 Extracting only its postcondition to a pure helper would reduce selected coverage,
 so reject that approach. This is a tested setup correction; its contribution to
 the30-second timeout remains a hypothesis until sealed comparison succeeds.
+
+
+The changed-input hosted comparison verifies the setup correction: run37703624491
+job113073036925 completes the required deferred candidate commit review and
+cold/warm fixtures successfully with existing guards. Compared with the observed
+CrossHair timeout on bb474e44, the only changed runtime logic is JSON-first
+planning and response-late imports; neither checker selection nor bounds change.
+This supports the combined correction, not attribution to one operation alone.
+Independent installed0.51.0 job113073036863 still lacks a report and observes
+a timeout marker without analyzer attribution. Remove temporary sampling before
+promotion and require a fresh production run.

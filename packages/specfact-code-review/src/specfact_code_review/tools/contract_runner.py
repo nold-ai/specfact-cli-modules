@@ -286,40 +286,10 @@ def _execute_crosshair(files: list[Path], *, bug_hunt: bool) -> subprocess.Compl
             check=False,
             timeout=proc_timeout,
         )
-    except subprocess.TimeoutExpired as exc:
-        observed = _crosshair_sampled_frames(exc.stderr)
-        suffix = " sampled_frames=" + ",".join(observed) if observed else ""
-        return _crosshair_unknown(files[0], "CrossHair timed out before mandatory evidence completed." + suffix)
+    except subprocess.TimeoutExpired:
+        return _crosshair_unknown(files[0], "CrossHair timed out before mandatory evidence completed.")
     except OSError as exc:
         return _crosshair_unknown(files[0], f"Unable to execute CrossHair: {exc}")
-
-
-def _crosshair_sampled_frames(stderr: bytes | str | None) -> list[str]:
-    """Expose only fixed frame observations from the bounded private stack tail."""
-    tail = stderr[-65536:] if stderr else ""
-    if isinstance(tail, bytes):
-        tail = tail.decode("utf-8", errors="replace")
-    frames = re.findall(r'File "([^"\n]+)", line [0-9]+ in ([a-zA-Z_][a-zA-Z_0-9]*)', tail)
-    known = {
-        ("target_bootstrap.py", "_configure_runtime"): "bootstrap_attachment",
-        ("target_bootstrap.py", "_configure_member_site"): "project_site_attachment",
-        ("crosshair/fnutil.py", "load_files_or_qualnames"): "subject_import",
-        ("crosshair/core.py", "analyze_calltree"): "symbolic_search",
-        ("crosshair/core.py", "attempt_call"): "symbolic_search",
-        ("crosshair/statespace.py", "choose_possible"): "symbolic_branch",
-        ("z3/z3core.py", "Z3_solver_check_assumptions"): "solver_check",
-        ("portable_worker.py", "select_test_paths"): "select_test_paths",
-        ("portable_worker.py", "validate_observation"): "validate_observation",
-        ("portable_worker.py", "preparation_failure_snapshot"): "preparation_failure_snapshot",
-        ("portable_worker.py", "run_portable_pytest"): "run_portable_pytest",
-    }
-    return sorted(
-        {
-            code
-            for (suffix, name), code in known.items()
-            if any(path.endswith("/" + suffix) and function == name for path, function in frames)
-        }
-    )
 
 
 def _parse_crosshair_findings(output: str, files: list[Path]) -> list[ReviewFinding]:
