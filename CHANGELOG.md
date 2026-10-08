@@ -9,6 +9,12 @@ and this project follows SemVer for bundle versions.
 
 ### Fixed
 
+- Preserve every declared Literal input in pinned CrossHair 0.0.109, including
+  constructor fields, unions and exact boolean/integer/enum identity. Restore
+  the invocation-scoped model on exit and retire temporary stack sampling.
+  Normalize impossible constructor default prefixes without reordering real
+  positional arguments or discarding valid optional defaults.
+
 - Preserve targeted Full/SMART test filters while running all mandatory host
   proofs first. Exclude ordinary BASE findings when incomplete HEAD analysis
   emits no findings; retain both snapshots' tool errors and UNKNOWN evidence.

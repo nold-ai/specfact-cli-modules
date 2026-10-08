@@ -13,7 +13,7 @@
 - [x] Verify request-first/response-late setup against the unchanged sealed candidate gate.
 - [x] Fix the demonstrated setup defect and remove temporary sampling.
 - [x] Verify production payload without the sampler in fresh hosted candidate CI.
-- [ ] Diagnose independent installed review using bounded complete private JSON and finite analyzer/side/failure-class observations, retaining oversized status and unavailable assurance.
+- [x] Triage independent installed review: retain the known published0.51.0 timeout as a user-approved exception with unavailable assurance; stop timeout investigation.
 - [ ] After separately authorized promotion, verify exact #498 sealed execution.
 
 - [ ] Retain both-snapshot incomplete tool errors and reject CrossHair failure exits without analysis output; verify protected candidate execution before promotion.
@@ -22,11 +22,13 @@
 - [ ] Verify the corrected constructor adapter on a fresh protected exact-head candidate review before promotion.
 
 - [x] Reproduce and correct the CP311/CP313 Requests callable pytest-marker registry crash while retaining actual method contracts, hashable overrides and native lookup restoration.
-- [ ] Verify the marker correction in fresh exact-head customer corpus execution; retain the separate CP312 required review timeout as unresolved.
+- [ ] Verify the marker correction in fresh exact-head customer corpus execution; retain known reviewer timeouts as the approved exception, while real process crashes and tests remain in scope.
 
 - [x] Specify and implement the approved renewed default-off private sampling route with failing-first lifecycle, request parity and finite privacy proofs.
-- [ ] Collect fresh protected exact-head sampled observations, establish the remaining runtime cause and implement a parity-preserving correction.
-- [ ] Remove the renewed temporary transport and verify fresh ordinary no-sampler sealed acceptance before promotion.
+- [x] Collect finite sampled observations and reproduce the concrete pinned Literal generation defect locally; implement all-value/type/identity/lifetime parity correction.
+- [ ] Confirm fresh ordinary hosted execution has no remaining real process crash; known timeouts retain the approved exception.
+- [x] Remove the renewed temporary transport with failing-first ordinary no-sampler proofs.
+- [ ] Verify fresh ordinary protected exact-head execution before promotion; known timeouts retain the approved exception without assurance upgrades.
 
 - [x] Reproduce and fix the verified adapter-only prepared-runtime cache-identity annotation.
 - [x] Reproduce and fix sampled completed-error privacy while retaining original native errors and ordinary-mode stderr parity.
@@ -42,3 +44,13 @@
 
 - [x] Reproduce and fix set-e skipping bounded preparation diagnostics; require command success for PREPARED and retain original preparation/projector exits.
 - [ ] Verify the latest preparation-flow annotation fix in fresh protected exact-head execution.
+
+- [x] Reproduce and correct pinned Literal proxy generation with every-value counterexamples, constructor/union/type parity and scoped registry restoration.
+- [ ] Verify the Literal correction in ordinary protected exact-head execution; retain the user-approved published0.51.0 timeout exception separately from real crashes/tests.
+
+- [x] Resolve the four validated cache/filter/empty-HEAD/preparation annotations after tested fixes were pushed.
+
+- [x] Reproduce and fix the fresh P1 positional-default prefix while retaining positional values, annotations and valid optional defaults.
+- [ ] Resolve the fresh P1 after its final verified fix is pushed.
+
+- [x] Reproduce and isolate parent-test CrossHair icontract mutation; preserve the unchanged project ViolationError assertion.

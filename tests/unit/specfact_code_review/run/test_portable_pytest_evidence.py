@@ -267,7 +267,7 @@ raise SystemExit(int(code))
     monkeypatch.setattr(
         runner,
         "_load_capsule_request",
-        lambda _path: ("targeted-pytest-coverage", files, False, ("portable-pytest-v2", "{}"), False, False),
+        lambda _path: ("targeted-pytest-coverage", files, False, ("portable-pytest-v2", "{}"), False),
     )
     monkeypatch.setattr(
         runner,

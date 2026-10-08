@@ -105,8 +105,8 @@ requirements:
     - case_id: reviewer-bootstrap-10
       scenario_id: pinned-constructor-analysis-preserves-real-arguments
       method: test
-      intent: Retain all real constructor arguments, upstream collision precedence and native CLI lifecycle under pinned compatibility dispatch.
-      observable: Meaningful argument-loss and invalid-order regressions precede code; argument/default/annotation parity, unsupported-version rejection and restoration on normal/error/SystemExit are required. Actual pinned CLI counterexample and fresh sealed candidate acceptance remain separate production proof.
+      intent: Retain real constructor positions, annotations, valid defaults, upstream collision precedence and native lifecycle; normalize impossible positional default prefixes without reordering inputs.
+      observable: Meaningful argument-loss, invalid-kind-order and two default-prefix Signature failures precede code; argument/default/annotation parity, unsupported-version rejection and restoration on normal/error/SystemExit are required. Actual pinned CLI counterexample and fresh sealed candidate acceptance remain separate production proof.
   openspec:code-review-portable-reviewer-bootstrap:review-portable-bootstrap:unhashable-callable-metadata-preserves-contract-parsing:
     rationale: The Requests customer artifact identifies the pinned registered-contract lookup crash on callable pytest class metadata.
     stakeholder_refs: [nold-ai/specfact-cli-modules#460]
@@ -202,3 +202,17 @@ requirements:
       method: test
       intent: Always project finite preparation status and enforce original command and projector failures before review.
       observable: Shell-flow failure regressions with valid, invalid and missing reports precede code; success and projector failures retain their separate statuses and exits.
+
+  openspec:code-review-portable-reviewer-bootstrap:review-portable-bootstrap:pinned-literal-analysis-preserves-declared-values:
+    rationale: The bounded public 23-file CP312 control reproduces a Literal annotation falling through to get_type_hints as a class.
+    stakeholder_refs: [nold-ai/specfact-cli-modules#460]
+    touchpoints:
+    - id: pinned-literal-dispatch
+      kind: config_file
+      locator: openspec/changes/code-review-portable-reviewer-bootstrap/specs/review-portable-bootstrap/spec.md
+    verification_cases:
+    - case_id: reviewer-bootstrap-18
+      scenario_id: pinned-literal-analysis-preserves-declared-values
+      method: test
+      intent: Preserve every literal value, type and identity, constructor/union inputs, existing registrations and restoration on every exit.
+      observable: Actual pinned CLI counterexample regressions fail before code; no contract selection or deadline change is permitted. Hosted TypeError attribution remains separate until exact-head execution confirms it.

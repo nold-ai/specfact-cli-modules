@@ -12,9 +12,12 @@ from specfact_code_review.run import target_bootstrap
 from specfact_code_review.tools import contract_runner
 
 
+@pytest.mark.parametrize("marker", [False, True])
 @pytest.mark.parametrize("bug_hunt", [False, True])
 @pytest.mark.parametrize("raw", [str, lambda value: value.encode()])
-def test_timeout_retains_unknown_and_discards_stderr(raw, bug_hunt, monkeypatch):
+def test_timeout_retains_unknown_and_discards_stderr(raw, bug_hunt, marker, monkeypatch):
+    if marker:
+        monkeypatch.setenv("SPECFACT_CODE_REVIEW_CROSSHAIR_STACK_SAMPLES", "1")
     stack = (
         '  File "/opt/specfact/config/member-analyzers/crosshair/core.py", line 1 in analyze_calltree\n'
         '  File "/private/secret/value.py", line 1 in PRIVATE_FUNCTION'
@@ -29,7 +32,11 @@ def test_timeout_retains_unknown_and_discards_stderr(raw, bug_hunt, monkeypatch)
     assert run.call_args.args[0] == ["crosshair", "check", "--per_path_timeout", "10" if bug_hunt else "2", "source.py"]
 
 
-def test_production_dispatch_preserves_attachment_argv_and_exit_without_sampling(monkeypatch):
+@pytest.mark.parametrize("marker", [False, True])
+def test_production_dispatch_preserves_attachment_argv_and_exit_without_sampling(monkeypatch, marker):
+    if marker:
+        monkeypatch.setenv("SPECFACT_CODE_REVIEW_CROSSHAIR_STACK_SAMPLES", "1")
+
     def unexpected(*_args, **_kwargs):
         raise AssertionError("temporary sampling must be removed")
 

@@ -19,7 +19,7 @@ import tempfile
 import tomllib
 import xml.etree.ElementTree as ET
 from collections.abc import Callable, Iterable, Mapping
-from contextlib import ExitStack, chdir, contextmanager, suppress
+from contextlib import ExitStack, chdir, suppress
 from dataclasses import dataclass, field, replace
 from functools import lru_cache, partial
 from pathlib import Path, PurePosixPath
@@ -1268,14 +1268,11 @@ def _capsule_adapter_request(request: dict[str, object], *, member: str) -> tupl
     return adapter_argv, True
 
 
-def _load_capsule_request(request_path: Path) -> tuple[str, list[Path], bool, tuple[str, ...], bool, bool]:
+def _load_capsule_request(request_path: Path) -> tuple[str, list[Path], bool, tuple[str, ...], bool]:
     request = json.loads(request_path.read_text(encoding="utf-8"))
     if not isinstance(request, dict):
         raise ValueError("capsule request must be an object")
     member = str(request["member"])
-    stack_samples = request.get("stack_samples", False)
-    if not isinstance(stack_samples, bool) or (stack_samples and member != "contracts"):
-        raise ValueError("stack sampling request is invalid")
     adapter_argv, complete_pytest_inventory = _capsule_adapter_request(request, member=member)
     return (
         member,
@@ -1283,7 +1280,6 @@ def _load_capsule_request(request_path: Path) -> tuple[str, list[Path], bool, tu
         bool(request.get("bug_hunt", False)),
         adapter_argv,
         complete_pytest_inventory,
-        stack_samples,
     )
 
 
@@ -1305,39 +1301,21 @@ def _capsule_member_response(member: str, findings: list[ReviewFinding]) -> dict
     }
 
 
-@contextmanager
-def _crosshair_diagnostic_scope(enabled: bool):
-    """Scope the fixed private diagnostic marker to one validated sealed request."""
-    marker = "SPECFACT_CODE_REVIEW_CROSSHAIR_STACK_SAMPLES"
-    previous = os.environ.pop(marker, None)
-    if enabled:
-        os.environ[marker] = "1"
-    try:
-        yield
-    finally:
-        os.environ.pop(marker, None)
-        if previous is not None:
-            os.environ[marker] = previous
-
-
 def _capsule_process_request(request_path: Path) -> None:
     """Run exactly one analyzer member inside the sealed capsule process."""
 
     try:
-        member, files, bug_hunt, adapter_argv, complete_pytest_inventory, stack_samples = _load_capsule_request(
-            request_path
-        )
-        with _crosshair_diagnostic_scope(stack_samples):
-            response = _capsule_member_response(
+        member, files, bug_hunt, adapter_argv, complete_pytest_inventory = _load_capsule_request(request_path)
+        response = _capsule_member_response(
+            member,
+            _member_findings(
                 member,
-                _member_findings(
-                    member,
-                    files,
-                    bug_hunt=bug_hunt,
-                    adapter_argv=adapter_argv,
-                    complete_pytest_inventory=complete_pytest_inventory,
-                ),
-            )
+                files,
+                bug_hunt=bug_hunt,
+                adapter_argv=adapter_argv,
+                complete_pytest_inventory=complete_pytest_inventory,
+            ),
+        )
         observation_path = Path("/opt/specfact/tmp/pytest-observation.json")
         if (
             member == "targeted-pytest-coverage"
@@ -1402,12 +1380,6 @@ def _execute_capsule_member(request: CapsuleMemberExecutionRequest) -> dict[str,
                     "complete_pytest_inventory": request.complete_pytest_inventory,
                     "member": request.member,
                     "paths": relative_paths,
-                    **(
-                        {"stack_samples": True}
-                        if request.member == "contracts"
-                        and os.environ.get("SPECFACT_CODE_REVIEW_CROSSHAIR_STACK_SAMPLES") == "1"
-                        else {}
-                    ),
                 },
                 ensure_ascii=False,
                 separators=(",", ":"),

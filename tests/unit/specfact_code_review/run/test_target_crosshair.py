@@ -2,8 +2,10 @@
 
 import importlib.metadata
 import inspect
+import subprocess
 import sys
 from pathlib import Path
+from typing import Literal
 
 import pytest
 from crosshair import condition_parser, core, dynamic_typing
@@ -65,6 +67,22 @@ class PositionalConstructor:
 
     def __init__(self, value: int = 3, /):
         self.value = value
+
+
+class DefaultPrefixConstructor:
+    def __new__(cls, first: int = 1, /, *items: int):
+        return object.__new__(cls)
+
+    def __init__(self, first: int, second: int, /):
+        self.first, self.second = first, second
+
+
+class DefaultPrefixWithOptionalConstructor:
+    def __new__(cls, first: int = 1, /, *items: int):
+        return object.__new__(cls)
+
+    def __init__(self, first: int, second: int, /, third: int = 3):
+        self.first, self.second, self.third = first, second, third
 
 
 class ExplicitConstructor:
@@ -257,3 +275,132 @@ def test_dispatch_custom_hash_error_is_preserved(crosshair_dispatch):
                 lookup(FailingHash())
 
     crosshair_dispatch(inspect_dispatch)
+
+
+@pytest.mark.parametrize("failure", [None, RuntimeError, SystemExit])
+def test_literal_registration_is_scoped_to_native_dispatch(crosshair_dispatch, monkeypatch, failure):
+    import importlib
+
+    importlib.import_module("crosshair.core_and_libs")
+
+    registry = vars(core)["_SIMPLE_PROXIES"]
+    monkeypatch.delitem(registry, Literal, raising=False)
+    original_integer = registry[int]
+    observed = []
+
+    def inspect_dispatch(*_args, **_kwargs):
+        observed.append(Literal in registry)
+        assert registry[int] is original_integer
+        if failure:
+            raise failure(7)
+
+    if failure:
+        with pytest.raises(failure):
+            crosshair_dispatch(inspect_dispatch)
+    else:
+        crosshair_dispatch(inspect_dispatch)
+    assert observed == [True]
+    assert Literal not in registry and registry[int] is original_integer
+
+
+def test_existing_literal_registration_is_preserved(crosshair_dispatch, monkeypatch):
+    import importlib
+
+    importlib.import_module("crosshair.core_and_libs")
+
+    registry = vars(core)["_SIMPLE_PROXIES"]
+
+    def original(*_args):
+        return "existing_model"
+
+    monkeypatch.setitem(registry, Literal, original)
+
+    def inspect_dispatch(*_args, **_kwargs):
+        assert registry[Literal] is original
+
+    crosshair_dispatch(inspect_dispatch)
+    assert registry[Literal] is original
+
+
+def test_empty_literal_is_an_impossible_attempt(crosshair_dispatch):
+    from crosshair.core_and_libs import standalone_statespace
+    from crosshair.util import IgnoreAttempt
+
+    def inspect_dispatch(*_args, **_kwargs):
+        with standalone_statespace, pytest.raises(IgnoreAttempt):
+            core.proxy_for_type(Literal[()], "empty")
+
+    crosshair_dispatch(inspect_dispatch)
+
+
+def test_nested_literal_scope_preserves_the_outer_registration(crosshair_dispatch):
+    from specfact_code_review.run.target_crosshair import _literal_compatibility
+
+    registry = vars(core)["_SIMPLE_PROXIES"]
+
+    def inspect_dispatch(*_args, **_kwargs):
+        outer = registry[Literal]
+        with _literal_compatibility():
+            assert registry[Literal] is outer
+        assert registry[Literal] is outer
+
+    crosshair_dispatch(inspect_dispatch)
+
+
+def test_cached_argument_proxy_reads_scoped_literal_registration(crosshair_dispatch, monkeypatch):
+    from crosshair.core_and_libs import NoTracing, standalone_statespace
+    from crosshair.util import renamed_function
+
+    cached = renamed_function(core.proxy_for_type, "proxy_arg_review_mode")
+    monkeypatch.setitem(vars(core)["_ARG_GENERATION_RENAMES"], "review_mode", cached)
+    signature = inspect.Signature([_parameter("review_mode", inspect.Parameter.POSITIONAL_OR_KEYWORD, Literal["full"])])
+
+    def inspect_dispatch(*_args, **_kwargs):
+        with standalone_statespace, NoTracing():
+            arguments = core.gen_args(signature)
+            assert arguments.arguments["review_mode"] == "full"
+        assert vars(core)["_ARG_GENERATION_RENAMES"]["review_mode"] is cached
+
+    crosshair_dispatch(inspect_dispatch)
+
+
+@pytest.mark.parametrize("constructor", [DefaultPrefixConstructor, DefaultPrefixWithOptionalConstructor])
+def test_constructor_required_prefix_keeps_real_positional_values(crosshair_dispatch, constructor):
+    def inspect_dispatch(*_args, **_kwargs):
+        signature = core.get_constructor_signature(constructor)
+        assert isinstance(signature, inspect.Signature)
+        parameters = signature.parameters
+        assert list(parameters)[:2] == ["first", "second"]
+        assert parameters["first"].default is inspect.Parameter.empty
+        assert parameters["second"].default is inspect.Parameter.empty
+        assert parameters["first"].annotation is int and parameters["second"].annotation is int
+        with pytest.raises(TypeError):
+            signature.bind(11)
+        constructed = constructor(*signature.bind(11, 22).args, **signature.bind(11, 22).kwargs)
+        assert constructed.first == 11 and constructed.second == 22
+        if constructor is DefaultPrefixWithOptionalConstructor:
+            assert parameters["third"].default == 3 and constructed.third == 3
+
+    crosshair_dispatch(inspect_dispatch)
+
+
+def test_dispatch_fixture_retains_later_project_contract_enforcement():
+    root = Path(__file__).parents[4]
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "pytest",
+            "tests/unit/specfact_code_review/run/test_crosshair_dispatch.py::test_production_dispatch_preserves_attachment_argv_and_exit_without_sampling",
+            "tests/unit/specfact_code_review/run/test_target_crosshair.py::test_dispatch_preserves_constructor_arguments",
+            "tests/unit/sync_runtime/test_bridge_probe.py::TestBridgeProbe::test_auto_generate_bridge_unknown",
+            "-q",
+        ],
+        cwd=root,
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "13 passed" in result.stdout

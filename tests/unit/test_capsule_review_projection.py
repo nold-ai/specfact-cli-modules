@@ -631,7 +631,7 @@ def test_candidate_large_report_retains_unavailable_marker_and_fixed_failure_cla
     assert "private-token" not in result.stdout + result.stderr
 
 
-def test_candidate_sample_projection_suppresses_unknown_frame_codes(tmp_path):
+def test_candidate_projection_ignores_retired_sample_frames(tmp_path):
     import json
 
     workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())
@@ -655,7 +655,7 @@ def test_candidate_sample_projection_suppresses_unknown_frame_codes(tmp_path):
     result = _run_projector(tmp_path, program)
     rows = [json.loads(line) for line in result.stdout.splitlines()]
     assert result.returncode == 0
-    assert rows[-1]["sampled_frame_observations"] == ["argument_generation", "run_portable_pytest"]
+    assert "sampled_frame_observations" not in rows[-1]
     assert "PRIVATE_TOKEN" not in result.stdout + result.stderr
 
 

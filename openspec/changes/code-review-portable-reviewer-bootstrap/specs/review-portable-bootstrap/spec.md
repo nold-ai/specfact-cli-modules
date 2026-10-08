@@ -198,8 +198,10 @@ lookup crash, while retaining all other contract parsers and registered override
 
 ### Requirement: Temporary diagnosis preserves ordinary dispatch
 
-The temporary sealed diagnostic route SHALL remain default-off and preserve every
-ordinary runtime and acceptance policy.
+The reviewer SHALL retire the temporary sealed diagnostic route before promotion
+and preserve ordinary runtime and acceptance policy. The diagnosis scenarios
+below describe only the approved historical milestone; after retirement, stale
+metadata SHALL NOT arm or transport sampling.
 
 #### Scenario: Renewed sealed diagnosis is default-off
 
@@ -273,3 +275,46 @@ and BASE/HEAD error states from complete bounded nested evidence.
 - **WHEN** complete private analyzer evidence marks BASE or HEAD error or UNKNOWN
 - **THEN** project only the allowlisted analyzer and corresponding base/head side names
 - **AND** ignore unknown sides, unknown analyzers and malformed nested nodes without exposing private text or upgrading assurance
+
+
+### Requirement: Pinned Literal analysis preserves declared values
+
+Pinned CrossHair0.0.109 dispatch SHALL generate every declared Literal value
+through its existing symbolic branch exploration instead of treating a Literal
+annotation as a class. This correction SHALL preserve the native analyzer inputs,
+contracts, options, deadlines and failures.
+
+#### Scenario: Literal arguments occur directly or in constructors
+
+- **WHEN** selected contracts accept Literal arguments, including ReviewOptions constructor fields, unions, booleans, integers, None and enum members
+- **THEN** branch over all declared values and retain their concrete identity and type, including equal boolean/integer values
+- **AND** detect a counterexample for each declared value when the corresponding postcondition rejects it; do not widen to undeclared values or discard contracts
+- **AND** leave non-Literal generation and an existing registered Literal model unchanged
+
+#### Scenario: Scoped Literal registration exits
+
+- **WHEN** the native pinned CLI returns, raises or exits
+- **THEN** restore the original Literal registry state on every exit and preserve upstream registrations, constructor/contract adapters and dependency-version rejection
+- **AND** keep native argv, 2/10-second path bounds and 30/120-second process bounds; empty Literal input remains impossible rather than falsely clean
+
+
+#### Scenario: Retired diagnosis cannot alter production
+
+- **WHEN** earlier diagnostic metadata or its environment marker is present after diagnosis is retired
+- **THEN** retain ordinary request bytes and fields, ignore retired extra request metadata, never forward the marker or arm sampling, and never project sampled frames
+- **AND** preserve original native analyzer errors, error/UNKNOWN on timeout and unchanged flags, budgets, grants and no-write proofs
+- **AND** record the user-approved known reviewer timeout as incomplete evidence rather than claiming PASS; actual process crashes and test failures remain in scope
+
+
+#### Scenario: Constructor intersection has impossible positional defaults
+
+- **WHEN** native constructor members are valid but their pinned intersection retains a default before a later required positional argument
+- **THEN** retain positional order, kinds and annotations and require the earlier argument instead of falsely treating it as omittable
+- **AND** preserve every valid positional/keyword-only default and actual constructed argument values; never reorder positional arguments to silence Signature validation
+
+
+#### Scenario: Dispatch tests do not leak upstream contract state
+
+- **WHEN** parent-process dispatch tests initialize the real CrossHair libraries
+- **THEN** restore icontract checker functions after each fixture so later project tests retain runtime contract enforcement
+- **AND** retain the existing bridge ViolationError assertion and native analyzer initialization inside its actual isolated child

@@ -895,3 +895,104 @@ A bounded CPython3.12.13/CrossHair0.0.109/core0.55.4 control with37aligned
 existing tool dependencies analyzes portable_worker alone: exit1 with946bytes
 of actual analysis stdout and empty stderr. It does not reproduce the crash
 and is not sealed acceptance. Exact batch-selection tracing remains necessary.
+
+
+## 2026-10-09 Literal defect and sampler retirement
+
+- Public 37186376 candidate batch is 23 Python paths (10 implementation/tool,
+  13 tests), with explicit_files selection and one index snapshot. A CPython
+  3.12.13 local control with every lock-listed Python distribution reproduces
+  `TypeError: typing.Literal['full', 'changed', 'shadow'] is not a module, class,
+  method, or function` in argument generation through proxy_for_class /
+  get_type_hints. This does not assert the hosted finite TypeError is identical.
+- Final pre-code regressions: 19 fail, 24 parity cases pass (2.64s). Real native
+  CLI cases require a counterexample for each declared value, including nested
+  constructor inputs, equal-but-distinct boolean/integer literals, None/enums,
+  unions and a singleton. Initial fixture had one quoted-docstring syntax error;
+  it was corrected and red evidence recollected against the original adapter.
+- Scoped Literal creation preserves every exact alternative, existing models,
+  cached proxies, other registrations and restoration on every exit. Native
+  CLI/dispatch controls pass 50 tests (2.71s) on local CPython3.14.7 and all 50
+  again on CPython3.12.13 with pinned distributions. The initial cached gen_args
+  fixture incorrectly omitted upstream's required NoTracing context; only that
+  test was corrected, with no production tracing shortcut.
+- The unchanged 23-file CP312 batch moves past the reproduced Literal crash but
+  reaches the same 30-second limit. This is timeout/incomplete, not acceptance.
+  Per user direction, do not chase known reviewer timeouts or treat them as PASS.
+- Sampler-retirement tests: 15 fail / 89 parity pass (3.80s) before removing the
+  temporary transport, arming, private-frame parsing and public sample fields.
+  Strengthen original ordinary timeout and no-sampler proofs with stale metadata;
+  retain original flags/budgets, native errors and all mandatory host proofs.
+- Combined focused proof: 203 pass (11.02s). Full/SMART and final quality evidence
+  follow on the frozen production tree before commit/push. Original immutable
+  historical deferred-review proof is untouched.
+
+
+### Fresh P1 positional-prefix annotation
+
+- Independently validate `Preserve valid ordering among positional parameters`
+  (PRRT_kwDORVEFbs6qlrru). Two valid positional-only constructor combinations
+  fail before code with `non-default argument follows default argument`; 29
+  existing cases pass (0.22s). An initial mixed-kind fixture was valid and did
+  not demonstrate this defect; it was replaced and red evidence recollected.
+- Preserve positional order and real constructed first/second values; clear
+  only impossible optional prefixes before a later required positional input.
+  Reordering required arguments before optional arguments would change positional
+  meaning and was not used. Valid optional defaults and annotations remain.
+- Constructor/Literal/native-dispatch controls pass 57 tests (2.39s). Type checks
+  have zero errors/warnings; lint10.00/10; actual AST/AI-bloat/Radon have zero
+  changed findings; pinned Semgrep has zero findings/errors after a test-name
+  correction and DRY consolidation preserving all cases.
+- Earlier full attempts were superseded by real typing/clean-code/new-P1 fixes,
+  stopped through their task-specific log writers, and are not passing evidence.
+  Final frozen Full/SMART results are required below.
+
+
+### Actual Full/SMART failure and test-state isolation
+
+- Frozen Full and SMART each expose the same real regression: unknown bridge
+  input raises ValueError instead of the original required ViolationError after
+  parent-process CrossHair test initialization disables icontract checkers.
+  Each run has 5,172 passing portable tests, one failure, 75 skips, 95 passing
+  subtests and five existing warnings (269.14s/267.57s); neither is green.
+- A fresh subprocess running the ten constructor-dispatch cases followed by the
+  unchanged unknown-bridge contract test reproduces one failure / ten passes
+  before fixture code. The outer regression fails before code (2.19s).
+- Snapshot the three upstream-mutated checker functions through pytest's
+  monkeypatch fixture and restore them at teardown. No project contract assertion,
+  production analyzer initialization or symbolic-analysis policy is changed.
+- Constructor/Literal/dispatch/bridge controls now pass82tests (5.96s), including
+  the actual test-order subprocess. Actual changed AST/AI-bloat/Radon remain zero;
+  required lint/type and pinned Semgrep are rechecked before final Full/SMART.
+
+
+### Shared bootstrap isolation correction
+
+- The next Full/SMART runs still expose the same bridge failure (5,173 passes,
+  one failure,75skips,95subtests,five warnings;273.12s/272.33s). Constructor-only
+  fixture restoration misses the earlier production-dispatch bootstrap test.
+- Expand the subprocess order to production dispatch, ten constructor cases and
+  the original bridge contract assertion. Before shared isolation the outer
+  regression fails (1.95s), with the child exposing the same bridge failure.
+- Move checker snapshots to an autouse fixture scoped only to the code-review
+  run unit-test directory. Both real bootstrap test paths now restore their
+  upstream mutations; production source and bridge assertions remain unchanged.
+- The expanded controls pass82tests (5.97s); changed-code AST/AI-bloat/Radon remain
+  zero. Final shared-isolation Full/SMART below supersede previous failed runs.
+
+
+### Final shared-isolation verification
+
+- Full and SMART each pass19mandatory host proofs and5,174portable tests,
+  75declared skips,95subtests andfive existing warnings (265.40s/264.54s).
+  The original unknown-bridge ViolationError assertion passes in both complete
+  runs after all preceding code-review tests. No test failure is waived; the five existing warnings retain their prior status.
+- Type0errors/0warnings,lint10.00/10,actual changed AST/AI-bloat/Radon0findings,
+  pinned Semgrep0findings/0errors,strict OpenSpec/planned requirements/manifests,
+  actionlint,CLI-contract/import checks and28contracts pass.
+- Changed draft checksum/version and six unaffected signatures verify. The
+  changed module remains an approved unsigned draft pending CI signing follow-up;
+  no private signing key is read. Production sampler transport is fully removed.
+- The known review timeout is separately user-approved as incomplete evidence.
+  Current-head hosted process-crash confirmation and public review follow push;
+  native installed/public acceptance remains after human reviewer promotion.

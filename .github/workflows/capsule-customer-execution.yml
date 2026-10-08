@@ -237,7 +237,6 @@ jobs:
             SPECFACT_CODE_REVIEW_SUBJECT_ROOT="$REVIEW_ROOT" \
             SPECFACT_CODE_REVIEW_PROJECT_CONFIG="$PROJECT_CONFIG" \
             SPECFACT_CODE_REVIEW_ENFORCEMENT=changed \
-            SPECFACT_CODE_REVIEW_CROSSHAIR_STACK_SAMPLES=1 \
             "$CUSTOMER_ROOT/venv/bin/python" "$GITHUB_WORKSPACE/scripts/pre_commit_code_review.py" "${review_paths[@]}" || review_exit=$?
           if [ "$review_exit" -ne 0 ]; then
             # Print only bounded reason codes; raw reports, receipts and tool logs stay private.
@@ -294,14 +293,7 @@ jobs:
                   "PermissionError": "permission_error_observed", "TypeError": "type_error_observed",
                   "FileNotFoundError": "file_not_found_observed", "ValueError": "value_error_observed",
                   "wrong parameter order": "wrong_parameter_order_observed"}
-              allowed_frames = {"bootstrap_attachment", "project_site_attachment", "subject_import",
-                  "symbolic_search", "argument_generation", "class_proxy_generation", "heap_checkpoint",
-                  "symbolic_branch", "symbolic_object_copy", "object_reconstruction", "type_hint_resolution",
-                  "solver_check", "constructor_signature", "json_decode", "installed_coverage_planning",
-                  "select_test_paths", "validate_observation", "preparation_failure_snapshot",
-                  "run_portable_pytest", "portable_pytest_command", "run_review", "run_tdd_gate", "run_contract_check"}
               observations = {}
-              sampled_frames = {}
               findings = data.get("findings", [])
               for finding in findings[:10000] if isinstance(findings, list) else []:
                   if not isinstance(finding, dict) or finding.get("category") != "tool_error" or finding.get("tool") != "crosshair":
@@ -311,14 +303,8 @@ jobs:
                       continue
                   code = next((code for prefix, code in classes.items() if message.startswith(prefix)), "unclassified_crosshair_error_observed")
                   observations.setdefault(code, set()).update(code for marker, code in exceptions.items() if marker in message)
-                  if " sampled_frames=" in message:
-                      token = message.partition(" sampled_frames=")[2].split(maxsplit=1)
-                      values = token[0].split(",") if token else []
-                      sampled_frames.setdefault(code, set()).update(value for value in values if value in allowed_frames)
               for code, observed in sorted(observations.items()):
                   row = {"analyzer": "contracts", "diagnostic_class": code, "exception_observations": sorted(observed)}
-                  if sampled_frames.get(code):
-                      row["sampled_frame_observations"] = sorted(sampled_frames[code])
                   print(json.dumps(row))
           PY_CANDIDATE_FAILURE
           fi

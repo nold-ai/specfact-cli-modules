@@ -208,3 +208,26 @@ descriptors for PREPARED. Capture projector failure separately; propagate the
 original preparation failure first, otherwise the projector failure, and run
 review only after both succeed. Preserve all command arguments and the separate
 1800-second preparation wrapper; no failing status is accepted.
+
+
+## Literal runtime correction and ordinary dispatch (2026-10-09)
+
+The source-derived explicit-files candidate batch contains 23 Python paths,
+including 13 test paths. A CPython3.12.13 control using all lock-listed Python
+distributions and the existing 2-second path / 30-second process limits
+reproduces Literal["full", "changed", "shadow"] falling through to
+proxy_for_class/get_type_hints. This local defect is concrete; the hosted finite
+TypeError observation alone does not establish identical root-cause attribution.
+
+Register only the missing pinned Literal creation model after standard CrossHair
+initialization. Sequential symbolic forks keep every declared alternative
+reachable and return its exact concrete value without coercion, deduplication or
+widening. Preserve existing models and other registrations. Remove only our own
+entry on normal, exceptional and SystemExit completion. Cached argument proxies
+read the shared registry dynamically; native argv/contracts/budgets remain.
+
+Retire the temporary diagnostic transport, faulthandler arming, sampled-frame
+parsers and projection. Stale metadata cannot enable it; ordinary request bytes,
+native completed errors and timeout error/UNKNOWN remain. The user approved
+known reviewer timeout failures as an exception pending promotion, not as PASS;
+real process crashes and tests remain required triage.
