@@ -309,3 +309,44 @@ Radon reports only unchanged baseline functions. target_bootstrap and
 contract_runner are byte-identical to origin/dev after profiler removal.
 Normal hooks follow with approved local capsule-only DEFERRED and mandatory
 hosted review. No private signing keys are used; CI signature follow-up required.
+
+
+## Production hosted result and oversized report header — 2026-10-08 Europe/Berlin
+
+Unprofiled production7bb10941 run37705634781 job113079504408 passes required
+candidate commit review under unchanged limits. Independent installed0.51.0
+job113079504239 now produces oversized_report, with unavailable assurance/verdict
+and unclassified observations. It does not report the earlier missing report or
+timeout marker. A request-inventory diagnostic is unnecessary for this observed
+phase and is not retained in the change.
+Specification precedes seven meaningful oversized-header failures(1.02s),
+including the existing oversized fixture and six new root-header cases. After
+implementation, an additional oversized Unicode case retains valid header
+observations when the prefix ends within a multibyte character. Final65focused
+host/projector cases pass(6.69s); AST/AI-bloat/Radon are clean for the real
+embedded observer and test file.
+The observer retains the existing2MiB+1 sentinel read and parses at most2MiB
+of the prefix. Standard-library JSONDecoder consumes complete root fields,
+stops before findings, rejects duplicates and malformed/incomplete headers,
+and accepts at most64root fields. Only analyzer_evidence and the actual unknown
+boolean are retained privately for finite observations. Oversized status and
+unavailable verdict/assurance remain unchanged; no partial header is accepted
+as a complete report, and private fields/findings/paths are never copied.
+Installed bytes, review argv, grants and300/1800s limits are unchanged.
+Actual hosted header availability and failure cause remain unverified.
+
+Pinned Semgrep on the extracted embedded observer reports one print-in-src
+transport finding at its final JSON emission. Explicit narrow exception: this
+existing workflow interface intentionally emits one allowlisted JSON line to
+stdout for CI observation; replacing it with ordinary logging would alter the
+consumer contract. No arbitrary report data is printed. No other pinned Semgrep
+findings or errors are reported; this is not a runtime source-file exception.
+
+Final full/SMART each pass19 mandatory host cases followed by5050portable tests,
+75declared skips,95subtests and five existing warnings(271.29s/269.91s).
+Format, typing0errors/0warnings, lint10.00/10, manifests/imports,28contracts,
+actionlint, planned requirements, strict OpenSpec and seven strict filesystem
+signature/checksum/version checks pass. The diagnostic-only change does not
+alter signed module payloads; the existing0.51.1 signature remains valid.
+Normal hooks follow with approved local capsule-only DEFERRED and mandatory
+exact-head hosted review. Public committed CodeRabbit review follows push.

@@ -518,13 +518,60 @@ jobs:
           import os
           from pathlib import Path
 
-          report = {}
+          def json_space(text, cursor):
+              while cursor < len(text) and text[cursor] in " \t\r\n":
+                  cursor += 1
+              return cursor
+
+          def header_field(text, cursor, decoder):
+              key, cursor = decoder.raw_decode(text, json_space(text, cursor))
+              if not isinstance(key, str):
+                  raise ValueError("invalid header key")
+              cursor = json_space(text, cursor)
+              if text[cursor] != ":":
+                  raise ValueError("invalid header delimiter")
+              cursor = json_space(text, cursor + 1)
+              if key == "findings":
+                  if text[cursor] != "[":
+                      raise ValueError("invalid findings header")
+                  return key, None, cursor
+              value, cursor = decoder.raw_decode(text, cursor)
+              cursor = json_space(text, cursor)
+              if text[cursor] != ",":
+                  raise ValueError("incomplete report header")
+              return key, value, cursor + 1
+
+          def report_header(data):
+              import codecs
+
+              try:
+                  text = codecs.getincrementaldecoder("utf-8")().decode(data, final=False)
+                  cursor = json_space(text, 0)
+                  if text[cursor] != "{":
+                      return {}
+                  cursor, seen, observed = cursor + 1, set(), {}
+                  decoder = json.JSONDecoder()
+                  for _ in range(64):
+                      key, value, cursor = header_field(text, cursor, decoder)
+                      if key in seen:
+                          return {}
+                      seen.add(key)
+                      if key == "findings":
+                          return observed if isinstance(observed.get("analyzer_evidence"), list) else {}
+                      if key in ("analyzer_evidence", "has_unknown_required_evidence"):
+                          observed[key] = value
+              except (ValueError, IndexError, RecursionError):
+                  pass
+              return {}
+
+          report, header = {}, {}
           outcome = "unreadable_report"
           try:
               with Path(os.environ["REVIEW_REPORT"]).open("rb") as stream:
                   data = stream.read(2 * 1024 * 1024 + 1)
               if len(data) > 2 * 1024 * 1024:
                   outcome = "oversized_report"
+                  header = report_header(data[:2 * 1024 * 1024])
               else:
                   value = json.loads(data)
                   if isinstance(value, dict) and isinstance(value.get("findings"), list) and isinstance(value.get("analyzer_evidence"), list):
@@ -537,7 +584,8 @@ jobs:
               outcome = "invalid_json"
           except (OSError, ValueError):
               pass
-          rows = [row for row in report.get("analyzer_evidence", [])[:10] if isinstance(row, dict)]
+          evidence_source = report if outcome == "structured_report" else header
+          rows = [row for row in evidence_source.get("analyzer_evidence", [])[:10] if isinstance(row, dict)]
           nodes = rows + [row[side] for row in rows for side in ("base", "head") if isinstance(row.get(side), dict)]
           diagnostics = [node.get("diagnostic", "") for node in nodes if isinstance(node.get("diagnostic", ""), str)]
           if outcome != "structured_report":
@@ -564,13 +612,16 @@ jobs:
           codes = [code for marker, code in markers.items() if any(marker in text for text in diagnostics)]
           assurance = report.get("assurance_status")
           verdict = report.get("overall_verdict")
-          print(json.dumps({"phase": "independent_review", "report_outcome": outcome,
+          projected = {"phase": "independent_review", "report_outcome": outcome,
               "assurance_status": assurance if assurance in ("PASS", "FAIL", "UNKNOWN", "NOT_APPLICABLE") else "UNAVAILABLE",
               "overall_verdict": verdict if verdict in ("PASS", "PASS_WITH_ADVISORY", "FAIL") else "UNAVAILABLE",
               "findings_present": bool(findings),
               "tool_error_present": any(isinstance(finding, dict) and finding.get("category") == "tool_error" for finding in findings),
               "execution_error_present": any(node.get("execution_state") == "error" for node in nodes),
-              "unknown_evidence_present": report.get("has_unknown_required_evidence") is True or any(node.get("evidence_outcome") == "UNKNOWN" for node in nodes),
+              "unknown_evidence_present": evidence_source.get("has_unknown_required_evidence") is True or any(node.get("evidence_outcome") == "UNKNOWN" for node in nodes),
               "error_analyzers": errors, "unknown_analyzers": unknowns,
-              "diagnostic_observations": codes or ["unclassified"]}))
+              "diagnostic_observations": codes or ["unclassified"]}
+          if outcome == "oversized_report":
+              projected["report_header_observed"] = bool(header)
+          print(json.dumps(projected))
           PY_REVIEW_FAILURE

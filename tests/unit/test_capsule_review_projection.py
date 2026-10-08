@@ -253,7 +253,7 @@ def _expected_review_projection(expected):
     outcome, flags, codes = expected
     verdict = "FAIL" if outcome == "structured_report" else "UNAVAILABLE"
     keys = ("findings_present", "tool_error_present", "execution_error_present", "unknown_evidence_present")
-    return {
+    projection = {
         "phase": "independent_review",
         "report_outcome": outcome,
         "assurance_status": verdict,
@@ -263,6 +263,9 @@ def _expected_review_projection(expected):
         "unknown_analyzers": ["pylint"] if flags[3] else [],
         **dict(zip(keys, flags, strict=True)),
     }
+    if outcome == "oversized_report":
+        projection["report_header_observed"] = False
+    return projection
 
 
 @pytest.mark.parametrize(
@@ -352,4 +355,75 @@ def test_candidate_crosshair_failure_emits_only_fixed_classes(tmp_path, message,
         else [{"analyzer": "contracts", "diagnostic_class": expected[0], "exception_observations": expected[1]}]
     )
     assert [json.loads(line) for line in result.stdout.splitlines()] == output
+    assert "private-token" not in result.stdout + result.stderr
+
+
+def _large_report_fixture():
+    return {
+        "analyzer_evidence": [
+            {
+                "id": "contracts",
+                "base": {
+                    "execution_state": "error",
+                    "evidence_outcome": "UNKNOWN",
+                    "diagnostic": "analyzer_reported_incomplete_execution:private-token",
+                },
+            }
+        ],
+        "findings": [{"message": "private-token" + "x" * (2 * 1024 * 1024)}],
+    }
+
+
+def _oversized_report_payload(case):
+    import json
+
+    root = _large_report_fixture()
+    if case == "nested":
+        root = {
+            "scope_evidence": {"analyzer_evidence": root["analyzer_evidence"]},
+            "analyzer_evidence": [],
+            "findings": root["findings"],
+        }
+    if case == "unicode":
+        root["findings"] = [{"message": "private-token" + "é" * (2 * 1024 * 1024)}]
+    overrides = {
+        "duplicate": '{"analyzer_evidence":[],"analyzer_evidence":[],"findings":[',
+        "malformed": "{private-token:",
+        "incomplete": '{"analyzer_evidence":[',
+        "wrong_findings_shape": '{"analyzer_evidence":[],"findings":{',
+    }
+    if case in overrides:
+        return overrides[case] + "x" * (2 * 1024 * 1024 + 1)
+    return json.dumps(root, ensure_ascii=False)
+
+
+@pytest.mark.parametrize(
+    "case", ["valid", "unicode", "nested", "duplicate", "malformed", "incomplete", "wrong_findings_shape"]
+)
+def test_oversized_independent_report_preserves_only_complete_root_header(tmp_path, monkeypatch, case):
+    import json
+
+    payload = _oversized_report_payload(case)
+    report, log = _write_independent_failure_fixture(tmp_path, "missing")
+    report.write_text(payload)
+    monkeypatch.setenv("REVIEW_REPORT", str(report))
+    monkeypatch.setenv("REVIEW_LOG", str(log))
+    step = next(
+        step
+        for step in independent_review_job()["steps"]
+        if step.get("name") == "Project independent review failure privately"
+    )
+    program = step["run"].split("<<'PY_REVIEW_FAILURE'\n", 1)[1].split("\nPY_REVIEW_FAILURE", 1)[0]
+    result = _run_projector(tmp_path, program)
+    assert result.returncode == 0
+    value = json.loads(result.stdout)
+    assert value["report_outcome"] == "oversized_report"
+    assert value["assurance_status"] == value["overall_verdict"] == "UNAVAILABLE"
+    assert value["report_header_observed"] is (case in ("valid", "unicode", "nested"))
+    assert (
+        value["error_analyzers"]
+        == value["unknown_analyzers"]
+        == (["contracts"] if case in ("valid", "unicode") else [])
+    )
+    assert value["findings_present"] is False
     assert "private-token" not in result.stdout + result.stderr

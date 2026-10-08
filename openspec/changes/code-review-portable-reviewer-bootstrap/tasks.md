@@ -12,5 +12,6 @@
 - [x] Identify the avoidable portable pytest setup in the observed sealed CrossHair path; combined correction passes the hosted candidate gate.
 - [x] Verify request-first/response-late setup against the unchanged sealed candidate gate.
 - [x] Fix the demonstrated setup defect and remove temporary sampling.
-- [ ] Verify production payload without the sampler in fresh hosted CI.
+- [x] Verify production payload without the sampler in fresh hosted candidate CI.
+- [ ] Diagnose independent installed review from bounded oversized report headers, retaining unavailable assurance.
 - [ ] After separately authorized promotion, verify exact #498 sealed execution.

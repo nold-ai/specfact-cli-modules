@@ -45,6 +45,11 @@ requirements:
       method: test
       intent: Verify undecorated preparation JSON, prepared base/head descriptors and bounded preparation/kernel failure observations.
       observable: Missing descriptors, stale audit records, rotation and failed captures cannot establish preparation or attribute a denial; only fixed statuses and booleans are public, with all failing exits and kernel gates retained.
+    - case_id: reviewer-bootstrap-7
+      scenario_id: reviewer-installation-and-host-proofs-retain-ordinary-context
+      method: test
+      intent: Preserve oversized-report failure and unavailable assurance while projecting complete bounded root-header observations.
+      observable: Seven meaningful regressions precede code; Unicode, nested spoofing, duplicate keys and malformed/incomplete headers retain privacy. Hosted observations and cause remain unverified.
   openspec:code-review-portable-reviewer-bootstrap:review-portable-bootstrap:sealed-timeout-diagnosis-retains-execution-guards:
     rationale: User approved bounded diagnosis of the verified sealed CrossHair timeout without changing analysis guards.
     stakeholder_refs: [nold-ai/specfact-cli-modules#460]
