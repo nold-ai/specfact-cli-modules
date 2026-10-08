@@ -199,3 +199,12 @@ The temporary candidate projector reports only allowlisted analyzer names and
 base/head incomplete states from the already bounded complete private report;
 unknown sides/nodes cannot supply attribution or public text. Sample frame
 aggregation remains an observation, not a claim of causal snapshot attribution.
+
+### Failed preparation still produces bounded diagnosis
+
+Capture the original preparation exit before projecting its private metadata.
+The projector requires fixed successful-command metadata as well as both valid
+descriptors for PREPARED. Capture projector failure separately; propagate the
+original preparation failure first, otherwise the projector failure, and run
+review only after both succeed. Preserve all command arguments and the separate
+1800-second preparation wrapper; no failing status is accepted.

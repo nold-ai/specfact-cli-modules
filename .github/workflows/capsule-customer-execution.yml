@@ -168,6 +168,7 @@ jobs:
           printf '%s\n' 'manager = "hatch"' 'environment = "default"' > "$PROJECT_CONFIG"
           # Provisioning is separate from the unchanged 300-second analysis budget.
           # Prepare the same bound base/index snapshots; customer cold cache stays empty.
+          preparation_exit=0
           SPECFACT_CODE_REVIEW_CAPSULE_CACHE="$CUSTOMER_ROOT/commit-review-cache" \
             SPECFACT_MODULES_REPO="$GITHUB_WORKSPACE" \
             SPECFACT_CLI_MODULES_REPO="$GITHUB_WORKSPACE" \
@@ -178,8 +179,9 @@ jobs:
               "$CUSTOMER_ROOT/venv/bin/python" -B -P -c \
               'import sys; from specfact_cli.cli import app; app(args=sys.argv[1:])' \
               code review runtime prepare --scope index --project-config "$PROJECT_CONFIG" --json \
-              > "$CUSTOMER_ROOT/commit-review-preparation.private.json"
-          PREPARATION_REPORT="$CUSTOMER_ROOT/commit-review-preparation.private.json" \
+              > "$CUSTOMER_ROOT/commit-review-preparation.private.json" || preparation_exit=$?
+          if PREPARATION_COMMAND_SUCCEEDED="$([ "$preparation_exit" -eq 0 ] && echo 1 || echo 0)" \
+            PREPARATION_REPORT="$CUSTOMER_ROOT/commit-review-preparation.private.json" \
             "$CUSTOMER_ROOT/venv/bin/python" -I - <<'PY_PREPARATION'
           import json
           import os
@@ -211,12 +213,25 @@ jobs:
               outcome = "invalid_json"
           except (OSError, ValueError, KeyError):
               outcome = "unreadable_report"
+          if outcome == "prepared" and os.environ.get("PREPARATION_COMMAND_SUCCEEDED") != "1":
+              outcome = "preparation_command_failed"
           prepared = outcome == "prepared"
           print(json.dumps({"status": "PREPARED" if prepared else "INCOMPLETE", "phase": "index_preparation",
               "report_outcome": outcome, "base_descriptor_supplied": supplied["base"], "head_descriptor_supplied": supplied["head"],
               "base_descriptor_present": present["base"], "head_descriptor_present": present["head"]}))
           raise SystemExit(0 if prepared else 1)
           PY_PREPARATION
+          then
+            preparation_report_exit=0
+          else
+            preparation_report_exit=$?
+          fi
+          if [ "$preparation_exit" -ne 0 ]; then
+            exit "$preparation_exit"
+          fi
+          if [ "$preparation_report_exit" -ne 0 ]; then
+            exit "$preparation_report_exit"
+          fi
           review_exit=0
           SPECFACT_CODE_REVIEW_CAPSULE_CACHE="$CUSTOMER_ROOT/commit-review-cache" \
             SPECFACT_CODE_REVIEW_SUBJECT_ROOT="$REVIEW_ROOT" \

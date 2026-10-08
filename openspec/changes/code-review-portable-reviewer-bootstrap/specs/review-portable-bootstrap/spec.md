@@ -251,6 +251,18 @@ before forwarding user arguments unchanged to the portable suite.
 - **THEN** run the complete host proof first and then execute the requested portable selection
 - **AND** propagate any host failure without launching portable tests and retain the portable exit code, including no-collection failure
 
+### Requirement: Preparation failures retain bounded diagnosis
+
+The candidate step SHALL project a finite preparation outcome after every
+preparation exit and preserve the original nonzero exit without running review.
+PREPARED SHALL require successful command execution and valid descriptor files.
+
+#### Scenario: Preparation fails before review
+
+- **WHEN** runtime preparation fails with valid, invalid or missing metadata
+- **THEN** emit finite INCOMPLETE preparation status and retain the original exit code
+- **AND** never start review or promote leftover descriptor metadata to PREPARED
+
 ### Requirement: Candidate diagnostics retain incomplete snapshot attribution
 
 The temporary private-report projector SHALL expose only finite analyzer names

@@ -188,3 +188,17 @@ requirements:
       method: test
       intent: Emit only allowlisted analyzer and base/head state names without private fields or assurance upgrade.
       observable: Missing side-attribution regressions precede code; valid states and malformed/unknown input parity remain required.
+
+  openspec:code-review-portable-reviewer-bootstrap:review-portable-bootstrap:preparation-failures-retain-bounded-diagnosis:
+    rationale: The current set-e preparation command bypasses its failure projector on nonzero exit.
+    stakeholder_refs: [nold-ai/specfact-cli-modules#460]
+    touchpoints:
+    - id: preparation-exit-diagnosis
+      kind: config_file
+      locator: openspec/changes/code-review-portable-reviewer-bootstrap/specs/review-portable-bootstrap/spec.md
+    verification_cases:
+    - case_id: reviewer-bootstrap-17
+      scenario_id: preparation-failures-retain-bounded-diagnosis
+      method: test
+      intent: Always project finite preparation status and enforce original command and projector failures before review.
+      observable: Shell-flow failure regressions with valid, invalid and missing reports precede code; success and projector failures retain their separate statuses and exits.

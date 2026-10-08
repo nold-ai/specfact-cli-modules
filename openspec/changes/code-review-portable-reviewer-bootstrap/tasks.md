@@ -39,3 +39,6 @@
 - [x] Reproduce and fix ordinary BASE findings leaking into an empty incomplete HEAD result; retain both nested states and BASE tool errors.
 - [x] Add failing-first bounded finite incomplete-side projection for the next candidate diagnosis.
 - [ ] Verify final annotation fixes and finite snapshot attribution in fresh protected exact-head execution.
+
+- [x] Reproduce and fix set-e skipping bounded preparation diagnostics; require command success for PREPARED and retain original preparation/projector exits.
+- [ ] Verify the latest preparation-flow annotation fix in fresh protected exact-head execution.

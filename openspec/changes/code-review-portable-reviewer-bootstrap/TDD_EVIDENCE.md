@@ -813,8 +813,11 @@ arguments for the portable run; host and portable failures remain failures.
 Empty incomplete HEAD now retains only BASE tool errors, with ordinary BASE
 findings absent and both nested UNKNOWN states intact. No errors are waived.
 
-Read-only review established that previous candidate frame projection unions
-BASE/HEAD observations, while the private report retains separate nested states.
+Initial read-only review mistakenly applied the immutable index/range route
+to the candidate pre-commit command. Source tracing now establishes that this
+candidate uses explicit_files review of one staged index snapshot; its analyzer
+states are direct fields. BASE binds only changed-line comparison here. The
+independent index/range route retains separate nested states.
 The previous run did not upload that report. New finite-side regression cases
 precede projection of only existing allowlisted analyzer/base/head incomplete
 states; malformed nodes, unknown sides and private text are suppressed. This
@@ -845,3 +848,50 @@ The maintainer merge's CP312 job 113571043433 reports a separate CrossHair
 process-error class with no recognized exception observation. It has unchanged
 runtime sources and is not attributed to the unpublished fixes. Its cause is
 unclassified; fresh completed-frame and nested-side observations remain needed.
+
+## 2026-10-09: preparation-flow annotation
+
+P2 “Capture preparation failures before running the projector” is independently
+validated: set-e previously skipped finite diagnosis when prepare failed.
+Specification preceded actual Bash-flow tests; three failures and eight parity
+passes precede workflow changes (`/private/tmp/specfact460-preparation-flow-red.log`).
+Cases fail preparation with valid, invalid and missing reports; all require
+INCOMPLETE, original exit 7 and no review execution. Success and projector-only
+failures remain separate controls. A fixed successful-command marker is required
+for PREPARED, so leftover valid descriptors cannot upgrade failed preparation.
+The original 1800-second wrapper, native CLI arguments, environment and all
+review deadlines/grants remain intact. No signed module assets changed.
+
+After correction, all 99 projection/mandatory host cases pass (8.42s).
+Actionlint, strict OpenSpec, planned requirements, format, typing (zero errors
+and warnings), lint (10.00/10), manifest/import checks and all 28 contracts
+pass. All seven strict signatures/filesystem checksums/version checks remain
+valid; no module payload or manifest was modified. Actual AST/AI-bloat and pinned Semgrep report zero findings/errors. Radon
+identified CC16 in the new shell-flow test. The just-started full suite was
+stopped before edits; replacing computed expectations with six explicit
+case outcomes preserves every assertion and strengthens report-outcome checks.
+Fresh changed-line review and both complete suites are required.
+Bounded read-only final verification reports no findings.
+
+Extracting controlled interpreter/shell setup into fixtures and grouping
+explicit expected outcomes retains all six cases and every assertion. Final
+99 focused/host cases pass (8.79s), typing is zero errors/warnings, lint10.00/10
+and actual AST/AI-bloat/Radon now all report zero changed findings. No warnings
+are waived; the original incomplete full run remains retained separately.
+
+Final frozen full and SMART each pass 19 mandatory host proofs and 5,160
+portable tests, 75 declared skips, 95 subtests and five existing warnings
+(263.57s/262.05s). Logs: `/private/tmp/specfact460-preparation-flow-{full,smart}2.log`.
+
+On 2026-10-09 the user explicitly approved ignoring the known reviewer timeout
+while this reviewer update is prepared for dev/main promotion. The independent
+job installs published0.51.0 and cannot receive these fixes before promotion.
+This is a documented exception for the timeout, not acceptance: its nonzero
+exit, missing report and unavailable assurance remain unchanged. Actual process
+errors, concrete defects and test failures remain in scope. Current signed371
+CP312 reports TypeError with finite class-generation/reconstruction and
+portable-pytest frames; that error is unclassified, not covered by the exception.
+A bounded CPython3.12.13/CrossHair0.0.109/core0.55.4 control with37aligned
+existing tool dependencies analyzes portable_worker alone: exit1 with946bytes
+of actual analysis stdout and empty stderr. It does not reproduce the crash
+and is not sealed acceptance. Exact batch-selection tracing remains necessary.
