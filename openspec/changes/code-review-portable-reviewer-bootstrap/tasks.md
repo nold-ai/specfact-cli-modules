@@ -34,3 +34,8 @@
 
 - [x] Reproduce unused installed-coverage setup on decoded non-object pytest requests and absent Python inputs; preserve native errors, valid command bytes and nonempty ownership checks.
 - [ ] Verify the setup-order corrections with fresh protected exact-head execution.
+
+- [x] Reproduce and fix targeted Full/SMART filter routing while retaining mandatory unfiltered host proofs and all failure codes.
+- [x] Reproduce and fix ordinary BASE findings leaking into an empty incomplete HEAD result; retain both nested states and BASE tool errors.
+- [x] Add failing-first bounded finite incomplete-side projection for the next candidate diagnosis.
+- [ ] Verify final annotation fixes and finite snapshot attribution in fresh protected exact-head execution.

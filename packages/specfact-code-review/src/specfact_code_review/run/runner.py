@@ -8140,9 +8140,8 @@ def _incomplete_snapshot_findings(
     head_findings: list[ReviewFinding],
 ) -> list[ReviewFinding]:
     """Keep incomplete tool evidence from both snapshots beside ordinary head findings."""
-    selected = list(head_findings or base_findings)
-    if head_findings:
-        selected.extend(finding for finding in base_findings if finding.category == "tool_error")
+    selected = list(head_findings)
+    selected.extend(finding for finding in base_findings if finding.category == "tool_error")
     return [finding.model_copy(update={"differential_state": "unknown"}) for finding in selected]
 
 

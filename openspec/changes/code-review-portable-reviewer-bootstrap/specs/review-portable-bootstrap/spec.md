@@ -151,6 +151,13 @@ The reviewer SHALL preserve incomplete tool execution as error/UNKNOWN evidence 
 - **THEN** report error/UNKNOWN tool evidence with the original diagnostic instead of returning clean findings
 - **AND** preserve valid counterexample/side-effect output handling and existing process/path analysis bounds
 
+
+#### Scenario: Empty incomplete HEAD retains only relevant findings
+
+- **WHEN** HEAD analysis is incomplete and emits no findings
+- **THEN** retain every BASE tool error with unknown differential state and both nested execution states
+- **AND** do not resurrect ordinary BASE findings, including when BASE contains only ordinary findings
+
 ### Requirement: Pinned constructor analysis preserves real arguments
 
 The pinned CrossHair0.0.109 dispatch SHALL correct constructor receiver merging
@@ -232,3 +239,25 @@ ownership check for nonempty Python source inputs.
 - **THEN** return exactly the original empty CoverageBridge without loading distribution metadata or walking the snapshot
 - **AND** do not shortcut merely because mappings are empty; nonempty Python inputs, including outside-snapshot sources, still use the complete ownership path
 - **AND** retain changed-source and duplicate-ownership rejection and all analysis guards
+
+### Requirement: Targeted test filters preserve mandatory host proofs
+
+Full and SMART test entrypoints SHALL execute mandatory host proofs unfiltered
+before forwarding user arguments unchanged to the portable suite.
+
+#### Scenario: A user filter matches only portable tests
+
+- **WHEN** a supported user filter matches portable tests but no mandatory host proof
+- **THEN** run the complete host proof first and then execute the requested portable selection
+- **AND** propagate any host failure without launching portable tests and retain the portable exit code, including no-collection failure
+
+### Requirement: Candidate diagnostics retain incomplete snapshot attribution
+
+The temporary private-report projector SHALL expose only finite analyzer names
+and BASE/HEAD error states from complete bounded nested evidence.
+
+#### Scenario: A snapshot error is reported privately
+
+- **WHEN** complete private analyzer evidence marks BASE or HEAD error or UNKNOWN
+- **THEN** project only the allowlisted analyzer and corresponding base/head side names
+- **AND** ignore unknown sides, unknown analyzers and malformed nested nodes without exposing private text or upgrading assurance

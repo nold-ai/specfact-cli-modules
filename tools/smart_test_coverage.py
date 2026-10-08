@@ -11,7 +11,7 @@ from dev_bootstrap_support import ROOT, ensure_core_dependency
 
 
 def _run_pytest(extra_args: list[str]) -> int:
-    host = [sys.executable, "-m", "pytest", "tests/host/proof_capsule_deferred_review_ci.py", *extra_args]
+    host = [sys.executable, "-m", "pytest", "tests/host/proof_capsule_deferred_review_ci.py"]
     result = subprocess.run(host, cwd=ROOT, check=False)
     if result.returncode:
         return result.returncode

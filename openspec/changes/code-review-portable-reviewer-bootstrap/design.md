@@ -187,3 +187,15 @@ mappings, changed content and duplicate-owner rejection. This changes error
 precedence only for an unusable decoded request whose unused planning would also
 fail. No caching, tracing change, checker reduction, type model or larger budget;
 local parity controls do not establish sealed cause or acceptance.
+
+### Final annotation routing and incomplete-side diagnosis
+
+Supported user filters apply only to the portable test invocation; mandatory
+host proofs run unfiltered and retain ordinary fail-fast propagation. Full and
+SMART remain two independent invocations with unchanged portable arguments.
+Incomplete range findings start from HEAD and append only BASE tool errors,
+even for an empty HEAD result. Both nested UNKNOWN states remain authoritative.
+The temporary candidate projector reports only allowlisted analyzer names and
+base/head incomplete states from the already bounded complete private report;
+unknown sides/nodes cannot supply attribution or public text. Sample frame
+aggregation remains an observation, not a claim of causal snapshot attribution.

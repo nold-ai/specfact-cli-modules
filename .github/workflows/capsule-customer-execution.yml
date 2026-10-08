@@ -260,6 +260,10 @@ jobs:
               for row in rows[:10] if isinstance(rows, list) else []:
                   if not isinstance(row, dict) or row.get("id") not in allowed:
                       continue
+                  incomplete_sides = [side for side in ("base", "head")
+                      if isinstance(row.get(side), dict) and (row[side].get("execution_state") == "error" or row[side].get("evidence_outcome") == "UNKNOWN")]
+                  if incomplete_sides:
+                      print(json.dumps({"analyzer": row["id"], "incomplete_snapshot_sides": incomplete_sides}))
                   tokens = str(row.get("diagnostic", "")).split(":")[:3]
                   codes = [token for token in tokens if token in known]
                   if codes:

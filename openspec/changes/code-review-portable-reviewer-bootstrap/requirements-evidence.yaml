@@ -87,7 +87,7 @@ requirements:
     - case_id: reviewer-bootstrap-8
       scenario_id: incomplete-analysis-retains-all-error-evidence
       method: test
-      intent: Retain every base/head tool error without restoring unrelated ordinary base findings.
+      intent: Retain every base/head tool error without restoring unrelated ordinary base findings, including empty HEAD and ordinary-only BASE.
       observable: Two meaningful failures precede correction; both-side tool errors retain unknown differential state and unchanged incomplete member evidence.
     - case_id: reviewer-bootstrap-9
       scenario_id: incomplete-analysis-retains-all-error-evidence
@@ -161,3 +161,30 @@ requirements:
       method: test
       intent: Avoid planning for five decoded non-object forms with native error parity and return exact empty coverage bridges without metadata/index setup.
       observable: Failing-first setup spies precede code; valid serialized command, nonempty outside-snapshot inputs and existing ownership rejection remain required. Fresh sealed acceptance is separate.
+
+  openspec:code-review-portable-reviewer-bootstrap:review-portable-bootstrap:targeted-test-filters-preserve-mandatory-host-proofs:
+    rationale: Supported filters must not prevent portable execution while mandatory host proofs remain required.
+    stakeholder_refs: [nold-ai/specfact-cli-modules#460]
+    touchpoints:
+    - id: targeted-test-routing
+      kind: config_file
+      locator: openspec/changes/code-review-portable-reviewer-bootstrap/specs/review-portable-bootstrap/spec.md
+    verification_cases:
+    - case_id: reviewer-bootstrap-15
+      scenario_id: targeted-test-filters-preserve-mandatory-host-proofs
+      method: test
+      intent: Forward filters only to portable tests and retain all host and portable failures.
+      observable: Nonempty filter regressions and actual Hatch invocation fail before code; ordinary full and SMART proofs remain mandatory.
+  openspec:code-review-portable-reviewer-bootstrap:review-portable-bootstrap:candidate-diagnostics-retain-incomplete-snapshot-attribution:
+    rationale: Aggregated sampled frames cannot identify the incomplete snapshot; existing bounded nested evidence can.
+    stakeholder_refs: [nold-ai/specfact-cli-modules#460]
+    touchpoints:
+    - id: candidate-snapshot-diagnosis
+      kind: config_file
+      locator: openspec/changes/code-review-portable-reviewer-bootstrap/specs/review-portable-bootstrap/spec.md
+    verification_cases:
+    - case_id: reviewer-bootstrap-16
+      scenario_id: candidate-diagnostics-retain-incomplete-snapshot-attribution
+      method: test
+      intent: Emit only allowlisted analyzer and base/head state names without private fields or assurance upgrade.
+      observable: Missing side-attribution regressions precede code; valid states and malformed/unknown input parity remain required.

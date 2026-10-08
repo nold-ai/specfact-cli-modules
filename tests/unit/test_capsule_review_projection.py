@@ -656,3 +656,38 @@ def test_candidate_sample_projection_suppresses_unknown_frame_codes(tmp_path):
     assert result.returncode == 0
     assert rows[-1]["sampled_frame_observations"] == ["argument_generation", "run_portable_pytest"]
     assert "PRIVATE_TOKEN" not in result.stdout + result.stderr
+
+
+@pytest.mark.parametrize(
+    "nested,expected",
+    [
+        ({"base": {"execution_state": "error", "diagnostic": "PRIVATE_TOKEN"}}, ["base"]),
+        ({"head": {"evidence_outcome": "UNKNOWN"}}, ["head"]),
+        ({"base": {"execution_state": "error"}, "head": {"evidence_outcome": "UNKNOWN"}}, ["base", "head"]),
+        ({"base": {"execution_state": "ran", "evidence_outcome": "PASS"}}, []),
+        ({"base": "PRIVATE_TOKEN", "unknown_side": {"execution_state": "error"}}, []),
+    ],
+)
+def test_candidate_incomplete_snapshot_projection_is_finite(tmp_path, nested, expected):
+    import json
+
+    workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())
+    step = next(item for item in workflow["jobs"]["customer"]["steps"] if item.get("name") == STEP_NAME)
+    program = step["run"].split("<<'PY_CANDIDATE_FAILURE'\n", 1)[1].split("\nPY_CANDIDATE_FAILURE", 1)[0]
+    root = tmp_path / ".specfact"
+    root.mkdir()
+    (root / "code-review.json").write_text(
+        json.dumps(
+            {
+                "analyzer_evidence": [
+                    {"id": "contracts", **nested},
+                    {"id": "PRIVATE_TOKEN", "base": {"execution_state": "error"}},
+                ]
+            }
+        )
+    )
+    result = _run_projector(tmp_path, program)
+    assert result.returncode == 0
+    rows = [json.loads(line) for line in result.stdout.splitlines()]
+    assert rows == ([{"analyzer": "contracts", "incomplete_snapshot_sides": expected}] if expected else [])
+    assert "PRIVATE_TOKEN" not in result.stdout + result.stderr

@@ -799,3 +799,49 @@ portable tests, 75 declared skips, 95 subtests and five existing warnings
 files. Actual AST/AI-bloat/Radon report zero changed findings. All seven draft
 checksums/version checks pass against origin/dev. Logs:
 `/private/tmp/specfact460-setup-order-{full,smart}-final2.log`.
+
+## 2026-10-09: final current PR annotation regressions
+
+Validated P2 titles: “Preserve targeted filters across the split test runs” and
+“Keep ordinary base findings out of empty-head failures”. Specification preceded
+tests: eight failures and nine parity passes on unchanged code
+(`/private/tmp/specfact460-final-annotations-red.log`). The actual supported
+`hatch run test -k test_target_crosshair` exited 5 after deselecting all 19 host
+proofs, before portable execution (`/private/tmp/specfact460-final-hatch-filter-red.log`).
+Full/SMART now run the same mandatory host proof unfiltered and preserve user
+arguments for the portable run; host and portable failures remain failures.
+Empty incomplete HEAD now retains only BASE tool errors, with ordinary BASE
+findings absent and both nested UNKNOWN states intact. No errors are waived.
+
+Read-only review established that previous candidate frame projection unions
+BASE/HEAD observations, while the private report retains separate nested states.
+The previous run did not upload that report. New finite-side regression cases
+precede projection of only existing allowlisted analyzer/base/head incomplete
+states; malformed nodes, unknown sides and private text are suppressed. This
+is diagnostic attribution, not runtime acceptance or causal frame attribution.
+The maintainer's source-identical runtime/documentation merge a5b3771d is retained
+by rebasing only the two unpublished local fixes; no force push is required.
+
+After correction, 42 focused regressions pass (1.49s). Actual supported Hatch
+filter execution runs all 19 mandatory host proofs and the requested 22
+CrossHair tests (1.57s portable). Typing reports zero errors/warnings, lint
+10.00/10, all 28 contracts, manifest/import checks, actionlint, strict OpenSpec
+and planned requirements pass. All seven draft checksums/version checks verify
+against updated origin/dev. Actual AST/AI-bloat/Radon report zero changed
+findings; pinned Semgrep reports 12 unchanged baseline findings (10 old test
+names and two existing SMART status prints), zero changed findings and zero
+errors. Bounded read-only verification reports no findings. No baseline lines
+were changed and no failure waiver was introduced.
+
+Final stable full and SMART each pass 19 mandatory host proofs and 5,154
+portable tests, 75 declared skips, 95 subtests and five existing warnings
+(245.26s/242.56s). The actual SMART targeted-filter command also passes all host
+proofs and the requested CrossHair tests. Cumulative actual AST/AI-bloat/Radon
+from maintainer head a5b3771d report zero changed findings. Logs:
+`/private/tmp/specfact460-final-{full,smart}.log` and
+`/private/tmp/specfact460-final-smart-filter-green.log`.
+
+The maintainer merge's CP312 job 113571043433 reports a separate CrossHair
+process-error class with no recognized exception observation. It has unchanged
+runtime sources and is not attributed to the unpublished fixes. Its cause is
+unclassified; fresh completed-frame and nested-side observations remain needed.

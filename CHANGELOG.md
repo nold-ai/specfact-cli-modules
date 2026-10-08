@@ -9,6 +9,10 @@ and this project follows SemVer for bundle versions.
 
 ### Fixed
 
+- Preserve targeted Full/SMART test filters while running all mandatory host
+  proofs first. Exclude ordinary BASE findings when incomplete HEAD analysis
+  emits no findings; retain both snapshots' tool errors and UNKNOWN evidence.
+
 - Avoid unused installed-coverage planning for unusable decoded pytest requests
   and absent Python inputs. Preserve native request errors, valid command bytes
   and complete ownership checks for nonempty Python selections.
