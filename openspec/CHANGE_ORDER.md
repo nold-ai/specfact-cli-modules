@@ -3,7 +3,6 @@
 This document is the modules-side source of truth for active OpenSpec work. It
 must be read together with the core repo change order in `nold-ai/specfact-cli`.
 
-
 ## Agentic SDLC adjustments (2026-10-04)
 
 The owner-approved [delivery roadmap](AGENTIC_SDLC_ROADMAP.md) adds bounded compatibility, optional decision-context, ecosystem and calibration stories. It preserves the lean release chain and keeps context-bound assurance opt-in. This section supersedes stale status/dependency wording below. Modules #481 is **In Progress**, with takeover authorized; follow-up fetched issues are Todo. Runtime work is not completed by this planning update. Core #742 tracking is live, but its proposal is not on the fetched core dev base.
@@ -19,6 +18,11 @@ The owner-approved [delivery roadmap](AGENTIC_SDLC_ROADMAP.md) adds bounded comp
 | 7 | Core [#682](https://github.com/nold-ai/specfact-cli/issues/682) / modules [#431](https://github.com/nold-ai/specfact-cli-modules/issues/431), core [#684](https://github.com/nold-ai/specfact-cli/issues/684) / modules [#434](https://github.com/nold-ai/specfact-cli-modules/issues/434) | Optional context binding and affected obligations. Preserve the context-free optional assurance chain; selected context binding alone waits for its contracts. Share #483 budgets. |
 | 8 | Modules [#169](https://github.com/nold-ai/specfact-cli-modules/issues/169) / core [#247](https://github.com/nold-ai/specfact-cli/issues/247); modules [#493](https://github.com/nold-ai/specfact-cli-modules/issues/493) | Optional Statement v1/SCAI v0.3 export and a separate exploratory pilot. No new signer/store or analytics platform; #170/#171 remain later consumers. |
 
+## Risk-first workflow amendment (2026-10-08)
+
+Extend the existing paired `workflow-01-turn-orchestration` stories, modules [#483](https://github.com/nold-ai/specfact-cli-modules/issues/483) and core [#742](https://github.com/nold-ai/specfact-cli/issues/742), preserving the owner-approved 2026-10-04 optional-context, producer trust/basis, structured-pytest identity and shared-budget amendment. Modules owns reusable guidance/runtime; core owns wrappers/projection. Deliver skills/projection -> deterministic verification -> bounded repair -> opt-in PR automation. Skills do not activate unavailable runtime commands. The signed modules #481 -> #483 -> core #742 runtime prerequisites remain; independent projection proceeds separately. Modules #483 also retains its existing blocking relationship to core #492.
+
+Use one or two early critical-assumption probes, evidence-based finding triage and compact one-writer repair handoffs within existing gates/budgets. No default panel, pstack installation, ledger, new interfaces or policy cutover is added. Review the initial skills/projection investment after two engineer-days. Bounded trials await the next subsequently authorized nontrivial change per repository; measurements reuse available records and do not establish causal savings. Planning creation completes no implementation/trial task and does not archive either change.
 
 ## Bounded turn workflow (2026-09-20)
 
@@ -51,12 +55,12 @@ Core #680/#679 and modules #417 were recovered from uncommitted planning-only fe
 
 | Bucket | Count | Location |
 |---|---:|---|
-| **Active-tree entries** | 31 | [`openspec/changes/`](changes/) |
+| **Active-tree entries** | 33 | [`openspec/changes/`](changes/) |
 | **Parking-lot entries** | 16 | [`openspec/parking-lot/`](parking-lot/) |
 | **Archived** | 50 | [`openspec/changes/archive/`](changes/archive/) |
 | **Abandoned history** | 1 | [`openspec/history/abandoned/`](history/abandoned/) |
 
-`openspec list` reflects all 31 direct active-tree entries (verified 2026-10-04). The closed R08
+`openspec list` reflects all 33 direct active-tree entries (verified 2026-10-08). The closed R08
 proposal is retained under non-canonical abandoned history, outside
 `openspec/changes/` and its completed-change archive; no unimplemented delta
 entered canonical specifications. Completed changes still use native OpenSpec

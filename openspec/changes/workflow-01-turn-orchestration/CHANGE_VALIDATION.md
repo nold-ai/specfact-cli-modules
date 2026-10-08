@@ -17,3 +17,59 @@ Separated branch base: `0828bdbc669569e7603ca84522e72452d400b525` on `codex/lean
 PR #482 is merged. The workflow planning branch now incorporates current dev at a6243c0b (including #486), and PR #484 targets dev directly. The merge was conflict-free and retains the workflow-only scope against dev. Runtime prerequisites and unchecked implementation tasks remain unchanged. Historical validation and exceptions above describe the original planning commits; this refresh uses normal hooks.
 
 The normal Requirements hook reproduced unsupported-sidecar-schema for this proposal. This refresh adds a schema-v2 planned-inspection mapping for its nine existing requirements; it changes no runtime acceptance or signed producer prerequisite and uses no hook bypass.
+
+## Risk-first planning creation validation — 2026-10-08
+
+Scope: this existing paired change and its change-order section only. The owner explicitly authorized the supplied risk-first plan. This is documentation/planning work; executable assumption probes, TDD RED/GREEN, runtime adoption and bounded trials are inapplicable to creation and remain future unchecked tasks. No new skill/runtime command is activated. The 2026-10-04 amendment, independent producer authority, effective finding policy, source/index preservation, ownership and exact signed #481/v3 compatibility gates are retained.
+
+### Baseline and prepared artifacts
+
+- Isolated branch: `codex/plan-workflow-risk-first`; Git HEAD at creation validation `74d3fd4d`. Modules starts from refreshed `origin/dev` after merged PR #484. Core starts at draft PR #743's inspected head, with its base `codex/lean-requirements-evidence` at `c8635ed53965c51a1b06f4c2b1cc6a07dcf85f67`; its original branch/base is preserved.
+- Proposal/design, existing ADDED capability deltas, unchecked tasks, planned evidence mappings and change ordering were reconciled. No duplicate change/capability, competing stage/command, report/receipt schema, verdict, ledger or automatic collection was introduced. Public artifacts contain adapted guidance and public sources; private research stays local.
+- Delivery order: skills/projection -> deterministic verification -> bounded repair -> opt-in PR automation. Two engineer-days is an initial investment checkpoint, not a full-runtime estimate. Trials await a subsequently authorized nontrivial change in each repository.
+
+### Executed checks
+
+- OpenSpec CLI 1.13.2: `openspec validate workflow-01-turn-orchestration --strict --json --no-interactive` passed with no findings.
+- `openspec validate --changes --strict --json --no-interactive`: 32/33 passed. The existing unrelated `requirements-03-backlog-sync` failure was reproduced before editing and remained identical afterward; no new all-change failure was introduced.
+- Native Requirements evidence on the actual amended index snapshot, `--staged --required-maturity planned`, passed: schema 2, observed maturity `planned`, delivery status `proposal-only`, no source/mapping findings. Index staging was temporary and restored; no commit was made. Inspection cases use the existing native requirement identity convention with individual scenario intent/observable text; no executable selectors or historical proof were fabricated.
+- Historical creation mapping file SHA-256 at validation: `148cdfcef0decfe8cf1411c854ea26a28aa1a6b11883900c19185bc0868bc51b`. Existing producer-generated evidence is ignored under `.specfact/reports/risk-first/`; it is planning evidence, not signed runtime compatibility acceptance.
+- Scoped Markdown lint (repository core configuration), local planning-link integrity and `git diff --check` passed. Two pre-existing extra blank lines in the already touched modules change order were normalized. Every implementation/trial checkbox remains unchecked; all touched public paths are OpenSpec Markdown/YAML.
+- Existing modules documentation command validation passed with no findings; `tools/validate_repo_manifests.py` validated seven manifests and the registry without asset edits.
+- Existing `tests/unit/docs/test_docs_review.py`: 20 passed with `--no-cov`. One pytest cache-write warning came from sandbox permissions; it does not change the test outcomes or establish runtime/coverage admission.
+- Native evidence used the owning modules planning gate with this worktree's Requirements/project sources and the existing local Python environment (Python 3.14.7).
+
+### Tracking, ownership and limits
+
+- [Existing issue #483](https://github.com/nold-ai/specfact-cli-modules/issues/483) synchronized with a dated, idempotent risk-first section, unchecked acceptance criteria, non-goals, verification/rollback and reciprocal public baseline proposal links. At creation completion the amendment was locally prepared/unpublished at those baseline links; subsequent publication is authorized below.
+- Live readback: native User Story; native parent Feature #163; assignee `djm81`; organization project SpecFact CLI/1; Status Todo; labels `architecture, change-proposal, enhancement, openspec`. Titles, unrelated body content, milestone/project date fields and both native dependency directions were preserved. Modules QA is absent and was not created. Modules #483 remains blocked by #481 and blocks core #742/#492; core #742 remains blocked by modules #483.
+- Both prescribed GitHub hierarchy cache refreshes succeeded. Core's required private wiki mirror/index and generated graph were updated without copying private content into public artifacts. Scoped mirror health has no findings; unrelated full-wiki health failures are recorded locally. Its prior modified graph was backed up, and unrelated source files were preserved.
+- Python analyzer/code-review JSON, runtime tests, security/contract execution, signing/version bumps and release acceptance are inapplicable to this Markdown/YAML planning surface; no analyzer/runtime PASS or completed OpenSpec delivery is claimed. The existing modules planning-only analyzer applicability rationale remains in `openspec/AGENTIC_SDLC_VALIDATION.md`. These gates remain mandatory for their applicable implementation slices.
+- During creation: no commits, pushes, new issues/PRs, PR retargeting, runtime implementation, trial execution or archival. Current policy remains effective; calibrated warnings and minimal-evidence cutover retain their separate owners.
+
+Rollback: revert/disable new guidance/projection planning while retaining evidence and ordinary checks. Runtime rollout still uses coordinated configuration/module-pin rollback. Risks are added ceremony, narrow probes implying too much and mistaken defect dismissal; mitigate with limited assumptions, explicit proof boundaries and producer/current-input authority. Confidence: high in scoped planning/tracking consistency; medium in defect/overhead improvements. Monetary and causal savings remain unverified.
+
+## Publication follow-up — 2026-10-08
+
+The owner subsequently authorized committing/pushing both amendments, creating review PRs and monitoring CI/review with the CodeRabbit autofix skill. Both publication PRs target dev. Core incorporates only the reconciled workflow artifacts inspected at PR #743 head into refreshed origin/dev; draft PR #743, its branch and codex/lean-requirements-evidence base are preserved. This publication does not implement runtime, complete trial tasks, close either story or archive the changes. Applicable pre-commit checks and signed commit provenance remain required. Remote PR/check/review outcomes are reported separately; no green/review-complete result is inferred from local planning validation.
+
+Publication hooks passed on the actual prepared candidates. Scoped mapping YAML lint passed with parsed-value equality after indentation adjustment. Local GPG signing is unavailable (No secret key); the publication route uses GitHub createCommitOnBranch with expected-head protection, then requires verified signature and exact tree equality with git write-tree before accepting the remote commit. No signing configuration or protected CI policy is changed. Runtime review/contract checks were skipped by their owning hooks for this planning-only scope, not claimed as runtime PASS.
+
+## Approved handoff repair validation — 2026-10-09 Europe/Berlin
+
+The owner individually approved moving the compact PR handoff scenario and its existing
+inspection case to `Compact Repair Handoffs Preserve Coverage`. Signed repair commit
+`925fa3be5e80d351d518d18f82397cc4b9240335` contains that semantic mapping correction.
+The earlier creation digest above describes its original candidate, not this repair.
+
+The owning staged native Requirements gate ran after the move and passed on the actual
+repair index: schema 2, required/observed maturity `planned`, verdict `passed`, delivery
+`proposal-only`, one passed source and no failed/skipped sources. The repaired mapping
+file SHA-256 is `a69ef3f215ad64d4e7dc3908fd53126629b6d946c02ca4290d261b39b553d56c`.
+The case is mapped exactly once to its actual parent; acceptance text is unchanged.
+Applicable pre-commit hooks, scoped mapping YAML lint, strict selected OpenSpec and
+whitespace checks passed after the move. This records planning verification only;
+implementation, executable trials and signed runtime compatibility remain pending.
+
+The native producer's normalized mapping digest is `sha256:5cdaa2246179dde4ed0e0600d62c82bcbc6a738dbee50293214b1ebd38d36ca2`; it is a
+different identity from the mapping file byte digest above.
