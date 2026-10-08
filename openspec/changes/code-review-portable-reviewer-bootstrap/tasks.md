@@ -20,3 +20,6 @@
 
 - [x] Reproduce the hosted wrong-parameter-order CrossHair failure on the exact pinned interpreter/analyzer and implement the bounded constructor compatibility adapter with argument/default/annotation parity and native CLI restoration.
 - [ ] Verify the corrected constructor adapter on a fresh protected exact-head candidate review before promotion.
+
+- [x] Reproduce and correct the CP311/CP313 Requests callable pytest-marker registry crash while retaining actual method contracts, hashable overrides and native lookup restoration.
+- [ ] Verify the marker correction in fresh exact-head customer corpus execution; retain the separate CP312 required review timeout as unresolved.

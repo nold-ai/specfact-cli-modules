@@ -625,3 +625,21 @@ stderr; final pinned Semgrep has0findings/0errors. All seven approved draft
 filesystem checksum/version checks pass. Protected current-head candidate review,
 public committed CodeRabbit review and any signature-only CI child are pending
 following the normal-hook commit/push; local capsule review is DEFERRED, never PASS.
+
+
+## Callable pytest marker registry correction — 2026-10-08 Europe/Berlin
+
+- Current signed2323a0e0 run37840754641 attempt2: CP312 required candidate113529947148 fails with crosshair_timeout_observed and no constructor exception observations; independent113529947167 lacks a report/observes a timeout. Signatures and all three schema compatibility jobs pass. No green or installed acceptance is claimed.
+- CP311 artifact11578442358 and CP313 artifact11578244194 each establish Requests cold-auto contracts error/UNKNOWN with TypeError unhashable MarkDecorator at RegisteredContractsParser -> get_contract dictionary lookup. Their other four corpus acceptance records pass. Quality jobs stop at prerequisite customer failures, not demonstrated quality-code failures.
+- Spec/design and mapped requirements precede tests. Before production:6genuine RED/16PASS,0.30s in marker-red.log, comprising real marked-class parser failure, both lookup aliases and restoration observations. Hashable registered override/custom-hash exception cases already pass.
+- After the scoped declared-unhashable guard:27focused cases pass,0.17s. Real CPython3.12.13/CrossHair0.0.109 CLI on a marked class with an intentional failed postcondition exits1 with counterexample stdout and empty stderr under unchanged2/30-second limits. No classes/methods/contracts are removed. Both imported runtime lookup aliases restore in finally; unsupported-version rejection remains first.
+- Actual AST/AI-bloat have0findings; Radon has0changed findings and2existing bootstrap findings. Pinned Semgrep has0findings/0errors. Typing0errors/0warnings, lint10.00/10, formatting/schema/imports,28contracts, strict OpenSpec and planned requirements pass. Initial quality failures (private imported aliases/redundant None branch) are corrected without waivers or removed assertions. Bounded independent review finds no issues.
+- Initial full/SMART each pass19host proofs, then fail one assurance case with5097portable PASS/75skips/95subtests/5existingwarnings,293.03s/292.25s. The case passes in isolation, and all419cases in its complete module pass18.43s after edits settle. Source inspection shows its changed-review path captures/rechecks worktree identity; concurrent tracked edits during verification are a plausible cause, not established attribution. Fresh final full/SMART runs use a stable tracked tree.
+- Approved draft checksum b33071e748470cf5e634e9ad8c92d479eb90233e81dfcd345d731fe7a85475f3 verifies all7modules against origin/dev with the public key. Stale signature removed; no private key accessed, and the user's CI-signing follow-up policy remains recorded.
+- Local unsealed diagnostics are not hosted attribution: CP314 Path checkpoint copying differs from CP312; CP312 changed-source analysis also encounters unsupported Literal construction. A scratch-only finite Literal experiment still reaches the30-second bound, so no such type model, broader tracing change, narrower inputs or deadline change is applied. Required timeout diagnosis remains outstanding.
+
+Final stable-tree full/SMART both PASS:19required host proofs plus5098portable
+tests/75declared skips/95subtests/5existing warnings,325.54s/326.55s. Every existing
+assurance assertion passes, including the earlier changed-review failure. No
+production or test waiver was introduced. The prior concurrent-edit attribution
+remains a hypothesis; no additional assurance logic change is warranted.

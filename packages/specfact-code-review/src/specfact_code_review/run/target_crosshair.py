@@ -9,7 +9,7 @@ from contextlib import contextmanager
 from importlib.metadata import version
 from types import FunctionType
 
-from crosshair import core, dynamic_typing
+from crosshair import condition_parser, core, dynamic_typing
 
 
 def _ordered_signature(*, parameters, return_annotation):
@@ -82,7 +82,30 @@ def _constructor_compatibility():
         core.get_constructor_signature = original
 
 
+def _registered_lookup(original):
+    """Retain upstream lookup for every callable that can be a registry key."""
+
+    def lookup(function):
+        return None if type(function).__hash__ is None else original(function)
+
+    return lookup
+
+
+@contextmanager
+def _contract_lookup_compatibility():
+    """Keep the impossible-key guard local to the verified pinned invocation."""
+    original_core = core.get_contract
+    original_parser = condition_parser.get_contract
+    core.get_contract = _registered_lookup(original_core)
+    condition_parser.get_contract = _registered_lookup(original_parser)
+    try:
+        yield
+    finally:
+        core.get_contract = original_core
+        condition_parser.get_contract = original_parser
+
+
 if __name__ == "__main__":
     sys.argv[0] = globals().get("ENTRY_PROGRAM", sys.argv[0])
-    with _constructor_compatibility():
+    with _constructor_compatibility(), _contract_lookup_compatibility():
         runpy.run_module("crosshair", run_name="__main__", alter_sys=True)

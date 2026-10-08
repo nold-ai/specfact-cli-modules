@@ -162,3 +162,21 @@ upstream intersection precedence or changing analyzer selection and deadlines.
 - **THEN** preserve native argv, result/error behavior and restore the original constructor resolver on every exit
 - **AND** keep the cloned upstream intersection local, preserve signature validation, and reject unsupported dependency versions without claiming clean analysis
 - **AND** run the same analyzer-owned imports, namespaces, contracts, flags and2/10-second path and30/120-second process bounds; retain incomplete error/UNKNOWN on checker failure
+
+
+### Requirement: Unhashable callable metadata preserves contract parsing
+
+Pinned CrossHair0.0.109 dispatch SHALL permit callable metadata with a declared
+unhashable type to pass through the registered-contract parser without a dictionary
+lookup crash, while retaining all other contract parsers and registered overrides.
+
+#### Scenario: Pytest marker is callable class metadata
+
+- **WHEN** selected project classes contain a callable pytest marker whose type declares __hash__ = None
+- **THEN** return no registered override for that impossible dictionary key and allow the remaining existing parsers to examine real methods
+- **AND** preserve hashable registered overrides, ordinary missing lookups and errors raised by custom hash functions or the original registry
+
+#### Scenario: Registered lookup compatibility exits
+
+- **WHEN** the native pinned CLI returns, raises or exits
+- **THEN** restore both core and condition-parser lookup aliases on every exit, retain dependency-version rejection, and preserve argv, contracts, namespaces and existing analysis budgets

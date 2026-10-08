@@ -6,7 +6,9 @@ import sys
 from pathlib import Path
 
 import pytest
-from crosshair import core, dynamic_typing
+from crosshair import condition_parser, core, dynamic_typing
+from crosshair.register_contract import REGISTERED_CONTRACTS, ContractOverride
+from icontract import ensure
 
 from specfact_code_review.run import target_bootstrap
 
@@ -166,3 +168,92 @@ def test_dispatch_rejects_unverified_dependency_version(crosshair_dispatch, monk
     with pytest.raises(RuntimeError, match="crosshair_version_unsupported"):
         crosshair_dispatch(lambda *args, **kwargs: called.append(True))
     assert called == []
+
+
+class MarkedContract:
+    pytestmark = pytest.mark.usefixtures("fixture_name")
+
+    @ensure(lambda result: isinstance(result, int))
+    def value(self) -> int:
+        return 3
+
+
+def test_dispatch_parses_marked_class_without_dropping_real_contract(crosshair_dispatch):
+    def inspect_dispatch(*_args, **_kwargs):
+        parser = condition_parser.CompositeConditionParser()
+        parser.parsers = [
+            condition_parser.IcontractParser(parser),
+            condition_parser.RegisteredContractsParser(parser),
+        ]
+        parsed = parser.get_class_conditions(MarkedContract)
+        assert parsed.methods["value"].post
+        assert parsed.methods["value"].sig.return_annotation is int
+        assert "pytestmark" not in parsed.methods
+
+    crosshair_dispatch(inspect_dispatch)
+
+
+@pytest.mark.parametrize("lookup_module", [core, condition_parser])
+def test_dispatch_unhashable_lookup_has_no_registered_override(crosshair_dispatch, lookup_module):
+    marker = MarkedContract.pytestmark
+    assert callable(marker) and type(marker).__hash__ is None
+
+    def inspect_dispatch(*_args, **_kwargs):
+        assert lookup_module.get_contract(marker) is None
+
+    crosshair_dispatch(inspect_dispatch)
+
+
+@pytest.mark.parametrize("failure", [None, RuntimeError, SystemExit])
+def test_dispatch_restores_registered_lookup_on_every_exit(crosshair_dispatch, failure):
+    original_core = vars(core)["get_contract"]
+    original_parser = vars(condition_parser)["get_contract"]
+    observed = []
+
+    def inspect_dispatch(*_args, **_kwargs):
+        observed.append(
+            (
+                vars(core)["get_contract"] is not original_core,
+                vars(condition_parser)["get_contract"] is not original_parser,
+            )
+        )
+        if failure:
+            raise failure(7)
+
+    if failure:
+        with pytest.raises(failure):
+            crosshair_dispatch(inspect_dispatch)
+    else:
+        crosshair_dispatch(inspect_dispatch)
+    assert observed == [(True, True)]
+    assert vars(core)["get_contract"] is original_core and vars(condition_parser)["get_contract"] is original_parser
+
+
+def test_dispatch_hashable_registry_override_is_preserved(crosshair_dispatch, monkeypatch):
+    def registered(value: int) -> int:
+        return value
+
+    contract = ContractOverride(pre=None, post=None, sigs=[inspect.signature(registered)], skip_body=False)
+    monkeypatch.setitem(REGISTERED_CONTRACTS, registered, contract)
+
+    def inspect_dispatch(*_args, **_kwargs):
+        assert vars(core)["get_contract"](registered) is contract
+        assert vars(condition_parser)["get_contract"](registered) is contract
+
+    crosshair_dispatch(inspect_dispatch)
+
+
+def test_dispatch_custom_hash_error_is_preserved(crosshair_dispatch):
+    class FailingHash:
+        def __call__(self):
+            return None
+
+        def __hash__(self):
+            raise TypeError("custom_hash_failure")
+
+    def inspect_dispatch(*_args, **_kwargs):
+        for lookup in (vars(core)["get_contract"], vars(condition_parser)["get_contract"]):
+            with pytest.raises(TypeError, match="custom_hash_failure"):
+                lookup(FailingHash())
+
+    crosshair_dispatch(inspect_dispatch)

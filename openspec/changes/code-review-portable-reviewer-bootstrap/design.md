@@ -136,3 +136,17 @@ analysis deadline or permission is introduced. Actual pinned CLI counterexample
 and fresh exact-head sealed review are required; the independent released0.51.0
 timeout is a separate unremediated release prerequisite. User-approved checksum
 refresh/signing follow-up policy applies to the modified trusted payload.
+
+
+CP311 customer artifact from run37840754641 job113529947249 identifies Requests
+contracts error/UNKNOWN: RegisteredContractsParser calls get_contract on callable
+pytest MarkDecorator class metadata, whose __hash__ is None; the dictionary lookup
+raises TypeError before normal parsers complete. Reuse the existing pinned CLI
+compatibility context. Return no registered override only when the callable type
+declares __hash__ = None: such an object cannot be registered as a dictionary key.
+Do not catch exceptions from hashable/custom-hash lookups or skip classes, methods,
+other parsers, contracts or source paths. Preserve both actual imported lookup aliases
+in core and condition_parser and restore them on all exits. The CP312 required
+candidate timeout is a separate unremediated defect; this corpus correction cannot
+establish its cause or acceptance. Local CP314 Path copying and CP312 Literal
+construction observations remain unsealed diagnostics, with no speculative fixes.

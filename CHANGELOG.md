@@ -9,6 +9,11 @@ and this project follows SemVer for bundle versions.
 
 ### Fixed
 
+- Preserve contract parsing for callable pytest class markers in pinned CrossHair
+  0.0.109 without dropping real method contracts or changing registered overrides.
+  Restore compatibility lookups on all exits; required review timeout diagnosis
+  and signed reviewer promotion remain outstanding.
+
 - Correct pinned CrossHair 0.0.109 constructor parameter ordering and implicit
   receiver handling while preserving real arguments, upstream merge behavior
   and CLI lifetime. Retain both snapshots' incomplete tool errors and reject

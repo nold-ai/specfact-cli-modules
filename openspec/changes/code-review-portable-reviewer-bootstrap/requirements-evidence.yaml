@@ -107,3 +107,16 @@ requirements:
       method: test
       intent: Retain all real constructor arguments, upstream collision precedence and native CLI lifecycle under pinned compatibility dispatch.
       observable: Meaningful argument-loss and invalid-order regressions precede code; argument/default/annotation parity, unsupported-version rejection and restoration on normal/error/SystemExit are required. Actual pinned CLI counterexample and fresh sealed candidate acceptance remain separate production proof.
+  openspec:code-review-portable-reviewer-bootstrap:review-portable-bootstrap:unhashable-callable-metadata-preserves-contract-parsing:
+    rationale: The Requests customer artifact identifies the pinned registered-contract lookup crash on callable pytest class metadata.
+    stakeholder_refs: [nold-ai/specfact-cli-modules#460]
+    touchpoints:
+    - id: pinned-callable-contract-lookup
+      kind: config_file
+      locator: openspec/changes/code-review-portable-reviewer-bootstrap/specs/review-portable-bootstrap/spec.md
+    verification_cases:
+    - case_id: reviewer-bootstrap-11
+      scenario_id: unhashable-callable-metadata-preserves-contract-parsing
+      method: test
+      intent: Preserve actual class-method contracts and registered hashable lookup semantics while rejecting impossible unhashable registry keys without a crash.
+      observable: Genuine parser and lookup regressions precede implementation; actual pytest marker parsing, hashable override parity, custom hash failure propagation and restoration on all exits are required. Hosted customer acceptance remains separate.
