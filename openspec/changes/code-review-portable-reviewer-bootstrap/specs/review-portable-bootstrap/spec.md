@@ -126,3 +126,20 @@ all execution deadlines SHALL remain unchanged.
 - **AND** reject invalid or duplicate JSON fields, ignore nested spoofed header keys, bound analyzer rows and finding inspection, and emit only finite known analyzer/snapshot-side/failure-class observations
 - **AND** report unavailable diagnostics beyond32MiB; never treat oversized diagnostics as accepted report evidence or disclose private fields
 - **AND** preserve the installed controller, original failing exit, grants, checker arguments and all established analysis deadlines
+
+
+### Requirement: Incomplete analysis retains all error evidence
+
+The reviewer SHALL preserve incomplete tool execution as error/UNKNOWN evidence and retain both snapshots' tool errors even when ordinary head findings exist.
+
+#### Scenario: Incomplete base findings remain visible beside head findings
+
+- **WHEN** either snapshot is incomplete and the head has ordinary findings
+- **THEN** retain every base/head tool-error finding with unknown differential state and retain the existing ordinary head finding selection
+- **AND** do not resurrect unrelated ordinary base findings or change unknown assurance, failing exit, analysis selection or deadlines
+
+#### Scenario: CrossHair failure exit has no analysis output
+
+- **WHEN** CrossHair exits1 without analysis stdout, including a constructor crash reported only on stderr
+- **THEN** report error/UNKNOWN tool evidence with the original diagnostic instead of returning clean findings
+- **AND** preserve valid counterexample/side-effect output handling and existing process/path analysis bounds

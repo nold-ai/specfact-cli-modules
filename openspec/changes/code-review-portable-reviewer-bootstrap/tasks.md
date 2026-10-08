@@ -15,3 +15,5 @@
 - [x] Verify production payload without the sampler in fresh hosted candidate CI.
 - [ ] Diagnose independent installed review using bounded complete private JSON and finite analyzer/side/failure-class observations, retaining oversized status and unavailable assurance.
 - [ ] After separately authorized promotion, verify exact #498 sealed execution.
+
+- [ ] Retain both-snapshot incomplete tool errors and reject CrossHair failure exits without analysis output; verify protected candidate execution before promotion.

@@ -7965,3 +7965,37 @@ def test_complete_native_test_only_review_preserves_failed_outcome(tmp_path: Pat
     assert response["execution_state"] == "ran"
     normalized = cast(list[dict[str, object]], response["findings"])
     assert normalized[0]["file"] == "tests/test_app.py"
+
+
+@pytest.mark.parametrize("head_error", [False, True])
+def test_incomplete_range_preserves_base_tool_errors_beside_head_findings(head_error: bool) -> None:
+    runner_api = _c14_runner()
+    context = runner_api.RangeDifferentialContext(
+        base_sources={"source.py": b"pass\n"},
+        head_sources={"source.py": b"pass\n"},
+        rename_facts={},
+        rename_ambiguities=None,
+        added_paths=(),
+        deleted_paths=(),
+    )
+    base_error = _finding(tool="crosshair", rule="base_failure", category="tool_error")
+    base_ordinary = _finding(tool="contract_runner", rule="base_ordinary", category="contracts")
+    head_finding = _finding(
+        tool="crosshair" if head_error else "contract_runner",
+        rule="head_finding",
+        category="tool_error" if head_error else "contracts",
+    )
+    evidence, findings = runner_api._classify_range_member(
+        "contracts",
+        context,
+        base_evidence={"execution_state": "error", "evidence_outcome": "UNKNOWN"},
+        head_evidence={
+            "execution_state": "error" if head_error else "ran",
+            "evidence_outcome": "UNKNOWN" if head_error else "FAIL",
+        },
+        base_findings=[base_error, base_ordinary],
+        head_findings=[head_finding],
+    )
+    assert evidence["evidence_outcome"] == "UNKNOWN"
+    assert [finding.rule for finding in findings] == ["head_finding", "base_failure"]
+    assert all(finding.differential_state == "unknown" for finding in findings)

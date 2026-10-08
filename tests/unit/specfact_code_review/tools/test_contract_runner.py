@@ -247,3 +247,21 @@ def test_skip_icontract_ast_scan_keeps_public_sync_entrypoints() -> None:
     assert not _skip_icontract_ast_scan(
         Path("packages/specfact-project/src/specfact_project/sync_runtime/speckit_backlog_sync.py")
     )
+
+
+@pytest.mark.parametrize("stderr", ["ValueError: wrong parameter order", ""])
+def test_crosshair_failure_exit_without_stdout_cannot_establish_clean_evidence(
+    monkeypatch: MonkeyPatch, stderr: str
+) -> None:
+    file_path = FIXTURES_DIR / "public_with_contracts.py"
+    monkeypatch.setattr(
+        subprocess, "run", Mock(return_value=completed_process("crosshair", stdout="", stderr=stderr, returncode=1))
+    )
+    findings = run_contract_check([file_path])
+    assert len(findings) == 1
+    assert (findings[0].category, findings[0].execution_state, findings[0].evidence_outcome) == (
+        "tool_error",
+        "error",
+        "UNKNOWN",
+    )
+    assert stderr in findings[0].message

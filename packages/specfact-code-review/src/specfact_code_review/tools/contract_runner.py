@@ -267,7 +267,7 @@ def _run_crosshair(files: list[Path], *, bug_hunt: bool) -> list[ReviewFinding]:
     result = _execute_crosshair(files, bug_hunt=bug_hunt)
     if isinstance(result, ReviewFinding):
         return [result]
-    if result.returncode not in {0, 1}:
+    if result.returncode not in {0, 1} or (result.returncode == 1 and not result.stdout.strip()):
         diagnostic = (result.stderr or result.stdout or f"process exit {result.returncode}").strip()
         return [_crosshair_unknown(files[0], f"CrossHair process error: {diagnostic}")]
     return _parse_crosshair_findings(result.stdout or "", files)

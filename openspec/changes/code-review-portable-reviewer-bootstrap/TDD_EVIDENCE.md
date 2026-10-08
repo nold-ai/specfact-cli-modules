@@ -446,3 +446,64 @@ filesystem signature/checksum/version checks pass. Signed assets are unchanged.
 Public committed review and fresh hosted exact-head attribution follow push.
 Both PRs have zero unresolved current threads at this triage. Their quality
 failures occur at signature/customer prerequisites before actual quality stages.
+
+
+## Incomplete differential evidence and CrossHair exit classification — 2026-10-08 Europe/Berlin
+
+Complete-reader run37716355426 job113113903056 establishes contracts and
+targeted-pytest-coverage error/UNKNOWN only in BASE. It emits no CrossHair
+failure class. Head warnings can suppress base tool errors because incomplete
+differential classification chooses head_findings or base_findings. A bounded
+independent source reproduction confirms loss of1/1base errors beside ordinary
+head findings and1/2errors when both sides fail. Separately, the actual pinned
+CrossHair0.0.109 CLI Path-contract reproduction on CPython3.12.14 exits1 with
+a constructor ValueError only on stderr and empty stdout. The runner accepts1
+as a normal counterexample exit and reads stdout only, incorrectly returning
+zero findings. That false-clean pattern cannot itself explain hosted UNKNOWN.
+Do not conflate the local library reproduction with the unclassified hosted
+cause; hosted sealed CP312 patch version differs. Upstream0.0.111 still has
+the relevant signature intersection code, so a version bump alone is not a
+verified fix. No compatibility patch is applied to an installed reviewer.
+
+After specification,4regressions fail(432deselected,0.55s): ordinary/error head
+findings must retain base tool errors without resurrecting base ordinary
+findings; failure exit1 with empty stdout and either stderr or no diagnostics
+must remain error/UNKNOWN. The correction preserves ordinary head selection,
+retains all tool errors, keeps unknown differential state and existing failing
+report behavior, and rejects exit1 without analysis output as incomplete.
+Existing counterexample/side-effect output parsing and all process/path budgets
+remain unchanged. Public review ofc0eea11a completesreview_completed,0findings.
+
+Final focused436runner/contract cases pass(16.15s). Full/SMART each pass19required
+host proofs plus5073portable tests,75declared skips,95subtests and five existing
+warnings(255.84s/253.04s). Format, typing0errors/0warnings, lint10.00/10,
+manifest schema/import boundaries,28contracts, actionlint, strict OpenSpec and
+planned requirements pass. Worktree-installed AST/AI-bloat/Radon and pinned
+Semgrep have zero changed-line findings; existing baseline findings remain
+unchanged. Both PRs have zero unresolved current review threads.
+
+The source fixes change the signed0.51.1payload. Read-only strict verification
+confirms the old manifest checksum no longer matches. Proposed checksum is
+sha256:86c8e5942b4cb3d7728b43fd40584295cef9b3202edeb5ebd2ff31404e7716c6.
+Automatic approval review rejected checksum-only manifest replacement because
+it would remove the existing signature and was classified outside diagnostic
+scope. No manifest change or bypass occurs. Source/test/spec work is complete
+locally; updating the checksum and obtaining a fresh signature from the existing
+CI workflow requires explicit approval before normal commit/push. No private
+key is read, no installed reviewer is mutated, and no merge/publication occurs.
+Public committed review and exact-head candidate/installed acceptance must run
+again after this source correction is signed and pushed. The original hosted
+base-snapshot analyzer cause is still unclassified; the new evidence-retention
+fix must not be represented as remediation of that as-yet-unknown cause.
+
+## Signed-payload update authorization — 2026-10-08 Europe/Berlin
+
+The user explicitly approves the checksum refresh and states that CI signing
+will occur through a follow-up PR after merge to dev. This resolves the preceding
+automatic approval-review rejection. Replace the stale signature with the
+correct filesystem payload checksum only; never present it as signed acceptance.
+Use the existing unsigned-head checksum/version policy for this dev-targeted PR.
+No private key is read and no authenticated installed reviewer is modified.
+Do not merge or publish automatically. A fresh valid CI signature remains a
+release prerequisite. Public committed review and exact-head hosted verification
+follow the normal-hook commit and authorized PR push.
