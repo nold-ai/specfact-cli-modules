@@ -55,12 +55,12 @@ Core #680/#679 and modules #417 were recovered from uncommitted planning-only fe
 
 | Bucket | Count | Location |
 |---|---:|---|
-| **Active-tree entries** | 31 | [`openspec/changes/`](changes/) |
+| **Active-tree entries** | 33 | [`openspec/changes/`](changes/) |
 | **Parking-lot entries** | 16 | [`openspec/parking-lot/`](parking-lot/) |
 | **Archived** | 50 | [`openspec/changes/archive/`](changes/archive/) |
 | **Abandoned history** | 1 | [`openspec/history/abandoned/`](history/abandoned/) |
 
-`openspec list` reflects all 31 direct active-tree entries (verified 2026-10-04). The closed R08
+`openspec list` reflects all 33 direct active-tree entries (verified 2026-10-08). The closed R08
 proposal is retained under non-canonical abandoned history, outside
 `openspec/changes/` and its completed-change archive; no unimplemented delta
 entered canonical specifications. Completed changes still use native OpenSpec
