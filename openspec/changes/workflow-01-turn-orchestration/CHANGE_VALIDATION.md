@@ -33,7 +33,7 @@ Scope: this existing paired change and its change-order section only. The owner 
 - OpenSpec CLI 1.13.2: `openspec validate workflow-01-turn-orchestration --strict --json --no-interactive` passed with no findings.
 - `openspec validate --changes --strict --json --no-interactive`: 32/33 passed. The existing unrelated `requirements-03-backlog-sync` failure was reproduced before editing and remained identical afterward; no new all-change failure was introduced.
 - Native Requirements evidence on the actual amended index snapshot, `--staged --required-maturity planned`, passed: schema 2, observed maturity `planned`, delivery status `proposal-only`, no source/mapping findings. Index staging was temporary and restored; no commit was made. Inspection cases use the existing native requirement identity convention with individual scenario intent/observable text; no executable selectors or historical proof were fabricated.
-- Mapping file SHA-256 at validation: `148cdfcef0decfe8cf1411c854ea26a28aa1a6b11883900c19185bc0868bc51b`. Existing producer-generated evidence is ignored under `.specfact/reports/risk-first/`; it is planning evidence, not signed runtime compatibility acceptance.
+- Historical creation mapping file SHA-256 at validation: `148cdfcef0decfe8cf1411c854ea26a28aa1a6b11883900c19185bc0868bc51b`. Existing producer-generated evidence is ignored under `.specfact/reports/risk-first/`; it is planning evidence, not signed runtime compatibility acceptance.
 - Scoped Markdown lint (repository core configuration), local planning-link integrity and `git diff --check` passed. Two pre-existing extra blank lines in the already touched modules change order were normalized. Every implementation/trial checkbox remains unchecked; all touched public paths are OpenSpec Markdown/YAML.
 - Existing modules documentation command validation passed with no findings; `tools/validate_repo_manifests.py` validated seven manifests and the registry without asset edits.
 - Existing `tests/unit/docs/test_docs_review.py`: 20 passed with `--no-cov`. One pytest cache-write warning came from sandbox permissions; it does not change the test outcomes or establish runtime/coverage admission.
@@ -54,3 +54,22 @@ Rollback: revert/disable new guidance/projection planning while retaining eviden
 The owner subsequently authorized committing/pushing both amendments, creating review PRs and monitoring CI/review with the CodeRabbit autofix skill. Both publication PRs target dev. Core incorporates only the reconciled workflow artifacts inspected at PR #743 head into refreshed origin/dev; draft PR #743, its branch and codex/lean-requirements-evidence base are preserved. This publication does not implement runtime, complete trial tasks, close either story or archive the changes. Applicable pre-commit checks and signed commit provenance remain required. Remote PR/check/review outcomes are reported separately; no green/review-complete result is inferred from local planning validation.
 
 Publication hooks passed on the actual prepared candidates. Scoped mapping YAML lint passed with parsed-value equality after indentation adjustment. Local GPG signing is unavailable (No secret key); the publication route uses GitHub createCommitOnBranch with expected-head protection, then requires verified signature and exact tree equality with git write-tree before accepting the remote commit. No signing configuration or protected CI policy is changed. Runtime review/contract checks were skipped by their owning hooks for this planning-only scope, not claimed as runtime PASS.
+
+## Approved handoff repair validation — 2026-10-09 Europe/Berlin
+
+The owner individually approved moving the compact PR handoff scenario and its existing
+inspection case to `Compact Repair Handoffs Preserve Coverage`. Signed repair commit
+`925fa3be5e80d351d518d18f82397cc4b9240335` contains that semantic mapping correction.
+The earlier creation digest above describes its original candidate, not this repair.
+
+The owning staged native Requirements gate ran after the move and passed on the actual
+repair index: schema 2, required/observed maturity `planned`, verdict `passed`, delivery
+`proposal-only`, one passed source and no failed/skipped sources. The repaired mapping
+file SHA-256 is `a69ef3f215ad64d4e7dc3908fd53126629b6d946c02ca4290d261b39b553d56c`.
+The case is mapped exactly once to its actual parent; acceptance text is unchanged.
+Applicable pre-commit hooks, scoped mapping YAML lint, strict selected OpenSpec and
+whitespace checks passed after the move. This records planning verification only;
+implementation, executable trials and signed runtime compatibility remain pending.
+
+The native producer's normalized mapping digest is `sha256:5cdaa2246179dde4ed0e0600d62c82bcbc6a738dbee50293214b1ebd38d36ca2`; it is a
+different identity from the mapping file byte digest above.
