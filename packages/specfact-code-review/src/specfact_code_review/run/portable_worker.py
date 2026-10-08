@@ -349,6 +349,8 @@ def _installed_coverage_findings(
 def _portable_pytest_command(files: list[Path], encoded: str) -> tuple[CoverageBridge, list[str]]:
     """Bind native measurement inputs to controller-verified installed ownership."""
     request = json.loads(encoded)
+    # Preserve native mapping errors before unused installed-coverage setup.
+    request["coverage_directories"] = []
     bridge = plan_installed_coverage(
         files, snapshot=Path(".").resolve(), site_packages=Path("/opt/specfact/project-runtime/site-packages")
     )

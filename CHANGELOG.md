@@ -9,6 +9,10 @@ and this project follows SemVer for bundle versions.
 
 ### Fixed
 
+- Avoid unused installed-coverage planning for unusable decoded pytest requests
+  and absent Python inputs. Preserve native request errors, valid command bytes
+  and complete ownership checks for nonempty Python selections.
+
 - Include the trusted CrossHair adapter in prepared-runtime cache identity so adapter-only corrections invalidate stale offline reuse.
 
 - Preserve contract parsing for callable pytest class markers in pinned CrossHair

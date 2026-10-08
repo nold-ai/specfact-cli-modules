@@ -31,3 +31,6 @@
 - [x] Reproduce and fix the verified adapter-only prepared-runtime cache-identity annotation.
 - [x] Reproduce and fix sampled completed-error privacy while retaining original native errors and ordinary-mode stderr parity.
 - [ ] Verify final review fixes in protected exact-head CI and resolve their addressed PR annotation after push.
+
+- [x] Reproduce unused installed-coverage setup on decoded non-object pytest requests and absent Python inputs; preserve native errors, valid command bytes and nonempty ownership checks.
+- [ ] Verify the setup-order corrections with fresh protected exact-head execution.

@@ -128,6 +128,13 @@ all execution deadlines SHALL remain unchanged.
 - **AND** preserve the installed controller, original failing exit, grants, checker arguments and all established analysis deadlines
 
 
+#### Scenario: Decoded non-object pytest JSON avoids unused planning
+- **GIVEN** a portable pytest request decodes successfully to a list, string, null, boolean or integer
+- **WHEN** the request cannot accept the required coverage mapping fields
+- **THEN** perform the native mapping assignment before installed coverage planning and preserve its exact escaping TypeError class/message
+- **AND** reject this input before unused planning even when that unused setup would itself fail
+- **AND** retain identical bridge objects, ownership fields, serialized command bytes, selected tests and subprocess behavior for valid objects
+
 ### Requirement: Incomplete analysis retains all error evidence
 
 The reviewer SHALL preserve incomplete tool execution as error/UNKNOWN evidence and retain both snapshots' tool errors even when ordinary head findings exist.
@@ -211,3 +218,17 @@ Prepared portable runtime identity SHALL include the trusted CrossHair adapter.
 - **WHEN** only target_crosshair.py changes after a runtime has been cached
 - **THEN** derive a different cache identity and reject reuse of the stale prepared runtime in offline mode
 - **AND** retain warm reuse when every builder-policy input is unchanged
+
+
+### Requirement: Absent coverage inputs avoid unused metadata setup
+
+Installed coverage planning SHALL avoid distribution/index setup when no reviewed
+input is a Python source, while retaining its original postcondition and every
+ownership check for nonempty Python source inputs.
+
+#### Scenario: Empty and non-Python coverage inputs preserve an empty bridge
+- **GIVEN** normalized snapshot and site roots and empty or non-Python reviewed inputs
+- **WHEN** installed coverage is planned
+- **THEN** return exactly the original empty CoverageBridge without loading distribution metadata or walking the snapshot
+- **AND** do not shortcut merely because mappings are empty; nonempty Python inputs, including outside-snapshot sources, still use the complete ownership path
+- **AND** retain changed-source and duplicate-ownership rejection and all analysis guards

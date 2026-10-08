@@ -147,3 +147,17 @@ requirements:
       method: test
       intent: Prove unchanged-policy warm reuse and adapter-only offline invalidation with fixed source, worker and Git inputs.
       observable: Existing policy-invalidation test fails with the newly selected adapter before changing the cache input list.
+
+  openspec:code-review-portable-reviewer-bootstrap:review-portable-bootstrap:absent-coverage-inputs-avoid-unused-metadata-setup:
+    rationale: Verified empty/no-Python coverage results do not require installed distribution/index setup in the observed sealed analysis path.
+    stakeholder_refs: [nold-ai/specfact-cli-modules#460]
+    touchpoints:
+    - id: unused-coverage-setup
+      kind: config_file
+      locator: openspec/changes/code-review-portable-reviewer-bootstrap/specs/review-portable-bootstrap/spec.md
+    verification_cases:
+    - case_id: reviewer-bootstrap-14
+      scenario_id: absent-coverage-inputs-avoid-unused-metadata-setup
+      method: test
+      intent: Avoid planning for five decoded non-object forms with native error parity and return exact empty coverage bridges without metadata/index setup.
+      observable: Failing-first setup spies precede code; valid serialized command, nonempty outside-snapshot inputs and existing ownership rejection remain required. Fresh sealed acceptance is separate.

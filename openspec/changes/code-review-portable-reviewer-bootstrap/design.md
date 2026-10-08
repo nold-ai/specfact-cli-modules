@@ -172,3 +172,18 @@ remains error/UNKNOWN. Ordinary mode retains its existing stderr handling. Inclu
 target_crosshair.py in the existing prepared-runtime builder digest so a later
 adapter-only correction invalidates warm/offline policy identity consistently
 with the Pylint and pytest helpers. No new runtime authority or cache bypass.
+
+
+The sealed timeout observations narrow a read-only follow-up to portable pytest
+command setup and installed coverage planning. Exact CPython3.12.13 controls
+reproduce unnecessary setup for JSON nonobjects and empty/non-Python coverage
+inputs. Bind an empty coverage_directories field immediately after JSON decoding
+to preserve the exact native assignment TypeError before unrelated ownership
+setup; valid objects later receive all the same verified ownership fields with
+identical command bytes. Normalize/filter coverage sources before metadata and
+return the existing empty bridge only when that source set is empty. Keep the
+postcondition and the full nonempty-source ownership path, including empty
+mappings, changed content and duplicate-owner rejection. This changes error
+precedence only for an unusable decoded request whose unused planning would also
+fail. No caching, tracing change, checker reduction, type model or larger budget;
+local parity controls do not establish sealed cause or acceptance.

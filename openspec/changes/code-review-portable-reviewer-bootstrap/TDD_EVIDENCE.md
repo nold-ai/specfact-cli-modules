@@ -758,3 +758,44 @@ run_portable_pytest, symbolic_search. Constructor exceptions are absent. These
 observations narrow a follow-up setup diagnosis; they are not acceptance or proof
 of any decoded input. Independent installed0.51.0 still lacks a report/observes
 a timeout; CP311/CP313 external corpus execution is still pending.
+
+## 2026-10-09: preserve errors before unused installed-coverage setup
+
+The signed 0f8a379e CP312 hosted required-review job timed out with finite
+observations of portable pytest setup, installed coverage planning and symbolic
+search. These observations narrow the path; they do not establish causation or
+acceptance. The CP311 and CP313 customer corpora passed. The three quality jobs failed at
+the capsule prerequisite check before running quality tools.
+
+Specification and eleven regression/parity cases preceded implementation. The
+unchanged code produced eight failures and three passing parity cases
+(`/private/tmp/specfact460-setup-order-red.log`). Decoded JSON lists, strings,
+null, booleans and integers must retain the exact native assignment TypeError
+before unused planning, including when that unused planner would raise OSError.
+Valid objects retain serialized command order/bytes and bridge identity. Empty
+or non-Python selections retain the exact empty CoverageBridge without metadata
+or index work; nonempty outside sources retain the complete ownership path.
+
+After the two setup-order corrections, 106 affected ownership, request and
+dispatch tests passed (`/private/tmp/specfact460-setup-order-focused.log`). Exact
+pinned CPython 3.12.13 controls and bounded read-only review confirmed native
+error and command parity; these controls are not sealed acceptance. No analyzer
+inputs, deadlines, flags, baseline errors, contract selection or isolation checks
+were reduced. Type checking reported zero errors/warnings, lint 10.00/10,
+manifest/import checks passed, all 28 contracts passed, and strict OpenSpec and
+planned requirements evidence passed. Two new Semgrep test-name findings were corrected by naming their ownership
+checks specifically; no waiver. An initial incomplete full run was stopped
+before these name edits and both complete suites restarted on the frozen tree.
+
+The reported Rosetta HOME writes from another session remain an environment
+observation with capsule version and exact commands unavailable. This hosted
+job used native ubuntu-24.04 x64; its timeout is not attributed to emulation and
+no no-write proof was relaxed. Temporary sampled transport must still be removed
+and fresh ordinary sealed acceptance obtained before promotion.
+
+Final frozen-tree full and SMART each pass 19 mandatory host proofs and 5,142
+portable tests, 75 declared skips, 95 subtests and five existing warnings
+(256.16s/252.27s). Pinned Semgrep reports zero findings/errors across the setup
+files. Actual AST/AI-bloat/Radon report zero changed findings. All seven draft
+checksums/version checks pass against origin/dev. Logs:
+`/private/tmp/specfact460-setup-order-{full,smart}-final2.log`.
