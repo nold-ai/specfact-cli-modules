@@ -78,7 +78,6 @@ def test_native_candidate_matrix():
         pytest.skip("maintainer-only native inputs not selected")
     assert platform.system() == "Darwin" and platform.machine() == "arm64"
     module = candidate()
-    import json
 
     inputs = json.loads(selected)
     assert set(inputs) == {"3.11", "3.12", "3.13"}

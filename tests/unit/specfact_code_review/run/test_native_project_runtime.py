@@ -426,7 +426,7 @@ def test_source_root_matching_indexes_inventory_once(monkeypatch, tmp_path: Path
             return super().items()
 
     inventory = ObservedInventory(native_project_runtime._runtime_tree(project))
-    monkeypatch.setattr(native_project_runtime, "_runtime_tree", lambda _path: inventory)
+    monkeypatch.setattr(native_project_runtime, "_runtime_tree", lambda _path, **_kwargs: inventory)
     assert native_project_runtime._bound_source_roots(project, wheels) == ["src"]
     assert inventory.calls == 1
 
@@ -1813,7 +1813,7 @@ def test_uv_generated_ancestor_initializer_keeps_imports_on_reviewed_source(tmp_
             "-B",
             "-c",
             "import sys,json;sys.path[:0]=sys.argv[1:];import customer.sub.module as selected;"
-            "print(json.dumps([selected.VALUE,selected.__file__]))",
+            + "print(json.dumps([selected.VALUE,selected.__file__]))",
             str(staged / "src"),
             str(site),
         ],
@@ -1828,3 +1828,28 @@ def test_uv_generated_ancestor_initializer_keeps_imports_on_reviewed_source(tmp_
     assert (overlay / "src" / ancestor / initializer).read_bytes() == generated.read_bytes()
     assert not (project / "src" / ancestor / initializer).exists()
     assert source.read_text() == "VALUE='original source'\n"
+
+
+@pytest.mark.parametrize("budget", ["files", "bytes"])
+def test_source_index_excludes_separate_vcs_budget_and_preserves_runtime_validation(tmp_path, monkeypatch, budget):
+    source = tmp_path / "src/customer.py"
+    source.parent.mkdir()
+    source.write_text("VALUE = 1\n")
+    metadata = tmp_path / ".git/objects/pack/fixture.pack"
+    metadata.parent.mkdir(parents=True)
+    metadata.write_bytes(b"x" * 1024)
+    if budget == "files":
+        monkeypatch.setattr(native_project_runtime, "_MAX_RUNTIME_FILES", 2)
+        (metadata.parent / "fixture.idx").write_bytes(b"index")
+    else:
+        monkeypatch.setattr(native_project_runtime, "_MAX_RUNTIME_BYTES", 64)
+    index = native_project_runtime._source_suffix_index(tmp_path)
+    assert index[("customer.py",)] == [(native_project_runtime.PurePosixPath("src/customer.py"), source.stat().st_size)]
+    with pytest.raises(ProjectRuntimeError, match="runtime_bounds_exceeded"):
+        native_project_runtime._runtime_tree(tmp_path)
+    source.write_bytes(b"x" * 128)
+    if budget == "files":
+        for name in ("other.py", "third.py"):
+            (source.parent / name).touch()
+    with pytest.raises(ProjectRuntimeError, match="bounds_exceeded"):
+        native_project_runtime._source_suffix_index(tmp_path)

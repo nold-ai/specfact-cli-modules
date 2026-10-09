@@ -153,10 +153,15 @@ def select_test_paths(plan: ProjectPlan, files: list[Path], *, full: bool) -> tu
         for relative in relative_paths
         if any(fnmatch.fnmatch(Path(relative).name, pattern) for pattern in patterns)
     }
-    source_stems = Counter(Path(relative).stem for relative in set(relative_paths) - explicit_tests)
+    source_modules = {
+        Path(relative).with_suffix("")
+        for relative in set(relative_paths) - explicit_tests
+        if Path(relative).suffix in {".py", ".pyi"}
+    }
+    source_stems = Counter(path.name for path in source_modules)
     selected = set(explicit_tests)
     for relative in relative_paths:
-        if relative not in explicit_tests:
+        if relative not in explicit_tests and Path(relative).suffix in {".py", ".pyi"}:
             selected.update(
                 _matching_source_tests(
                     relative, candidates, explicit_tests, multiple_sources=source_stems[Path(relative).stem] > 1

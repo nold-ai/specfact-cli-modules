@@ -634,3 +634,19 @@ def test_distinct_changed_stems_retain_unique_inferred_tests(tmp_path: Path) -> 
         changed.append(source)
     plan = ProjectPlan(tmp_path, manager="pip")
     assert select_test_paths(plan, changed, full=False) == ("tests/test_model.py", "tests/test_other.py")
+
+
+@pytest.mark.parametrize("extra", ["docs/model.md", "src/model.pyi", "docs/model.py.txt"])
+@pytest.mark.parametrize("reverse", [False, True])
+def test_nonpython_and_stub_inputs_preserve_explicit_python_selection(tmp_path, extra, reverse):
+    changed = []
+    for relative in ("src/model.py", extra, "tests/a/test_model.py", "tests/b/test_model.py"):
+        path = tmp_path / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.touch()
+        if relative != "tests/b/test_model.py":
+            changed.append(path)
+    if reverse:
+        changed.reverse()
+    plan = ProjectPlan(tmp_path, manager="pip", pytest_config={"testpaths": ["tests"]})
+    assert select_test_paths(plan, changed, full=False) == ("tests/a/test_model.py",)

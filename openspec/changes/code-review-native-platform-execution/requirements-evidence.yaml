@@ -817,3 +817,40 @@ requirements:
       method: test
       intent: Diagnose an OS-specific native failure without exporting raw diagnostics or changing acceptance.
       observable: The hosted macOS14 proof fails with EOF during WAIT, while the exact authenticated CPython3.11 input passes six cases locally. Missing helper and malformed non-scalar identity regressions fail before projection; fixed case/phase/boolean fields pass with original proof failures still blocking. Hosted cause remains to be established.
+
+  openspec:code-review-native-platform-execution:review-native-platform-execution:release-review-corrections-preserve-source-and-failure-boundaries:
+    rationale: Release annotations must be corrected without weakening evidence, ownership or publication authority.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#460
+    touchpoints:
+    - id: release-review-corrections
+      kind: config_file
+      locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
+    verification_cases:
+    - case_id: 460-21-1
+      scenario_id: release-review-corrections-preserve-source-and-failure-boundaries
+      method: test
+      intent: Count distinct Python modules and preserve independent VCS and runtime bounds.
+      observable: Four selection REDs with two healthy non-Python controls and two VCS file/byte REDs precede fixes; stub pairs deduplicate while distinct-module ambiguity and default runtime bounds remain enforced.
+    - case_id: 460-21-2
+      scenario_id: release-review-corrections-preserve-source-and-failure-boundaries
+      method: test
+      intent: Retain actionable incomplete pytest evidence and hard artifact safety/identity rejection.
+      observable: Four evaluator REDs and two controlled decoder-refusal REDs precede fixes; absent coverage never bypasses later symlink/FIFO/size checks, six malformed node-identity contract rejections and exact valid identities remain unchanged.
+    - case_id: 460-21-3
+      scenario_id: release-review-corrections-preserve-source-and-failure-boundaries
+      method: test
+      intent: Bind publication directly to protected main and verify the independently pinned published reviewer.
+      observable: Protected-source condition regression fails before correction; pinned archive version, detached checksum, core compatibility and cryptographic signature pass independently of newer candidate registry entries.
+
+    - case_id: 460-21-4
+      scenario_id: release-review-corrections-preserve-source-and-failure-boundaries
+      method: test
+      intent: Preserve available observer identity rejection when other ordinary evidence is absent or malformed.
+      observable: Eighteen REDs cover all six malformed identity forms with absent coverage, absent JUnit or malformed coverage; eight existing/healthy controls pass. Artifact path/type/size validation remains before all parsing and valid identities with missing evidence remain incomplete.
+
+    - case_id: 460-21-5
+      scenario_id: release-review-corrections-preserve-source-and-failure-boundaries
+      method: test
+      intent: Handle missing ordinary artifact parents without weakening substituted-parent rejection.
+      observable: Two helper REDs distinguish absent directories and typed dangling-symlink rejection; three controls including the real evaluator already returning UNKNOWN pass. Final parent handling keeps canonical-path equality, lexical confinement, no-follow regular-file reads and all bounds.

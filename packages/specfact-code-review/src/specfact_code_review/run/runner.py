@@ -7204,6 +7204,8 @@ def _evaluate_pytest_execution(
         ], None
 
     try:
+        if test_result.returncode == 4:
+            raise ValueError("project_pytest_configuration_or_collection_failed:exit=4; inspect pytest options")
         observer, junit = _load_pytest_outcome_evidence(observer_path, junit_path)
         outcome = reconcile_pytest_outcomes(
             observer=observer,
@@ -7224,8 +7226,12 @@ def _evaluate_pytest_execution(
                 if any(fnmatch.fnmatch(relative.name, pattern) for pattern in discovery_test_patterns):
                     test_files.add(discovery_snapshot / relative)
             source_files = [path for path in source_files if path not in test_files]
+        if not coverage_path.exists():
+            raise ValueError("project_pytest_coverage_missing; enable pytest-cov and remove --no-cov if configured")
         coverage_payload = json.loads(coverage_path.read_text(encoding="utf-8"))
-    except (OSError, ValueError, json.JSONDecodeError, ET.ParseError) as exc:
+        if not isinstance(coverage_payload, dict) or not isinstance(coverage_payload.get("files"), dict):
+            raise ValueError("project_pytest_coverage_artifact_invalid")
+    except (OSError, ValueError, RecursionError, json.JSONDecodeError, ET.ParseError) as exc:
         return [
             tool_error(
                 tool="pytest",

@@ -240,8 +240,15 @@ controlled fixture archive/manifest/summary bytes or ten public builder inputs.
 Hosted diagnostics now prioritize tool errors within the200-location cap and
 classify missing reports/trusted300s timeouts using fixed public values.
 
-The explicit Darwin-only Z3 specfact.2 derivative is82436032 bytes, SHA256
+The original measured Darwin-only Z3 specfact.2 derivative was 82436032 bytes, SHA-256
 03eb2624d4d19d06020e9a6c5823cf8ac4f6b3fcb0a73e25ef2514d1129982bd.
+The later authenticated `dist-info/licenses/` placement correction produces the
+current locked wheel SHA-256
+`81d7e08869fc34877ad9b1315de5bb5398792bc8858f44e45c38a974f310f7e7`.
+The original measurement above is retained as historical evidence; current
+preparation follows `scripts/native_analyzer_inputs/README.md`. See the later
+license-path correction in `TDD_EVIDENCE.md`.
+
 It preserves29 original retained members, omits only ten authenticated foreign
 DLL identities and carries the release-linked license. Historical specfact.1
 remains byte-identical. All three complete candidate locks resolve offline and

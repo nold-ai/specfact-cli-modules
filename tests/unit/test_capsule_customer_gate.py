@@ -666,8 +666,8 @@ def test_customer_gate_always_adds_separate_targeted_regression(tmp_path, monkey
 
 def _published_reviewer_inputs():
     """An isolated reviewer pin must be installable through the actual registry."""
-    import json
     import re
+    import tarfile
 
     import yaml
 
@@ -680,8 +680,20 @@ def _published_reviewer_inputs():
     version = re.search(r"--version\s+([0-9]+\.[0-9]+\.[0-9]+)\s+--source marketplace", installation)
     core = re.search(r"specfact-cli==([0-9]+\.[0-9]+\.[0-9]+)", installation)
     assert version is not None and core is not None, "reviewer identities must be literal released pins"
-    registry = json.loads((root / "registry/index.json").read_text())
-    entry = next(row for row in registry["modules"] if row["id"] == "nold-ai/specfact-code-review")
+    # The trusted main reviewer is independent of the advancing candidate index.
+    archive = root / "registry/modules" / f"specfact-code-review-{version.group(1)}.tar.gz"
+    with tarfile.open(archive) as stream:
+        manifests = [member for member in stream.getmembers() if member.name.endswith("/module-package.yaml")]
+        assert len(manifests) == 1
+        payload = stream.extractfile(manifests[0])
+        assert payload is not None
+        metadata = yaml.safe_load(payload.read())
+    entry = {
+        "latest_version": str(metadata["version"]),
+        "core_compatibility": metadata["core_compatibility"],
+        "download_url": str(archive.relative_to(root / "registry")),
+        "checksum_sha256": archive.with_suffix(archive.suffix + ".sha256").read_text().strip().split()[0],
+    }
     return root, installation, version.group(1), core.group(1), entry
 
 
@@ -696,7 +708,7 @@ def test_independent_reviewer_pin_is_installable_signed_published_baseline():
     assert "SPECFACT_ALLOW_UNSIGNED" not in installation
 
 
-def test_published_reviewer_archive_matches_registry_checksum_and_authenticated_manifest():
+def test_published_reviewer_archive_matches_registry_checksum_and_authenticated_manifest(tmp_path):
     import hashlib
     import tarfile
 
@@ -712,3 +724,16 @@ def test_published_reviewer_archive_matches_registry_checksum_and_authenticated_
         metadata = yaml.safe_load(payload.read())
     assert str(metadata["version"]) == version
     assert metadata["integrity"]["signature"]
+    from specfact_cli.registry import module_installer
+
+    with tarfile.open(archive) as stream:
+        stream.extractall(tmp_path, filter="data")
+    package = next(tmp_path.rglob("module-package.yaml")).parent
+    assert module_installer.verify_module_artifact(
+        package,
+        module_installer.ModulePackageMetadata.model_validate(metadata),
+        allow_unsigned=False,
+        require_integrity=True,
+        require_signature=True,
+        public_key_pem=module_installer._bundled_public_key_path().read_text(),
+    )

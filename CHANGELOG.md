@@ -9,6 +9,12 @@ and this project follows SemVer for bundle versions.
 
 ### Fixed
 
+- Prepare Code Review 0.51.4: targeted selection counts distinct Python modules,
+  source-root inference excludes separately verified VCS metadata from source
+  budgets, and native pytest failures retain incomplete-evidence remedies while
+  unsafe artifacts still fail closed. Protect publication on its own main-ref
+  gate and clarify historical versus current Z3 artifact evidence.
+
 - Resume macOS ARM64 Code Review delivery above the published 0.51.2 bundle, retaining current portable reviewer bootstrap corrections.
 - Preserve actionable test-selection ambiguity when multiple changed source files share a stem and only some matching tests are supplied explicitly.
 - Preserve both native bounded failure locations and current hosted reviewer/namespace diagnostics during upstream integration.

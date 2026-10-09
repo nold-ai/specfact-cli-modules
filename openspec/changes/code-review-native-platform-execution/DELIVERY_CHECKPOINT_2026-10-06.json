@@ -532,7 +532,9 @@
       "cp312",
       "cp313"
     ],
+    "corrected_wheel_sha256": "81d7e08869fc34877ad9b1315de5bb5398792bc8858f44e45c38a974f310f7e7",
     "dependency_admitted": false,
+    "historical_identity_note": "The wheel_sha256 and wheel_bytes fields record the original measured derivative. The later authenticated dist-info/licenses placement correction changes wheel bytes; current locks use corrected_wheel_sha256. See TDD_EVIDENCE.md license-path correction.",
     "legacy_wheel_sha256": "af669755eabd97268a4141983a391cb4a832116d5a2c3cf04a4c53c7650ce72c",
     "license_sha256": "e617cad2ab9347e3129c2b171e87909332174e17961c5c3412d0799469111337",
     "omitted_foreign_members": 10,
