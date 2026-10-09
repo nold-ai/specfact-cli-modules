@@ -1229,3 +1229,10 @@ Source-to-test collision detection SHALL count distinct Python production module
 - **WHEN** dev publishes a newer bundle while protected main still supplies the literal independent reviewer pin
 - **THEN** repository tests SHALL verify that pinned archived bundle, its detached archive checksum, core compatibility and cryptographic module signature
 - **AND** SHALL NOT require the isolated reviewer pin to equal the advancing dev registry latest entry or replace the protected-main installation with candidate source
+
+#### Scenario: Missing evidence cannot suppress available invalid observer identity
+- **GIVEN** an available parseable observer record with a missing or non-string node identifier
+- **AND** coverage or JUnit is absent, or coverage has malformed ordinary content
+- **WHEN** native artifacts have passed the unchanged path/type/size checks
+- **THEN** invalid observer identity SHALL reject the worker contract before any incomplete-artifact fallback
+- **AND** valid observer records with missing ordinary artifacts SHALL remain UNKNOWN without invented observations

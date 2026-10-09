@@ -183,9 +183,18 @@ def _capture_result(transport, records):
     ],
     ids=["missing", "null", "boolean", "integer", "list", "object"],
 )
-def test_native_pytest_observations_reject_malformed_node_identity(tmp_path: Path, record: dict) -> None:
+@pytest.mark.parametrize("other_artifact", [None, "missing-coverage", "missing-junit", "malformed-coverage"])
+def test_native_pytest_observations_reject_malformed_node_identity(
+    tmp_path: Path, record: dict, other_artifact: str | None
+) -> None:
     transport = _transport(tmp_path)
     result = _capture_result(transport, [record])
+    if other_artifact == "missing-coverage":
+        result[1].unlink()
+    elif other_artifact == "missing-junit":
+        result[3].unlink()
+    elif other_artifact == "malformed-coverage":
+        result[1].write_text("[]")
     with pytest.raises(native_worker.WorkerContractError, match=r"observer.*node"):
         native_worker._capture_pytest_observation(result, transport)
 
@@ -291,3 +300,11 @@ def test_missing_coverage_does_not_skip_later_artifact_safety(tmp_path, monkeypa
     result = subprocess.CompletedProcess([], 4, "", ""), coverage, observer, junit
     with pytest.raises(native_worker.WorkerContractError, match="artifact"):
         native_worker._capture_pytest_observation(result, transport)
+
+
+@pytest.mark.parametrize("missing", ["coverage.json", "junit.xml"])
+def test_valid_node_identity_with_missing_artifact_remains_incomplete(tmp_path, missing):
+    transport = _transport(tmp_path)
+    result = _capture_result(transport, [{"nodeid": "tests/test_value.py::test_value", "phase": "call"}])
+    (transport.temporary / missing).unlink()
+    assert native_worker._capture_pytest_observation(result, transport) is None

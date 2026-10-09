@@ -701,19 +701,24 @@ def _capture_pytest_observation(result: Any, transport: ReplayTransport) -> dict
     coverage_bytes = _read_pytest_artifact(coverage_path, transport.temporary)
     observer_bytes = _read_pytest_artifact(observer_path, transport.temporary)
     junit_bytes = _read_pytest_artifact(junit_path, transport.temporary)
-    if coverage_bytes is None or observer_bytes is None or junit_bytes is None:
+    if observer_bytes is None:
         return None
     try:
-        coverage = json.loads(coverage_bytes)
         records = json.loads(observer_bytes)
     except (ValueError, RecursionError):
-        return None
-    if not isinstance(coverage, dict) or not isinstance(coverage.get("files"), dict):
         return None
     if not isinstance(records, list) or not all(isinstance(record, dict) for record in records):
         return None
     if not all(isinstance(record.get("nodeid"), str) for record in records):
         raise WorkerContractError("native pytest observer node identity is invalid")
+    if coverage_bytes is None or junit_bytes is None:
+        return None
+    try:
+        coverage = json.loads(coverage_bytes)
+    except (ValueError, RecursionError):
+        return None
+    if not isinstance(coverage, dict) or not isinstance(coverage.get("files"), dict):
+        return None
     collected = sorted(
         {record["nodeid"] for record in records if record.get("phase") in {"collection", "setup", "call", "teardown"}}
     )

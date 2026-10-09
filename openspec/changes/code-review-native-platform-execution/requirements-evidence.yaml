@@ -842,3 +842,9 @@ requirements:
       method: test
       intent: Bind publication directly to protected main and verify the independently pinned published reviewer.
       observable: Protected-source condition regression fails before correction; pinned archive version, detached checksum, core compatibility and cryptographic signature pass independently of newer candidate registry entries.
+
+    - case_id: 460-21-4
+      scenario_id: release-review-corrections-preserve-source-and-failure-boundaries
+      method: test
+      intent: Preserve available observer identity rejection when other ordinary evidence is absent or malformed.
+      observable: Eighteen REDs cover all six malformed identity forms with absent coverage, absent JUnit or malformed coverage; eight existing/healthy controls pass. Artifact path/type/size validation remains before all parsing and valid identities with missing evidence remain incomplete.
