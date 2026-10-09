@@ -224,3 +224,5 @@ Runbook and exact candidate limitations: [NATIVE_RELEASE.md](NATIVE_RELEASE.md).
 - [x] Reproduce malformed/oversized diagnostic crashes and reviewer exit masking, bound both public readers and preserve the original failed review exit across all candidate diagnostics.
 
 - [x] Reproduce missing native workflow triggers with real transitive input paths and negative controls; include native build/acceptance/proof/corpus and pytest/bootstrap inputs without changing matrix or protected release gates.
+
+- [x] Reproduce uv installed generated-module implicit-root loss; preserve byte-bound generated modules in the existing private overlay with mismatch/ambiguity, explicit-root and lock controls.

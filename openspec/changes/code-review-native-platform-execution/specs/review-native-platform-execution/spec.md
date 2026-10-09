@@ -958,9 +958,12 @@ The native backend SHALL reuse portable project discovery and prepare dependenci
 
 #### Scenario: Native generated wheel modules preserve bound project source imports
 
-- **WHEN** a real built root wheel includes a generated module absent from the source checkout alongside byte-identical source modules
+- **WHEN** a real built root wheel or uv-installed project includes a generated module absent from the source checkout alongside byte-identical source modules
 - **THEN** native preparation retains source roots proven by unambiguous matching source bytes only when generated modules remain reachable through a sealed project-runtime overlay in private analyzer snapshots
-- **AND** the overlay contains only missing modules from the actual built root wheel, never overwrites customer source, and is bound by the project runtime inventory and identity
+- **AND** the overlay contains only missing modules belonging to the actual byte-bound project package from its built wheel or uv-installed files, never copies unrelated dependency modules or overwrites customer source, and is bound by the project runtime inventory and identity
+- **AND** same-owner generated ancestor package initializers remain reachable in private source staging, so regular installed packages cannot supersede byte-bound namespace source edits
+- **AND** legitimate RECORD script paths outside site-packages are excluded from overlay ownership without reading outside files, while sibling packages of the same distribution remain excluded unless their package path also matches source
+- **AND** installed overlay files require unique distribution RECORD ownership and verified file hashes bound to byte-matched source; shared namespaces never establish ownership, and missing, malformed, ambiguous or altered metadata cannot authorize writes
 - **AND** existing source modules with differing wheel bytes or ambiguous source matches still reject automatic root inference; no path is inferred only from its name
 - **AND** source matching indexes exact package-path suffixes with a bounded index construction budget; shared short path tails cannot trigger unbounded candidate scans
 

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import csv
 import hashlib
 import json
 import os
@@ -1132,7 +1133,9 @@ def _prepare_uv_on_demand(plan: ProjectPlan, runtime: Any, artifact: Path) -> di
         )
         inventory.update(
             source_roots=list(plan.source_roots)
-            or _bound_source_roots(snapshot, artifact / "site-packages", installed=True),
+            or _bound_source_roots(
+                snapshot, artifact / "site-packages", installed=True, generated_destination=artifact / "source-overlay"
+            ),
             pytest_arguments=[],
             native_extensions=_admit_native_extensions(
                 artifact / "site-packages", capsule_root=Path(runtime.root), declared_count=count
@@ -1769,11 +1772,28 @@ def _matching_source_roots(
 
 
 def _generated_source_files(
-    packages: dict[str, set[tuple[str, ...]]], missing: list[tuple[PurePosixPath, bytes]], *, installed: bool
+    packages: dict[str, set[tuple[str, ...]]],
+    missing: list[tuple[PurePosixPath, bytes]],
+    *,
+    installed: bool,
+    owners: dict[str, str] | None = None,
+    owned_packages: dict[tuple[str, tuple[str, ...]], set[tuple[str, ...]]] | None = None,
 ) -> list[tuple[PurePosixPath, bytes]] | None:
     generated: list[tuple[PurePosixPath, bytes]] = []
+    lookups = 0
     for path, payload in missing:
-        roots = packages.get(path.parts[0], set())
+        owner = owners.get(path.as_posix(), "") if owners is not None else path.parts[0]
+        roots = packages.get(owner, set()) if owned_packages is None else set()
+        if owned_packages is not None:
+            for length in range(1, len(path.parts)):
+                lookups += 1
+                if lookups > _MAX_RUNTIME_FILES:
+                    raise ProjectRuntimeError(
+                        "project_native_source_root_bounds_exceeded:provide explicit source_roots"
+                    )
+                roots.update(owned_packages.get((owner, path.parts[:length]), set()))
+        if owned_packages is not None and path.name in {"__init__.py", "__init__.pyi"}:
+            roots.update(owned_packages.get((owner, path.parts), set()))
         if not roots and installed:
             continue
         if len(roots) != 1:
@@ -1806,7 +1826,10 @@ def _bound_source_roots(
     if not wheels.is_dir():
         return []
     candidates = _source_suffix_index(project)
+    owners = _installed_python_owners(wheels) if installed and generated_destination is not None else None
     packages: dict[str, set[tuple[str, ...]]] = {}
+    source_packages: set[str] = set()
+    owned_packages: dict[tuple[str, tuple[str, ...]], set[tuple[str, ...]]] | None = {} if owners is not None else None
     missing: list[tuple[PurePosixPath, bytes]] = []
     comparisons = 0
     files = _installed_python_files(wheels) if installed else _wheel_python_files(wheels)
@@ -1821,13 +1844,71 @@ def _bound_source_roots(
         matches = _matching_source_roots(project, path, payload, represented)
         if len(matches) != 1:
             return []
-        packages.setdefault(path.parts[0], set()).add(matches[0])
-    generated = _generated_source_files(packages, missing, installed=installed)
+        owner = owners.get(path.as_posix()) if owners is not None else path.parts[0]
+        if owner is None:
+            return []
+        packages.setdefault(owner, set()).add(matches[0])
+        source_packages.add(path.parts[0])
+        if owned_packages is not None:
+            owned_packages.setdefault((owner, path.parts[:-1]), set()).add(matches[0])
+            for length in range(1, len(path.parts) - 1):
+                owned_packages.setdefault((owner, (*path.parts[:length], "__init__.py")), set()).add(matches[0])
+                owned_packages.setdefault((owner, (*path.parts[:length], "__init__.pyi")), set()).add(matches[0])
+            if len(owned_packages) > _MAX_RUNTIME_FILES:
+                raise ProjectRuntimeError("project_native_source_root_bounds_exceeded:provide explicit source_roots")
+    if owners is not None and any(
+        path.parts[0] in source_packages and path.as_posix() not in owners for path, _payload in missing
+    ):
+        return []
+    generated = _generated_source_files(
+        packages, missing, installed=installed, owners=owners, owned_packages=owned_packages
+    )
     if generated is None or (generated and generated_destination is None):
         return []
     if generated_destination is not None:
         _write_generated_source_files(generated_destination, generated)
     return _distinct_source_roots(packages)
+
+
+def _installed_python_owners(site: Path) -> dict[str, str]:
+    """Bind overlay candidates to unique hashed installation RECORD owners."""
+    from specfact_code_review.run.installed_coverage import _record_row, _verified_record
+
+    owners: dict[str, str] = {}
+    rows = 0
+    try:
+        for relative, (kind, identity) in _runtime_tree(site).items():
+            path = PurePosixPath(relative)
+            if (
+                kind != "file"
+                or len(path.parts) != 2
+                or not path.parts[0].endswith(".dist-info")
+                or path.name != "RECORD"
+            ):
+                continue
+            if identity[4] > _MAX_RESULT_BYTES:
+                raise ValueError("installation RECORD exceeds bounds")
+            files: dict[str, str] = {}
+            for row in csv.reader((site / relative).read_text(encoding="utf-8").splitlines()):
+                rows += 1
+                if rows > _MAX_RUNTIME_FILES:
+                    raise ValueError("installation RECORD rows exceed bounds")
+                if len(row) == 3 and (PurePosixPath(row[0]).is_absolute() or ".." in PurePosixPath(row[0]).parts):
+                    # RECORD legitimately lists launch scripts outside site-packages.
+                    normalized = Path(os.path.abspath(site / row[0]))
+                    try:
+                        relative_file = normalized.relative_to(Path(os.path.abspath(site)))
+                    except ValueError:
+                        continue
+                    row = [relative_file.as_posix(), *row[1:]]
+                _record_row(row, files, python_suffixes=(".py", ".pyi"))
+            for name, digest in files.items():
+                if name in owners or not _verified_record(site / name, digest, site):
+                    raise ValueError("installation ownership is ambiguous or changed")
+                owners[name] = path.parts[0]
+    except (OSError, ValueError, csv.Error) as exc:
+        raise ProjectRuntimeError("project_native_source_ownership_invalid") from exc
+    return owners
 
 
 def _installed_python_files(site: Path) -> Iterator[tuple[PurePosixPath, bytes]]:

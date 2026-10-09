@@ -7,6 +7,7 @@ import io
 import json
 import shutil
 import struct
+import subprocess
 import sys
 import tarfile
 import zipfile
@@ -1559,6 +1560,7 @@ def test_generated_project_module_does_not_discard_verified_source_root(tmp_path
         (artifacts / "customer").mkdir()
         (artifacts / "customer/__init__.py").write_bytes(b"VALUE=7\n")
         (artifacts / "customer/_version.py").write_bytes(b"VERSION='generated'\n")
+        _write_native_distribution_record(artifacts, "customer", ["customer/__init__.py", "customer/_version.py"])
     else:
         with zipfile.ZipFile(artifacts / "customer-1-py3-none-any.whl", "w") as wheel:
             wheel.writestr("customer/__init__.py", b"VALUE=7\n")
@@ -1614,3 +1616,215 @@ def test_source_matching_uses_full_suffix_index_for_shared_package_tails(monkeyp
     monkeypatch.setattr(native_project_runtime, "PurePosixPath", CountedPath)
     assert native_project_runtime._bound_source_roots(project, wheels) == ["src"]
     assert CountedPath.checks < 100000
+
+
+def _write_native_distribution_record(site, name, paths):
+    metadata = site / f"{name}-1.dist-info"
+    metadata.mkdir()
+    rows = []
+    for relative in paths:
+        payload = (site / relative).read_bytes()
+        digest = base64.urlsafe_b64encode(hashlib.sha256(payload).digest()).decode().rstrip("=")
+        rows.append(f"{relative},sha256={digest},{len(payload)}\n")
+    (metadata / "RECORD").write_text("".join(rows))
+    return metadata / "RECORD"
+
+
+@pytest.mark.parametrize("lock_present", [True, False])
+@pytest.mark.parametrize("generated_name", ["_version.py", "_version.pyi"])
+@pytest.mark.parametrize("source_binding", ["matching", "changed", "ambiguous"])
+@pytest.mark.parametrize("explicit_roots", [False, True])
+def test_uv_generated_module_preserves_only_byte_bound_implicit_source(
+    monkeypatch, tmp_path, lock_present, generated_name, source_binding, explicit_roots
+):
+    project = tmp_path / "project"
+    package = project / "src/customer"
+    package.mkdir(parents=True)
+    (project / "pyproject.toml").write_text('[project]\nname="customer"\nversion="1"\n[tool.uv]\n')
+    source_bytes = b"VALUE='reviewed source'\n"
+    (package / "__init__.py").write_bytes(source_bytes)
+    if source_binding == "ambiguous":
+        other = project / "other/customer"
+        other.mkdir(parents=True)
+        (other / "__init__.py").write_bytes(source_bytes)
+    if lock_present:
+        (project / "uv.lock").write_text("version=1\n")
+    plan = discover_project(project)
+    assert not plan.source_roots
+    if explicit_roots:
+        plan = replace(plan, source_roots=("src",))
+    artifact = tmp_path / "artifact"
+    generated_bytes = b"VERSION='generated build'\n"
+    calls = []
+
+    def phase(_runtime, operation, inputs, destination):
+        calls.append(operation)
+        destination.mkdir()
+        if operation == "uv":
+            request = json.loads((inputs / ".specfact-uv.json").read_text())
+            assert request["locked"] is lock_present
+            site = destination / "site-packages"
+            installed = site / "customer"
+            installed.mkdir(parents=True)
+            (installed / "__init__.py").write_bytes(
+                source_bytes if source_binding != "changed" else b"VALUE='different build'\n"
+            )
+            (installed / generated_name).write_bytes(generated_bytes)
+            (site / "unrelated_dependency.py").write_text("VALUE='dependency'\n")
+            _write_native_distribution_record(site, "customer", ["customer/__init__.py", f"customer/{generated_name}"])
+            _write_native_distribution_record(site, "dependency", ["unrelated_dependency.py"])
+            (destination / "prepared.lock").write_text("version=1\n")
+        else:
+            assert operation == "inspect"
+            (destination / "environment-inventory.json").write_text(
+                json.dumps(
+                    {
+                        "installed": [],
+                        "environment": {"sys_platform": "darwin", "python_full_version": "3.11.16"},
+                        "member_graphs": {},
+                        "analyzer_conflicts": {},
+                    }
+                )
+            )
+
+    monkeypatch.setattr(native_project_runtime, "_run_pip_phase", phase)
+    inventory = native_project_runtime._prepare_project_on_demand(
+        plan, SimpleNamespace(root=tmp_path / "capsule", environment_id="darwin-arm64-cp311"), artifact
+    )
+    assert calls == ["uv", "inspect"]
+    assert inventory["native_preparation"]["existing_lock_preserved"] is lock_present
+    assert (project / "uv.lock").exists() is lock_present
+    assert (package / "__init__.py").read_bytes() == source_bytes
+    assert not (package / generated_name).exists()
+    overlay = artifact / "source-overlay"
+    if source_binding == "matching" and not explicit_roots:
+        assert inventory["source_roots"] == ["src"]
+        generated = overlay / "src/customer" / generated_name
+        assert generated.read_bytes() == generated_bytes
+        assert generated.stat().st_mode & 0o777 == 0o400
+        assert {path.relative_to(overlay).as_posix() for path in overlay.rglob("*") if path.is_file()} == {
+            f"src/customer/{generated_name}"
+        }
+    else:
+        assert inventory["source_roots"] == (["src"] if explicit_roots else [])
+        assert not overlay.exists()
+
+
+@pytest.mark.parametrize("namespace", [False, True])
+@pytest.mark.parametrize("generated_name", ["_version.py", "_version.pyi"])
+@pytest.mark.parametrize(
+    "ownership",
+    [
+        "valid",
+        "same_owner",
+        "outside_script",
+        "missing",
+        "unrecorded_generated",
+        "ambiguous",
+        "changed_digest",
+        "malformed",
+    ],
+)
+def test_uv_overlay_excludes_shared_package_dependencies(tmp_path, namespace, generated_name, ownership):
+    project = tmp_path / "project"
+    package = "ns/customer" if namespace else "customer"
+    dependency = "ns/plugin" if namespace else ("otherlib" if ownership == "same_owner" else "customer/plugin")
+    source = project / "src" / package
+    source.mkdir(parents=True)
+    source_bytes = b"VALUE='source'\n"
+    (source / "__init__.py").write_bytes(source_bytes)
+    site = tmp_path / "site"
+    installed = site / package
+    installed.mkdir(parents=True)
+    (installed / "__init__.py").write_bytes(source_bytes)
+    (installed / generated_name).write_bytes(b"VERSION='built'\n")
+    foreign = site / dependency
+    foreign.mkdir(parents=True)
+    (foreign / "__init__.py").write_text(
+        "from pathlib import Path\nVALUE=Path(__file__).with_name('data.txt').read_text()\n"
+    )
+    (foreign / "data.txt").write_text("dependency resource\n")
+    record = _write_native_distribution_record(
+        site, "customer", [f"{package}/__init__.py", f"{package}/{generated_name}"]
+    )
+    foreign_record = _write_native_distribution_record(site, "plugin", [f"{dependency}/__init__.py"])
+    if ownership == "same_owner":
+        record.write_text(record.read_text() + foreign_record.read_text())
+        foreign_record.unlink()
+    elif ownership == "outside_script":
+        record.write_text(record.read_text() + "../../../bin/tool.py,,\n/opt/external/tool.py,,\n")
+    if ownership == "missing":
+        record.unlink()
+    elif ownership == "unrecorded_generated":
+        record.write_text(
+            "".join(line for line in record.read_text().splitlines(keepends=True) if generated_name not in line)
+        )
+    elif ownership == "ambiguous":
+        _write_native_distribution_record(site, "duplicate", [f"{package}/{generated_name}"])
+    elif ownership == "changed_digest":
+        (installed / generated_name).write_bytes(b"VERSION='changed after record'\n")
+    elif ownership == "malformed":
+        record.write_text("malformed,record\n")
+    overlay = tmp_path / "overlay"
+    if ownership in {"ambiguous", "changed_digest", "malformed"}:
+        with pytest.raises(ProjectRuntimeError, match="project_native_source_ownership_invalid"):
+            native_project_runtime._bound_source_roots(project, site, installed=True, generated_destination=overlay)
+    else:
+        roots = native_project_runtime._bound_source_roots(project, site, installed=True, generated_destination=overlay)
+        assert roots == (["src"] if ownership in {"valid", "same_owner", "outside_script"} else [])
+    if ownership in {"valid", "same_owner", "outside_script"}:
+        assert (overlay / "src" / package / generated_name).read_bytes() == b"VERSION='built'\n"
+        assert not (overlay / "src" / dependency).exists()
+        assert {path.relative_to(overlay).as_posix() for path in overlay.rglob("*") if path.is_file()} == {
+            f"src/{package}/{generated_name}"
+        }
+    else:
+        assert not overlay.exists()
+    assert (foreign / "data.txt").read_text() == "dependency resource\n"
+    assert not (source / generated_name).exists()
+
+
+@pytest.mark.parametrize("ancestor", ["customer", "customer/sub"])
+@pytest.mark.parametrize("initializer", ["__init__.py", "__init__.pyi"])
+def test_uv_generated_ancestor_initializer_keeps_imports_on_reviewed_source(tmp_path, ancestor, initializer):
+    project = tmp_path / "project"
+    source = project / "src/customer/sub/module.py"
+    source.parent.mkdir(parents=True)
+    source.write_text("VALUE='original source'\n")
+    site = tmp_path / "site"
+    installed = site / "customer/sub/module.py"
+    installed.parent.mkdir(parents=True)
+    installed.write_bytes(source.read_bytes())
+    generated = site / ancestor / initializer
+    generated.write_text("READY=True\n")
+    _write_native_distribution_record(site, "customer", ["customer/sub/module.py", f"{ancestor}/{initializer}"])
+    overlay = tmp_path / "overlay"
+    roots = native_project_runtime._bound_source_roots(project, site, installed=True, generated_destination=overlay)
+    assert roots == ["src"]
+    staged = tmp_path / "staged"
+    shutil.copytree(project, staged)
+    if overlay.exists():
+        shutil.copytree(overlay, staged, dirs_exist_ok=True)
+    (staged / "src/customer/sub/module.py").write_text("VALUE='edited reviewed source'\n")
+    child = subprocess.run(
+        [
+            sys.executable,
+            "-I",
+            "-B",
+            "-c",
+            "import sys,json;sys.path[:0]=sys.argv[1:];import customer.sub.module as selected;"
+            "print(json.dumps([selected.VALUE,selected.__file__]))",
+            str(staged / "src"),
+            str(site),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+        timeout=10,
+    )
+    value, imported = json.loads(child.stdout)
+    assert value == "edited reviewed source"
+    assert Path(imported) == staged / "src/customer/sub/module.py"
+    assert (overlay / "src" / ancestor / initializer).read_bytes() == generated.read_bytes()
+    assert not (project / "src" / ancestor / initializer).exists()
+    assert source.read_text() == "VALUE='original source'\n"
