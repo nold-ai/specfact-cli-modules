@@ -1284,3 +1284,23 @@ Source-to-test collision detection SHALL count distinct Python production module
 - **WHEN** the fixed native code canonicalizes that path
 - **THEN** canonicalization SHALL use allocation sized by the system rather than a fixed protocol buffer, reject noncanonical or protocol-overlong paths, and free the allocation on every outcome
 - **AND** existing private-root, directory, symlink and launch restrictions SHALL remain unchanged
+
+
+#### Scenario: Deferral covers the entire staged review and a real PR invocation
+
+- **GIVEN** a qualifying capsule delta with a complete staged review surface against the same dev merge-base
+- **WHEN** local deferral validates the indexed workflow
+- **THEN** it SHALL reject unrelated reviewable paths instead of hiding them through a path-limited diff; only capsule changes, explicitly related active native OpenSpec metadata and the existing nonreviewed generated paths retain the approved exception
+- **AND** literal GitHub `on` keys SHALL remain distinguishable from YAML boolean keys; the PR event SHALL cover both target branches and the candidate's path surface with the original opened/synchronize lifecycle
+- **AND** the reusable review execution contract, including Linux runner, effective Python 3.12 matrix, commands and their supporting steps/environment, SHALL equal the already integrated dev merge-base workflow; changed execution SHALL require real review rather than local deferral
+- **AND** parsed comments/formatting may differ while execution, enforcement, inputs, deadlines and failure propagation remain unchanged
+
+The trigger validator SHALL admit null or mapping PR event configuration and SHALL reject false, numeric, sequence or string event configuration instead of interpreting falsey malformed values as defaults.
+
+
+#### Scenario: Canonical C proofs execute in an admitted compiler context
+
+- **GIVEN** native canonical-path security proofs require a C compiler absent from the sealed Python analysis capsule
+- **WHEN** required Full, SMART and native CI gates execute
+- **THEN** all ten original compiled sink and real filesystem assertions SHALL execute explicitly in the host/native proof context, including Linux and all retained macOS boundary runners
+- **AND** ordinary capsule discovery SHALL not falsely classify those compiler-dependent proofs as portable Python tests; no skip, weakened assertion, added capsule tool or altered deadline SHALL replace execution

@@ -23,7 +23,7 @@ def test_full_and_smart_host_runs_require_the_retained_host_proof(monkeypatch):
 
     configuration = tomllib.loads((ROOT / "pyproject.toml").read_text())
     assert (
-        "pytest " + HOST_PROOF + " && pytest tests "
+        "pytest " + HOST_PROOF + " tests/native/proof_native_canonical_path.py && pytest tests "
         in configuration["tool"]["hatch"]["envs"]["default"]["scripts"]["test"]
     )
     monkeypatch.syspath_prepend(str(ROOT / "tools"))
@@ -40,7 +40,13 @@ def test_full_and_smart_host_runs_require_the_retained_host_proof(monkeypatch):
         ),
     )
     assert module._run_pytest(["-n", "0"]) == 7
-    assert calls[0] == [module.sys.executable, "-m", "pytest", HOST_PROOF]
+    assert calls[0] == [
+        module.sys.executable,
+        "-m",
+        "pytest",
+        HOST_PROOF,
+        "tests/native/proof_native_canonical_path.py",
+    ]
     assert calls[1][:4] == [module.sys.executable, "-m", "pytest", "tests"]
     assert calls[1][-2:] == ["-n", "0"]
     assert set(calls[1][4:-2]) == {
@@ -231,3 +237,29 @@ def test_proof_only_changes_schedule_blocking_customer_review(path):
     customer = workflow["jobs"]["customer-capsules"]
     assert "needs.changes.outputs.capsule_changed" in customer["if"]
     assert not customer.get("continue-on-error", False)
+
+
+@pytest.mark.parametrize("surface", ["full", "smart", "native_ci", "discovery"])
+def test_compiled_canonical_proofs_have_required_compiler_context(surface):
+    proof = "tests/native/proof_native_canonical_path.py"
+    if surface == "full":
+        import tomllib
+
+        configuration = tomllib.loads((ROOT / "pyproject.toml").read_text())
+        command = configuration["tool"]["hatch"]["envs"]["default"]["scripts"]["test"]
+        assert "pytest " + HOST_PROOF + " " + proof + " && pytest tests " in command
+    elif surface == "smart":
+        assert '"' + proof + '"' in (ROOT / "tools/smart_test_coverage.py").read_text()
+    elif surface == "native_ci":
+        workflow = yaml.safe_load((ROOT / ".github/workflows/code-review-macos-boundary.yml").read_text())
+        for name in ("native-boundary", "canonical-linux"):
+            job = workflow["jobs"][name]
+            assert not job.get("continue-on-error", False) and "if" not in job
+            assert proof in "\n".join(str(step.get("run", "")) for step in job["steps"])
+        assert workflow["jobs"]["canonical-linux"]["runs-on"] == "ubuntu-24.04"
+    else:
+        assert (ROOT / proof).is_file()
+        plan = ProjectPlan(ROOT, manager="hatch", pytest_config={"testpaths": ["tests"], "python_files": ["test_*.py"]})
+        portable = ROOT / "tests/unit/test_native_analyzer_inputs.py"
+        assert select_test_paths(plan, [portable, ROOT / proof], full=False) == (portable.relative_to(ROOT).as_posix(),)
+        assert not (ROOT / "tests/unit/test_native_canonical_path.py").exists()

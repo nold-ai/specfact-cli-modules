@@ -339,7 +339,7 @@ run_code_review_gate() {
       error "Capsule review deferral requires the blocking independent signed-review job."
       exit 1
     fi
-    local capsule_paths candidate_base
+    local capsule_paths candidate_base candidate_paths
     if ! candidate_base="$(git merge-base HEAD refs/remotes/origin/dev)"; then
       error "Capsule review deferral cannot determine the PR merge-base against origin/dev."
       exit 1
@@ -347,7 +347,8 @@ run_code_review_gate() {
     if ! capsule_paths="$(git diff --cached --name-only "${candidate_base}" -- \
       packages/specfact-code-review .github/workflows/capsule-customer-execution.yml \
       .github/workflows/pr-orchestrator.yml scripts/pre-commit-quality-checks.sh scripts/check_capsule_deferral.py \
-      tests/native tests/unit/specfact_code_review tests/unit/test_native_broker_cleanup.py tests/unit/test_native_canonical_path.py \
+      tests/native tests/unit/specfact_code_review tests/unit/test_native_broker_cleanup.py pyproject.toml tools/smart_test_coverage.py \
+      .github/workflows/code-review-macos-boundary.yml \
       tests/unit/test_capsule_proof_contexts.py tests/host/proof_capsule_deferred_review_ci.py \
       tests/support/capsule_review_fixtures.py)"; then
       error "Capsule review deferral cannot determine the staged candidate delta against origin/dev."
@@ -357,7 +358,11 @@ run_code_review_gate() {
       error "Capsule review deferral requires a candidate change that schedules the blocking capsule workflow."
       exit 1
     fi
-    if ! hatch run python -I scripts/check_capsule_deferral.py "${capsule_paths}"; then
+    if ! candidate_paths="$(git diff --cached --name-only "${candidate_base}")"; then
+      error "Capsule review deferral cannot determine the complete staged candidate surface."
+      exit 1
+    fi
+    if ! hatch run python -I scripts/check_capsule_deferral.py "${capsule_paths}" "${candidate_paths}" "${candidate_base}"; then
       error "Capsule review deferral requires effective indexed blocking customer scheduling."
       exit 1
     fi

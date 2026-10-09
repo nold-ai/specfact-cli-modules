@@ -77,7 +77,7 @@ def test_deferred_gate_reviews_exact_staged_tree_and_propagates_failure(
         ("Darwin", "", "github-linux", "specfact-project", True, True, 1),
         ("Darwin", "", "github-linux", "tests/native/proof_macos_native_broker_wait.py", False, True, 0),
         ("Darwin", "", "github-linux", "tests/unit/test_native_broker_cleanup.py", False, True, 0),
-        ("Darwin", "", "github-linux", "tests/unit/test_native_canonical_path.py", False, True, 0),
+        ("Darwin", "", "github-linux", "tests/native/proof_native_canonical_path.py", False, True, 0),
         (
             "Darwin",
             "",
@@ -322,6 +322,7 @@ def test_local_deferral_rejects_nonblocking_reusable_review(tmp_path: Path, muta
     worktree = deferral_worktree(tmp_path, scenario)
     path = worktree / ".github/workflows/capsule-customer-execution.yml"
     document = yaml.safe_load(path.read_text())
+    document["on"] = document.pop(True)
     job = document["jobs"]["independent-review" if mutation.startswith("independent") else "customer"]
     if mutation.endswith("job"):
         job["continue-on-error"] = True
@@ -357,3 +358,163 @@ def test_local_deferral_rejects_nonblocking_reusable_review(tmp_path: Path, muta
     assert result.returncode == 1, result.stdout + result.stderr
     assert "Capsule review deferral" in result.stderr
     assert "DEFERRED" not in result.stderr
+
+
+def _assert_local_deferral(worktree: Path, calls: Path, expected: int) -> None:
+    script = (REPO_ROOT / "scripts/pre-commit-quality-checks.sh").read_text().rsplit('main "$@"', 1)[0]
+    result = subprocess.run(
+        ["bash", "-c", script + _BLOCK2_HATCH_FIXTURE],
+        cwd=worktree,
+        env=os.environ
+        | {
+            "FIXTURE_PLATFORM": "Darwin",
+            "FIXTURE_CALLS": str(calls),
+            "CI": "",
+            "GITHUB_ACTIONS": "",
+            "SPECFACT_CODE_REVIEW_DEFER_TO_CI": "github-linux",
+        },
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == expected, result.stdout + result.stderr
+    assert_block2_trace(calls.read_text(), expected, result.stderr, prompt_required=False)
+
+
+@pytest.mark.parametrize(
+    "mutation",
+    [
+        "missing_pr",
+        "literal_true",
+        "excluded_dev",
+        "excluded_main",
+        "excluded_paths",
+        "selected_paths",
+        "closed_only",
+        "extra_boolean_root",
+        "duplicate_on",
+    ],
+)
+def test_deferral_requires_effective_literal_pr_event(tmp_path: Path, mutation: str) -> None:
+    scenario = ("Darwin", "", "github-linux", "tests/native/proof_macos_native_broker_wait.py", False, True, 1)
+    worktree = deferral_worktree(tmp_path, scenario)
+    path = worktree / ".github/workflows/pr-orchestrator.yml"
+    document = yaml.safe_load(path.read_text())
+    events = document.pop(True)
+    document["on"] = events
+    if mutation == "literal_true":
+        document[True] = document.pop("on")
+    elif mutation == "missing_pr":
+        events.pop("pull_request")
+    elif mutation in {"extra_boolean_root", "duplicate_on"}:
+        document[True] = events if mutation == "extra_boolean_root" else {}
+    else:
+        changes = {
+            "excluded_dev": {"branches": ["main"]},
+            "excluded_main": {"branches": ["dev"]},
+            "excluded_paths": {"paths-ignore": ["**"]},
+            "selected_paths": {"paths": ["docs/**"]},
+            "closed_only": {"types": ["closed"]},
+        }
+        events["pull_request"].update(changes[mutation])
+    serialized = yaml.safe_dump(document, sort_keys=False)
+    if mutation == "duplicate_on":
+        serialized = (
+            serialized.replace("true: {}\n", "")
+            + "\non:\n"
+            + '  pull_request:\n    branches: [main, dev]\n    paths-ignore: ["**/*.md", "docs/**"]\n'
+        )
+    path.write_text(serialized)
+    _git(worktree, "add", ".")
+    _assert_local_deferral(worktree, tmp_path / "calls", 1)
+
+
+@pytest.mark.parametrize(
+    "unrelated",
+    [
+        "tests/unit/specfact_project/unrelated.py",
+        "tools/unrelated.py",
+        "packages/specfact-project/src/unrelated.py",
+        "openspec/changes/unrelated/spec.md",
+    ],
+)
+def test_deferral_rejects_mixed_unrelated_reviewable_paths(tmp_path: Path, unrelated: str) -> None:
+    scenario = ("Darwin", "", "github-linux", "tests/native/proof_macos_native_broker_wait.py", False, True, 1)
+    worktree = deferral_worktree(tmp_path, scenario)
+    path = worktree / unrelated
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("unrelated = 1\n")
+    _git(worktree, "add", ".")
+    _assert_local_deferral(worktree, tmp_path / "calls", 1)
+
+
+@pytest.mark.parametrize(
+    "mutation",
+    [
+        "literal_true",
+        "excluded_cp312",
+        "nonlinux",
+        "candidate_echo",
+        "independent_echo",
+        "early_exit",
+        "root_environment",
+    ],
+)
+def test_deferral_requires_integrated_review_execution_contract(tmp_path: Path, mutation: str) -> None:
+    scenario = ("Darwin", "", "github-linux", "tests/native/proof_macos_native_broker_wait.py", False, True, 1)
+    worktree = deferral_worktree(tmp_path, scenario)
+    path = worktree / ".github/workflows/capsule-customer-execution.yml"
+    document = yaml.safe_load(path.read_text())
+    document["on"] = document.pop(True)
+    customer = document["jobs"]["customer"]
+    commands = {
+        "candidate_echo": ("customer", "deferred_review"),
+        "independent_echo": ("independent-review", "independent_review"),
+        "early_exit": ("customer", "deferred_review"),
+    }
+    if mutation in commands:
+        job_name, identity = commands[mutation]
+        job = document["jobs"][job_name]
+        step = next(step for step in job["steps"] if step.get("id") == identity)
+        step["run"] = "exit 0\n" + step["run"] if mutation == "early_exit" else "echo skipped"
+    elif mutation == "literal_true":
+        document[True] = document.pop("on")
+    elif mutation == "excluded_cp312":
+        customer["strategy"]["matrix"]["exclude"] = [{"python": "3.12"}]
+    elif mutation == "nonlinux":
+        customer["runs-on"] = "macos-14"
+    else:
+        document["env"] = {"SPECFACT_CODE_REVIEW_ENFORCEMENT": "none"}
+    path.write_text(yaml.safe_dump(document, sort_keys=False))
+    _git(worktree, "add", ".")
+    _assert_local_deferral(worktree, tmp_path / "calls", 1)
+
+
+@pytest.mark.parametrize("control", ["formatting", "unrelated_generated_docs"])
+def test_deferral_retains_exact_review_contract_controls(tmp_path: Path, control: str) -> None:
+    scenario = ("Darwin", "", "github-linux", "tests/native/proof_macos_native_broker_wait.py", False, True, 0)
+    worktree = deferral_worktree(tmp_path, scenario)
+    if control == "formatting":
+        path = worktree / ".github/workflows/capsule-customer-execution.yml"
+        document = yaml.safe_load(path.read_text())
+        document["on"] = document.pop(True)
+        path.write_text(yaml.safe_dump(document, sort_keys=False))
+    else:
+        path = worktree / "docs/generated.md"
+        path.parent.mkdir(exist_ok=True)
+        path.write_text("Generated command reference.\n")
+    _git(worktree, "add", ".")
+    _assert_local_deferral(worktree, tmp_path / "calls", 0)
+
+
+@pytest.mark.parametrize("event", [False, 0, [], ""])
+def test_deferral_rejects_falsey_malformed_pr_events(tmp_path: Path, event: object) -> None:
+    scenario = ("Darwin", "", "github-linux", "tests/native/proof_macos_native_broker_wait.py", False, True, 1)
+    worktree = deferral_worktree(tmp_path, scenario)
+    path = worktree / ".github/workflows/pr-orchestrator.yml"
+    document = yaml.safe_load(path.read_text())
+    document["on"] = document.pop(True)
+    document["on"]["pull_request"] = event
+    path.write_text(yaml.safe_dump(document, sort_keys=False))
+    _git(worktree, "add", ".")
+    _assert_local_deferral(worktree, tmp_path / "calls", 1)

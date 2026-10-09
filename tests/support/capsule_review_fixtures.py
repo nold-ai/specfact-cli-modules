@@ -292,7 +292,7 @@ def deferral_worktree(tmp_path: Path, scenario):
         "docs/reference/commands.generated.json",
         "docs/reference/commands.generated.md",
         candidate_path,
-        "openspec/changes/example/spec.md",
+        "openspec/changes/code-review-native-platform-execution/spec.md",
     ]
     for relative in files:
         path = repository / relative

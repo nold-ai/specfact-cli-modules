@@ -884,3 +884,15 @@ requirements:
       method: test
       intent: Remove fixed-buffer realpath assumptions at bootstrap, managed Git and inherited worker boundaries.
       observable: Three source-backed sink REDs under an injected larger-allocation contract precede the shared allocated predicate; balanced allocation/free and seven real filesystem canonical, alias, relative, dot, missing, protocol-bound and null cases pass. The injected contract is not asserted as an observed macOS exploit.
+
+    - case_id: 460-21-11
+      scenario_id: release-review-corrections-preserve-source-and-failure-boundaries
+      method: test
+      intent: Require literal effective PR events, complete staged review scope and actual integrated reviewer execution before deferral.
+      observable: Eighteen REDs cover PR trigger/branch/path/lifecycle exclusions, mixed unrelated reviewable files and reusable runner/matrix/command/environment bypasses; two further duplicate/boolean root-key REDs precede parser identity checks and four falsey malformed PR-event REDs precede null-only defaulting. Existing controls remain, including comments/formatting equivalence and generated nonreviewed docs. Native payload/signatures remain unchanged.
+
+    - case_id: 460-21-12
+      scenario_id: release-review-corrections-preserve-source-and-failure-boundaries
+      method: test
+      intent: Execute every compiler-dependent canonical path proof in required host and native contexts.
+      observable: Ten compiler-unavailable failures and four required-context REDs precede explicit Full/SMART and Linux/macOS CI execution of the unchanged ten compiled security assertions. No capsule compiler or skip is added.
