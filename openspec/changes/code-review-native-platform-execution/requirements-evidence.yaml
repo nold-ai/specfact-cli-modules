@@ -848,3 +848,9 @@ requirements:
       method: test
       intent: Preserve available observer identity rejection when other ordinary evidence is absent or malformed.
       observable: Eighteen REDs cover all six malformed identity forms with absent coverage, absent JUnit or malformed coverage; eight existing/healthy controls pass. Artifact path/type/size validation remains before all parsing and valid identities with missing evidence remain incomplete.
+
+    - case_id: 460-21-5
+      scenario_id: release-review-corrections-preserve-source-and-failure-boundaries
+      method: test
+      intent: Handle missing ordinary artifact parents without weakening substituted-parent rejection.
+      observable: Two helper REDs distinguish absent directories and typed dangling-symlink rejection; three controls including the real evaluator already returning UNKNOWN pass. Final parent handling keeps canonical-path equality, lexical confinement, no-follow regular-file reads and all bounds.

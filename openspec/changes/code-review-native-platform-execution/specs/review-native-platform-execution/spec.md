@@ -1236,3 +1236,9 @@ Source-to-test collision detection SHALL count distinct Python production module
 - **WHEN** native artifacts have passed the unchanged path/type/size checks
 - **THEN** invalid observer identity SHALL reject the worker contract before any incomplete-artifact fallback
 - **AND** valid observer records with missing ordinary artifacts SHALL remain UNKNOWN without invented observations
+
+#### Scenario: Deleted ordinary evidence directory retains incomplete diagnostics
+- **GIVEN** pytest removes its ordinary private evidence directory before returning
+- **WHEN** artifact capture checks the unchanged confined artifact paths
+- **THEN** absent ordinary parent directories SHALL reach incomplete-evidence evaluation
+- **AND** existing or dangling symlink parents, non-directory parents and lexical escapes SHALL retain hard rejection before reading artifact bytes

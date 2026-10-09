@@ -211,7 +211,16 @@ def test_native_pytest_observations_preserve_exact_valid_node_identity(tmp_path:
 
 
 @pytest.mark.parametrize(
-    "failure", ["usage", "missing-coverage", "malformed-coverage", "missing-observer", "deep-coverage", "deep-observer"]
+    "failure",
+    [
+        "usage",
+        "missing-coverage",
+        "malformed-coverage",
+        "missing-observer",
+        "deep-coverage",
+        "deep-observer",
+        "missing-directory",
+    ],
 )
 def test_native_pytest_failure_reaches_real_evaluator_with_incomplete_remedy(tmp_path, monkeypatch, failure):
     transport = _transport(tmp_path)
@@ -247,6 +256,10 @@ def test_native_pytest_failure_reaches_real_evaluator_with_incomplete_remedy(tmp
             paths[0].write_text("[]")
         elif failure.startswith("deep-"):
             paths[0 if failure == "deep-coverage" else 1].write_text("[" * 2000 + "0" + "]" * 2000)
+        elif failure == "missing-directory":
+            for path in paths:
+                path.unlink()
+            paths[0].parent.rmdir()
         else:
             paths[1].unlink()
         return subprocess.CompletedProcess([], 4 if failure == "usage" else 0, "", ""), *paths
@@ -308,3 +321,24 @@ def test_valid_node_identity_with_missing_artifact_remains_incomplete(tmp_path, 
     result = _capture_result(transport, [{"nodeid": "tests/test_value.py::test_value", "phase": "call"}])
     (transport.temporary / missing).unlink()
     assert native_worker._capture_pytest_observation(result, transport) is None
+
+
+@pytest.mark.parametrize("parent_kind", ["absent", "dangling-symlink", "symlink", "file"])
+def test_pytest_artifact_parent_boundary_distinguishes_absence_from_substitution(tmp_path, parent_kind):
+    transport = _transport(tmp_path)
+    parent = transport.temporary / "evidence-parent"
+    outside = tmp_path / "outside"
+    if parent_kind == "symlink":
+        outside.mkdir()
+        (outside / "coverage.json").write_text("private outside bytes")
+        parent.symlink_to(outside, target_is_directory=True)
+    elif parent_kind == "dangling-symlink":
+        parent.symlink_to(outside, target_is_directory=True)
+    elif parent_kind == "file":
+        parent.write_text("ordinary file")
+    path = parent / "coverage.json"
+    if parent_kind == "absent":
+        assert native_worker._read_pytest_artifact(path, transport.temporary) is None
+    else:
+        with pytest.raises(native_worker.WorkerContractError, match="artifact"):
+            native_worker._read_pytest_artifact(path, transport.temporary)

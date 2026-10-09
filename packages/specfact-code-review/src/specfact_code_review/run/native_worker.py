@@ -673,9 +673,13 @@ def _bind_pytest_private_state(adapter_argv: list[str], temporary: Path) -> list
 
 def _read_pytest_artifact(path: Path, temporary: Path) -> bytes | None:
     """Read one bounded ordinary artifact from the confined private state."""
-    if not path.is_relative_to(temporary) or path.parent.resolve(strict=True) != path.parent:
+    if not path.is_relative_to(temporary):
         raise WorkerContractError("native pytest artifact path is invalid")
     try:
+        # Resolve existing links even when an ordinary evidence directory is gone.
+        # Dangling/substituted parents still change the canonical path and reject.
+        if path.parent.resolve(strict=False) != path.parent:
+            raise WorkerContractError("native pytest artifact path is invalid")
         descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
         try:
             metadata = os.fstat(descriptor)
