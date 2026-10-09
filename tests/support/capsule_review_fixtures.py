@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import json
 import os
+import shlex
 import subprocess
+import sys
 import venv
 from pathlib import Path
 from string import Template
@@ -87,6 +89,7 @@ _BLOCK2_HATCH_FIXTURE = (
     'uname() { if [[ "${1:-}" == "-m" ]]; then echo arm64; else echo "$FIXTURE_PLATFORM"; fi; }\n'
     "hatch() {\n"
     '  printf \'%s\\n\' "$*" >> "$FIXTURE_CALLS"\n'
+    f'  if [[ "${{4:-}}" == scripts/check_capsule_deferral.py ]]; then {shlex.quote(sys.executable)} -I {shlex.quote(str(REPO_ROOT / "scripts/check_capsule_deferral.py"))} "${{@:5}}"; return $?; fi\n'
     '  if [[ "$*" == *pre_commit_code_review.py* ]]; then return 99; fi\n'
     '  if [[ "$*" == *contract-test-status* ]]; then return 1; fi\n'
     "  return 0\n"

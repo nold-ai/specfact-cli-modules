@@ -77,6 +77,7 @@ def test_deferred_gate_reviews_exact_staged_tree_and_propagates_failure(
         ("Darwin", "", "github-linux", "specfact-project", True, True, 1),
         ("Darwin", "", "github-linux", "tests/native/proof_macos_native_broker_wait.py", False, True, 0),
         ("Darwin", "", "github-linux", "tests/unit/test_native_broker_cleanup.py", False, True, 0),
+        ("Darwin", "", "github-linux", "tests/unit/test_native_canonical_path.py", False, True, 0),
         (
             "Darwin",
             "",
@@ -218,3 +219,141 @@ def test_independent_invalid_no_impact_stops_before_review(
     assert not (trusted / "prepared").exists()
     assert (trusted / "cleaned").exists()
     assert "private-reason" not in result.stdout
+
+
+@pytest.mark.parametrize(
+    "mutation",
+    [
+        "self_trigger",
+        "missing_job",
+        "disabled_job",
+        "wrong_filter",
+        "wrong_target",
+        "nonblocking",
+        "decoy_rule",
+        "missing_filter_output",
+        "conditional_filter",
+        "negated_filter",
+        "wrong_detection",
+        "filter_every",
+        "malformed",
+    ],
+)
+def test_local_deferral_rejects_unscheduled_indexed_customer_review(tmp_path: Path, mutation: str) -> None:
+    scenario = ("Darwin", "", "github-linux", "tests/native/proof_macos_native_broker_wait.py", False, True, 1)
+    worktree = deferral_worktree(tmp_path, scenario)
+    path = worktree / ".github/workflows/pr-orchestrator.yml"
+    source = path.read_text()
+    replacements = {
+        "filter_every": (
+            "        with:\n          filters: |",
+            "        with:\n          predicate-quantifier: every\n          filters: |",
+        ),
+        "self_trigger": ('              - ".github/workflows/pr-orchestrator.yml"\n', ""),
+        "disabled_job": (
+            "if: github.event_name == 'pull_request' && needs.changes.outputs.capsule_changed == 'true'",
+            "if: false",
+        ),
+        "wrong_filter": ("needs.changes.outputs.capsule_changed == 'true'", "needs.changes.outputs.other == 'true'"),
+        "wrong_target": (
+            "uses: ./.github/workflows/capsule-customer-execution.yml",
+            "uses: ./.github/workflows/docs.yml",
+        ),
+        "nonblocking": ("  customer-capsules:\n", "  customer-capsules:\n    continue-on-error: true\n"),
+        "decoy_rule": ('              - "tests/native/**"\n', ""),
+        "missing_filter_output": ("capsule_changed: ${{ steps.filter.outputs.capsule }}", "capsule_changed: false"),
+        "conditional_filter": ("        id: filter", "        if: false\n        id: filter"),
+        "negated_filter": ("            capsule:\n", '            capsule:\n              - "!tests/native/**"\n'),
+        "wrong_detection": ("  changes:\n", "  changes:\n    if: false\n"),
+    }
+    if mutation in replacements:
+        source = source.replace(*replacements[mutation])
+    if mutation == "self_trigger":
+        # Only the orchestrator qualifies; unrelated code cannot schedule review.
+        _git(worktree, "reset", "HEAD", "tests/native/proof_macos_native_broker_wait.py")
+        unrelated = worktree / "tools/unrelated.py"
+        unrelated.parent.mkdir()
+        unrelated.write_text("value = 1\n")
+    elif mutation == "missing_job":
+        start = source.index("\n  customer-capsules:")
+        end = source.index("\n  quality:", start)
+        source = source[:start] + source[end:]
+    elif mutation == "decoy_rule":
+        source += '\n# - "tests/native/**"\n'
+    elif mutation == "malformed":
+        source = "jobs: [unterminated"
+    path.write_text(source)
+    _git(worktree, "add", ".")
+    calls = tmp_path / "calls"
+    script = (REPO_ROOT / "scripts/pre-commit-quality-checks.sh").read_text().rsplit('main "$@"', 1)[0]
+    result = subprocess.run(
+        ["bash", "-c", script + _BLOCK2_HATCH_FIXTURE],
+        cwd=worktree,
+        env=os.environ
+        | {
+            "FIXTURE_PLATFORM": "Darwin",
+            "FIXTURE_CALLS": str(calls),
+            "CI": "",
+            "GITHUB_ACTIONS": "",
+            "SPECFACT_CODE_REVIEW_DEFER_TO_CI": "github-linux",
+        },
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 1, result.stdout + result.stderr
+    assert "Capsule review deferral" in result.stderr
+    assert "DEFERRED" not in result.stderr
+
+
+@pytest.mark.parametrize(
+    "mutation",
+    [
+        "candidate_step",
+        "candidate_job",
+        "candidate_condition",
+        "independent_job",
+        "independent_step",
+        "independent_condition",
+    ],
+)
+def test_local_deferral_rejects_nonblocking_reusable_review(tmp_path: Path, mutation: str) -> None:
+    scenario = ("Darwin", "", "github-linux", "tests/native/proof_macos_native_broker_wait.py", False, True, 1)
+    worktree = deferral_worktree(tmp_path, scenario)
+    path = worktree / ".github/workflows/capsule-customer-execution.yml"
+    document = yaml.safe_load(path.read_text())
+    job = document["jobs"]["independent-review" if mutation.startswith("independent") else "customer"]
+    if mutation.endswith("job"):
+        job["continue-on-error"] = True
+    else:
+        step = next(
+            item
+            for item in job["steps"]
+            if item.get("id") == ("independent_review" if mutation.startswith("independent") else "deferred_review")
+        )
+        if mutation.endswith("condition"):
+            step["if"] = False
+        else:
+            step["continue-on-error"] = True
+    path.write_text(yaml.safe_dump(document, sort_keys=False))
+    _git(worktree, "add", ".")
+    calls = tmp_path / "calls"
+    script = (REPO_ROOT / "scripts/pre-commit-quality-checks.sh").read_text().rsplit('main "$@"', 1)[0]
+    result = subprocess.run(
+        ["bash", "-c", script + _BLOCK2_HATCH_FIXTURE],
+        cwd=worktree,
+        env=os.environ
+        | {
+            "FIXTURE_PLATFORM": "Darwin",
+            "FIXTURE_CALLS": str(calls),
+            "CI": "",
+            "GITHUB_ACTIONS": "",
+            "SPECFACT_CODE_REVIEW_DEFER_TO_CI": "github-linux",
+        },
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 1, result.stdout + result.stderr
+    assert "Capsule review deferral" in result.stderr
+    assert "DEFERRED" not in result.stderr

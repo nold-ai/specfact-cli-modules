@@ -1261,3 +1261,26 @@ Source-to-test collision detection SHALL count distinct Python production module
 - **WHEN** the PR change filter and owner-approved local Darwin deferral evaluate the staged delta
 - **THEN** those proof paths SHALL schedule the same blocking candidate/independent customer review and qualify only for that local deferral
 - **AND** unrelated test changes SHALL NOT qualify; missing indexed scheduling rules, absent independent review and CI-side deferral SHALL reject
+
+
+#### Scenario: Combined native evidence fits the controller result budget
+
+- **GIVEN** independently valid pytest artifacts and normalized findings whose combined completed response may exceed 16 MiB
+- **WHEN** the worker serializes the completed result as UTF-8 including its terminating newline
+- **THEN** a response at or below the controller's existing budget SHALL preserve every finding and observation unchanged
+- **AND** an oversized combined response SHALL become a bounded UNKNOWN/error result with fixed `native_worker_result_size_exceeded` diagnostic, never a partial PASS
+- **AND** original artifact confinement, type, size and node-identity validation SHALL remain before this fallback
+
+#### Scenario: Indexed orchestration schedules a blocking customer review
+
+- **GIVEN** an owner-approved local ARM64 Darwin capsule-only review deferral
+- **WHEN** the staged orchestrator, effective capsule filter and reusable customer workflow are inspected as data
+- **THEN** the effective capsule filter SHALL cover each qualifying staged path, including the orchestrator itself, and bind its output to the blocking customer job's unchanged PR/filter condition and local reusable-workflow target
+- **AND** missing, disabled, nonblocking, unrelated-filter or malformed scheduling, including either required reusable review job/step, SHALL reject deferral while valid staged scheduling remains admitted
+
+#### Scenario: Canonical native paths cannot overflow protocol storage
+
+- **GIVEN** a managed child cwd, Git private path or inherited worker path originating in the startup/worker protocol
+- **WHEN** the fixed native code canonicalizes that path
+- **THEN** canonicalization SHALL use allocation sized by the system rather than a fixed protocol buffer, reject noncanonical or protocol-overlong paths, and free the allocation on every outcome
+- **AND** existing private-root, directory, symlink and launch restrictions SHALL remain unchanged

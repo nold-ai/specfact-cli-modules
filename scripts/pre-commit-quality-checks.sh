@@ -346,8 +346,8 @@ run_code_review_gate() {
     fi
     if ! capsule_paths="$(git diff --cached --name-only "${candidate_base}" -- \
       packages/specfact-code-review .github/workflows/capsule-customer-execution.yml \
-      .github/workflows/pr-orchestrator.yml scripts/pre-commit-quality-checks.sh \
-      tests/native tests/unit/specfact_code_review tests/unit/test_native_broker_cleanup.py \
+      .github/workflows/pr-orchestrator.yml scripts/pre-commit-quality-checks.sh scripts/check_capsule_deferral.py \
+      tests/native tests/unit/specfact_code_review tests/unit/test_native_broker_cleanup.py tests/unit/test_native_canonical_path.py \
       tests/unit/test_capsule_proof_contexts.py tests/host/proof_capsule_deferred_review_ci.py \
       tests/support/capsule_review_fixtures.py)"; then
       error "Capsule review deferral cannot determine the staged candidate delta against origin/dev."
@@ -357,24 +357,10 @@ run_code_review_gate() {
       error "Capsule review deferral requires a candidate change that schedules the blocking capsule workflow."
       exit 1
     fi
-    local indexed_orchestrator proof_path proof_rule
-    if ! indexed_orchestrator="$(git show :.github/workflows/pr-orchestrator.yml 2>/dev/null)"; then
-      error "Capsule review deferral requires indexed customer scheduling rules."
+    if ! hatch run python -I scripts/check_capsule_deferral.py "${capsule_paths}"; then
+      error "Capsule review deferral requires effective indexed blocking customer scheduling."
       exit 1
     fi
-    while IFS= read -r proof_path; do
-      proof_rule=""
-      case "${proof_path}" in
-        tests/native/*) proof_rule="tests/native/**" ;;
-        tests/unit/specfact_code_review/*) proof_rule="tests/unit/specfact_code_review/**" ;;
-        tests/unit/test_native_broker_cleanup.py|tests/unit/test_capsule_proof_contexts.py|tests/host/proof_capsule_deferred_review_ci.py|tests/support/capsule_review_fixtures.py|scripts/pre-commit-quality-checks.sh)
-          proof_rule="${proof_path}" ;;
-      esac
-      if [[ -n "${proof_rule}" ]] && ! grep -Fq -- "- \"${proof_rule}\"" <<<"${indexed_orchestrator}"; then
-        error "Capsule review deferral requires the indexed proof-path customer trigger."
-        exit 1
-      fi
-    done <<<"${capsule_paths}"
     warn "DEFERRED: only the local capsule review requires mandatory exact-head GitHub Linux CI; this is not a PASS."
     return 0
   fi

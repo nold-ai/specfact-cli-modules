@@ -866,3 +866,21 @@ requirements:
       method: test
       intent: Schedule mandatory customer review for proof-only fixes and bind approved local deferral to indexed scheduling.
       observable: Six canonical host/index/workflow REDs precede trigger/deferral updates; ten unrelated/missing-review/missing-trigger/CI/platform controls remain. No enforcement, analysis input, deadline or failure assertion is weakened.
+
+    - case_id: 460-21-8
+      scenario_id: release-review-corrections-preserve-source-and-failure-boundaries
+      method: test
+      intent: Bound complete serialized native evidence without partial success or relaxed artifact validation.
+      observable: Four genuine response-budget REDs cover individually valid combined artifacts, multibyte collected identities, findings and newline boundary; normalized finding identity rejection and exact-boundary complete evidence remain controls.
+
+    - case_id: 460-21-9
+      scenario_id: release-review-corrections-preserve-source-and-failure-boundaries
+      method: test
+      intent: Bind local deferral to effective indexed blocking orchestration.
+      observable: Eight effective-scheduling REDs plus two explicit false-condition REDs precede parsed workflow validation; malformed and unrelated scheduling controls retain failure and canonical scheduling remains admitted. Six sibling reusable-job/step/condition REDs precede shared blocking-scope validation.
+
+    - case_id: 460-21-10
+      scenario_id: release-review-corrections-preserve-source-and-failure-boundaries
+      method: test
+      intent: Remove fixed-buffer realpath assumptions at bootstrap, managed Git and inherited worker boundaries.
+      observable: Three source-backed sink REDs under an injected larger-allocation contract precede the shared allocated predicate; balanced allocation/free and seven real filesystem canonical, alias, relative, dot, missing, protocol-bound and null cases pass. The injected contract is not asserted as an observed macOS exploit.

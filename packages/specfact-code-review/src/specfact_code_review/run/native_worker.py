@@ -63,6 +63,7 @@ _MEMBERS: Final = frozenset({"ai-bloat-ast", "ast-clean-code", *_EXTERNAL_TOOLS}
 _MAX_PATHS: Final = 100_000
 _MAX_PATH_BYTES: Final = 240
 _MAX_REQUEST_BYTES: Final = 16 << 20
+_MAX_RESULT_BYTES: Final = 16 << 20
 _MAX_ADAPTER_ARGUMENTS: Final = 128
 _MAX_ARGUMENT_BYTES: Final = 1024
 _MAX_PROCESS_ARGUMENT_BYTES: Final = 64 << 10
@@ -865,6 +866,8 @@ def _completed_response(
     }
     if target_execution is not None:
         response["target_execution"] = target_execution
+    if len(_result_payload(response)) > _MAX_RESULT_BYTES:
+        return _unknown_response(member, "native_worker_result_size_exceeded")
     return response
 
 
@@ -878,14 +881,18 @@ def _unknown_response(member: str, diagnostic: str) -> dict[str, object]:
     }
 
 
+def _result_payload(response: dict[str, object]) -> bytes:
+    return (json.dumps(response, ensure_ascii=False, separators=(",", ":"), sort_keys=True) + "\n").encode("utf-8")
+
+
 def _write_result(output: Path, response: dict[str, object]) -> None:
     destination = output / "result.json"
     if destination.exists() or destination.is_symlink():
         raise FileExistsError("result output already exists")
     temporary = output / f".result.{os.getpid()}.tmp"
-    payload = json.dumps(response, ensure_ascii=False, separators=(",", ":"), sort_keys=True) + "\n"
+    payload = _result_payload(response)
     try:
-        with temporary.open("x", encoding="utf-8") as stream:
+        with temporary.open("xb") as stream:
             stream.write(payload)
             stream.flush()
             os.fsync(stream.fileno())

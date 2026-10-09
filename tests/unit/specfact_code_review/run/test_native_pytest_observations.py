@@ -342,3 +342,121 @@ def test_pytest_artifact_parent_boundary_distinguishes_absence_from_substitution
     else:
         with pytest.raises(native_worker.WorkerContractError, match="artifact"):
             native_worker._read_pytest_artifact(path, transport.temporary)
+
+
+@pytest.mark.parametrize("large_part", ["combined", "collected", "findings"])
+def test_completed_result_bounds_whole_utf8_evidence(tmp_path: Path, large_part: str) -> None:
+    transport = _transport(tmp_path)
+    member = "targeted-pytest-coverage"
+    raw_findings = []
+    evidence: dict[str, object] | None
+    if large_part == "combined":
+        # Both actual artifact files fit their independent 16 MiB limits.
+        coverage = transport.temporary / "coverage.json"
+        observer = transport.temporary / "observer.json"
+        junit = transport.temporary / "junit.xml"
+        padding = "x" * (9 << 20)
+        coverage.write_text(json.dumps({"files": {}, "metadata": padding}))
+        observer.write_text(
+            json.dumps([{"nodeid": "tests/test_value.py::test_value", "phase": "call", "detail": padding}])
+        )
+        junit.write_text("<testsuite/>")
+        assert all(path.stat().st_size <= 16 << 20 for path in (coverage, observer, junit))
+        evidence = native_worker._capture_pytest_observation(
+            (subprocess.CompletedProcess([], 0, "", ""), coverage, observer, junit), transport
+        )
+        assert evidence is not None
+    else:
+        evidence = {"collected": ["é" * (9 << 20)]} if large_part == "collected" else None
+        if large_part == "findings":
+            raw_findings = [
+                {
+                    "file": "value.py",
+                    "line": 1,
+                    "severity": "warning",
+                    "category": "style",
+                    "tool": "ruff",
+                    "rule": "F401",
+                    "message": "é" * (9 << 20),
+                }
+            ]
+    response = native_worker._completed_response(
+        member, raw_findings, project=transport.project, selected={"value.py"}, target_execution=evidence
+    )
+    assert response == native_worker._unknown_response(member, "native_worker_result_size_exceeded")
+    output = tmp_path / "bounded"
+    output.mkdir()
+    native_worker._write_result(output, response)
+    assert (output / "result.json").stat().st_size <= 16 << 20
+    assert json.loads((output / "result.json").read_text()) == response
+
+
+@pytest.mark.parametrize("extra_bytes", [0, -1])
+def test_completed_result_budget_includes_utf8_envelope_and_newline(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, extra_bytes: int
+) -> None:
+    transport = _transport(tmp_path)
+    evidence = {"collected": ["tests/test_é.py::test_é"], "records": [], "coverage": {"files": {}}}
+    baseline = native_worker._completed_response(
+        "targeted-pytest-coverage", [], project=transport.project, selected=set(), target_execution=evidence
+    )
+    wire = (json.dumps(baseline, ensure_ascii=False, separators=(",", ":"), sort_keys=True) + "\n").encode("utf-8")
+    monkeypatch.setattr(native_worker, "_MAX_RESULT_BYTES", len(wire) + extra_bytes, raising=False)
+    response = native_worker._completed_response(
+        "targeted-pytest-coverage", [], project=transport.project, selected=set(), target_execution=evidence
+    )
+    if extra_bytes == 0:
+        assert response == baseline
+    else:
+        assert response == native_worker._unknown_response(
+            "targeted-pytest-coverage", "native_worker_result_size_exceeded"
+        )
+
+
+def test_oversized_evidence_never_bypasses_finding_identity(tmp_path: Path) -> None:
+    transport = _transport(tmp_path)
+    with pytest.raises(native_worker.WorkerContractError, match="outside selected"):
+        native_worker._completed_response(
+            "targeted-pytest-coverage",
+            [
+                {
+                    "file": "../outside.py",
+                    "line": 1,
+                    "severity": "error",
+                    "category": "style",
+                    "tool": "ruff",
+                    "rule": "F401",
+                    "message": "bad",
+                }
+            ],
+            project=transport.project,
+            selected={"value.py"},
+            target_execution={"records": ["x" * (17 << 20)]},
+        )
+
+
+def test_completed_worker_publishes_bounded_unknown_for_combined_evidence(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    for name in native_worker._UNSAFE_ENVIRONMENT:
+        monkeypatch.delenv(name, raising=False)
+    roots = _roots(tmp_path)
+    _set_member(roots, "targeted-pytest-coverage")
+    monkeypatch.setattr(native_worker, "_request_member", lambda _request: ("targeted-pytest-coverage", []))
+
+    def adapter(_paths, run, *_args):
+        run.__self__.target_execution = {
+            "collected": ["tests/test_value.py::test_value"],
+            "records": [{"nodeid": "tests/test_value.py::test_value", "phase": "call", "detail": "x" * (9 << 20)}],
+            "coverage": {"files": {}, "metadata": "x" * (9 << 20)},
+        }
+        return []
+
+    monkeypatch.setitem(native_worker.EXTERNAL_ADAPTERS, "targeted-pytest-coverage", adapter)
+    monkeypatch.setattr(native_worker.sys, "argv", _argv(roots))
+    assert native_worker.main() == native_worker.EXIT_COMPLETE
+    result = roots[2] / "result.json"
+    assert result.stat().st_size <= 16 << 20
+    assert json.loads(result.read_text()) == native_worker._unknown_response(
+        "targeted-pytest-coverage", "native_worker_result_size_exceeded"
+    )
