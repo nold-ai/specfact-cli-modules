@@ -1,0 +1,76 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+name: Native installed customer acceptance
+
+on:
+  workflow_dispatch:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  installed-customer:
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
+    env:
+      RELEASE_TAG: ${{ github.event.release.tag_name || '' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [macos-14, macos-15, macos-26]
+        python: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: ${{ matrix.python }}
+          architecture: arm64
+      - name: Create independent ordinary customer installation
+        run: |
+          set -euo pipefail
+          CUSTOMER_ROOT="$RUNNER_TEMP/native-customer"
+          mkdir -m 700 "$CUSTOMER_ROOT" "$CUSTOMER_ROOT/home" "$CUSTOMER_ROOT/tmp"
+          python -m venv "$CUSTOMER_ROOT/venv"
+          "$CUSTOMER_ROOT/venv/bin/python" -m pip install --no-cache-dir specfact-cli==0.55.4
+          {
+            echo "CUSTOMER_ROOT=$CUSTOMER_ROOT"
+            echo "HOME=$CUSTOMER_ROOT/home"
+            echo "TMPDIR=$CUSTOMER_ROOT/tmp"
+          } >> "$GITHUB_ENV"
+          echo "$CUSTOMER_ROOT/venv/bin" >> "$GITHUB_PATH"
+      - name: Install and verify the official signed module through the marketplace
+        run: |
+          set -euo pipefail
+          unset GITHUB_TOKEN GH_TOKEN PYTHONPATH SPECFACT_ALLOW_UNSIGNED SPECFACT_MODULES_ROOTS
+          EXPECTED_MODULE_VERSION="$(python scripts/capsule_customer_gate.py \
+            --repository "$GITHUB_WORKSPACE" --evidence "$CUSTOMER_ROOT/install-evidence" \
+            --mode public --require-source-identity --installation-version)"
+          cd "$CUSTOMER_ROOT"
+          specfact module install nold-ai/specfact-code-review --scope user \
+            --version "$EXPECTED_MODULE_VERSION" --source marketplace
+          python "$GITHUB_WORKSPACE/scripts/capsule_customer_gate.py" \
+            --repository "$GITHUB_WORKSPACE" --evidence "$CUSTOMER_ROOT/install-evidence" \
+            --mode public --require-source-identity --verify-installation
+      - name: Prove anonymous cold acquisition, real project execution and offline reuse
+        env:
+          PLATFORM_LABEL: ${{ matrix.runner }}
+        run: |
+          set -euo pipefail
+          unset GITHUB_TOKEN GH_TOKEN PYTHONPATH SPECFACT_ALLOW_UNSIGNED SPECFACT_MODULES_ROOTS
+          unset SPECFACT_CODE_REVIEW_NATIVE_ARTIFACT_DIR SPECFACT_NATIVE_CAPSULE_PRIVATE_SIGN_KEY
+          python -m scripts.native_release.acceptance --mode customer \
+            --work "$CUSTOMER_ROOT/acceptance" --runner "$PLATFORM_LABEL"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: native-customer-${{ matrix.runner }}-${{ matrix.python }}
+          path: |
+            ${{ env.CUSTOMER_ROOT }}/install-evidence
+            ${{ env.CUSTOMER_ROOT }}/acceptance/*.json
+          if-no-files-found: error
+          retention-days: 7

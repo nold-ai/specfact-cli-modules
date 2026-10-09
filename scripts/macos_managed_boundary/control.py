@@ -155,10 +155,9 @@ class Client:
         self._activate_request(0)
         self.capability = capability
         self.history: list[dict[str, Any]] = []
-        self.stream = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        self.stream.settimeout(7)
+        self.stream = SOCKET.connect_private_socket(path)
         try:
-            self.stream.connect(str(path))
+            self.stream.settimeout(7)
             require(self.request(0).get("state") == "authenticated", "authentication failed")
         except BaseException:
             self.stream.close()
@@ -395,9 +394,8 @@ class Invocation:
         }
         path = _write_diagnostic(record)
         marker = {"failed_case": self.case, "failure_phase": phase, "failure_origin": origin, "diagnostic": str(path)}
-        state = STATE.last_worker_state(record["events"], record["requests"], phase) if origin else {}
-        if state:
-            marker["last_worker_state"] = state
+        if origin:
+            marker.update(STATE.wait_observations(record["events"], record["requests"], phase))
         socket_state = error.__dict__.get("_native_socket_state")
         if (
             origin

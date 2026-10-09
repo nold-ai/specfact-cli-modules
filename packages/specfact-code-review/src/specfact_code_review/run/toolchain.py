@@ -1628,6 +1628,8 @@ def _installed_payload_manifest(identity: InstalledModuleIdentity) -> tuple[Payl
     paths = sorted(root.rglob("*"), key=lambda item: item.relative_to(installed_root).as_posix())
     manifest: list[PayloadEntry] = []
     for path in paths:
+        if "__pycache__" in path.relative_to(root).parts or path.suffix in {".pyc", ".pyo"}:
+            continue
         mode = path.lstat().st_mode
         if stat.S_ISDIR(mode):
             continue

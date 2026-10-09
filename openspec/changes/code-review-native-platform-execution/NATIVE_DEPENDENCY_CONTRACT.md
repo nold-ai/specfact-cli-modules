@@ -314,3 +314,20 @@ Primary sources inspected 2026-10-03:
 [Z3 tagged license](https://github.com/Z3Prover/z3/blob/0b6cdcdbc65da25ef0f73ac9da210574d0f66cf8/LICENSE.txt),
 [Z3 release](https://github.com/Z3Prover/z3/releases/tag/z3-5.1.0),
 [exact wheel metadata](https://pypi.org/pypi/z3-solver/5.1.0.0/json).
+
+## Parent delivery amendment — 6 October 2026 (Europe/Berlin)
+
+The direct finish-460 request authorizes reconciliation of the native Z3
+provenance gap. Retain the metadata-only specfact.1 tool/output unchanged. Add
+an explicitly selected specfact.2 Darwin-only projection, requiring the exact
+authenticated wheel and ARM64 release. Omit only the ten exact DLL path/hash/size
+identities already recorded in the authenticated supplemental provenance; reject
+missing/altered/unknown foreign payload. Copy the authenticated, release-linked
+MIT license into the new wheel and bind its RECORD/metadata/provenance. Retain
+every Darwin native, Python source and header byte and record all omissions.
+This avoids redistributing unused unlicensed foreign components without claiming
+MIT covers them. New dependency identity requires three-ABI resolution/import
+and native compatibility evidence; all production/dependency flags stay false.
+Authenticating Microsoft runtime terms would distribute unused Windows payload
+and add a separate provenance obligation, so the explicit native-only projection
+is the smaller adaptation. No signed production catalog is changed by this step.

@@ -416,3 +416,26 @@ def test_poetry_corpus_rejects_known_import_misresolution(tmp_path: Path, monkey
 def test_poetry_corpus_preserves_unrelated_findings(tmp_path: Path, monkeypatch, finding) -> None:
     _run_poetry_import_guard(tmp_path, monkeypatch, "cold", finding)
     assert json.loads((tmp_path / "evidence/poetry/acceptance.json").read_text())["status"] == "PASS"
+
+
+@pytest.mark.parametrize(
+    "finding",
+    [
+        {"tool": "pylint", "rule": "F0002", "category": "style"},
+        {"tool": "pylint", "rule": "F0001", "category": "architecture"},
+        {"tool": "pytest", "rule": "tool_error", "category": "tool_error"},
+    ],
+)
+def test_external_gate_rejects_failed_analyzer_diagnostic_despite_complete_rows(finding) -> None:
+    module = _load()
+    rows = [{"id": name, "evidence_outcome": "PASS"} for name in module.EXPECTED_ANALYZERS]
+    next(row for row in rows if row["id"] == "targeted-pytest-coverage")["target_execution"] = {
+        "collected": ["test_app.py::test_app"],
+        "records": [{"phase": "call", "outcome": "passed"}],
+        "coverage": {"files": {"app.py": {}}},
+    }
+    report = {"assurance_status": "FAIL", "analyzer_evidence": rows, "findings": [finding]}
+    with pytest.raises(ValueError, match="failed analyzer diagnostic"):
+        module.assert_completed_report(report)
+    report["findings"] = [{"tool": "pylint", "rule": "W0702", "category": "architecture"}]
+    module.assert_completed_report(report)

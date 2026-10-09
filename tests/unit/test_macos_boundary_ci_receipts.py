@@ -823,3 +823,14 @@ def test_exception_receipt_accepts_explicit_kernel_policy_denial(boundary_ci, ki
     trial["status"]["output"] = trial["status"]["output"].replace("preserved=1", "preserved=0")
     with pytest.raises(AssertionError):
         boundary_ci["checked_exception_port"](trial)
+
+
+@pytest.mark.parametrize(
+    "kind", ["ConnectionRefusedError", "ConnectionResetError", "BrokenPipeError", "PermissionError"]
+)
+def test_native_connection_exception_class_is_public_without_private_text(boundary_ci, tmp_path, kind):
+    path = tmp_path / "control.json"
+    path.write_text(json.dumps({"failure": f"{kind}: PRIVATE_AUTHORITY /private/secret 98765", "trials": []}))
+    result = boundary_ci["_receipt_diagnostics"]("control", path, {"cancel"})
+    assert result == {"failure_type": kind, "completed_cases": {}}
+    assert "PRIVATE" not in json.dumps(result) and "98765" not in json.dumps(result)

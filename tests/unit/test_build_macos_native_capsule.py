@@ -86,13 +86,19 @@ def build_case(tmp_path: Path):
 
 
 def test_build_is_deterministic_and_manifest_is_consumer_compatible(build_case, tmp_path: Path) -> None:
-    _root, key, _closure, signing, invoke = build_case
+    _root, _key, _closure, _signing, invoke = build_case
     first = invoke()
     second = invoke(output_dir=tmp_path / "other")
 
     assert first.archive.read_bytes() == second.archive.read_bytes()
     assert first.manifest.read_bytes() == second.manifest.read_bytes()
+    assert first.signature is not None and second.signature is not None
     assert first.signature.read_bytes() == second.signature.read_bytes()
+
+
+def test_builder_manifest_and_signature_provenance_bind_archive(build_case) -> None:
+    _root, _key, _closure, signing, invoke = build_case
+    first = invoke()
     document = json.loads(first.manifest.read_bytes())
     expected_archive_size = (
         sum(512 + ((record["size"] + 511) // 512) * 512 for record in document["files"].values()) + 1024
@@ -127,13 +133,18 @@ def test_build_is_deterministic_and_manifest_is_consumer_compatible(build_case, 
         "signing_mode": "adhoc",
     }
 
+
+def test_builder_signature_and_manifest_roundtrip_through_native_consumer(build_case, tmp_path: Path) -> None:
+    _root, key, _closure, signing, invoke = build_case
+    first = invoke()
+    assert first.signature is not None
     public_key = key.public_key().public_bytes(
         serialization.Encoding.PEM, serialization.PublicFormat.SubjectPublicKeyInfo
     )
     with acquire_native_capsule(
         tmp_path / "cache",
         first.manifest.read_bytes(),
-        first.signature.read_text(),
+        first.signature.read_text() if first.signature else "",
         public_key,
         environment_id="darwin-arm64-cp312",
         backend="managed-v1",
@@ -226,7 +237,7 @@ def test_builder_and_consumer_accept_real_python_metadata_names(build_case, tmp_
     with acquire_native_capsule(
         tmp_path / "metadata-cache",
         built.manifest.read_bytes(),
-        built.signature.read_text(),
+        built.signature.read_text() if built.signature else "",
         public_key,
         environment_id="darwin-arm64-cp312",
         backend="managed-v1",
@@ -390,6 +401,7 @@ def test_manifest_limit_is_checked_after_canonical_encoding(build_case, monkeypa
 def test_signature_is_base64_and_matches_canonical_manifest(build_case) -> None:
     _root, key, _closure, _signing, invoke = build_case
     result = invoke()
+    assert result.signature is not None
     key.public_key().verify(base64.b64decode(result.signature.read_text()), result.manifest.read_bytes())
 
 
@@ -640,3 +652,28 @@ def test_managed_git_packer_checks_binding_before_any_output_or_signing(git_buil
     with pytest.raises(ValueError, match=r"Git|git|broker|undeclared"):
         invoke()
     assert not (root.parent / "out").exists()
+
+
+def test_unsigned_build_preserves_final_bytes_without_signer(build_case, tmp_path: Path, monkeypatch) -> None:
+    _root, _key, _closure, _signing, invoke = build_case
+    signed = invoke()
+
+    def forbidden_sign(*args):
+        pytest.fail("unsigned build invoked a manifest signer")
+
+    monkeypatch.setattr(builder, "_sign", forbidden_sign)
+    unsigned = invoke(output_dir=tmp_path / "unsigned", private_key=None)
+    assert unsigned.archive.read_bytes() == signed.archive.read_bytes()
+    assert unsigned.manifest.read_bytes() == signed.manifest.read_bytes()
+    assert unsigned.signature is None
+    assert not (tmp_path / "unsigned/manifest.sig").exists()
+    summary = json.loads(unsigned.summary.read_bytes())
+    assert summary["manifest_authenticated"] is False
+    assert summary["production_eligible"] is False
+
+
+def test_unsigned_build_still_rejects_invalid_native_signature(build_case, tmp_path: Path) -> None:
+    _root, _key, _closure, _signing, invoke = build_case
+    with pytest.raises(ValueError, match="ad-hoc hardened-runtime"):
+        invoke(private_key=None, signature_inspector=lambda path: {})
+    assert not (tmp_path / "out/capsule.tar").exists()

@@ -20,6 +20,13 @@ The command prints **progress** to the terminal (spinner/status while the pipeli
 
 The pipeline reviews **`.py`** and **`.pyi`** only. The **`--focus docs`** facet selects Python files whose path contains a **`docs/`** directory segment (for example tooling beside the Jekyll site), not Markdown documentation pages. For published-site link, front matter, and command-example checks on the modules docs tree, run **`python scripts/check-docs-commands.py`** in this repository (see CI and contributing docs).
 
+When required analyzer evidence is `UNKNOWN`, the ordinary text report prints
+its distinct recorded causes as literal text. For example,
+`native_capsule_artifact_not_admitted:darwin-arm64-cp312` means the installed
+module has no admitted capsule for that ABI. Reinstalling the same module cannot
+supply a missing catalog entry; a signed release with accepted runtime artifacts
+is required. The JSON report retains the cause in `analyzer_evidence[].diagnostic`.
+
 ## Installed package layout
 
 Code Review accepts signed installations with either `src/specfact_code_review`

@@ -140,6 +140,7 @@ def build_review_command(files: Sequence[str], *, enforcement: str | None = None
         "code",
         "review",
         "run",
+        "--bug-hunt",
         "--json",
         "--out",
         REVIEW_JSON_OUT,
@@ -179,6 +180,32 @@ def _prepare_report_path(repo_root: Path) -> Path:
     return report_path
 
 
+def _last_capsule_analyzer(stderr: str | bytes | None) -> str | None:
+    """Project only exact public analyzer progress from a bounded timeout tail."""
+    if stderr is None:
+        return None
+    tail = stderr[-65_536:]
+    if isinstance(tail, bytes):
+        tail = tail.decode("utf-8", errors="replace")
+    analyzers = (
+        "ruff",
+        "radon",
+        "semgrep-clean",
+        "ai-bloat-ast",
+        "ast-clean-code",
+        "basedpyright",
+        "pylint",
+        "contracts",
+        "semgrep-bugs",
+        "targeted-pytest-coverage",
+    )
+    for line in reversed(tail.splitlines()):
+        for analyzer in analyzers:
+            if line.strip() == f"Checking capsule analyzer {analyzer}...":
+                return analyzer
+    return None
+
+
 def _run_review_subprocess(
     cmd: list[str],
     repo_root: Path,
@@ -210,7 +237,20 @@ def _run_review_subprocess(
             env=env,
             timeout=300,
         )
-    except TimeoutExpired:
+    except TimeoutExpired as error:
+        analyzer = _last_capsule_analyzer(error.stderr)
+        if analyzer is not None:
+            sys.stderr.write(
+                json.dumps(
+                    {
+                        "status": "INCOMPLETE",
+                        "phase": "review",
+                        "diagnostic": "analysis_timeout",
+                        "analyzer": analyzer,
+                    }
+                )
+                + "\n"
+            )
         joined_cmd = " ".join(cmd)
         sys.stderr.write(f"Code review gate timed out after 300s (command: {joined_cmd!r}, files: {list(files)!r}).\n")
         return None
@@ -596,7 +636,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     report_path = _prepare_report_path(repo_root)
     result = _run_review_subprocess(cmd, repo_root, specfact_files, enforcement=enforcement)
     if result is None:
-        return 1
+        return 124
     if not report_path.is_file():
         return _missing_report_exit_code(report_path, result)
     # Do not echo nested `specfact code review run` stdout/stderr (verbose tool banners); full report

@@ -134,6 +134,10 @@ _FAILURE_CLASSES = frozenset(
         "ValueError",
         "EOFError",
         "FileNotFoundError",
+        "ConnectionRefusedError",
+        "ConnectionResetError",
+        "BrokenPipeError",
+        "PermissionError",
         "AssertionError",
     )
 )

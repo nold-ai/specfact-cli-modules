@@ -1,4 +1,4 @@
-"""Unused pytest setup retains native errors and installed coverage ownership."""
+"""Invalid pytest requests precede setup; valid selectors retain coverage ownership."""
 
 import json
 from pathlib import Path
@@ -11,16 +11,13 @@ from specfact_code_review.run.installed_coverage import CoverageBridge
 
 
 @pytest.mark.parametrize("value", [[], "invalid", None, True, 1])
-def test_decoded_non_object_avoids_planning_with_native_error(monkeypatch, value):
+def test_decoded_non_object_avoids_planning_with_invalid_request(monkeypatch, value):
     planner = Mock(return_value=CoverageBridge((), (), {}, {}))
     command = Mock(side_effect=AssertionError("invalid request must not launch"))
     monkeypatch.setattr(portable_worker, "plan_installed_coverage", planner)
     monkeypatch.setattr(portable_worker, "target_command", command)
-    with pytest.raises(TypeError) as native:
-        value["coverage_directories"] = []
-    with pytest.raises(TypeError) as observed:
+    with pytest.raises(ValueError, match="project_pytest_request_invalid"):
         portable_worker._portable_pytest_command([], json.dumps(value))
-    assert str(observed.value) == str(native.value)
     planner.assert_not_called()
     command.assert_not_called()
 
@@ -28,7 +25,7 @@ def test_decoded_non_object_avoids_planning_with_native_error(monkeypatch, value
 def test_unusable_request_precedes_failure_in_unused_setup(monkeypatch):
     planner = Mock(side_effect=OSError("unused installed metadata failure"))
     monkeypatch.setattr(portable_worker, "plan_installed_coverage", planner)
-    with pytest.raises(TypeError, match="NoneType"):
+    with pytest.raises(ValueError, match="project_pytest_request_invalid"):
         portable_worker._portable_pytest_command([], "null")
     planner.assert_not_called()
 
@@ -37,18 +34,20 @@ def test_unusable_request_precedes_failure_in_unused_setup(monkeypatch):
     "encoded,expected",
     [
         (
-            "{}",
+            '{"selectors":["tests"]}',
             {
+                "selectors": ["tests"],
                 "coverage_directories": ["/owned/package"],
                 "coverage_modules": ["owned"],
                 "coverage_candidates": ["/owned/package/first.py", "/owned/package/second.py"],
             },
         ),
         (
-            '{"coverage_modules":["untrusted"],"kept":1,"coverage_directories":["untrusted"],"coverage_candidates":["untrusted"]}',
+            '{"selectors":["tests"],"coverage_modules":["untrusted"],"kept":1,"coverage_directories":["untrusted"],"coverage_candidates":["untrusted"]}',
             {
                 "coverage_modules": ["owned"],
                 "kept": 1,
+                "selectors": ["tests"],
                 "coverage_directories": ["/owned/package"],
                 "coverage_candidates": ["/owned/package/first.py", "/owned/package/second.py"],
             },
@@ -71,7 +70,10 @@ def test_valid_objects_retain_exact_bridge_and_command(monkeypatch, encoded, exp
     files = [Path("source.py")]
     actual_bridge, actual_command = portable_worker._portable_pytest_command(files, encoded)
     assert actual_bridge is bridge and actual_command == ["native-worker", "unchanged-arguments"]
-    command.assert_called_once_with("pytest-observe", [json.dumps(expected)])
+    command.assert_called_once()
+    domain, arguments = command.call_args.args
+    assert domain == "pytest-observe" and len(arguments) == 1
+    assert json.loads(arguments[0]) == expected
     planner.assert_called_once_with(
         files, snapshot=Path(".").resolve(), site_packages=Path("/opt/specfact/project-runtime/site-packages")
     )

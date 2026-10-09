@@ -14,7 +14,7 @@ from functools import partial
 from importlib import import_module
 from pathlib import Path
 from types import ModuleType, SimpleNamespace
-from typing import Final, cast
+from typing import Any, Final, cast
 from unittest.mock import patch
 
 from pydantic import ValidationError
@@ -373,6 +373,7 @@ class ReplayTransport:
         self.project = project
         self.temporary = temporary
         self.consumed = 0
+        self.target_execution: dict[str, object] | None = None
 
     def _logical_path(self, value: str) -> str:
         normalized = value
@@ -670,6 +671,50 @@ def _bind_pytest_private_state(adapter_argv: list[str], temporary: Path) -> list
     ]
 
 
+def _read_pytest_artifact(path: Path, temporary: Path) -> bytes:
+    """Read one bounded ordinary artifact from the confined private state."""
+    if not path.is_relative_to(temporary) or path.parent.resolve(strict=True) != path.parent:
+        raise WorkerContractError("native pytest artifact path is invalid")
+    try:
+        descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+        try:
+            metadata = os.fstat(descriptor)
+            if not stat.S_ISREG(metadata.st_mode) or metadata.st_size > 16 << 20:
+                raise WorkerContractError("native pytest artifact type or size is invalid")
+            with os.fdopen(descriptor, "rb", closefd=False) as stream:
+                payload = stream.read((16 << 20) + 1)
+            if len(payload) > 16 << 20:
+                raise WorkerContractError("native pytest artifact size is invalid")
+            return payload
+        finally:
+            os.close(descriptor)
+    except OSError as exc:
+        raise WorkerContractError("native pytest artifact is unavailable") from exc
+
+
+def _capture_pytest_observation(result: Any, transport: ReplayTransport) -> dict[str, object]:
+    completed, coverage_path, observer_path, junit_path = result
+    coverage = json.loads(_read_pytest_artifact(coverage_path, transport.temporary))
+    records = json.loads(_read_pytest_artifact(observer_path, transport.temporary))
+    _read_pytest_artifact(junit_path, transport.temporary)
+    if not isinstance(coverage, dict) or not isinstance(coverage.get("files"), dict):
+        raise WorkerContractError("native pytest coverage artifact is invalid")
+    if not isinstance(records, list) or not all(isinstance(record, dict) for record in records):
+        raise WorkerContractError("native pytest observer artifact is invalid")
+    if not all(isinstance(record.get("nodeid"), str) for record in records):
+        raise WorkerContractError("native pytest observer node identity is invalid")
+    collected = sorted(
+        {record["nodeid"] for record in records if record.get("phase") in {"collection", "setup", "call", "teardown"}}
+    )
+    return {
+        "collected": collected,
+        "records": records,
+        "coverage": coverage,
+        "process_exit": completed.returncode,
+        "result_provenance": "project-origin-v1",
+    }
+
+
 def _pytest_external_adapter(
     paths: list[Path],
     managed_run: ManagedRun,
@@ -699,7 +744,15 @@ def _pytest_external_adapter(
         environment["PYTEST_DISABLE_PLUGIN_AUTOLOAD"] = "1"
         return environment
 
+    execute = module._run_pytest_selection_with_coverage
+
+    def observed_execution(*args: Any, **kwargs: Any) -> Any:
+        result = execute(*args, **kwargs)
+        transport.target_execution = _capture_pytest_observation(result, transport)
+        return result
+
     with _patched_adapter(module, tool="pytest", managed_run=managed_run) as stack:
+        stack.enter_context(patch.object(module, "_run_pytest_selection_with_coverage", observed_execution))
         if complete_pytest_inventory:
             stack.enter_context(patch.object(module, "_projected_pytest_test_roots", native_test_roots))
             stack.enter_context(
@@ -772,17 +825,27 @@ def _normalize_findings(raw_findings: object, *, project: Path, selected: set[st
     return normalized
 
 
-def _completed_response(member: str, raw_findings: object, *, project: Path, selected: set[str]) -> dict[str, object]:
+def _completed_response(
+    member: str,
+    raw_findings: object,
+    *,
+    project: Path,
+    selected: set[str],
+    target_execution: dict[str, object] | None = None,
+) -> dict[str, object]:
     findings = _normalize_findings(raw_findings, project=project, selected=selected)
     unknown = any(item["category"] == "tool_error" for item in findings)
     blocking = any(ReviewFinding.model_validate(item).is_blocking() for item in findings)
-    return {
+    response: dict[str, object] = {
         "diagnostic": "analyzer_reported_incomplete_execution" if unknown else "",
         "evidence_outcome": "UNKNOWN" if unknown else "FAIL" if blocking else "PASS",
         "execution_state": "error" if unknown else "ran",
         "findings": findings,
         "member": member,
     }
+    if target_execution is not None:
+        response["target_execution"] = target_execution
+    return response
 
 
 def _unknown_response(member: str, diagnostic: str) -> dict[str, object]:
@@ -855,7 +918,9 @@ def main() -> int:
                 cast(bool, request["complete_pytest_inventory"]),
             )
             transport.verify_complete()
-            response = _completed_response(member, findings, project=project, selected=set(names))
+            response = _completed_response(
+                member, findings, project=project, selected=set(names), target_execution=transport.target_execution
+            )
         except RequestPending as pending:
             response = _unknown_response(member, "managed_tool_replay_required")
             response["managed_launch_request"] = pending.request

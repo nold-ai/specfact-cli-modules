@@ -9,6 +9,10 @@ and this project follows SemVer for bundle versions.
 
 ### Fixed
 
+- Resume macOS ARM64 Code Review delivery above the published 0.51.2 bundle, retaining current portable reviewer bootstrap corrections.
+- Preserve actionable test-selection ambiguity when multiple changed source files share a stem and only some matching tests are supplied explicitly.
+- Preserve both native bounded failure locations and current hosted reviewer/namespace diagnostics during upstream integration.
+
 - Prepare Code Review 0.51.2 release follow-up: accept successful index
   no-governed-impact preparation for registry/workflow-only capsule jobs while
   preserving normal review, cleanup and failure exits. Keep malformed or failed
@@ -46,6 +50,39 @@ and this project follows SemVer for bundle versions.
   Pylint wrapper caches immutable similarity windows only within one bounded
   invocation and restores upstream state on all exits. Required checks, jobs,
   findings and deadlines remain unchanged; publication requires human promotion.
+- Encode managed uv Python launches as binary property lists so XML overhead
+  cannot exhaust the existing 4096-byte broker frame during confined Hatch
+  builds. Preserve arguments, private environments, native parser validation,
+  field limits and channel budgets; bind the changed bridge to newly built uv
+  provenance. Final archive acceptance remains required.
+
+- Preserve maintained `uv` image signatures and provenance during native capsule
+  preparation and reject missing or changed provenance before assembly. Align
+  worktree and native snapshot exclusion of nested local Python environments
+  with project preparation, retaining selected-input and alias rejection. Keep
+  native pytest execution and coverage observations in ordinary reports with
+  their existing project-origin authority. Materialize verified internal source
+  aliases before sealing private native preparation inputs; preserve empty
+  directories and executable modes, clean owned read-only copies, and reject
+  cycles or substitutions. Keep verified standard-library source at relocated
+  frozen-module paths for Pylint inference and classify fatal analyzer diagnostics
+  as incomplete evidence. Preserve byte-bound project source roots when built
+  wheels add generated modules by sealing them into private snapshot overlays,
+  retain ordinary source packages named `venv`, bound source matching for shared
+  package tails, and retain actually observed selectors from distributed pytest
+  phase records. Connect capsule execution to the existing CLI progress callback
+  and preserve blocking timeout exit 124 with only a bounded, fixed analyzer
+  identity in hosted diagnostics; retain the 300-second analysis budget.
+
+- Prepare Code Review 0.51.1 to display distinct UNKNOWN analyzer diagnostics in
+  ordinary terminal reports. Native capsule builders can emit unsigned final
+  archive/manifest bytes for separate CI signing. Exclude controller-generated
+  bytecode from copied analyzer payloads and composition identities, matching the
+  module signing boundary. Honor explicit matching tests when source stems are
+  ambiguous, activate bug-hunt in staged reviews and select the available signed
+  0.51.0 baseline for hosted independent review. These corrections add no
+  supported macOS combinations or public runtime
+  capabilities. Native catalog publication and customer acceptance remain gated.
 
 ### Added
 

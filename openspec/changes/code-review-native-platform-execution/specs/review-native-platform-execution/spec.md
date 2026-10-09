@@ -32,6 +32,13 @@ Production backend approval SHALL follow harmless native feasibility tests of th
 - **WHEN** tests exercise authorized reads/writes and prohibited host reads/writes, outbound and listening network operations, inherited descriptors and child processes
 - **THEN** allowed operations succeed and denied operations fail for the intended policy reason; helper startup or parser failure is not successful confinement evidence
 
+#### Scenario: Python fixture profiles retain exception-port denial on older kernels
+
+- **GIVEN** a required minimal CPython or analyzer fixture on a supported older macOS kernel
+- **WHEN** its build-owned sandbox profile is compiled before CPython execution
+- **THEN** the profile SHALL retain unconditional denial of all task/thread exception-port set and swap RPCs and conditionally name the newer exception-port operation only when defined, using the existing broker policy
+- **AND** file, process, network, resource, startup and cleanup permissions and bounds SHALL remain unchanged; host-only or newer-kernel success is not acceptance for the required older-kernel run
+
 #### Scenario: Kernel RPC denial retains exception endpoints
 
 - **WHEN** the signed control fixture receives KERN_DENIED or KERN_NO_ACCESS from exception-port swapping
@@ -84,6 +91,13 @@ Production backend approval SHALL follow harmless native feasibility tests of th
 - **AND** repetition counts, architecture, build/profile identity, exact failure and observer cleanup MUST be recorded; 100 repetitions per lifecycle race are required before positive admission
 - **AND** no privileged helper, process polling or cooperative PID report may substitute for a mechanism establishing descendant ownership
 
+#### Scenario: Cleanup tolerates an observed process exiting before signal delivery
+
+- **WHEN** the native proof observes the same owned process identity but that process exits before the cleanup signal arrives
+- **THEN** only the resulting process-not-found error is tolerated, earlier proof failures remain visible and remaining teardown runs
+- **AND** absent or changed identities are not signaled, while permission and other cleanup errors still fail
+
+
 ### Requirement: Portable review semantics
 
 The macOS backend SHALL preserve the exact released baseline's scope, findings, differential classification and verdict/exit semantics. C15 delivery is independent. New platform evidence SHALL have explicitly versioned producer/consumer compatibility, and local evidence SHALL NOT acquire protected PR authority by declaring an identity.
@@ -93,6 +107,50 @@ The macOS backend SHALL preserve the exact released baseline's scope, findings, 
 - **GIVEN** equivalent approved analyzer/policy versions and portable clean/defective fixtures on Linux and macOS
 - **WHEN** all required analyzer members execute
 - **THEN** introduced, fixed and unchanged findings and authoritative status/exit results agree; skipped, empty or UNKNOWN required evidence cannot pass acceptance
+
+#### Scenario: Invalid pytest requests are rejected before ownership I/O
+- **WHEN** the portable pytest adapter receives malformed JSON, a non-object request or missing/invalid selector strings
+- **THEN** it SHALL reject the request before scanning installed distribution RECORDs or constructing a target command; stale owned observations SHALL be cleared before any preparation failure
+- **AND** requests with no Python attribution inputs SHALL return an empty correspondence without scanning ownership metadata; valid nonempty selector requests SHALL retain the same complete ownership, byte identity, coverage mapping and target validation; analyzer budgets and required evidence SHALL remain unchanged.
+
+#### Scenario: Hosted preparation preserves immutable inputs and exact ABI locks
+- **WHEN** hosted artifact transport resets managed tool file permissions or CPython 3.11 venv creation adds bootstrap setuptools
+- **THEN** preparation restores read-only managed tool inventories and only their declared executable images before unchanged provenance validation
+- **AND** it removes bootstrap-only setuptools from the fresh cp311 maintainer venv before installing the unchanged hash-pinned ABI lock
+- **AND** unexpected distributions, altered bytes, extra executables and writable delivered inputs remain rejected; no validator or signing requirement is bypassed.
+
+#### Scenario: Failed hosted reviews receive bounded non-authoritative profiling
+
+- **GIVEN** a required Linux capsule review has already failed its unchanged analysis deadline
+- **WHEN** a separate diagnostic replay samples the same staged subject and command
+- **THEN** it SHALL use a pinned external profiler without modifying the authenticated reviewer, increasing any acceptance budget or changing sandbox and test selection
+- **AND** raw stack profiles and command output SHALL remain private; public summaries SHALL contain only known tracked source paths, static declared function names and bounded inclusive/deepest-public sample counts (at most20entries per view)
+- **AND** diagnostic results SHALL never replace the required failed gate or authorize publication
+
+#### Scenario: Native release CLI and parser fixtures retain clean review behavior
+
+- **WHEN** review checks the native release CLI, public profile output and managed uv parser regression fixtures
+- **THEN** machine-readable CLI and broker proof results use explicit serialized stdout records with the same values, flush points and failure exits; parser mutation cases use a named fixed replacement inventory with every original native parser assertion; the trusted timeout fixture executes the saved wrapper as a named module with every original budget/exit assertion
+- **AND** source naming remains specific, no review rule is disabled, and native permissions, byte identities and protocol limits remain unchanged
+
+#### Scenario: Hosted review fixtures separate fixed payloads from scenario logic
+
+- **WHEN** hosted review tests materialize fixed scripts, isolated reviewer stubs and tracked reports
+- **THEN** named fixed payloads and shared report setup preserve every source script, sandbox/bootstrap assertion, parameter case, private-output assertion and review failure result
+- **AND** the scenario functions remain focused without suppressing informational clean-code findings
+
+#### Scenario: Hosted incomplete pytest exposes only fixed diagnostic classes
+
+- **WHEN** a required hosted review reports a pytest tool error
+- **THEN** its public projection may emit only allowlisted fixed diagnostic prefixes and fixed missing-file/permission classes
+- **AND** the independent timeout may identify the last exact allowlisted analyzer progress marker from a bounded private log tail; paths, exception text, unknown codes and payloads remain private; the 200-location cap, required reviewer, deadlines and original exit remain unchanged
+
+#### Scenario: Synthetic enforcement tests use bounded isolated subjects
+
+- **GIVEN** unit tests replace analyzer execution with synthetic complete evidence
+- **WHEN** they verify changed-line enforcement, retained failures or report readback
+- **THEN** they SHALL use a minimal isolated source fixture rather than repeatedly hashing the caller's entire checkout
+- **AND** all existing enforcement assertions and real snapshot-identity, mutation and installed-customer checks SHALL remain required; no timeout, test inventory or sandbox gate may be weakened
 
 #### Scenario: OS dependent project tests
 
@@ -113,6 +171,13 @@ The macOS backend SHALL preserve the exact released baseline's scope, findings, 
 - **THEN** the report retains the selected Darwin/ARM64 environment identity and native platform admission context
 - **AND** it does not label the failed run as a Linux capsule or imply that an analyzer ran
 
+#### Scenario: Pylint fatal diagnostics remain incomplete analyzer evidence
+
+- **WHEN** Pylint returns a fatal `F` diagnostic, including an internal crash or a diagnostic outside the selected source files
+- **THEN** the review retains a `tool_error` finding anchored to the selected source and preserves the fatal rule and diagnostic
+- **AND** ordinary project findings retain their existing mapping and cannot make the failed analyzer appear complete
+- **AND** independent corpus acceptance rejects tool errors and fatal Pylint findings even in an older report that labels the fatal finding as style
+
 ### Requirement: Verified provisioning and offline reuse
 
 Module-shipped files SHALL retain full-module signature/checksum verification. External native runtimes SHALL have an approved signed manifest binding artifact and installed-payload digests, OS, architecture, ABI, complete dependency closure, released policy identity and backend/profile version. Cache identity SHALL include those bindings. Provisioning, extraction and each launch including offline reuse SHALL verify the selected payload and admission policy, and prevent substitution between verification and use.
@@ -126,6 +191,22 @@ The signed native manifest SHALL bind the exact closed analyzer-version map used
 - **THEN** it reads bounded chunks rather than allocating the entire signed allowance in advance
 - **AND** compressed digest, complete uncompressed diff-ID, unpacked-byte and file-count limits, duplicate-path rejection and whiteout safety remain mandatory before application
 - **AND** historical Linux artifact identities, worker limits and acceptance thresholds remain unchanged
+
+#### Scenario: Maintained manager images retain their verified provenance
+
+- **GIVEN** a capsule candidate includes the reviewed managed uv image and its complete source, patch, license, and signed-binary provenance
+- **WHEN** analyzer preparation records native signatures and assembly copies the final runtime
+- **THEN** it verifies the existing ad-hoc hardened uv signature without re-signing or changing the bound executable
+- **AND** preparation revalidates the full maintained artifact after native inventory, while assembly rejects missing, changed, or substituted uv provenance before creating its output
+- **AND** optional maintainer inputs are never inferred from host PATH, and candidate observations cannot approve production publication
+
+#### Scenario: Managed uv build launches retain the fixed channel budget
+
+- **GIVEN** a confined Hatch or uv build invokes the bound Python image with valid arguments and an inherited private environment
+- **WHEN** XML serialization alone would exceed the existing 4096-byte managed request frame
+- **THEN** managed uv serializes the unchanged launch document as a binary property list accepted by the existing broker parser
+- **AND** the final wire request, individual strings, argument/environment counts, owned-handle lifecycle and execution grants retain their existing bounds; oversized binary requests fail before channel use
+- **AND** managed uv provenance binds the changed bridge source and its newly built ad-hoc hardened executable; prior executable receipts are not reused for altered bytes
 
 #### Scenario: Cached native runtime
 
@@ -263,6 +344,16 @@ The full native closure SHALL satisfy released dependency policy independently o
 - **WHEN** all admission, integrity and platform tests pass
 - **THEN** native execution may proceed without satisfying the new selection from a superseded cache
 
+#### Scenario: Explicit Darwin-only Z3 derivative preserves authenticated retained bytes
+
+- **GIVEN** the pinned upstream wheel includes ten byte-identified Windows DLLs without verified redistribution terms
+- **WHEN** a maintainer explicitly requests the versioned Darwin-only derivative with the pinned upstream release archive
+- **THEN** preparation SHALL authenticate wheel, release, source/native linkage and license before output, omit only the exact reviewed DLL identities, and include the authenticated license in the new wheel
+- **AND** the derivative SHALL have a distinct version, filename, complete RECORD and provenance binding every unchanged retained byte, omitted member and added license
+- **AND** each License-File header SHALL resolve relative to the wheel dist-info/licenses directory to the authenticated retained license member; provenance and every ABI hash lock SHALL bind the corrected final bytes
+- **AND** missing or altered linkage, unknown DLLs, license tampering or an absent release archive SHALL reject before output
+- **AND** the historical metadata-only derivative SHALL remain reproducible, and no derivative alone SHALL grant dependency or production admission
+
 ### Requirement: Native project runtime preparation
 
 The macOS backend SHALL carry forward pip/pip-tools, Hatch, uv and Poetry discovery, source selection, pytest plugins and coverage from #473. Acquisition, build hooks, preparation and analysis SHALL each have explicit trust, filesystem, process and network boundaries. Mach-O/dyld dependency handling SHALL replace Linux ELF assumptions for macOS. The trusted control domain SHALL remain separate from project code and extensions.
@@ -383,6 +474,22 @@ Support SHALL be claimed only after a canonical signed publication passes fresh 
 - **GIVEN** the final helper/runtime has been packaged and signed in the approved order
 - **WHEN** a fresh customer installation launches with normal platform protections and loads project extensions
 - **THEN** initial-distribution native-signature/quarantine checks and the approved hardening/library-loading policy pass without disabling host protections; final payload hashes match the shipped signed manifest
+
+#### Scenario: Private socket metadata precedes listener readiness
+
+- **GIVEN** the private launchd socket has the correct owner, type and mode before its listener accepts connections
+- **WHEN** initial control connection receives ConnectionRefusedError
+- **THEN** the fixture client SHALL observe readiness within its existing seven-second connection budget using fresh sockets and rechecking private metadata
+- **AND** elapsed metadata checks and socket creation SHALL consume the same deadline; the remaining blocking connect timeout SHALL be refreshed immediately before connecting
+- **AND** it SHALL close each unsuccessful socket, authenticate exactly once after connection, and never retry authentication, register another job or retry a fixture
+- **AND** other connection errors and an expired budget SHALL remain failures; the three-second metadata, five-second cleanup and 100-repetition gates SHALL remain unchanged
+
+#### Scenario: Native connection failures remain diagnosable
+
+- **WHEN** a native fixture fails with a standard connection refusal, reset, broken pipe or permission error
+- **THEN** the sanitized receipt SHALL retain only that explicitly allowlisted exception class
+- **AND** raw failure text, authority bytes, private paths and identifiers SHALL remain private; an unknown class SHALL remain unknown
+- **AND** this diagnostic SHALL NOT waive any readiness, cleanup or repetition gate
 
 #### Scenario: Linux regression and rollback
 
@@ -680,6 +787,20 @@ Versioned inspection and evidence SHALL distinguish SpecFact manifest authentica
 
 The existing review command SHALL automatically acquire a prebuilt signed Darwin ARM64 runtime on first use and show bounded progress at phase changes and coarse byte intervals, including the final byte count. It SHALL verify platform, ABI, policy/backend identity and payload digests, publish caches atomically and verify offline reuse. Customer execution SHALL require no Docker, VM, Homebrew, Xcode, administrator privilege or separately installed daemon.
 
+#### Scenario: Controller bytecode does not change runtime composition
+
+- **GIVEN** the same verified installed module source on cold and warm runs
+- **WHEN** controller imports create or update `__pycache__`, `.pyc` or `.pyo` files excluded by module signing
+- **THEN** those generated files are omitted from the copied capsule payload and its composition identity
+- **AND** source, resource and executable changes still invalidate the verified payload; cached controller bytecode is never an analyzer input
+
+#### Scenario: Ordinary review output identifies unavailable native delivery
+
+- **GIVEN** native acquisition or verification leaves required analyzer evidence UNKNOWN
+- **WHEN** a developer runs the ordinary review command without JSON output
+- **THEN** the text report includes each distinct recorded analyzer diagnostic as literal text, including the unavailable ABI or acquisition cause
+- **AND** repeated diagnostics are shown once, successful analyzer diagnostics are omitted, and JSON retains its existing evidence contract
+
 #### Scenario: First invocation and offline reuse
 
 - **WHEN** the ordinary command runs with an empty cache and later with a verified warm cache offline
@@ -698,6 +819,30 @@ The native backend SHALL reuse portable project discovery and prepare dependenci
 - **THEN** the backend SHALL resolve and prepare its dependencies using authentic pinned manager semantics
 - **AND** SHALL retain independently available findings and report incomplete evidence if required preparation is unsupported
 
+#### Scenario: Native preparation materializes contained source aliases
+
+- **GIVEN** an unfamiliar project contains valid internal file or directory aliases, including empty directories
+- **WHEN** native preparation copies the source and verifies its discovered identity before any hook or acquisition
+- **THEN** it materializes those aliases into ordinary private files and directories within the unchanged native source limits
+- **AND** external aliases, excluded environments, cycles, path collisions, substitution during capture and changed source inputs remain rejected before execution
+- **AND** source executable bits are retained, owner-read-only source directories are handled within the owned private copy, the original checkout is unchanged and the sealed dependency runtime remains indirection-free
+
+#### Scenario: Native local pytest retains actual execution observations
+
+- **GIVEN** the confined native pytest adapter executes project tests and produces observer, JUnit and coverage artifacts
+- **WHEN** the worker completes replay and the ordinary command emits its versioned report
+- **THEN** analyzer evidence retains the actual collected selectors, phase records, process exit and coverage data before temporary artifacts are removed
+- **AND** the observations retain `project-origin-v1` provenance; they do not become protected PR evidence or override incomplete execution and genuine failed findings
+- **AND** absent, substituted or malformed artifacts remain incomplete evidence under the existing limits
+
+#### Scenario: Nested local environments do not block ordinary project review
+
+- **GIVEN** an unfamiliar project contains an ignored local Python environment identified by `pyvenv.cfg`, under an arbitrary nested directory
+- **WHEN** ordinary review captures worktree identity and the native source snapshot
+- **THEN** both exclude that environment using the same rule as project preparation, without reading or executing its installed dependencies
+- **AND** tracked or explicitly selected files inside an excluded environment remain incomplete inputs rather than silently disappearing
+- **AND** ordinary source directories, mutations to analyzer inputs, and aliases to outside or excluded inputs retain their existing rejection and identity checks
+
 #### Scenario: Caller resolves ambiguous discovery
 - **GIVEN** repository metadata admits multiple project managers or environments
 - **WHEN** the caller invokes runtime inspect with JSON output
@@ -713,6 +858,47 @@ The native backend SHALL reuse portable project discovery and prepare dependenci
 - **AND** the review retains changed-line enforcement, all required analyzers, bug-hunt activation and the existing 300-second bound
 - **AND** unsupported published-reviewer policy or required incomplete evidence fails the job explicitly; a candidate helper returning success cannot approve it
 - **AND** candidate runtime/corpus validation remains separately required and never establishes independent reviewer authority
+
+#### Scenario: Independent review installs an available published baseline
+
+- **GIVEN** the independent reviewer starts in a fresh ordinary-user environment before candidate execution
+- **WHEN** it installs its explicitly pinned authenticated Code Review version through the main marketplace
+- **THEN** the pinned version SHALL exist in the published registry and satisfy the pinned released core's compatibility range
+- **AND** candidate manifests, helper scripts, module roots, unsigned overrides and dynamic candidate version selection SHALL NOT choose the reviewer
+- **AND** an unavailable or incompatible published baseline SHALL fail the job rather than falling back to candidate source
+
+#### Scenario: Acquisition metadata stops before exceeding the physical header limit
+
+- **WHEN** authenticated dependency acquisition encounters repeated global or per-file metadata headers
+- **THEN** it rejects extension metadata that would require decoding a following physical header beyond the existing limit, before delegating recursive metadata processing
+- **AND** valid archives whose final regular member exactly reaches that limit still extract their original file bytes on supported Python versions
+
+#### Scenario: Hosted failure exposes bounded public finding locations
+
+- **WHEN** candidate or independently installed review fails in the public repository
+- **THEN** hosted diagnostics SHALL expose at most 200 finding locations bound to tracked public paths with integer lines and declared severities
+- **AND** diagnostics MAY include only fixed public analyzer/category/rule identities and fixed failure classifications; independent review SHALL use trusted inline projection, never candidate host scripts
+- **AND** raw findings, messages, private absolute paths, receipts and tool logs SHALL remain private
+- **AND** the diagnostic step SHALL preserve the review failure exit code
+- **AND** incomplete execution findings SHALL precede ordinary findings within the same 200-location limit
+- **AND** a trusted independent analysis timeout or missing report SHALL expose only a fixed public status while retaining the original 300-second analysis budget
+- **AND** structured Semgrep failures MAY expose at most three recognized public error variant tags from bounded JSON details; unknown tags, variant payloads, raw messages and source excerpts SHALL remain private
+- **AND** the staged helper preserves the distinct analysis-timeout exit124 after the unchanged300-second deadline, so missing-report diagnostics cannot conceal the timeout; every timeout remains a blocking failure
+- **AND** capsule review SHALL reuse the existing progress callback before each analyzer check; timeout diagnostics MAY identify only the last recognized fixed analyzer from a bounded stderr tail, without copying raw tool output or claiming successful execution
+
+#### Scenario: Staged review activates bug-hunt
+
+- **WHEN** the pre-commit helper builds a staged review command
+- **THEN** it SHALL activate bug-hunt for the conditional bug analyzer and contract budgets
+- **AND** changed-line enforcement, JSON evidence, explicit project configuration and the existing 300-second analysis timeout SHALL remain unchanged
+
+#### Scenario: Explicit matching tests resolve ambiguous source mapping
+
+- **GIVEN** partial review changes one production file and discovers multiple conventional tests matching its filename
+- **WHEN** the caller supplies at least one of those matching tests explicitly
+- **THEN** test selection SHALL use the supplied matching tests while retaining other explicit tests and uniquely inferred tests
+- **AND** ambiguity without an explicit matching test SHALL remain actionable incomplete evidence
+- **AND** source/test ordering SHALL NOT change the selected inventory
 
 #### Scenario: Hosted review selects its declared project environment
 
@@ -757,6 +943,37 @@ The native backend SHALL reuse portable project discovery and prepare dependenci
 - **WHEN** a file in the runtime integration package changes
 - **THEN** the native matrix workflow is scheduled even when the basename does not start with native_
 
+#### Scenario: Native source capture preserves ordinary packages named venv
+
+- **WHEN** a project contains a regular Python source package named venv without a pyvenv.cfg marker
+- **THEN** native snapshot capture and worktree support identity retain its actual source bytes
+- **AND** real local environments still remain excluded by their marker, and tracked/selected environment inputs remain rejected
+
+#### Scenario: Distributed native pytest retains actually observed selectors
+
+- **WHEN** project pytest plugins provide actual test phase records without coordinator collection records
+- **THEN** native local execution observations retain the node identifiers observed in setup, call or teardown as collected selectors
+- **AND** an empty observer remains empty; no declared or requested but unobserved selectors may be invented
+- **AND** every observer record SHALL have a string node identifier before capture or response projection; missing or non-string identifiers SHALL fail the worker contract, and valid identifiers SHALL remain unchanged without string coercion
+
+#### Scenario: Native generated wheel modules preserve bound project source imports
+
+- **WHEN** a real built root wheel or uv-installed project includes a generated module absent from the source checkout alongside byte-identical source modules
+- **THEN** native preparation retains source roots proven by unambiguous matching source bytes only when generated modules remain reachable through a sealed project-runtime overlay in private analyzer snapshots
+- **AND** the overlay contains only missing modules belonging to the actual byte-bound project package from its built wheel or uv-installed files, never copies unrelated dependency modules or overwrites customer source, and is bound by the project runtime inventory and identity
+- **AND** same-owner generated ancestor package initializers remain reachable in private source staging, so regular installed packages cannot supersede byte-bound namespace source edits
+- **AND** legitimate RECORD script paths outside site-packages are excluded from overlay ownership without reading outside files, while sibling packages of the same distribution remain excluded unless their package path also matches source
+- **AND** installed overlay files require unique distribution RECORD ownership and verified file hashes bound to byte-matched source; shared namespaces never establish ownership, and missing, malformed, ambiguous or altered metadata cannot authorize writes
+- **AND** existing source modules with differing wheel bytes or ambiguous source matches still reject automatic root inference; no path is inferred only from its name
+- **AND** source matching indexes exact package-path suffixes with a bounded index construction budget; shared short path tails cannot trigger unbounded candidate scans
+
+#### Scenario: Preserved Linux analyzer parses reviewed test callbacks
+
+- **GIVEN** a native-runtime correction also touches the established command tests
+- **WHEN** the preserved Linux Semgrep1.144.0 scans those complete Python inputs
+- **THEN** test callbacks use equivalent supported syntax while retaining keyword-only invocation contracts and all existing assertions
+- **AND** structured parser failures remain incomplete evidence rather than being ignored, skipped or relabeled as successful execution
+
 ### Requirement: Equivalent execution on supported physical machines and full virtual machines
 Support SHALL depend on guest OS/build, CPU architecture, Python ABI and required kernel capabilities. A matching-architecture full VM SHALL be eligible for the same acceptance as a physical machine. VM detection SHALL NOT reject an otherwise supported environment or weaken isolation. Full-system CPU emulation SHALL be recorded as supplemental evidence; translated user-mode binaries SHALL NOT establish native acceptance for their translated architecture. Windows and Linux ARM64 remain follow-ups; this delivery covers macOS ARM64 and Linux x86-64.
 
@@ -765,3 +982,217 @@ Support SHALL depend on guest OS/build, CPU architecture, Python ABI and require
 - **WHEN** the final capsule is acquired through the documented installation route
 - **THEN** cold acquisition, offline reuse, analysis, integrity and lifecycle acceptance SHALL run without publisher keys or host development tools
 - **AND** evidence SHALL record guest OS/kernel build, architecture, ABI, artifact identity and configured virtualization mode
+
+### Requirement: CI-only native artifact assembly
+
+Native build and test jobs SHALL emit deterministic final archive and canonical manifest bytes without publisher signing authority. Only separate protected CI/CD jobs running reviewed pinned code SHALL authenticate accepted manifests. Unsigned outputs SHALL NOT populate the customer catalog or establish production eligibility.
+
+#### Scenario: Build final archive bytes without manifest signing authority
+
+- **GIVEN** a complete verified native runtime root and no publisher key
+- **WHEN** the maintainer or read-only build job selects unsigned assembly
+- **THEN** the builder emits the same deterministic archive and canonical manifest as the signed path, without calling a signer or creating a signature sidecar
+- **AND** the summary declares manifest authentication false and production eligibility false; only a separate protected CI signing step can authenticate the manifest
+
+#### Scenario: Native standard-library source remains available for static inference
+
+- **WHEN** the relocated native CPython closure supplies frozen or ZIP-loaded standard-library modules to Pylint and Astroid
+- **THEN** the same authenticated bounded standard-library source bytes also exist at their relocated filesystem paths, including `_collections_abc.py`, `collections/abc.py`, and dataclass dependencies
+- **AND** no host interpreter, site-packages, source symlink, or unrecorded fallback supplies those files
+
+
+### Requirement: Protected native release and authenticated catalog
+
+Native release tooling SHALL validate the exact deterministic archive, native
+signing metadata and supported-platform acceptance before protected CI signs
+the unchanged manifest. Signing SHALL execute reviewed protected workflow code
+without executing candidate content or exposing keys to build/test jobs. Catalog
+resources SHALL bind the authenticated manifest and immutable anonymous GHCR
+blob using the existing consumer format. Human promotion remains separate.
+
+#### Scenario: Candidate code cannot control signing authority
+
+- **GIVEN** an unsigned artifact and its exact supported-matrix acceptance
+- **WHEN** protected CI signs it
+- **THEN** branch/workflow/source identity and all required evidence are checked before key access; PR, unprotected, substituted, incomplete or stale inputs fail without signing or publication
+
+#### Scenario: Signed catalog round-trip preserves final bytes
+
+- **GIVEN** accepted cp311/cp312/cp313 archives and CI-authenticated manifests
+- **WHEN** catalog preparation runs
+- **THEN** each entry contains only matching manifest/signature/public-key resources and the dedicated immutable GHCR archive digest/size; altered archives, foreign keys, duplicate ABI inputs and partial output are rejected
+
+### Requirement: Initial ad-hoc loader and installation acceptance
+
+The initial ARM64 distribution SHALL use verified ad-hoc hardened native images
+and SpecFact-authenticated manifests without Apple membership. Only CPython and
+Semgrep Core may carry disable-library-validation. Every other native image must
+have empty entitlements. A normal first-run trust warning MAY be acknowledged
+and recorded; system protections and quarantine SHALL remain enabled.
+
+#### Scenario: Loader entitlement substitution fails before release
+
+- **GIVEN** final archive signing metadata
+- **WHEN** a control component, unrelated tool or library gains an entitlement or a required loader loses its exact entitlement
+- **THEN** release validation rejects the artifact before signing or catalog creation
+
+#### Scenario: Independent customer acquires and reuses the capsule
+
+- **GIVEN** a clean independent supported ARM64 environment and the signed module installed through the ordinary route
+- **WHEN** review runs on a dependency-bearing project cold and then offline
+- **THEN** the packaged catalog and standard anonymous GHCR client acquire and verify the exact final archive, all ten required analyzers execute, actual tests/plugins/coverage/native extensions are observed, and verified caches are reused without a local artifact override, development link, unsigned override, security disablement or customer signing
+
+### Requirement: Fixture-owned portable test observations
+
+Synthetic observation regression tests SHALL use fixture-owned installed metadata
+and guard against host distribution scans while preserving actual discovery,
+coverage and failure-evidence assertions.
+
+#### Scenario: Synthetic portable observations are independent of host installations
+
+- **WHEN** regression fixtures inject synthetic pytest observations and mock target execution
+- **THEN** their installed ownership context is fixture-owned, guarded against host distribution scans, and all coverage, phase-failure and retained-execution assertions still run
+- **AND** dedicated installed-ownership and actual native discovery/observer tests retain their real execution and identity checks
+
+
+#### Scenario: Synthetic observer API failures cannot consume active reviewer state
+
+- **WHEN** a unit observation simulates a missing native coverage API while the real reviewer plugin is active
+- **THEN** the unit observation uses its fixture plugin context and retains the same records, threshold and origin-unavailable diagnostic
+- **AND** the active reviewer continues measuring the actual test process tree
+
+
+#### Scenario: Repository review tests retain complete evidence with bounded parallelism
+
+- **WHEN** this repository's pytest policy declares two workers and no worker restart
+- **THEN** all selected tests execute with the same collection, findings, failure policy and combined reviewer coverage evidence
+- **AND** worker loss remains incomplete/error, supported native proof CLI calls keep their existing deadlines and repetitions, and the capsule continues honoring each project's declared pytest policy
+
+
+#### Scenario: Minimum-core smoke remains independent of developer pytest plugins
+
+- **WHEN** the immutable minimum-core compatibility environment contains pytest and its existing minimal dependencies without xdist
+- **THEN** its explicit single-test smoke command uses the original serial reporting/import options and runs every existing assertion
+- **AND** repository reviewer tests retain the declared two-worker policy, immutable core identity and signed-capsule smoke requirements remain unchanged
+
+
+#### Scenario: Hosted test failures survive the public diagnostic location cap
+
+- **WHEN** a failed review contains test outcome or coverage failures after more than 200 ordinary findings
+- **THEN** both inline public projections retain tool errors first and test failures next, include only fixed test rule identifiers, and keep the same 200-location cap
+- **AND** raw node IDs, parameter values, traces and exception messages remain private; required review exits and deadlines remain unchanged
+
+
+#### Scenario: Lean documentation CI does not inherit developer worker plugins
+
+- **WHEN** Docs Review installs its pinned lean dependencies without xdist
+- **THEN** its original five test files execute with explicit serial reporting/import options, preserve pipeline failure propagation, and do not inherit repository worker arguments
+- **AND** full repository review retains its declared worker and coverage policy
+
+
+#### Scenario: Hosted bootstrap fixtures own an ordinary interpreter
+
+- **WHEN** the hosted recipe regression runs inside a managed project Python worker whose sys.executable is the attachment-preserving launcher
+- **THEN** its simulated ordinary CI environment owns a real isolated fixture venv interpreter and executes the unchanged trusted -I bootstrap and all staged-tree/failure assertions
+- **AND** the fixture does not alias the managed caller launcher, relax managed argument rejection, or change actual capsule runtime or trusted installation policy
+
+
+#### Scenario: Hosted test diagnostics identify only public source functions
+
+- **WHEN** a required review reports a nonpassing test observation
+- **THEN** both bounded inline projections retain only the finite outcome, phase and xfail flag, plus a function name independently present in the tracked public Python source
+- **AND** raw node IDs, parameter values, private names and traces remain private; malformed or oversized messages and unsafe source paths cannot add function identity
+- **AND** required review exits, test inventory, the 200-location limit and execution deadlines remain unchanged
+
+- **AND** a matching controller-owned phase record may add only a fixed exception class or the existing managed Python option rejection code; unrelated phase records and raw exception payloads remain private
+
+- **AND** immutable index/range observations are read from bounded head/base evidence with matching head records preferred, and test parameter sections are removed before parsing source function scope separators
+
+
+#### Scenario: Hook timeout regression owns its report directory
+
+- **WHEN** the hook timeout test simulates the existing 300-second review deadline
+- **THEN** report preparation and subprocess working-directory assertions use the fixture-owned temporary repository and cannot consume or modify the active reviewer's report
+- **AND** timeout exit124 and the existing diagnostic and selected-file assertions remain mandatory
+
+
+### Requirement: Repository proof contexts retain every required assertion
+
+The repository SHALL execute every retained assertion in a required context that supplies its real host or native prerequisites while preserving independent confined portable review.
+
+#### Scenario: Repository proof contexts retain every required assertion
+
+- **GIVEN** the maintainer-approved separation of ordinary-host/macOS proofs from confined Linux tests
+- **WHEN** the repository runs capsule review, full/SMART host verification and native boundary acceptance
+- **THEN** existing filename discovery selects portable regression modules for confined execution while required host/macOS jobs explicitly execute retained proof modules with their actual prerequisites
+- **AND** unchanged baseline proof files are preserved; revised proof assertions, mutation identities, 100-repetition lifecycle requirements and five-second cleanup bounds are retained in their appropriate required contexts
+- **AND** no authenticated installed reviewer is modified, no test failure or skip becomes PASS, and no deadline, security boundary or acceptance requirement is relaxed
+
+
+#### Scenario: Native proof failures retain bounded context
+
+- **WHEN** a required native CPython proof fails on a hosted OS after local success
+- **THEN** its public diagnostic contains only the declared ABI, fixed fixture case/failure phase, existing boolean worker-state fields and a fixed result rejection stage with exit-class/entry-marker booleans from a bounded fixture-owned log
+- **AND** raw output, exception payloads, authority, filesystem paths and process identities remain private; the original proof failure still fails the required job
+
+#### Scenario: Native pending-result rejection remains identifiable
+
+- **WHEN** the original bounded native broker rejects output encoding, response size, queue capacity or its session deadline during a recorded WAIT
+- **THEN** fixture diagnostics retain only a matching worker's fixed stage, a fixed startup-output classification and actual exit-class/entry-marker booleans
+- **AND** no payload bytes, authority, process identity or exception message becomes public; every original limit and failure exit remains blocking
+
+#### Scenario: Explicit tests do not waive another changed same-stem source
+
+- **GIVEN** two distinct changed production files share a filename stem and discovery finds multiple matching tests
+- **WHEN** changed-scope review supplies only a subset of those matching tests
+- **THEN** selection SHALL retain actionable `project_test_selection_ambiguous` incomplete evidence for the unresolved source group, regardless of input order
+- **AND** the caller can resolve this conservative ambiguity by explicitly including all discovered matching tests, or use full native pytest discovery
+- **AND** an explicit matching test continues to resolve a single changed production file's mapping without broadening its selected test scope
+
+#### Scenario: Upstream test contexts retain native validation and serial child policy
+
+- **WHEN** reviewer bootstrap regression tests run after native integration
+- **THEN** valid adapter fixtures supply actual `selectors`, invalid requests fail before coverage planning or response imports, and no contract assertion is dropped
+- **AND** a child proof without auto-loaded xdist retains the repository's serial reporting/import options while removing only xdist worker controls
+- **AND** hosted independent review uses a literal signed published marketplace baseline, currently 0.51.2, without developer overrides
+- **AND** full and SMART host proofs run without caller test filters; only the portable suite receives those filters
+
+#### Scenario: Installed customer proof binds the triggering release identity
+
+- **GIVEN** a published release points to an older commit and main has advanced
+- **WHEN** the native installed customer matrix runs for that release
+- **THEN** it SHALL check out the triggering event commit, expose the published release tag to the existing installation identity validator and make tag references available
+- **AND** the pinned registry artifact and installed-identity receipt SHALL derive from that release checkout, not the later main registry
+- **AND** a tag/checkout mismatch fails before installation version selection; manual dispatch remains bound to its selected event commit
+
+
+#### Scenario: Fatal analyzer diagnostics retain their selected source location
+
+- **WHEN** Pylint emits a fatal diagnostic naming any selected source file
+- **THEN** its governed tool-error finding SHALL retain that selected path and reported line, including relative path variants and a later file in the selection
+- **AND** an unselected or global fatal diagnostic still becomes incomplete tool-error evidence attributed to the fallback selected file; unrelated nonfatal diagnostics remain excluded
+
+
+#### Scenario: Native installed acceptance cannot attest an older registry module
+
+- **WHEN** native installed customer acceptance selects or verifies its marketplace module
+- **THEN** the source package manifest SHALL equal the pinned registry archive manifest, including version, integrity and authenticated resource identity, before installation or a receipt can succeed
+- **AND** missing, malformed, older or divergent source/registry identities fail closed without a receipt; the ordinary Linux candidate can still intentionally select a published baseline from a registry-only checkout
+- **AND** registry publication remains the normal reviewed CI release flow, and an unpublished source patch cannot be presented as completed installed acceptance
+
+
+#### Scenario: Failure diagnostics cannot replace the required review exit
+
+- **WHEN** either hosted failure-report projector receives unreadable, malformed, non-object, deeply nested or oversized private JSON
+- **THEN** it SHALL read at most the existing 32 MiB diagnostic bound plus one overflow byte and emit only a fixed incomplete diagnostic
+- **AND** execution failure in any diagnostic command in the failed candidate/review branches cannot prevent the final original nonzero review exit, including timeout124; no failure becomes PASS and private payload/trace text stays private
+- **AND** unexpected projector stderr is retained only in a private diagnostic file and the public log receives fixed `review_projection_failed` incomplete evidence
+- **AND** every inline failure diagnostic interpreter SHALL use isolated Python mode, excluding the candidate working directory and ambient Python import paths; candidate standard-library lookalikes cannot execute on the host before projection or alter the original reviewer exit
+
+
+#### Scenario: Native PR verification follows transitive release inputs
+
+- **WHEN** a PR changes a native preparer, transitive analyzer/build helper, shared acceptance helper, native proof, corpus fixture or repository pytest/bootstrap input
+- **THEN** native release PR filtering SHALL schedule the unchanged secret-free build and nine-cell execution matrix for that change
+- **AND** unrelated documentation, packages and unit tests retain filtered execution; matrix dimensions, deadlines, protected-main signing/publication approval and runtime bytes remain unchanged
+- **AND** trigger regressions distinguish single-star segment matches from recursive double-star matches, so a root script glob cannot conceal missing directory coverage

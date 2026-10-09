@@ -92,6 +92,28 @@ static void control_state(const struct worker *item) {
     errno = saved;
 }
 
+/* Only fixed fixture prefixes are classified; raw output remains private. */
+static const char *control_output_class(const struct worker *item) {
+    if (strstr(item->output, "candidate-profile-failure:")) return "profile_initialization";
+    if (strstr(item->output, "Fatal Python error:")) return "python_initialization";
+    if (strstr(item->output, "Python path configuration:")) return "python_path_configuration";
+    if (strstr(item->output, "dyld[")) return "loader";
+    return "unclassified";
+}
+
+/* Finite private proof diagnostics never admit output or alter a rejection. */
+static void control_result(const struct worker *item, const char *stage) {
+    if (!item) return;
+    int saved = errno;
+    printf("{\"control_result\":%d,\"stage\":\"%s\",\"worker_exited\":%s,"
+        "\"worker_signalled\":%s,\"entry_marker_present\":%s,\"output_class\":\"%s\"}\n", item->pid, stage,
+        item->reaped && WIFEXITED(item->status) ? "true" : "false",
+        item->reaped && WIFSIGNALED(item->status) ? "true" : "false",
+        strstr(item->output, "python-entry-ns=") ? "true" : "false", control_output_class(item));
+    fflush(stdout);
+    errno = saved;
+}
+
 static void nonblocking(int fd) {
     if (fd < 0 || fd >= FD_SETSIZE || fcntl(fd, F_SETFL, O_NONBLOCK) < 0 ||
         fcntl(fd, F_SETFD, FD_CLOEXEC) < 0) die();
@@ -179,15 +201,15 @@ static void reject_spawned_worker(struct worker *item) {
 }
 #endif
 
-static void queue(const char *json) {
+static void queue(const char *json, const struct worker *item) {
     size_t length = strlen(json);
-    if (length > 2048) die();
+    if (length > 2048) { control_result(item, "response_size"); die(); }
     if (output_sent) {
         memmove(output, output + output_sent, output_used - output_sent);
         output_used -= output_sent;
         output_sent = 0;
     }
-    if (length + 4 > QUEUE - output_used) die();
+    if (length + 4 > QUEUE - output_used) { control_result(item, "queue_capacity"); die(); }
     uint32_t size = htonl((uint32_t)length);
     memcpy(output + output_used, &size, 4);
     memcpy(output + output_used + 4, json, length);
@@ -197,11 +219,12 @@ static void queue(const char *json) {
 static void reject(const char *error) {
     char response[128];
     snprintf(response, sizeof(response), "{\"version\":1,\"ok\":false,\"error\":\"%s\"}", error);
-    queue(response);
+    queue(response, NULL);
 }
 
 static void result(int index, const char *state) {
     struct worker *item = &workers[index];
+    control_result(item, "entered");
     char escaped[OUTPUT * 2 + 1];
     size_t position = 0;
     for (size_t i = 0; i < item->used; i++) {
@@ -209,7 +232,7 @@ static void result(int index, const char *state) {
         if (value == '\n') { escaped[position++] = '\\'; escaped[position++] = 'n'; }
         else if (value == '"' || value == '\\') { escaped[position++] = '\\'; escaped[position++] = (char)value; }
         else if (value >= 32 && value < 127) escaped[position++] = (char)value;
-        else die();
+        else { control_result(item, "output_encoding"); die(); }
     }
     escaped[position] = 0;
     char response[2300];
@@ -221,7 +244,8 @@ static void result(int index, const char *state) {
         item->reaped && WIFEXITED(item->status) ? WEXITSTATUS(item->status) : -1,
         item->reaped && WIFSIGNALED(item->status) ? WTERMSIG(item->status) : 0,
         item->traced ? "true" : "false", item->reason, escaped);
-    queue(response);
+    queue(response, item);
+    control_result(item, "queued");
 }
 
 #ifndef CONTROL_BSD_TEST
@@ -309,7 +333,7 @@ static void request(void) {
     if (!opcode) {
         if (authenticated || handle || argument || timeout) { reject("arguments"); return; }
         authenticated = 1;
-        queue("{\"version\":1,\"ok\":true,\"state\":\"authenticated\"}");
+        queue("{\"version\":1,\"ok\":true,\"state\":\"authenticated\"}", NULL);
         return;
     }
     if (opcode == 1) {
@@ -439,7 +463,11 @@ static void loop(int listener) {
         #endif
         reap();
         double current = now(), deadline = session_deadline;
-        if (current >= session_deadline || (client < 0 && current >= accept_deadline) ||
+        if (current >= session_deadline) {
+            control_result(pending >= 0 ? &workers[pending] : NULL, "session_deadline");
+            die();
+        }
+        if ((client < 0 && current >= accept_deadline) ||
             (partial_deadline && current >= partial_deadline)) die();
         if (client < 0 && accept_deadline < deadline) deadline = accept_deadline;
         if (partial_deadline && partial_deadline < deadline) deadline = partial_deadline;

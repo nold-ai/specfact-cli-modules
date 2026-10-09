@@ -388,7 +388,20 @@ def test_constructor_required_prefix_keeps_real_positional_values(crosshair_disp
 
 
 def test_dispatch_fixture_retains_later_project_contract_enforcement():
+    import shlex
+    import tomllib
+
     root = Path(__file__).parents[4]
+    configured = shlex.split(
+        tomllib.loads((root / "pyproject.toml").read_text())["tool"]["pytest"]["ini_options"]["addopts"]
+    )
+    serial = []
+    options = iter(configured)
+    for option in options:
+        if option == "-n":
+            next(options)
+        elif not option.startswith("--max-worker-restart="):
+            serial.append(option)
     result = subprocess.run(
         [
             sys.executable,
@@ -397,6 +410,8 @@ def test_dispatch_fixture_retains_later_project_contract_enforcement():
             "tests/unit/specfact_code_review/run/test_crosshair_dispatch.py::test_production_dispatch_preserves_attachment_argv_and_exit_without_sampling",
             "tests/unit/specfact_code_review/run/test_target_crosshair.py::test_dispatch_preserves_constructor_arguments",
             "tests/unit/sync_runtime/test_bridge_probe.py::TestBridgeProbe::test_auto_generate_bridge_unknown",
+            "-o",
+            "addopts=" + shlex.join(serial),
             "-q",
         ],
         cwd=root,

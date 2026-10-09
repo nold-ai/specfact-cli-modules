@@ -116,6 +116,14 @@ def test_build_review_command_writes_json_report() -> None:
     assert command[-2:] == ["tests/test_app.py", "packages/specfact-spec/src/x.py"]
 
 
+def test_staged_review_activates_bug_hunt_without_changing_enforcement() -> None:
+    module = _load_script_module()
+    command = module.build_review_command(["tests/test_app.py"], enforcement="changed")
+    assert "--bug-hunt" in command
+    assert command[command.index("--enforcement") + 1] == "changed"
+    assert command[-1] == "tests/test_app.py"
+
+
 def test_main_skips_when_no_relevant_files(capsys: pytest.CaptureFixture[str]) -> None:
     """Hook should not fail commits when no staged review-relevant paths are present."""
     module = _load_script_module()
@@ -420,10 +428,20 @@ def test_main_missing_report_still_returns_exit_code_and_warns(
     assert ".specfact/code-review.json" in err
 
 
-def test_main_timeout_fails_hook(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
+def test_main_timeout_fails_hook(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], tmp_path: Path
+) -> None:
     """Subprocess timeout must fail the hook with a clear message."""
     module = _load_script_module()
-    repo_root = Path(__file__).resolve().parents[3]
+    repo_root = tmp_path
+
+    original_prepare = module._prepare_report_path
+
+    def _prepare_owned_report(root: Path) -> Path:
+        assert root == tmp_path, "timeout fixture must not prepare the active reviewer's report"
+        return original_prepare(root)
+
+    monkeypatch.setattr(module, "_prepare_report_path", _prepare_owned_report)
 
     def _fake_ensure() -> tuple[bool, str | None]:
         return True, None
@@ -439,10 +457,49 @@ def test_main_timeout_fails_hook(monkeypatch: pytest.MonkeyPatch, capsys: pytest
 
     exit_code = module.main(["tests/unit/test_app.py"])
 
-    assert exit_code == 1
+    assert exit_code == 124
     err = capsys.readouterr().err
     assert "timed out after 300s" in err
     assert "tests/unit/test_app.py" in err
+
+
+@pytest.mark.parametrize(
+    ("partial_stderr", "analyzer"),
+    [
+        ("private tool content\nChecking capsule analyzer pylint...\n", "pylint"),
+        (b"Checking capsule analyzer ruff...\nprivate token\nChecking capsule analyzer contracts...\n", "contracts"),
+        ("Checking capsule analyzer private-token...\n", None),
+        ("Checking capsule analyzer pylint... private token\n", None),
+        ("Checking capsule analyzer ruff...\n" + "x" * 65_536, None),
+        (None, None),
+    ],
+)
+def test_review_timeout_projects_only_last_fixed_analyzer(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    tmp_path: Path,
+    partial_stderr: str | bytes | None,
+    analyzer: str | None,
+) -> None:
+    module = _load_script_module()
+
+    def fail(cmd: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        assert kwargs["timeout"] == 300
+        raise subprocess.TimeoutExpired(cmd, 300, stderr=partial_stderr)
+
+    monkeypatch.setattr(module.subprocess, "run", fail)
+    assert module._run_review_subprocess(["specfact"], tmp_path, [], enforcement="changed") is None
+    captured = capsys.readouterr()
+    diagnostics = [json.loads(line) for line in captured.err.splitlines() if line.startswith("{")]
+    expected = (
+        []
+        if analyzer is None
+        else [{"status": "INCOMPLETE", "phase": "review", "diagnostic": "analysis_timeout", "analyzer": analyzer}]
+    )
+    assert diagnostics == expected
+    assert "private" not in captured.err
+    assert "x" * 100 not in captured.err
+    assert captured.out == ""
 
 
 def test_run_review_subprocess_exposes_local_module_sources(monkeypatch: pytest.MonkeyPatch) -> None:

@@ -687,8 +687,9 @@ def test_native_member_execution_uses_native_backend_instead_of_bubblewrap(
     assert observed == [request]
 
 
+@pytest.mark.parametrize("overlay", ["absent", "generated", "collision"])
 def test_native_member_execution_stages_immutable_snapshot_and_uses_closed_plan(
-    monkeypatch: MonkeyPatch, tmp_path: Path
+    monkeypatch: MonkeyPatch, tmp_path: Path, overlay: str
 ) -> None:
     snapshot = tmp_path / "source"
     snapshot.mkdir()
@@ -709,6 +710,10 @@ def test_native_member_execution_stages_immutable_snapshot_and_uses_closed_plan(
     dependency.parent.mkdir(parents=True)
     dependency.write_text("VALUE = 1\n", encoding="utf-8")
     (project_runtime / "project-runtime.json").write_text("{}\n", encoding="utf-8")
+    if overlay != "absent":
+        generated = project_runtime / "source-overlay/pkg" / ("example.py" if overlay == "collision" else "_version.py")
+        generated.parent.mkdir(parents=True)
+        generated.write_text("VERSION = 7\n")
     lease = SimpleNamespace()
     runtime = runner.CapsuleRuntime(
         root=tmp_path / "capsule",
@@ -735,6 +740,9 @@ def test_native_member_execution_stages_immutable_snapshot_and_uses_closed_plan(
     def prepare(**kwargs: Any) -> SimpleNamespace:
         captured.update(kwargs)
         staged = kwargs["project_snapshot"]
+        if overlay == "generated":
+            assert (staged / "pkg/_version.py").read_text() == "VERSION = 7\n"
+            assert not (snapshot / "pkg/_version.py").exists()
         assert (staged / "pkg" / "example.py").read_text(encoding="utf-8") == "value = 1\n"
         assert (staged / "pkg" / "support.py").read_text(encoding="utf-8") == "HELPER = 2\n"
         assert (staged / ".specfact-native-config/1/ruff.toml").read_text(encoding="utf-8") == (
@@ -775,6 +783,14 @@ def test_native_member_execution_stages_immutable_snapshot_and_uses_closed_plan(
     monkeypatch.setattr(runner.native_execution, "BinaryNativeExecutionTransport", lambda value: value)
     monkeypatch.setattr(runner.native_execution, "NativeExecutionSession", Session)
 
+    if overlay == "collision":
+        response = runner._execute_native_capsule_member(request)
+        assert response["evidence_outcome"] == "UNKNOWN"
+        diagnostic = response["diagnostic"]
+        assert isinstance(diagnostic, str)
+        assert "generated source collision" in diagnostic
+        assert source.read_text() == "value = 1\n"
+        return
     assert runner._execute_native_capsule_member(request) == {
         "evidence_outcome": "PASS",
         "execution_state": "ran",

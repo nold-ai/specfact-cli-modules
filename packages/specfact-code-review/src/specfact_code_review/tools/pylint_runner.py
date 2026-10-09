@@ -43,7 +43,9 @@ def _map_severity(message_id: str) -> Literal["error", "warning", "info"]:
     return "warning"
 
 
-def _category_for_message_id(message_id: str) -> Literal["architecture", "style"]:
+def _category_for_message_id(message_id: str) -> Literal["architecture", "style", "tool_error"]:
+    if message_id.startswith("F"):
+        return "tool_error"
     if message_id in PYLINT_CATEGORY_MAP:
         return "architecture"
     return "style"
@@ -68,19 +70,21 @@ def _coerce_pylint_message(raw: object) -> str:
     return "(pylint provided no message text)"
 
 
-def _finding_from_item(item: object, *, allowed_paths: set[str]) -> ReviewFinding | None:
+def _finding_from_item(item: object, *, allowed_paths: set[str], selected_path: Path) -> ReviewFinding | None:
     if not isinstance(item, dict):
         raise ValueError("pylint finding must be an object")
 
     filename = item["path"]
     if not isinstance(filename, str):
         raise ValueError("pylint path must be a string")
-    if normalize_path_variants(filename).isdisjoint(allowed_paths):
-        return None
-
     message_id = item["message-id"]
     if not isinstance(message_id, str):
         raise ValueError("pylint message-id must be a string")
+    if normalize_path_variants(filename).isdisjoint(allowed_paths):
+        if message_id.startswith("F"):
+            filename = str(selected_path)
+        else:
+            return None
     line = _coerce_pylint_line(item.get("line"))
     message = _coerce_pylint_message(item.get("message"))
 
@@ -116,10 +120,12 @@ def _payload_from_output(stdout: str, *, stderr: str, returncode: int | None) ->
     return payload
 
 
-def _findings_from_payload(payload: list[object], *, allowed_paths: set[str]) -> list[ReviewFinding]:
+def _findings_from_payload(
+    payload: list[object], *, allowed_paths: set[str], selected_path: Path
+) -> list[ReviewFinding]:
     findings: list[ReviewFinding] = []
     for item in payload:
-        finding = _finding_from_item(item, allowed_paths=allowed_paths)
+        finding = _finding_from_item(item, allowed_paths=allowed_paths, selected_path=selected_path)
         if finding is not None:
             findings.append(finding)
     return findings
@@ -164,7 +170,7 @@ def run_pylint(files: list[Path], *, extra_args: tuple[str, ...] = ()) -> list[R
 
     allowed_paths = _allowed_paths(files)
     try:
-        return _findings_from_payload(payload, allowed_paths=allowed_paths)
+        return _findings_from_payload(payload, allowed_paths=allowed_paths, selected_path=files[0])
     except (KeyError, TypeError, ValueError) as exc:
         return [
             tool_error(

@@ -110,7 +110,6 @@ _ANALYZER_SCAN_EXCLUDED_DIRECTORIES = frozenset(
         ".venv",
         "__pycache__",
         "node_modules",
-        "venv",
     }
 )
 _NATIVE_MEMBER_PLANS = {
@@ -329,7 +328,20 @@ def _capture_native_files(root: Path, files: list[tuple[Path, Path]]) -> list[tu
     return sorted(entries)
 
 
-def _capture_native_snapshot(root: Path, *, python_only: bool = False) -> list[tuple[str, bytes]]:
+def _excluded_analyzer_directory(path: Path) -> bool:
+    """Keep source capture and identity scans out of local environments."""
+    from specfact_code_review.run.runtime_sources import is_virtual_environment
+
+    return path.name in _ANALYZER_SCAN_EXCLUDED_DIRECTORIES or (not path.is_symlink() and is_virtual_environment(path))
+
+
+def _capture_native_snapshot(
+    root: Path,
+    *,
+    python_only: bool = False,
+    directories: list[str] | None = None,
+    exclude_directory: Callable[[Path], bool] = _excluded_analyzer_directory,
+) -> list[tuple[str, bytes]]:
     """Materialize a bounded immutable tree, dereferencing only internal aliases."""
 
     root = root.resolve(strict=True)
@@ -357,19 +369,31 @@ def _capture_native_snapshot(root: Path, *, python_only: bool = False) -> list[t
         identity = (metadata.st_dev, metadata.st_ino)
         if identity in active:
             raise ValueError("native_snapshot_directory_alias_cycle")
+        if directories is not None and logical.parts:
+            normalized, alias = _validate_native_snapshot_name(logical)
+            if alias in aliases or len(aliases) >= 100_000:
+                raise ValueError("native_snapshot_inventory_invalid")
+            aliases.add(alias)
+            directories.append(normalized)
         with os.scandir(resolved) as stream:
             children = sorted(stream, key=lambda entry: entry.name.casefold())
         for child in children:
             source = Path(child.path)
             relative = logical / child.name
             metadata = source.lstat()
-            if child.name in _ANALYZER_SCAN_EXCLUDED_DIRECTORIES and child.is_dir():
+            if exclude_directory(source) and child.is_dir():
                 continue
             if stat.S_ISLNK(metadata.st_mode):
                 target = source.resolve(strict=True)
                 if not target.is_relative_to(root):
                     raise ValueError("native_snapshot_alias_escape")
                 if target.is_dir():
+                    if any(
+                        exclude_directory(entry)
+                        for entry in (target, *target.parents)
+                        if entry.is_relative_to(root) and entry != root
+                    ):
+                        raise ValueError("native_snapshot_directory_alias_excluded")
                     visit(target, relative, active | {identity})
                 elif target.is_file() and (not python_only or relative.suffix in {".py", ".pyi"}):
                     add_file(target, relative)
@@ -1635,6 +1659,16 @@ def _execute_native_capsule_member(request: CapsuleMemberExecutionRequest) -> di
                         symlinks=False,
                         copy_function=copy_runtime_file,
                     )
+                    overlay = destination_runtime / "source-overlay"
+                    if overlay.exists():
+                        for name, payload in _capture_native_snapshot(overlay):
+                            generated = project_root / name
+                            if generated.suffix not in {".py", ".pyi"} or generated.exists():
+                                raise ValueError("native project generated source collision or invalid file")
+                            generated.parent.mkdir(parents=True, exist_ok=True)
+                            with generated.open("xb") as stream:
+                                stream.write(payload)
+                            generated.chmod(0o400)
                 if domain_tool in {"pylint", "crosshair", "pytest"}:
                     from specfact_code_review.run.native_analyzer_view import VIEW_NAME, build_analyzer_view
 
@@ -2080,6 +2114,8 @@ def _run_capsule_snapshot(
         sealed_bugs_policy = settings.member_argv is not None and "semgrep-bugs" in settings.member_argv
         raw = (settings.unavailable_members or {}).get(member)
         if raw is None:
+            if options.progress_callback is not None:
+                options.progress_callback(f"Checking capsule analyzer {member}...")
             raw = _dispatch_capsule_member(
                 CapsuleMemberExecutionRequest(
                     runtime=runtime,
@@ -5547,7 +5583,7 @@ def _repository_analyzer_support_paths(repository: Path) -> tuple[str, ...] | No
     try:
         for directory, directory_names, file_names in os.walk(repository, followlinks=False):
             directory_names[:] = sorted(
-                name for name in directory_names if name not in _ANALYZER_SCAN_EXCLUDED_DIRECTORIES
+                name for name in directory_names if not _excluded_analyzer_directory(Path(directory) / name)
             )
             relative_directory = Path(directory).relative_to(repository)
             for name in sorted((*directory_names, *file_names)):
@@ -5581,7 +5617,11 @@ def _with_contained_symlink_targets(repository: Path, paths: set[str]) -> tuple[
             resolved_target = absolute.resolve(strict=True)
             relative_target = resolved_target.relative_to(repository.resolve(strict=True))
             if resolved_target.is_dir():
-                if any(part in _ANALYZER_SCAN_EXCLUDED_DIRECTORIES for part in relative_target.parts):
+                if any(
+                    _excluded_analyzer_directory(entry)
+                    for entry in (resolved_target, *resolved_target.parents)
+                    if entry.is_relative_to(repository) and entry != repository
+                ):
                     return None
                 directory_paths = _directory_symlink_target_paths(repository, resolved_target)
                 if directory_paths is None:
@@ -5655,6 +5695,16 @@ def _symlink_resolution_is_contained(root: Path, link: Path) -> bool:
     return True
 
 
+def _has_environment_ancestor(repository: Path, path: Path) -> bool:
+    from specfact_code_review.run.runtime_sources import is_virtual_environment
+
+    return any(
+        is_virtual_environment(parent)
+        for parent in path.parents
+        if parent.is_relative_to(repository) and parent != repository
+    )
+
+
 def _worktree_analysis_identity(repository: Path, selected: dict[str, Path]) -> WorktreeAnalysisIdentity | None:
     """Bind one stable base and complete Git-visible raw worktree input set."""
     base_tree = _cached_base_tree_identity(repository)
@@ -5666,6 +5716,8 @@ def _worktree_analysis_identity(repository: Path, selected: dict[str, Path]) -> 
     for path in bound_paths:
         absolute = selected.get(path, repository.joinpath(*PurePosixPath(path).parts))
         is_unselected = path not in selected
+        if _has_environment_ancestor(repository, absolute):
+            return None
         identity = _worktree_path_identity(
             path,
             absolute,

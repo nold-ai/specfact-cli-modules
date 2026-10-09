@@ -28,11 +28,21 @@ requirements:
       kind: config_file
       locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
     verification_cases:
+    - case_id: 460-2-12
+      scenario_id: native-isolation-capability-evidence
+      method: test
+      intent: Retain compatible exception-port denial in both Python fixture profiles.
+      observable: Both profile builders must match the existing broker's unconditional four RPC denials and guarded newer operation; required older-kernel native execution remains separate evidence and no grants or budgets change.
     - case_id: 460-15-6
       scenario_id: native-isolation-capability-evidence
       method: inspection
       intent: "Inspect acceptance: Kernel RPC denial retains exception endpoints."
       observable: "KERN_DENIED and KERN_NO_ACCESS still require unchanged independently read set/swap/clear endpoint snapshots and normal exit; actual signed controls run on ARM64. Lifecycle repetition requirements are unchanged."
+    - case_id: 460-2-11
+      scenario_id: native-isolation-capability-evidence
+      method: test
+      intent: Preserve proof assertions when an owned process exits between cleanup identity observation and signaling.
+      observable: Cleanup catches only ProcessLookupError; regression tests retain permission failures and reject absent or changed identities. Actual local controller-loss, bootstrap-failure and exception-denial proofs pass with unchanged numeric protocol, positive controls and five-second deadline. Hosted supported cells remain separate acceptance.
     - case_id: 460-2-1
       scenario_id: native-isolation-capability-evidence
       method: inspection
@@ -67,6 +77,31 @@ requirements:
       kind: config_file
       locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
     verification_cases:
+    - case_id: 460-3-8
+      scenario_id: portable-review-semantics
+      method: test
+      intent: Invalid or empty-attribution requests do not trigger unnecessary ownership scans.
+      observable: Planner/launcher guards prove malformed JSON/selectors are rejected before ownership I/O; preparation errors clear stale observations. Empty Python attribution inputs produce the identical empty bridge without metadata reads. Valid mappings retain full ownership, byte identity and target checks; all budgets remain unchanged.
+    - case_id: 460-3-7
+      scenario_id: portable-review-semantics
+      method: test
+      intent: Hosted transport and cp311 bootstrap preparation preserve strict input validation.
+      observable: Executed artifact restore recipe passes actual immutable Git file validation without byte changes; unexpected executables remain rejected. Fresh cp311 preparation removes bootstrap setuptools before unchanged hash-pinned installation and lock admission.
+    - case_id: 460-3-6
+      scenario_id: portable-review-semantics
+      method: test
+      intent: Failed hosted reviews expose bounded profiling without granting acceptance.
+      observable: Diagnostic summary tests reject malformed, oversized and substituted fields; only static tracked public symbols and sample counts survive. Workflow checks retain the required 300-second failure and a shorter independently stopped diagnostic replay; no raw profile is uploaded.
+    - case_id: 460-3-5
+      scenario_id: portable-review-semantics
+      method: test
+      intent: Synthetic enforcement tests do not borrow the real checkout as an identity fixture.
+      observable: A fail-on-real-Git-inventory fixture guard preserves all five enforcement/readback assertions against a minimal standalone source; actual identity security tests remain unchanged. Local timing is diagnostic, not hosted acceptance.
+    - case_id: 460-3-4
+      scenario_id: portable-review-semantics
+      method: test
+      intent: "Pylint fatal diagnostics remain incomplete analyzer evidence."
+      observable: "Six failing-before/passing-after regressions preserve fatal F0001/F0002/F0010 diagnostics as tool_error findings even outside selected paths, retaining ordinary findings. No internal analyzer crash may satisfy complete-report acceptance. Three independent checker regressions additionally reject fatal/style misclassification and tool errors despite complete member rows; genuine project findings remain accepted."
     - case_id: 460-3-1
       scenario_id: portable-review-semantics
       method: inspection
@@ -91,6 +126,11 @@ requirements:
       kind: config_file
       locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
     verification_cases:
+    - case_id: 460-4-15
+      scenario_id: verified-provisioning-and-offline-reuse
+      method: inspection
+      intent: "Inspect acceptance: Maintained manager images retain their verified provenance."
+      observable: "Focused managed uv regressions require byte-identical verified signatures through preparation, complete maintained-artifact revalidation after inventory, and missing/changed provenance rejection before assembly output. These bounded tests and maintainer observations do not establish final installed-customer acceptance or production publication."
     - case_id: 460-4-1
       scenario_id: verified-provisioning-and-offline-reuse
       method: inspection
@@ -184,6 +224,16 @@ requirements:
       method: inspection
       intent: "Inspect planned acceptance: Policy-admissible replacement is verified."
       observable: "native execution may proceed without satisfying the new selection from a superseded cache. Planned maturity only; future native execution evidence is required by FEASIBILITY.md and tasks.md; no runtime pass is claimed."
+    - case_id: 460-15-41
+      scenario_id: dependency-source-admission
+      method: test
+      intent: Resolve declared wheel license paths to authenticated retained bytes.
+      observable: Metadata and provenance regressions fail against licenses/LICENSE.txt; corrected LICENSE.txt resolves relative to dist-info/licenses to the authenticated license member. Three exact-hash lock regressions fail before all ABI locks bind two identical authenticated rebuilds. The legacy derivative stays byte-identical; native release admission remains separate.
+    - case_id: 460-6-4
+      scenario_id: dependency-source-admission
+      method: inspection
+      intent: "Verify explicit authenticated Darwin-only Z3 projection and preserved historical derivative."
+      observable: "test_native_z3_wheel.py rejects unreviewed/missing foreign payload, source/release/license tampering and absent release inputs before output; every retained byte, omission, license and regenerated RECORD is bound, default specfact.1 bytes stay identical, and all three candidate locks select the observed specfact.2 hash. Candidate compatibility is separate from final dependency/production admission."
   openspec:code-review-native-platform-execution:review-native-platform-execution:native-project-runtime-preparation:
     rationale: Define macOS ARM64 acceptance without claiming unexecuted runtime proof.
     stakeholder_refs:
@@ -223,6 +273,16 @@ requirements:
       kind: config_file
       locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
     verification_cases:
+    - case_id: 460-8-24
+      scenario_id: signed-customer-release-acceptance
+      method: test
+      intent: "Private socket metadata precedes listener readiness."
+      observable: "test_private_socket_connect_waits_only_for_refused_listener, test_socket_identity_checks_cannot_extend_connection_budget and related tests verify refusal-only fresh sockets, metadata rechecks, original seven-second budget including metadata work, close on deadline/error and one authentication. No job or fixture retry; hosted 100-repetition and cleanup acceptance remain required."
+    - case_id: 460-8-23
+      scenario_id: signed-customer-release-acceptance
+      method: test
+      intent: "Native connection failures remain diagnosable."
+      observable: "test_native_connection_exception_class_is_public_without_private_text verifies four fixed standard exception class names without raw failure text. Existing unknown-name and private-field tests remain mandatory; runtime readiness and repetition requirements are unchanged."
     - case_id: 460-8-1
       scenario_id: signed-customer-release-acceptance
       method: inspection
@@ -455,6 +515,16 @@ requirements:
       kind: config_file
       locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
     verification_cases:
+    - case_id: 460-11-3
+      scenario_id: automatic-native-runtime-acquisition
+      method: test
+      intent: "Ordinary review output identifies unavailable native delivery."
+      observable: "test_default_output_shows_distinct_unknown_runtime_diagnostics, test_default_output_renders_unknown_diagnostic_as_literal_text and test_json_output_preserves_unknown_diagnostic_contract pass; distinct UNKNOWN causes render literally and existing JSON remains unchanged. This unit evidence does not admit a native artifact."
+    - case_id: 460-11-4
+      scenario_id: automatic-native-runtime-acquisition
+      method: test
+      intent: "Controller bytecode does not change runtime composition."
+      observable: "test_controller_bytecode_cannot_change_cold_warm_payload_identity passes for four generated-cache cases; existing test_builtin_analyzer_missing_or_drifted_payload_is_unknown and test_builtin_copy_rejects_payload_drift_after_verification separately verify source tamper rejection. Hosted Linux cold/warm acceptance remains required."
     - case_id: 460-11-1
       scenario_id: automatic-native-runtime-acquisition
       method: inspection
@@ -474,6 +544,136 @@ requirements:
       kind: config_file
       locator: openspec/changes/code-review-native-platform-execution/PROJECT_DRIVEN_PREPARATION_CONTRACT.md
     verification_cases:
+    - case_id: 460-15-19
+      scenario_id: prepare-unfamiliar-projects-from-discovered-or-caller-supplied-setup
+      method: test
+      intent: "Ordinary source packages named venv remain reviewable."
+      observable: "Meaningful RED then GREEN preserves src/hatch/venv during native capture; directories with an actual pyvenv.cfg marker remain excluded by the shared predicate. Real Hatch candidate preparation and all ten analyzers complete without missing imports."
+    - case_id: 460-15-17
+      scenario_id: prepare-unfamiliar-projects-from-discovered-or-caller-supplied-setup
+      method: test
+      intent: "Native generated wheel modules preserve bound project source imports."
+      observable: "Meaningful RED tests require byte-bound roots, sealed generated Python overlays reachable from the private project snapshot, and collision rejection without checkout mutation. Size/byte mismatches and ambiguous copies reject. Exact suffix indexing handles 3,000 packages sharing common/__init__.py within the original 100,000 bound; index construction is separately bounded. Real Hatch candidate CLI executes five tests with offline reuse; authenticated final-byte acceptance remains separate."
+    - case_id: 460-15-18
+      scenario_id: prepare-unfamiliar-projects-from-discovered-or-caller-supplied-setup
+      method: test
+      intent: "Distributed native pytest retains actually observed selectors."
+      observable: "Three meaningful failing-before/passing-after regressions retain actually observed setup/call/teardown nodeids without coordinator collection events; an empty observer stays empty. No requested but unobserved selector or protected authority is fabricated. Actual Poetry proof is checked separately."
+    - case_id: 460-15-16
+      scenario_id: prepare-unfamiliar-projects-from-discovered-or-caller-supplied-setup
+      method: test
+      intent: "Native preparation materializes contained source aliases."
+      observable: "Focused native preparation regressions require internal file/directory and empty-directory materialization, original checkout preservation, executable source modes, owned read-only copy cleanup, cycle and copied-source substitution rejection, external alias rejection and environment exclusion. Runtime dependency inventories retain their no-link policy. Physical Requests acceptance is required separately."
+    - case_id: 460-15-14
+      scenario_id: prepare-unfamiliar-projects-from-discovered-or-caller-supplied-setup
+      method: test
+      intent: "Nested local environments do not block ordinary project review."
+      observable: "Six focused tests and existing worktree containment/mutation cases verify shared pyvenv.cfg exclusion, ordinary-directory rejection, tracked/selected environment input rejection, and alias rejection. These tests preserve source input identity; they do not admit release artifacts."
+    - case_id: 460-15-15
+      scenario_id: prepare-unfamiliar-projects-from-discovered-or-caller-supplied-setup
+      method: test
+      intent: "Native local pytest retains actual execution observations."
+      observable: "Seven failing-before/passing-after regressions exercise real adapter orchestration, completed response projection, failure exit preservation and absent/substituted/malformed/oversized artifacts. Native observations remain project-origin-v1 and cannot establish protected PR authority. Final installed-customer proof remains separate."
+    - case_id: 460-15-11
+      scenario_id: prepare-unfamiliar-projects-from-discovered-or-caller-supplied-setup
+      method: test
+      intent: "Staged review activates bug-hunt."
+      observable: "test_staged_review_activates_bug_hunt_without_changing_enforcement verifies conditional analyzer activation with unchanged changed-line enforcement. Existing timeout and isolation tests remain mandatory."
+    - case_id: 460-15-12
+      scenario_id: prepare-unfamiliar-projects-from-discovered-or-caller-supplied-setup
+      method: test
+      intent: "Explicit matching tests resolve ambiguous source mapping."
+      observable: "test_explicit_matching_test_resolves_duplicate_source_stems verifies order-independent explicit matching choices, multiple explicit tests and other retained tests; absent or unrelated explicit tests preserve ambiguity. Full discovery and strict coverage remain unchanged."
+    - case_id: 460-15-21
+      scenario_id: prepare-unfamiliar-projects-from-discovered-or-caller-supplied-setup
+      method: inspection
+      intent: "Preserved Linux analyzer can parse equivalent command-test callbacks."
+      observable: "The hash-verified official Semgrep1.144.0 ARM64 engine reproduces a syntax error at the keyword-only lambda in the touched command test; equivalent named keyword-only functions must remove that error without changing any review assertion or ignoring structured errors. Native static evidence is separate from exact-head Linux acceptance."
+    - case_id: 460-15-24
+      scenario_id: prepare-unfamiliar-projects-from-discovered-or-caller-supplied-setup
+      method: test
+      intent: "Managed uv build launch encoding preserves the fixed channel budget."
+      observable: "test_managed_uv_compact_launch_round_trips_through_native_parser compiles the actual Rust bridge, reproduces oversized XML before implementation, decodes the compact binary request, preserves every literal argument/environment field and passes the real CoreFoundation broker parser with spaces/Unicode roots. Oversized strings and final binary requests remain rejected before channel use. Newly built uv provenance must bind the changed bridge and executable."
+    - case_id: 460-15-23
+      scenario_id: prepare-unfamiliar-projects-from-discovered-or-caller-supplied-setup
+      method: test
+      intent: "Capsule execution reports safe progress through the existing CLI callback."
+      observable: "Real snapshot orchestration invokes the callback before each dispatched member without altering evidence. The subprocess timeout path projects only the last exact recognized analyzer from a bounded stderr tail, including bytes returned by TimeoutExpired; unknown/payload-bearing lines and raw private output are withheld. Exit124 and the300-second deadline remain unchanged."
+    - case_id: 460-15-22
+      scenario_id: prepare-unfamiliar-projects-from-discovered-or-caller-supplied-setup
+      method: test
+      intent: "Staged review timeout retains a distinct blocking result."
+      observable: "A real helper-path TimeoutExpired regression requires exit124 at the unchanged300-second budget; candidate public projection reports analysis_timeout and cannot assign review_report_missing. No report or successful evidence is synthesized."
+    - case_id: 460-15-20
+      scenario_id: prepare-unfamiliar-projects-from-discovered-or-caller-supplied-setup
+      method: test
+      intent: "Hosted structured Semgrep failures retain a safe actionable variant."
+      observable: "Four meaningful RED cases and two injected decoder-failure RED cases precede fixed scalar and payload-bearing error-tag projection from bounded JSON details in both trusted inline diagnostic paths. Unknown types, payloads, source excerpts, malformed or oversized details remain private; structured outer errors take precedence over nested timeout text, the existing 200-location limit and review exit remain unchanged."
+    - case_id: 460-15-32
+      scenario_id: prepare-unfamiliar-projects-from-discovered-or-caller-supplied-setup
+      method: test
+      intent: Remove informational fixture bloat while preserving actual recipe execution and failure assertions.
+      observable: Six direct AI-bloat informational rows precede extraction of named fixed scripts, template stubs and shared tracked-report setup. Exact previously rendered isolated module bytes match for three representative success/failure/private-reason cases. The original120focused cases and eight local-deferral parameter scenarios pass; AST, AI-bloat and fixture Radon return zero findings, with no suppressions. The68-file pinned clean/bloat/bug scan has no added-line matches or parse errors. Hosted independent/candidate review remains separately required.
+    - case_id: 460-15-31
+      scenario_id: prepare-unfamiliar-projects-from-discovered-or-caller-supplied-setup
+      method: test
+      intent: Resolve introduced parser complexity, machine-output and naming findings without changing protocol assertions.
+      observable: The pinned Semgrep1.144.0 frontend reproduces five introduced rows and then returns zero findings/errors on the same four files. Radon reproduces the large-frame proofCC16; separate setup/assertion helpers and fixed forbidden-request replacements remove all UV fixture Radon findings. All native parser mutation IDs, XML value/size assertions, process status checks and deadlines remain. Serialized CLI stdout values/exits are unchanged. The146focused and90follow-up cases pass, with unchanged rules and payloads. The complete68-file pinned clean/bloat/bug scan has no added-line findings or parse errors after correcting five further broker/timeout-fixture rows. Actual physical broker proof passes9cases; stable full/SMART each pass5245tests. Hosted exact-head Linux review remains required.
+    - case_id: 460-15-40
+      scenario_id: prepare-unfamiliar-projects-from-discovered-or-caller-supplied-setup
+      method: test
+      intent: Reject malformed observer node identities before capture and preserve exact valid strings.
+      observable: Six meaningful failing-before regressions reject missing/null/boolean/integer/list/object nodeids with WorkerContractError; a positive parameterized identity preserves exact collected and raw record strings without coercion. Empty genuine inventories stay empty. No selector, protected evidence, confinement or acceptance policy changes.
+    - case_id: 460-15-39
+      scenario_id: prepare-unfamiliar-projects-from-discovered-or-caller-supplied-setup
+      method: test
+      intent: Keep the hook timeout fixture from modifying the active review report.
+      observable: A report-directory ownership guard fails against the original real-checkout fixture on Python3.12 and3.14. The fixture-owned temporary repository retains cwd, timeout300, exit124, message and selected-file assertions. Actual hook behavior and deadlines remain unchanged.
+    - case_id: 460-15-38
+      scenario_id: prepare-unfamiliar-projects-from-discovered-or-caller-supplied-setup
+      method: test
+      intent: Stop recursive acquisition metadata before decoding beyond the physical header limit.
+      observable: The original regression fails on Python3.12; valid nonempty global PAX headers and a portable physical-header observation also reproduce five decoded headers against the unchanged four-header limit on Python3.14. Rejecting extension metadata at the exhausted boundary prevents a fifth decode; a positive exact-boundary archive preserves both original file payloads. No archive limit, authentication check or review deadline is relaxed.
+    - case_id: 460-15-37
+      scenario_id: prepare-unfamiliar-projects-from-discovered-or-caller-supplied-setup
+      method: test
+      intent: Preserve public test diagnostics for immutable evidence and parameter scope separators.
+      observable: Twelve regressions fail before both inline projections support matching head/direct/base phase records and remove the parameter section before parsing class/function separators. Matching head records take precedence over conflicting base records; parameters, nested names and raw exception payloads remain private. Corrected focused suite passes156cases; the existing bounded projection and failure exits remain unchanged.
+    - case_id: 460-15-36
+      scenario_id: prepare-unfamiliar-projects-from-discovered-or-caller-supplied-setup
+      method: test
+      intent: Distinguish actual assertion failures from unavailable test contexts without exposing private node IDs.
+      observable: Six outcome/function regressions and ten fixed coverage-prefix regressions fail before both inline projectors expose finite outcome/phase/xfail values and source-validated public function identity. Eight malformed/private/oversized message cases and eight matching/mismatched-phase exception cases remain private where required; six exception-class assertions fail before implementation. Function discovery parses only bounded tracked Python inside the subject, never imports candidate code. Existing 200-location cap, review exits, inventory, trusted reviewer and all deadlines remain unchanged; exact-head CI is still required.
+    - case_id: 460-15-35
+      scenario_id: prepare-unfamiliar-projects-from-discovered-or-caller-supplied-setup
+      method: test
+      intent: Preserve ordinary hosted bootstrap behavior when fixture tests run inside a managed project worker.
+      observable: A regression substitutes a rejecting managed caller launcher and reproduces exit78 from the original fake CI interpreter alias. A fixture-owned real venv executes the unchanged -I bootstrap, staged-tree and failure assertions; all122focused cases pass. Actual target_bootstrap sets sys.executable to the project launcher and deliberately rejects -I/-E/-S; those runtime rules remain unchanged. This independently proven fixture defect is not asserted as the sole cause of incomplete hosted pytest until exact-head evidence confirms it.
+    - case_id: 460-15-34
+      scenario_id: prepare-unfamiliar-projects-from-discovered-or-caller-supplied-setup
+      method: test
+      intent: Repair lean Docs Review pytest invocation after repository parallel policy changes.
+      observable: Hosted Docs Review job112573148858 exits4 before collection due to missing xdist. The original exact five-file command reproduces exit4 with plugin autoload disabled; a workflow contract fails before explicit serial addopts. The corrected command preserves all five test files and PIPESTATUS failure propagation; repository review workers and dependencies remain unchanged. Exact-head hosted documentation gates remain required.
+    - case_id: 460-15-33
+      scenario_id: prepare-unfamiliar-projects-from-discovered-or-caller-supplied-setup
+      method: test
+      intent: Keep required test failures visible within bounded hosted diagnostics.
+      observable: Four location-cap assertions fail before both inline projections prioritize testing after tool errors; fixed outcome and coverage policy rule identifiers survive while traces remain private. Six additional RED cases cover the existing collection-error and pytest-root diagnostic prefixes. Existing 200-location limit, trusted reviewer, failure exits and deadlines remain unchanged; exact-head CI remains required.
+    - case_id: 460-15-29
+      scenario_id: prepare-unfamiliar-projects-from-discovered-or-caller-supplied-setup
+      method: test
+      intent: Diagnose incomplete hosted pytest and independent timeout without disclosing private output.
+      observable: Ten missing fixed-prefix assertions and two missing timeout-stage assertions fail before the projector change. Both inline projectors emit only finite pytest diagnostic prefixes or fixed errno classes; the independent timeout emits only the last exact known marker from a65,536-byte private tail. Spoofed prefixes, payloads and out-of-tail markers remain private. Required exits, deadlines and200-location cap remain unchanged. Fresh CI is required;120focused tests pass.
+    - case_id: 460-15-13
+      scenario_id: prepare-unfamiliar-projects-from-discovered-or-caller-supplied-setup
+      method: test
+      intent: "Hosted failure exposes bounded public finding locations."
+      observable: "test_failed_candidate_diagnostics_expose_only_bounded_tracked_locations executes the real workflow diagnostic code; private/untracked paths, messages, invalid lines and severity are withheld and at most 200 locations are emitted. test_both_failed_reviews_project_fixed_analyzer_identity_without_private_text covers candidate and independent trusted inline projections with finite public values. Arbitrary analyzer identifiers/tokens remain private. Existing recipe tests preserve review failure propagation. Required execution failures precede ordinary rows within the same cap; missing-report and trusted timeout statuses are fixed public values."
+    - case_id: 460-15-10
+      scenario_id: prepare-unfamiliar-projects-from-discovered-or-caller-supplied-setup
+      method: test
+      intent: "Independent review installs an available published baseline."
+      observable: "The literal reviewer-pin test validates the published version and core; test_published_reviewer_archive_matches_registry_checksum_and_authenticated_manifest separately verifies the exact registry archive checksum and signed metadata. The isolated job retains no candidate module/unsigned overrides. Hosted installation/review is required separately."
     - case_id: 460-15-7
       scenario_id: prepare-unfamiliar-projects-from-discovered-or-caller-supplied-setup
       method: inspection
@@ -528,3 +728,92 @@ requirements:
       method: inspection
       intent: 'Inspect planned acceptance: Clean installation in a matching-architecture guest.'
       observable: 'Clean guest installation records OS/kernel, architecture, ABI, artifact identity and virtualization mode and runs unchanged acceptance under default protections. CPU emulation is supplemental. No independent installation pass is claimed.'
+  openspec:code-review-native-platform-execution:review-native-platform-execution:ci-only-native-artifact-assembly:
+    rationale: Separate final-byte assembly from protected publisher signing authority.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#460
+    touchpoints:
+    - id: openspec-source-spec
+      kind: config_file
+      locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
+    verification_cases:
+    - case_id: 460-16-2
+      scenario_id: ci-only-native-artifact-assembly
+      method: test
+      intent: "Native standard-library source remains available for static inference."
+      observable: "Three ABI regressions require exact bounded source-byte equality between the captured source inventory, ZIP and relocated filesystem paths, excluding site-packages. Actual cp313 Astroid resolves frozen collections.abc, dataclasses, typing, inspect and abc in the rebuilt candidate; final archive matrix remains separate."
+    - case_id: 460-16-1
+      scenario_id: ci-only-native-artifact-assembly
+      method: test
+      intent: "Build final archive bytes without manifest signing authority."
+      observable: "test_unsigned_build_preserves_final_bytes_without_signer and test_unsigned_build_still_rejects_invalid_native_signature pass; keyless output preserves archive/manifest bytes and native checks. This historical keyless-builder test does not verify the later protected release workflow, CI signing or publication; current implementation and pending execution are mapped separately in 460-17-1 and NATIVE_RELEASE.md."
+
+  openspec:code-review-native-platform-execution:review-native-platform-execution:protected-native-release-and-authenticated-catalog:
+    rationale: Exact final-byte integrity and protected signing precede immutable catalog admission.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#460
+    touchpoints:
+    - id: native-release-spec
+      kind: config_file
+      locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
+    verification_cases:
+    - case_id: 460-17-1
+      scenario_id: protected-native-release-and-authenticated-catalog
+      method: test
+      intent: Reject candidate authority, substituted final bytes and incomplete acceptance before signing.
+      observable: Release validator and signed catalog round-trip tests bind archive, manifest, source and matrix. Fixture tests are not CI signing or publication evidence.
+  openspec:code-review-native-platform-execution:review-native-platform-execution:initial-ad-hoc-loader-and-installation-acceptance:
+    rationale: The owner accepts ordinary first-launch trust warnings without weakening execution or integrity boundaries.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#460
+    touchpoints:
+    - id: native-installation-spec
+      kind: config_file
+      locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
+    verification_cases:
+    - case_id: 460-18-1
+      scenario_id: initial-ad-hoc-loader-and-installation-acceptance
+      method: test
+      intent: Reject broadened entitlements and observe ordinary signed cold/offline installation.
+      observable: Exact loader-profile tests and independent installed-customer workflow retain actual system trust state and findings; no installation pass is inferred from mocks.
+
+  openspec:code-review-native-platform-execution:review-native-platform-execution:fixture-owned-portable-test-observations:
+    rationale: Synthetic observation assertions must not depend on or repeatedly scan a host installation.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#460
+    touchpoints:
+    - id: portable-observation-fixtures
+      kind: config_file
+      locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
+    verification_cases:
+    - case_id: 460-19-2
+      scenario_id: fixture-owned-portable-test-observations
+      method: test
+      intent: Keep the immutable minimum-core smoke independent of developer pytest workers.
+      observable: A plugins-disabled pytest invocation reproduces the original unrecognized-worker-options exit4; the original serial reporting/import option override passes12workflow tests without plugin autoload. The137customer/deferred-review/workflow cases pass. The exact minimum-core test, pinned tag/commit/tree, dependency list and signed-capsule smoke remain unchanged; fresh three-ABI CI is required.
+    - case_id: 460-19-1
+      scenario_id: fixture-owned-portable-test-observations
+      method: test
+      intent: Guard synthetic observation playback against host RECORD scans while preserving all actual discovery and evidence assertions.
+      observable: Autouse guards fail 38 prior evidence/discovery cases; explicit fixture bridges pass all 244 portable observation, worker, ownership and target coverage tests. The native-alias-API regression passes under the actual reviewer plugin after fixture context isolation with original diagnostic/record/threshold assertions. Two declared repository workers and disabled restarts retain all 1752 selected tests and actual combined coverage locally; final full/SMART and hosted timing remain independently required. Actual native observer subprocesses and dedicated ownership checks remain.
+
+  openspec:code-review-native-platform-execution:review-native-platform-execution:repository-proof-contexts-retain-every-required-assertion:
+    rationale: Host and native fixture evidence requires its real execution context, while portable tests remain independently confined.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#460
+    touchpoints:
+    - id: required-proof-contexts
+      kind: config_file
+      locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
+    verification_cases:
+    - case_id: 460-20-1
+      scenario_id: repository-proof-contexts-retain-every-required-assertion
+      method: test
+      intent: Keep all current assertions in required host or native jobs and retain rejection of proof-only portable selection.
+      observable: Three context regressions fail before entrypoint changes; the required CPython-job regression separately fails before workflow wiring. Focused tests and assertion-preservation checks verify the revised contexts. Exact-head hosted evidence remains required; no skipped assertion or local deferral establishes PASS.
+
+    - case_id: 460-20-2
+      scenario_id: repository-proof-contexts-retain-every-required-assertion
+      method: test
+      intent: Diagnose an OS-specific native failure without exporting raw diagnostics or changing acceptance.
+      observable: The hosted macOS14 proof fails with EOF during WAIT, while the exact authenticated CPython3.11 input passes six cases locally. Missing helper and malformed non-scalar identity regressions fail before projection; fixed case/phase/boolean fields pass with original proof failures still blocking. Hosted cause remains to be established.
