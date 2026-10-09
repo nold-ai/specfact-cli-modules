@@ -156,8 +156,10 @@ _ISOLATED_REVIEWER_TEMPLATES = {
     "    assert request.scope=='index' and "
     "request.portable_project_runtime\n"
     "    return "
-    "SimpleNamespace(status=$STATUS,reason=$REASON,base_snapshot=SimpleNamespace(root=request.repository/'base'),head_snapshot=SimpleNamespace(root=request.repository/'head'))\n"
-    "def cleanup_scope_resolution(resolution): pass\n",
+    "SimpleNamespace(status=$STATUS,reason=$REASON,selected_paths=$SELECTED_PATHS,ci_exit_code=$SCOPE_EXIT,base_snapshot=SimpleNamespace(root=request.repository/'base'),head_snapshot=SimpleNamespace(root=request.repository/'head'))\n"
+    "def cleanup_scope_resolution(resolution):\n"
+    "    import os\n    from pathlib import Path\n"
+    "    (Path(os.environ['HOME']).parent/'cleaned').touch()\n",
 }
 
 
@@ -278,13 +280,23 @@ def independent_review_job():
     return workflow["jobs"].get("independent-review")
 
 
-def _isolated_reviewer_modules(review_case):
+def _isolated_reviewer_modules(review_case, *, selected_paths=None, scope_exit=None):
     review_exit, preparation_status, fixture_reason = review_case
-    replacements = {"REVIEW_EXIT": str(review_exit), "STATUS": repr(preparation_status), "REASON": repr(fixture_reason)}
+    replacements = {
+        "REVIEW_EXIT": str(review_exit),
+        "STATUS": repr(preparation_status),
+        "REASON": repr(fixture_reason),
+        "SELECTED_PATHS": repr([] if preparation_status == "NOT_APPLICABLE" else ["governed.py"])
+        if selected_paths is None
+        else repr(selected_paths),
+        "SCOPE_EXIT": str(0 if preparation_status in {"PASS", "NOT_APPLICABLE"} else 1)
+        if scope_exit is None
+        else str(scope_exit),
+    }
     return {name: Template(source).substitute(replacements) for name, source in _ISOLATED_REVIEWER_TEMPLATES.items()}
 
 
-def create_isolated_reviewer(tmp_path: Path, review_case):
+def create_isolated_reviewer(tmp_path: Path, review_case, *, selected_paths=None, scope_exit=None):
     trusted = tmp_path / "trusted"
     for name in ("home", "tmp", "subject"):
         (trusted / name).mkdir(parents=True)
@@ -295,7 +307,7 @@ def create_isolated_reviewer(tmp_path: Path, review_case):
             [str(interpreter), "-I", "-c", "import sysconfig;print(sysconfig.get_path('purelib'))"], text=True
         ).strip()
     )
-    modules = _isolated_reviewer_modules(review_case)
+    modules = _isolated_reviewer_modules(review_case, selected_paths=selected_paths, scope_exit=scope_exit)
     for name, content in modules.items():
         path = site / name
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -329,8 +341,11 @@ def assert_incomplete_preparation(trusted: Path, result, fixture_reason: str):
         assert fixture_reason not in result.stdout
 
 
-def assert_installed_review_arguments(trusted: Path):
-    assert (trusted / "prepared").read_text().splitlines() == ["base", "head"]
+def assert_installed_review_arguments(trusted: Path, *, prepared: bool = True):
+    if prepared:
+        assert (trusted / "prepared").read_text().splitlines() == ["base", "head"]
+    else:
+        assert not (trusted / "prepared").exists()
     args = json.loads((trusted / "argv.json").read_text())
     assert args[:3] == ["code", "review", "run"]
     assert args[args.index("--scope") + 1] == "index"

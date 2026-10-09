@@ -200,7 +200,10 @@ jobs:
                   if not isinstance(result, dict):
                       outcome = "invalid_report_shape"
                   elif result.get("status") == "NOT_APPLICABLE":
-                      outcome = "not_applicable"
+                      no_impact = (result.get("scope") == "index"
+                          and result.get("diagnostic") == "no_governed_impact"
+                          and result.get("runtimes") == {})
+                      outcome = "not_applicable" if no_impact else "invalid_not_applicable"
                   else:
                       runtimes = result.get("runtimes", {})
                       for side in present:
@@ -213,13 +216,14 @@ jobs:
               outcome = "invalid_json"
           except (OSError, ValueError, KeyError):
               outcome = "unreadable_report"
-          if outcome == "prepared" and os.environ.get("PREPARATION_COMMAND_SUCCEEDED") != "1":
+          if outcome in {"prepared", "not_applicable"} and os.environ.get("PREPARATION_COMMAND_SUCCEEDED") != "1":
               outcome = "preparation_command_failed"
-          prepared = outcome == "prepared"
-          print(json.dumps({"status": "PREPARED" if prepared else "INCOMPLETE", "phase": "index_preparation",
+          accepted = outcome in {"prepared", "not_applicable"}
+          status = "NOT_APPLICABLE" if outcome == "not_applicable" else "PREPARED" if accepted else "INCOMPLETE"
+          print(json.dumps({"status": status, "phase": "index_preparation",
               "report_outcome": outcome, "base_descriptor_supplied": supplied["base"], "head_descriptor_supplied": supplied["head"],
               "base_descriptor_present": present["base"], "head_descriptor_present": present["head"]}))
-          raise SystemExit(0 if prepared else 1)
+          raise SystemExit(0 if accepted else 1)
           PY_PREPARATION
           then
             preparation_report_exit=0
@@ -471,6 +475,9 @@ jobs:
               repository=Path.cwd(), scope="index", portable_project_runtime=True,
           ))
           try:
+              if (resolution.status == "NOT_APPLICABLE" and resolution.reason == "no_governed_impact"
+                  and not resolution.selected_paths and resolution.ci_exit_code == 0):
+                  raise SystemExit(0)
               if resolution.status != "PASS" or resolution.base_snapshot is None or resolution.head_snapshot is None:
                   reason = resolution.reason or "missing_snapshots"
                   public_codes = {

@@ -996,3 +996,29 @@ and is not sealed acceptance. Exact batch-selection tracing remains necessary.
 - The known review timeout is separately user-approved as incomplete evidence.
   Current-head hosted process-crash confirmation and public review follow push;
   native installed/public acceptance remains after human reviewer promotion.
+
+## Release #502 no-impact correction (2026-10-09, Europe/Berlin)
+
+Owner authorized a separate bugfix patch PR to dev. Spec and requirement mapping
+preceded tests. Actual candidate preparation projector/shell and isolated installed
+controller tests on unmodified workflow: **11 failed, 103 passed in 10.57s**.
+Successful NOT_APPLICABLE was rejected by both preparation routes. Invalid
+claims remain controls. Independent checks retain trusted preload, cleanup,
+normal index review/enforcement/bug-hunt arguments and 0/2/7 exit propagation.
+CodeQL fixture edits retain outer pytest.raises so the cache context still sees
+the exception. Custom hash failure remains deliberate; standard hash=None does
+not exercise that compatibility boundary. Patch version advances 0.51.1 to 0.51.2.
+
+GREEN: 170 focused cases pass in 12.50s; isolated no-impact accepts review exits
+0/2/7 and all invalid controls remain blocking. Full and SMART each pass 27 host
+proofs and 5,181 portable tests, 75 skips, 95 subtests and five existing warnings
+(292.00s/291.38s). Final cache fixture readability adds a pre-entry assertion and
+an explicit bound-handle postcondition; 24 cache parity cases pass after format,
+and final focused tests plus zero-error/zero-warning type checks pass. Format,
+lint (10.00/10), 28 contracts, CLI/manifests/imports, actionlint, strict OpenSpec,
+staged planned requirements, changed AST/AI-bloat/Radon and pinned Semgrep pass.
+The staged requirements source is passed/planned, implementation evidence remains
+not-yet-available; the earlier unstaged no-impact run was not counted as planned
+validation. All seven module checksum/version checks pass on the unsigned 0.51.2
+draft. Signing remains ordinary CI; no private key is accessed. Local Darwin
+capsule review is explicitly DEFERRED under the existing owner approval.

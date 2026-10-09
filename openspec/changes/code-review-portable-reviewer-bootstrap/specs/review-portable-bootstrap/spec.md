@@ -57,7 +57,7 @@ confined targeted discovery SHALL not select those proof-only host fixtures.
 #### Scenario: Failed hosted preparation retains bounded public evidence
 
 - **GIVEN** the mandatory candidate or independently installed reviewer preparation
-- **WHEN** preparation exits successfully without both index runtime descriptors or namespace setup fails
+- **WHEN** applicable preparation exits successfully without both index runtime descriptors or namespace setup fails
 - **THEN** the job remains failing and publishes only fixed preparation status, descriptor-presence and kernel-audit denial booleans, with raw paths/logs remaining private
 - **AND** authenticated controller provenance, descriptor binding, namespaces, grants and deadlines remain unchanged
 
@@ -318,3 +318,25 @@ contracts, options, deadlines and failures.
 - **WHEN** parent-process dispatch tests initialize the real CrossHair libraries
 - **THEN** restore icontract checker functions after each fixture so later project tests retain runtime contract enforcement
 - **AND** retain the existing bridge ViolationError assertion and native analyzer initialization inside its actual isolated child
+
+### Requirement: No-impact release preparation preserves normal review
+
+Hosted candidate and independent preparation SHALL accept the exact successful
+index `NOT_APPLICABLE/no_governed_impact` outcome without acquiring runtimes.
+They SHALL still invoke the normal reviewer and preserve its exit. Malformed
+reports, nonempty governed selections, unknown reasons and failed preparation
+commands SHALL remain blocking.
+
+#### Scenario: Registry or workflow changes have no governed impact
+
+- **GIVEN** successful index resolution with no selected governed paths
+- **WHEN** the preparation report has index scope, exact no-impact diagnostic and empty runtimes
+- **THEN** candidate preparation emits NOT_APPLICABLE without requiring descriptors
+- **AND** independent preparation skips runtime acquisition and cleans its resolution
+- **AND** trusted preload, ordinary review arguments, isolation and review failure exits remain unchanged
+
+#### Scenario: Invalid no-impact claim remains blocking
+
+- **WHEN** a no-impact claim has a failed command, wrong reason/scope, malformed runtimes, selected governed paths or nonzero scope exit
+- **THEN** preparation remains INCOMPLETE and cannot reach review
+- **AND** the original command failure takes precedence and raw diagnostic data remains private

@@ -266,6 +266,9 @@ def test_dispatch_custom_hash_error_is_preserved(crosshair_dispatch):
         def __call__(self):
             return None
 
+        def __eq__(self, other):
+            return self is other
+
         def __hash__(self):
             raise TypeError("custom_hash_failure")
 
