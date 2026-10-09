@@ -1242,3 +1242,22 @@ Source-to-test collision detection SHALL count distinct Python production module
 - **WHEN** artifact capture checks the unchanged confined artifact paths
 - **THEN** absent ordinary parent directories SHALL reach incomplete-evidence evaluation
 - **AND** existing or dangling symlink parents, non-directory parents and lexical escapes SHALL retain hard rejection before reading artifact bytes
+
+
+#### Scenario: Controller-loss proof awaits complete worker identity
+- **GIVEN** the owned native self-test creates its PID marker before completing the newline-terminated PID write
+- **WHEN** the controller-loss proof observes that marker
+- **THEN** it SHALL await complete PID contents within the original five-second deadline before reporting launch or sending WAIT
+- **AND** absent/incomplete markers SHALL fail within that deadline and malformed/non-positive complete identities SHALL reject; controller-loss, exception-denial and bootstrap assertions remain unchanged
+
+#### Scenario: Generated-source import proof preserves managed runtime attachment
+- **WHEN** the generated-ancestor source-precedence proof runs under a managed project Python launcher
+- **THEN** its real child import SHALL use supported Python arguments that preserve required runtime attachment and exclude implicit working-directory imports
+- **AND** it SHALL still assert the edited reviewed-source value and exact imported file, immutable original source, owned initializer bytes and absence of generated writes in the original project
+
+
+#### Scenario: Proof-only fixes retain blocking customer review
+- **GIVEN** a native broker proof, its cleanup regressions or Code Review unit proof changes without signed runtime edits
+- **WHEN** the PR change filter and owner-approved local Darwin deferral evaluate the staged delta
+- **THEN** those proof paths SHALL schedule the same blocking candidate/independent customer review and qualify only for that local deferral
+- **AND** unrelated test changes SHALL NOT qualify; missing indexed scheduling rules, absent independent review and CI-side deferral SHALL reject

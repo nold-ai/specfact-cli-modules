@@ -854,3 +854,15 @@ requirements:
       method: test
       intent: Handle missing ordinary artifact parents without weakening substituted-parent rejection.
       observable: Two helper REDs distinguish absent directories and typed dangling-symlink rejection; three controls including the real evaluator already returning UNKNOWN pass. Final parent handling keeps canonical-path equality, lexical confinement, no-follow regular-file reads and all bounds.
+
+    - case_id: 460-21-6
+      scenario_id: release-review-corrections-preserve-source-and-failure-boundaries
+      method: test
+      intent: Observe complete native worker PID writes and preserve managed attachment in source-precedence proofs.
+      observable: Six PID publication/deadline/identity REDs and four actual managed-argument REDs precede proof-only corrections. Original WAIT/lifecycle deadlines and import value/file/initializer/source/no-write assertions remain; complete focused proof files pass 140 tests.
+
+    - case_id: 460-21-7
+      scenario_id: release-review-corrections-preserve-source-and-failure-boundaries
+      method: test
+      intent: Schedule mandatory customer review for proof-only fixes and bind approved local deferral to indexed scheduling.
+      observable: Six canonical host/index/workflow REDs precede trigger/deferral updates; ten unrelated/missing-review/missing-trigger/CI/platform controls remain. No enforcement, analysis input, deadline or failure assertion is weakened.

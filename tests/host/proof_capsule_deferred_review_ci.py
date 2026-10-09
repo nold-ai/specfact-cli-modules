@@ -75,6 +75,19 @@ def test_deferred_gate_reviews_exact_staged_tree_and_propagates_failure(
         ("Darwin", "", "invalid", "specfact-code-review", False, True, 1),
         ("Darwin", "", "github-linux", "specfact-project", False, True, 1),
         ("Darwin", "", "github-linux", "specfact-project", True, True, 1),
+        ("Darwin", "", "github-linux", "tests/native/proof_macos_native_broker_wait.py", False, True, 0),
+        ("Darwin", "", "github-linux", "tests/unit/test_native_broker_cleanup.py", False, True, 0),
+        (
+            "Darwin",
+            "",
+            "github-linux",
+            "tests/unit/specfact_code_review/run/test_native_project_runtime.py",
+            False,
+            True,
+            0,
+        ),
+        ("Darwin", "", "github-linux", "tests/unit/specfact_project/unrelated.py", False, True, 1),
+        ("Darwin", "", "github-linux", "tests/native/proof_macos_native_broker_wait.py", False, "missing_trigger", 1),
     ],
 )
 def test_narrow_local_deferral_retains_block2_and_cannot_run_in_ci(tmp_path: Path, scenario) -> None:
@@ -95,7 +108,7 @@ def test_narrow_local_deferral_retains_block2_and_cannot_run_in_ci(tmp_path: Pat
     )
     assert result.returncode == expected, result.stdout + result.stderr
     invoked = calls.read_text()
-    assert_block2_trace(invoked, expected, result.stderr)
+    assert_block2_trace(invoked, expected, result.stderr, prompt_required=not _bundle.startswith("tests/"))
 
 
 @pytest.mark.parametrize(

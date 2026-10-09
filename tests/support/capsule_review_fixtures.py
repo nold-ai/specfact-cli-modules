@@ -278,11 +278,17 @@ def deferral_worktree(tmp_path: Path, scenario):
     workflow.write_text(
         workflow_source if independent_review else workflow_source.split("\n  independent-review:", 1)[0]
     )
+    orchestrator = repository / ".github/workflows/pr-orchestrator.yml"
+    orchestration = (REPO_ROOT / ".github/workflows/pr-orchestrator.yml").read_text()
+    if independent_review == "missing_trigger":
+        orchestration = orchestration.replace('              - "tests/native/**"\n', "")
+    orchestrator.write_text(orchestration)
+    candidate_path = bundle if bundle.startswith("tests/") else f"packages/{bundle}/resources/example.py"
     files = [
         "llms.txt",
         "docs/reference/commands.generated.json",
         "docs/reference/commands.generated.md",
-        f"packages/{bundle}/resources/example.py",
+        candidate_path,
         "openspec/changes/example/spec.md",
     ]
     for relative in files:
@@ -314,17 +320,20 @@ def deferral_worktree(tmp_path: Path, scenario):
     return worktree
 
 
-def assert_block2_trace(invoked, expected, stderr):
+def assert_block2_trace(invoked, expected, stderr, *, prompt_required=True):
     for command in [
         "generate-command-overview",
         "check-command-overview",
         "check-command-contract",
         "check-core-documentation-accountability",
         "check-docs-commands.py",
-        "check-prompt-commands.py",
         "requirements_evidence_gate.py --staged",
     ]:
         assert command in invoked
+    if prompt_required:
+        assert "check-prompt-commands.py" in invoked
+    else:
+        assert "check-prompt-commands.py" not in invoked
     assert "pre_commit_code_review.py" not in invoked
     if expected == 0:
         assert "DEFERRED" in stderr

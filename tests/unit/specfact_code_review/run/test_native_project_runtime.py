@@ -1786,7 +1786,20 @@ def test_uv_overlay_excludes_shared_package_dependencies(tmp_path, namespace, ge
 
 @pytest.mark.parametrize("ancestor", ["customer", "customer/sub"])
 @pytest.mark.parametrize("initializer", ["__init__.py", "__init__.pyi"])
-def test_uv_generated_ancestor_initializer_keeps_imports_on_reviewed_source(tmp_path, ancestor, initializer):
+@pytest.mark.parametrize("attached", [False, True])
+def test_uv_generated_ancestor_initializer_keeps_imports_on_reviewed_source(
+    tmp_path, ancestor, initializer, attached, monkeypatch
+):
+    if attached:
+        from specfact_code_review.run.target_bootstrap import _validate_python_arguments
+
+        run = subprocess.run
+
+        def attached_run(command, **options):
+            _validate_python_arguments(command[1:])
+            return run(command, **options)
+
+        monkeypatch.setattr(subprocess, "run", attached_run)
     project = tmp_path / "project"
     source = project / "src/customer/sub/module.py"
     source.parent.mkdir(parents=True)
@@ -1809,7 +1822,7 @@ def test_uv_generated_ancestor_initializer_keeps_imports_on_reviewed_source(tmp_
     child = subprocess.run(
         [
             sys.executable,
-            "-I",
+            "-P",
             "-B",
             "-c",
             "import sys,json;sys.path[:0]=sys.argv[1:];import customer.sub.module as selected;"

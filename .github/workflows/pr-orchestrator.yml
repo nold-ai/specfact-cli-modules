@@ -49,6 +49,13 @@ jobs:
               - "publish_bundle_selection.py"
               - "tests/unit/test_publish_bundle_selection.py"
               - "tests/unit/test_capsule_customer_gate.py"
+              - "tests/native/**"
+              - "tests/unit/specfact_code_review/**"
+              - "tests/unit/test_native_broker_cleanup.py"
+              - "tests/unit/test_capsule_proof_contexts.py"
+              - "tests/host/proof_capsule_deferred_review_ci.py"
+              - "tests/support/capsule_review_fixtures.py"
+              - "scripts/pre-commit-quality-checks.sh"
               - ".github/workflows/capsule-customer-execution.yml"
               - ".github/workflows/pr-orchestrator.yml"
       - id: out

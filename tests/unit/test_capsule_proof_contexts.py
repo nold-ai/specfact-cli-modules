@@ -210,3 +210,24 @@ def test_native_output_class_projection_rejects_unknown_payloads():
         assert STATE.project_worker_result({**classified, "raw": "/private/value"}) == classified
     for payload in ("/private/value", [], False):
         assert STATE.project_worker_result({**fields, "output_class": payload}) == {}
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        NATIVE_BROKER,
+        "tests/unit/test_native_broker_cleanup.py",
+        "tests/unit/specfact_code_review/run/test_native_project_runtime.py",
+    ],
+)
+def test_proof_only_changes_schedule_blocking_customer_review(path):
+    from fnmatch import fnmatchcase
+
+    workflow = yaml.safe_load((ROOT / ".github/workflows/pr-orchestrator.yml").read_text())
+    step = next(item for item in workflow["jobs"]["changes"]["steps"] if item.get("id") == "filter")
+    paths = yaml.safe_load(step["with"]["filters"])["capsule"]
+    assert any(fnmatchcase(path, pattern) for pattern in paths)
+    assert not any(fnmatchcase("tests/unit/specfact_project/unrelated.py", pattern) for pattern in paths)
+    customer = workflow["jobs"]["customer-capsules"]
+    assert "needs.changes.outputs.capsule_changed" in customer["if"]
+    assert not customer.get("continue-on-error", False)
