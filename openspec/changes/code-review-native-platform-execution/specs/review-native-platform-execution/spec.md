@@ -1304,3 +1304,13 @@ The trigger validator SHALL admit null or mapping PR event configuration and SHA
 - **WHEN** required Full, SMART and native CI gates execute
 - **THEN** all ten original compiled sink and real filesystem assertions SHALL execute explicitly in the host/native proof context, including Linux and all retained macOS boundary runners
 - **AND** ordinary capsule discovery SHALL not falsely classify those compiler-dependent proofs as portable Python tests; no skip, weakened assertion, added capsule tool or altered deadline SHALL replace execution
+
+
+#### Scenario: Deferral requires an executable change detector
+
+- **GIVEN** local deferral depends on the indexed orchestrator's change-detector output
+- **WHEN** the detector loses its runner, gains missing/conditional dependencies, becomes an empty matrix, or changes checkout/filter execution
+- **THEN** deferral SHALL reject rather than imply that the dependent hosted reviewer will run
+- **AND** the detector's parsed execution contract SHALL equal the integrated dev job except for the validated capsule trigger inventory; comments and formatting may differ, but runner, dependencies, strategy, checkout, all filter options and other outputs/steps SHALL stay bound
+
+Detector capsule trigger inventories SHALL retain every integrated baseline rule and SHALL reject duplicate filter mapping keys. Added validated trigger rules and equivalent formatting remain supported.

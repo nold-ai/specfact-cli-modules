@@ -490,14 +490,20 @@ def test_deferral_requires_integrated_review_execution_contract(tmp_path: Path, 
     _assert_local_deferral(worktree, tmp_path / "calls", 1)
 
 
-@pytest.mark.parametrize("control", ["formatting", "unrelated_generated_docs"])
+@pytest.mark.parametrize("control", ["formatting", "detector_formatting", "unrelated_generated_docs"])
 def test_deferral_retains_exact_review_contract_controls(tmp_path: Path, control: str) -> None:
     scenario = ("Darwin", "", "github-linux", "tests/native/proof_macos_native_broker_wait.py", False, True, 0)
     worktree = deferral_worktree(tmp_path, scenario)
-    if control == "formatting":
-        path = worktree / ".github/workflows/capsule-customer-execution.yml"
+    if control != "unrelated_generated_docs":
+        filename = "pr-orchestrator.yml" if control == "detector_formatting" else "capsule-customer-execution.yml"
+        path = worktree / ".github/workflows" / filename
         document = yaml.safe_load(path.read_text())
         document["on"] = document.pop(True)
+        if control == "detector_formatting":
+            step = next(step for step in document["jobs"]["changes"]["steps"] if step.get("id") == "filter")
+            step["with"]["filters"] = "# Equivalent embedded filter formatting\n" + yaml.safe_dump(
+                yaml.safe_load(step["with"]["filters"])
+            )
         path.write_text(yaml.safe_dump(document, sort_keys=False))
     else:
         path = worktree / "docs/generated.md"
@@ -518,3 +524,61 @@ def test_deferral_rejects_falsey_malformed_pr_events(tmp_path: Path, event: obje
     path.write_text(yaml.safe_dump(document, sort_keys=False))
     _git(worktree, "add", ".")
     _assert_local_deferral(worktree, tmp_path / "calls", 1)
+
+
+@pytest.mark.parametrize(
+    "mutation",
+    [
+        "missing_runner",
+        "nonlinux",
+        "conditional_dependency",
+        "missing_dependency",
+        "empty_matrix",
+        "skip_checkout",
+        "wrong_checkout_ref",
+        "filter_base",
+        "filter_ref",
+        "remove_baseline_rule",
+        "duplicate_filter",
+    ],
+)
+def test_deferral_requires_integrated_change_detector_execution(tmp_path: Path, mutation: str) -> None:
+    scenario = ("Darwin", "", "github-linux", "tests/native/proof_macos_native_broker_wait.py", False, True, 1)
+    worktree = deferral_worktree(tmp_path, scenario)
+    path = worktree / ".github/workflows/pr-orchestrator.yml"
+    document = yaml.safe_load(path.read_text())
+    document["on"] = document.pop(True)
+    changes = document["jobs"]["changes"]
+    updates = {
+        "nonlinux": {"runs-on": "unavailable-capsule-detector-runner"},
+        "missing_dependency": {"needs": ["absent_precheck"]},
+        "empty_matrix": {"strategy": {"matrix": {"include": []}}},
+    }
+    if mutation in updates:
+        changes.update(updates[mutation])
+    elif mutation == "missing_runner":
+        changes.pop("runs-on")
+    elif mutation == "conditional_dependency":
+        changes["needs"] = ["precheck"]
+        document["jobs"]["precheck"] = {"runs-on": "ubuntu-latest", "if": False, "steps": [{"run": "exit 0"}]}
+    elif mutation == "skip_checkout":
+        changes["steps"][0]["if"] = False
+    elif mutation == "wrong_checkout_ref":
+        changes["steps"][0]["with"]["ref"] = "unrelated-source"
+    else:
+        _mutate_detector_filter(changes, mutation)
+    path.write_text(yaml.safe_dump(document, sort_keys=False))
+    _git(worktree, "add", ".")
+    _assert_local_deferral(worktree, tmp_path / "calls", 1)
+
+
+def _mutate_detector_filter(changes: dict, mutation: str) -> None:
+    step = next(step for step in changes["steps"] if step.get("id") == "filter")
+    if mutation == "remove_baseline_rule":
+        filters = yaml.safe_load(step["with"]["filters"])
+        filters["capsule"].remove("registry/**")
+        step["with"]["filters"] = yaml.safe_dump(filters)
+    elif mutation == "duplicate_filter":
+        step["with"]["filters"] = "capsule: []\n" + step["with"]["filters"]
+    else:
+        step["with"]["base" if mutation == "filter_base" else "ref"] = "unrelated-source"

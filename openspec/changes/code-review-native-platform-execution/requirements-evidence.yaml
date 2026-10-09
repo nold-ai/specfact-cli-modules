@@ -896,3 +896,9 @@ requirements:
       method: test
       intent: Execute every compiler-dependent canonical path proof in required host and native contexts.
       observable: Ten compiler-unavailable failures and four required-context REDs precede explicit Full/SMART and Linux/macOS CI execution of the unchanged ten compiled security assertions. No capsule compiler or skip is added.
+
+    - case_id: 460-21-13
+      scenario_id: release-review-corrections-preserve-source-and-failure-boundaries
+      method: test
+      intent: Require the integrated executable detector contract before deferring to its hosted output.
+      observable: Nine runner, dependency, matrix, checkout and filter-reference REDs plus two baseline-rule and duplicate-filter REDs precede parsed detector binding; equivalent outer/embedded formatting and all prior proof controls remain accepted.

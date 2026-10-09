@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 import re
 import subprocess
 import sys
@@ -35,14 +36,21 @@ _WorkflowLoader.add_implicit_resolver(
 )
 
 
-def _workflow_yaml(path: str, revision: str = "") -> dict:
-    source = subprocess.check_output(["git", "show", f"{revision}:{path}"], text=True)
+def _yaml_mapping(source: str) -> dict:
     loader = _WorkflowLoader(source)
     try:
         document = loader.get_single_data()
     finally:
         loader.dispose()
-    if not isinstance(document, dict) or set(document) - {
+    if not isinstance(document, dict):
+        raise ValueError("YAML document is not a mapping")
+    return document
+
+
+def _workflow_yaml(path: str, revision: str = "") -> dict:
+    source = subprocess.check_output(["git", "show", f"{revision}:{path}"], text=True)
+    document = _yaml_mapping(source)
+    if set(document) - {
         "name",
         "run-name",
         "on",
@@ -84,10 +92,27 @@ def _capsule_rules(changes: dict) -> list[str]:
     _blocking_scope(step)
     if step["uses"] != "dorny/paths-filter@v3" or step["with"].get("predicate-quantifier", "some") != "some":
         raise ValueError("capsule filter uses an unsupported implementation")
-    rules = yaml.safe_load(step["with"]["filters"])["capsule"]
+    rules = _yaml_mapping(step["with"]["filters"])["capsule"]
     if not isinstance(rules, list) or any(not isinstance(rule, str) or rule.startswith("!") for rule in rules):
         raise ValueError("capsule filter contains unsupported or excluding rules")
     return rules
+
+
+def _detector_contract(changes: dict) -> dict:
+    contract = copy.deepcopy(changes)
+    step = _unique_step(contract, "filter")
+    filters = _yaml_mapping(step["with"]["filters"])
+    filters["capsule"] = []  # Validated trigger additions do not change execution.
+    step["with"]["filters"] = filters
+    return contract
+
+
+def _validate_detector_execution(changes: dict, baseline: str) -> None:
+    integrated = _workflow_yaml(".github/workflows/pr-orchestrator.yml", baseline)["jobs"]["changes"]
+    if not set(_capsule_rules(integrated)).issubset(_capsule_rules(changes)):
+        raise ValueError("capsule trigger inventory removes an integrated rule")
+    if _detector_contract(changes) != _detector_contract(integrated):
+        raise ValueError("change detector execution differs from the integrated dev contract")
 
 
 def _validate_reusable_review(baseline: str) -> None:
@@ -141,6 +166,7 @@ def validate_indexed_scheduling(paths: list[str], candidate_paths: list[str], ba
     _validate_review_surface(paths, candidate_paths)
     jobs = workflow["jobs"]
     rules = _capsule_rules(jobs["changes"])
+    _validate_detector_execution(jobs["changes"], baseline)
     if not paths or any(_path_rule(path) not in rules for path in paths):
         raise ValueError("capsule filter does not cover the staged delta")
     job = jobs["customer-capsules"]
