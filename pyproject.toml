@@ -36,6 +36,7 @@ dependencies = [
     "ruff>=0.14.2",
     "semgrep>=1.144.0",
     "pylint==4.0.7",
+    "crosshair-tool==0.0.109",
     "pre-commit>=3.7.0",
     "typer>=0.20.0",
     "pyyaml>=6.0.3",
@@ -55,7 +56,7 @@ dev-deps = "python tools/ensure_core_dependency.py"
 format = "ruff check . --fix && ruff format ."
 type-check = "python tools/run_basedpyright.py {args}"
 lint = "python tools/ensure_core_dependency.py && ruff format . --check && python tools/run_basedpyright.py && ruff check . && PYLINTHOME=.pylint.d pylint src tests tools"
-test = "python tools/ensure_core_dependency.py && pytest tests/host/proof_capsule_deferred_review_ci.py {args} && pytest tests --ignore=tests/unit/test_capsule_deferred_review_ci.py --ignore=tests/unit/test_macos_managed_uv_child.py --ignore=tests/unit/test_macos_native_broker_wait.py --ignore=tests/unit/test_macos_python_candidate.py {args}"
+test = "python tools/ensure_core_dependency.py && pytest tests/host/proof_capsule_deferred_review_ci.py && pytest tests --ignore=tests/unit/test_capsule_deferred_review_ci.py --ignore=tests/unit/test_macos_managed_uv_child.py --ignore=tests/unit/test_macos_native_broker_wait.py --ignore=tests/unit/test_macos_python_candidate.py {args}"
 scan = "semgrep --config packages/specfact-code-review/src/specfact_code_review/.semgrep/clean_code.yaml {args}"
 scan-all = "semgrep --config packages/specfact-code-review/src/specfact_code_review/.semgrep/clean_code.yaml packages/specfact-code-review/src/specfact_code_review"
 

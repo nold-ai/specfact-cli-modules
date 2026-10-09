@@ -1,6 +1,6 @@
 # Native capsule build, staging and installation
 
-Status on 6 October 2026 (Europe/Berlin): implementation is reviewable in draft
+Status on 9 October 2026 (Europe/Berlin): implementation is reviewable in
 PR [#498](https://github.com/nold-ai/specfact-cli-modules/pull/498). Local actual
 ARM64 capsule execution works. Protected hosted acceptance, publisher signing,
 public distribution and independent ordinary installation remain acceptance
@@ -65,7 +65,7 @@ bypass disabled. Signing additionally requires the dedicated environment-scoped
 `SPECFACT_NATIVE_CAPSULE_PRIVATE_SIGN_KEY` and optional passphrase; do not use
 repository-scoped publisher secrets. The workflow reads the actual environment
 protection configuration before its authority step and rejects missing or
-weaker protection. These environments were not created or populated locally.
+weaker protection. On 9 October 2026 both environments were configured through GitHub with `djm81` as the required approver and all protection settings above verified. The signing environment has no secrets provisioned yet. The owner must provision its dedicated key through the existing CI/CD secret-management process; agents never read, copy or locally use publisher secrets. Because self-review prevention remains enabled, an independently authorized actor must dispatch a deployment for `djm81` to approve it.
 
 1. Review and merge the implementation through dev to protected main; require
    exact-head Linux review and the secret-free native matrix. Dispatch the main

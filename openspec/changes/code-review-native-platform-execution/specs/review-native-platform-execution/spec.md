@@ -894,7 +894,7 @@ The native backend SHALL reuse portable project discovery and prepare dependenci
 
 #### Scenario: Explicit matching tests resolve ambiguous source mapping
 
-- **GIVEN** partial review discovers multiple conventional tests matching a source filename
+- **GIVEN** partial review changes one production file and discovers multiple conventional tests matching its filename
 - **WHEN** the caller supplies at least one of those matching tests explicitly
 - **THEN** test selection SHALL use the supplied matching tests while retaining other explicit tests and uniquely inferred tests
 - **AND** ambiguity without an explicit matching test SHALL remain actionable incomplete evidence
@@ -1137,3 +1137,19 @@ The repository SHALL execute every retained assertion in a required context that
 - **WHEN** the original bounded native broker rejects output encoding, response size, queue capacity or its session deadline during a recorded WAIT
 - **THEN** fixture diagnostics retain only a matching worker's fixed stage, a fixed startup-output classification and actual exit-class/entry-marker booleans
 - **AND** no payload bytes, authority, process identity or exception message becomes public; every original limit and failure exit remains blocking
+
+#### Scenario: Explicit tests do not waive another changed same-stem source
+
+- **GIVEN** two distinct changed production files share a filename stem and discovery finds multiple matching tests
+- **WHEN** changed-scope review supplies only a subset of those matching tests
+- **THEN** selection SHALL retain actionable `project_test_selection_ambiguous` incomplete evidence for the unresolved source group, regardless of input order
+- **AND** the caller can resolve this conservative ambiguity by explicitly including all discovered matching tests, or use full native pytest discovery
+- **AND** an explicit matching test continues to resolve a single changed production file's mapping without broadening its selected test scope
+
+#### Scenario: Upstream test contexts retain native validation and serial child policy
+
+- **WHEN** reviewer bootstrap regression tests run after native integration
+- **THEN** valid adapter fixtures supply actual `selectors`, invalid requests fail before coverage planning or response imports, and no contract assertion is dropped
+- **AND** a child proof without auto-loaded xdist retains the repository's serial reporting/import options while removing only xdist worker controls
+- **AND** hosted independent review uses a literal signed published marketplace baseline, currently 0.51.2, without developer overrides
+- **AND** full and SMART host proofs run without caller test filters; only the portable suite receives those filters

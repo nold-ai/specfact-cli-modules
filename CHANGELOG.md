@@ -9,6 +9,47 @@ and this project follows SemVer for bundle versions.
 
 ### Fixed
 
+- Resume macOS ARM64 Code Review delivery above the published 0.51.2 bundle, retaining current portable reviewer bootstrap corrections.
+- Preserve actionable test-selection ambiguity when multiple changed source files share a stem and only some matching tests are supplied explicitly.
+- Preserve both native bounded failure locations and current hosted reviewer/namespace diagnostics during upstream integration.
+
+- Prepare Code Review 0.51.2 release follow-up: accept successful index
+  no-governed-impact preparation for registry/workflow-only capsule jobs while
+  preserving normal review, cleanup and failure exits. Keep malformed or failed
+  no-impact claims blocking and preserve deliberate fixture error coverage.
+
+- Preserve every declared Literal input in pinned CrossHair 0.0.109, including
+  constructor fields, unions and exact boolean/integer/enum identity. Restore
+  the invocation-scoped model on exit and retire temporary stack sampling.
+  Normalize impossible constructor default prefixes without reordering real
+  positional arguments or discarding valid optional defaults.
+
+- Preserve targeted Full/SMART test filters while running all mandatory host
+  proofs first. Exclude ordinary BASE findings when incomplete HEAD analysis
+  emits no findings; retain both snapshots' tool errors and UNKNOWN evidence.
+
+- Avoid unused installed-coverage planning for unusable decoded pytest requests
+  and absent Python inputs. Preserve native request errors, valid command bytes
+  and complete ownership checks for nonempty Python selections.
+
+- Include the trusted CrossHair adapter in prepared-runtime cache identity so adapter-only corrections invalidate stale offline reuse.
+
+- Preserve contract parsing for callable pytest class markers in pinned CrossHair
+  0.0.109 without dropping real method contracts or changing registered overrides.
+  Restore compatibility lookups on all exits; required review timeout diagnosis
+  and signed reviewer promotion remain outstanding.
+
+- Correct pinned CrossHair 0.0.109 constructor parameter ordering and implicit
+  receiver handling while preserving real arguments, upstream merge behavior
+  and CLI lifetime. Retain both snapshots' incomplete tool errors and reject
+  failure exits without analysis output. Existing deadlines and isolation
+  remain required; signed reviewer promotion is still pending.
+
+- Prepare Code Review 0.51.1 portable reviewer bootstrap: corresponding explicit
+  tests resolve source-basename ambiguity before fallback selection. The pinned
+  Pylint wrapper caches immutable similarity windows only within one bounded
+  invocation and restores upstream state on all exits. Required checks, jobs,
+  findings and deadlines remain unchanged; publication requires human promotion.
 - Encode managed uv Python launches as binary property lists so XML overhead
   cannot exhaust the existing 4096-byte broker frame during confined Hatch
   builds. Preserve arguments, private environments, native parser validation,

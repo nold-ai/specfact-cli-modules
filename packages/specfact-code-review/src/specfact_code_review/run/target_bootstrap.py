@@ -352,6 +352,7 @@ def main() -> None:
     run_module, run_path = runpy.run_module, runpy.run_path
     observer_path = str(BUILTIN / "specfact_code_review/run/target_pytest.py")
     pylint_path = str(BUILTIN / "specfact_code_review/run/target_pylint.py")
+    crosshair_path = str(BUILTIN / "specfact_code_review/run/target_crosshair.py")
     snapshot_root = SNAPSHOT
     try:
         _configure_runtime(module)
@@ -362,6 +363,8 @@ def main() -> None:
         run_path(observer_path, run_name="__main__")
     elif module == "pylint":
         run_path(pylint_path, init_globals={"SNAPSHOT_ROOT": snapshot_root}, run_name="__main__")
+    elif module == "crosshair":
+        run_path(crosshair_path, init_globals={"ENTRY_PROGRAM": sys.argv[0]}, run_name="__main__")
     else:
         run_module(module, run_name="__main__", alter_sys=True)
 

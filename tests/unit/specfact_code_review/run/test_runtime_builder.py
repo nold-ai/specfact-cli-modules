@@ -301,7 +301,7 @@ def _assert_policy_change_invalidates_reuse(tmp_path: Path, monkeypatch, helper_
     assert digest(identities[2]) != digest(identities[0])
 
 
-@pytest.mark.parametrize("helper_name", ["target_pylint.py", "runtime_compatibility.py"])
+@pytest.mark.parametrize("helper_name", ["target_pylint.py", "runtime_compatibility.py", "target_crosshair.py"])
 def test_controller_policy_change_invalidates_offline_runtime_reuse(
     tmp_path: Path, monkeypatch, helper_name: str
 ) -> None:

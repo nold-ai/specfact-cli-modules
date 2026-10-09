@@ -53,7 +53,8 @@ Documentation impact: module command/reference and workflow guides on modules.sp
 - **Repository**: `nold-ai/specfact-cli-modules`
 - **Parent Feature**: #163
 - **Paired Core Story**: <https://github.com/nold-ai/specfact-cli/issues/742>
-- **Last Synced Status**: proposed / Todo, 2026-09-20
+- **Paired Core Proposal (public baseline)**: <https://github.com/nold-ai/specfact-cli/blob/codex/workflow-01-turn-orchestration/openspec/changes/workflow-01-turn-orchestration/proposal.md>; the risk-first amendment is prepared for a separate review PR.
+- **Last Synced Status**: proposed / Todo, 2026-10-08 (live readback; planning creation complete, separate publication authorized)
 
 ## Signed Requirements compatibility gate
 
@@ -62,3 +63,18 @@ Before selecting or adopting workflow #483 for current-run Requirements integrat
 ## Planning validation
 
 See [AGENTIC_SDLC_VALIDATION.md](../../AGENTIC_SDLC_VALIDATION.md) for actual proposal checks and the explicit Python-only analyzer applicability exception. Runtime review and release tasks remain pending.
+
+## Risk-first execution amendment — 2026-10-08
+
+The owner selected a minimal adaptation within this existing paired change: discover invalid assumptions before dependent work and reduce avoidable correction overhead. Reuse `specfact-pre-validate`, `specfact-implement`, `specfact-verify`, `specfact-fix` and `specfact-autofix`; add no stage aliases or commands. This amendment preserves the 2026-10-04 decision, current assurance/review policy and signed release dependencies. It adds guidance and acceptance scenarios, not report schemas, receipt formats, producer verdicts or automatic collection.
+
+- For nontrivial behavior changes, select one or two assumptions that could invalidate the approach and run the smallest relevant existing CLI/API/dependency probe before dependent implementation. Record the observed boundary, limitations and result in existing planning/evidence sections. Documentation-only work records applicability; a probe supplements required checks.
+- Give the applicable existing review the assumptions, evidence references, affected obligations and exclusions. Triage findings against a violated requirement or concrete invariant, a reachable failure path and evidence. Preserve confirmed defects, disproved concerns, suggestions and unresolved claims as distinct dispositions; no disposition waives required findings.
+- Keep one writer and batch compatible repairs. Handoffs carry the delta, affected assumptions, remaining findings and original evidence references. Boundary drift or uncertain impact broadens review and affected-gate rechecks; retain the shared controller and consumed budgets across handoffs.
+- Reuse existing records for a bounded trial on the next subsequently authorized nontrivial change in each repository. Report early discoveries, later escapes, correction batches and overhead. Separate token categories, billed charges, elapsed time, active effort and waiting; unavailable values remain unknown. Operational observations do not prove causal or monetary savings.
+
+Non-goals: full pstack installation, default Arena/reviewer panels, a new ledger, importing another project's capability, warning-policy calibration or minimal-evidence cutover. No runtime command becomes active because skills exist. Keep reusable modules content concise, reference existing rules, and let each repository supply its own commands/governance and core-owned wrappers/projection.
+
+Deliver skills/projection -> deterministic verification -> bounded repair -> opt-in PR automation. Review the initial skills/projection slice after two engineer-days as an investment checkpoint, not an estimate for the full paired runtime. Added ceremony, weak probes and incorrect dismissals are mitigated by limiting assumptions, stating proof boundaries and preserving producer authority/current-input binding. Roll back new guidance/projection while retaining evidence and ordinary checks; runtime adoption retains coordinated configuration/module-pin rollback.
+
+Public research context (accessed 2026-10-08): [Cursor pstack](https://github.com/cursor/plugins/tree/main/pstack) and [Flavio Copes' overview, updated 2026-09-29](https://flaviocopes.com/pstack/). These inform adapted practices, not a framework dependency or savings claim. Confidence: high in architectural fit; medium in reducing defects/overhead. Planning creation leaves runtime implementation and trials unchecked.

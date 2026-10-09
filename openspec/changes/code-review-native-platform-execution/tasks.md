@@ -65,7 +65,7 @@
 - [ ] Admit Node/npm, Semgrep and Z3 closure, Mach-O loading, signed caches and versioned evidence.
 - [ ] Implement first-use acquisition, offline reuse and compatibility rejection; repeat signed customer installation.
 - [ ] Complete native ARM64 CI and physical-Mac proof plus Linux regression, all repository gates and independent review.
-- [ ] Prepare patch 0.51.1 for completion/correction of the released 0.51.0 promise; sign and publish through CI only after acceptance, and update registry identities from actual release bytes.
+- [ ] Prepare patch 0.51.3 above published 0.51.2 for completion/correction of the released 0.51.0 promise; sign and publish through CI only after acceptance, and update registry identities from actual release bytes.
 - [ ] Open implementation PR to dev and resolve current-head reviews/checks; no automatic merge or publication.
 
 ## 7. Parallel native compatibility (owner approved 2026-10-02)
@@ -205,3 +205,11 @@ Runbook and exact candidate limitations: [NATIVE_RELEASE.md](NATIVE_RELEASE.md).
 
 - [x] Diagnose hosted macOS15 proof teardown PID-exit race; retain identity checks, actual denial/deadline assertions and strict unexpected-error failures.
 - [ ] Pass fresh supported boundary jobs after proof cleanup correction.
+
+### Resumed upstream integration (9 October 2026)
+
+- [x] Resolve current dev integration conflicts while retaining native isolation, diagnostics and current reviewer bootstrap regressions.
+- [x] Fix transferred #502 same-stem source/test ambiguity with spec-first failing tests and passing affected regression coverage.
+- [x] Configure protected signing/publication environments with djm81 as required approver, self-review prevention and admin bypass disabled.
+- [ ] Provision the dedicated environment-scoped native publisher signing secret via the owner-managed CI/CD secret process.
+- [ ] Pass the current-head hosted review/build/acceptance gates, promote through dev/main with human review, publish and verify installed customer execution.

@@ -8,6 +8,7 @@ import json
 import os
 import shlex
 import subprocess
+from collections import Counter
 from collections.abc import Callable, Iterator
 from pathlib import Path
 from typing import Any
@@ -39,10 +40,16 @@ def _strings(value: object) -> tuple[str, ...]:
     return ()
 
 
-def _matching_source_tests(relative: str, candidates: set[str], explicit_tests: set[str]) -> set[str]:
+def _matching_source_tests(
+    relative: str, candidates: set[str], explicit_tests: set[str], *, multiple_sources: bool
+) -> set[str]:
     stem = Path(relative).stem
     matches = {candidate for candidate in candidates if Path(candidate).name in {f"test_{stem}.py", f"{stem}_test.py"}}
     if selected := matches & explicit_tests:
+        if multiple_sources and selected != matches:
+            raise ProjectRuntimeError(
+                f"project_test_selection_ambiguous:{relative}; include all matching test paths or use full scope"
+            )
         return selected
     if len(matches) > 1:
         raise ProjectRuntimeError(f"project_test_selection_ambiguous:{relative}; include explicit test paths")
@@ -146,10 +153,15 @@ def select_test_paths(plan: ProjectPlan, files: list[Path], *, full: bool) -> tu
         for relative in relative_paths
         if any(fnmatch.fnmatch(Path(relative).name, pattern) for pattern in patterns)
     }
+    source_stems = Counter(Path(relative).stem for relative in set(relative_paths) - explicit_tests)
     selected = set(explicit_tests)
     for relative in relative_paths:
         if relative not in explicit_tests:
-            selected.update(_matching_source_tests(relative, candidates, explicit_tests))
+            selected.update(
+                _matching_source_tests(
+                    relative, candidates, explicit_tests, multiple_sources=source_stems[Path(relative).stem] > 1
+                )
+            )
     if not selected:
         raise ProjectRuntimeError("project_test_selection_empty: include corresponding test files")
     return tuple(sorted(selected))
@@ -376,8 +388,6 @@ def run_portable_pytest(files: list[Path], adapter_argv: tuple[str, ...]) -> lis
     if len(adapter_argv) != 2 or adapter_argv[0] != "portable-pytest-v2":
         return [tool_error(tool="pytest", file_path=anchor, message="project_pytest_request_invalid")]
 
-    from specfact_code_review.run.runner import evaluate_portable_pytest_coverage, resolve_portable_pytest_root
-
     try:
         Path("/opt/specfact/tmp/pytest-observation.json").unlink(missing_ok=True)
         bridge, command = _portable_pytest_command(files, adapter_argv[1])
@@ -392,6 +402,8 @@ def run_portable_pytest(files: list[Path], adapter_argv: tuple[str, ...]) -> lis
             validation_error = str(exc)
         if validation_error and not records:
             return [*policy_findings, tool_error(tool="pytest", file_path=anchor, message=validation_error)]
+        from specfact_code_review.run.runner import evaluate_portable_pytest_coverage, resolve_portable_pytest_root
+
         pytest_root = resolve_portable_pytest_root(observation)
         findings = [*policy_findings, *_nonpassing_observation_findings(records, pytest_root)]
     except (OSError, ValueError, KeyError, subprocess.SubprocessError) as exc:

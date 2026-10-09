@@ -1,0 +1,246 @@
+schema_version: '2'
+maturity: planned
+requirements:
+  openspec:code-review-portable-reviewer-bootstrap:review-portable-bootstrap:explicit-correspondence-resolves-source-basename-ambiguity:
+    rationale: The immutable reviewer requires unambiguous explicit correspondence rather than an unrelated-test waiver.
+    stakeholder_refs: [nold-ai/specfact-cli-modules#460]
+    touchpoints:
+    - id: explicit-test-correspondence
+      kind: config_file
+      locator: openspec/changes/code-review-portable-reviewer-bootstrap/specs/review-portable-bootstrap/spec.md
+    verification_cases:
+    - case_id: reviewer-bootstrap-1
+      scenario_id: explicit-correspondence-resolves-source-basename-ambiguity
+      method: test
+      intent: Preserve order-independent explicit matches and reject absent or unrelated matches.
+      observable: Failing regression evidence precedes the selection change; no test failure is promoted to PASS.
+  openspec:code-review-portable-reviewer-bootstrap:review-portable-bootstrap:similarity-hash-caching-preserves-upstream-review-results:
+    rationale: Reuse immutable upstream windows while preserving findings and all execution guards.
+    stakeholder_refs: [nold-ai/specfact-cli-modules#460]
+    touchpoints:
+    - id: bounded-upstream-hashes
+      kind: config_file
+      locator: openspec/changes/code-review-portable-reviewer-bootstrap/specs/review-portable-bootstrap/spec.md
+    verification_cases:
+    - case_id: reviewer-bootstrap-2
+      scenario_id: similarity-hash-caching-preserves-upstream-review-results
+      method: test
+      intent: Compare actual same-object duplicate results and restore/clear on all exits.
+      observable: Missing cache regressions fail before implementation; upstream parity, eviction and teardown are required. Full sealed #498 timing remains a separate promotion check.
+  openspec:code-review-portable-reviewer-bootstrap:review-portable-bootstrap:reviewer-installation-and-host-proofs-retain-ordinary-context:
+    rationale: Actual hosted CI cannot install retired 0.50.1; reuse the owner-approved proof context separation without waiving assertions.
+    stakeholder_refs: [nold-ai/specfact-cli-modules#460]
+    touchpoints:
+    - id: reviewer-installation
+      kind: config_file
+      locator: openspec/changes/code-review-portable-reviewer-bootstrap/specs/review-portable-bootstrap/spec.md
+    verification_cases:
+    - case_id: reviewer-bootstrap-3
+      scenario_id: reviewer-installation-and-host-proofs-retain-ordinary-context
+      method: test
+      intent: Validate available reviewer installation and mandatory ordinary-host failure propagation.
+      observable: Retired pin fails hosted installation; explicit host proof retains all old assertions, target selection omits its proof-only filename and failure remains blocking.
+    - case_id: reviewer-bootstrap-4
+      scenario_id: reviewer-installation-and-host-proofs-retain-ordinary-context
+      method: test
+      intent: Verify undecorated preparation JSON, prepared base/head descriptors and bounded preparation/kernel failure observations.
+      observable: Missing descriptors, stale audit records, rotation and failed captures cannot establish preparation or attribute a denial; only fixed statuses and booleans are public, with all failing exits and kernel gates retained.
+    - case_id: reviewer-bootstrap-7
+      scenario_id: reviewer-installation-and-host-proofs-retain-ordinary-context
+      method: test
+      intent: Preserve oversized-report failure and unavailable assurance while projecting finite observations from complete private JSON within32MiB.
+      observable: Seven meaningful regressions precede code; Unicode, nested spoofing, duplicate keys and malformed/incomplete headers retain privacy. Hosted installed0.51.0 now establishes contracts error/UNKNOWN. Three failing complete-report regressions precede the standard-library JSON diagnostic reader; other-tool spoofing and the32MiB cap retain unavailable diagnostics and privacy. Fresh complete-reader execution identifies contracts and targeted-pytest-coverage as BASE errors/UNKNOWN; no CrossHair failure class is emitted. The original class remains unclassified because released differential reporting can discard base tool errors beside ordinary head findings.
+  openspec:code-review-portable-reviewer-bootstrap:review-portable-bootstrap:sealed-timeout-diagnosis-retains-execution-guards:
+    rationale: User approved bounded diagnosis of the verified sealed CrossHair timeout without changing analysis guards.
+    stakeholder_refs: [nold-ai/specfact-cli-modules#460]
+    touchpoints:
+    - id: temporary-crosshair-sampling
+      kind: config_file
+      locator: openspec/changes/code-review-portable-reviewer-bootstrap/specs/review-portable-bootstrap/spec.md
+    verification_cases:
+    - case_id: reviewer-bootstrap-5
+      scenario_id: sealed-timeout-diagnosis-retains-execution-guards
+      method: test
+      intent: Preserve command and deadlines, arm before attachment, cancel on every exit, and suppress private stack tokens.
+      observable: Temporary sampler/privacy regressions precede diagnosis. The combined setup correction passes hosted candidate commit review; five production policy regressions precede sampler removal. Production hosted validation remains required.
+  openspec:code-review-portable-reviewer-bootstrap:review-portable-bootstrap:invalid-pytest-requests-avoid-response-only-setup:
+    rationale: Decode malformed requests before installed coverage planning and defer unused response imports without reducing contract coverage.
+    stakeholder_refs: [nold-ai/specfact-cli-modules#460]
+    touchpoints:
+    - id: request-first-portable-pytest
+      kind: config_file
+      locator: openspec/changes/code-review-portable-reviewer-bootstrap/specs/review-portable-bootstrap/spec.md
+    verification_cases:
+    - case_id: reviewer-bootstrap-6
+      scenario_id: invalid-pytest-requests-avoid-response-only-setup
+      method: test
+      intent: Preserve valid request fields, coverage findings, setup-error handling and uncaught import errors while avoiding unused setup.
+      observable: Three setup-order regressions fail before code; valid request parity and response coverage pass. The combined correction passes hosted candidate commit review; removal of sampling requires fresh production evidence.
+  openspec:code-review-portable-reviewer-bootstrap:review-portable-bootstrap:incomplete-analysis-retains-all-error-evidence:
+    rationale: Independently reproduced evidence loss and false-clean failure handling must not conceal incomplete analysis.
+    stakeholder_refs: [nold-ai/specfact-cli-modules#460]
+    touchpoints:
+    - id: incomplete-analysis-diagnostics
+      kind: config_file
+      locator: openspec/changes/code-review-portable-reviewer-bootstrap/specs/review-portable-bootstrap/spec.md
+    verification_cases:
+    - case_id: reviewer-bootstrap-8
+      scenario_id: incomplete-analysis-retains-all-error-evidence
+      method: test
+      intent: Retain every base/head tool error without restoring unrelated ordinary base findings, including empty HEAD and ordinary-only BASE.
+      observable: Two meaningful failures precede correction; both-side tool errors retain unknown differential state and unchanged incomplete member evidence.
+    - case_id: reviewer-bootstrap-9
+      scenario_id: incomplete-analysis-retains-all-error-evidence
+      method: test
+      intent: Reject failure exit1 without analysis stdout whether stderr is present or absent.
+      observable: Two meaningful failures precede correction; error/UNKNOWN is retained while existing valid counterexample and side-effect output tests pass.
+  openspec:code-review-portable-reviewer-bootstrap:review-portable-bootstrap:pinned-constructor-analysis-preserves-real-arguments:
+    rationale: Hosted candidate CrossHair process error matches the independently reproduced pinned constructor signature defect.
+    stakeholder_refs: [nold-ai/specfact-cli-modules#460]
+    touchpoints:
+    - id: pinned-constructor-dispatch
+      kind: config_file
+      locator: openspec/changes/code-review-portable-reviewer-bootstrap/specs/review-portable-bootstrap/spec.md
+    verification_cases:
+    - case_id: reviewer-bootstrap-10
+      scenario_id: pinned-constructor-analysis-preserves-real-arguments
+      method: test
+      intent: Retain real constructor positions, annotations, valid defaults, upstream collision precedence and native lifecycle; normalize impossible positional default prefixes without reordering inputs.
+      observable: Meaningful argument-loss, invalid-kind-order and two default-prefix Signature failures precede code; argument/default/annotation parity, unsupported-version rejection and restoration on normal/error/SystemExit are required. Actual pinned CLI counterexample and fresh sealed candidate acceptance remain separate production proof.
+  openspec:code-review-portable-reviewer-bootstrap:review-portable-bootstrap:unhashable-callable-metadata-preserves-contract-parsing:
+    rationale: The Requests customer artifact identifies the pinned registered-contract lookup crash on callable pytest class metadata.
+    stakeholder_refs: [nold-ai/specfact-cli-modules#460]
+    touchpoints:
+    - id: pinned-callable-contract-lookup
+      kind: config_file
+      locator: openspec/changes/code-review-portable-reviewer-bootstrap/specs/review-portable-bootstrap/spec.md
+    verification_cases:
+    - case_id: reviewer-bootstrap-11
+      scenario_id: unhashable-callable-metadata-preserves-contract-parsing
+      method: test
+      intent: Preserve actual class-method contracts and registered hashable lookup semantics while rejecting impossible unhashable registry keys without a crash.
+      observable: Genuine parser and lookup regressions precede implementation; actual pytest marker parsing, hashable override parity, custom hash failure propagation and restoration on all exits are required. Hosted customer acceptance remains separate.
+  openspec:code-review-portable-reviewer-bootstrap:review-portable-bootstrap:temporary-diagnosis-preserves-ordinary-dispatch:
+    rationale: Reuse the user-approved bounded private sampling milestone while preserving the ordinary no-sampler execution and all analysis guards.
+    stakeholder_refs: [nold-ai/specfact-cli-modules#460]
+    touchpoints:
+    - id: default-off-private-crosshair-diagnosis
+      kind: config_file
+      locator: openspec/changes/code-review-portable-reviewer-bootstrap/specs/review-portable-bootstrap/spec.md
+    verification_cases:
+    - case_id: reviewer-bootstrap-12
+      scenario_id: temporary-diagnosis-preserves-ordinary-dispatch
+      method: test
+      intent: Retain default request bytes, restrict an actual boolean to contracts, restore scoped state, consume child metadata, cancel samples on all exits, preserve completed native errors and suppress private stack tokens including quoted filenames.
+      observable: Seventeen behavior assertions and three new scoped-helper interface cases fail before code; ordinary-mode cases initially pass. Current hosted gate/no-sampler/CLI/timeout and finite privacy proofs remain mandatory. Sampled observations are not production acceptance.
+
+  openspec:code-review-portable-reviewer-bootstrap:review-portable-bootstrap:crosshair-adapter-updates-invalidate-prepared-runtimes:
+    rationale: The trusted adapter executes in prepared runtimes and every later policy correction must invalidate stale cache reuse.
+    stakeholder_refs: [nold-ai/specfact-cli-modules#460]
+    touchpoints:
+    - id: crosshair-runtime-identity
+      kind: config_file
+      locator: openspec/changes/code-review-portable-reviewer-bootstrap/specs/review-portable-bootstrap/spec.md
+    verification_cases:
+    - case_id: reviewer-bootstrap-13
+      scenario_id: crosshair-adapter-updates-invalidate-prepared-runtimes
+      method: test
+      intent: Prove unchanged-policy warm reuse and adapter-only offline invalidation with fixed source, worker and Git inputs.
+      observable: Existing policy-invalidation test fails with the newly selected adapter before changing the cache input list.
+
+  openspec:code-review-portable-reviewer-bootstrap:review-portable-bootstrap:absent-coverage-inputs-avoid-unused-metadata-setup:
+    rationale: Verified empty/no-Python coverage results do not require installed distribution/index setup in the observed sealed analysis path.
+    stakeholder_refs: [nold-ai/specfact-cli-modules#460]
+    touchpoints:
+    - id: unused-coverage-setup
+      kind: config_file
+      locator: openspec/changes/code-review-portable-reviewer-bootstrap/specs/review-portable-bootstrap/spec.md
+    verification_cases:
+    - case_id: reviewer-bootstrap-14
+      scenario_id: absent-coverage-inputs-avoid-unused-metadata-setup
+      method: test
+      intent: Avoid planning for five decoded non-object forms with native error parity and return exact empty coverage bridges without metadata/index setup.
+      observable: Failing-first setup spies precede code; valid serialized command, nonempty outside-snapshot inputs and existing ownership rejection remain required. Fresh sealed acceptance is separate.
+
+  openspec:code-review-portable-reviewer-bootstrap:review-portable-bootstrap:targeted-test-filters-preserve-mandatory-host-proofs:
+    rationale: Supported filters must not prevent portable execution while mandatory host proofs remain required.
+    stakeholder_refs: [nold-ai/specfact-cli-modules#460]
+    touchpoints:
+    - id: targeted-test-routing
+      kind: config_file
+      locator: openspec/changes/code-review-portable-reviewer-bootstrap/specs/review-portable-bootstrap/spec.md
+    verification_cases:
+    - case_id: reviewer-bootstrap-15
+      scenario_id: targeted-test-filters-preserve-mandatory-host-proofs
+      method: test
+      intent: Forward filters only to portable tests and retain all host and portable failures.
+      observable: Nonempty filter regressions and actual Hatch invocation fail before code; ordinary full and SMART proofs remain mandatory.
+  openspec:code-review-portable-reviewer-bootstrap:review-portable-bootstrap:candidate-diagnostics-retain-incomplete-snapshot-attribution:
+    rationale: Aggregated sampled frames cannot identify the incomplete snapshot; existing bounded nested evidence can.
+    stakeholder_refs: [nold-ai/specfact-cli-modules#460]
+    touchpoints:
+    - id: candidate-snapshot-diagnosis
+      kind: config_file
+      locator: openspec/changes/code-review-portable-reviewer-bootstrap/specs/review-portable-bootstrap/spec.md
+    verification_cases:
+    - case_id: reviewer-bootstrap-16
+      scenario_id: candidate-diagnostics-retain-incomplete-snapshot-attribution
+      method: test
+      intent: Emit only allowlisted analyzer and base/head state names without private fields or assurance upgrade.
+      observable: Missing side-attribution regressions precede code; valid states and malformed/unknown input parity remain required.
+
+  openspec:code-review-portable-reviewer-bootstrap:review-portable-bootstrap:preparation-failures-retain-bounded-diagnosis:
+    rationale: The current set-e preparation command bypasses its failure projector on nonzero exit.
+    stakeholder_refs: [nold-ai/specfact-cli-modules#460]
+    touchpoints:
+    - id: preparation-exit-diagnosis
+      kind: config_file
+      locator: openspec/changes/code-review-portable-reviewer-bootstrap/specs/review-portable-bootstrap/spec.md
+    verification_cases:
+    - case_id: reviewer-bootstrap-17
+      scenario_id: preparation-failures-retain-bounded-diagnosis
+      method: test
+      intent: Always project finite preparation status and enforce original command and projector failures before review.
+      observable: Shell-flow failure regressions with valid, invalid and missing reports precede code; success and projector failures retain their separate statuses and exits.
+
+  openspec:code-review-portable-reviewer-bootstrap:review-portable-bootstrap:pinned-literal-analysis-preserves-declared-values:
+    rationale: The bounded public 23-file CP312 control reproduces a Literal annotation falling through to get_type_hints as a class.
+    stakeholder_refs: [nold-ai/specfact-cli-modules#460]
+    touchpoints:
+    - id: pinned-literal-dispatch
+      kind: config_file
+      locator: openspec/changes/code-review-portable-reviewer-bootstrap/specs/review-portable-bootstrap/spec.md
+    verification_cases:
+    - case_id: reviewer-bootstrap-18
+      scenario_id: pinned-literal-analysis-preserves-declared-values
+      method: test
+      intent: Preserve every literal value, type and identity, constructor/union inputs, existing registrations and restoration on every exit.
+      observable: Actual pinned CLI counterexample regressions fail before code; no contract selection or deadline change is permitted. Hosted TypeError attribution remains separate until exact-head execution confirms it.
+
+  openspec:code-review-portable-reviewer-bootstrap:review-portable-bootstrap:no-impact-release-preparation-preserves-normal-review:
+    rationale: Registry-only and workflow-only release changes must retain legitimate no-impact scope without accepting incomplete preparation.
+    stakeholder_refs: [nold-ai/specfact-cli-modules#460]
+    touchpoints:
+    - id: no-impact-release-preparation
+      kind: config_file
+      locator: openspec/changes/code-review-portable-reviewer-bootstrap/specs/review-portable-bootstrap/spec.md
+    verification_cases:
+    - case_id: release-no-impact
+      scenario_id: no-impact-release-preparation-preserves-normal-review
+      method: test
+      intent: Execute actual candidate shell and isolated independent controller for successful and invalid no-impact outcomes.
+      observable: Failing-first tests demonstrate both preparation rejections; valid no-impact invokes normal review and retains 0/2/7 exits, malformed claims remain blocked.
+
+  openspec:code-review-portable-reviewer-bootstrap:review-portable-bootstrap:ordered-contract-regression-accepts-additional-valid-cases:
+    rationale: A fixed child summary count incorrectly rejects additional successful constructor cases.
+    stakeholder_refs: [nold-ai/specfact-cli-modules#460]
+    touchpoints:
+    - id: ordered-contract-regression
+      kind: config_file
+      locator: openspec/changes/code-review-portable-reviewer-bootstrap/specs/review-portable-bootstrap/spec.md
+    verification_cases:
+    - case_id: ordered-contract-additional-case
+      scenario_id: ordered-contract-regression-accepts-additional-valid-cases
+      method: test
+      intent: Add a controlled valid constructor parameter and reproduce the fixed-summary false failure before removing the count assertion.
+      observable: Child tests all pass but the original ordered regression fails; after removing only the summary count, both expanded and ordinary selections pass with original bounds and assertions.

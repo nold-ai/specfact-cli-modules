@@ -497,3 +497,140 @@ def test_invalid_pytest_request_does_not_scan_ownership_or_launch(monkeypatch, e
     with pytest.raises(ValueError, match="project_pytest_request_invalid"):
         _portable_pytest_command([], encoded)
     assert calls == []
+
+
+def _reject_response_imports(monkeypatch):
+    import builtins
+
+    original = builtins.__import__
+
+    def guarded(name, *args, **kwargs):
+        if name == "specfact_code_review.run.runner":
+            raise AssertionError("response helpers must wait for observations")
+        return original(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", guarded)
+
+
+def test_malformed_pytest_json_avoids_coverage_and_response_setup(monkeypatch):
+    _reject_response_imports(monkeypatch)
+    planned = []
+    monkeypatch.setattr(portable_worker, "plan_installed_coverage", lambda *a, **k: planned.append((a, k)))
+    findings = portable_worker.run_portable_pytest([Path("test_app.py")], ("portable-pytest-v2", "{"))
+    assert planned == []
+    assert len(findings) == 1
+    assert findings[0].tool == "pytest" and findings[0].category == "tool_error"
+    assert findings[0].message == "project_pytest_request_invalid"
+    assert findings[0].severity == "error"
+
+
+def test_failed_pytest_command_setup_does_not_load_response_helpers(monkeypatch):
+    _reject_response_imports(monkeypatch)
+
+    def fail(*_args):
+        raise ValueError("existing preparation failure")
+
+    monkeypatch.setattr(portable_worker, "_portable_pytest_command", fail)
+    findings = portable_worker.run_portable_pytest([Path("test_app.py")], ("portable-pytest-v2", "{}"))
+    assert len(findings) == 1
+    assert findings[0].message == "existing preparation failure"
+    assert findings[0].severity == "error"
+
+
+def test_valid_pytest_command_retains_bridge_fields_and_selected_inputs(monkeypatch):
+    bridge = CoverageBridge(
+        directories=(Path("measured"),),
+        mappings=(),
+        diagnostics={},
+        candidates={"source.py": ("candidate.py",)},
+        measured_origins=("installed.py",),
+        modules=("module",),
+    )
+    calls = []
+    monkeypatch.setattr(
+        portable_worker, "plan_installed_coverage", lambda files, **kw: calls.append((files, kw)) or bridge
+    )
+    monkeypatch.setattr(portable_worker, "target_command", lambda domain, argv: [domain, *argv])
+    files = [Path("source.py")]
+    actual_bridge, command = portable_worker._portable_pytest_command(files, '{"selectors":["tests/test_source.py"]}')
+    assert actual_bridge is bridge
+    assert calls == [
+        (files, {"snapshot": Path.cwd(), "site_packages": Path("/opt/specfact/project-runtime/site-packages")})
+    ]
+    assert command[0] == "pytest-observe"
+    assert json.loads(command[1]) == {
+        "selectors": ["tests/test_source.py"],
+        "coverage_directories": ["measured"],
+        "coverage_modules": ["module"],
+        "coverage_candidates": ["candidate.py", "installed.py"],
+    }
+
+
+def test_malformed_pytest_command_decodes_before_planning(monkeypatch):
+    def unexpected_plan(*_args, **_kwargs):
+        raise AssertionError("malformed JSON must not plan coverage")
+
+    monkeypatch.setattr(portable_worker, "plan_installed_coverage", unexpected_plan)
+    with pytest.raises(ValueError, match="project_pytest_request_invalid"):
+        portable_worker._portable_pytest_command([Path("source.py")], "{")
+
+
+@pytest.mark.parametrize("fail_import", [False, True])
+def test_response_helpers_wait_for_completed_observation(monkeypatch, observe_coverage_policy, fail_import):
+    import builtins
+
+    original = builtins.__import__
+
+    def guarded(name, *args, **kwargs):
+        if name == "specfact_code_review.run.runner":
+            assert portable_worker.Path("/opt/specfact/tmp/pytest-observation.json").is_file()
+            if fail_import:
+                raise ImportError("controlled unavailable response helper")
+        return original(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", guarded)
+    if fail_import:
+        with pytest.raises(ImportError, match="controlled unavailable response helper"):
+            observe_coverage_policy(_coverage_observation(), 1)
+    else:
+        findings = observe_coverage_policy(_coverage_observation(), 1)
+        assert len(findings) == 1
+        assert findings[0].rule == "TEST_COVERAGE_POLICY_FAILED"
+        assert findings[0].severity == "error"
+
+
+@pytest.mark.parametrize("reverse", [False, True])
+@pytest.mark.parametrize("explicit_index", [0, 1])
+def test_partial_explicit_tests_cannot_waive_distinct_same_stem_sources(
+    tmp_path: Path, reverse: bool, explicit_index: int
+) -> None:
+    sources, tests = [], []
+    for package in ("a", "b"):
+        source = tmp_path / "src" / package / "model.py"
+        test = tmp_path / "tests" / package / "test_model.py"
+        source.parent.mkdir(parents=True)
+        test.parent.mkdir(parents=True)
+        source.touch()
+        test.touch()
+        sources.append(source)
+        tests.append(test)
+    changed = [*sources, tests[explicit_index]]
+    if reverse:
+        changed.reverse()
+    plan = ProjectPlan(tmp_path, manager="pip", pytest_config={"testpaths": ["tests"]})
+    with pytest.raises(ProjectRuntimeError, match="project_test_selection_ambiguous"):
+        select_test_paths(plan, changed, full=False)
+    assert select_test_paths(plan, changed, full=True) == ()
+    assert select_test_paths(plan, [*sources, *tests], full=False) == ("tests/a/test_model.py", "tests/b/test_model.py")
+
+
+def test_distinct_changed_stems_retain_unique_inferred_tests(tmp_path: Path) -> None:
+    (tmp_path / "tests").mkdir()
+    changed = []
+    for stem in ("model", "other"):
+        source = tmp_path / f"{stem}.py"
+        source.touch()
+        (tmp_path / "tests" / f"test_{stem}.py").touch()
+        changed.append(source)
+    plan = ProjectPlan(tmp_path, manager="pip")
+    assert select_test_paths(plan, changed, full=False) == ("tests/test_model.py", "tests/test_other.py")

@@ -165,3 +165,43 @@ def test_deferred_host_fixture_does_not_alias_managed_caller_python(tmp_path: Pa
     managed.chmod(0o755)
     monkeypatch.setattr(sys, "executable", str(managed))
     test_deferred_gate_reviews_exact_staged_tree_and_propagates_failure(tmp_path, 0, False)
+
+
+@pytest.mark.parametrize("review_exit", [0, 2, 7])
+def test_independent_no_impact_still_reviews_and_cleans_resolution(tmp_path: Path, review_exit: int) -> None:
+    from tests.support.capsule_review_fixtures import independent_review_job
+
+    step = next(item for item in independent_review_job()["steps"] if item.get("id") == "independent_review")
+    trusted, environment = create_isolated_reviewer(tmp_path, (review_exit, "NOT_APPLICABLE", "no_governed_impact"))
+    result = subprocess.run(["bash", "-c", step["run"]], env=environment, text=True, capture_output=True, check=False)
+    assert result.returncode == review_exit, result.stdout + result.stderr
+    assert (trusted / "preloaded").exists()
+    assert (trusted / "cleaned").exists()
+    assert_installed_review_arguments(trusted, prepared=False)
+
+
+@pytest.mark.parametrize(
+    "status,reason,selected,scope_exit",
+    [
+        ("NOT_APPLICABLE", "private-reason", [], 0),
+        ("NOT_APPLICABLE", "no_governed_impact", ["governed.py"], 0),
+        ("NOT_APPLICABLE", "no_governed_impact", [], 7),
+        ("UNKNOWN", "no_governed_impact", [], 0),
+        ("FAIL", "no_governed_impact", [], 0),
+    ],
+)
+def test_independent_invalid_no_impact_stops_before_review(
+    tmp_path: Path, status, reason, selected, scope_exit
+) -> None:
+    from tests.support.capsule_review_fixtures import independent_review_job
+
+    step = next(item for item in independent_review_job()["steps"] if item.get("id") == "independent_review")
+    trusted, environment = create_isolated_reviewer(
+        tmp_path, (0, status, reason), selected_paths=selected, scope_exit=scope_exit
+    )
+    result = subprocess.run(["bash", "-c", step["run"]], env=environment, text=True, capture_output=True, check=False)
+    assert result.returncode == 1, result.stdout + result.stderr
+    assert not (trusted / "argv.json").exists()
+    assert not (trusted / "prepared").exists()
+    assert (trusted / "cleaned").exists()
+    assert "private-reason" not in result.stdout

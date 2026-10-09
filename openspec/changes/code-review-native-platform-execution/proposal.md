@@ -5,7 +5,7 @@
 Code Review 0.51.0 and core 0.55.4 are released, but the authenticated native
 catalog is empty. Issue #460 was reopened and moved to Todo on 2026-10-05;
 merged implementation is not customer delivery. Continue this change without
-archiving it. Prepare patch 0.51.1 for corrections to the promised delivery,
+archiving it. Prepare patch 0.51.3 (above the now-published 0.51.2) for corrections to the promised delivery,
 rather than another additive capability or a new minor version.
 
 The current worktree reproduces complete CPython 3.11–3.13 native assembly.

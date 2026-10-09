@@ -133,6 +133,16 @@ jobs:
           }
           EOF
           sudo apparmor_parser -r "$profile"
+      - name: Record kernel audit boundary privately
+        if: github.event_name == 'pull_request' && matrix.python == '3.12'
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          audit_exit=0
+          { sudo dmesg --color=never; } > "$CUSTOMER_ROOT/namespace-audit-baseline.private.log" \
+            2> "$CUSTOMER_ROOT/namespace-audit-baseline.private.stderr" || audit_exit=$?
+          echo "NAMESPACE_AUDIT_BASELINE_CAPTURED=$([ "$audit_exit" -eq 0 ] && echo 1 || echo 0)" >> "$GITHUB_ENV"
       - name: Run deferred candidate commit review without weakening enforcement
         id: deferred_review
         if: github.event_name == 'pull_request' && matrix.python == '3.12'
@@ -158,6 +168,7 @@ jobs:
           printf '%s\n' 'manager = "hatch"' 'environment = "default"' > "$PROJECT_CONFIG"
           # Provisioning is separate from the unchanged 300-second analysis budget.
           # Prepare the same bound base/index snapshots; customer cold cache stays empty.
+          preparation_exit=0
           SPECFACT_CODE_REVIEW_CAPSULE_CACHE="$CUSTOMER_ROOT/commit-review-cache" \
             SPECFACT_MODULES_REPO="$GITHUB_WORKSPACE" \
             SPECFACT_CLI_MODULES_REPO="$GITHUB_WORKSPACE" \
@@ -165,9 +176,66 @@ jobs:
             PYTHONPATH="$GITHUB_WORKSPACE/packages/specfact-code-review/src" \
             "$CUSTOMER_ROOT/venv/bin/python" -I -c \
               'import subprocess,sys; sys.exit(subprocess.run(sys.argv[1:],timeout=1800,check=False).returncode)' \
-              "$CUSTOMER_ROOT/venv/bin/python" -B -P -m specfact_cli.cli \
+              "$CUSTOMER_ROOT/venv/bin/python" -B -P -c \
+              'import sys; from specfact_cli.cli import app; app(args=sys.argv[1:])' \
               code review runtime prepare --scope index --project-config "$PROJECT_CONFIG" --json \
-              > "$CUSTOMER_ROOT/commit-review-preparation.private.json"
+              > "$CUSTOMER_ROOT/commit-review-preparation.private.json" || preparation_exit=$?
+          if PREPARATION_COMMAND_SUCCEEDED="$([ "$preparation_exit" -eq 0 ] && echo 1 || echo 0)" \
+            PREPARATION_REPORT="$CUSTOMER_ROOT/commit-review-preparation.private.json" \
+            "$CUSTOMER_ROOT/venv/bin/python" -I - <<'PY_PREPARATION'
+          import json
+          import os
+          from pathlib import Path
+
+          present = {side: False for side in ("base", "head")}
+          supplied = dict(present)
+          outcome = "unreadable_report"
+          try:
+              with Path(os.environ["PREPARATION_REPORT"]).open("rb") as stream:
+                  data = stream.read(2 * 1024 * 1024 + 1)
+              if len(data) > 2 * 1024 * 1024:
+                  outcome = "oversized_report"
+              else:
+                  result = json.loads(data)
+                  if not isinstance(result, dict):
+                      outcome = "invalid_report_shape"
+                  elif result.get("status") == "NOT_APPLICABLE":
+                      no_impact = (result.get("scope") == "index"
+                          and result.get("diagnostic") == "no_governed_impact"
+                          and result.get("runtimes") == {})
+                      outcome = "not_applicable" if no_impact else "invalid_not_applicable"
+                  else:
+                      runtimes = result.get("runtimes", {})
+                      for side in present:
+                          value = runtimes.get(side, {}) if isinstance(runtimes, dict) else {}
+                          descriptor = value.get("descriptor") if isinstance(value, dict) else None
+                          supplied[side] = isinstance(descriptor, str) and bool(descriptor)
+                          present[side] = supplied[side] and Path(descriptor).is_file() and not Path(descriptor).is_symlink()
+                      outcome = "prepared" if all(present.values()) else "missing_descriptor_files" if all(supplied.values()) else "missing_descriptor_fields"
+          except json.JSONDecodeError:
+              outcome = "invalid_json"
+          except (OSError, ValueError, KeyError):
+              outcome = "unreadable_report"
+          if outcome in {"prepared", "not_applicable"} and os.environ.get("PREPARATION_COMMAND_SUCCEEDED") != "1":
+              outcome = "preparation_command_failed"
+          accepted = outcome in {"prepared", "not_applicable"}
+          status = "NOT_APPLICABLE" if outcome == "not_applicable" else "PREPARED" if accepted else "INCOMPLETE"
+          print(json.dumps({"status": status, "phase": "index_preparation",
+              "report_outcome": outcome, "base_descriptor_supplied": supplied["base"], "head_descriptor_supplied": supplied["head"],
+              "base_descriptor_present": present["base"], "head_descriptor_present": present["head"]}))
+          raise SystemExit(0 if accepted else 1)
+          PY_PREPARATION
+          then
+            preparation_report_exit=0
+          else
+            preparation_report_exit=$?
+          fi
+          if [ "$preparation_exit" -ne 0 ]; then
+            exit "$preparation_exit"
+          fi
+          if [ "$preparation_report_exit" -ne 0 ]; then
+            exit "$preparation_report_exit"
+          fi
           review_exit=0
           SPECFACT_CODE_REVIEW_CAPSULE_CACHE="$CUSTOMER_ROOT/commit-review-cache" \
             SPECFACT_CODE_REVIEW_SUBJECT_ROOT="$REVIEW_ROOT" \
@@ -360,6 +428,73 @@ jobs:
                       if emitted == 200:
                           break
           PY
+            "$CUSTOMER_ROOT/venv/bin/python" -I - <<'PY_CANDIDATE_FAILURE'
+          import json
+          from pathlib import Path
+
+          def unique_candidate_json_object(pairs):
+              value = {}
+              for key, item in pairs:
+                  if key in value:
+                      raise ValueError("duplicate private JSON field")
+                  value[key] = item
+              return value
+
+          report = Path(".specfact/code-review.json")
+          if report.is_file():
+              data = {}
+              try:
+                  with report.open("rb") as stream:
+                      payload = stream.read(32 * 1024 * 1024 + 1)
+                  if len(payload) > 32 * 1024 * 1024:
+                      raise ValueError("private diagnostic bound exceeded")
+                  value = json.loads(payload, object_pairs_hook=unique_candidate_json_object)
+                  if not isinstance(value, dict):
+                      raise ValueError("private report shape invalid")
+                  data = value
+                  if len(payload) > 2 * 1024 * 1024:
+                      print(json.dumps({"analyzer": "contracts", "diagnostic_class": "candidate_report_unavailable"}))
+              except (OSError, ValueError, RecursionError):
+                  print(json.dumps({"analyzer": "contracts", "diagnostic_class": "candidate_report_unavailable"}))
+              allowed = ("ai-bloat-ast", "ast-clean-code", "basedpyright", "contracts", "pylint", "radon", "ruff", "semgrep-clean", "semgrep-bugs", "targeted-pytest-coverage")
+              known = ("analyzer_reported_incomplete_execution", "namespace_unavailable", "capsule_materialization_failed", "snapshot_member_incomplete", "project_runtime_prepare_failed", "project_test_selection_ambiguous", "local_pytest_inventory_failed")
+              rows = data.get("analyzer_evidence", [])
+              for row in rows[:10] if isinstance(rows, list) else []:
+                  if not isinstance(row, dict) or row.get("id") not in allowed:
+                      continue
+                  incomplete_sides = [side for side in ("base", "head")
+                      if isinstance(row.get(side), dict) and (row[side].get("execution_state") == "error" or row[side].get("evidence_outcome") == "UNKNOWN")]
+                  if incomplete_sides:
+                      print(json.dumps({"analyzer": row["id"], "incomplete_snapshot_sides": incomplete_sides}))
+                  tokens = str(row.get("diagnostic", "")).split(":")[:3]
+                  codes = [token for token in tokens if token in known]
+                  if codes:
+                      print(json.dumps({"analyzer": row["id"], "diagnostic_codes": codes}))
+              classes = {
+                  "CrossHair timed out before mandatory evidence completed.": "crosshair_timeout_observed",
+                  "CrossHair process error:": "crosshair_process_error_observed",
+                  "Unrecognized CrossHair output:": "crosshair_unrecognized_output_observed",
+                  "Unable to execute CrossHair:": "crosshair_execute_error_observed",
+              }
+              exceptions = {"ModuleNotFoundError": "module_not_found_observed",
+                  "ImportError": "import_error_observed", "SyntaxError": "syntax_error_observed",
+                  "PermissionError": "permission_error_observed", "TypeError": "type_error_observed",
+                  "FileNotFoundError": "file_not_found_observed", "ValueError": "value_error_observed",
+                  "wrong parameter order": "wrong_parameter_order_observed"}
+              observations = {}
+              findings = data.get("findings", [])
+              for finding in findings[:10000] if isinstance(findings, list) else []:
+                  if not isinstance(finding, dict) or finding.get("category") != "tool_error" or finding.get("tool") != "crosshair":
+                      continue
+                  message = finding.get("message", "")
+                  if not isinstance(message, str):
+                      continue
+                  code = next((code for prefix, code in classes.items() if message.startswith(prefix)), "unclassified_crosshair_error_observed")
+                  observations.setdefault(code, set()).update(code for marker, code in exceptions.items() if marker in message)
+              for code, observed in sorted(observations.items()):
+                  row = {"analyzer": "contracts", "diagnostic_class": code, "exception_observations": sorted(observed)}
+                  print(json.dumps(row))
+          PY_CANDIDATE_FAILURE
           fi
           exit "$review_exit"
       - name: Profile failed candidate review privately
@@ -409,6 +544,50 @@ jobs:
           fi
           "$CUSTOMER_ROOT/venv/bin/python" "$GITHUB_WORKSPACE/scripts/capsule_profile_summary.py" \
             --profile "$CUSTOMER_ROOT/commit-review-profile.private.json" --repository "$REVIEW_ROOT"
+      - name: Collect namespace audit evidence privately
+        if: failure() && steps.deferred_review.outcome == 'failure'
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          audit_exit=0
+          { sudo dmesg --color=never; } > "$CUSTOMER_ROOT/namespace-audit.private.log" \
+            2> "$CUSTOMER_ROOT/namespace-audit.private.stderr" || audit_exit=$?
+          NAMESPACE_AUDIT="$CUSTOMER_ROOT/namespace-audit.private.log" \
+            NAMESPACE_AUDIT_BASELINE="$CUSTOMER_ROOT/namespace-audit-baseline.private.log" \
+            NAMESPACE_AUDIT_CAPTURED="$([ "$audit_exit" -eq 0 ] && echo 1 || echo 0)" \
+            EXPECTED_LAUNCHER_PROFILE=specfact-customer-commit-review \
+            "$CUSTOMER_ROOT/venv/bin/python" -I - <<'PY_NAMESPACE'
+          import json
+          import os
+          import re
+          from pathlib import Path
+
+          logs = {}
+          try:
+              for name in ("NAMESPACE_AUDIT_BASELINE", "NAMESPACE_AUDIT"):
+                  with Path(os.environ[name]).open("rb") as stream:
+                      logs[name] = stream.read(16 * 1024 * 1024 + 1)
+                  if len(logs[name]) > 16 * 1024 * 1024:
+                      raise ValueError("private audit bound exceeded")
+              before, after = logs["NAMESPACE_AUDIT_BASELINE"], logs["NAMESPACE_AUDIT"]
+              boundary = os.environ.get("NAMESPACE_AUDIT_BASELINE_CAPTURED") == "1" and os.environ["NAMESPACE_AUDIT_CAPTURED"] == "1" and after.startswith(before)
+              text = after[len(before):][-8192:].decode("utf-8", errors="replace") if boundary else ""
+          except (OSError, ValueError, KeyError):
+              boundary, text = False, ""
+          records = [line for line in text.splitlines() if 'apparmor="DENIED"' in line and ('comm="bwrap-static"' in line or re.search(r'comm="[0-9]{1,10}"', line) is not None)]
+          expected = 'profile="' + os.environ["EXPECTED_LAUNCHER_PROFILE"] + '"'
+          print(json.dumps({"phase": "namespace_audit",
+              "audit_captured": os.environ["NAMESPACE_AUDIT_CAPTURED"] == "1",
+              "audit_boundary_available": boundary,
+              "apparmor_denial_audit_observed": bool(records),
+              "launcher_name_audit_observed": any('comm="bwrap-static"' in line for line in records),
+              "numeric_descriptor_name_audit_observed": any(re.search(r'comm="[0-9]{1,10}"', line) is not None for line in records),
+              "expected_profile_audit_observed": any(expected in line for line in records),
+              "unconfined_profile_audit_observed": any('profile="unconfined"' in line for line in records),
+              "net_admin_denial_observed": any('capname="net_admin"' in line for line in records),
+              "userns_denial_observed": any('operation="userns_create"' in line for line in records)}))
+          PY_NAMESPACE
       - name: Exercise cold and warm fixtures and modules repository
         shell: bash
         run: |
@@ -469,7 +648,7 @@ jobs:
           env -i HOME="$TRUSTED_ROOT/home" TMPDIR="$TRUSTED_ROOT/tmp" \
             PATH="$TRUSTED_ROOT/venv/bin:/usr/bin:/bin" SPECFACT_MODULES_BRANCH=main \
             "$TRUSTED_ROOT/venv/bin/python" -I -m specfact_cli.cli \
-            module install nold-ai/specfact-code-review --scope user --version 0.51.0 --source marketplace
+            module install nold-ai/specfact-code-review --scope user --version 0.51.2 --source marketplace
       - name: Capture immutable candidate subject without executing its host code
         shell: bash
         run: |
@@ -493,6 +672,7 @@ jobs:
           EOF
           sudo apparmor_parser -r "$TRUSTED_ROOT/capsule.apparmor"
       - name: Prepare and review through the authenticated installed controller
+        id: independent_review
         shell: bash
         run: |
           set -euo pipefail
@@ -526,6 +706,9 @@ jobs:
               repository=Path.cwd(), scope="index", portable_project_runtime=True,
           ))
           try:
+              if (resolution.status == "NOT_APPLICABLE" and resolution.reason == "no_governed_impact"
+                  and not resolution.selected_paths and resolution.ci_exit_code == 0):
+                  raise SystemExit(0)
               if resolution.status != "PASS" or resolution.base_snapshot is None or resolution.head_snapshot is None:
                   reason = resolution.reason or "missing_snapshots"
                   public_codes = {
@@ -560,12 +743,32 @@ jobs:
             "$TRUSTED_ROOT/subject" prepare-index "$TRUSTED_ROOT/project.toml" \
             > "$TRUSTED_ROOT/preparation.private.log" 2>&1; then
             echo "Independent signed reviewer preparation failed; no acceptance."
+            PREPARATION_LOG="$TRUSTED_ROOT/preparation.private.log" \
+              "$TRUSTED_ROOT/venv/bin/python" -I - <<'PY_FAILURE'
+          import json
+          import os
+          from pathlib import Path
+
+          try:
+              with Path(os.environ["PREPARATION_LOG"]).open("rb") as stream:
+                  stream.seek(0, 2)
+                  stream.seek(max(0, stream.tell() - 8192))
+                  text = stream.read(8192).decode("utf-8", errors="replace")
+          except OSError:
+              text = ""
+          markers = {"namespace_unavailable": "capsule_namespace_unavailable",
+              "project_test_selection_ambiguous": "test_selection_ambiguous",
+              "project_runtime_prepare_failed": "project_runtime_preparation_failed"}
+          code = next((code for marker, code in markers.items() if marker in text), "unclassified_preparation_failure")
+          print(json.dumps({"status": "INCOMPLETE", "phase": "trusted_index_preparation", "diagnostic": code}))
+          PY_FAILURE
             if [ -f "$TRUSTED_ROOT/status.public.json" ]; then
               cat "$TRUSTED_ROOT/status.public.json"
             fi
             exit 1
           fi
           review_exit=0
+          touch "$TRUSTED_ROOT/review-attempted"
           "${trusted_env[@]}" "$TRUSTED_ROOT/venv/bin/python" -I -c \
             'import subprocess,sys
           try:
@@ -780,3 +983,125 @@ jobs:
           PY
           fi
           exit "$review_exit"
+      - name: Project independent review failure privately
+        if: failure() && steps.independent_review.outcome == 'failure'
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f "$TRUSTED_ROOT/review-attempted" || exit 0
+          REVIEW_REPORT="$TRUSTED_ROOT/review.private.json" REVIEW_LOG="$TRUSTED_ROOT/review.private.log" \
+            "$TRUSTED_ROOT/venv/bin/python" -I - <<'PY_REVIEW_FAILURE'
+          import json
+          import os
+          from pathlib import Path
+
+          def unique_json_object(pairs):
+              value = {}
+              for key, item in pairs:
+                  if key in value:
+                      raise ValueError("duplicate JSON field")
+                  value[key] = item
+              return value
+
+          def complete_private_report(data):
+              value = json.loads(data, object_pairs_hook=unique_json_object)
+              if not isinstance(value, dict):
+                  return {}
+              if not isinstance(value.get("findings"), list) or not isinstance(value.get("analyzer_evidence"), list):
+                  return {}
+              return value
+
+          def crosshair_failure_observations(findings):
+              markers = {
+                  "CrossHair timed out before mandatory evidence completed.": "crosshair_timeout_observed",
+                  "CrossHair process error:": "crosshair_process_error_observed",
+                  "Unrecognized CrossHair output:": "crosshair_unrecognized_output_observed",
+                  "Unable to execute CrossHair:": "crosshair_execute_error_observed",
+                  "ModuleNotFoundError": "module_not_found_observed",
+                  "ImportError": "import_error_observed", "SyntaxError": "syntax_error_observed",
+                  "PermissionError": "permission_error_observed", "TypeError": "type_error_observed",
+                  "FileNotFoundError": "file_not_found_observed", "ValueError": "value_error_observed",
+                  "wrong parameter order": "wrong_parameter_order_observed",
+              }
+              observed = set()
+              for finding in findings[:10000]:
+                  if not isinstance(finding, dict) or finding.get("category") != "tool_error" or finding.get("tool") != "crosshair":
+                      continue
+                  message = finding.get("message", "")
+                  if isinstance(message, str):
+                      observed.update(code for marker, code in markers.items() if marker in message)
+              return sorted(observed)
+
+          def incomplete_sides(members):
+              observed = {}
+              for name, group in members:
+                  row = group[0]
+                  for side in ("base", "head"):
+                      node = row.get(side)
+                      if isinstance(node, dict) and (node.get("execution_state") == "error" or node.get("evidence_outcome") == "UNKNOWN"):
+                          observed.setdefault(name, set()).add(side)
+              return {name: sorted(sides) for name, sides in sorted(observed.items())}
+
+          report, header = {}, {}
+          outcome = "unreadable_report"
+          diagnostic_bound = 32 * 1024 * 1024
+          try:
+              with Path(os.environ["REVIEW_REPORT"]).open("rb") as stream:
+                  data = stream.read(diagnostic_bound + 1)
+              if len(data) > 2 * 1024 * 1024:
+                  outcome = "oversized_report"
+                  if len(data) <= diagnostic_bound:
+                      header = complete_private_report(data)
+              else:
+                  report = complete_private_report(data)
+                  outcome = "structured_report" if report else "invalid_report_shape"
+          except FileNotFoundError:
+              outcome = "missing_report"
+          except json.JSONDecodeError:
+              if outcome != "oversized_report":
+                  outcome = "invalid_json"
+          except (OSError, ValueError, RecursionError):
+              pass
+          evidence_source = report if outcome == "structured_report" else header
+          rows = [row for row in evidence_source.get("analyzer_evidence", [])[:10] if isinstance(row, dict)]
+          nodes = rows + [row[side] for row in rows for side in ("base", "head") if isinstance(row.get(side), dict)]
+          diagnostics = [node.get("diagnostic", "") for node in nodes if isinstance(node.get("diagnostic", ""), str)]
+          if outcome != "structured_report":
+              try:
+                  with Path(os.environ["REVIEW_LOG"]).open("rb") as stream:
+                      stream.seek(0, 2)
+                      stream.seek(max(0, stream.tell() - 8192))
+                      diagnostics.append(stream.read(8192).decode("utf-8", errors="replace"))
+              except OSError:
+                  pass
+          findings = report.get("findings", [])
+          diagnostics += [finding["message"] for finding in findings if isinstance(finding, dict) and finding.get("category") == "tool_error" and isinstance(finding.get("message"), str)]
+          allowed = ("ai-bloat-ast", "ast-clean-code", "basedpyright", "contracts", "pylint", "radon", "ruff", "semgrep-clean", "semgrep-bugs", "targeted-pytest-coverage")
+          members = [(row.get("id"), [row] + [row[side] for side in ("base", "head") if isinstance(row.get(side), dict)]) for row in rows if row.get("id") in allowed]
+          errors = sorted({name for name, group in members if any(node.get("execution_state") == "error" for node in group)})
+          unknowns = sorted({name for name, group in members if any(node.get("evidence_outcome") == "UNKNOWN" for node in group)})
+          markers = {"namespace_unavailable": "namespace_unavailable",
+              "capsule_materialization_failed": "capsule_materialization_failed",
+              "analyzer_reported_incomplete_execution": "analyzer_reported_incomplete_execution",
+              "project_runtime_prepare_failed": "project_runtime_prepare_failed",
+              "local_pytest_inventory_failed": "local_pytest_inventory_failed",
+              "project_test_selection_ambiguous": "project_test_selection_ambiguous",
+              "TimeoutExpired": "timeout_marker_observed"}
+          codes = [code for marker, code in markers.items() if any(marker in text for text in diagnostics)]
+          assurance = report.get("assurance_status")
+          verdict = report.get("overall_verdict")
+          projected = {"phase": "independent_review", "report_outcome": outcome,
+              "assurance_status": assurance if assurance in ("PASS", "FAIL", "UNKNOWN", "NOT_APPLICABLE") else "UNAVAILABLE",
+              "overall_verdict": verdict if verdict in ("PASS", "PASS_WITH_ADVISORY", "FAIL") else "UNAVAILABLE",
+              "findings_present": bool(findings),
+              "tool_error_present": any(isinstance(finding, dict) and finding.get("category") == "tool_error" for finding in findings),
+              "execution_error_present": any(node.get("execution_state") == "error" for node in nodes),
+              "unknown_evidence_present": evidence_source.get("has_unknown_required_evidence") is True or any(node.get("evidence_outcome") == "UNKNOWN" for node in nodes),
+              "error_analyzers": errors, "unknown_analyzers": unknowns,
+              "diagnostic_observations": codes or ["unclassified"]}
+          if outcome == "oversized_report":
+              projected["report_header_observed"] = bool(header)
+              projected["error_analyzer_sides"] = incomplete_sides(members)
+              projected["crosshair_failure_observations"] = crosshair_failure_observations(header.get("findings", []))
+          print(json.dumps(projected))
+          PY_REVIEW_FAILURE
