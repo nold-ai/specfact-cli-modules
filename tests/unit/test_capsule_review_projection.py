@@ -1445,3 +1445,45 @@ def test_candidate_secondary_projector_crash_preserves_review_exit(tmp_path: Pat
         "phase": "review",
         "diagnostic": "review_projection_failed",
     }
+
+
+@pytest.mark.parametrize("job_name", ["customer", "independent-review"])
+@pytest.mark.parametrize("module_name", ["ast", "json"])
+@pytest.mark.parametrize("import_origin", ["checkout", "pythonpath"])
+@pytest.mark.parametrize("review_exit", [17, 124])
+def test_actual_projector_launch_excludes_untrusted_imports(
+    tmp_path: Path, job_name, module_name, import_origin, review_exit
+):
+    workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())
+    name = STEP_NAME if job_name == "customer" else "Prepare and review through the authenticated installed controller"
+    recipe = next(step["run"] for step in workflow["jobs"][job_name]["steps"] if step.get("name") == name)
+    invocation = next(line for line in recipe.splitlines() if "REVIEW_PUBLIC_EXIT=" in line and "<<'PY'" in line)
+    interpreter = tmp_path / "venv/bin/python"
+    interpreter.parent.mkdir(parents=True)
+    interpreter.symlink_to(sys.executable)
+    candidate = tmp_path / "candidate"
+    candidate.mkdir()
+    ambient = tmp_path / "ambient"
+    ambient.mkdir()
+    marker = tmp_path / "untrusted-import-executed"
+    poison = candidate if import_origin == "checkout" else ambient
+    (poison / f"{module_name}.py").write_text(
+        f"from pathlib import Path\nPath({str(marker)!r}).write_text('executed')\nraise RuntimeError('UNTRUSTED_IMPORT')\n"
+    )
+    report = candidate / ".specfact/code-review.json" if job_name == "customer" else tmp_path / "review.private.json"
+    report.parent.mkdir(exist_ok=True)
+    report.write_text("PRIVATE_REPORT invalid JSON")
+    shell = f"set -e\ntrusted_env=(env)\nreview_exit={review_exit}\n" + invocation + "\n" + public_projector(job_name)
+    shell += '\nPY\nexit "$review_exit"\n'
+    environment = dict(os.environ, CUSTOMER_ROOT=str(tmp_path), TRUSTED_ROOT=str(tmp_path), PYTHONPATH=str(ambient))
+    environment["REVIEW_PUBLIC_REPORT"] = str(report)
+    result = subprocess.run(
+        ["bash", "-c", shell], cwd=candidate, env=environment, capture_output=True, text=True, check=False
+    )
+    assert not marker.exists(), "Candidate or ambient standard-library lookalikes executed on the host"
+    assert result.returncode == review_exit and result.stderr == ""
+    rows = [json.loads(line) for line in result.stdout.splitlines()]
+    assert rows[-1] == {"status": "INCOMPLETE", "phase": "review", "diagnostic": "review_report_unreadable"}
+    assert (review_exit != 124) or rows[0]["diagnostic"] == "analysis_timeout"
+    assert "PRIVATE_REPORT" not in result.stdout and "UNTRUSTED_IMPORT" not in result.stdout
+    assert report.read_text() == "PRIVATE_REPORT invalid JSON"

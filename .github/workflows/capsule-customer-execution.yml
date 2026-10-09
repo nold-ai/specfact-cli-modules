@@ -244,7 +244,7 @@ jobs:
             "$CUSTOMER_ROOT/venv/bin/python" "$GITHUB_WORKSPACE/scripts/pre_commit_code_review.py" "${review_paths[@]}" || review_exit=$?
           if [ "$review_exit" -ne 0 ]; then
             # Print bounded codes/public locations; raw reports, receipts and logs stay private.
-            REVIEW_PUBLIC_EXIT="$review_exit" "$CUSTOMER_ROOT/venv/bin/python" - <<'PY' 2> "$CUSTOMER_ROOT/review-projection.private.log" || printf '%s\n' '{"status":"INCOMPLETE","phase":"review","diagnostic":"review_projection_failed"}' || true
+            REVIEW_PUBLIC_EXIT="$review_exit" "$CUSTOMER_ROOT/venv/bin/python" -I - <<'PY' 2> "$CUSTOMER_ROOT/review-projection.private.log" || printf '%s\n' '{"status":"INCOMPLETE","phase":"review","diagnostic":"review_projection_failed"}' || true
           import ast
           import re
           import json

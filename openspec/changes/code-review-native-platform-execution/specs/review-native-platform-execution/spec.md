@@ -1187,6 +1187,7 @@ The repository SHALL execute every retained assertion in a required context that
 - **THEN** it SHALL read at most the existing 32 MiB diagnostic bound plus one overflow byte and emit only a fixed incomplete diagnostic
 - **AND** execution failure in any diagnostic command in the failed candidate/review branches cannot prevent the final original nonzero review exit, including timeout124; no failure becomes PASS and private payload/trace text stays private
 - **AND** unexpected projector stderr is retained only in a private diagnostic file and the public log receives fixed `review_projection_failed` incomplete evidence
+- **AND** every inline failure diagnostic interpreter SHALL use isolated Python mode, excluding the candidate working directory and ambient Python import paths; candidate standard-library lookalikes cannot execute on the host before projection or alter the original reviewer exit
 
 
 #### Scenario: Native PR verification follows transitive release inputs
