@@ -213,3 +213,10 @@ Runbook and exact candidate limitations: [NATIVE_RELEASE.md](NATIVE_RELEASE.md).
 - [x] Configure protected signing/publication environments with djm81 as required approver, self-review prevention and admin bypass disabled.
 - [x] Owner provisioned the dedicated native key/passphrase secrets; authenticated metadata confirms both names. Protected CI still must validate values against the public root.
 - [ ] Pass the current-head hosted review/build/acceptance gates, promote through dev/main with human review, publish and verify installed customer execution.
+
+
+## PR #498 current review corrections (9 October 2026)
+
+- [x] Specify and reproduce fatal Pylint attribution on a later selected source; preserve selected paths and lines while retaining global fatal fallback.
+- [x] Specify and reproduce native source/registry acceptance drift; require exact source manifest identity for native version selection and receipt verification while preserving the published Linux candidate baseline.
+- [ ] Complete current-head quality gates, normal CI payload signing and review; registry/catalog publication and installed native acceptance remain outstanding.

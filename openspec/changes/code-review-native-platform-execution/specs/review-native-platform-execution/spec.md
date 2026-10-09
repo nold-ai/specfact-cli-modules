@@ -1161,3 +1161,18 @@ The repository SHALL execute every retained assertion in a required context that
 - **THEN** it SHALL check out the triggering event commit, expose the published release tag to the existing installation identity validator and make tag references available
 - **AND** the pinned registry artifact and installed-identity receipt SHALL derive from that release checkout, not the later main registry
 - **AND** a tag/checkout mismatch fails before installation version selection; manual dispatch remains bound to its selected event commit
+
+
+#### Scenario: Fatal analyzer diagnostics retain their selected source location
+
+- **WHEN** Pylint emits a fatal diagnostic naming any selected source file
+- **THEN** its governed tool-error finding SHALL retain that selected path and reported line, including relative path variants and a later file in the selection
+- **AND** an unselected or global fatal diagnostic still becomes incomplete tool-error evidence attributed to the fallback selected file; unrelated nonfatal diagnostics remain excluded
+
+
+#### Scenario: Native installed acceptance cannot attest an older registry module
+
+- **WHEN** native installed customer acceptance selects or verifies its marketplace module
+- **THEN** the source package manifest SHALL equal the pinned registry archive manifest, including version, integrity and authenticated resource identity, before installation or a receipt can succeed
+- **AND** missing, malformed, older or divergent source/registry identities fail closed without a receipt; the ordinary Linux candidate can still intentionally select a published baseline from a registry-only checkout
+- **AND** registry publication remains the normal reviewed CI release flow, and an unpublished source patch cannot be presented as completed installed acceptance

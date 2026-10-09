@@ -80,10 +80,11 @@ def _finding_from_item(item: object, *, allowed_paths: set[str], selected_path: 
     message_id = item["message-id"]
     if not isinstance(message_id, str):
         raise ValueError("pylint message-id must be a string")
-    if message_id.startswith("F"):
-        filename = str(selected_path)
-    elif normalize_path_variants(filename).isdisjoint(allowed_paths):
-        return None
+    if normalize_path_variants(filename).isdisjoint(allowed_paths):
+        if message_id.startswith("F"):
+            filename = str(selected_path)
+        else:
+            return None
     line = _coerce_pylint_line(item.get("line"))
     message = _coerce_pylint_message(item.get("message"))
 

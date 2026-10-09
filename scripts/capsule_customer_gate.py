@@ -484,7 +484,7 @@ def _registry_entry(repository: Path) -> dict[str, Any]:
     return next(entry for entry in registry["modules"] if entry["id"] == "nold-ai/specfact-code-review")
 
 
-def _expected_installation(repository: Path) -> dict[str, Any]:
+def _expected_installation(repository: Path, *, require_source_identity: bool = False) -> dict[str, Any]:
     import tarfile
 
     import yaml
@@ -501,6 +501,14 @@ def _expected_installation(repository: Path) -> dict[str, Any]:
         manifest = yaml.safe_load(manifest_file.read())
     if (manifest.get("name"), str(manifest.get("version"))) != (entry["id"], entry["latest_version"]):
         raise ValueError("registry archive manifest version does not match the checkout")
+    if require_source_identity:
+        source_path = repository / "packages/specfact-code-review/module-package.yaml"
+        try:
+            source_manifest = yaml.safe_load(source_path.read_text(encoding="utf-8"))
+        except (OSError, yaml.YAMLError) as error:
+            raise ValueError("source module manifest is missing or malformed") from error
+        if not isinstance(source_manifest, dict) or source_manifest != manifest:
+            raise ValueError("source module manifest differs from the pinned registry artifact")
     return manifest
 
 
@@ -521,12 +529,12 @@ def _release_checkout_identity(repository: Path) -> dict[str, str]:
     return {"commit": commit, "release_tag": tag}
 
 
-def _verify_installation(repository: Path, evidence: Path) -> None:
+def _verify_installation(repository: Path, evidence: Path, *, require_source_identity: bool = False) -> None:
     import yaml
     from specfact_cli.models.module_package import ModulePackageMetadata
     from specfact_cli.registry import module_installer
 
-    expected = _expected_installation(repository)
+    expected = _expected_installation(repository, require_source_identity=require_source_identity)
     package = module_installer.USER_MODULES_ROOT / "specfact-code-review"
     installed = yaml.safe_load((package / "module-package.yaml").read_text(encoding="utf-8"))
     _validate_installed_manifest(expected, installed)
@@ -609,13 +617,14 @@ def main() -> int:
     parser.add_argument("--expect-namespace-denial", action="store_true")
     parser.add_argument("--installation-version", action="store_true")
     parser.add_argument("--verify-installation", action="store_true")
+    parser.add_argument("--require-source-identity", action="store_true")
     args = parser.parse_args()
     if args.installation_version:
         _release_checkout_identity(args.repository)
-        print(_expected_installation(args.repository)["version"])
+        print(_expected_installation(args.repository, require_source_identity=args.require_source_identity)["version"])
         return 0
     if args.verify_installation:
-        _verify_installation(args.repository, args.evidence)
+        _verify_installation(args.repository, args.evidence, require_source_identity=args.require_source_identity)
         return 0
     cache = _validate_customer_environment(args.mode)
     evidence = args.evidence.resolve()

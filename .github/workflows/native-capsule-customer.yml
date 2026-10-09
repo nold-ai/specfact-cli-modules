@@ -49,13 +49,13 @@ jobs:
           unset GITHUB_TOKEN GH_TOKEN PYTHONPATH SPECFACT_ALLOW_UNSIGNED SPECFACT_MODULES_ROOTS
           EXPECTED_MODULE_VERSION="$(python scripts/capsule_customer_gate.py \
             --repository "$GITHUB_WORKSPACE" --evidence "$CUSTOMER_ROOT/install-evidence" \
-            --mode public --installation-version)"
+            --mode public --require-source-identity --installation-version)"
           cd "$CUSTOMER_ROOT"
           specfact module install nold-ai/specfact-code-review --scope user \
             --version "$EXPECTED_MODULE_VERSION" --source marketplace
           python "$GITHUB_WORKSPACE/scripts/capsule_customer_gate.py" \
             --repository "$GITHUB_WORKSPACE" --evidence "$CUSTOMER_ROOT/install-evidence" \
-            --mode public --verify-installation
+            --mode public --require-source-identity --verify-installation
       - name: Prove anonymous cold acquisition, real project execution and offline reuse
         env:
           PLATFORM_LABEL: ${{ matrix.runner }}

@@ -48,7 +48,7 @@ catalogs or establish production acceptance.
 
 `.github/workflows/native-capsule-customer.yml` independently installs public
 `specfact-cli==0.55.4` and the official signed marketplace module into a fresh
-ordinary-user HOME/venv. It verifies installation, forbids developer overrides
+ordinary-user HOME/venv. Both version selection and installation verification require the source package manifest to equal the pinned registry archive manifest, including integrity and authenticated resources. An unpublished source patch therefore fails before installation and cannot attest an older registry bundle. The Linux candidate retains its deliberate published-baseline selection. Normal reviewed CI registry publication must precede native installed acceptance. It verifies installation, forbids developer overrides
 and registry credentials, and invokes the normal installed CLI. The nine-cell
 customer matrix must complete anonymous cold acquisition, actual ten-analyzer
 execution, project tests/coverage/extensions, offline project preparation and

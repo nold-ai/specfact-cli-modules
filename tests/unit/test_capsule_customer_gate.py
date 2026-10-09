@@ -343,7 +343,10 @@ def test_repository_slice_uses_original_dependency_compatible_source_and_tests()
     assert gate._REPOSITORY_PATHS == ("publish_bundle_selection.py", "tests/unit/test_publish_bundle_selection.py")
 
 
-def test_installed_identity_requires_signature_and_records_pinned_receipt(tmp_path, monkeypatch):
+@pytest.mark.parametrize("require_source_identity", [False, True])
+def test_installed_identity_requires_signature_and_records_pinned_receipt(
+    tmp_path, monkeypatch, require_source_identity
+):
     import json
 
     import yaml
@@ -368,7 +371,23 @@ def test_installed_identity_requires_signature_and_records_pinned_receipt(tmp_pa
         return True
 
     monkeypatch.setattr(module_installer, "verify_module_artifact", verify)
-    gate._verify_installation(Path(__file__).parents[2], tmp_path / "evidence")
+    repository = Path(__file__).parents[2]
+    if require_source_identity:
+        import shutil
+
+        original = repository
+        repository = tmp_path / "repository"
+        registry = repository / "registry"
+        registry.mkdir(parents=True)
+        entry = gate._registry_entry(original)
+        (registry / "index.json").write_text(json.dumps({"modules": [entry]}))
+        archive = registry / entry["download_url"]
+        archive.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(original / "registry" / entry["download_url"], archive)
+        source = repository / "packages/specfact-code-review/module-package.yaml"
+        source.parent.mkdir(parents=True)
+        source.write_text(yaml.safe_dump(expected))
+    gate._verify_installation(repository, tmp_path / "evidence", require_source_identity=require_source_identity)
     assert calls == [
         {
             "allow_unsigned": False,

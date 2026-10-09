@@ -265,3 +265,25 @@ def test_pylint_fatal_diagnostic_is_tool_error_even_outside_selection(
     assert fatal.file == str(selected)
     assert "internal crash" in fatal.message
     assert any(finding.rule == "W0702" and finding.category == "architecture" for finding in findings)
+
+
+@mark.parametrize("message_id", ["F0001", "F0002", "F0010"])
+@mark.parametrize("relative_path", [False, True])
+def test_pylint_fatal_retains_later_selected_file_and_line(
+    tmp_path: Path, monkeypatch: MonkeyPatch, message_id: str, relative_path: bool
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    first, later = tmp_path / "first.py", tmp_path / "later.py"
+    reported = "later.py" if relative_path else str(later)
+    payload = [{"message-id": message_id, "path": reported, "line": 7, "message": "Fatal module diagnostic"}]
+    monkeypatch.setattr(
+        subprocess, "run", Mock(return_value=completed_process("pylint", stdout=json.dumps(payload), returncode=1))
+    )
+
+    findings = run_pylint([first, later])
+
+    assert len(findings) == 1
+    assert findings[0].file == reported
+    assert findings[0].line == 7
+    assert findings[0].category == "tool_error"
+    assert findings[0].severity == "error"
