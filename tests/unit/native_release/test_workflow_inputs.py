@@ -81,3 +81,14 @@ def test_filter_globs_respect_directory_boundaries(path, pattern, expected, monk
     # These filters use literals and stars; a single star must not consume a slash.
     monkeypatch.setattr(yaml, "load", lambda *_args, **_kwargs: {"on": {"pull_request": {"paths": [pattern]}}})
     assert _schedules_native(path) is expected
+
+
+def test_publication_authority_has_its_own_protected_main_gate():
+    workflow = yaml.load((ROOT / ".github/workflows/native-capsule-release.yml").read_text(), Loader=yaml.BaseLoader)
+    job = workflow["jobs"]["publish-candidate"]
+    assert job["permissions"]["packages"] == "write"
+    condition = job["if"]
+    assert "github.event_name == 'workflow_dispatch'" in condition
+    assert "inputs.publish_candidate" in condition
+    assert "github.ref == 'refs/heads/main'" in condition
+    assert "github.ref_protected" in condition

@@ -59,7 +59,7 @@ def _identity(metadata: os.stat_result) -> _Identity:
     )
 
 
-def _runtime_tree(root: Path) -> dict[str, _TreeEntry]:
+def _runtime_tree(root: Path, *, exclude_vcs: bool = False) -> dict[str, _TreeEntry]:
     """Capture a bounded, indirection-free tree without following project links."""
     entries: dict[str, _TreeEntry] = {}
     files = 0
@@ -77,6 +77,8 @@ def _runtime_tree(root: Path) -> dict[str, _TreeEntry]:
             entries[relative] = ("directory", _identity(metadata))
             children = sorted(os.scandir(current), key=lambda entry: entry.name)
             for child in children:
+                if exclude_vcs and current == root and child.name == ".git":
+                    continue  # Copied VCS context has its own verification boundary.
                 path = Path(child.path)
                 child_relative = path.relative_to(root).as_posix()
                 child_metadata = child.stat(follow_symlinks=False)
@@ -1749,7 +1751,7 @@ def _read_preparation_document(path: Path) -> dict[str, Any]:
 def _source_suffix_index(project: Path) -> dict[tuple[str, ...], list[tuple[PurePosixPath, int]]]:
     candidates: dict[tuple[str, ...], list[tuple[PurePosixPath, int]]] = {}
     index_entries = 0
-    for relative, (kind, identity) in _runtime_tree(project).items():
+    for relative, (kind, identity) in _runtime_tree(project, exclude_vcs=True).items():
         path = PurePosixPath(relative)
         if kind != "file" or path.suffix not in {".py", ".pyi"}:
             continue

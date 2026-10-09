@@ -1196,3 +1196,36 @@ The repository SHALL execute every retained assertion in a required context that
 - **THEN** native release PR filtering SHALL schedule the unchanged secret-free build and nine-cell execution matrix for that change
 - **AND** unrelated documentation, packages and unit tests retain filtered execution; matrix dimensions, deadlines, protected-main signing/publication approval and runtime bytes remain unchanged
 - **AND** trigger regressions distinguish single-star segment matches from recursive double-star matches, so a root script glob cannot conceal missing directory coverage
+
+
+### Requirement: Release review corrections preserve source and failure boundaries
+
+Source-to-test collision detection SHALL count distinct Python production modules only, treating same-path `.py`/`.pyi` inputs as one module. Source-root indexing SHALL exclude the separately copied root `.git` context from its source inventory budgets, while retaining source bounds and default runtime-tree validation. Native pytest observation capture SHALL preserve actionable incomplete-evidence diagnostics for absent or malformed ordinary artifacts, without reading substituted, symlinked, special or oversized artifacts.
+
+#### Scenario: Documentation and stub counterparts do not invent module ambiguity
+- **GIVEN** one Python module, its stub or matching documentation, and one explicitly selected matching test among multiple candidates
+- **WHEN** targeted test selection runs
+- **THEN** the explicit test is selected; distinct Python modules still require complete disambiguation
+
+#### Scenario: VCS metadata has an independent inventory boundary
+- **GIVEN** a bounded source snapshot and separately copied `.git` history exceeding the source-index budget
+- **WHEN** source roots are inferred
+- **THEN** source indexing succeeds without inspecting `.git`; ordinary runtime validation and source limits remain enforced
+
+#### Scenario: Pytest failures keep their remedy and remain incomplete
+- **GIVEN** pytest exits with a configuration error or leaves absent/malformed ordinary result artifacts
+- **WHEN** native observation capture runs before the evaluator
+- **THEN** the evaluator reports the specific incomplete pytest evidence instead of a worker request failure
+- **AND** unsafe artifact paths/types/sizes remain rejected before evaluator reads
+- **AND** a parsed observer record with a missing or non-string node identifier retains the explicit worker-contract rejection; identities are never coerced or projected as valid observations
+
+
+#### Scenario: Publication authority gates its own protected source
+- **GIVEN** the publication job holds package write permission
+- **WHEN** its workflow eligibility is evaluated
+- **THEN** its own condition requires explicit dispatch, publication opt-in and protected main, independently of the signing dependency
+
+#### Scenario: Published independent reviewer pin survives dev registry advancement
+- **WHEN** dev publishes a newer bundle while protected main still supplies the literal independent reviewer pin
+- **THEN** repository tests SHALL verify that pinned archived bundle, its detached archive checksum, core compatibility and cryptographic module signature
+- **AND** SHALL NOT require the isolated reviewer pin to equal the advancing dev registry latest entry or replace the protected-main installation with candidate source

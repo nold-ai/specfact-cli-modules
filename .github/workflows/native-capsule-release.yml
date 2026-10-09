@@ -226,7 +226,7 @@ jobs:
 
   publish-candidate:
     needs: sign-and-stage
-    if: github.event_name == 'workflow_dispatch' && inputs.publish_candidate
+    if: github.event_name == 'workflow_dispatch' && inputs.publish_candidate && github.ref == 'refs/heads/main' && github.ref_protected
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     environment: native-capsule-publication

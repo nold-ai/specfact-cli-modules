@@ -202,14 +202,19 @@ checked offline), then prepare license-bearing candidate artifacts:
   --release-archive /absolute/inputs/z3-5.1.0-arm64-osx-13.3.zip
 ```
 
-The schema-3 sidecar verifies tagged source/metadata identity and byte-links 28
+This command intentionally describes the historical specfact.1 path. It omits
+`--darwin-only` and does not produce the specfact.2 wheel pinned by the current
+Darwin locks. For current preparation, use the explicit `--darwin-only` command
+and hash in the opening section.
+
+The historical schema-3 sidecar verifies tagged source/metadata identity and byte-links 28
 native/source/header members to that authenticated release. The output directory
 also contains the exact supplemental `Z3-LICENSE.txt`; the corrected wheel is
 byte-identical. Final signed redistribution must carry and authenticate that
 license file separately: installing the wheel alone does not include it.
 
-The supplemental MIT text covers the verified Z3 Darwin/source payload; it does
-not supply Microsoft VC runtime terms or Windows binary-source linkage. Exact
-unlinked DLL identities remain named in the reviewed provenance and sidecar.
+For that historical specfact.1 wheel, the supplemental MIT text covers the verified
+Z3 Darwin/source payload; it does not supply Microsoft VC runtime terms or Windows
+binary-source linkage. Exact unlinked DLL identities remain named in the reviewed provenance and sidecar.
 Neither this evidence nor adapter conformance admits the complete dependency
 closure or enables production execution.
