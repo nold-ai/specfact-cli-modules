@@ -211,5 +211,5 @@ Runbook and exact candidate limitations: [NATIVE_RELEASE.md](NATIVE_RELEASE.md).
 - [x] Resolve current dev integration conflicts while retaining native isolation, diagnostics and current reviewer bootstrap regressions.
 - [x] Fix transferred #502 same-stem source/test ambiguity with spec-first failing tests and passing affected regression coverage.
 - [x] Configure protected signing/publication environments with djm81 as required approver, self-review prevention and admin bypass disabled.
-- [ ] Provision the dedicated environment-scoped native publisher signing secret via the owner-managed CI/CD secret process.
+- [x] Owner provisioned the dedicated native key/passphrase secrets; authenticated metadata confirms both names. Protected CI still must validate values against the public root.
 - [ ] Pass the current-head hosted review/build/acceptance gates, promote through dev/main with human review, publish and verify installed customer execution.

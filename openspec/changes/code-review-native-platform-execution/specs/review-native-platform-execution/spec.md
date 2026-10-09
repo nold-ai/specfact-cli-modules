@@ -1153,3 +1153,11 @@ The repository SHALL execute every retained assertion in a required context that
 - **AND** a child proof without auto-loaded xdist retains the repository's serial reporting/import options while removing only xdist worker controls
 - **AND** hosted independent review uses a literal signed published marketplace baseline, currently 0.51.2, without developer overrides
 - **AND** full and SMART host proofs run without caller test filters; only the portable suite receives those filters
+
+#### Scenario: Installed customer proof binds the triggering release identity
+
+- **GIVEN** a published release points to an older commit and main has advanced
+- **WHEN** the native installed customer matrix runs for that release
+- **THEN** it SHALL check out the triggering event commit, expose the published release tag to the existing installation identity validator and make tag references available
+- **AND** the pinned registry artifact and installed-identity receipt SHALL derive from that release checkout, not the later main registry
+- **AND** a tag/checkout mismatch fails before installation version selection; manual dispatch remains bound to its selected event commit
