@@ -415,7 +415,7 @@ def public_projector(job_name):
     workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())
     name = STEP_NAME if job_name == "customer" else "Prepare and review through the authenticated installed controller"
     recipe = next(step["run"] for step in workflow["jobs"][job_name]["steps"] if step.get("name") == name)
-    return recipe.rsplit("- <<'PY'\n", 1)[1].split("\nPY\n", 1)[0]
+    return recipe.rsplit("- <<'PY'", 1)[1].split("\n", 1)[1].split("\nPY\n", 1)[0]
 
 
 def write_public_phase_record_report(root, nodeid, detail):

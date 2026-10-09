@@ -1176,3 +1176,11 @@ The repository SHALL execute every retained assertion in a required context that
 - **THEN** the source package manifest SHALL equal the pinned registry archive manifest, including version, integrity and authenticated resource identity, before installation or a receipt can succeed
 - **AND** missing, malformed, older or divergent source/registry identities fail closed without a receipt; the ordinary Linux candidate can still intentionally select a published baseline from a registry-only checkout
 - **AND** registry publication remains the normal reviewed CI release flow, and an unpublished source patch cannot be presented as completed installed acceptance
+
+
+#### Scenario: Failure diagnostics cannot replace the required review exit
+
+- **WHEN** either hosted failure-report projector receives unreadable, malformed, non-object, deeply nested or oversized private JSON
+- **THEN** it SHALL read at most the existing 32 MiB diagnostic bound plus one overflow byte and emit only a fixed incomplete diagnostic
+- **AND** execution failure in any diagnostic command in the failed candidate/review branches cannot prevent the final original nonzero review exit, including timeout124; no failure becomes PASS and private payload/trace text stays private
+- **AND** unexpected projector stderr is retained only in a private diagnostic file and the public log receives fixed `review_projection_failed` incomplete evidence

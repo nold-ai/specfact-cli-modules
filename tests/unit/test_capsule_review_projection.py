@@ -372,7 +372,9 @@ def test_candidate_crosshair_failure_emits_only_fixed_classes(tmp_path, message,
     workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())
     step = next(item for item in workflow["jobs"]["customer"]["steps"] if item.get("name") == STEP_NAME)
     assert "PY_CANDIDATE_FAILURE" in step["run"]
-    program = step["run"].split("<<'PY_CANDIDATE_FAILURE'\n", 1)[1].split("\nPY_CANDIDATE_FAILURE", 1)[0]
+    program = (
+        step["run"].split("<<'PY_CANDIDATE_FAILURE'", 1)[1].split("\n", 1)[1].split("\nPY_CANDIDATE_FAILURE", 1)[0]
+    )
     root = tmp_path / ".specfact"
     root.mkdir()
     (root / "code-review.json").write_text(
@@ -630,7 +632,9 @@ def test_candidate_large_report_retains_unavailable_marker_and_fixed_failure_cla
 
     workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())
     step = next(item for item in workflow["jobs"]["customer"]["steps"] if item.get("name") == STEP_NAME)
-    program = step["run"].split("<<'PY_CANDIDATE_FAILURE'\n", 1)[1].split("\nPY_CANDIDATE_FAILURE", 1)[0]
+    program = (
+        step["run"].split("<<'PY_CANDIDATE_FAILURE'", 1)[1].split("\n", 1)[1].split("\nPY_CANDIDATE_FAILURE", 1)[0]
+    )
     root = tmp_path / ".specfact"
     root.mkdir()
     size = 32 if case == "diagnostic_bound" else 2
@@ -669,7 +673,9 @@ def test_candidate_projection_ignores_retired_sample_frames(tmp_path):
 
     workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())
     step = next(item for item in workflow["jobs"]["customer"]["steps"] if item.get("name") == STEP_NAME)
-    program = step["run"].split("<<'PY_CANDIDATE_FAILURE'\n", 1)[1].split("\nPY_CANDIDATE_FAILURE", 1)[0]
+    program = (
+        step["run"].split("<<'PY_CANDIDATE_FAILURE'", 1)[1].split("\n", 1)[1].split("\nPY_CANDIDATE_FAILURE", 1)[0]
+    )
     root = tmp_path / ".specfact"
     root.mkdir()
     (root / "code-review.json").write_text(
@@ -707,7 +713,9 @@ def test_candidate_incomplete_snapshot_projection_is_finite(tmp_path, nested, ex
 
     workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())
     step = next(item for item in workflow["jobs"]["customer"]["steps"] if item.get("name") == STEP_NAME)
-    program = step["run"].split("<<'PY_CANDIDATE_FAILURE'\n", 1)[1].split("\nPY_CANDIDATE_FAILURE", 1)[0]
+    program = (
+        step["run"].split("<<'PY_CANDIDATE_FAILURE'", 1)[1].split("\n", 1)[1].split("\nPY_CANDIDATE_FAILURE", 1)[0]
+    )
     root = tmp_path / ".specfact"
     root.mkdir()
     (root / "code-review.json").write_text(
@@ -808,9 +816,7 @@ def test_preparation_shell_preserves_failure_and_projects_incomplete(preparation
 
 
 def test_failed_candidate_diagnostics_expose_only_bounded_tracked_locations(tmp_path: Path) -> None:
-    workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())
-    step = next(item for item in workflow["jobs"]["customer"]["steps"] if item.get("name") == STEP_NAME)
-    code = step["run"].rsplit("- <<'PY'\n", 1)[1].split("\nPY\n", 1)[0]
+    code = public_projector("customer")
     _git(tmp_path, "init", "-q")
     source = tmp_path / "public.py"
     source.write_text("value = 1\n")
@@ -1334,3 +1340,108 @@ def test_public_test_failure_reads_immutable_snapshot_records(tmp_path, job_name
     row = json.loads(result.stdout)["finding_location"]
     assert row.get("test_failure_class") == "FileNotFoundError"
     assert "PRIVATE" not in result.stdout and "PermissionError" not in result.stdout
+
+
+@pytest.mark.parametrize("job_name", ["customer", "independent-review"])
+@pytest.mark.parametrize("case", ["invalid", "non_object", "oversized", "recursive", "unreadable"])
+def test_public_projector_bounds_and_rejects_unreadable_reports(tmp_path: Path, job_name, case):
+    report = tmp_path / ".specfact/code-review.json"
+    report.parent.mkdir()
+    fault = ""
+    if case == "oversized":
+        with report.open("wb") as stream:
+            stream.write(b'{"private":"PRIVATE_SECRET')
+            for _ in range(512):
+                stream.write(b"x" * 65536)
+            stream.write(b'"}')
+    elif case == "recursive":
+        report.write_text("[" * 10000 + "0" + "]" * 10000)
+    else:
+        report.write_text("PRIVATE_SECRET invalid JSON" if case == "invalid" else '["PRIVATE_SECRET"]')
+    if case == "unreadable":
+        fault = "from pathlib import Path\ndef denied_open(*args, **kwargs):\n    raise OSError('PRIVATE_SECRET')\nPath.open = denied_open\n"
+    result = subprocess.run(
+        [sys.executable, "-c", fault + public_projector(job_name)],
+        cwd=tmp_path,
+        env=dict(os.environ, REVIEW_PUBLIC_EXIT="17"),
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, "Malformed diagnostic input must not crash projection"
+    assert json.loads(result.stdout) == {
+        "status": "INCOMPLETE",
+        "phase": "review",
+        "diagnostic": "review_report_unreadable",
+    }
+    assert "PRIVATE_SECRET" not in result.stdout
+
+
+@pytest.mark.parametrize("job_name", ["customer", "independent-review"])
+@pytest.mark.parametrize("review_exit", [17, 124])
+def test_projector_crash_preserves_original_review_exit(tmp_path: Path, job_name, review_exit):
+    import shlex
+
+    workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())
+    name = STEP_NAME if job_name == "customer" else "Prepare and review through the authenticated installed controller"
+    recipe = next(step["run"] for step in workflow["jobs"][job_name]["steps"] if step.get("name") == name)
+    invocation = next(line for line in recipe.splitlines() if "REVIEW_PUBLIC_EXIT=" in line and "<<'PY'" in line)
+    guard = invocation.split("<<'PY'", 1)[1]
+    report = tmp_path / ".specfact/code-review.json"
+    report.parent.mkdir()
+    report.write_text('{"analyzer_evidence":42}')
+    program = public_projector(job_name)
+    shell = (
+        f"set -e\nreview_exit={review_exit}\nREVIEW_PUBLIC_EXIT=$review_exit {shlex.quote(sys.executable)} - <<'PY'{guard}\n"
+        + program
+        + '\nPY\nexit "$review_exit"\n'
+    )
+    result = subprocess.run(
+        ["bash", "-c", shell],
+        cwd=tmp_path,
+        env=dict(os.environ, CUSTOMER_ROOT=str(tmp_path), TRUSTED_ROOT=str(tmp_path)),
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == review_exit, "Diagnostics must preserve the original failed review result"
+    assert result.stderr == "", "Projector tracebacks must remain private"
+    assert json.loads(result.stdout.splitlines()[-1]) == {
+        "status": "INCOMPLETE",
+        "phase": "review",
+        "diagnostic": "review_projection_failed",
+    }
+    assert "TypeError" in (tmp_path / "review-projection.private.log").read_text()
+
+
+@pytest.mark.parametrize("review_exit", [17, 124])
+def test_candidate_secondary_projector_crash_preserves_review_exit(tmp_path: Path, review_exit):
+    import shlex
+
+    workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())
+    recipe = next(step["run"] for step in workflow["jobs"]["customer"]["steps"] if step.get("name") == STEP_NAME)
+    marker = "<<'PY_CANDIDATE_FAILURE'"
+    invocation = next(line for line in recipe.splitlines() if marker in line)
+    guard = invocation.split(marker, 1)[1]
+    program = recipe.split(marker, 1)[1].split("\n", 1)[1].split("\nPY_CANDIDATE_FAILURE", 1)[0]
+    shell = (
+        f"set -e\nreview_exit={review_exit}\n{shlex.quote(sys.executable)} - {marker}{guard}\n"
+        + "raise SystemExit(3)\n"
+        + program
+        + '\nPY_CANDIDATE_FAILURE\nexit "$review_exit"\n'
+    )
+    result = subprocess.run(
+        ["bash", "-c", shell],
+        cwd=tmp_path,
+        env=dict(os.environ, CUSTOMER_ROOT=str(tmp_path)),
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == review_exit, "Every diagnostic invocation must preserve the failed review result"
+    assert result.stderr == ""
+    assert json.loads(result.stdout) == {
+        "status": "INCOMPLETE",
+        "phase": "review",
+        "diagnostic": "review_projection_failed",
+    }

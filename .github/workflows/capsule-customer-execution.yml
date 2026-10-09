@@ -244,7 +244,7 @@ jobs:
             "$CUSTOMER_ROOT/venv/bin/python" "$GITHUB_WORKSPACE/scripts/pre_commit_code_review.py" "${review_paths[@]}" || review_exit=$?
           if [ "$review_exit" -ne 0 ]; then
             # Print bounded codes/public locations; raw reports, receipts and logs stay private.
-            REVIEW_PUBLIC_EXIT="$review_exit" "$CUSTOMER_ROOT/venv/bin/python" - <<'PY'
+            REVIEW_PUBLIC_EXIT="$review_exit" "$CUSTOMER_ROOT/venv/bin/python" - <<'PY' 2> "$CUSTOMER_ROOT/review-projection.private.log" || printf '%s\n' '{"status":"INCOMPLETE","phase":"review","diagnostic":"review_projection_failed"}' || true
           import ast
           import re
           import json
@@ -257,8 +257,19 @@ jobs:
               print(json.dumps({"status": "INCOMPLETE", "phase": "review", "diagnostic": "analysis_timeout"}))
           if not report.is_file() and os.environ.get("REVIEW_PUBLIC_EXIT") != "124":
               print(json.dumps({"status": "INCOMPLETE", "phase": "review", "diagnostic": "review_report_missing"}))
+          data = None
           if report.is_file():
-              data = json.loads(report.read_text())
+              try:
+                  with report.open("rb") as stream:
+                      payload = stream.read(32 * 1024 * 1024 + 1)
+                  if len(payload) <= 32 * 1024 * 1024:
+                      value = json.loads(payload)
+                      data = value if isinstance(value, dict) else None
+              except (OSError, ValueError, RecursionError):
+                  data = None
+              if data is None:
+                  print(json.dumps({"status": "INCOMPLETE", "phase": "review", "diagnostic": "review_report_unreadable"}))
+          if data is not None:
               public_analyzers = {"ruff", "radon", "semgrep-clean", "ai-bloat-ast", "ast-clean-code", "basedpyright", "pylint", "contracts", "semgrep-bugs", "targeted-pytest-coverage"}
               public_codes = {"analyzer_reported_incomplete_execution", "capsule_request_failed", "project_test_selection_ambiguous", "project_runtime_required", "project_pytest_coverage_missing", "analyzer_output_invalid", "timeout", "capsule_acquisition_failed", "native_capsule_artifact_not_admitted"}
               for row in data.get("analyzer_evidence", []):
@@ -428,7 +439,7 @@ jobs:
                       if emitted == 200:
                           break
           PY
-            "$CUSTOMER_ROOT/venv/bin/python" -I - <<'PY_CANDIDATE_FAILURE'
+            "$CUSTOMER_ROOT/venv/bin/python" -I - <<'PY_CANDIDATE_FAILURE' 2> "$CUSTOMER_ROOT/contract-projection.private.log" || printf '%s\n' '{"status":"INCOMPLETE","phase":"review","diagnostic":"review_projection_failed"}' || true
           import json
           from pathlib import Path
 
@@ -781,7 +792,7 @@ jobs:
             > "$TRUSTED_ROOT/review.private.log" 2>&1 || review_exit=$?
           if [ "$review_exit" -ne 0 ]; then
             cd "$TRUSTED_ROOT/subject"
-            "${trusted_env[@]}" REVIEW_PUBLIC_REPORT="$TRUSTED_ROOT/review.private.json" REVIEW_PUBLIC_EXIT="$review_exit" REVIEW_PUBLIC_PROGRESS="$TRUSTED_ROOT/review.private.log" "$TRUSTED_ROOT/venv/bin/python" -I - <<'PY'
+            "${trusted_env[@]}" REVIEW_PUBLIC_REPORT="$TRUSTED_ROOT/review.private.json" REVIEW_PUBLIC_EXIT="$review_exit" REVIEW_PUBLIC_PROGRESS="$TRUSTED_ROOT/review.private.log" "$TRUSTED_ROOT/venv/bin/python" -I - <<'PY' 2> "$TRUSTED_ROOT/review-projection.private.log" || printf '%s\n' '{"status":"INCOMPLETE","phase":"review","diagnostic":"review_projection_failed"}' || true
           import ast
           import re
           import json
@@ -810,8 +821,19 @@ jobs:
               print(json.dumps(timeout_status))
           if not report.is_file() and os.environ.get("REVIEW_PUBLIC_EXIT") != "124":
               print(json.dumps({"status": "INCOMPLETE", "phase": "review", "diagnostic": "review_report_missing"}))
+          data = None
           if report.is_file():
-              data = json.loads(report.read_text())
+              try:
+                  with report.open("rb") as stream:
+                      payload = stream.read(32 * 1024 * 1024 + 1)
+                  if len(payload) <= 32 * 1024 * 1024:
+                      value = json.loads(payload)
+                      data = value if isinstance(value, dict) else None
+              except (OSError, ValueError, RecursionError):
+                  data = None
+              if data is None:
+                  print(json.dumps({"status": "INCOMPLETE", "phase": "review", "diagnostic": "review_report_unreadable"}))
+          if data is not None:
               public_analyzers = {"ruff", "radon", "semgrep-clean", "ai-bloat-ast", "ast-clean-code", "basedpyright", "pylint", "contracts", "semgrep-bugs", "targeted-pytest-coverage"}
               public_codes = {"analyzer_reported_incomplete_execution", "capsule_request_failed", "project_test_selection_ambiguous", "project_runtime_required", "project_pytest_coverage_missing", "analyzer_output_invalid", "timeout", "capsule_acquisition_failed", "native_capsule_artifact_not_admitted"}
               for row in data.get("analyzer_evidence", []):
