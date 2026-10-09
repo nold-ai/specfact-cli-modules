@@ -39,7 +39,7 @@ def test_hashed_native_closure(abi):
         assert hashes, name
         if name in pins:
             assert requirement.specifier == Requirement(pins[name]).specifier
-    assert "af669755eabd97268a4141983a391cb4a832116d5a2c3cf04a4c53c7650ce72c" in locked["z3-solver"]
+    assert "81d7e08869fc34877ad9b1315de5bb5398792bc8858f44e45c38a974f310f7e7" in locked["z3-solver"]
 
 
 def test_candidate_policy_floors_and_analyzer_baseline():
@@ -53,7 +53,7 @@ def test_candidate_policy_floors_and_analyzer_baseline():
         "pylint": "4.0.7",
         "crosshair-tool": "0.0.109",
         "icontract": "2.7.1",
-        "z3-solver": "5.1.0.0+specfact.1",
+        "z3-solver": "5.1.0.0+specfact.2",
         "pytest": "9.0.3",
         "pytest-cov": "7.1.0",
         "coverage": "7.15.4",

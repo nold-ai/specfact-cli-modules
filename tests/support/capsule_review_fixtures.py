@@ -1,3 +1,5 @@
+"""Execute the hosted gate recipe against a real isolated Git index."""
+
 from __future__ import annotations
 
 import json
@@ -21,6 +23,7 @@ __all__ = [
     "_git",
     "_isolated_reviewer_modules",
     "_write_deferred_fixture_sources",
+    "_write_public_report",
     "assert_block2_trace",
     "assert_incomplete_preparation",
     "assert_installed_review_arguments",
@@ -28,7 +31,10 @@ __all__ = [
     "deferral_worktree",
     "deferred_review_repository",
     "independent_review_job",
+    "public_projector",
+    "write_public_phase_record_report",
 ]
+
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
@@ -105,7 +111,7 @@ _TRUSTED_BOOTSTRAP_LAUNCHER = (
     "            (core/'__init__.py').write_text('')\n"
     "            (core/'cli.py').write_text(\n"
     "                \"import sys\\nassert sys.argv[1:]==['module','install','nold-ai/specfact-code-review',\"\n"
-    "                \"'--scope','user','--version','0.51.0','--source','marketplace']\\n\"\n"
+    "                \"'--scope','user','--version','0.51.2','--source','marketplace']\\n\"\n"
     "            )\n"
     "            "
 )
@@ -161,6 +167,58 @@ _ISOLATED_REVIEWER_TEMPLATES = {
     "    import os\n    from pathlib import Path\n"
     "    (Path(os.environ['HOME']).parent/'cleaned').touch()\n",
 }
+
+
+_FIXED_ANALYZER_FINDING_ROWS = [
+    {
+        "file": "public.py",
+        "line": 1,
+        "severity": "error",
+        "category": "clean_code",
+        "tool": "radon",
+        "rule": "CC34",
+        "message": "PRIVATE_MESSAGE",
+    },
+    {
+        "file": "public.py",
+        "line": 2,
+        "severity": "error",
+        "category": "tool_error",
+        "tool": "semgrep",
+        "rule": "tool_error",
+        "message": "TimeoutExpired PRIVATE_SECRET",
+    },
+    {
+        "file": "public.py",
+        "line": 3,
+        "severity": "error",
+        "category": "PRIVATE_CATEGORY",
+        "tool": "PRIVATE_TOOL",
+        "rule": "PRIVATE_RULE",
+        "message": "PRIVATE_SECRET",
+    },
+]
+
+
+_DEPTH_FAILURE_FINDING_ROWS = [
+    {
+        "file": "public.py",
+        "line": 1,
+        "severity": "error",
+        "category": "tool_error",
+        "tool": "semgrep",
+        "message": "semgrep returned structured errors; details=DECODER_DEPTH_FAILURE",
+    }
+]
+
+
+def _write_public_report(root, findings):
+    _git(root, "init", "-q")
+    (root / "public.py").write_text("value = 1\n")
+    _git(root, "add", "public.py")
+    report = root / ".specfact/code-review.json"
+    report.parent.mkdir()
+    report.write_text(json.dumps({"findings": findings}))
 
 
 def _git(root: Path, *args: str) -> str:
@@ -351,3 +409,32 @@ def assert_installed_review_arguments(trusted: Path, *, prepared: bool = True):
     assert args[args.index("--scope") + 1] == "index"
     assert args[args.index("--enforcement") + 1] == "changed"
     assert "--bug-hunt" in args
+
+
+def public_projector(job_name):
+    workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())
+    name = STEP_NAME if job_name == "customer" else "Prepare and review through the authenticated installed controller"
+    recipe = next(step["run"] for step in workflow["jobs"][job_name]["steps"] if step.get("name") == name)
+    return recipe.rsplit("- <<'PY'", 1)[1].split("\n", 1)[1].split("\nPY\n", 1)[0]
+
+
+def write_public_phase_record_report(root, nodeid, detail):
+    finding = {
+        "file": "public.py",
+        "line": 1,
+        "severity": "error",
+        "category": "testing",
+        "tool": "pytest",
+        "rule": "TEST_OUTCOME_NOT_PASS",
+        "message": f"Test {nodeid} failed during call.",
+    }
+    _write_public_report(root, [finding])
+    (root / "public.py").write_text("def test_public_case():\n    pass\n")
+    report = root / ".specfact/code-review.json"
+    data = json.loads(report.read_text())
+    records = [
+        {"nodeid": nodeid, "phase": "setup", "outcome": "failed", "detail": "E PermissionError: PRIVATE_SETUP"},
+        {"nodeid": nodeid, "phase": "call", "outcome": "failed", "detail": detail},
+    ]
+    data["analyzer_evidence"] = [{"id": "targeted-pytest-coverage", "target_execution": {"records": records}}]
+    report.write_text(json.dumps(data))

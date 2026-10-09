@@ -29,10 +29,15 @@ IGNORED_INPUTS = frozenset(
 )
 
 
+def is_virtual_environment(path: Path) -> bool:
+    """Identify local environments independently of their directory names."""
+    return path.is_dir() and (path / "pyvenv.cfg").is_file()
+
+
 @require(lambda path: bool(path.name))
 def is_excluded_source(path: Path) -> bool:
     """Distinguish actual environments from ordinary packages with common names."""
-    return path.name in IGNORED_INPUTS or (path.is_dir() and (path / "pyvenv.cfg").is_file())
+    return path.name in IGNORED_INPUTS or is_virtual_environment(path)
 
 
 @ensure(lambda result, root: result.is_relative_to(root))

@@ -29,7 +29,10 @@ CODE_REVIEW_SOURCE = REPOSITORY_ROOT / "packages/specfact-code-review/src"
 if str(CODE_REVIEW_SOURCE) not in sys.path:
     sys.path.insert(0, str(CODE_REVIEW_SOURCE))
 
-from scripts import build_macos_native_capsule as artifact_builder  # noqa: E402
+from scripts import (  # noqa: E402
+    build_macos_managed_uv as managed_uv_builder,
+    build_macos_native_capsule as artifact_builder,
+)
 from specfact_code_review.run import runtime_native  # noqa: E402
 from specfact_code_review.run.native_capsule import CHUNK, inspect_native_signature  # noqa: E402
 
@@ -224,6 +227,15 @@ def _verify_observed_signature(path: Path, inspector: SignatureInspector) -> Non
         raise AssemblyError(f"native signature or architecture mismatch: {path.name}")
 
 
+def _verify_managed_uv_input(payload: Path, candidate: dict[str, Any], observed: dict[str, Any]) -> None:
+    uv_members = any(name.startswith("uv/") for name in observed)
+    if uv_members or "managed_uv" in candidate:
+        if not uv_members or "managed_uv" not in candidate:
+            raise AssemblyError("managed uv input lacks complete provenance")
+        if managed_uv_builder.validate_artifact(payload / "uv") != candidate["managed_uv"]:
+            raise AssemblyError("managed uv candidate provenance differs from installed input")
+
+
 def _analyzer_input(root: Path, environment_id: str, inspector: SignatureInspector) -> tuple[Path, dict[str, Any]]:
     candidate = _json_object(root / "candidate.json", "analyzer candidate")
     version = candidate.get("version")
@@ -242,6 +254,7 @@ def _analyzer_input(root: Path, environment_id: str, inspector: SignatureInspect
     declared = _inventory(candidate.get("inventory"))
     if observed != declared:
         raise AssemblyError("analyzer payload does not match its complete inventory")
+    _verify_managed_uv_input(payload, candidate, observed)
     interpreter = f"bin/python{version}"
     interpreter_records = [name for name in observed if name.startswith("bin/python3.")]
     if interpreter_records != [interpreter] or observed.get(interpreter, {}).get("kind") != "file":
@@ -533,6 +546,27 @@ def _owned_output(path: Path, identity: tuple[int, int] | None) -> bool:
     return (observed.st_dev, observed.st_ino) == identity
 
 
+def _analyzer_provenance(candidate: dict[str, Any], environment_id: str, inventory_digest: str) -> dict[str, Any]:
+    version = str(candidate["version"])
+    provenance = {
+        "schema": "specfact-analyzer-assembly-input-v1",
+        "environment_id": environment_id,
+        "platform": "darwin-arm64",
+        "abi": f"cp{version.replace('.', '')}",
+        "inventory_sha256": inventory_digest,
+        "profile_id": candidate.get("profile_id"),
+        "semgrep_plan_id": candidate.get("semgrep_plan_id"),
+        "signed_images": [
+            {"path": record["path"], "sha256": record["sha256"]}
+            for record in sorted(candidate["signed_images"], key=lambda item: item["path"])
+        ],
+        "production_eligible": False,
+    }
+    if "managed_uv" in candidate:
+        provenance["managed_uv"] = candidate["managed_uv"]
+    return provenance
+
+
 def assemble_macos_native_capsule(
     *,
     analyzer_root: Path,
@@ -607,20 +641,7 @@ def assemble_macos_native_capsule(
         if not licenses:
             raise AssemblyError("analyzer closure contains no declared license bytes")
         inventory_digest = hashlib.sha256(_canonical(candidate["inventory"])).hexdigest()
-        analyzer_provenance = {
-            "schema": "specfact-analyzer-assembly-input-v1",
-            "environment_id": environment_id,
-            "platform": "darwin-arm64",
-            "abi": f"cp{version.replace('.', '')}",
-            "inventory_sha256": inventory_digest,
-            "profile_id": candidate.get("profile_id"),
-            "semgrep_plan_id": candidate.get("semgrep_plan_id"),
-            "signed_images": [
-                {"path": record["path"], "sha256": record["sha256"]}
-                for record in sorted(candidate["signed_images"], key=lambda item: item["path"])
-            ],
-            "production_eligible": False,
-        }
+        analyzer_provenance = _analyzer_provenance(candidate, environment_id, inventory_digest)
         native_provenance = _component_provenance(component_metadata)
         if git_receipt is not None:
             native_provenance["managed_tool_requirements"] = {"tools/git": git_receipt["signing"]["requirement"]}

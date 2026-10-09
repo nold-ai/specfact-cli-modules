@@ -360,7 +360,7 @@ jobs:
         run: |
           set -euo pipefail
           . .exact-core-venv/bin/activate
-          python -m pytest -q --import-mode=importlib tests/e2e/specfact_code_review/test_review_run_e2e.py::test_core_0_55_1_runtime_loads_schema_1_6_consumer_matrix
+          python -m pytest -o "addopts=-ra -v --import-mode=importlib" -q --import-mode=importlib tests/e2e/specfact_code_review/test_review_run_e2e.py::test_core_0_55_1_runtime_loads_schema_1_6_consumer_matrix
       - name: Run signed analyzer capsule from prefetched cache and empty Bubblewrap smoke
         shell: bash
         env:

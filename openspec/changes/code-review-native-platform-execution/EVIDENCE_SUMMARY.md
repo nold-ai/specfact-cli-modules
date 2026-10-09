@@ -1,5 +1,10 @@
 # Reviewed feasibility evidence — 2026-09-30
 
+Latest delivery status: [2026-10-06 checkpoint](DELIVERY_CHECKPOINT_2026-10-06.md).
+#460 is reopened/Open/Todo. Real three-ABI assembly and experimental analyzer
+fixtures do not complete signed artifact delivery. The native catalog remains
+empty and the mandatory local review is UNKNOWN. Historical evidence follows.
+
 Current project-driven evidence (2026-10-05, Europe/Berlin): pinned native pip
 26.2.1 prepares unfamiliar dependencies and the actual project root without a
 publisher project catalog. Separate network-denied workers execute setuptools

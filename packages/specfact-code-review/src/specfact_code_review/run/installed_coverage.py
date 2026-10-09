@@ -72,14 +72,14 @@ def _local_origin(metadata: Path) -> bool:
     )
 
 
-def _record_row(row: list[str], files: dict[str, str]) -> None:
+def _record_row(row: list[str], files: dict[str, str], *, python_suffixes: tuple[str, ...] = (".py",)) -> None:
     """Retain only canonical Python ownership entries from one RECORD row."""
     if len(row) != 3:
         raise ValueError("malformed RECORD row")
     relative = PurePosixPath(row[0])
     if relative.as_posix() != row[0]:
         raise ValueError("noncanonical RECORD path")
-    if relative.suffix != ".py":
+    if relative.suffix not in python_suffixes:
         return  # Wheels also legitimately own ../bin entry points, not coverage source.
     if relative.is_absolute() or ".." in relative.parts or "\\" in row[0]:
         raise ValueError("unsafe Python RECORD path")

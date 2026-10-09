@@ -243,8 +243,203 @@ jobs:
             SPECFACT_CODE_REVIEW_ENFORCEMENT=changed \
             "$CUSTOMER_ROOT/venv/bin/python" "$GITHUB_WORKSPACE/scripts/pre_commit_code_review.py" "${review_paths[@]}" || review_exit=$?
           if [ "$review_exit" -ne 0 ]; then
-            # Print only bounded reason codes; raw reports, receipts and tool logs stay private.
-            "$CUSTOMER_ROOT/venv/bin/python" -I - <<'PY_CANDIDATE_FAILURE'
+            # Print bounded codes/public locations; raw reports, receipts and logs stay private.
+            REVIEW_PUBLIC_EXIT="$review_exit" "$CUSTOMER_ROOT/venv/bin/python" -I - <<'PY' 2> "$CUSTOMER_ROOT/review-projection.private.log" || printf '%s\n' '{"status":"INCOMPLETE","phase":"review","diagnostic":"review_projection_failed"}' || true
+          import ast
+          import re
+          import json
+          import os
+          import subprocess
+          from pathlib import Path
+
+          report = Path(os.environ.get("REVIEW_PUBLIC_REPORT", ".specfact/code-review.json"))
+          if os.environ.get("REVIEW_PUBLIC_EXIT") == "124":
+              print(json.dumps({"status": "INCOMPLETE", "phase": "review", "diagnostic": "analysis_timeout"}))
+          if not report.is_file() and os.environ.get("REVIEW_PUBLIC_EXIT") != "124":
+              print(json.dumps({"status": "INCOMPLETE", "phase": "review", "diagnostic": "review_report_missing"}))
+          data = None
+          if report.is_file():
+              try:
+                  with report.open("rb") as stream:
+                      payload = stream.read(32 * 1024 * 1024 + 1)
+                  if len(payload) <= 32 * 1024 * 1024:
+                      value = json.loads(payload)
+                      data = value if isinstance(value, dict) else None
+              except (OSError, ValueError, RecursionError):
+                  data = None
+              if data is None:
+                  print(json.dumps({"status": "INCOMPLETE", "phase": "review", "diagnostic": "review_report_unreadable"}))
+          if data is not None:
+              public_analyzers = {"ruff", "radon", "semgrep-clean", "ai-bloat-ast", "ast-clean-code", "basedpyright", "pylint", "contracts", "semgrep-bugs", "targeted-pytest-coverage"}
+              public_codes = {"analyzer_reported_incomplete_execution", "capsule_request_failed", "project_test_selection_ambiguous", "project_runtime_required", "project_pytest_coverage_missing", "analyzer_output_invalid", "timeout", "capsule_acquisition_failed", "native_capsule_artifact_not_admitted"}
+              for row in data.get("analyzer_evidence", []):
+                  if not isinstance(row, dict) or not isinstance(row.get("id"), str) or row["id"] not in public_analyzers:
+                      continue
+                  tokens = str(row.get("diagnostic", "")).split(":")[:3]
+                  codes = [token for token in tokens if token in public_codes]
+                  if codes:
+                      print(json.dumps({"analyzer": row["id"], "diagnostic_codes": codes}))
+              def _semgrep_error_types(message):
+                  if len(message) > 4096 or "details=" not in message:
+                      return []
+                  try:
+                      details = json.loads(message.rsplit("details=", 1)[1])
+                  except (ValueError, TypeError, RecursionError):
+                      return []
+                  if not isinstance(details, list):
+                      return []
+                  allowed = {
+                      "Lexical error", "Syntax error", "Other syntax error", "AST builder error",
+                      "Rule parse error", "SemgrepWarning", "SemgrepError", "InvalidRuleSchemaError",
+                      "UnknownLanguageError", "Invalid YAML", "Internal matching error",
+                      "Semgrep match found", "Too many matches", "Fatal error", "Timeout",
+                      "Out of memory", "Fixpoint timeout", "Stack overflow",
+                      "Timeout during interfile analysis", "OOM during interfile analysis",
+                      "Missing plugin", "Pattern parse error", "Incompatible rule",
+                      "PatternParseError", "PartialParsing", "IncompatibleRule", "DependencyResolutionError",
+                  }
+                  tags = set()
+                  for error in details[:3]:
+                      if not isinstance(error, dict):
+                          continue
+                      value = error.get("type")
+                      if isinstance(value, list) and value:
+                          value = value[0]
+                      if isinstance(value, str) and value in allowed:
+                          tags.add(value)
+                  return sorted(tags)
+
+              test_failure_details = {}
+              for analyzer in data.get("analyzer_evidence", []):
+                  if not isinstance(analyzer, dict) or analyzer.get("id") != "targeted-pytest-coverage":
+                      continue
+                  for side in (analyzer.get("head"), analyzer, analyzer.get("base")):
+                      execution = side.get("target_execution") if isinstance(side, dict) else None
+                      records = execution.get("records", []) if isinstance(execution, dict) else []
+                      if not isinstance(records, list):
+                          continue
+                      for record in records[:20_000]:
+                          if not isinstance(record, dict):
+                              continue
+                          key = tuple(record.get(field) for field in ("nodeid", "outcome", "phase"))
+                          detail = record.get("detail")
+                          if all(isinstance(value, str) and len(value) <= 4096 for value in key) and isinstance(detail, str) and len(detail) <= 65_536:
+                              test_failure_details.setdefault(key, detail)
+
+              def _public_test_failure(nodeid, outcome, phase):
+                  detail = test_failure_details.get((nodeid, outcome, phase), "")
+                  exception = re.search(r"^E\s+(?:subprocess\.)?(AssertionError|FileNotFoundError|PermissionError|CalledProcessError|RuntimeError|ImportError|ModuleNotFoundError|TypeError|ValueError)(?=:|\s|$)", detail, re.MULTILINE)
+                  failure = {"test_failure_class": exception.group(1)} if exception else {}
+                  for option in ("-I", "-E", "-S"):
+                      if "project_python_option_unsupported:" + option + ";" in detail:
+                          failure.update(test_diagnostic="project_python_option_unsupported", python_option=option)
+                          break
+                  return failure
+
+              source_test_functions = {}
+              def _public_test_observation(finding, file):
+                  message = finding.get("message")
+                  if not isinstance(message, str) or len(message) > 4096:
+                      return {}
+                  match = re.fullmatch(r"Test (.+) (passed|failed|skipped) during (setup|call|teardown)( with an xfail marker)?\.", message)
+                  if match is None:
+                      return {}
+                  nodeid, outcome, phase, xfail = match.groups()
+                  observation = {"test_outcome": outcome, "test_phase": phase, "test_xfail": bool(xfail)}
+                  observation.update(_public_test_failure(nodeid, outcome, phase))
+                  if not nodeid.startswith(file + "::"):
+                      return observation
+                  if file not in source_test_functions:
+                      functions = set()
+                      source = Path(file)
+                      try:
+                          source.resolve().relative_to(Path.cwd().resolve())
+                          if source.suffix == ".py" and not source.is_symlink() and source.stat().st_size <= 2_097_152:
+                              tree = ast.parse(source.read_text(encoding="utf-8"))
+                              functions = {node.name for node in ast.walk(tree) if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name.startswith("test_")}
+                      except (OSError, ValueError, SyntaxError, UnicodeError, RecursionError):
+                          pass
+                      source_test_functions[file] = functions
+                  function = nodeid[len(file) + 2:].split("[", 1)[0].rsplit("::", 1)[-1]
+                  if function in source_test_functions[file]:
+                      observation["test_function"] = function
+                  return observation
+
+              tracked = set(subprocess.check_output(["git", "ls-files", "-z"], text=True).split("\0"))
+              emitted = 0
+              def _finding_priority(row):
+                  category = row.get("category") if isinstance(row, dict) else None
+                  return {"tool_error": 0, "testing": 1}.get(category, 2) if isinstance(category, str) else 2
+
+              findings = sorted(data.get("findings", []), key=_finding_priority)
+              for finding in findings:
+                  if not isinstance(finding, dict):
+                      continue
+                  file, line, severity = (finding.get(key) for key in ("file", "line", "severity"))
+                  if (
+                      isinstance(file, str) and file in tracked and not Path(file).is_absolute()
+                      and type(line) is int and line > 0 and severity in ("error", "warning", "info")
+                  ):
+                      location = {"file": file, "line": line, "severity": severity}
+                      public_values = {
+                          "category": {"clean_code", "security", "type_safety", "contracts", "testing", "style", "architecture", "tool_error", "naming", "kiss", "yagni", "dry", "solid", "ai_bloat"},
+                          "tool": {"ruff", "radon", "radon-kiss", "semgrep", "ast", "basedpyright", "pylint", "contract_runner", "crosshair", "pytest"},
+                          "rule": {"tool_error", "TEST_OUTCOME_NOT_PASS", "TEST_COVERAGE_POLICY_FAILED", "MISSING_ICONTRACT", "CROSSHAIR_COUNTEREXAMPLE", "CROSSHAIR_INCOMPLETE_EVIDENCE", "kiss.loc.error", "kiss.loc.warning", "kiss.nesting.error", "kiss.nesting.warning", "kiss.parameter-count.error", "kiss.parameter-count.warning", *(f"CC{number}" for number in range(1, 1001))},
+                      }
+                      for key, allowed in public_values.items():
+                          value = finding.get(key)
+                          if isinstance(value, str) and value in allowed:
+                              location[key] = value
+                      if location.get("tool") == "pytest" and location.get("rule") == "TEST_OUTCOME_NOT_PASS":
+                          location.update(_public_test_observation(finding, file))
+                      if location.get("category") == "tool_error":
+                          message = finding.get("message")
+                          classes = (
+                              ("structured errors", "structured_errors"),
+                              ("timeout", "timeout"), ("timed out", "timeout"),
+                              ("semgrep process failed", "process_failure"),
+                              ("semgrep returned empty stdout", "empty_output"),
+                              ("unrecognized crosshair output", "unrecognized_output"),
+                          )
+                          if isinstance(message, str) and location.get("tool") == "pytest":
+                              pytest_codes = {
+                                  "project_pytest_request_invalid", "project_pytest_configuration_or_collection_failed",
+                                  "project_pytest_collection_error", "project_pytest_root_missing_or_invalid",
+                                  "project_pytest_coverage_diagnostic_invalid", "project_pytest_coverage_policy_invalid",
+                                  "project_pytest_coverage_candidate_invalid", "project_pytest_installed_coverage_directory_invalid",
+                                  "project_pytest_installed_coverage_module_invalid",
+                                  "project_pytest_root_outside_snapshot",
+                                  "project_pytest_collection_failed", "project_pytest_execution_incomplete",
+                                  "project_pytest_unexecuted", "project_pytest_coverage_missing",
+                                  "project_pytest_coverage_evidence_unavailable", "project_pytest_coverage_worker_missing",
+                                  "project_pytest_coverage_instrumentation_unavailable", "project_pytest_coverage_disabled",
+                                  "project_pytest_coverage_suppressed", "project_pytest_coverage_plugin_not_activated",
+                                  "project_pytest_coverage_controller_observation_missing",
+                                  "project_pytest_installed_coverage_unavailable", "project_pytest_installed_coverage",
+                                  "project_pytest_failure_without_observed_test", "project_pytest_internal_error",
+                              }
+                              prefix = message.split(":", 1)[0].split(";", 1)[0]
+                              if prefix in pytest_codes:
+                                  location["diagnostic_code"] = prefix
+                              elif message.startswith("[Errno 2] "):
+                                  location["diagnostic_code"] = "file_missing"
+                              elif message.startswith("[Errno 13] "):
+                                  location["diagnostic_code"] = "permission_denied"
+                          if isinstance(message, str):
+                              for marker, classification in classes:
+                                  if marker in message.lower():
+                                      location["failure_class"] = classification
+                                      if classification == "structured_errors":
+                                          tags = _semgrep_error_types(message)
+                                          if tags:
+                                              location["semgrep_error_types"] = tags
+                                      break
+                      print(json.dumps({"finding_location": location}))
+                      emitted += 1
+                      if emitted == 200:
+                          break
+          PY
+            "$CUSTOMER_ROOT/venv/bin/python" -I - <<'PY_CANDIDATE_FAILURE' 2> "$CUSTOMER_ROOT/contract-projection.private.log" || printf '%s\n' '{"status":"INCOMPLETE","phase":"review","diagnostic":"review_projection_failed"}' || true
           import json
           from pathlib import Path
 
@@ -313,6 +508,53 @@ jobs:
           PY_CANDIDATE_FAILURE
           fi
           exit "$review_exit"
+      - name: Profile failed candidate review privately
+        if: failure() && steps.deferred_review.outcome == 'failure'
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(id -u)" -ne 0
+          unset GITHUB_TOKEN GH_TOKEN PYTHONPATH
+          REVIEW_ROOT="$CUSTOMER_ROOT/staged-review"
+          PROJECT_CONFIG="$CUSTOMER_ROOT/commit-review-project.toml"
+          if [ ! -d "$REVIEW_ROOT" ] || [ ! -f "$PROJECT_CONFIG" ]; then
+            echo '{"status":"DIAGNOSTIC_UNAVAILABLE"}'
+            exit 1
+          fi
+          # Separate pinned profiler; authenticated reviewer and its deadline stay unchanged.
+          "$CUSTOMER_ROOT/venv/bin/python" -m venv "$CUSTOMER_ROOT/profile-venv"
+          printf '%s\n' 'py-spy==0.4.2 --hash=sha256:aeb0323409199c785f730645e9f4bb7a7b9ca2c481f2c331a55642b5d13fa52f' \
+            > "$CUSTOMER_ROOT/profile-requirements.txt"
+          "$CUSTOMER_ROOT/profile-venv/bin/python" -m pip install \
+            --only-binary=:all: --no-deps --require-hashes \
+            -r "$CUSTOMER_ROOT/profile-requirements.txt" \
+            > "$CUSTOMER_ROOT/profile-install.private.log" 2>&1
+          cd "$REVIEW_ROOT"
+          review_paths=()
+          while IFS= read -r -d '' path; do
+            review_paths+=("$path")
+          done < <(git diff --cached --name-only --diff-filter=ACMR -z)
+          test "${#review_paths[@]}" -gt 0
+          profile_exit=0
+          SPECFACT_CODE_REVIEW_CAPSULE_CACHE="$CUSTOMER_ROOT/commit-review-cache" \
+            SPECFACT_CODE_REVIEW_SUBJECT_ROOT="$REVIEW_ROOT" \
+            SPECFACT_CODE_REVIEW_PROJECT_CONFIG="$PROJECT_CONFIG" \
+            SPECFACT_CODE_REVIEW_ENFORCEMENT=changed \
+            timeout --signal=INT --kill-after=5s 280s \
+            "$CUSTOMER_ROOT/profile-venv/bin/py-spy" record \
+            --rate 10 --idle --subprocesses --format speedscope \
+            --output "$CUSTOMER_ROOT/commit-review-profile.private.json" -- \
+            "$CUSTOMER_ROOT/venv/bin/python" \
+            "$GITHUB_WORKSPACE/scripts/pre_commit_code_review.py" "${review_paths[@]}" \
+            > "$CUSTOMER_ROOT/commit-review-profile.private.stdout" \
+            2> "$CUSTOMER_ROOT/commit-review-profile.private.stderr" || profile_exit=$?
+          # The replay cannot replace the failed required review. Raw stacks stay runner-private.
+          if [ ! -f "$CUSTOMER_ROOT/commit-review-profile.private.json" ]; then
+            printf '{"status":"DIAGNOSTIC_UNAVAILABLE","exit":%s}\n' "$profile_exit"
+            exit 1
+          fi
+          "$CUSTOMER_ROOT/venv/bin/python" "$GITHUB_WORKSPACE/scripts/capsule_profile_summary.py" \
+            --profile "$CUSTOMER_ROOT/commit-review-profile.private.json" --repository "$REVIEW_ROOT"
       - name: Collect namespace audit evidence privately
         if: failure() && steps.deferred_review.outcome == 'failure'
         shell: bash
@@ -417,7 +659,7 @@ jobs:
           env -i HOME="$TRUSTED_ROOT/home" TMPDIR="$TRUSTED_ROOT/tmp" \
             PATH="$TRUSTED_ROOT/venv/bin:/usr/bin:/bin" SPECFACT_MODULES_BRANCH=main \
             "$TRUSTED_ROOT/venv/bin/python" -I -m specfact_cli.cli \
-            module install nold-ai/specfact-code-review --scope user --version 0.51.0 --source marketplace
+            module install nold-ai/specfact-code-review --scope user --version 0.51.2 --source marketplace
       - name: Capture immutable candidate subject without executing its host code
         shell: bash
         run: |
@@ -536,13 +778,233 @@ jobs:
             fi
             exit 1
           fi
+          review_exit=0
           touch "$TRUSTED_ROOT/review-attempted"
           "${trusted_env[@]}" "$TRUSTED_ROOT/venv/bin/python" -I -c \
-            'import subprocess,sys; sys.exit(subprocess.run(sys.argv[1:],timeout=300,check=False).returncode)' \
+            'import subprocess,sys
+          try:
+              sys.exit(subprocess.run(sys.argv[1:],timeout=300,check=False).returncode)
+          except subprocess.TimeoutExpired:
+              sys.exit(124)' \
             "$TRUSTED_ROOT/venv/bin/python" -I "$TRUSTED_ROOT/reviewer.py" \
             "$TRUSTED_ROOT/subject" code review run --scope index --enforcement changed --bug-hunt \
             --project-config "$TRUSTED_ROOT/project.toml" --json --out "$TRUSTED_ROOT/review.private.json" \
-            > "$TRUSTED_ROOT/review.private.log" 2>&1
+            > "$TRUSTED_ROOT/review.private.log" 2>&1 || review_exit=$?
+          if [ "$review_exit" -ne 0 ]; then
+            cd "$TRUSTED_ROOT/subject"
+            "${trusted_env[@]}" REVIEW_PUBLIC_REPORT="$TRUSTED_ROOT/review.private.json" REVIEW_PUBLIC_EXIT="$review_exit" REVIEW_PUBLIC_PROGRESS="$TRUSTED_ROOT/review.private.log" "$TRUSTED_ROOT/venv/bin/python" -I - <<'PY' 2> "$TRUSTED_ROOT/review-projection.private.log" || printf '%s\n' '{"status":"INCOMPLETE","phase":"review","diagnostic":"review_projection_failed"}' || true
+          import ast
+          import re
+          import json
+          import os
+          import subprocess
+          from pathlib import Path
+
+          report = Path(os.environ.get("REVIEW_PUBLIC_REPORT", ".specfact/code-review.json"))
+          if os.environ.get("REVIEW_PUBLIC_EXIT") == "124":
+              timeout_status = {"status": "INCOMPLETE", "phase": "review", "diagnostic": "analysis_timeout"}
+              progress_path = os.environ.get("REVIEW_PUBLIC_PROGRESS")
+              if progress_path:
+                  try:
+                      with Path(progress_path).open("rb") as progress:
+                          progress.seek(0, 2)
+                          progress.seek(max(0, progress.tell() - 65_536))
+                          tail = progress.read(65_536).decode("utf-8", errors="replace")
+                  except OSError:
+                      tail = ""
+                  progress_analyzers = {"ruff", "radon", "semgrep-clean", "ai-bloat-ast", "ast-clean-code", "basedpyright", "pylint", "contracts", "semgrep-bugs", "targeted-pytest-coverage"}
+                  markers = {f"Checking capsule analyzer {name}...": name for name in progress_analyzers}
+                  for line in reversed(tail.splitlines()):
+                      if line.strip() in markers:
+                          timeout_status["analyzer"] = markers[line.strip()]
+                          break
+              print(json.dumps(timeout_status))
+          if not report.is_file() and os.environ.get("REVIEW_PUBLIC_EXIT") != "124":
+              print(json.dumps({"status": "INCOMPLETE", "phase": "review", "diagnostic": "review_report_missing"}))
+          data = None
+          if report.is_file():
+              try:
+                  with report.open("rb") as stream:
+                      payload = stream.read(32 * 1024 * 1024 + 1)
+                  if len(payload) <= 32 * 1024 * 1024:
+                      value = json.loads(payload)
+                      data = value if isinstance(value, dict) else None
+              except (OSError, ValueError, RecursionError):
+                  data = None
+              if data is None:
+                  print(json.dumps({"status": "INCOMPLETE", "phase": "review", "diagnostic": "review_report_unreadable"}))
+          if data is not None:
+              public_analyzers = {"ruff", "radon", "semgrep-clean", "ai-bloat-ast", "ast-clean-code", "basedpyright", "pylint", "contracts", "semgrep-bugs", "targeted-pytest-coverage"}
+              public_codes = {"analyzer_reported_incomplete_execution", "capsule_request_failed", "project_test_selection_ambiguous", "project_runtime_required", "project_pytest_coverage_missing", "analyzer_output_invalid", "timeout", "capsule_acquisition_failed", "native_capsule_artifact_not_admitted"}
+              for row in data.get("analyzer_evidence", []):
+                  if not isinstance(row, dict) or not isinstance(row.get("id"), str) or row["id"] not in public_analyzers:
+                      continue
+                  tokens = str(row.get("diagnostic", "")).split(":")[:3]
+                  codes = [token for token in tokens if token in public_codes]
+                  if codes:
+                      print(json.dumps({"analyzer": row["id"], "diagnostic_codes": codes}))
+              def _semgrep_error_types(message):
+                  if len(message) > 4096 or "details=" not in message:
+                      return []
+                  try:
+                      details = json.loads(message.rsplit("details=", 1)[1])
+                  except (ValueError, TypeError, RecursionError):
+                      return []
+                  if not isinstance(details, list):
+                      return []
+                  allowed = {
+                      "Lexical error", "Syntax error", "Other syntax error", "AST builder error",
+                      "Rule parse error", "SemgrepWarning", "SemgrepError", "InvalidRuleSchemaError",
+                      "UnknownLanguageError", "Invalid YAML", "Internal matching error",
+                      "Semgrep match found", "Too many matches", "Fatal error", "Timeout",
+                      "Out of memory", "Fixpoint timeout", "Stack overflow",
+                      "Timeout during interfile analysis", "OOM during interfile analysis",
+                      "Missing plugin", "Pattern parse error", "Incompatible rule",
+                      "PatternParseError", "PartialParsing", "IncompatibleRule", "DependencyResolutionError",
+                  }
+                  tags = set()
+                  for error in details[:3]:
+                      if not isinstance(error, dict):
+                          continue
+                      value = error.get("type")
+                      if isinstance(value, list) and value:
+                          value = value[0]
+                      if isinstance(value, str) and value in allowed:
+                          tags.add(value)
+                  return sorted(tags)
+
+              test_failure_details = {}
+              for analyzer in data.get("analyzer_evidence", []):
+                  if not isinstance(analyzer, dict) or analyzer.get("id") != "targeted-pytest-coverage":
+                      continue
+                  for side in (analyzer.get("head"), analyzer, analyzer.get("base")):
+                      execution = side.get("target_execution") if isinstance(side, dict) else None
+                      records = execution.get("records", []) if isinstance(execution, dict) else []
+                      if not isinstance(records, list):
+                          continue
+                      for record in records[:20_000]:
+                          if not isinstance(record, dict):
+                              continue
+                          key = tuple(record.get(field) for field in ("nodeid", "outcome", "phase"))
+                          detail = record.get("detail")
+                          if all(isinstance(value, str) and len(value) <= 4096 for value in key) and isinstance(detail, str) and len(detail) <= 65_536:
+                              test_failure_details.setdefault(key, detail)
+
+              def _public_test_failure(nodeid, outcome, phase):
+                  detail = test_failure_details.get((nodeid, outcome, phase), "")
+                  exception = re.search(r"^E\s+(?:subprocess\.)?(AssertionError|FileNotFoundError|PermissionError|CalledProcessError|RuntimeError|ImportError|ModuleNotFoundError|TypeError|ValueError)(?=:|\s|$)", detail, re.MULTILINE)
+                  failure = {"test_failure_class": exception.group(1)} if exception else {}
+                  for option in ("-I", "-E", "-S"):
+                      if "project_python_option_unsupported:" + option + ";" in detail:
+                          failure.update(test_diagnostic="project_python_option_unsupported", python_option=option)
+                          break
+                  return failure
+
+              source_test_functions = {}
+              def _public_test_observation(finding, file):
+                  message = finding.get("message")
+                  if not isinstance(message, str) or len(message) > 4096:
+                      return {}
+                  match = re.fullmatch(r"Test (.+) (passed|failed|skipped) during (setup|call|teardown)( with an xfail marker)?\.", message)
+                  if match is None:
+                      return {}
+                  nodeid, outcome, phase, xfail = match.groups()
+                  observation = {"test_outcome": outcome, "test_phase": phase, "test_xfail": bool(xfail)}
+                  observation.update(_public_test_failure(nodeid, outcome, phase))
+                  if not nodeid.startswith(file + "::"):
+                      return observation
+                  if file not in source_test_functions:
+                      functions = set()
+                      source = Path(file)
+                      try:
+                          source.resolve().relative_to(Path.cwd().resolve())
+                          if source.suffix == ".py" and not source.is_symlink() and source.stat().st_size <= 2_097_152:
+                              tree = ast.parse(source.read_text(encoding="utf-8"))
+                              functions = {node.name for node in ast.walk(tree) if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name.startswith("test_")}
+                      except (OSError, ValueError, SyntaxError, UnicodeError, RecursionError):
+                          pass
+                      source_test_functions[file] = functions
+                  function = nodeid[len(file) + 2:].split("[", 1)[0].rsplit("::", 1)[-1]
+                  if function in source_test_functions[file]:
+                      observation["test_function"] = function
+                  return observation
+
+              tracked = set(subprocess.check_output(["git", "ls-files", "-z"], text=True).split("\0"))
+              emitted = 0
+              def _finding_priority(row):
+                  category = row.get("category") if isinstance(row, dict) else None
+                  return {"tool_error": 0, "testing": 1}.get(category, 2) if isinstance(category, str) else 2
+
+              findings = sorted(data.get("findings", []), key=_finding_priority)
+              for finding in findings:
+                  if not isinstance(finding, dict):
+                      continue
+                  file, line, severity = (finding.get(key) for key in ("file", "line", "severity"))
+                  if (
+                      isinstance(file, str) and file in tracked and not Path(file).is_absolute()
+                      and type(line) is int and line > 0 and severity in ("error", "warning", "info")
+                  ):
+                      location = {"file": file, "line": line, "severity": severity}
+                      public_values = {
+                          "category": {"clean_code", "security", "type_safety", "contracts", "testing", "style", "architecture", "tool_error", "naming", "kiss", "yagni", "dry", "solid", "ai_bloat"},
+                          "tool": {"ruff", "radon", "radon-kiss", "semgrep", "ast", "basedpyright", "pylint", "contract_runner", "crosshair", "pytest"},
+                          "rule": {"tool_error", "TEST_OUTCOME_NOT_PASS", "TEST_COVERAGE_POLICY_FAILED", "MISSING_ICONTRACT", "CROSSHAIR_COUNTEREXAMPLE", "CROSSHAIR_INCOMPLETE_EVIDENCE", "kiss.loc.error", "kiss.loc.warning", "kiss.nesting.error", "kiss.nesting.warning", "kiss.parameter-count.error", "kiss.parameter-count.warning", *(f"CC{number}" for number in range(1, 1001))},
+                      }
+                      for key, allowed in public_values.items():
+                          value = finding.get(key)
+                          if isinstance(value, str) and value in allowed:
+                              location[key] = value
+                      if location.get("tool") == "pytest" and location.get("rule") == "TEST_OUTCOME_NOT_PASS":
+                          location.update(_public_test_observation(finding, file))
+                      if location.get("category") == "tool_error":
+                          message = finding.get("message")
+                          classes = (
+                              ("structured errors", "structured_errors"),
+                              ("timeout", "timeout"), ("timed out", "timeout"),
+                              ("semgrep process failed", "process_failure"),
+                              ("semgrep returned empty stdout", "empty_output"),
+                              ("unrecognized crosshair output", "unrecognized_output"),
+                          )
+                          if isinstance(message, str) and location.get("tool") == "pytest":
+                              pytest_codes = {
+                                  "project_pytest_request_invalid", "project_pytest_configuration_or_collection_failed",
+                                  "project_pytest_collection_error", "project_pytest_root_missing_or_invalid",
+                                  "project_pytest_coverage_diagnostic_invalid", "project_pytest_coverage_policy_invalid",
+                                  "project_pytest_coverage_candidate_invalid", "project_pytest_installed_coverage_directory_invalid",
+                                  "project_pytest_installed_coverage_module_invalid",
+                                  "project_pytest_root_outside_snapshot",
+                                  "project_pytest_collection_failed", "project_pytest_execution_incomplete",
+                                  "project_pytest_unexecuted", "project_pytest_coverage_missing",
+                                  "project_pytest_coverage_evidence_unavailable", "project_pytest_coverage_worker_missing",
+                                  "project_pytest_coverage_instrumentation_unavailable", "project_pytest_coverage_disabled",
+                                  "project_pytest_coverage_suppressed", "project_pytest_coverage_plugin_not_activated",
+                                  "project_pytest_coverage_controller_observation_missing",
+                                  "project_pytest_installed_coverage_unavailable", "project_pytest_installed_coverage",
+                                  "project_pytest_failure_without_observed_test", "project_pytest_internal_error",
+                              }
+                              prefix = message.split(":", 1)[0].split(";", 1)[0]
+                              if prefix in pytest_codes:
+                                  location["diagnostic_code"] = prefix
+                              elif message.startswith("[Errno 2] "):
+                                  location["diagnostic_code"] = "file_missing"
+                              elif message.startswith("[Errno 13] "):
+                                  location["diagnostic_code"] = "permission_denied"
+                          if isinstance(message, str):
+                              for marker, classification in classes:
+                                  if marker in message.lower():
+                                      location["failure_class"] = classification
+                                      if classification == "structured_errors":
+                                          tags = _semgrep_error_types(message)
+                                          if tags:
+                                              location["semgrep_error_types"] = tags
+                                      break
+                      print(json.dumps({"finding_location": location}))
+                      emitted += 1
+                      if emitted == 200:
+                          break
+          PY
+          fi
+          exit "$review_exit"
       - name: Project independent review failure privately
         if: failure() && steps.independent_review.outcome == 'failure'
         shell: bash

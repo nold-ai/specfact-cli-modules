@@ -2399,3 +2399,2159 @@ validation passed. Normal commit hooks passed, including repository lint and
 contracts; only the expressly approved local capsule review was deferred to
 GitHub Linux. Module manifest is checksum-refreshed and remains unsigned until
 the protected CI/CD follow-up supplies its signature.
+
+
+## Delivery corrections — 2026-10-06 (Europe/Berlin)
+
+Specification scenarios and NATIVE_ARTIFACT_BUILD_CONTRACT.md preceded new tests.
+Source edits followed the observed RED results. Commands below ran in the
+isolated finish-460 worktree using controller CPython 3.14.7 / pytest 9.1.1.
+Fixture-only test keys never authenticate release artifacts; no publisher key
+was accessed. Raw transcripts are private under /private/tmp/specfact460-*.
+
+| Correction | Focused RED command | Observed RED | Full focused GREEN |
+| --- | --- | --- | --- |
+| Literal distinct UNKNOWN causes in ordinary output | `hatch run pytest -q tests/unit/specfact_code_review/run/test_commands.py -k 'unknown_runtime_diagnostics or unknown_diagnostic'` | 3 failed, 1 passed | Same file: 83 passed |
+| Keyless deterministic native assembly | `hatch run pytest -q tests/unit/test_build_macos_native_capsule.py -k unsigned` | 1 failed, 1 passed | Same file: 60 passed |
+| Generated controller cache cannot affect module composition | `hatch run pytest -q tests/unit/specfact_code_review/run/test_toolchain.py -k controller_bytecode` | 4 failed | Same file: 116 passed |
+
+The command implementation deduplicates only UNKNOWN analyzer diagnostics and
+renders them with Rich markup/highlighting disabled. Existing JSON output
+remains unchanged. The unsigned builder never calls a signer, omits manifest.sig,
+rejects stale sidecars and retains native-signature checks; signed builder
+archive/manifest bytes remain identical. The toolchain exclusion exactly matches
+module signing: __pycache__ entries and .pyc/.pyo files. Four new cases verify copied
+payload exclusion and unchanged identities. Existing
+`test_builtin_analyzer_missing_or_drifted_payload_is_unknown` and
+`test_builtin_copy_rejects_payload_drift_after_verification`, included in the
+116-test toolchain run, separately verify source/content/mode tamper rejection.
+
+`hatch run contract-test`: 28 passed. `hatch run smart-test`: 4998 passed,
+75 skipped, 95 subtests. `hatch run test -n 4` after the bytecode correction:
+5002 passed, 75 skipped, 95 subtests, five warnings in 111.19 seconds.
+Explicit native proof skips are not passing native acceptance.
+
+Mandatory review command:
+`hatch run specfact code review run --enforcement changed --bug-hunt --json --out .specfact/code-review.json`.
+Report timestamp 2026-10-05T22:11:36.527467Z; FAIL / UNKNOWN / ci_exit_code=1,
+all ten required members identify the missing darwin-arm64-cp312 catalog artifact.
+The outer process returned zero and is not proof of gate success. No findings
+were returned, but unavailable required evidence still blocks the gate.
+One requested bounded review agent found no actionable security/defect issues
+in the implementation and incremental bytecode fix; this does not replace the
+required capsule review or current-head GitHub reviews.
+
+Full artifact/candidate identities, accepted fixture limits, rejected loader
+configuration and remaining release obligations are in
+DELIVERY_CHECKPOINT_2026-10-06.md and its machine-readable sidecar. Do not archive
+this change or infer production eligibility from the unit/checkpoint results.
+
+
+Final checkpoint validation: format PASS; type check zero errors/warnings;
+lint PASS (Pylint 10/10); YAML/import boundary PASS; unsigned-development
+manifest integrity/version gate PASS for all seven modules using the paired
+core's public verification key; publish pre-check PASS with unchanged declared
+core compatibility (core 0.55.4 exercised); OpenSpec strict validation PASS.
+No publisher key or main-release required-signature claim is involved.
+
+After the initial missing-reference failure, only fixed hash-authenticated
+Semgrep inputs were restored into ignored worktree storage. The existing
+versioned adapter comparison then passed 14/14 cases for cp311, cp312 and cp313,
+with reference efbae0e733db2ea821702d36f9dfdd377194a22f11335f4208d4a233a76075f8
+and semantic adapter 471977480df00f50a7f3e624802db9d964f2afad0a9f6c01707e803ab51be45e.
+This is candidate compatibility evidence; producer/consumer/lock/signed policy
+admission and final-artifact Linux/native acceptance remain required.
+
+Staged requirements evidence gate: PASS at planned maturity; implementation
+evidence not-yet-available and delivery status proposal-only. The initial branch
+diff selected no committed changes, so its no-impact result was not counted.
+The staged invocation includes both output paths and the workflow-declared
+project/requirements module import paths.
+
+Final independent review identified one P3 evidence-attribution defect: the
+ledger attributed source mutation to the four new bytecode cases. Corrected the
+claim to cite the existing source-tamper tests that actually ran; no code change
+or additional acceptance claim was needed.
+
+The same independent agent read back the attribution correction and confirmed
+P3 closed, with no remaining concrete inconsistency in those statements.
+
+## Approved local capsule review deferral — 2026-10-06 (Europe/Berlin)
+
+The human explicitly approved the pending request to defer only the local
+Darwin ARM64 feature-worktree capsule review to blocking current-head GitHub
+Linux CI, enabling commit/push and a draft PR toward dev. Use
+SPECFACT_CODE_REVIEW_DEFER_TO_CI=github-linux only for local hooks. Every other
+quality gate still runs. This records DEFERRED, never PASS; both candidate
+customer acceptance and independent signed review remain required before merge.
+The approval grants no merge, signing-key access, publication, boundary admission
+or production eligibility. The existing UNKNOWN report is retained.
+
+The approved complete local hook pipeline passed after selecting the existing
+paired core checkout via SPECFACT_CLI_REPO. It ran format, YAML, imports, lint,
+command overview/contract, core documentation accountability, module validation
+and 28 contract tests; only capsule review reported DEFERRED. No budget or
+required analyzer enforcement changed. Initial missing paired-checkout-path
+configuration was corrected without editing the core checkout.
+
+## Hosted independent reviewer pin correction — 2026-10-06 (Europe/Berlin)
+
+PR #498 was opened at 30ace59e after rebase onto origin/dev
+74d3fd4dd6f9b171f18857abcc8f659c80d686e9 (documentation/governance changes only).
+CI subsequently signed the unchanged 0.51.1 module payload at
+687b7d7396b50b2bb1454376688fae532db62c84. Public-key required-signature verification
+passed for all seven modules; no publisher key was used locally. Only its
+signature field changed. The signed head's existing validation runs were approved
+after GitHub paused the bot-authored update. Old-head results cannot replace
+current-head acceptance.
+
+Hosted independent review failed during installation: its literal 0.50.1 pin
+is not advertised by main's single-version registry; signed published 0.51.0
+installation succeeded in the separate customer job. An OpenSpec scenario and
+regression against the actual registry/tarball preceded workflow modification.
+RED: test_independent_reviewer_pin_is_installable_signed_published_baseline
+failed (0.50.1 versus 0.51.0),60 deselected. Update only the pinned published
+reviewer to 0.51.0, retaining core 0.55.4, main marketplace, env-i isolation,
+independent VM and all enforcement/budgets. GREEN: customer gate plus
+pr-orchestrator signing suites, 73 passed in 0.63 seconds. The test verifies literal
+released pins, declared core compatibility, actual archive checksum, signed
+module metadata and absence of candidate roots/unsigned overrides. Hosted
+current-head installation and review remain required.
+
+CodeRabbit skipped automatic draft review; its green status does not count as
+review completion. The trusted installed CLI authenticated, but automatic
+approval review rejected its external diff transmission as outside the bounded
+review-agent authorization. No review ran, no external diff was sent, and no
+retry/workaround was attempted. Continue the same authorized bounded agent
+review and record external review as unavailable, rather than clean.
+
+The same independent agent found P2 stale expected pins in two existing
+deferred-review security tests. A dedicated RED reproduced 2failures/18 passes;
+update only their expected literal version to 0.51.0. Existing candidate-host
+poisoning, isolated bootstrap and override rejection assertions remain intact.
+Complete affected customer/deferred-security/orchestrator suite: 93 passed in
+6.76 seconds. The concurrently already-collected full suite retained the old
+literals and reported 2failures/5001 passes; repeat on corrected sources is
+required rather than treating the earlier 5002-test pass as current.
+
+The same independent agent confirmed P2 closed after reading both corrected
+expectations; no remaining finding in this bounded correction. Fresh full-suite
+GREEN: 5003 passed, 75 skipped, five warnings, 95 subtests in 90.87 seconds. Final
+format/type/lint and YAML/OpenSpec validation pass. The smart run had collected
+old expectations and retained the same 2 failures; repeat on corrected inputs
+uses four workers without changing selection, tests, budgets or enforcement.
+
+
+## Hosted candidate review diagnostics and selection — 2026-10-06 (Europe/Berlin)
+
+Current signed head 687b7d73's cp312 deferred review failed with 160 findings
+(errors 6, warnings 138, info 16). Required Semgrep-clean execution was incomplete,
+Semgrep-bugs was not activated, and targeted pytest reported ambiguous source/test
+mapping. Raw reports stayed private; counts and bounded reason codes do not prove
+findings are resolved. No budget or enforcement waiver is permitted.
+
+The existing helper omitted bug-hunt; portable partial test mapping rejected
+multiple matching filenames even when the caller explicitly supplied a matching
+test. Specification preceded regressions. RED: 3 failed, 106 deselected for
+bug-hunt plus both input orderings. Implementation forwards --bug-hunt and resolves
+only explicitly supplied matching candidates. Unrelated explicit tests do not
+resolve ambiguity; other explicit tests and multiple matching tests are retained.
+Full discovery and required coverage are unchanged. GREEN: 209 affected tests.
+
+A separate spec/test RED showed hosted diagnostics exposed no public finding
+locations. Emit at most 200 tracked relative paths, positive integer lines and
+declared severities, retaining the failure exit. Messages, raw findings, private
+absolute/untracked paths, booleans and invalid severities stay private. The actual
+workflow code is executed by its regression; final affected suite result follows.
+
+Parallel smart-test on the corrected pin inputs had 2 failures / 5001 passes in
+existing changed-evidence tests (not stale version assertions): missing projected
+pre-enforcement evidence and unexpected required UNKNOWN. This is not a pass.
+The default serial smart-test command passed all 5003 tests, 75 skips, five warnings
+and 95 subtests in 244.88 seconds on the pin correction. The additional selection/
+diagnostic tests were not collected by that already-started run; current-source
+smart-test and full-suite validation remain required.
+
+Hosted macOS14 at 687b7d73 passed startup and control fixtures. macOS15 passed all
+six startup races at 100 repetitions, then control failed at request-authenticate
+in cancel after 73 successful repetitions per repeated group. Its exception was
+not allowlisted, so public type was unknown; this is incomplete evidence, not a
+passing boundary or a reason to increase timing budgets. macOS26 was still running
+at inspection. These fixed fixtures do not accept the final capsules or ABIs.
+
+
+Follow-up selection/diagnostic affected suite GREEN: 210 tests passed in 5.84
+seconds. The same independent agent reviewed the complete uncommitted diff
+against 687b7d73 and found no introduced defect. Native diagnostic extension
+separately reproduced four failing standard exception-class cases before adding
+only those fixed names to the existing allowlist. No runtime deadline, cleanup,
+repetition or security policy changed. Actual macOS15 connection failure is still
+unresolved pending its detailed sanitized next-run class.
+
+The explicit-manifest checksum command rejected same-version signing against
+HEAD as designed. Used existing changed-only mode against origin/dev (0.51.0)
+for the unpublished 0.51.1 payload, retaining version-bump enforcement; no same-
+version bypass or local publisher key was used. CI must sign the updated payload
+again before required-signature release verification can pass.
+
+
+Current-source mandatory smart-test GREEN: 5011 passed, 75 explicit skips,
+five warnings, 95 subtests in 254.79 seconds. Default serial execution retains
+complete selection. Native receipt suite: 216 passed in 1.61 seconds. Final
+format/type/lint (zero errors/warnings, Pylint 10/10), YAML and bundle imports
+passed. Complete local hook pipeline passed staged planned-maturity mapping and
+28 contracts / 5058 deselected; only the explicitly approved capsule review was
+DEFERRED. The same independent agent also reviewed the four-class diagnostic
+extension and entire interacting diff: no introduced finding, current hosted
+and signed native release acceptance still pending.
+
+Hosted macOS26 completed successfully at 687b7d73 alongside macOS14; macOS15
+remains failed. These are fixed-boundary fixtures with false production flags,
+not the final-artifact nine-cell OS/ABI acceptance. No native publication,
+protective-policy waiver, budget expansion or issue completion occurred.
+
+
+Completed Linux current-checkpoint evidence at 687b7d73: cp311 and cp313
+customer jobs succeeded, including cold/warm fixture/module checks and all five
+pinned upstream corpus entries (Flask/pip, Requests/uv, Hatch, detached Hatch and
+Poetry). Downloaded GitHub artifact IDs 11380162044 and 11379471574; each
+corpus-summary status is PASS and all five acceptance.json entries are candidate
+PASS. This supports the reproduced bytecode composition correction on Linux;
+it is neither follow-up-head acceptance nor native acceptance. cp312 stopped at
+its failed deferred review, and independent review stopped at unavailable-pin
+installation. Do not claim a complete green Linux matrix.
+
+The first bare signature verifier command failed because optional signed modules
+needed a public key and its default HEAD~1 baseline already held unpublished
+0.51.1. Corrected configuration uses --version-check-base origin/dev and the
+paired public module verification key; all seven filesystem payload/version
+checks passed, with 0.51.1 greater than dev's 0.51.0. No missing-key allowance,
+metadata-only check or version bypass was used. Updated code-review payload has
+a development checksum only and awaits CI signing. The nonpublishing module
+publish pre-check and OpenSpec strict validation also passed.
+
+
+Final current-source mandatory full-suite GREEN: 5011 passed, 75 explicit native/
+platform skips, five warnings, 95 subtests in 260.40 seconds. Together with the
+5011-test serial smart pass, this completes local follow-up unit selection.
+Skips and local capsule deferral remain incomplete acceptance, not passes.
+
+
+## 2026-10-06 socket listener readiness and hosted failure diagnostics
+
+Signed checkpoint 18e77026f480268c58ea72186b682e715104339c has all seven
+public-key filesystem signatures verified against origin/dev. Current hosted
+Linux cp311/cp313 customer jobs and all three minimum-core jobs passed; cp312
+failed required review with four incomplete analyzers. Fresh independent signed
+0.51.0 installation passed, but its review exited 1 with its private report
+withheld. Current fixed-boundary macOS14/15 passed; macOS26 failed at
+request-authenticate with ConnectionRefusedError (38 complete lifecycle rounds,
+39 successes for the earlier cases). Runs 37387817080 and 37387816637 are
+candidate fixture evidence, not signed native archive acceptance.
+
+Spec preceded new readiness tests. RED4 in specfact460-connect-red.log and RED1
+Client-routing test in specfact460-client-route-red.log preceded changes to
+control_socket.py / Client. The helper retries only initial ConnectionRefusedError,
+rechecks private directory/socket metadata, closes each failed descriptor and
+uses the original seven-second connection deadline. Authentication runs once;
+other errors remain terminal. No fixture/job retry or expanded metadata,
+analysis, cleanup or repetition budget. Existing agent found stale remaining
+budget after metadata work; RED2 in specfact460-metadata-budget-red.log confirmed
+it. Recompute immediately before blocking connect fixed the finding. Current
+native unit GREEN: 304 passed, 5 explicit native-run skips (1.97 seconds).
+
+Two attempted full physical macOS27 runs did not establish lifecycle acceptance.
+The first failed the foreign-peer assertion; an isolated owning protocol check
+observed foreign-client EOFError and passed. The instrumented second full run
+stopped when the exception-port positive target received SIGKILL. Both failures
+are retained privately; neither is a boundary or repetition pass. This host is
+outside the required macOS14/15/26 matrix. No protection was disabled and no
+unchanged third attempt was made.
+
+Hosted diagnostic spec/test RED2 preceded inline workflow changes. A further
+synthetic regex-safe PRIVATE_TOKEN RED1 established that arbitrary diagnostic
+ids/tokens cannot be public. Both projectors now use finite analyzer/code/tool/
+category/rule allowlists, tracked relative public locations, integer positive
+lines and a 200-row cap. A tool error may expose only a fixed timeout class.
+Independent projection runs trusted inline code in its fresh env-i environment;
+no candidate script selects or executes the installed reviewer. Raw messages,
+absolute/untracked paths and reports remain private; original failure exits are
+preserved. Workflow/customer tests GREEN84 (5.68 seconds before the final
+finite-token correction; final rerun recorded below).
+
+Local existing-adapter reproduction identifies the hosted complexity errors:
+build_native_capsule CC34, length121 and parameters10; _git_identity CC18;
+builder test CC17; published-pin test CC17; independent-isolation tests CC25/
+CC20 and local deferral test parameters8. This is diagnostic evidence, not a
+passing capsule review; clean-code remediation remains required. Local
+basedpyright adapter reports no errors at these locations. No analysis budget
+or enforcement waiver was introduced.
+
+Final finite-token workflow/customer rerun GREEN84 in 5.42 seconds. The same
+requested bounded review agent verified the deadline finding closed and found
+no further introduced issue in socket/inline workflow changes. Required serial
+smart GREEN5025/75skips/5warnings/95subtests in 244.80 seconds; full GREEN5025
+with identical skip/warning/subtest counts in 248.53 seconds. Format, types/lint
+(zero errors/warnings, Pylint10/10), YAML, imports and OpenSpec strict passed.
+All seven strict public-key filesystem signatures/version checks against
+origin/dev passed at 18e77026; no signed module payload changed in this follow-up.
+Hosted review/native acceptance remains required; local capsule review uses
+only the human-approved DEFERRED mechanism, never PASS.
+
+
+## 2026-10-06 bounded builder/workflow clean-code remediation
+
+Existing adapter diagnosis at pushed dc8eb069 found nine error findings. The
+maintainer builder's orchestration CC increased from origin/dev's CC28 to CC34,
+and its length from113 to121 lines; workflow tests introduced CC17/CC25/CC20 and
+an eight-parameter fixture. Before-refactor findings are retained privately in
+specfact460-complexity-red.jsonl. This is maintainability refactoring under the
+existing spec; no behavior/schema/limit is changed and no new behavioral test is
+used to mirror implementation.
+
+The builder now delegates bounded validation, file records, archive planning and
+document emission through immutable internal input/payload structures. Its
+existing ten named Python arguments and CLI remain compatible. A fresh controlled
+unsigned fixture matches pre-refactor archive, manifest and summary bytes exactly:
+archive8fc6c287bb1c81acb705482d5ec7a1356b86e4563e516962e82d2b36f06b1112,
+manifestc10f8fff9d9fb9e3158050e765695155c61fae402c6db5ccbb3d997d27a4d93a,
+summary36f6bcba01602736224ba2b49d7ec58258aac69db707a51b1f43f26006c05558.
+These are synthetic fixture identities, never release artifact identities.
+
+Workflow tests now separate trusted fixture setup, job isolation, reviewer scope/
+budgets, all five forbidden host routes, installed argument checks and rejected
+preparation. The same eight deferral cases and every prior assertion are retained.
+Signed registry metadata/checksum and deterministic builder consumer checks are
+separate complete tests. No enforcement, required analyzer, budget or host-control
+check is removed. Focused GREEN183; direct builder types and standard format/
+type/lint (zero errors/warnings, Pylint10), YAML and imports passed. The same bounded
+agent inspected the entire interacting refactor and reports no findings.
+
+Origin/dev extraction proves the two remaining builder errors (GitCC18 and the
+public ten-argument facade), and listed warning sites in existing builder/customer/
+Git tests, predate this request. The facade declaration is unchanged at line695;
+compatibility is retained instead of silently changing maintainer inputs. New
+phase functions and refactored workflow tests have no complexity/length/parameter
+finding. This is not a waiver or PASS for hosted review: all required current-head
+capsule evidence still must execute, and raw legacy findings remain evidence under
+the unchanged changed-line policy. The OpenSpec change and #460 remain incomplete.
+
+
+Final refactor gates at ea93ce54: serial SMART **5035 passed, 75 skipped,
+five warnings, 95 subtests** in248.93s; full **5035 passed** with the same
+skip/warning/subtest counts in258.71s. Logs specfact460-refactor-smart/full.log.
+OpenSpec strict and all seven strict public-key filesystem signatures/version
+checks against origin/dev passed. Normal hooks and28 contracts passed; local
+capsule review remains the approved DEFERRED gate.
+
+Fresh hosted boundary run37391623966 at dc8eb069 passed macOS14.8.9,15.7.9
+and26.6.2 on ARM64: each startup receipt completed six races at100 repetitions
+and each control receipt completed20 races at100 repetitions, retaining the
+original independent cleanup bound. These are fixed broker fixtures, not the
+final capsule/ABI matrix or physical-Mac acceptance; production flags stay false.
+Current orchestrator37391624311 has all three minimum-core checks passed; cp312
+deferred review still fails with semgrep-clean/contracts/semgrep-bugs/targeted-
+pytest-coverage incomplete. Its200-location public cap hid later tool errors.
+Independent signed0.51.0 installation/preparation succeeded but review exited1
+with no report projection; exact cause remains unknown. cp311/cp313 customer
+jobs remain in progress when this checkpoint is recorded. No budget is raised.
+
+## 2026-10-06 bounded incomplete-execution diagnostic correction
+
+Specification preceded15 meaningful failing regressions (30 passed) in
+specfact460-diagnostics-priority-red.log. The projectors preserve the200 public
+location cap and finite identity allowlists, but prioritize execution failures
+so later required analyzers cannot disappear behind ordinary findings. Known
+Semgrep structured/process/empty-output and CrossHair unrecognized-output
+messages map only to fixed classes; private text stays private. Missing reports
+produce a fixed INCOMPLETE status. The independently installed review wrapper
+catches TimeoutExpired as exit124 under the unchanged300s budget; only that
+fixed class is public, and the original failure is retained. No candidate host
+helper, report upload, analyzer omission or budget relaxation is introduced.
+
+
+## 2026-10-06 explicit Darwin-only Z3 derivative and final checkpoint gates
+
+The direct finish-460 instruction authorizes reconciliation of Z3 provenance.
+The parent amendment preserves the existing metadata-only specfact.1 artifact
+and requires explicit selection of a distinct specfact.2 Darwin projection,
+authenticated release/source/native/license linkage and exact foreign omissions.
+Spec preceded9 projection failures /28 passes, and then5 lock-policy failures /
+9 passes, in specfact460-z3-projection-red.log and specfact460-z3-lock-red.log.
+GREEN51 in0.27s; meaningful rejection cases cover absent release, altered/missing/
+extra DLLs, altered source/license and output-before-authentication.
+
+Two actual upstream-wheel/release preparations produce the same wheel and
+provenance. Specfact.2 wheel82436032 bytes, SHA256
+03eb2624d4d19d06020e9a6c5823cf8ac4f6b3fcb0a73e25ef2514d1129982bd.
+The new wheel retains29 original non-metadata members, omits only the ten exact
+reviewed DLL identities, and carries the authenticated MIT text in dist-info
+licenses with correct License-File metadata/RECORD. No MIT claim covers omitted
+DLLs. Real historical specfact.1 reproduces unchanged hash
+af669755eabd97268a4141983a391cb4a832116d5a2c3cf04a4c53c7650ce72c.
+All other candidate closure pins stay unchanged. Fresh scratch clones of all
+three native environments completed normal full hash-locked uv sync offline,
+pip check and actual Z3 import/solve; no no-deps/resolver bypass or old-worktree
+mutation. GitHub API rechecked immutable upstream commit0b6cdcdb signature as
+valid on2026-10-06. Existing authenticated license/provenance inputs stay frozen.
+
+The actual confined library-loading experiment with the new full lock closure
+passed10/10 analyzers,20/20 clean/defective cases and14/14 versioned Semgrep
+parity cases for each of cp311/cp312/cp313 on physical macOS27.0.1 ARM64.
+Native scratch roots sf-analyzers-311-e6pgdipc,312-1y9gjbeh,313-g76mptve retain
+private receipts. These are candidate fixture results, not final archives, the
+supported-OS/ABI matrix, upstream manager corpus or independently installed
+customer acceptance. All production/dependency/complete-boundary flags stay false.
+
+The same bounded independent agent found no introduced defect in diagnostics
+or Z3 projection/lock/provenance handling. Diagnostic GREEN107 in6.70s.
+Mandatory serial SMART **5060 passed,75 skipped,five warnings,95 subtests**
+in257.55s and full **5060 passed** with identical counts in259.53s. Regular
+format/types/lint (zero errors/warnings,Pylint10),YAML,imports and strict OpenSpec
+passed. Logs specfact460-projection-smart/full/lint.log. Earlier published
+reviewer failures remain failures; exact-head hosted review still blocks merge.
+
+Completed dc8eb069 Linux artifacts11382485918(cp311) and11381794925(cp313)
+verify all five external entries PASS (flask,hatch,hatch-detached,poetry,requests)
+across the four managers, in addition to customer fixtures. cp312 and independent
+installed review failed; downstream quality stopped at its required customer
+prerequisite, never at local lint. All three minimum-core checks passed.
+
+This continuation consumed native fixture and full-suite runs and additional
+multi-GB scratch copies, with no paid service or publisher key used locally.
+Rollback removes the unpublished source/lock projection while preserving the
+historical derivative and all immutable evidence; never promote the rejected
+empty-entitlement archives. Final supported artifacts/catalog/publication and
+physical full-boundary proof remain open.
+
+
+## 2026-10-06 incomplete native runtime corrections
+
+The direct instruction to implement incomplete runtime logic authorizes these
+bounded corrections. Specs preceded production edits. Managed uv preparation
+re-signed a verified maintained executable, changing its hash from
+3b1a6d08d941bdb0934ab72804748ae5ddd2aeb35940ee93c7a8a44b67cef151
+to ae866acd9cf22058c3278513b5fd7f3392b4aa69b49c9159033d8e2b1f1d3bcd
+without replacing its receipt. Six meaningful RED regressions preceded the
+signature-preservation and post-inventory/assembly provenance checks; focused
+GREEN46 includes accepted assembly and rejection before output. Private logs:
+specfact460-managed-uv-red/green.log. All three complete CPython candidate inputs
+now include verified maintained uv and Git, unlike the earlier analyzer-only
+fixture roots. No publisher signing key or host-manager inference is used.
+
+Actual default changed enforcement failed before native analysis on changecost:
+worktree identity entered the ignored .changecost/verify-py311 environment while
+project preparation excluded it. Five meaningful REDs (one existing negative
+control passed) preceded shared pyvenv.cfg exclusion. Tracked/selected environment
+inputs and excluded/external aliases remain rejected. The surrounding suite
+caught an overbroad parent check for ordinary packages named venv; it was narrowed
+to actual environments, retaining the existing reachable-input mutation check.
+All32 worktree enforcement tests passed. Logs environment-identity-red/focused.
+
+Native adapter execution alone did not retain pytest observations in its report.
+Seven meaningful REDs preceded bounded ordinary-artifact capture before evaluator
+cleanup and projection only after completed replay. Project-origin-v1 remains
+explicit and native protected-range evidence remains ineligible. GREEN136 covers
+worker, native runner and assembly contracts. SMART subsequently caught the new
+projection test inheriting controller PYTHONPATH; its fixture now clears only the
+worker's existing unsafe environment list, without changing production admission.
+The earlier SMART failure (5079 passed,75 skipped) is preserved, never counted as
+PASS. No full suite ran after that failed prerequisite. Logs runtime-followup-smart
+and native-pytest-red/runtime-followup-focused.
+
+The pinned Requests repository reproduced project_native_runtime_symlink at the
+valid internal tests/certs/valid/ca -> ../expired/ca directory alias. Two meaningful
+RED cases (no indirection-free projection and copied-source substitution) preceded
+private materialization; the first cycle fixture checked the wrong existing error
+and is not counted as meaningful RED. A genuine sibling-directory cycle now rejects.
+A subsequent meaningful RED detected removal of an ordinary package named venv;
+projection now uses the exact preparation exclusion predicate. It preserves empty
+directories and never changes the original checkout. Native dependency runtime
+inventories still reject all aliases. Final focused GREEN122 in0.93s covers these
+corrections and existing preparation/capture contracts. Logs native-source-alias-red,
+native-source-alias-projection-red and runtime-final-focused.
+
+Physical candidate scope is ARM64 macOS27.0.1 (26A434), not the supported matrix.
+The observed native fixture lease binds real ad-hoc hardened binaries but is not
+authenticated by a publisher manifest. Current worker runtime digest
+fbc5bc0d59556de4d6d6aa1af153c3456f7da581cba66e01efdfdf1788b8da35,
+11126 regular files, cp313. Module CLI uses the real command/report implementation
+with only that fixture acquisition seam. No unsigned-module override is used.
+Changelog/source changes after that assembly are controller-side corrections;
+this is bounded runtime evidence, not final release-byte acceptance.
+
+Changecost uv cold preparation completed in25.747s; offline identity reuse passed.
+Full source CLI review with default changed enforcement completed in149.112s:
+all10 members reported ran, no reported UNKNOWN or tool errors. Subsequent
+diagnostic inspection found Pylint F0002 internal crashes misclassified as style;
+this initial completion-checker PASS is insufficient and is not runtime acceptance.
+Actual pytest observer retained842 collected selectors,315 call records and325
+coverage files, exit1, project-origin-v1. The existing external acceptance report
+checker passed its completion contract; it does not reinterpret failed tests as
+PASS or provide protected authority. Initial CLI harness mistakes (calling a
+callback directly, stale source-manifest rejection and wrong module entrypoint)
+are not attributed to native runtime execution and do not count as acceptance.
+
+Requests commit dae7ef63b4df6eded86637f251fc4e3a06c3b479 used real pip preparation,
+no project catalog entry, no host hooks/tests, cold13.317s and offline reuse PASS.
+Its selected production/test CLI run completed in32.813s: all10 analyzers ran,
+no UNKNOWN;24 collected/called tests,139 coverage files and pytest exit0. BasedPyright
+findings remain FAIL. Its Pylint collections.abc import failure was subsequently
+traced to missing frozen-module filesystem source, not accepted as a project
+defect. Safe summaries are private tmp
+specfact460-{changecost,requests}-current-cli.summary.json; detailed reports remain
+private. Complete manager/ABI/final-byte/customer acceptance is still required.
+
+Exact-head63e6e83 hosted status: macOS14/15/26 fixed boundary jobs all PASS,
+6 startup and20 control races per OS, each100 repetitions. Linux cp311/cp313 all
+five corpus entries PASS; cp312 deferred review FAIL with structured Semgrep errors,
+CrossHair timeout and pytest tool error. Independent signed0.51.0 review reaches
+the unchanged300s timeout. All minimum-core jobs PASS; downstream quality stops
+at its prerequisite. These failures remain blocking; no budget, roster, policy,
+cleanup bound or installed reviewer is waived or altered. Current-head signing
+and CI must repeat after this source change. Native catalog remains empty and
+publication/production/complete-boundary flags remain false.
+
+
+### Remaining source-copy and Pylint runtime logic — 6 October 2026
+
+The bounded reviewer identified executable-mode loss and failure cleaning owned
+0555 source-copy directories. Both reproduced (2 RED,5 passed) before fixes;
+GREEN7 preserves executable regular/alias files, non-executable data, unchanged
+customer directory modes and full owned temporary cleanup. No links are followed
+when granting cleanup permission in the discarded private copy.
+
+Inspection of actual candidate report findings invalidated the earlier assertion
+of complete changecost Pylint execution: F0002 internal crashes had been mapped
+to style, and both projects exposed collections.abc lookup errors. Direct real
+CPython/Astroid execution reproduced AstroidBuildingError for relocated
+lib/python3.13/_collections_abc.py, which was absent because only the ZIP held
+source. Three ABI source-projection tests and six fatal-diagnostic mapping tests
+failed meaningfully before implementation (RED9,26 passed,1 skipped). The builder
+now retains the exact captured bounded source bytes at relocated paths as well
+as the ZIP; no host input or third-party package fallback is admitted. Pylint
+F diagnostics remain tool_error even outside selected files, preserving ordinary
+findings and required incomplete-evidence semantics. Focused GREEN42,1 explicit
+maintainer skip. Private logs native-stdlib-pylint-red/green.log.
+
+The rebuilt real cp313 runtime digest is
+23efb3a4b24ee668b508c032ea4164f57b4df3bd1e52df55917f4c0052d90d8e,
+11758 regular files. Direct actual Astroid resolution now passes collections.abc,
+dataclasses, typing, inspect and abc. Production approval and manifest
+authentication remain false. The same bounded reviewer returned No findings,
+42 tests passed and1 explicit maintainer skip; installed-customer acceptance
+remains unverified.
+
+Before the final fixes, SMART passed5085 tests,75 skips and95 subtests; the
+subsequent full gate observed the two then-unfixed source-mode/cleanup tests
+failing (5085 passed,75 skipped). That historical failure is retained and does
+not count as a final PASS. Both failures have focused passing evidence; final
+required gates and real project commands are run against the corrected source.
+
+
+The independent corpus completion checker also reproduced three false accepts
+for tool errors or fatal Pylint diagnostics disguised as style/architecture;
+RED3 preceded rejection and GREEN50 includes genuine-finding positive controls.
+The bounded reviewer found no defects in this correction. Earlier reports are
+not retroactively accepted. Real cp311/cp312 assemblies with corrected source
+projection contain11860/11811 files with candidate-only digests
+a2a2e1b04adf45936c5ca702f9b430e70f88628c9cea14c4d0a876ade14a51d2
+and f23914f258f995bcf31d141ac6599c9e8574030e55f1edea85671714a9bc2204.
+All three actual isolated -I -S -B interpreters resolve the five stdlib inference
+modules. A standalone diagnostic initially omitted -B and generated bytecode in
+the private cp313 candidate; unchanged launch ownership checks rejected it. Only
+that diagnostic bytecode was removed, source/native bytes preserved, then the
+explicit no-bytecode probes and real project commands were checked again.
+
+Corrected physical cp313 changecost preparation25.222s, offline reuse PASS; full
+CLI review143.633s. All10 members execute with no fatal Pylint or tool-error
+findings, no UNKNOWN; actual pytest842 collected,315 calls,325 coverage files,
+exit1. Corrected Requests preparation15.085s, offline PASS; review36.591s,
+all10 members execute, no internal/import-resolution errors;24 tests,139 coverage
+files, pytest exit0. The stricter independent completion checker accepts both
+completed reports; actual project findings/test failures remain FAIL. Both
+reports bind cp313 runtime23efb3a4...90d8e and project-origin-v1 observations.
+This is candidate module-command evidence on unsupported supplementary macOS27,
+not final archive, installed-customer, complete-boundary or publisher proof.
+
+
+### Actual four-manager follow-up — 6 October 2026
+
+Pinned upstream Hatch d5f7bfe813dd4d81520def23b43f5d46aad1899c prepared in67.217s
+and reused offline, but pytest could not import hatch. Its built root wheel's
+generated version file discarded otherwise matching src roots; only backend/src
+remained. RED1,1 existing installed positive control preceded generated-wheel-only
+module handling; represented sources with changed sizes/bytes still reject, and
+matching ambiguous copies retain rejection. No name-only root inference is added.
+Bounded pytest-only diagnostic retained the actual ModuleNotFoundError and missing
+artifact rejection, rather than repeating the failed full acceptance unchanged.
+
+Pinned Flask d73fa1cdcbd8b1465c151db8924ba58b1dd14e35 completed real native uv
+preparation7.117s, offline reuse and all ten analyzers35.686s;19 actual test calls,
+161 coverage files, pytest exit0, strict complete-report checker PASS. Pinned
+Poetry be56ff07db06e9b82574648433ca228e4cac549b prepared53.298s, offline PASS;
+its59.372s review ran7 successful tests with856 coverage files but the report lost
+collection selectors because distributed plugins emitted only21 setup/call/teardown
+events. This was correctly rejected as incomplete acceptance. RED3 preceded
+retention of nodeids from actually observed test phases; empty observers remain
+empty and requested unobserved selectors are never supplied. GREEN89 surrounds
+Hatch runtime preparation and native pytest observations.
+
+The rebuilt cp313 candidate includes those worker changes, digest
+bc2a0a3bb089652b7b93964d5611c784acde99bca3395c53605965ce08327473,
+11758 regular files, manifest_authenticated=false and production_approved=false.
+Actual Hatch and Poetry commands are rechecked under unchanged budgets; final
+archive and installed-customer matrix remain pending.
+
+Before these two new corrections, final v3 SMART and full gates each passed5099
+tests,75 skips,95 subtests with5 existing warnings. These passes cover the earlier
+source, stdlib and fatal-diagnostic fixes; they do not cover the subsequently
+added Hatch/Poetry code. Final v4 mandatory gates are run on that corrected source.
+
+
+### Generated imports, bounded matching and real manager completion — 6 October 2026
+
+The bounded review found generated wheel Python modules could become unreachable
+when a source root shadows the installed regular package. RED stage and collision
+regressions preceded an immutable source-overlay in the prepared runtime, projected
+only into the owned private project snapshot. Existing originals cannot be
+replaced, only Python files enter the overlay, and source/ambiguity binding remains.
+A second actual Hatch failure was ModuleNotFoundError:hatch.venv: an ordinary
+source package named venv was statically excluded. Meaningful capture RED preceded
+removal of that name-only exclusion; real pyvenv.cfg environments remain excluded.
+Focused GREEN 131 covered surrounding snapshot, preparation and worker behavior.
+
+The review also reproduced comparison-budget exhaustion for unrelated package
+names and an uncharged quadratic shared-tail scan. The meaningful shared-tail RED
+uses 3,000 packages named customer_i/common/__init__.py and counted over 9 million
+candidate path reads. Full suffix indexing bounds construction and exact matching
+within the unchanged 100,000 cap; GREEN 115 covers strict bytes, ambiguity, generated
+imports, collision and ordinary environments. Measured Radon CC25 in the introduced
+combined helper required extraction; the final orchestration is CC11, extracted
+helpers CC2–6. The same reviewer found no defects in either correction or extraction.
+Logs source-tail-budget-red/green.log and source-helper-green.log remain private.
+
+A complete real four-manager candidate CLI pass binds runtime
+a12c8c15eddc27cc987a6f0b7d0910206d359fc98bf26270d880f5692c2c4f4d,
+11758 files. Every project completed ten members, no UNKNOWN, no tool_error or fatal
+Pylint findings, strict completion-check PASS and offline cache reuse PASS:
+
+| Actual pinned project / manager | Cold preparation (seconds) | Review (seconds) | Observed tests / coverage files | Pytest exit |
+| --- | ---: | ---: | ---: | ---: |
+| Requests / pip | 14.604 | 36.713 | 24 / 139 | 0 |
+| Hatch / Hatch | 64.651 | 38.551 | 5 / 479 | 0 |
+| Flask / uv | 6.736 | 34.297 | 19 / 161 | 0 |
+| Poetry / Poetry | 51.677 | 55.285 | 7 / 856 | 0 |
+
+The source revisions are those recorded above and in the unchanged pinned corpus.
+Requests reports a genuine BasedPyright finding and FAIL; the others report
+PASS_WITH_ADVISORY. Reports retain project-origin-v1. This candidate precedes the
+final helper/index extraction, which has focused regression proof; these are not
+final-source archive identities. The fixture lease is manifest_authenticated=false,
+production_approved=false, on supplementary macOS27.0.1. No native catalog, supported
+OS/ABI acceptance or ordinary installed-customer success follows from these passes.
+
+Before the latest overlay/index corrections, v4 SMART passed5104 tests,75 skips,
+95 subtests. The subsequent full gate passed5103 and failed one changed-line
+identity test while tracked source was being changed concurrently. The guard
+correctly returned UNKNOWN; it was not weakened. A stable focused rerun passed
+both affected changed-enforcement tests. Final gates are run only after all
+tracked code/spec/manifest edits stop; the historical full failure is not PASS.
+
+
+Final v6 SMART found one stale fixture, with 5,108 tests, 75 skips and 95 subtests
+passing. The original capture test derived ordinary data filenames from the live
+excluded-directory set, then unconditionally linked data/venv. Correct removal
+of name-only venv exclusion left that target absent. The fixture now explicitly
+creates venv as ordinary project data; exact capture inventory and both alias
+content assertions remain. Runtime dangling-alias rejection is unchanged. This
+failed gate is retained; focused proof and stable SMART/full reruns follow.
+
+
+With the corrected ordinary-data fixture, v7 SMART passed 5,109 tests,
+75 explicit skips and 95 subtests. Additional measured clean-code comparison
+found new environment ancestry raised identity orchestration CC9 to CC13.
+Extraction restores it to CC10 (predicate CC4). Optional pytest observation
+projection now belongs to the existing response constructor (CC8), restoring
+worker main to its prior CC13; no new legacy warning is introduced. UV
+verification and analyzer provenance projection are extracted at their natural
+boundaries: input CC38 and preparation CC29 remain at their prior values,
+assembly CC41 is below its prior CC42, and new helpers are CC3–7.
+Focused post-extraction GREEN: 116 tests, 3.12 seconds. This preserves actual
+observation authority, provenance rejection and assembler outputs; final stable
+gates follow these extractions. An initial focused command named a nonexistent
+test module and collected nothing; it is not passing evidence. The corrected
+command uses test_assemble_macos_native_capsule.py.
+
+
+### Stable final runtime checkpoint gates — 6 October 2026, Europe/Berlin
+
+Final v8 format, type (zero errors/warnings), lint (10.00/10), YAML,
+import-boundary, filesystem manifest integrity/version, OpenSpec strict,
+requirements planned mapping, publish pre-check and 28 contract tests pass.
+Final SMART and full suites each pass 5,109 tests, 75 explicit skips and
+95 subtests, with five existing fork deprecation warnings. Neither suite ran
+while tracked source changed. Native proof skips are not acceptance passes.
+The unchanged module compatibility range includes the actually exercised core
+0.55.4. The unpublished module remains 0.51.1; local checksum refresh is unsigned,
+with all publisher key variables removed. Fresh CI signature and hosted exact-head
+review remain required. One bounded agent's final extraction review found no
+defects; it did not independently rerun final suites or authenticate customer
+installation. Local authoritative capsule review is the existing human-approved
+DEFERRED gate, never PASS. No merge, publication or native admission occurred.
+
+Private logs: /private/tmp/specfact460-final-v8-{format,type,lint,yaml,imports,
+signature,openspec,requirements,contract,smart,full}.log. Real candidate manager
+reports and complete archive/installed-customer release limitations above remain
+separate from repository gate results.
+
+
+### Signed runtime follow-up and bounded hosted diagnostics — 6 October 2026, Europe/Berlin
+
+Runtime source commit ca1cf81f6915661c41bc781107a4b7907e9923c2 was committed
+through the normal hook pipeline and pushed to draft PR #498. Its CI signing
+follow-up 4ec4e942ae43e7705163dba573b384785fd6653e changes only the module
+signature; all seven filesystem payloads pass public-key signature verification.
+No publisher private key was used locally. The approved Darwin capsule review
+remained DEFERRED, never PASS.
+
+Exact-head orchestrator run 37447095674 failed. Linux customer cp311 and cp313
+passed cold/warm/alternate/targeted fixtures and their external-corpus artifacts
+contain status PASS with no failures. The cp312 blocking candidate review failed
+with structured Semgrep errors, Pylint timeout, incomplete CrossHair timeout and
+a pytest tool_error. Independent installed signed review timed out with exit124
+at the unchanged 300-second budget. No raw analysis report was uploaded; these
+finite diagnostics do not identify the underlying causes yet. All three minimum
+core jobs pass. Quality jobs remain failed by their prerequisites. Native run
+37447095490 passes fixed startup/control/lifecycle fixtures on macOS14/15/26;
+these are not final archives or the required OS/ABI acceptance matrix. Five
+bot-authored test runs were approved for execution, without PR approval, merge,
+promotion or signing-authority changes.
+
+New case460-15-20 first failed four genuine assertions for absent recognized
+Semgrep tags, while eight privacy controls passed. Both trusted inline projectors
+now expose at most three fixed public error-variant tags from bounded details;
+unknown names, variant payloads, source excerpts and raw messages stay private.
+Structured outer errors precede nested Timeout text. A first implementation
+failed two such precedence assertions before correction. Actual local CPython
+3.14.7 and 3.12.14 both parsed the 1,500-level bounded nesting control, so that
+control is not failing-first evidence. Explicit decoder-fault injection then
+failed two tests with a private RecursionError traceback; bounded fallback now
+catches it and retains the generic public cause. Existing exits, 300-second
+review deadline and 200-location cap are unchanged, and the independently
+installed review does not execute candidate helper scripts.
+
+Native candidate Semgrep1.175.0 scanned all41 changed Python files with exit0,
+no structured errors and six introduced naming matches in tests. Six test names
+were corrected without changing assertions; the same diagnostic now has zero
+introduced naming matches. This native version differs from the released Linux
+tool and does not resolve its structured errors or establish hosted acceptance.
+Focused follow-up GREEN is229 tests in8.55seconds. The existing bounded review
+agent reports No findings for the workflow/test diff; it did not rerun tests.
+Whitespace observations were corrected. Final local gates are recorded after
+all tracked edits stop. Protected native release workflow, final nine-cell
+archive acceptance, signed catalogs and independent native customer installation
+remain incomplete. No archive, publication or #460 closure is authorized by
+these partial results.
+
+Private diagnostic logs: specfact460-structured-semgrep-public-red.log,
+specfact460-structured-semgrep-decoder-red.log and
+specfact460-semgrep-diagnostic-final-green.log under /private/tmp. Historical
+failed gates remain retained rather than relabeled as successful.
+
+The first follow-up signature command omitted --version-check-base and compared
+against HEAD~1, the CI signature-only commit parent. Cryptographic checks passed
+all seven modules, but that default version comparison failed at unchanged0.51.1.
+The corrected command uses origin/dev, matching the normal hook policy. This
+invocation failure does not justify a second version bump or signature rewrite.
+
+
+The preserved Semgrep1.144.0 parser failure now has a concrete reproduction.
+The official PyPI ARM64 wheel is39,953,709bytes, SHA256
+a10b5076d50cdf5ebbec720580679d69a1172485d52f9fbf24b11af5e3676d0f
+(metadata https://pypi.org/pypi/semgrep/1.144.0/json, accessed2026-10-06).
+It was hash-verified and only its engine extracted into a private diagnostic
+folder; installed analyzer packages, locks and compatibility policies were
+unchanged. With metrics disabled, a private HOME and the unchanged90-second
+budget, the same41-source scan exits0 but reports Syntax error at the pre-existing
+keyword-only lambda at test_commands.py:721. The runtime correctly treats this
+structured error as incomplete despite exit0. Semgrep1.175.0 has no such error.
+Private equivalent-source controls show parentheses still fail, while positional
+lambda syntax parses but loses the keyword-only contract and was not adopted.
+
+After specifying case460-15-21, five local callbacks were replaced with nested
+named keyword-only functions. Every return value and test assertion is retained.
+The same Semgrep1.144.0 command now exits0 with errors[] and28 real findings;
+146 command/projector tests pass in7.40seconds. This is a real older-parser
+compatibility fix, not an error-filter waiver. Linux reproduction remains to be
+confirmed by exact-head hosted review; Pylint/CrossHair/pytest failures and the
+independent deadline remain unresolved. The earlier SMART follow-up passed
+5,127tests,75skips,95subtests and five existing warnings in264.75seconds before
+this additional callback syntax correction. Final stable gates follow below.
+
+The first private-copy comparison command used a nonexistent local config path
+and yielded non-JSON output; the corrected command used the original verified
+rule paths. That failed diagnostic is not passing parser evidence.
+
+The first new case mapping used a scenario title slug, while the current native
+Requirements import exposes requirement-level scenario identities. The existing
+gate rejected unknown-source-scenario. The sidecar now uses the established
+parent requirement identity, as every existing case does; the concrete scenario
+and parser proof remain explicit. No validator or acceptance rule was changed.
+
+
+Final parser-compatible follow-up gates: SMART5,127passed/75skips/95subtests
+in264.63seconds; full5,127passed/75skips/95subtests in267.70seconds. Both
+retain five existing fork warnings and ran with tracked files stable. Format,
+type (zero errors/warnings), lint10.00/10, YAML, imports, strict filesystem
+signatures/version against origin/dev, OpenSpec strict, corrected planned
+Requirements mapping and28contracts pass. The bounded callback review reports
+No findings and confirms all five keyword-only signatures, closures and
+assertions remain unchanged. Hosted exact-head review remains required; local
+capsule review is only the previously approved DEFERRED gate. Final logs are
+/private/tmp/specfact460-parser-final-{type,lint,yaml,openspec,smart,full}.log,
+corrected Requirements output and the followup-signature-dev/contract/imports
+logs. No native production flag, published support or completion is asserted.
+
+
+### Current-source native workflow and timeout progress — 2026-10-06
+
+The rebuilt e71e74c7 module-source candidate has identity
+ df8a9ee20f4a7828068b19d90979ee5ebb8af0bc8fc7c68bea46af2c50aa32ee,
+11,758 files, on supplementary physical macOS27.0.1/ARM64/cp313. All ten
+members complete without UNKNOWN/tool-error/fatal rows for the pinned
+Requests/pip, Hatch, Flask/uv and Poetry projects. Actual observed pytest
+calls/coverage files are24/139,5/479,19/161,7/856; pytest exits0 in all four.
+Cold preparation/review seconds are13.373/32.044,62.919/40.267,
+6.563/32.746 and51.721/52.163 respectively. Prepared offline reuse and the
+strict completion checker pass; source checkouts remain clean. Actual reported
+findings are retained, including Requests' BasedPyright FAIL. The native lease
+is an observed candidate fixture: manifest_authenticated=false and
+production_approved=false. This is current-source runtime proof for the
+preceding committed implementation, not final archive or installed-customer
+admission. Private summaries remain under specfact460-native-upstream-5v0slcd6
+and specfact460-final-logic-cp313.summary.json in /private/tmp.
+
+Fresh exact-head e71e74c7 hosted run37453978812 has passed Linux3.13 candidate
+customer/corpus acceptance and all three minimum-core checks. Linux3.12's
+staged review and the independently installed signed baseline hit the
+unchanged300-second analysis deadline. The candidate helper originally returns
+1 after TimeoutExpired, causing the public projector to say review_report_missing.
+This is a concrete diagnostic bug, not proof of which analyzer timed out.
+
+After specifying case460-15-22, the initial test edit targeted the wrong local
+variable; its1PASS is preserved as first-not-red, not failing evidence. Correcting
+the actual exit_code assertion to124 produces1FAIL/22deselected before changing
+production. The single return correction yields86PASS in6.88seconds across
+helper and trusted projector suites. Exit124 remains blocking and does not
+synthesize a report. Logs: specfact460-hook-timeout-distinct-{red,green}.log.
+
+Reuse is preferred over new observer infrastructure: the ordinary CLI already
+provides ReviewOptions.progress_callback, but capsule snapshot dispatch never
+calls it. Case460-15-23 specifies fixed public progress and bounded timeout
+projection. The real snapshot orchestration test fails before any dispatch
+because the callback is absent; two real TimeoutExpired paths also fail because
+the helper discards str/bytes partial stderr. Meaningful RED is3FAIL/4PASS;
+unknown/payload-bearing lines, oversized tails and missing stderr already pass
+negative privacy controls. Production now calls the existing callback before
+member checks and projects only the last exact known analyzer from at most
+65,536 stderr bytes/characters. It labels an analysis timeout, never execution
+success or authority. No callback is emitted for pre-existing unavailable
+member evidence. The unchanged300-second deadline and exit124 are retained.
+
+GREEN is447 helper/runner tests in37.50seconds. An initial combined invocation
+named a nonexistent workflow test path and ran zero tests; this is not passing
+verification. Corrected projector and final repository gates follow separately.
+Private logs: specfact460-capsule-progress-{red,green}.log. The authenticated
+independent baseline is unchanged and its deadline remains undiagnosed. These
+changes improve candidate diagnosis; they do not resolve analysis performance,
+complete protected native delivery, waive review budgets or authorize release.
+
+The completed e71e74c7 run also passes Linux3.11 candidate acceptance; cp312
+and independent timeouts keep the orchestrator and dependent quality jobs
+failed. No successful overall review is inferred. The bounded review agent
+reports No findings for the new timeout/callback/projection diff. Trusted
+workflow projector plus helper tests pass92 cases in6.92seconds. Type has zero
+errors/warnings, lint10.00/10, YAML/imports/OpenSpec strict and28contracts pass.
+The first integrity refresh used explicit manifests with --base-ref alone;
+that mode compares HEAD and correctly rejected unchanged unpublished0.51.1.
+The corrected --changed-only selection compares origin/dev, retains the required
+0.51.0→0.51.1 bump and refreshes only the altered Code Review payload checksum.
+Its signature is deliberately absent pending CI-only signing. Other six
+signatures verify with the paired public key; the initial verification omitted
+that key and is retained as a command failure, not cryptographic proof. The
+first Requirements invocation omitted its declared PYTHONPATH and failed import;
+the corrected command follows the existing CI recipe. No gate is weakened.
+Final SMART/full gates run with tracked files unchanged and follow below.
+
+The corrected planned Requirements gate passes (implementation evidence remains
+not-yet-available). SMART passes5,134tests/75skips/95subtests with five existing
+fork warnings in264.77seconds. Tracked files were stable during that run.
+
+Full GREEN is5,134passed/75skips/95subtests with five existing warnings in
+268.33seconds, again with stable tracked files. Existing native acceptance skips
+are not passes. The already verified Semgrep1.144.0 engine parses all41 changed
+Python files without structured errors; its25 raw legacy rows contain zero
+matches on added lines against HEAD or origin/dev. This is a bounded syntax/
+clean-rule diagnostic, not a replacement for the required ten-analyzer review.
+The first direct engine invocation omitted the existing parity recipe's
+--experimental switch, attempted its absent pysemgrep fallback and produced
+no JSON. It is retained as an invocation failure; the corrected explicit native
+frontend produces exit0/errors[]. Private outputs remain in the existing
+semgrep-1.144-diagnostic folder. Mandatory local capsule review remains the
+human-approved DEFERRED gate, never PASS. The changed0.51.1 checksum requires
+fresh CI-only signing. Final logs are specfact460-progress-{type,lint,yaml,
+imports,integrity-verify-corrected,contracts,openspec,smart,full}.log and corrected
+Requirements output under /private/tmp. No publisher key was used locally.
+
+## Managed uv fixed-frame build launch correction — 2026-10-06 Europe/Berlin
+
+The exact unsigned5a0c443b cp311 archive round-trip reached actual pinned Hatch
+preparation, but the upstream installer failed with
+`project_native_managed_process_incomplete:request exceeds bounds`. A private
+read-only broker-output observer reproduced the failure through the unchanged
+confined hook; no installed reviewer or execution grant was modified.
+
+After specifying case460-15-24, the new native regression compiled the real Rust
+bridge and reproduced the same frame failure: **1FAIL/13deselected**,
+`/private/tmp/specfact460-uv-frame-red.log`. The production change uses existing
+CoreFoundation serialization to emit binary property lists, preserving every
+argument/environment field. The actual native broker parser accepts the compact
+payload with spaces/Unicode roots. XML exceeds4096bytes while the final binary
+frame fits; individually oversized strings and oversized final binary payloads
+still fail before channel use. Frame/count/output/resource limits are unchanged.
+
+The initial native parser suite passes14tests; the parser, managed-uv builder
+integrity and analyzer provenance suites pass28tests in1.30s. Logs:
+`/private/tmp/specfact460-uv-frame-green.log` and
+`/private/tmp/specfact460-uv-frame-provenance-green.log`. The reviewed bridge pin
+was updated to actual changed source bytes. A newly built executable and real
+Hatch command acceptance are pending, so old executable receipts and5a archives
+are preserved as historical candidates, not presented as corrected artifacts.
+
+Exact5a LinuxCI run37458400647 isFAIL: cp311/cp313 customer/corpus and all three
+minimum-core jobs pass; cp312 candidate review completes but Pylint/CrossHair
+reach their unchanged deadlines and targeted pytest has unusable evidence. The
+independently installed signed baseline reaches the outer300-second deadline.
+Quality jobs fail at prerequisites. Fixed boundary run37458400298 passes on
+macOS14/15/26; it does not test final Python archives. No release flag, catalog,
+publication or issue-completion claim follows from these observations.
+
+The offline locked upstream build completed through the existing reviewed builder.
+Full maintained-input validation and actual native inspection pass for the new
+uv executable SHA256
+`2469006ee4df6dc43658d0739c18f6fb57ea01d655e2ba0221adc7665bc0a5f8`;
+it retains ad-hoc hardened signing under `ai.nold.specfact.managed-uv`.
+The changed bridge SHA256 is
+`22171d8ccb60b004d94039c762c1ad986dcf87034b44d5615440401e70b75198`.
+The historical executable receipt is rejected because its bridge source differs.
+No publisher key or local manifest signature is used.
+
+Three fresh brokers were compiled against the actual Python/direct-tool/uv/Git
+designated requirements, then three unsigned capsules were assembled and streamed
+through the existing extractor. Exact archive SHA256 identities:
+
+| ABI | Archive SHA256 |
+| --- | --- |
+| cp311 | `1a95b270374991047c44d88df5fc7174c6c96a8a2acd409b1e27fea7297fa3d7` |
+| cp312 | `618c80b1219d3307cd9d030f255a7fd682e748f3bc9412bb698a6fe3bb5ae2da` |
+| cp313 | `0129ccf5fa0d251f0abd8f1bff894d1e161350b5375e6a18b9ef5b7888c419a2` |
+
+Every extraction verifies exact bytes, inventory and36actual native signatures.
+Manifest authentication is deliberately not performed. The source evidence binds
+5a0c443b plus working-tree diff SHA256
+`7c0d7a19b379b58d2fc9bfe49372fba11b7764b4a210d05b5b4ed3adb68664dc`;
+post-build evidence prose does not replace those captured inputs. The initial
+extractor helper launch lacked the module source path and failed to import; only
+the corrected explicit-PYTHONPATH launch establishes extraction success.
+
+Actual cp311 Hatch preparation/review now completes all ten analyzers, five tests
+and480coverage files with offline reuse; the prior hook failure is resolved.
+Cp311 Flask/uv and Poetry also complete. Requests/pip completes all ten members
+for each ABI, with24observed tests and139coverage files; its real BasedPyright
+finding and FAIL exit are retained. These private-cache, explicit fixture-lease
+checks on physical macOS27.0.1 are candidate evidence, not normal installed
+customer authentication or the required macOS14/15/26 final-artifact matrix.
+Remaining ABI manager results will be recorded separately when completed.
+
+Final stable-patch SMART passes5,135tests/75skips/95subtests/five existingwarnings
+in275.82s; full passes the same counts in296.47s. Format/type/lint/YAML/imports,
+28contract tests, strict OpenSpec, planned requirements, all7payload/version
+integrity checks and bounded independent review pass. The changed0.51.1 module
+has checksum-only metadata pending CI signing; existing6signatures verify.
+The review agent reports No findings. The known Linux review failures, protected
+native release path, signed catalogs and independent installed native acceptance
+remain blocking; no release/publication/completion flag changes.
+
+The corrected exact-archive manager probes complete **12/12**: Requests/pip,
+Hatch, Flask/uv and Poetry on cp311/cp312/cp313. Every case completes all ten
+analyzers and prepared offline reuse, with actual project-origin tests/coverage
+observed; no required UNKNOWN or tool failure is hidden. Requests keeps its
+existing BasedPyright FAIL; the other slices report PASS_WITH_ADVISORY. These are
+explicit unsigned fixture-lease probes on the supplementary macOS27 host.
+
+| ABI | Manager/project | Cold preparation(s) | Review(s) | Observed calls | Coverage files |
+| --- | --- | ---: | ---: | ---: | ---: |
+| cp311 | hatch/hatch | 61.438 | 41.53 | 5 | 480 |
+| cp311 | pip/requests | 13.585 | 33.185 | 24 | 139 |
+| cp311 | poetry/poetry | 52.479 | 57.387 | 7 | 877 |
+| cp311 | uv/flask | 6.55 | 33.731 | 19 | 161 |
+| cp312 | hatch/hatch | 64.563 | 38.762 | 5 | 480 |
+| cp312 | pip/requests | 15.72 | 39.005 | 24 | 139 |
+| cp312 | poetry/poetry | 49.825 | 52.927 | 7 | 857 |
+| cp312 | uv/flask | 6.822 | 33.378 | 19 | 161 |
+| cp313 | hatch/hatch | 63.701 | 38.147 | 5 | 479 |
+| cp313 | pip/requests | 14.815 | 39.145 | 24 | 139 |
+| cp313 | poetry/poetry | 54.571 | 54.389 | 7 | 856 |
+| cp313 | uv/flask | 6.985 | 35.953 | 19 | 161 |
+
+Private fixed-field aggregate: `/private/tmp/specfact460-uv-frame-complete-matrix-evidence.json`.
+Original failed5a cp311 Hatch evidence and all old candidate archives remain
+preserved. These12project runs do not replace clean/defective full boundary
+acceptance, macOS14/15/26 matrix, anonymous signed acquisition or independent
+installed-customer proof.
+
+The corrected exact cp313 archive also completes the physical `changecost`
+full-scope candidate CLI in143.146s after24.574s cold preparation, with verified
+prepared offline reuse. All ten analyzers run with no requiredUNKNOWN. Actual
+project-origin pytest observations retain842collected nodes,315call records,
+325coverage files and process exit1. Overall review remainsFAIL; project findings
+and the actual nonpassing test outcome are preserved. This candidate fixture
+lease does not authenticate the manifest or exercise normal installed native
+acquisition. Private summary:
+`/private/tmp/specfact460-uv-frame-changecost-cli.summary.json`.
+
+
+## Z3 test review cleanup and signed-runtime CI — 6 October 2026 (Europe/Berlin)
+
+Normal hooks committed the managed uv runtime correction as
+`964ceda0c1f57515eedeece64e9869dca1c82b41`; CI-only module signing followed as
+`88f91ca9f27092385a5c02159adf2c44ae5759e6`. The worktree fast-forwarded cleanly
+and required public-key/payload/version verification passes all seven modules.
+No local publisher key or archive authentication was used.
+
+The prior cp312 hosted public locations contain two introduced Z3 test warnings:
+CC13 at line339 and kiss.nesting.warning at line378. The existing full-result
+Radon adapter reproduces both in `/private/tmp/specfact460-z3-review-red.json`.
+Splitting receipt verification from identity assertions and separating license
+mutation from four flat payload mutations retains every provenance, false
+admission, RECORD, digest and reject-before-output assertion. The same adapter
+returns no findings for the changed test section in
+`/private/tmp/specfact460-z3-review-green.json`; all38Z3 tests pass. The bounded
+existing review agent reports No findings and confirms preserved assertions,
+with no product, authentication, budget or authority changes. This inspection
+of capped public locations is not complete hosted review assurance.
+
+Final format/type/lint pass, including no type diagnostics and Pylint10.00/10.
+SMART and full each pass5,136tests,75explicit skips,95subtests and five existing
+warnings, taking266.30s and267.11s respectively. These repeat gates are justified
+by the confirmed review findings and changed test structure. Native candidate
+payloads are unchanged by the test-only follow-up; their12/12manager/ABI and
+physical changecost observations above remain candidate evidence.
+
+Exact signed-runtime orchestrator37468195895 fails: independent installed
+review job112285254663 reaches the unchanged300-second analysis_timeout, and
+cp312 staged review job112285254779 also reaches that outer deadline. Its last
+fixed public analyzer marker is targeted-pytest-coverage; this does not establish
+the underlying cause. Private logs are retained at
+`/private/tmp/specfact460-88f91ca9-{independent,cp312}.private.sanitized.log`.
+The prior5a per-analyzer Pylint/CrossHair/pytest failures remain historical
+evidence, not substituted for this current timeout outcome. No failed job was
+manually rerun and no budget changed.
+
+At88f91ca9, all three minimum-core jobs, required signatures, requirements,
+docs and macOS14/15/26 fixed boundary fixtures pass; Linux3.13 customer
+job112285254767 passes. Linux3.11 is still running at this checkpoint.
+The boundary workflow37468195615 tests fixed startup/control fixtures, not
+accepted final archives. The test-only follow-up requires its own exact-head
+CI; neither local DEFERRED review nor these partial results authorize merging.
+
+Keep PR498 draft and #460 open. Protected native build/accept/sign/stage,
+authenticated catalog entries, final nine-cell archive acceptance and ordinary
+independent signed installation remain incomplete. No merge, publication,
+production admission, issue close or OpenSpec archive occurs.
+
+
+## Owner-approved native delivery implementation — 6 October 2026 (Europe/Berlin)
+
+The owner requested implementation of the three remaining release/loader/customer
+items and expressly accepted normal first-run trust warnings without an Apple
+Developer account. No merge or publication was authorized. Specs/design/proposal/
+requirements were synchronized before new behavior; strict OpenSpec validation
+passed. The linked issue remained OPEN/Todo with complete public metadata. Work
+remains in the attached codex worktree and draft PR498.
+
+New release tooling/workflows have 49 focused passing tests. Failing-before logs
+in `/private/tmp/specfact460-release-*-red.log` retain archive/profile validation,
+protected source/key boundaries, incomplete/mismatched matrix rejection, unsigned
+or substituted upload rejection, duplicate JSON and boolean-type rejection,
+exclusive staging against an empty-output race, missing/weak environment rules,
+actual extension-phase schema, required private copy modes, and read-only trust
+observation regressions. Ephemeral unit keys cannot establish publisher authority.
+The orchestration wrapper reuses existing tested builders; its additional input
+validation tests are not represented as a failing-first new runtime experiment.
+
+A bounded independent reviewer identified the missing clean-CI Node staging
+parent, insufficient final-byte lifecycle binding, and a five-second clock that
+started after waiting for controller exit. All were corrected. The fake-clock
+six-second disappearance case demonstrably failed before the deadline correction
+and passes after it. The reviewer confirmed the deadline fix with three passing
+boundary tests and no further finding in that bounded correction scope.
+
+The new cp312 build entry point assembled real native archive bytes, identical to
+the previous manifest/archive digests in NATIVE_RELEASE.md. All three actual ABI
+archives pass strict archive and narrow loader validation. The new acceptance
+CLI exercised actual consumer authentication with an explicitly ephemeral fixture
+key, real archive extraction/codesign, cold/offline cache verification, actual
+Flask preparation and all ten module-command analyzers. The cp312 v4 report
+records 20 collected/20 called tests, 162 coverage files and a passed real
+MarkupSafe extension test. An initial extension checker mistakenly used an
+outcome string rather than the actual boolean passed field; its RED regression
+and successful v4 rerun retain that failure honestly.
+
+The post-correction delivered cp312 component proof at
+`/private/tmp/specfact460-release-delivered-boundary-cp312-v3/delivered-boundary.json`
+passes 100 actual repetitions each of controller loss, bootstrap failure and
+exception-port denial. Source/provenance SHA-256 values bind the exact delivered
+broker/bootstrap/verifier/self-test/policy bytes. The harness neither compiles nor
+patches nor re-signs those components. Cleanup observation time is included in
+the unchanged five-second deadline. This physical Mac is 27.0.1/26A434; local
+receipts explicitly cannot replace macOS14/15/26 hosted proof or ordinary signed
+customer installation.
+
+Direct local AST/AI-bloat/ordinary Radon adapters report zero findings after
+introduced complexity warnings were resolved. An attempted direct sealed
+full-result Radon pass cannot reconcile upstream CLI omission of constant-only
+modules; it is incomplete local authority, not PASS. The unchanged required
+capsule review remains DEFERRED to exact-head GitHub Linux under prior owner
+approval. No hosted timeout budget or required analyzer gate was weakened.
+Explicit script typing reports zero errors/warnings, Actionlint validates both
+actual workflows, and the CI preparation shell passes bash syntax validation.
+Final repository gate outcomes and the exact commit/CI state follow below.
+
+No native protected environment or signing key was configured, no candidate blob
+was uploaded, no authenticated production catalog entry was installed and no
+normal customer PASS is claimed. Existing official module assets are unchanged;
+all seven existing signatures continue to verify against the public root. The
+implemented normal-customer gate forbids developer overrides/credentials and
+records actual quarantine attributes without changing them. Visual first-run
+dialog observation remains unavailable in unattended CLI evidence. #460 remains
+open, the PR remains draft, and OpenSpec archive is pending actual acceptance.
+
+Final implementation gates: full 5,185 passed/75 skipped/95 subtests/five existing
+warnings in311.06s; SMART the same counts in311.27s; contracts28 passed. Format,
+default lint/type (Pylint10.00/10), explicit new-script typing, YAML/imports,
+Actionlint, bash syntax and all seven required module signatures pass. Strict
+OpenSpec validation passes. Requirements gate passes at planned maturity and
+correctly retains implementation evidence not-yet-available for complete release
+acceptance. Logs: `/private/tmp/specfact460-release-{full,smart,contract,lint}-final.log`;
+new-script diagnostics: `/private/tmp/specfact460-release-script-type-final.log`;
+requirements: `/private/tmp/specfact460-release-requirements.{json,md}`.
+
+No final acceptance checkmark, production flag, issue closure, automatic merge,
+publication or OpenSpec archive is inferred from these repository gate results.
+
+
+## PR Actions timeout diagnosis and fixture correction — 6 October 2026 (Europe/Berlin)
+
+At eeedb18c, orchestrator37530542945 fails cp312 staged job112498571408 and
+independent signed job112498571534 at the existing300-second outer deadline.
+The candidate's final fixed public marker is targeted-pytest-coverage. Private
+sanitized job logs are retained at
+`/private/tmp/specfact460-eeedb18c-{cp312,independent}.private.log`.
+These markers do not alone establish the precise hosted bottleneck. Module
+signatures, requirements, docs, minimum-core and all three fixed native boundary
+jobs pass; the new native tools build is still running at this observation.
+
+Read-only planning selects35test files/1,597tests for the61changed Python files.
+The unchanged selected suite passes locally in54.39s, with five synthetic
+changed-enforcement tests taking5.23–5.89s each. Their analyzer execution is
+mocked, but they nevertheless bind the entire real caller's checkout repeatedly
+through `_worktree_analysis_identity`. The baseline and index controls in an
+installed review can make this redundant work more expensive; that hosted
+contribution remains a hypothesis until fresh CI completion.
+
+The portable-review specification now requires these synthetic contracts to use
+bounded isolated subjects while preserving real identity/security tests. A
+fail-on-real-Git-inventory fixture guard first produces five failures in
+`/private/tmp/specfact460-enforcement-fixture-red.log`. Supplying actual tiny
+standalone source files and an isolated working directory then passes all29
+matching tests in3.25s. The same35-file selected inventory, with no tests removed,
+passes1,597tests/one pre-existing maintainer skip in27.63s after the correction.
+The relevant source-identity, mutation, cached-index, real capsule and customer
+checks are unchanged. No300-second deadline, inner analyzer timeout, blocking
+exit124, authenticated reviewer or review subject is replaced or weakened.
+
+The new fixture initially lacked its separate src parent; that setup error was
+corrected before passing evidence. Timing logs are
+`/private/tmp/specfact460-review-selected-duration{,-green}.log`. Typing/lint and
+strict OpenSpec pass. Direct local clean-code adapters find no introduced fixture
+finding; this is not hosted capsule-review authority. Final gates and fresh-head
+CI results follow; do not infer green PR status from the local speed improvement.
+
+Fixture-correction gates: full5,185 passed/75 explicit skips/95subtests/five
+existing warnings in278.76s; SMART the same in277.36s; contracts28 passed.
+The touched advisory-readback test's size guidance was subsequently resolved by
+grouping identical report/model checks; all13previous asserted values remain.
+All29focused enforcement tests pass after that grouping, and direct changed-line
+AST/AI-bloat/Radon adapters return zero findings. Format, default typing/lint and
+strict OpenSpec pass. Required300-second hosted review is still pending fresh
+source; these local tests are not a substituted capsule review PASS.
+
+
+## Bounded hosted timeout profiling — 6 October 2026 (Europe/Berlin)
+
+At609b72f8, fresh orchestrator37534332122 again fails candidate cp312
+job112511410095 and independent signed job112511409991 with analysis_timeout.
+The candidate marker remains targeted-pytest-coverage. Both3.11/3.13 customer
+jobs pass; all three quality jobs fail at the required customer prerequisite,
+before lint/tests. All macOS14/15/26 fixed boundary jobs pass. The preceding
+native tools job112498499046 actually completed successfully in30m13s; its
+following build jobs were superseded by the609b72f8 push. Current native tools
+job112511470796 is still running at this observation. These facts replace the
+earlier pending observations; the local fixture timing improvement did not
+resolve the hosted timeout, and no hosted review PASS is claimed.
+
+After two failed hosted attempts, the next evidence step is a separate,
+non-authoritative candidate-only profiling replay. The original required review
+continues to fail with its unchanged300-second outer analysis budget. Only
+following that failure, a separately installed/hash-pinned py-spy0.4.2 wheel
+samples the same staged subject and helper command as the ordinary runner user.
+GNU timeout stops the diagnostic at280seconds with a5second final kill bound.
+Authenticated reviewer code, sandbox permissions, test selection and independent
+signed reviewer are unchanged. No root profiling, ptrace policy change or raw
+profile upload is used. Raw stdout/stderr/stacks remain runner-private; a stdlib
+data-only helper emits at most20 known tracked public source/functions with
+inclusive sample counts, not elapsed seconds. Malformed indexes, oversized
+profiles, ambiguous suffixes and linked sources fail closed or are omitted.
+DIAGNOSTIC_ONLY/DIAGNOSTIC_UNAVAILABLE cannot authorize merge or publication.
+
+Specification/evidence mapping preceded tests. Initial import RED is retained
+in `/private/tmp/specfact460-profile-summary-red.log`; the absent workflow
+step gives a separate RED in `/private/tmp/specfact460-profile-workflow-red.log`.
+The new helper and recipe pass86focused tests (including the existing real
+staged-tree/failure-propagation tests), explicit script typing with zero
+diagnostics, Actionlint and direct AST/AI-bloat/ordinary Radon with zero findings.
+Logs are `/private/tmp/specfact460-profile-green.log` and
+`/private/tmp/specfact460-profile-clean-code.json`. Strict OpenSpec and planned
+requirements evidence gates pass; planned maturity is not release acceptance.
+The local candidate runbook now explicitly supplies required SOURCE_SHA.
+Final mandatory gates and the next hosted diagnostic result follow.
+
+
+## Hosted native input corrections — 7 October 2026 (Europe/Berlin)
+
+Native run37534331581 tools completed successfully, then all three archive builds
+failed before execution. Completed private logs are retained at
+`/private/tmp/specfact460-native-{112521945682,112521945756,112521945818}.private.log`.
+cp312/cp313 reject `Git input must be immutable with one executable image`;
+cp311 first rejects `installed distribution does not match ABI lock`.
+
+The download action resets artifact files to0644/directories0755. Restoring only
+the two executable bits left provenance/license inputs writable. Preparation now
+removes all write bits from both managed-tool trees and restores only the two
+fixed declared executable images. The unchanged Git validator checks exact
+inventory, immutable modes, executable exclusivity, provenance and bytes.
+
+CPython3.11 venv bootstrap additionally seeds setuptools, which none of the
+reviewed ABI locks admits. Fresh actual cp311 reproduction produces bootstrap
+setuptools79.0.1; the exact fresh-venv uninstall command leaves only bootstrap
+pip. The cp311 preparation recipe now removes only setuptools before the
+unchanged hash-pinned installation. It does not add that ambient dependency to
+the lock or relax installed-distribution/RECORD admission. Reproduction/removal
+uses `/private/tmp/specfact460-native-bootstrap-reproduction` and
+`/private/tmp/specfact460-native-bootstrap-removal.log`.
+
+The specification precedes two RED regressions retained at
+`/private/tmp/specfact460-native-transport-red.log`. Executing the actual hosted
+restore recipe against transported-style inputs now passes immutable admission
+with identical bytes; an extra executable remains rejected. Together with
+native release, profiling and existing staged/independent CI tests,137tests pass
+in7.77s (`/private/tmp/specfact460-native-transport-green.log`). Explicit typing,
+Actionlint for both workflows, shell syntax and direct AST/AI-bloat/ordinary
+Radon pass with zero findings. Source receipt, signing controls, reviewed pins,
+analysis deadlines and Linux prerequisite failures remain unchanged.
+
+Primary references, accessed7October2026:
+- https://github.com/actions/download-artifact#maintaining-file-permissions
+- https://docs.python.org/3.12/library/venv.html (setuptools ceases to be a venv core dependency in3.12)
+- https://github.com/benfred/py-spy/tree/v0.4.2 (external child/subprocess profiling; raw memory-derived stacks remain private)
+
+Final pre-push full/SMART results and fresh hosted observations follow. Existing
+review failures and unexecuted nine-cell acceptance remain outstanding.
+
+
+Pre-push gates: SMART5,207 passed/75 skips/95subtests/five existing warnings
+in249.56s, then full5,208 passed/75 skips/95subtests/five existing warnings
+in255.37s. SMART collected before the final private-input CLI guard was added;
+full collected before the two hosted native recipe regressions were added.
+The final137focused tests cover those additions and all release/diagnostic
+recipes; the final subset rerun also passes after import formatting. Final
+lint/typing, signatures(all7), contracts(28), YAML/import boundaries, Actionlint,
+shell syntax, strict OpenSpec and planned requirements pass. No test or analyzer
+is removed. The owner-approved local review remains DEFERRED to blocking
+exact-head Linux CI, never PASS; raw profiling is not acceptance evidence.
+
+
+## Hosted profile readback refinement — 7 October 2026 (Europe/Berlin)
+
+At56ff60b9, independent job112524988404 again times out; candidate
+job112524988393 times out at targeted-pytest-coverage. Its separate bounded
+profiling step completes successfully, yielding54,117 sampled thread stacks.
+The private job logs are `/private/tmp/specfact460-56ff60b9-{cp312,independent}.private.log`;
+only the static-symbol public summary is retained at
+`/private/tmp/specfact460-56ff60b9-profile.public.json`. Top20 inclusive entries
+are predominantly controller/wait ancestors. The capsule request has2,183
+inclusive samples, but this alone does not identify the expensive leaf call or
+establish elapsed attribution. This is real sandbox-worker evidence, not review
+acceptance; the raw profile is intentionally not uploaded or recoverable.
+
+The next bounded diagnostic refines readback, retaining at most20 inclusive
+entries plus20 deepest-public entries. Each validated stack preserves order;
+inclusive counts still deduplicate repeats, while the deepest admitted public
+frame receives one leaf sample. Private library/command/process labels never
+enter output. Specification precedes RED assertions for the missing field and
+ancestor/leaf distinction (`/private/tmp/specfact460-profile-leaf-red.log`).
+The refinement passes138release/CI/diagnostic tests, zero explicit typing
+warnings, zero direct clean-code findings, formatting/lint and strict OpenSpec.
+The existing required300-second gates and shorter280+5second diagnostic remain
+unchanged. Logs are `/private/tmp/specfact460-profile-leaf-green.log` and
+`/private/tmp/specfact460-profile-leaf-clean-code.json`.
+
+Supplementary local timing with coverage and the declared Rust prerequisite
+runs the expanded36-file selected inventory:1,622tests pass/one maintainer skip
+in28.66s (29.17s wall time). The command retains exit1 from the native global
+coverage threshold; this isolated selected suite is explicitly diagnostic-only,
+not a review PASS. The first diagnostic omitted the local Rust path and failed
+its mandatory macOS parser regression, corrected by the declared prerequisite.
+Both logs stay at `/private/tmp/specfact460-selected-coverage{,-green}.private.log`.
+Local Python3.14 timing cannot establish hosted Python3.12/sandbox equivalence.
+The exact hosted bottleneck remains unknown until useful leaf evidence arrives.
+
+
+## Hosted ownership-I/O correction — 7 October 2026 (Europe/Berlin)
+
+At c65b8a5e, independent job112532774667 and candidate job112532774779
+again fail the unchanged review deadline. Candidate replay yields53,055 sampled
+thread stacks. Its deepest-public entries include `_record_row`954 samples,
+`_execute_crosshair`1,192, and the controller subprocess waits. These counts
+span processes/threads, can overlap, and are not seconds or a causal attribution
+to CrossHair. Public summary: `/private/tmp/specfact460-c65b8a5e-profile.public.json`.
+Raw runner stacks remain private and are not acceptance authority.
+
+Concrete inspection finds installed ownership scanning before invalid request
+decoding and even when there are no Python attribution inputs. The specification
+precedes guarded regression tests: seven malformed/nonobject/invalid-selector
+requests must reject without RECORD I/O or target launch; empty/non-Python inputs
+must return the identical empty bridge without distribution inspection. RED
+logs are `/private/tmp/specfact460-pytest-request-io-red.log` and
+`/private/tmp/specfact460-empty-attribution-io-red.log`. Both guards fail on the
+previous implementation. The first correction also exposes the existing stale
+observation regression: preparation failures must clear the owned observation
+before preparing a command, not only before launch. Both malformed preparation
+and valid-request startup failure now retain that assertion.
+
+The corrected focused suite passes183tests in7.06s; explicit typing reports
+zero errors/warnings and direct AST/AI-bloat/ordinary Radon reports no findings.
+Logs: `/private/tmp/specfact460-pytest-request-io-{green,lint}.log` and
+`/private/tmp/specfact460-pytest-request-io-clean-code.json`. Valid nonempty
+requests retain full ownership, byte identity and target coverage checks. No
+analyzer, deadline or independent-review authority changes. Hosted contribution
+to the timeout remains a hypothesis until both fresh reviewers pass.
+
+The pending module version0.51.1 remains above target dev0.51.0; checksum
+refresh uses `--changed-only --base-ref origin/dev --allow-unsigned` with local
+private-key variables unset. This removes the stale signature and passes the
+feature-branch checksum/version gate for all seven modules. It is not signed
+release acceptance: existing same-repo PR CI must sign the fresh payload before
+strict public-key verification and a subsequent exact-head review run. No
+registry or publisher promotion occurs. Full/SMART final results follow.
+
+
+The initial full and SMART runs each expose27old synthetic fixtures passing
+`{}` into the now-validated request, yielding5,194passes/75skips and failures
+before their intended coverage/non-pass assertions. Their original logs remain
+`/private/tmp/specfact460-pytest-request-io-{full,smart}.log`; these are failures,
+not passing evidence. The evidence fixtures now supply `selectors:["."]` and
+the discovery fixture its actual `test_case.py` selector. Every observation,
+coverage, malformed-root and non-pass assertion is preserved. Final reruns use
+separate `-v2-` logs below.
+
+
+The corrected combined focused suite passes244tests in16.35s. The long native
+usage-error evidence test is then split into a subprocess setup helper and the
+original assertions, preserving actual exit4/configuration diagnostics and
+retained target execution. Its61fixture/discovery tests pass after extraction;
+direct AST/AI-bloat/ordinary Radon for all six modified Python files reports
+zero findings (`/private/tmp/specfact460-pytest-request-io-v2-clean-code.json`).
+Full/SMART reruns collect the same5,296tests before this fixture-only extraction;
+the separate rerun covers its final bytes.
+
+Native run37540557846 now passes managed tools and all three exact ABI archive
+builds, establishing correction of the previous immutable-Git/setuptools input
+failures. Nine exact-byte execution cells are running, not yet accepted.
+
+
+Further inspection identifies fixture-owned observations whose mocked target
+launch still scans the real installed runtime metadata. Autouse distribution
+guards fail38of61evidence/discovery cases on the prior fixture setup
+(`/private/tmp/specfact460-synthetic-ownership-red.log`), proving the extra I/O.
+Synthetic playback now supplies an explicit empty ownership bridge, matching
+its preexisting installation-free local context; every coverage/non-pass
+assertion and actual native subprocess discovery remains. The guards remain
+active so future fixtures cannot silently read the capsule's installed RECORDs.
+Dedicated installed-coverage/portable-worker/target-coverage tests retain real
+planner and attribution checks. This concrete fixture leak fits the hosted
+RECORD samples but its elapsed contribution still requires hosted confirmation.
+
+
+Before final fixture ownership isolation, full and SMART each pass5,221tests,
+75explicit skips,95subtests and five existing warnings in265.53s/264.69s.
+Final guarded fixture/ownership suite passes244tests in15.13s, lint/typing
+passes and direct clean-code findings are empty. Final full/SMART with permanent
+guards are running at `/private/tmp/specfact460-synthetic-ownership-{full,smart}.log`.
+
+
+Final guarded full and SMART each pass5,221tests,75explicit skips,95subtests
+and five existing warnings in259.05s/259.11s. Their `synthetic-ownership` logs
+are final-source evidence; final lint/typing, direct clean-code, feature checksum
+and version gate,28contracts, docs/YAML/import boundaries, staged requirements
+and strict OpenSpec pass. Normal implementation hooks ran with the owner-approved
+local ARM64 capsule review DEFERRED to unchanged blocking Linux CI, never PASS.
+The earlier specification amendment failed its newly required evidence mapping;
+460-19-1 adds that mapping and the next normal hook passes.
+
+Pre-push native baseline has tools plus all three archive builds PASS. Its nine
+execution cells have not completed. The fresh payload requires new source-bound
+CI signing and review; pushing necessarily supersedes this older concurrency
+group. No partial cell or diagnostic replay is counted as release acceptance.
+
+
+CI signs the fresh0.51.1runtime payload at6ba108b1d24daab47f38238e28863db1530c814b
+following implementatione96d73ccd52821a630bc624d948eb2a06401f434. Fast-forward
+readback verifies all seven modules with `--require-signature`, current filesystem
+payloads, version-bump comparison against origin/dev and the publisher public
+key; no local private key is read. The only signing diff is the manifest
+signature. Bot-head workflows report `action_required`; this substantive
+readback-evidence commit triggers ordinary exact-signed-payload PR checks.
+Required Linux reviews and native nine-cell acceptance remain pending; no
+workflow approval or publisher environment policy is bypassed.
+
+
+## Hosted native proof teardown race — 7 October 2026 (Europe/Berlin)
+
+Signed-head97359e22macOS15boundary job112547218993 fails solely in the
+exception-self-test finally block: identity observation sees the owned broker,
+but the broker exits before SIGKILL, producing ProcessLookupError. Actual
+exception-port denial and five-second worker cleanup assertions precede teardown.
+Private log: `/private/tmp/specfact460-97359e22-boundary15.private.log`. This
+failure is retained, not relabeled PASS. Specification and regression guards
+precede cleanup changes; `/private/tmp/specfact460-broker-cleanup-race-red.log`
+has three failing missing-contract tests before implementation.
+
+Cleanup now tolerates only process-not-found after an exact identity match.
+Tests also require permission errors to propagate and absent/reused identities
+never to receive a signal. The proof harness is separated into protocol setup,
+positive/failure controls, held-worker assertions and measured controller loss;
+all original wire values, assertions and five-second deadline remain. Partial
+process identities stay captured by the outer finally before assertions.
+The delivered component path remains byte-for-byte copy-only and100repetitions
+per lifecycle/exception case; its acceptance assertions do not change.
+
+Initial focused boundary/receipt tests pass222/three explicit native skips.
+Actual local native proofs plus delivered-boundary unit tests pass9tests after
+refactoring (`/private/tmp/specfact460-broker-cleanup-race-native-typed.log`);
+local macOS27.0.1 is supplementary, not the supported hosted matrix. Direct
+clean-code passes after resolving legacy proof-function complexity and length;
+normal lint additionally requires stdlib suppress and bound loop captures.
+Earlier intermediate parse/type/lint failures remain in `broker-cleanup-race`
+logs and do not establish passing evidence. Final full/SMART and lint follow.
+No module payload, signature, runtime boundary or reviewer budget changes.
+
+
+Final cleanup-correction full and SMART pass5,224tests/75explicit skips/
+95subtests/five existing warnings in259.59s/258.80s. Final native/unit subset
+passes9tests in3.66s, including retention of a prior proof failure through an
+already-exited cleanup. Normal hooks pass final lint/typing, staged requirements,
+28contracts, docs/YAML/imports, and the unchanged seven strict module signatures.
+Direct full-file AST/AI-bloat/ordinary Radon has zero findings after phase helpers
+and compact unchanged request encoding. Full runs collect before the final
+stdlib-suppress/bound-capture spelling and original-failure assertion; the
+final native subset verifies those final bytes.
+
+At97359e22the independent reviewer job112547359085 still reports
+analysis_timeout. Candidate job112547359287also fails required review and its
+bounded diagnostic replay is running. This proves the ownership fixes alone
+are insufficient, despite the concrete guarded I/O defects. Read-only current
+selector inspection chooses40test files, with Hatch/default and unchanged
+`-ra -v --import-mode=importlib`; no whole `tests` operand is selected. The
+manual Hatch-script expansion hypothesis does not apply to the capsule engine,
+which consumes exported extra-args and selected paths. No tests are dropped
+and no project configuration or budget is changed to hide the failure.
+
+
+## Final hosted leaf readback and bounded test policy — 7 October 2026 (Europe/Berlin)
+
+The completed97359e22candidate replay yields54,619thread samples. RECORD
+scanning is no longer a top20leaf, CrossHair has126leaf samples (previous1,192),
+and portable pytest has1,194, discovery subprocess observation358 and target
+bootstrap573. Counts span threads/processes, overlap and are not elapsed
+seconds. Public summary: `/private/tmp/specfact460-97359e22-profile.public.json`;
+required review remains failed. Both Python3.11/3.13 customer cells and all
+minimum-core cells pass; all quality cells fail the customer prerequisite.
+Fixed macOS14/26boundary cells pass; macOS15has the retained teardown race.
+
+Actual reviewer-plugin execution of the exact40-file current selector inventory
+with two workers first fails the existing missing-native-alias-API fixture:
+it consumes the active reviewer plugin instead of its fake native API.
+`/private/tmp/specfact460-selected-parallel.private.log` retains1failure/
+1,751passes/four skips, not a PASS. Fixture-owned helper context now forces that
+unit observation's intended fake API without disabling real measurement hooks;
+its original records/root/threshold/origin-unavailable assertions remain.
+The same40files then pass1,752tests/four skips in19.86s (20.21s wall) with actual
+reviewer coverage and two workers, no restarts; log is
+`/private/tmp/specfact460-selected-parallel-v2.private.log`. LocalPython3.14
+timing is diagnostic only and cannot establish hosted equivalence.
+
+Repository pytest policy explicitly declares two workers and zero restarts
+using already-declared pytest-xdist3.8.0. Generic capsule policy, selectors,
+coverage, native proof CLI and deadlines/repetitions stay unchanged. Worker
+loss remains an error; `-n0` allows serial local debugging. Primary flag reference:
+https://pytest-xdist.readthedocs.io/en/stable/distribution.html (accessed7October2026
+Europe/Berlin). The specification and retained hosted deadline/active-plugin
+failures precede the fixture/policy corrections; no failing review is waived.
+
+Final two-worker full and SMART each pass5,224tests/75explicit skips/95subtests/
+five existing warnings in158.47s/152.36s. Logs:
+`/private/tmp/specfact460-parallel-policy-{full,smart}.log`. The same40-file
+reviewer-plugin suite also passes1,752tests/four skips serially in46.06s
+(46.83s wall); two workers pass in19.86s. These runs have different concurrent
+local loads and are not a controlled hosted speed ratio. Actual local native
+proofs with two workers pass9tests in5.63s. Final lint/typing and direct clean-code
+for both affected test modules pass without findings; normal implementation
+hooks pass, including staged requirements,28contracts, docs/YAML/imports and
+checksum/version verification. Owner-approved local capsule review remains
+DEFERRED to blocking Linux, never PASS. Module payloads are unchanged after
+CI signing; all seven public-key signatures remain valid. Fresh exact-head
+Linux and supported native acceptance remain required before merge.
+
+An intermediate evidence append accidentally overwrote this file with TOML;
+pre-push diff inspection caught it. This correction restores the entire previous
+Git history verbatim and appends only this section, retaining all prior failures
+and acceptance limits. No overwritten evidence is pushed or treated as authority.
+
+
+## Minimal core smoke isolation — 7 October 2026 (Europe/Berlin)
+
+At61a859ccthe three minimum-core cells fail before their smoke assertion with
+pytest usage exit4: the deliberately lean pinned environment lacks xdist and
+cannot parse repository-default worker flags. Completed Python3.12job
+112556888034log is `/private/tmp/specfact460-61a859cc-mincore312.private.log`.
+This is a test-harness plugin dependency error, not evidence of capsule/core
+incompatibility. It is retained as a failure.
+
+The specification precedes a plugins-disabled invocation with the old options;
+it reproduces the same exit4 (`/private/tmp/specfact460-mincore-plugin-independence-red.log`).
+The isolated single-test smoke now explicitly retains its original serial
+`-ra -v --import-mode=importlib` reporting/import configuration, with the same
+exact test selector and assertions. Immutable tag, commit/tree checks, existing
+minimal dependency list and signed-capsule smoke remain. The repository reviewer
+continues honoring its declared two-worker policy; no analyzer/test/deadline is
+removed or loosened.
+
+A plugins-disabled invocation with the corrected options passes12existing
+workflow cases in0.02s; the combined customer/deferred-review/workflow suite
+passes137tests in4.21s. Logs are
+`/private/tmp/specfact460-mincore-plugin-independence-{green,focused}.log`.
+Actionlint, strict OpenSpec and diff whitespace pass. This limited recipe fix
+requires fresh three-ABI minimum-core CI; existing full/SMART source evidence
+is unchanged. Current Linux reviewer jobs are still running at61a859cc.
+
+
+## Hosted review root-cause projection — 7 October 2026 (Europe/Berlin)
+
+Corrected diagnosis at61a859cc: the candidate required review completes and
+reports Pylint timeout plus incomplete targeted-pytest evidence, followed by
+bounded code findings. It is not an overall analysis_timeout. Its diagnostic
+replay also completes before the280-second cutoff. The independent installed
+reviewer still reports actual300-second analysis_timeout. Earlier commentary
+mistakenly treated both as overall timeout; no pass or exception is inferred.
+
+Spec precedes ten RED fixed-pytest-prefix assertions and two RED timeout-stage
+assertions. The public projections now emit only finite anchored pytest codes
+or fixed file-missing/permission-denied classes; raw details stay private.
+The independent timeout reads at most65,536bytes from its private log tail,
+projects only the last exact allowlisted analyzer marker, and retains exit124.
+Unknown/spoofed codes, payloads, unknown markers and out-of-tail markers stay
+private. No analyzer, signed reviewer, source selection or budget is changed.
+RED logs: `/private/tmp/specfact460-pytest-diagnostic-red.log` and
+`/private/tmp/specfact460-independent-progress-red.log`. Focused real inline
+workflow execution, profile and orchestrator tests pass120cases in4.31s in
+`/private/tmp/specfact460-pytest-diagnostic-green.log`. Actionlint and touched
+Ruff checks pass. Native boundary jobs on macOS14,15and26 all pass including
+100repetitions; all three native ABI archive build jobs pass. Nine delivered
+archive execution jobs remain running. These diagnostics require fresh CI and
+cannot replace the failed required review or final acceptance.
+
+
+## Pylint parallel benchmark rejected — 7 October 2026 (Europe/Berlin)
+
+Diagnostic native-configuration Pylint4.0.7 on the same68Python files completes
+with one process in17.76s and two in12.36s. Both retain actual finding exit30
+and848raw findings. All823non-R0801findings match exactly; six duplicate message
+bodies differ in ordering among25R0801rows, already excluded by unchanged
+reviewer filtering. These local runs do not prove sealed execution. Reports:
+`/private/tmp/specfact460-pylint-native-workers{1,2}.private.json`.
+
+The existing parallel runtime-root fixture passes10cases in3.18s, but explicitly
+substitutes the native interpreter launcher. The delivered worker profile denies
+process-fork and requires broker-managed process launches. Pylint's standard
+ProcessPoolExecutor is not broker-managed, so declaring two workers cannot be
+accepted from this fixture or benchmark. The proposed local config/spec/sidecar
+changes were withdrawn before commit or push. No worker grant, timeout or checker
+is changed. The real hosted Pylint timeout remains unresolved.
+
+Initial projected-policy diagnostic attempts reject the executable init hook
+or fail usage for `--errors-only=no`; they are not acceptance evidence. The
+successful bench uses native repository configuration. Primary process-pool
+reference: https://pylint.pycqa.org/en/stable/user_guide/usage/run.html (accessed
+7October2026 Europe/Berlin). Diagnostic-only full suite passes5,245tests/75skips/
+95subtests/five existing warnings in143.57s in
+`/private/tmp/specfact460-diagnostic-final-full.log`. SMART was started while
+the temporary worker config was present; it is supplementary only and cannot
+establish final-tree acceptance.
+
+
+## Introduced clean-review corrections — 7 October 2026 (Europe/Berlin)
+
+At61a859ccsix bounded reported locations directly intersect added Python lines:
+CC16in the large managed-uv frame test, four print-in-src warnings in CLI entry
+points, and the generic naming regex in the empty-attribution test. The report
+is capped at200rows; this is not a complete finding inventory. The source delta
+and direct pinned analyzer reproduction precede correction and remain RED.
+
+The Semgrep1.144.0 ARM64 wheel's previously hash-verified native binary reproduces
+all five warnings. It requires the `osemgrep` argv0 frontend and `--experimental`;
+an initial semgrep-core-mode invocation rejects that option and produces no
+JSON. No successful scan is inferred from that invocation. Corrected frontend
+reports are `/private/tmp/specfact460-clean-locations-{red,green}.private.json`;
+the same files now have zero errors and findings with unchanged clean rules.
+
+CLI outputs are machine wire records (JSON, artifact path or fixed public status),
+so explicit serialized stdout writes retain exactly the same newline, value and
+failure exit without introducing logging prefixes or exposing private exception
+text. The empty-attribution test name now describes distribution RECORD scans.
+The actual uv large-frame test separates compilation/setup from frame assertions;
+all XML payload sizes,30large values, child return codes and native parser checks
+remain. A fixed replacement inventory also simplifies the forbidden-request
+fixture while retaining all original parameter IDs/expected failures. Initial
+refactor retained theCC16large-frame function; the corrected split has zero
+Radon findings for the whole UV fixture file. Actual native parser and selected
+CLI/ownership tests pass146cases in2.19s in
+`/private/tmp/specfact460-clean-locations-final-green.log`. An initial invocation
+named a nonexistent release test file and collected zero; it is not GREEN.
+
+Touched AST and AI-bloat return no findings; typing reports zero errors/warnings.
+An initial direct AI-bloat call used a nonexistent function name; the corrected
+`run_ai_bloat` invocation returns no findings. Ruff import order corrections
+precede final verification. Two delivered archive CI cells at61a859ccpass on
+macOS14/Python3.12and3.13, including real extensions/all analyzers/offline reuse.
+The other seven supported cells and both required Linux reviews remain separate
+acceptance. Final full/SMART and hooks follow below before push.
+
+
+The complete pinned clean/bloat/bug scan of all68changed Python files exposes
+five further added-line rows beyond the hosted200-row cap: three broker proof
+prints, one cleanup-test name and the timeout test's directexec. All are retained
+in `/private/tmp/specfact460-clean-full-semgrep.private.json`. Broker stdout
+now retains exact records/newlines plus explicit flushes. The timeout fixture
+executes the saved trusted wrapper as a named module using runpy, preserving
+both300-second invocation and exit124 assertions. The PID test name is specific.
+The corrected whole scan retains29legacy raw rows and has zero added-line
+findings or parse errors; it does not replace the required analyzer composition.
+`/private/tmp/specfact460-clean-full-semgrep-final.private.json` is private.
+
+Follow-up projector/broker/boundary tests pass90cases with three explicit native
+skips. An explicit physical broker/boundary invocation separately passes all9
+cases in3.97s (`/private/tmp/specfact460-clean-proof-native-green.log`). The prior
+full run144.65s overlaps adaptive source changes, so it is supplementary only.
+Stable final full and SMART each pass5,245tests/75explicit skips/95subtests/five
+existing warnings in159.24s/157.67s, with source/config unchanged throughout.
+Logs: `/private/tmp/specfact460-clean-final-stable-{full,smart}.log`.
+Five delivered archive CI cells at61a859ccnow pass: macOS14/cp312/cp313,
+macOS15/cp313, and macOS26/cp312/cp313. Four cells remain running; no final matrix
+or public installation pass is inferred. Final hooks and exact-head CI are still
+required, and the Pylint timeout remains unresolved.
+
+
+## Focused hosted fixture logic — 7 October 2026 (Europe/Berlin)
+
+The broadened direct pass retains six AI-bloat loc-vs-complexity informational
+rows in the deferred-review fixture module (not the previous five-file subset).
+Spec precedes the direct RED inventory in
+`/private/tmp/specfact460-fixture-bloat-red.log`. Fixed script payloads are now
+named constants; isolated fixture modules use named templates with explicit
+literal replacements. The exact formerly rendered module bytes match for
+three success/failure/private-reason inputs. File materialization and Git branch
+transitions are separate fixture responsibilities. Shared tracked-report setup
+removes duplicated construction while preserving real inline projector execution.
+Command trace assertions remain intact in a dedicated assertion helper.
+
+An initial extraction accidentally attached the existing eight-case parameter
+decorator to that helper:112tests pass but the scenario test errors because its
+fixture is missing. This is retained in
+`/private/tmp/specfact460-fixture-bloat-green.log`, not called GREEN. Restoring
+the decorator to the scenario retains all120focused cases, passing in4.34s in
+`/private/tmp/specfact460-fixture-bloat-final-green.log`. Typing has zero errors/
+warnings. Touched AST and AI-bloat, and full fixture Radon, return zero findings.
+The unchanged three pinned Semgrep rule packs scan all68changed Python files:
+zero parse errors,29legacy raw rows and zero added-line matches in
+`/private/tmp/specfact460-fixture-final-semgrep.private.json`. No rule, severity,
+private-output guard, installed-reviewer boundary, test or budget is weakened.
+Final stable full/SMART and hooks follow before push; supported native matrix
+and exact-head hosted review remain independently required.
+
+
+Final stable full and SMART each pass5,245tests/75explicit skips/95subtests/
+five existing warnings in157.65s/158.25s, with tracked source/config stable:
+`/private/tmp/specfact460-fixture-final-{full,smart}.log`. No test case was lost
+in fixture extraction. Required Linux review remains deferred locally and must
+complete on the pushed exact head; native source bytes and signed module payload
+are unchanged by these fixture-only corrections. Normal hooks follow before push.
+
+
+## Supported native candidate matrix GREEN — 7 October 2026, 02:38 Europe/Berlin
+
+Workflow37548070020for PR head61a859ccade53adb33fc828fded777d933d8ad14
+completesSUCCESS: toolchain, all three ABI archives and all nine delivered
+execution cells. Source receipts bind the actual PR merge checkout
+b37c9d31aca09474ad4d979f5c5a4a553e661430, whose parents are target dev
+74d3fd4dd6f9b171f18857abcc8f659c80d686e9and that PR head. This is actual
+candidate merge-tree execution, not protected-main publication authority or a
+new-head pass. Three separate fixed-boundary supported jobs also pass.
+
+Downloaded9small acceptance receipts in
+`/private/tmp/specfact460-native61-receipts` have the exact3×3matrix, arm64,
+the same source merge SHA and all eight checks true: all ten analyzers, cold
+extraction, loader profile, native boundary, offline reuse, project coverage,
+project extensions and project tests. Archive/manifest SHA pairs match across
+all three OS cells for each ABI:
+
+- cp311:c75ced8232b441cf20ae8aae437d00a59dd05f7408e178aa209f43bcf5c04492 /
+  2f5ecf17409c141cd1262991417b11b9c43a9dc98be5c92d0655f56626d8419f
+- cp312:b264b37119bfaa796d9f9fb4e145c6a67829348c7dd8102b7b2829e98d1be6e3 /
+  d904de0e748583eac975cf6605cfae6470f65007b433aa50e3a5fb361d70a96b
+- cp313:122a727c5585ca6d0c617e35c3ce67cd62ae80f292347dabeeeb7e9622273358 /
+  64d8a2f6fe5141be656225814620711f9d655d07e371eb056853211d907e770a
+
+Observed OS14.8.9/23J631,15.7.9/24G830and26.6.2/25G83. No production publisher
+key or ordinary signed native installation is inferred. Protected environments,
+signing/catalog promotion and independent ordinary installation remain pending.
+The subsequent CI/fixture-only correction head still requires its own Linux
+review, minimum-core and native checks. The baseline native success is retained
+before pushing, avoiding cancellation of this completed evidence.
+
+
+### 2026-10-07 02:55 Europe/Berlin — retain bounded test diagnostics (460-15-33)
+
+Fresh fc97b0c9 orchestrator 37553154584 confirms all three minimum-core jobs PASS. Candidate cp312 job112573196699 still reports Pylint timeout and incomplete pytest without an allowlisted prefix; independent job112573196520 still reaches the unchanged300-second analysis deadline without a known progress marker. Private candidate replay yields48028 overlapping thread samples and completes in approximately241seconds; these counts are not analyzer elapsed times or acceptance. No speculative runtime or process-policy change is made.
+
+Spec precedes four RED cases proving testing rows were omitted after219ordinary findings in both inline projectors, then six RED cases proving three existing collection/root error prefixes were withheld. Both inline projectors now order tool errors, testing, then ordinary rows within the same200-location cap and admit fixed TEST_OUTCOME_NOT_PASS / TEST_COVERAGE_POLICY_FAILED identifiers plus those three existing prefixes. Messages, test parameters and traces remain private. Required review outcomes, deadline and reviewer identity are unchanged. An initial combined test command named a nonexistent minimum-core test file and collected no tests; it is not GREEN evidence. Correct focused command and final checks follow below.
+
+Fresh fc97 Docs Review112573148858 also exits4 before tests because requirements-docs-ci.txt has pytest but no xdist. Case460-15-34 spec precedes a failing workflow contract and a direct reproduction of its exact original five-file suite with PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 (exit4). The docs-only command now sets the same original serial addopts as the minimum-core smoke; the original five files and PIPESTATUS remain. This changes neither review analyzer inventory nor repository parallel policy.
+
+Local verification: original five-file lean docs suite PASS59tests in2.20s with plugin autoload disabled; combined diagnostic/profile/paired-core workflow suite PASS121tests in8.13s. Format, type-check (0errors/warnings), lint, Actionlint, strict OpenSpec, YAML/registry validation, import boundaries, all7strict public-key module signatures and existing contract suite (28PASS in2.89s) pass. Command overview,118command contract and documentation accountability checks pass. Direct AST/AI-bloat diagnostics return no findings for either modified test file; an initial bare Python import lacked the module path and produced no result, corrected explicit local import succeeds. These are bounded checks, not required hosted review acceptance. Full/SMART results and commit-hook record follow.
+
+Final full/SMART: each PASS5256tests,75skips,95subtests,5existing warnings in145.56s/145.54s respectively. Both corrected docs/prompt validators PASS; pinned Semgrep1.144.0 clean/bloat/bug checks on both changed test files have zero findings/errors. Actual full nine-cell native matrix at prior61a859cc merge-tree and currentfc97 boundary jobs remain separate evidence, not exact-next-head acceptance. Required candidate/independent Linux reviews remain FAIL atfc97; no green report is asserted. Local ARM64 review deferral retains the previously explicit maintainer approval and must pass hosted exact-head review before merge.
+
+
+### 2026-10-07 — ordinary bootstrap fixture identity (460-15-35)
+
+At a1906e5a, hosted Docs Review37555113148 is SUCCESS, confirming the lean serial invocation fix in actual CI. Further source diagnosis shows target_bootstrap sets sys.executable to PROJECT/bin/python and _validate_python_arguments deliberately rejects -I/-E/-S. The hosted recipe fixture had aliased its fake ordinary CI venv Python to that caller. Spec precedes a meaningful regression substituting a rejecting managed caller: original fixture exits78 (RED). Creating a real fixture-owned venv, as the existing independent reviewer fixture already does, executes the unchanged isolated bootstrap and exact staged-tree assertions (GREEN122focused tests in8.73s). No runtime launcher, permissions, test selection or deadline is changed, and no host fallback is introduced into actual capsule execution. The signed module payload is unaffected. This fixture defect is confirmed independently; current public hosted pytest diagnosis is incomplete and this is not claimed as its sole cause.
+
+Final fixture verification: full/SMART each PASS5257tests,75skips,95subtests,5existing warnings in145.82s/145.76s. Format, type/lint, strict OpenSpec, diff checks and direct AST/AI-bloat pass; pinned Semgrep1.144.0 clean/bloat/bug scans return zero findings/errors for the modified fixture. Module assets and manifests are unchanged. Existing hooks retain the approved local ARM64 DEFERRED review route; required exact-head Linux review remains outstanding.
+
+
+## 2026-10-07 — 460-15-36: precise private-safe test diagnostics
+
+Latest completed PR head `60c39ebe7689c1146ac22416744eab4c1b0570c5`: orchestrator run `37556736050` remains failed. Candidate cp312 job `112585116557` reports incomplete Pylint (30-second timeout) and pytest, with nonpassing observations in six public test files. Independent signed reviewer job `112585116410` retains its required 300-second timeout. Quality cp312 job `112592429767` has `SIGNATURE_RESULT=success` and `CAPSULE_RESULT=failure`, and stops at the prerequisite; this is not a demonstrated separate lint/test defect. Docs, all three minimum-core cells, requirements and strict signatures pass. These facts do not constitute review acceptance.
+
+Specification preceded tests. The original projector fails six outcome/phase/xfail/function regressions (`/private/tmp/specfact460-outcomes-red.log`: 6 failed,8 passed), ten coverage-prefix assertions (`/private/tmp/specfact460-coverage-prefix-red.log`:10 failed,22 passed), and six exception-class assertions (`/private/tmp/specfact460-test-class-red.log`:6 failed,2 passed). Both inline projections now emit only finite outcome/phase/xfail, source-validated public test function, fixed exception classes and existing managed option-rejection codes from the matching controller phase record. No raw node ID, parameter, source excerpt, traceback or exception payload is printed. Message/detail/source size bounds and subject-relative non-symlink source checks apply; candidate Python is parsed, never imported. Existing200-location cap, reviewer identity, test inventory, exits and all deadlines remain. This change diagnoses existing failures; it does not claim to fix or waive them.
+
+Final focused suite:150 passed. Initial new fixture introduced AI-bloat LOC/complexity and parameter-count warnings; compact fixture construction and a grouped case parameter remove both, preserving every assertion. Direct AST,AI-bloat and Radon now return no findings. Pinned Semgrep1.144.0 clean-code/bloat/bug scan has zero findings/errors.
+
+The first broad local run failed because this invocation omitted the existing Rust compiler directory from PATH; it had5280 passes and75 skips. The failure was the explicit Rust prerequisite assertion, not a parser acceptance failure. Restoring `/private/tmp/specfact-rust-toolchain/bin` yields SMART5281 passes/75 skips/95 subtests (146.19s) and full5289 passes/75 skips/95 subtests (147.56s). Subsequent final-fixture verification is recorded below; these diagnostic runs are not hosted capsule PASS. Incorrect focused filename selection produced no tests and exit5 and is retained in its private log, never counted as proof. A transient inline indentation error produced84 failing regressions before correction; the entire affected file then passed109 cases.
+
+Native run `37556735497` independently passes all nine OS/ABI cells. All nine tiny receipts were downloaded to `/private/tmp/specfact460-native60-receipts`; every declared check is true (all_ten_analyzers,cold_extraction,loader_profile,native_boundary,offline_reuse,project_coverage,project_extensions,project_tests). Actual receipt source is PR merge tree `de303d500be615e73fb4015817c7fe29f18b9379`, verified GitHub parents `74d3fd4dd6f9b171f18857abcc8f659c80d686e9` and the60c39ebe PR head. Each ABI's archive/manifest identities match across OS14.8.9/23J631,15.7.9/24G830 and26.6.2/25G83. This confirms native staged execution; secret-bearing signing/publishing stays skipped and public installed catalog acceptance remains pending. Apple membership is not required for the accepted ad-hoc stage.
+
+Stable final fixture snapshot: SMART5289 passed/75 skipped/95 subtests,144.16s; full5289 passed/75 skipped/95 subtests,145.69s; five existing fork deprecation warnings in each. Final150focused cases pass11.91s. Formatting,typing (zero errors/warnings),lint,YAML/import boundaries, all7 strict module signatures (filesystem payload/version-bump against origin/dev),28 contracts,actionlint,strict OpenSpec validation and diff whitespace pass. Final pinned Semgrep clean/bloat/bugs has zero findings/errors and direct AST/AI-bloat/Radon have zero findings. No signed module payload changes. Local capsule review retains the previously approved explicit GitHub-Linux deferral, DEFERRED rather than PASS; the exact-head hosted review remains mandatory.
+
+A test-context decision is pending: the unchanged Linux capsule inventory includes actual macOS/CoreFoundation proofs and ordinary-host bootstrap fixtures. The proposed separation would retain every assertion in required host/macOS jobs while selecting supported tests for capsule execution. No test-selection change, skip exception, deadline extension or acceptance waiver is implemented by this diagnostic patch. The rule in docs/agent-rules/15-intent-and-scope.md requires an explicit decision before that acceptance-contract change.
+
+
+## 2026-10-07 — 460-15-37: immutable phase records and parameter parsing
+
+Bounded review of immutable eef315067113f00f912406869906e7c8dccda25b found two diagnostic correctness defects: index/range controller observations are nested under head/base, and parameter text containing `::` was parsed as source function scope. Specification preceded twelve failing regressions (`/private/tmp/specfact460-review-corrections-red.log`). Both inline projectors now inspect bounded head/direct/base records, prefer a matching head record, and remove parameter sections before parsing the source function. Corrected focused suite passes156tests in10.99s. Existing privacy restrictions, 200-row cap, required exits and deadlines remain. Read-only review of both corrections returns no findings and twelve targeted passes.
+
+Stable pre-runtime-fix verification: SMART5295passed/75skipped/95subtests in145.38s; full5295passed/75skipped/95subtests in146.11s, five existing fork deprecation warnings each. Format/type/lint and direct AST/AI-bloat/Radon pass. These observations precede the separate runtime and timeout-fixture fixes below and are not exact-head hosted acceptance.
+
+## 2026-10-07 — 460-15-38/39: recursive archive limit and owned timeout fixture
+
+Latest completed eef3150 candidate job112645749322 identifies two ordinary failed-call assertions: test_acquisition_archive_bounds_global_headers_even_without_file_members and test_main_timeout_fails_hook. It also reports ordinary-host bootstrap fixture launch errors, eighteen macOS/maintainer test skips, Pylint timeout30s and incomplete pytest; independent job112645749216 retains analysis_timeout300s. No test selection or acceptance changes are implemented while the requested test-context decision is pending.
+
+Python3.12.13 isolated regression environment `/private/tmp/specfact460-cp312-regressions` reproduces the original archive assertion (1failed, `/private/tmp/specfact460-cp312-existing-archive-red.log`). Specification then precedes a portable regression using valid nonempty global PAX headers and observing physical member processing on Python3.14 as well as the original frombuf assertion. Both Python versions decode five physical headers against the unchanged four-header bound. A positive test requires exact-boundary archives to preserve two original payloads. The timeout fixture gains a report ownership guard before any filesystem write; its original real checkout fails that guard. RED on both Python3.12 and3.14:2failed,1passed (`/private/tmp/specfact460-archive-timeout-red{312,314}.log`).
+
+The runtime now rejects extension metadata at the exhausted physical header boundary before tarfile can recursively decode another header. Regular members at the exact boundary remain accepted. The timeout fixture uses its own temporary repository and preserves the cwd, timeout300, exit124, diagnostic and selected-file assertions. No deadline, count/byte limit, authentication rule or test assertion is weakened. Verification and signed payload readback follow below.
+
+
+Final stable source verification for460-15-37/38/39: full5296passed/75skipped/95subtests in162.66s; SMART5296passed/75skipped/95subtests in163.44s, five existing fork deprecation warnings each. Both complete earlier broad runs also pass, but precede the final equivalent bound-expression simplification and are not substituted for these stable runs. Focused Python3.14 suite passes226tests; supported Python3.12 full affected runtime/hook suites pass93tests (final4.26s). Bounded read-only review finds no defects and independently passes the three new regressions on Python3.14. All assertions, 30/300-second analysis limits and test selection remain unchanged.
+
+Format,type (zero errors/warnings),lint,YAML/registry,import boundaries,28contracts,Actionlint,strict OpenSpec,staged planned-maturity requirements gate,docs/prompt command validation,command overview/contract and documentation accountability pass. Direct AST has zero findings; AI-bloat/Radon match the prior HEAD's eight/thirty-four existing findings with no additions or removals. An initial expanded conditional introduced an additional complexity level; the equivalent reserved-header limit removes that regression before final checks. Pinned Semgrep1.144.0 has zero errors and no changed-line findings (six pre-existing whole-file findings). These bounded checks are not all-analyzer hosted PASS.
+
+Only the changed module manifest's checksum is refreshed locally with private signing variables removed; module0.51.1 remains newer than dev0.51.0. Filesystem payload/version-bump verification passes all seven manifests at the feature branch's checksum-only policy. CI-only auto-sign and strict authenticated payload readback remain required; no local signing key is accessed. Normal commit hooks retain the existing explicitly approved Darwin feature-worktree capsule review DEFERRED to required GitHub Linux, not PASS. Public exact-head results are still required. Old eef3150 customer cp311/cp313 jobs finishSUCCESS; their deferred review is intentionally cp312-only, and they do not erase its strict review failure.
+
+
+### CI-only signature readback for460-15-38
+
+Source correction17178d775c35dfa492ae840ab92f0d508bfd6e7d is pushed with normal hooks passing (contract hook28passed in3.90s; approved local review DEFERRED). Signature workflow37578820476 completesSUCCESS and appends CI signing commitdc895be5443cc750d839a318801da643578353d6. Verified diff adds only the signature to the changed module manifest; source bytes, checksum and version are unchanged. After fast-forward readback, public-key verification with --require-signature --payload-from-filesystem --enforce-version-bump --version-check-base origin/dev passes all seven module manifests (`/private/tmp/specfact460-archive-signed-readback.log`). Changed0.51.1 payload checksum issha256:eb7ee671a8ec8ecd1c6a416a76444ce307de0070ffdbbcab915fc742e0406952. No local private key is read or used, and no publication is performed.
+
+This evidence-only follow-up preserves that exact signed runtime payload while normal current-head workflows exercise it. Full native matrix and both mandatory Linux reviews remain independent acceptance gates. The explicit test-context question remains unanswered; no selection or skip-policy change is implied by the ordinary archive/fixture fixes.
+
+
+## 2026-10-07 — 460-15-40/41: reviewed observer identities and wheel license paths
+
+The explicitly requested CodeRabbit CLI review of 2aea48da reports four minor findings: two stale workflow-status records, malformed observer node identities, and the Darwin derivative License-File path. Each is independently validated before editing. The single bounded read-only review agent confirms the schema and licensing defects; it does not demonstrate a false PASS or confinement bypass. Missing recognized-phase nodeid previously raises an untyped KeyError; non-string values are coerced for collected identities but remain malformed in records.
+
+Specification precedes tests for missing/null/boolean/integer/list/object node identities, exact parameterized valid strings, metadata license resolution and matching provenance. RED: 8 failed / 47 passed in 0.66 s (`/private/tmp/specfact460-autofix-observer-license-red.log`). The worker now rejects malformed identities with WorkerContractError before projection; valid identities are unchanged without coercion. The metadata/provenance value is LICENSE.txt relative to dist-info/licenses; the physical authenticated license member stays unchanged. GREEN: 55 passed in 0.45 s. Bounded read-only review returns no introduced defects, with rebuilt wheel hashes still pending at that review snapshot.
+
+Authenticated source wheel SHA-256 399a38a85d784105e5df5a05c04a581481bfdb80af7424779cf76fa843b4e66c and ARM64 release ZIP SHA-256 81d29e934fd863079a74af35eecaeaef8047e0e12414d33ca322b358d68383db reproduce two identical corrected specfact.2 wheels: SHA-256 81d7e08869fc34877ad9b1315de5bb5398792bc8858f44e45c38a974f310f7e7. Exact-hash tests are updated before all three ABI locks: the old locks fail the new assertions, then receive the authenticated new digest. Historical specfact.1 reproduces unchanged SHA-256 af669755eabd97268a4141983a391cb4a832116d5a2c3cf04a4c53c7650ce72c. Retained native/source bytes, exact reviewed omissions, license bytes, versions and other closure pins remain unchanged. Previous native matrix acceptance does not cover the corrected final bytes. No publication or dependency admission is implied.
+
+PyPA primary specification, accessed 2026-10-07: [installed licenses subdirectory](https://packaging.python.org/en/latest/specifications/recording-installed-packages/#the-licenses-subdirectory) and [wheel licenses directory](https://packaging.python.org/en/latest/specifications/binary-distribution-format/#the-dist-info-licenses-directory). The workflow exists; live GitHub environment metadata still lists only github-pages. Delivery notes now distinguish implemented workflow from pending protected native release environment and authority.
+
+Exact 2aea48da hosted candidate 3.12 still reports Pylint 30-second timeout, 19 ordinary-host fixture failures and 18 native/maintainer skips; independent review remains incomplete at 300 seconds. cp311/cp313 candidate jobs, signature/docs/requirements/CodeQL and all three macOS boundary jobs pass. Some final native matrix cells remain running at this observation. The test-context decision remains pending; this autofix changes no test selection, deadlines, confinement or acceptance requirements.
+
+
+Final stable verification: focused 60 passed on Python 3.14 (1.15 s) and supported Python 3.12 (0.76 s); SMART 5304 passed / 75 skipped / 95 subtests in 159.65 s; full 5304 passed / 75 skipped / 95 subtests in 154.38 s, five existing fork deprecation warnings each. Skips remain explicit unexecuted native/maintainer acceptance, never PASS. Fresh isolated Python 3.12 installation of the corrected authenticated wheel passes pip check, exact metadata/license bytes and native Z3 solve. Separate licensing assertions remove a new test complexity regression without removing any assertion. Format, typing (zero errors/warnings), lint, YAML/import boundaries, 28 contracts, strict OpenSpec, planned-maturity staged requirements and documentation checks pass. Direct AST has zero findings; AI-bloat/Radon match three/thirteen baseline findings with no additions. Pinned Semgrep 1.144.0 reports zero errors, one pre-existing whole-file finding and no changed-line findings.
+
+The single bounded read-only reviewer independently verifies both rebuilt wheel digests and metadata-to-authenticated-member resolution; final patch review has no findings. The final CodeRabbit CLI rerun is not executed: automatic approval review rejects private uncommitted diff egress pending destination-specific approval. This does not erase the preceding completed four-minor-finding CLI review or claim a fresh clean CodeRabbit review. GitHub's posted annotation separately consolidates the two workflow-status records and is resolved only after the verified fix is pushed.
+
+Native run 37579074968 completes SUCCESS on 2026-10-07. Nine downloaded tiny receipts each require all eight declared checks true and bind source merge tree 01f408026f931eff6acb74bfc375cc7a36e20d36, whose verified parents are dev 74d3fd4dd6f9b171f18857abcc8f659c80d686e9 and PR head 2aea48da32d056d09cf9f5cde238e72d2e8af831. Each ABI's archive/manifest identity is unchanged across ARM64 macOS 14.8.9/23J631, 15.7.9/24G830 and 26.6.2/25G83. Signing/publishing is skipped. This completed matrix validates the preceding bytes, not this corrected wheel or observer runtime. Fresh final-byte acceptance remains required.
+
+Only changed unpublished module 0.51.1's filesystem checksum is refreshed locally: sha256:d688d26265448c66e9bfeca02fe6ac5932c1d3670d642e7f0b32d78d1989d1e7. Private signing variables are removed; no local private key is accessed. Feature checksum/version verification passes all seven manifests with the public key; CI-only signature and strict readback remain required. Normal commit hooks retain the earlier explicitly approved local Darwin capsule review DEFERRED to mandatory GitHub Linux, never PASS. Quality job 112662781273 fails only at its capsule/signature prerequisite and skips downstream steps; no local quality defect is inferred from that inherited failure.
+
+
+### CI-only signing readback for 460-15-40
+
+Source fix 14c738cf43ff43b19a6cff9a8a9391eeb705bd8b passes normal commit hooks (28 contracts in 4.01 s; approved local capsule review DEFERRED). Signature workflow 37585303049 completes SUCCESS and appends f177e906f688a72915689d84634b885131d569d1. The verified diff adds only the manifest signature; source bytes, module version and checksum d688d26265448c66e9bfeca02fe6ac5932c1d3670d642e7f0b32d78d1989d1e7 remain unchanged. Fast-forward readback plus public-key --require-signature --payload-from-filesystem --enforce-version-bump --version-check-base origin/dev verifies all seven manifests (`/private/tmp/specfact460-autofix-signed-readback.log`). No local private key or publication is used.
+
+The consolidated CodeRabbit GitHub annotation PRRT_kwDORVEFbs6pygT8 is resolved after pushing the verified two-record documentation correction; summary comment6032841628 records the fixes and limits. The other two defects originate from the completed CLI review, with no corresponding GitHub thread invented. This substantive evidence follow-up preserves the exact verified source/signature bytes and starts normal current-head acceptance. Current Linux fixture-context/deadline failures remain open pending the recorded test-context decision; no stale or skipped review is described as green.
+
+
+## Approved required proof contexts — 2026-10-07 (Europe/Berlin)
+
+The maintainer's “yes approved” authorizes separating host/macOS proofs from
+confined portable discovery while retaining every assertion. It also authorizes
+the bounded CodeRabbit destination review: the committed 2aea48da→082e8b6d CLI
+review completed with zero findings over15files. Current paginated GitHub thread
+readback reports zero unresolved current annotations.
+
+Specification and failing regressions preceded entrypoint changes: initial three
+context checks FAIL3 in0.16s; native-job, package-marker ambiguity, exclusive ABI
+preparation and host invocation regressions each separately FAIL before their
+fixes. Separate host execution is required: pytest parent-directory plus explicit
+child-file discovery omitted all19hostcases; --keep-duplicates repeated them.
+Full and SMART now invoke the proof separately before the portable suite, returning the host failure without running the portable suite; after host success,
+the portable exit status is returned. No pytest discovery or installed-controller policy is
+weakened. Empty namespace package markers are removed after the installed0.51.0
+selection probe reproduces their ambiguity. Each native ABI preparation has its
+own fresh cwd, retaining exclusive Node output ownership and existing input hashes.
+
+The four obsolete baseline modules are byte-identical to origin/dev; canonical
+host wrappers ignore only those versions. All81 original top-level test/helper
+ASTs are retained, normalizing only nine cross-module public helper identifiers.
+One copied test selector is renamed from copies_data to copies_runtime_bytes to
+satisfy the introduced whole-file naming check; its entire body is unchanged.
+The read-only reviewer independently confirms assertion preservation and that all
+nine newly added Python files select four portable files under installed0.51.0,
+with no proof or obsolete baseline fixture selected. Proof-only selection remains
+an error. Required macOS jobs explicitly execute parser/broker proofs on all three
+OS labels and all three minimal CPython ABI inputs; hosted execution remains due.
+
+Focused final context/portable/host tests PASS154 in13.03s before the selector-only
+rename. Full host entrypoint executes19hostcases separately, then5275portable cases
+PASS /71declared skips /95subtests in139.57s, with5existing fork warnings. SMART
+executes the same19hostcases and5275portable cases in157.19s. Native parser PASS14
+in1.41s with real SDK/Rust; all three real broker CLI proofs exit0. Format, typing
+(0errors/0warnings), lint, YAML, imports,28contracts, strict OpenSpec and actionlint
+PASS. AST, AI-bloat and Radon return0findings for all introduced context modules.
+Pinned Semgrep1.144.0 reports0errors; two remaining tools print findings are on
+unchanged baseline lines. Strict public-key filesystem/version signatures PASS7;
+this change alters no signed module payload.
+
+Fresh historical final-wheel acceptance is now verified from native run
+37585571068: all9cells and all8checks percellPASS. Receipts bind merge65cafbd5e0a2a008b3aba0835a8fd38cb0f83e2d, whose parents are dev74d3fd4dd6f9b171f18857abcc8f659c80d686e9 and PR082e8b6dae8d0b333315d8927d4770a92fda1853.
+Per-ABI archive/manifest hashes are identical across macOS14/15/26. This proves the
+corrected wheel/runtime bytes in staging; it is neither protected publication nor
+ordinary signed customer installation. Fresh context-head CI is still required.
+
+The existing authenticated0.51.0 controller additionally reproduces ambiguous
+selection for the changed run/commands.py with two baseline test_commands.py
+stems. Candidate explicit-match correction is absent from that immutable published
+reviewer. Previously observed Pylint30s and independent300s deadlines remain
+required. No published reviewer modification, skip-to-PASS conversion, deadline
+increase, automatic merge/publication/issue closure/OpenSpec archive is performed.
+
+
+### Exact-head context diagnosis and bounded native follow-up — 2026-10-07
+
+Head14aff915: required native parser/broker steps pass on macOS14/15/26; the
+new minimal CPython proof in tools job112978610168 fails with EOFError during
+WAIT. All original assertions remain required. The exact SHA-256-pinned
+CPython3.11.16 input independently passes6/6cases locally on the physical ARM64
+host; that is not macOS14 evidence. No new sysctl/profile grant is inferred.
+A fixed-field failure projection is specified and tested: initial helper import
+FAIL before implementation; malformed scalar identities FAIL before type guards.
+Raw8KiBfixture-log tails/paths/authority stay private; public output contains only
+declared ABI, fixed case/phase and existing four boolean wait-state fields. The
+original error is retained privately and the required proof still fails. The
+hosted cause remains unknown pending fresh diagnosis. The20focused portable
+context/Python-source tests pass before the annotation-only type correction.
+
+CodeRabbit completes context-only14aff915 review with one minor evidence wording
+finding: host failure prevents portable execution; after host success the portable
+status is returned. Documentation is corrected, with entrypoints unchanged.
+The maintainer separately approves preparing a small authenticated reviewer-update
+PR covering explicit test selection and a tested Pylint optimization. This does
+not authorize automatic merge/publication or modification of installed reviewers.
+Existing #498 stays separate from the reviewer bootstrap worktree on updated dev.
+
+
+## Bounded native WAIT result diagnostic — 7 October 2026 (Europe/Berlin)
+
+Head 8eeae6d4's hosted macOS14 minimal CPython3.11 clean case fails at
+request-wait after output_closed, wait_accepted, wait_pending and worker_reaped
+are all true. Exact authenticated PBS3.11 bytes pass locally6/6; the cause remains
+unknown. Encoding and serialized-response size are distinct rejection paths,
+so no permission, output/frame, deadline or cleanup gate is changed.
+
+Specification precedes a meaningful RED for missing last_worker_result, then
+finite per-worker entered/queued/output_encoding/response_size/queue_capacity/
+session_deadline observations. Status projection permits only worker_exited,
+worker_signalled and entry_marker_present booleans. It binds to this client's
+recorded failing WAIT and rejects foreign identities, malformed/unknown stages
+and non-boolean fields. No raw bytes, exception payload, PID, handle, authority or
+path becomes public; every rejection still terminates at the original gate.
+
+Focused25tests pass. The actual native broker compiles and all6minimal CPython
+cases pass using the exact authenticated3.11 input. A bounded read-only reviewer
+finds no defect; tests do not yet exercise every C rejection path. Full host entry
+passes19cases followed by5278portable cases/71declared skips/95subtests in156.85s
+before equivalent helper/test extraction; final focused coverage verifies those
+extractions. AST/AI-bloat/Radon return0on changed small helpers. Pinned Semgrep
+has0errors and only the pre-existing fixture print finding on unchanged code.
+Typing/lint pass with0errors/warnings and10.00/10. Fresh hosted diagnostic and
+exact-head capsule review remain required; this is not acceptance or publication.
+
+
+The fffa6856 hosted tools job113006304974 (run37683804287) now proves the
+macOS14 clean3.11 failure is output_encoding, with worker_exited=true,
+worker_signalled=false and entry_marker_present=false. This identifies broker
+rejection of pre-entry startup output, not the underlying startup error. Retain
+that distinction; do not infer a new sandbox permission or weaken encoding.
+
+A subsequent spec/RED→GREEN adds five fixed startup classes only: profile
+initialization, Python initialization, Python path configuration, loader and
+unclassified, based on literal fixture error prefixes.26focused cases and the
+actual6native cases pass; invalid/future values cannot disclose raw payloads.
+Typing/lint (0errors/warnings,10.00/10) and direct AST/AI-bloat/Radon pass. The
+existing single read-only reviewer finds no defect and confirms unchanged gates.
+Final full and SMART each pass19required host cases followed by5280portable
+cases,71declared skips,95subtests and5existing warnings (142.44s /143.06s). Fresh hosted failure
+classification remains required; these labels are clues, not startup acceptance.
+
+
+## Python profile compatibility correction — 2026-10-07 (Europe/Berlin)
+
+Exact0381b7fac571784476d0ffff6d7dd033d38264c1 tools job113013929699
+(run37686023721) fails before CPython entry. Fixed public projection reports
+output_class=profile_initialization,stage=output_encoding,worker_exited=true,
+worker_signalled=false,entry_marker_present=false. Raw output remains private.
+This proves sandbox initialization failed, not its underlying compiler cause.
+
+Source inspection identifies a definite compatibility inconsistency: both Python
+fixture profiles name mach-task-exception-port-set unconditionally, while the
+already-measured broker retains all four unconditional exception-port RPC denials
+and guards the newer operation with defined?. Reuse that exact existing policy
+in both Python builders. This adds no allow, changes no budgets and retains the
+newer-operation denial wherever defined; protected native execution remains required.
+
+Specification preceded two focused regressions. Both fail against their missing
+canonical broker policy(0.81s), then pass after the shared policy correction; the
+combined candidate/context suite passes25cases(0.70s). The private exact minimal
+PBS3.11 fixture subsequently passes all6cases, with the unchanged cleanup and
+denial assertions. The bounded agent verifies canonical denial-policy equality
+and unchanged grants/budgets, with no findings. Local/newer-kernel proof does
+not establish macOS14 remediation; fresh required hosted execution follows.
+Private evidence logs: /private/tmp/specfact460-exception-profile-{red2,green}.log
+and /private/tmp/specfact460-exception-profile-native.private.log.
+
+Final correction verification: format, typing0errors/0warnings,lint10.00/10,
+manifests/imports,strictOpenSpec,stagedplannedrequirements,28contracts and all
+seven strict public-key signatures pass. AST/AI-bloat return0findings; Radon
+and pinnedSemgrep return0changed-line findings (unchanged existing observations
+are retained, not suppressed). Full:19hostcases then5282portable cases/71declared
+skips/95subtests/5existingwarnings(149.21s). SMART:same counts(141.63s).
+The signed module payload/checksum is unchanged. Normal hooks reuse only the
+approved local Darwin capsule-review deferral; exact-head hosted Linux remains
+mandatory. Hosted macOS14 profile compilation/remediation remains pending.
+
+## 9 October 2026: #498 upstream integration and same-stem mapping
+
+User authorized resolving #498 conflicts, readying the PR and fixing review findings before release. Current dev bb57584c includes the signed/published 0.51.2 patch; resumed native payload version is 0.51.3. The merge preserves native diagnostics/proofs alongside dev bootstrap and immutable reporting fixes.
+
+Specification was extended before tests. Four parameterized changed-scope cases (two changed production files with one shared stem, two discovered matching tests, one explicitly selected test; both orders and either selected test) genuinely failed because no ambiguity error was raised. A distinct-stem control passed. RED: `/private/tmp/specfact498-same-stem-red.log` (4 failed, 1 passed).
+
+The minimal fix counts distinct changed source paths per stem, retains the established single-source explicit mapping, and rejects partial explicit coverage of a multi-source matching-test group. Explicitly selecting all matching tests or full native discovery resolves it without guessing directory correspondence. The imported dev fixture uses the current `selectors` field and bounded native invalid-request diagnostic; response initialization still waits for successful observations. Affected worker, bounded diagnostic and host proof checks: 324 passed, `/private/tmp/specfact498-merged-targeted-green.log`. Full/SMART and normal hook results are recorded after completion below.
+
+Release configuration was checked through GitHub metadata, without reading secret values. Both native environments now require djm81, prevent self-review, restrict protected branches and disable admin bypass. The dedicated signing environment currently has no secret names listed. Owner provisioning remains required; a signing-capable workflow cannot manufacture or retrieve an existing GitHub secret value. A different authorized actor must initiate deployment for djm81 to approve under the existing independent-approval rule. No signing/publication was dispatched and no publisher private key was used locally.
+
+Full integration RED additionally exposed 12 stale upstream assumptions (native invalid-request handling and selector schema, subprocess xdist controls, published reviewer pin, immutable host proof invocation). `/private/tmp/specfact498-full-test.log` records 12 failed, 5475 passed. Corrections preserve complete request/ownership assertions, compare JSON object fields semantically, retain original serial reporting/import options, and use actually published signed 0.51.2 in the independent reviewer. No customer analysis inputs, deadlines, contracts or no-write controls were relaxed. The intermediate full run loaded the old key-order assertion before its correction and still failed that assertion; it is not passing evidence. The corrected setup module passed all 11 cases in `/private/tmp/specfact498-setup-final-green.log`.
+
+The authenticated CodeRabbit CLI actually completed the resolved integration review with zero findings over 49 text files (two binary registry archives excluded). Subsequent test-context/published-pin corrections require current-head GitHub producer completion; this earlier CLI result is not an exact final-head clean assertion.
+
+Final full gate: 27 mandatory host proofs and 5487 portable cases passed (71 declared skips, 95 subtests, five existing fork warnings; portable duration 154.26 seconds), `/private/tmp/specfact498-full-verified.log`. Final SMART gate independently passed the same mandatory host proofs and 5487 portable cases (137.35 seconds), `/private/tmp/specfact498-smart-verified.log`. Final typing reports zero errors/warnings; Ruff passes, Pylint 10.00/10, manifest and bundle boundary checks pass, seven module checksums/version policy pass with the new native payload awaiting normal CI signature, and selected strict OpenSpec validation passes. Contract gate: 28 passed. No private publisher key was accessed. Current-head hosted acceptance/review and installed release proof remain outstanding.
+
+Normal merge commit hooks all passed on implementation commit 9fde4785c15e42763430cf8bf0c95d9a51839a08, including 28 contract cases, with only the previously approved local capsule review DEFERRED to exact-head hosted Linux. Existing CI added signature-only child 3d936d5eebcb9e9481d78e0106b7855ca14c0597: exactly one manifest signature insertion, unchanged module payload/checksum/version 0.51.3. After a clean fast-forward, all seven strict signatures, payload checksums and upstream version checks pass against the existing public root. No repeated runtime tests are required for that signature-only child or this reporting checkpoint.
+
+Credential configuration clarification: GitHub lists existing repository-scoped `SPECFACT_MODULE_PRIVATE_SIGN_KEY`, its passphrase and public-key metadata; the native signing environment still lists no secrets. Public-key comparison confirms the native signer and verified module publisher share the same trust root. A new key is not required: the owner can provision the existing securely held key/passphrase under the dedicated native environment secret names. GitHub cannot return existing secret values for an agent to copy, and no private key is read or used locally. GHCR upload uses the workflow's built-in GITHUB_TOKEN with packages:write; no new registry credential is required.
+
+## 9 October 2026: customer release identity P1 and owner secret provisioning
+
+New current review thread PRRT_kwDORVEFbs6qv5R_ correctly identifies release drift: native installed customer acceptance checked out mutable main and omitted RELEASE_TAG. The specification was extended first. A new workflow regression genuinely failed on `ref: main`; a real Git repository test independently proved the existing identity validator rejects newer-main/tag mismatch and accepts the released commit or manual untagged commit. RED: `/private/tmp/specfact498-release-identity-red.log` (1 failed, 1 passed).
+
+The minimal workflow correction checks out the immutable event SHA, fetches tags for identity verification, and forwards RELEASE_TAG to both existing installation selection/verification calls. No registry override, signing key, private output or customer assertion is added. The module payload/version/checksum/signature remain unchanged at 0.51.3. The new workflow path and regression coverage require fresh hosted checks and review.
+
+The owner supplied both `SPECFACT_NATIVE_CAPSULE_PRIVATE_SIGN_KEY` and `SPECFACT_NATIVE_CAPSULE_PRIVATE_SIGN_KEY_PASSPHRASE` to the signing environment (metadata updated 10:58:29 / 10:58:52 UTC). Both environment policies pass the tracked validator again. Only names and metadata were read; no secret value was retrieved. Value/decryption/public-root compatibility must be validated by the protected main signer after exact nine-cell acceptance and independent approval, not by a local probe or feature-branch dispatch.
+
+P1 GREEN: all 115 release/customer cases pass, `/private/tmp/specfact498-release-identity-green-final.log`. Final Full and SMART each pass 27 mandatory host proofs plus 5489 portable cases, 71 declared skips and 95 subtests (161.46 / 159.35 seconds), `/private/tmp/specfact498-release-p1-full.log` and `/private/tmp/specfact498-release-p1-smart.log`. Final typing/Ruff/Pylint, manifest and strict OpenSpec gates pass. The authenticated CLI review actually completed with zero findings across all six staged text files; a separate bounded read-only audit found no remaining release-binding defect. These are code/review results, not installed production acceptance.
+
+Hosted independent job 113787136598 on reporting head 99e91783 emitted the trusted `analysis_timeout` classification and exited 124. Its finite follow-up projector had no report and emitted missing_report/unclassified; that does not override the verified timeout. This is the explicitly owner-approved timeout exception and remains INCOMPLETE, never PASS. Public fixed diagnostics only were inspected; no private report or key was retrieved. New-head hosted review/customer/native checks remain required after the workflow correction.
+
+
+## PR #498 source identity and fatal attribution follow-up — 9 October 2026
+
+Both current annotations were independently validated within the approved native delivery scope. Spec scenarios were added before tests and implementation. Root remained sole writer with one bounded read-only audit agent.
+
+- Pylint RED: six later-file absolute/relative fatal cases failed because the first selected path replaced the actual path; six existing selected/global fallback cases passed. `/private/tmp/specfact498-fatal-red.log`. The fix retains admitted source paths/lines and preserves unselected fatal fallback, tool-error and nonfatal selection semantics.
+- Native installation RED: seven source identity/workflow regressions failed and two existing release identity controls passed. Real fixture archives/indexes remain internally valid while source version, integrity/resources or manifest availability diverge. `/private/tmp/specfact498-install-red.log`. Native selection and verification now explicitly require complete source/archive manifest equality; the Linux registry-only published candidate default is unchanged.
+- Focused GREEN: 152 tests, including matching signed-install receipt controls, version-output binding and original customer controls. `/private/tmp/specfact498-new-findings-green.log`. An actual checkout0.51.3 versus registry0.51.2 invocation rejects before installation/version output as expected (`/private/tmp/specfact498-unpublished-rejection.log`), demonstrating publication is still required rather than claiming installed acceptance.
+- Format, typing (zero errors/warnings), Ruff/Pylint10.00/10, seven manifest checks, bundle imports and strict OpenSpec pass. The bounded read-only audit found no defects.
+- Exact e3e hosted independent job113792360434 emits `analysis_timeout` and exit124. This is independently verified and remains INCOMPLETE under the existing user-approved timeout exception, never PASS. No private report was retrieved.
+- Native environment metadata confirms both owner-provisioned key/passphrase secret names and independent djm81 protection; values remain exclusively for approved protected-main CI. GHCR uses the existing built-in token.
+
+Full and SMART each pass 27 required host proofs plus 5505 portable cases, with the same 71 declared skips, 95 subtests and five existing warnings (139.73/145.02 seconds portable respectively). Logs: `/private/tmp/specfact498-new-full.log` and `/private/tmp/specfact498-new-smart.log`. The authenticated bounded CLI review completed with zero findings across 11 files; the read-only audit also found no defects. Initial automatic approval rejected the upload under a private-repository assumption; fresh GitHub PUBLIC/isPrivate=false metadata and the no-credential-material diff check supported approval of the same direct command before remote analysis began. No completed/started review was retried. Later evidence append only records those results. Refreshed payload checksum is `sha256:3c7d9a6e7f5ef5c76987eb569f7722434747cc535866372fb46cfc5953255f21`; stale signature was removed without accessing a private key. All seven checksum/upstream-version gates pass, and normal commit hooks are enforced with only the already approved local Darwin review deferral; the changed module requires fresh normal CI signing before strict signature acceptance. Current-head GitHub checks remain required. Version0.51.3 remains above freshly verified published dev0.51.2 and is unpublished; no additional patch bump or manual registry artifact is required for this bounded correction.
+
+
+## PR #498 bounded failure projection — 9 October 2026
+
+CodeRabbit thread `PRRT_kwDORVEFbs6qwc6m` independently reproduces unbounded/unhandled public report parsing and failure exit substitution. Spec preceded tests/code: fourteen genuine RED cases cover both public projectors with malformed/non-object/valid oversized/deep/unreadable private reports plus shell crash propagation at exit17/124. A read-only audit identified the secondary candidate diagnostic invocation in the same failed-review branch; two further RED cases demonstrate its process exit3 replacing review17/124. Logs: `/private/tmp/specfact498-projector-red.log`, `/private/tmp/specfact498-secondary-projector-red.log`.
+
+Both public readers now use the existing32MiB+1 private diagnostic bound, require JSON objects and emit fixed `review_report_unreadable` INCOMPLETE only on parse/read/shape/size failure. All three diagnostic invocations in failed-review branches are nonfatal so the original required nonzero reviewer exit remains authoritative. Existing private parsing, fixed public locations/function identity, 200-location cap, deadlines, analyzer invocation, retained test assertions and timeout/incomplete semantics remain unchanged. Heredoc extractors accept guarded syntax; source assertions are preserved.
+
+Focused GREEN235 includes every current public/private projector assertion and the27 mandatory ordinary-host proofs. `/private/tmp/specfact498-projector-green-final.log`. The first broader run detected one existing inline heredoc extractor tied to unguarded syntax; it is fixed via the existing shared helper and no diagnostic assertion was removed. An accidental targeted invocation of the excluded historical `tests/unit/test_capsule_deferred_review_ci.py` produced six stale-baseline/fixture failures; the required current `tests/host/proof_capsule_deferred_review_ci.py` is the maintained proof and all27 assertions pass. The initial in-flight full run retained the already collected old extractor and therefore reports one failure/5518passes; final full/SMART are being rerun after the actual fixture correction, not waived.
+
+Normal CI signature-only child `7572e239` was inspected and fast-forwarded: it inserts only the signature for unchanged0.51.3 payload checksum `sha256:3c7d9a6e7f5ef5c76987eb569f7722434747cc535866372fb46cfc5953255f21`. All seven strict public-key signatures/checksums/version gates pass. This workflow/test/spec-only follow-up changes no module bytes/version/signature and requires no additional bump or local private key. Native protected-main secret correctness, actual registry publication and installed customer acceptance remain separate pending delivery gates.
+
+
+The first new six-file CodeRabbit review completed with one Minor privacy finding, not a clean review: a later projector loop crash could print stderr despite the exit guard. Independent validation confirmed this against the existing private-log requirement. Six genuine RED assertions then show public tracebacks or missing fixed projection-failure diagnostics (`/private/tmp/specfact498-projector-privacy-red.log`). All three diagnostic commands now redirect stderr to owner-controlled private logs outside upload-artifact paths and emit only fixed INCOMPLETE `review_projection_failed`; a final nonfatal guard also preserves the original review exit if diagnostic output itself fails. The235-case focused scope passes with empty public stderr, actual private crash evidence and original exit17/124 retained (`/private/tmp/specfact498-projector-private-green.log`). The preceding final full run passed27host/5521portable, but the latest privacy correction receives a fresh final full/SMART check. Neither a started/completed review nor an unchanged failed gate is retried without changed source/evidence.
+
+
+Final private-diagnostic verification: Full and SMART each pass27requiredhostproofs and5521portable cases (71declaredskips,95subtests,5existingwarnings), with portable durations154.99/155.21seconds. Logs: `/private/tmp/specfact498-projector-private-full.log`, `/private/tmp/specfact498-projector-private-smart.log`. Final focused235 passes. Format/typing/Ruff/Pylint10.00/10, YAML/manifests, bundle imports and strict OpenSpec pass. The final six-file authenticated CLI review completed with zero findings after the privacy correction; the bounded read-only audit also found no remaining defects. This evidence-only append records completed results. Normal commit hooks remain mandatory with only the existing approved local Darwin review deferral, and exact-head hosted review/checks remain pending. Signed0.51.3 module bytes/checksum and CI7572e239signature are unchanged by the workflow-only correction; all7strict signatures previously verified for these exact bytes remain valid.
+
+
+## PR #498 native workflow input coverage — 9 October 2026
+
+Codex P2 thread `PRRT_kwDORVEFbs6qxFxr` is independently valid: the PR filter omitted real Node/Z3/runtime/parity helpers, acceptance helpers, broker proof/corpus fixtures and pytest/bootstrap inputs consumed by the native jobs. The scenario was specified first, then29 source-backed trigger/negative-control cases produced14 genuine RED failures and15 passes (`/private/tmp/specfact498-path-filter-red.log`). Narrow native/macos script patterns and explicit shared inputs now schedule the existing secret-free build and nine-cell execution jobs; unrelated documentation, module packages and unit tests remain filtered. No matrix, deadline, signing/publication approval or signed module byte changes. Focused native release GREEN:91 cases (`/private/tmp/specfact498-path-green.log`).
+
+Exact prior head3c1d36e1 candidate3.12 job113806025990 and independent job113806025834 both emit fixed public `analysis_timeout` and exit124 (`/private/tmp/specfact498-job113806025990.log`, `/private/tmp/specfact498-job113806025834.log`). These newly inspected failures are INCOMPLETE under the approved timeout exception, never PASS. No private reports or signing secrets were accessed.
+
+The first new five-file CLI review completed with zero findings. The separate read-only audit identified inaccurate single-star slash semantics in the test helper. Six direct controls produced1 genuine RED/34passes before correcting the literal/star matcher to full-path regex with segment stars and recursive stars; this follows [GitHub filter semantics](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#filter-pattern-cheat-sheet), accessed9October2026. `/private/tmp/specfact498-path-glob-red.log`. Earlier full5550passes reflects the pre-correction tests and is historical; final focused and whole-suite evidence follow the actual matcher correction.
+
+Final native input correction evidence: focused97pass (`/private/tmp/specfact498-path-green-final.log`); Full/SMART each27requiredhostproofs plus5556portable cases with71declaredskips,95subtests and5existingwarnings (210.22/177.69seconds). Logs: `/private/tmp/specfact498-path-full-final.log`, `/private/tmp/specfact498-path-smart-final.log`. Final five-file authenticated CLI review completed with zero findings after the actual slash matcher correction; final read-only audit found no defects. Format, zero-error/warning typing, Ruff/Pylint10.00/10, YAML/manifests, bundle imports and strict OpenSpec pass. All7strict public-key signatures/checksums/upstream-version gates pass (`/private/tmp/specfact498-path-signatures-final.log`); signed0.51.3 module bytes remain unchanged. The three prior-head quality jobs113815349590/668/683 fail at customer-matrix prerequisite validation before any quality tools/tests, downstream of the independently verified timeout jobs. Normal hooks remain required with only the already approved Darwin reviewer deferral. New-head hosted checks and actual installed acceptance remain outstanding.
+
+
+## PR #498 uv generated-module inference — 9 October 2026
+
+Codex P2 `PRRT_kwDORVEFbs6qx3t6` independently identifies a missing overlay destination in uv preparation. The existing byte-bound inference helper rejects generated project files without an overlay; dropping implicit roots can select installed copies instead of reviewed source. Spec first extended the existing generated-wheel scenario to actual uv-installed files. Four genuine REDs plus20passing controls cover locked/unlocked preparation, generated.py/.pyi, byte mismatch, ambiguous matches and explicit-root preservation (`/private/tmp/specfact498-uv-red-controls.log`).
+
+The minimal correction passes the existing private source-overlay destination, matching pip/Hatch/Poetry. It retains exact source byte binding, unrelated dependency exclusion, explicit-root short-circuiting, unchanged customer checkout and existing lock handling. No new importer, deadline change or staging bypass. Affected preparation/source/worker GREEN:129cases (`/private/tmp/specfact498-uv-green.log`). Public hierarchy metadata remains complete; issue460 is OPEN/Todo and cache refresh is unchanged. Source/spec/full/SMART/review and normal-hook final evidence follow.
+
+Exact prior1ce3c039 customer candidate3.12 job113819547817 and independent job113819547758 both emit `analysis_timeout` with exit124. Public finite diagnostics only inspected; these are approved INCOMPLETE exceptions, never PASS (`/private/tmp/specfact498-job113819547817.log`, `/private/tmp/specfact498-job113819547758.log`). Signed module bytes changed by the source correction. Unpublished0.51.3 remains above dev published0.51.2; checksum refreshed via normal checksum-only tooling with all private key/passphrase environment variables removed. Stale signature removed; normal CI signing is required before strict signature acceptance. Registry artifacts are left to normal publication.
+
+The first new six-file CLI review completed with one Major finding, not a clean review: installed files sharing a namespace were selected by package prefix. The independent read-only audit confirmed the same defect. Twenty genuine RED cases cover regular/shared namespace dependencies with resource-relative imports, missing/malformed/ambiguous records and altered hashes (`/private/tmp/specfact498-uv-ownership-red.log`). Four further REDs prove a partial RECORD omitting a generated module must not leave inferred roots without a reachable generated file (`/private/tmp/specfact498-uv-unrecorded-red.log`).
+
+Native uv overlay selection now reuses the established installation RECORD row parser and hash verifier, admits unique owners associated with exact byte-matched source/root sets, and excludes unrelated distributions even when package names overlap. Parsing retains the existing bounded tree, limits each RECORD to4MiB and total rows to100000. `.pyi` is admitted only through an explicit parser option; the portable coverage default remains `.py`. Missing matched ownership or unrecorded project-namespace files reject inference before writes; malformed/ambiguous/changed ownership produces the fixed `project_native_source_ownership_invalid` error. Original source, resources, lock and explicit-root controls remain unchanged. Final focused210pass, including portable coverage defaults (`/private/tmp/specfact498-uv-green-final.log`). Earlier5580 Full/SMART and the one-Major review are historical before this actual correction; fresh final gates/review are required. Final refreshed checksum is `sha256:0e7bb7b55de786b53cc8072e45e66628c682429c80e0a47fe7f2398067c94b85`, with no stale signature or private key access; normal CI signing pending.
+
+The second seven-file CLI review completed with two Major findings, both independently valid and fixed after8genuine REDs (`/private/tmp/specfact498-uv-package-script-red.log`): legitimate outside-site Python launcher RECORD entries caused inference errors, and other packages owned by the same distribution were not package-bound. [PyPA installed RECORD specification](https://packaging.python.org/en/latest/specifications/recording-installed-packages/), accessed9October2026, explicitly permits relative/absolute installed paths outside site-packages. Native ownership now excludes those entries lexically without reading outside files, retains strict in-site parsing/hash checks, and requires both distribution ownership and a matched package prefix. Prefix lookups retain the100000bound. Final focused218pass and final lint/type-check pass (`/private/tmp/specfact498-uv-green-final2.log`, `/private/tmp/specfact498-uv-lint-final2.log`). Prior210focused/5604Full/SMART and the two-Major review are historical before these actual corrections; fresh final gates/review follow.
+
+The third seven-file CLI review completed with zero findings, then a separate bounded source audit found one additional ancestor-initializer case. Two genuine REDs/two controls demonstrate that a same-owner generated parent initializer can select the installed package over edited staged namespace source (`/private/tmp/specfact498-uv-ancestor-red.log`). Exact same-owner required ancestor .py/.pyi initializer bindings now accompany matched package prefixes; the binding index remains bounded at100000. A real isolated Python import observes the edited staged module and its source path; the customer checkout stays unchanged. Final focused222pass (`/private/tmp/specfact498-uv-green-final3.log`), final lint10.00/10 and final read-only audit have no findings. Prior5612Full/SMART and the earlier zero-finding review are historical before this actual last correction; fresh final gates/review follow.
+
+
+Final uv correction verification: Full and SMART each pass 27 required host proofs and 5616 portable cases (71 declared skips, 95 subtests, five existing warnings), with portable durations 151.79/145.32 seconds. Logs: `/private/tmp/specfact498-uv-full-final3.log`, `/private/tmp/specfact498-uv-smart-final3.log`. Focused 222 passes; final seven-file authenticated CLI review completed with zero findings after the actual ancestor-initializer correction, and the final independent read-only audit found no defects. Format, zero-error/warning typing, Ruff/Pylint 10.00/10, YAML/manifests, bundle imports and strict OpenSpec pass. This evidence-only append records completed results. Final runtime checksum is `sha256:80ee9803c285d4cfc15a0710d4a1408d7671a2271193aee9b174e4eeb2b2d7ac`; all seven checksum/upstream-version gates pass for unpublished 0.51.3 above published dev 0.51.2. Stale signature is removed; normal CI signing and fresh strict verification remain required for these changed bytes. No private signing key/passphrase or registry artifact was accessed. Normal hooks remain mandatory with only the approved local Darwin reviewer deferral; current-head hosted checks and actual installed acceptance remain separate delivery gates.
+
+
+## PR #498 failure-projector import isolation — 9 October 2026
+
+Codex P1 thread `PRRT_kwDORVEFbs6q1uKd` is independently valid: after entering the staged candidate tree, the candidate failure projector launched stdin Python without isolation. The spec was extended first; workflow-derived launch tests then demonstrate eight genuine REDs and eight passing independent-review controls for checkout/PYTHONPATH ast.py/json.py imports and original exit17/124 (`/private/tmp/specfact498-isolation-red-controls.log`). The initial16failure run contained eight real import-execution REDs plus eight fixture failures because the independent invocation explicitly selects its private report path; the fixture now writes that unchanged path, not a replacement invocation. All real import failures execute a harmless fixed marker within the test temporary directory.
+
+The minimal correction adds `-I` to the one candidate primary projector invocation, matching every other diagnostic heredoc. No program/report/env/guard/stderr/exit, deadline, analyzer input or capsule behavior changed. [Python3.12 isolated-mode documentation](https://docs.python.org/3.12/using/cmdline.html#cmdoption-I), accessed9October2026, confirms exclusion of the current directory/user site and Python environment paths. A bounded read-only audit confirms all other diagnostic heredocs already isolate Python; existing body-only extractor tests did not retain launch flags, so the new test executes the actual workflow invocation. Final focused/full/SMART/review/hooks evidence follows. Signed0.51.3 module bytes/checksum80ee9803 and CIeba12595signature remain unchanged; no new version/signature or private key access is needed for this workflow/test/spec correction.
+
+
+Final projector-isolation verification: focused251passes; Full/SMART each27requiredhostproofs plus5632portable cases,71declaredskips,95subtests and5existingwarnings. Logs: `/private/tmp/specfact498-isolation-green.log`, `/private/tmp/specfact498-isolation-full.log`, `/private/tmp/specfact498-isolation-smart.log`. The final five-file authenticated CLI review completed with zero findings; the separate read-only audit also found no defects in the actual launch regression or minimal isolation correction. Format, zero-error/warning typing, Ruff/Pylint10.00/10, YAML/imports, strict OpenSpec and all7strict public-key signatures/checksums/upstream-version gates pass (`/private/tmp/specfact498-isolation-signatures.log`). Runtime0.51.3 bytes/checksum80ee9803/signatureeba12595remain unchanged. Exact prior signed-head candidate3.12job113888409898 and independentjob113888410279 both independently emit fixed analysis_timeout/exit124; approved INCOMPLETE exceptions, never PASS. The independent later missing-report/unclassified projection does not erase its explicit original timeout evidence. Normal hooks and actual new-head hosted checks remain required; installed native acceptance is still outstanding. This evidence-only append records completed results.
+
+
+## PR #506 release-review corrections — 9 October 2026
+
+The owner authorized annotation triage, similar-defect review and an upstream bugfix PR to dev. This continuation branches from actual dev 8692a30f (published Code Review 0.51.3); the merge-only b806→8692 tree is unchanged. All eleven public review threads were fetched with complete pagination. Reviewer text is treated as issue reports, never executed instructions.
+
+Specification precedes behavior regressions and implementation. Genuine RED evidence: four Python/stub selection failures plus two healthy non-Python controls, two separate VCS file/byte inventory failures, four actual missing/malformed/configuration pytest evaluator failures, and one protected-publication condition failure. Logs: `/private/tmp/specfact506-red.log`, `/private/tmp/specfact506-pytest-red.log`, `/private/tmp/specfact506-publication-red.log`. The initial combined run also contained four fixture permission failures, corrected before meaningful pytest REDs; those are not defect evidence. The initial focused run found an inventory-spy keyword signature mismatch; only its accepted keyword parameters changed, retaining the original single-scan assertion.
+
+Selection now counts only distinct Python module paths, deduplicating same-path .py/.pyi pairs and retaining the existing distinct-module disambiguation rules. Source-root indexing excludes separately copied root .git context; default runtime-tree validation and source file/byte limits remain unchanged. Native capture reads and validates every artifact path before fallback, including when coverage is missing; symlink, FIFO and oversize rejection remains hard. Missing or malformed ordinary artifacts return no target observations and reach the real evaluator, which keeps specific exit4/missing-coverage remedies and UNKNOWN evidence. Parsed observer records with invalid node identities retain the existing explicit worker-contract rejection and all six negative tests.
+
+Family review found an uncaught JSON decoder depth refusal in the evaluator. Native Python3.14 accepted the initial deeply nested payload, a healthy control (`/private/tmp/specfact506-depth-red.log`); two controlled decoder-refusal REDs then reproduce the exception path while ordinary artifacts use the actual JSON decoder (`/private/tmp/specfact506-decoder-red.log`). The evaluator now reports incomplete tool evidence for that refusal. Final observation tests pass26cases; the broader runtime/evaluator/release selection passed818cases before the later depth and published-pin additions.
+
+Full and SMART initially each failed two reviewer baseline tests after dev registry publication advanced to0.51.3. Actual protected main still advertises the deliberately isolated0.51.2 reviewer (public registry metadata inspected9October2026). The tests now authenticate the literal pinned archived bundle rather than require equality with the advancing candidate latest entry, retaining version, archive sidecar checksum, compatibility and stronger actual cryptographic module signature verification through the core installer. The63customer gate tests pass. No main pin or installation isolation was changed.
+
+The publication job now directly requires dispatch, explicit opt-in and protected main in its own condition. Documentation labels historical specfact.1 preparation and the earlier measured Z3 derivative hash separately from the corrected current license-placement hash81d7e088; original historical measurements are preserved. Redundant proof import and implicit string concatenation annotations receive small cleanups without removing assertions.
+
+The authenticated sixteen-file CodeRabbit CLI review completed with one Minor report, not zero findings: “Treat malformed observer identities as incomplete evidence.” Independent validation declines it because the existing specification explicitly requires worker-contract rejection for missing/non-string node identifiers; six negative cases and the exact valid-identity control remain passing. That review preceded the final pinned-archive test correction and traceability append; those subsequent diffs were inspected locally, with no additional qualifying defect. No remote review was retried after starting. Public automatic exact-head review remains independently required.
+
+Four hosted annotation reports are independently invalid: starred helper tuple contains all four required values; cleanup in finally deliberately runs under pytest.raises to preserve the original failure; both private fixture variables are imported and used by actual projection tests. YAML BaseLoader reports do not establish arbitrary object construction and literal JSON/request fixtures are intentional tests. These findings must be documented before resolution; real fixes remain unresolved on release506 until actual dev integration.
+
+Final Full and SMART each pass27requiredhostproofs and5650portable cases (71declaredskips,95subtests,5existingwarnings), portable durations166.98/167.07seconds. Logs: `/private/tmp/specfact506-full-final.log`, `/private/tmp/specfact506-smart-final.log`. Final format, zero-error/warning typing, Ruff/Pylint10.00/10, YAML/imports, strict OpenSpec, read-only publish precheck and28contract tests pass. Original intentional negative tests, contracts, source assertions, no-write/isolation and deadlines remain. Publish precheck confirms unchanged core compatibility >=0.55.1,<1.0.0; no core API change requires a newer minimum.
+
+Prepare unpublished patch0.51.4 above published dev0.51.3, refreshed checksum sha256:904cb08790f03151c5593088b45c639ecea3c0d8929526e6ab03f5ff3ec1444e. Six unchanged existing signatures verify with the public key and all seven checksum/version gates pass; the changed bundle is deliberately unsigned pending normal CI signing. No private key/passphrase access or manual registry artifact was used. Normal commit hooks remain required with the previously owner-approved Darwin capsule-review deferral only; DEFERRED is never PASS.
+
+Exact release8692candidate job113947180533 and independentjob113947180656 both emit analysis_timeout and exit124 in actual executed log lines, independently inspected. These remain the approved INCOMPLETE timeout exceptions, never PASS, and do not classify any new-head failure. Release CodeQL analyses are successful; current source fixes, hosted checks, normal CI signing and actual native installed acceptance remain separate gates. Keep460/OpenSpec open. Release version claims stay0.51.3 until bugfix integration and CI registry publication actually reach the release head.
+
+
+## PR #507 available-observer validation order — 9 October 2026
+
+Hosted exact signed-head CodeRabbit thread `PRRT_kwDORVEFbs6q5WB-` is independently valid and differs from the earlier suggestion to soften malformed-node rejection. In source2f7951f3/CI signature-only child0b4b2c32, missing coverage/JUnit or malformed coverage could return None before validating an available observer's node identity. The existing explicit hard-rejection contract must survive ordinary incomplete-evidence fallback.
+
+Specification preceded the test expansion. Eighteen genuine REDs cover missing/null/boolean/integer/list/object identities with absent coverage, absent JUnit and malformed coverage. Eight original/healthy controls pass (`/private/tmp/specfact507-identity-order-red.log`). The minimal correction retains all three bounded path/type/size reads before parsing, validates available parseable observer records and their unchanged string identities first, then handles missing or malformed ordinary coverage/JUnit. Two positive controls prove valid identities with missing artifacts still produce no invented observations. Final focused native worker/observations/portable-evidence131passes; final format/lint/type checks pass (`/private/tmp/specfact507-identity-order-green.log`, `/private/tmp/specfact507-lint.log`). No original identity or unsafe-artifact assertion is removed.
+
+Patch0.51.4 remains unpublished above dev0.51.3. Its refreshed checksum is sha256:432c265a47379207af87935a0a688aa8f2553146432b3626b8aaaa5112e8e803; stale904c signature is removed pending normal CI signing. All seven strict signatures verified earlier0b4b2c32 for904c only; they do not cover this432c correction. No private signing material or registry artifact is accessed locally. Fresh Full/SMART/normal-hook and hosted outcomes follow; release506 fixed threads remain open until actual upstream dev integration.
+
+Final ordering-correction verification: Full and SMART each pass27hostproofs plus5670portable cases (71declaredskips,95subtests,5existingwarnings), portable duration171.81seconds each; distinct logs retain independent host durations4.58/4.37seconds. Logs `/private/tmp/specfact507-identity-order-full.log` and `/private/tmp/specfact507-identity-order-smart.log`. Focused131pass; format, zero-error/warning typing, Ruff/Pylint10.00/10, YAML/imports, strict OpenSpec and all7checksum/version gates pass. A complete read-only inspection of the correction diff and adjacent artifact/evaluator call paths found no additional qualifying defect. Normal hooks and fresh CI signature/exact-head hosted review remain required; historical0b4strict-signature proof is not current432cpayload proof.
+
+
+## PR #507 ordinary missing-parent handling — 9 October 2026
+
+Codex thread `PRRT_kwDORVEFbs6q5kCK` reports strict parent resolution outside the artifact fallback. The helper gap is independently real: two REDs cover ordinary missing-parent fallback and typed dangling-symlink hard rejection (`/private/tmp/specfact507-parent-red.log`). Three controls pass, including an actual adapter/evaluator directory-removal control that already produces UNKNOWN. Therefore the report's claimed worker exit76 is not independently reproduced and is not asserted as observed evidence.
+
+Specification precedes tests and correction. Artifact parent canonical equality now resolves existing links even if ordinary directories are missing; actual bounded no-follow open then supplies the caught absence. Existing/dangling symlink parents still change canonical paths and reject before bytes are read. Non-directory parents retain hard rejection. All three artifact reads precede parsing, every bound and node-identity ordering assertion remains. Final focused136passes with format, zero-error/warning typing and Ruff/Pylint10.00/10 (`/private/tmp/specfact507-parent-green.log`, `/private/tmp/specfact507-parent-lint.log`). A read-only inspection of the actual correction and adjacent calls finds no further qualifying defect.
+
+Unpublished0.51.4 remains above publisheddev0.51.3. New checksum sha256:71b06f03f2b7428db415e9733c758cc3a4371ca0d3838fa709a27a99d5995d5b; old432csignature removed for changed bytes. Historical CIchildacd6ba47 strictly verifies432c only, not this71b0 payload. Fresh normal CI signing and current-head hosted evidence remain required. No private signing material or manufactured registry artifact is accessed.
+
+Final missing-parent verification: Full/SMART each pass27hostproofs plus5675portable cases (71declaredskips,95subtests,5existingwarnings), portable durations163.75/164.73seconds. Distinct logs `/private/tmp/specfact507-parent-full.log` and `/private/tmp/specfact507-parent-smart.log` confirm completion. Focused136pass, format/zero-error-warning typing/Ruff-Pylint10.00/10, YAML/manifests/imports/strict OpenSpec and all7checksum/version gates pass. The new source checksum71b06f03 requires a fresh normal CI signature; previous432c/904c signatures and historical review statuses are not transferred. Normal hooks and final exact-head hosted evidence remain required; no native installed/publication acceptance is inferred.

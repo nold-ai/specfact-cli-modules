@@ -1,0 +1,550 @@
+{
+  "abis": {
+    "cp311": {
+      "analyzer_candidate": {
+        "abi": "3.11",
+        "completed_cases": 20,
+        "library_loading_experiment": true,
+        "members": 10,
+        "passed": 10,
+        "production_eligible": false
+      },
+      "hatch_reconstruction_missing_artifacts": [
+        "lock:hatch.lock",
+        "sealed-distribution:pyodbc",
+        "sealed-distribution:pytest-asyncio",
+        "sealed-executable:specfact-hatch-adapter"
+      ],
+      "project_observer": {
+        "broker_verified": true,
+        "coverage_recorded": true,
+        "native_extension_architecture": "arm64",
+        "native_extension_imported": true,
+        "plugin_loaded": true,
+        "preparation_domain_separate": true,
+        "production_approved": false,
+        "pytest_executed": true
+      },
+      "rejected_empty_entitlement_artifact": {
+        "archive_sha256": "9a908ab3c4c06437a2b45ce630b24369645d67ee2d12f68d2f05b699269aa965",
+        "archive_size": 600412672,
+        "environment_id": "darwin-arm64-cp311",
+        "file_count": 11127,
+        "manifest_authenticated": false,
+        "manifest_sha256": "0004a62e70e1c39ee6c162e694eeedcda6344d6eef65ff9af7acf3cf5c0af87a",
+        "native_image_count": 36,
+        "production_eligible": false,
+        "publication": "candidate-only",
+        "signing_mode": "adhoc"
+      },
+      "semgrep_adapter_parity": {
+        "abi": "3.11",
+        "matched_cases": 14,
+        "plan_id": "semgrep-1.175.0-offline-ca-v2",
+        "production_eligible": false,
+        "reference_sha256": "efbae0e733db2ea821702d36f9dfdd377194a22f11335f4208d4a233a76075f8",
+        "required_cases": 14,
+        "semantic_adapter_sha256": "471977480df00f50a7f3e624802db9d964f2afad0a9f6c01707e803ab51be45e"
+      }
+    },
+    "cp312": {
+      "analyzer_candidate": {
+        "abi": "3.12",
+        "completed_cases": 20,
+        "library_loading_experiment": true,
+        "members": 10,
+        "passed": 10,
+        "production_eligible": false
+      },
+      "hatch_reconstruction_missing_artifacts": [
+        "lock:hatch.lock",
+        "sealed-distribution:pyodbc",
+        "sealed-distribution:pytest-asyncio",
+        "sealed-executable:specfact-hatch-adapter"
+      ],
+      "project_observer": {
+        "broker_verified": true,
+        "coverage_recorded": true,
+        "native_extension_architecture": "arm64",
+        "native_extension_imported": true,
+        "plugin_loaded": true,
+        "preparation_domain_separate": true,
+        "production_approved": false,
+        "pytest_executed": true
+      },
+      "rejected_empty_entitlement_artifact": {
+        "archive_sha256": "9c562827f4ee97e2c1120e9c7b7f866cbe2b2416272532562f6e88cc32fb2878",
+        "archive_size": 600330240,
+        "environment_id": "darwin-arm64-cp312",
+        "file_count": 11126,
+        "manifest_authenticated": false,
+        "manifest_sha256": "f95a2a18d3f9f46b00b122e7fd7d0288300fef0b84e980111d9a3ca66c6e09a6",
+        "native_image_count": 36,
+        "production_eligible": false,
+        "publication": "candidate-only",
+        "signing_mode": "adhoc"
+      },
+      "semgrep_adapter_parity": {
+        "abi": "3.12",
+        "matched_cases": 14,
+        "plan_id": "semgrep-1.175.0-offline-ca-v2",
+        "production_eligible": false,
+        "reference_sha256": "efbae0e733db2ea821702d36f9dfdd377194a22f11335f4208d4a233a76075f8",
+        "required_cases": 14,
+        "semantic_adapter_sha256": "471977480df00f50a7f3e624802db9d964f2afad0a9f6c01707e803ab51be45e"
+      }
+    },
+    "cp313": {
+      "analyzer_candidate": {
+        "abi": "3.13",
+        "completed_cases": 20,
+        "library_loading_experiment": true,
+        "members": 10,
+        "passed": 10,
+        "production_eligible": false
+      },
+      "hatch_reconstruction_missing_artifacts": [
+        "lock:hatch.lock",
+        "sealed-distribution:pyodbc",
+        "sealed-distribution:pytest-asyncio",
+        "sealed-executable:specfact-hatch-adapter"
+      ],
+      "project_observer": {
+        "broker_verified": true,
+        "coverage_recorded": true,
+        "native_extension_architecture": "arm64",
+        "native_extension_imported": true,
+        "plugin_loaded": true,
+        "preparation_domain_separate": true,
+        "production_approved": false,
+        "pytest_executed": true
+      },
+      "rejected_empty_entitlement_artifact": {
+        "archive_sha256": "477691de5e29a9ad167ecfca099521d9138a32fc57a785b426231a2f19810f41",
+        "archive_size": 599658496,
+        "environment_id": "darwin-arm64-cp313",
+        "file_count": 11126,
+        "manifest_authenticated": false,
+        "manifest_sha256": "cb79a3212fe45734464c709c43acb7d780cb4fa6f89d1441d5f84971962d7471",
+        "native_image_count": 36,
+        "production_eligible": false,
+        "publication": "candidate-only",
+        "signing_mode": "adhoc"
+      },
+      "semgrep_adapter_parity": {
+        "abi": "3.13",
+        "matched_cases": 14,
+        "plan_id": "semgrep-1.175.0-offline-ca-v2",
+        "production_eligible": false,
+        "reference_sha256": "efbae0e733db2ea821702d36f9dfdd377194a22f11335f4208d4a233a76075f8",
+        "required_cases": 14,
+        "semantic_adapter_sha256": "471977480df00f50a7f3e624802db9d964f2afad0a9f6c01707e803ab51be45e"
+      }
+    }
+  },
+  "base_commit": "b87159c4fbeab3a1282919823035c2109527d385",
+  "clean_code_refactor": {
+    "affected_tests_passed": 183,
+    "before_error_findings": 9,
+    "bounded_agent_review": "no findings",
+    "commit": "ea93ce54",
+    "current_head_capsule_review": "required-not-yet-passed",
+    "full_seconds": 258.71,
+    "full_tests": 5035,
+    "introduced_complexity_errors": 0,
+    "production_eligible": false,
+    "public_builder_arguments_unchanged": true,
+    "remaining_origin_dev_builder_errors": [
+      "CC18:_git_identity",
+      "kiss.parameter-count.error:public-build_native_capsule"
+    ],
+    "smart_seconds": 248.93,
+    "smart_tests": 5035,
+    "synthetic_fixture_bytes_unchanged": true
+  },
+  "complete_boundary": false,
+  "date_europe_berlin": "2026-10-06",
+  "draft_pull_request": "https://github.com/nold-ai/specfact-cli-modules/pull/498",
+  "hosted_checkpoint": {
+    "final_artifact_acceptance": false,
+    "head": "dc8eb0690325d293e8b80d314987c77762f22702",
+    "independent_signed_review": "failed-exit1-no-public-report",
+    "linux_customer": {
+      "cp311": "passed",
+      "cp312": "failed-deferred-required-review",
+      "cp313": "passed"
+    },
+    "linux_external_corpus": {
+      "cp311": {
+        "artifact_id": 11382485918,
+        "project_results": {
+          "flask": {
+            "status": "PASS"
+          },
+          "hatch": {
+            "status": "PASS"
+          },
+          "hatch-detached": {
+            "status": "PASS"
+          },
+          "poetry": {
+            "status": "PASS"
+          },
+          "requests": {
+            "status": "PASS"
+          }
+        },
+        "projects": 5,
+        "status": "candidate-PASS"
+      },
+      "cp313": {
+        "artifact_id": 11381794925,
+        "project_results": {
+          "flask": {
+            "status": "PASS"
+          },
+          "hatch": {
+            "status": "PASS"
+          },
+          "hatch-detached": {
+            "status": "PASS"
+          },
+          "poetry": {
+            "status": "PASS"
+          },
+          "requests": {
+            "status": "PASS"
+          }
+        },
+        "projects": 5,
+        "status": "candidate-PASS"
+      }
+    },
+    "macos_boundary_run": 37391623966,
+    "macos_fixed_boundary": {
+      "14": "passed",
+      "15": "passed",
+      "26": "passed"
+    },
+    "macos_receipts": {
+      "14": [
+        {
+          "completed_races": {
+            "confined": 100,
+            "exec": 100,
+            "pretrace": 100,
+            "suspended": 100,
+            "trace-stopped": 100,
+            "traced": 100
+          },
+          "os_build": "23J631",
+          "os_version": "14.8.9",
+          "production_approved": false,
+          "python": "3.13.15",
+          "repetition_gate_passed": true,
+          "result": "passed",
+          "suite": "startup"
+        },
+        {
+          "completed_races": {
+            "broker-kill": 100,
+            "cancel": 100,
+            "cancel-held-stop": 100,
+            "cli-kill-wait": 100,
+            "eof-partial": 100,
+            "eof-pretrace": 100,
+            "eof-running": 100,
+            "eof-trace-stopped": 100,
+            "eof-wait": 100,
+            "exec-broker-kill": 100,
+            "exec-broker-kill-held": 100,
+            "exec-cancel": 100,
+            "exec-cancel-held": 100,
+            "exec-eof": 100,
+            "exec-eof-held": 100,
+            "exec-identity-swap": 100,
+            "isolation": 100,
+            "partial-timeout": 100,
+            "signal": 100,
+            "timeout": 100
+          },
+          "os_build": "23J631",
+          "os_version": "14.8.9",
+          "production_approved": false,
+          "python": "3.13.15",
+          "repetition_gate_passed": true,
+          "result": "passed",
+          "suite": "control"
+        }
+      ],
+      "15": [
+        {
+          "completed_races": {
+            "confined": 100,
+            "exec": 100,
+            "pretrace": 100,
+            "suspended": 100,
+            "trace-stopped": 100,
+            "traced": 100
+          },
+          "os_build": "24G830",
+          "os_version": "15.7.9",
+          "production_approved": false,
+          "python": "3.13.15",
+          "repetition_gate_passed": true,
+          "result": "passed",
+          "suite": "startup"
+        },
+        {
+          "completed_races": {
+            "broker-kill": 100,
+            "cancel": 100,
+            "cancel-held-stop": 100,
+            "cli-kill-wait": 100,
+            "eof-partial": 100,
+            "eof-pretrace": 100,
+            "eof-running": 100,
+            "eof-trace-stopped": 100,
+            "eof-wait": 100,
+            "exec-broker-kill": 100,
+            "exec-broker-kill-held": 100,
+            "exec-cancel": 100,
+            "exec-cancel-held": 100,
+            "exec-eof": 100,
+            "exec-eof-held": 100,
+            "exec-identity-swap": 100,
+            "isolation": 100,
+            "partial-timeout": 100,
+            "signal": 100,
+            "timeout": 100
+          },
+          "os_build": "24G830",
+          "os_version": "15.7.9",
+          "production_approved": false,
+          "python": "3.13.15",
+          "repetition_gate_passed": true,
+          "result": "passed",
+          "suite": "control"
+        }
+      ],
+      "26": [
+        {
+          "completed_races": {
+            "confined": 100,
+            "exec": 100,
+            "pretrace": 100,
+            "suspended": 100,
+            "trace-stopped": 100,
+            "traced": 100
+          },
+          "os_build": "25G83",
+          "os_version": "26.6.2",
+          "production_approved": false,
+          "python": "3.13.15",
+          "repetition_gate_passed": true,
+          "result": "passed",
+          "suite": "startup"
+        },
+        {
+          "completed_races": {
+            "broker-kill": 100,
+            "cancel": 100,
+            "cancel-held-stop": 100,
+            "cli-kill-wait": 100,
+            "eof-partial": 100,
+            "eof-pretrace": 100,
+            "eof-running": 100,
+            "eof-trace-stopped": 100,
+            "eof-wait": 100,
+            "exec-broker-kill": 100,
+            "exec-broker-kill-held": 100,
+            "exec-cancel": 100,
+            "exec-cancel-held": 100,
+            "exec-eof": 100,
+            "exec-eof-held": 100,
+            "exec-identity-swap": 100,
+            "isolation": 100,
+            "partial-timeout": 100,
+            "signal": 100,
+            "timeout": 100
+          },
+          "os_build": "25G83",
+          "os_version": "26.6.2",
+          "production_approved": false,
+          "python": "3.13.15",
+          "repetition_gate_passed": true,
+          "result": "passed",
+          "suite": "control"
+        }
+      ]
+    },
+    "minimum_core": {
+      "cp311": "passed",
+      "cp312": "passed",
+      "cp313": "passed"
+    },
+    "orchestrator_run": 37391624311
+  },
+  "hosted_failure_projection": {
+    "bounded_agent_review": "no findings",
+    "current_head_review_still_required": true,
+    "focused_green_tests": 107,
+    "independent_analysis_seconds": 300,
+    "red_tests": 15,
+    "tracked_location_limit": 200
+  },
+  "hosted_history": [
+    {
+      "final_artifact_acceptance": false,
+      "followup_acceptance_required": true,
+      "head": "687b7d7396b50b2bb1454376688fae532db62c84",
+      "independent_signed_review": "failed-unavailable-0.50.1-pin",
+      "linux_customer_fixture_stages": {
+        "cp311": "passed",
+        "cp312": "failed-deferred-review",
+        "cp313": "passed"
+      },
+      "linux_external_corpus": {
+        "cp311": {
+          "artifact_id": 11380162044,
+          "projects": 5,
+          "status": "candidate-PASS"
+        },
+        "cp312": "not-run:deferred-review-failed",
+        "cp313": {
+          "artifact_id": 11379471574,
+          "projects": 5,
+          "status": "candidate-PASS"
+        }
+      },
+      "macos_fixed_boundary": {
+        "14": "passed",
+        "15": "failed:cancel:request-authenticate:73-repetitions",
+        "26": "passed"
+      }
+    },
+    {
+      "boundary_run": 37387816637,
+      "final_artifact_acceptance": false,
+      "followup_acceptance_required": true,
+      "head": "18e77026f480268c58ea72186b682e715104339c",
+      "independent_signed_installation": "passed:published-0.51.0-core-0.55.4",
+      "independent_signed_review": "failed:private-report-unavailable-public-diagnostics-added-next-head",
+      "linux_customer_fixture_stages": {
+        "cp311": "passed",
+        "cp312": "failed-deferred-review",
+        "cp313": "passed"
+      },
+      "macos_fixed_boundary": {
+        "14": "passed",
+        "15": "passed",
+        "26": "failed:eof-trace-stopped:request-authenticate:ConnectionRefusedError"
+      },
+      "minimum_core": {
+        "cp311": "passed",
+        "cp312": "passed",
+        "cp313": "passed"
+      },
+      "orchestrator_run": 37387817080
+    }
+  ],
+  "mandatory_review": {
+    "assurance": "UNKNOWN",
+    "reason": "native_capsule_artifact_not_admitted:darwin-arm64-cp312",
+    "verdict": "FAIL"
+  },
+  "native_catalog_entries": 0,
+  "platform": {
+    "architecture": "arm64",
+    "os_build": "26A434",
+    "os_version": "27.0.1"
+  },
+  "production_eligible": false,
+  "quality_gates": {
+    "bundle_imports": "PASS",
+    "contract_tests": 28,
+    "explicit_skips": 75,
+    "format": "PASS",
+    "full_tests": 5060,
+    "lint": "PASS",
+    "local_capsule_gate_handling": "DEFERRED_human_approved_2026-10-06_blocking_exact_head_linux_ci",
+    "mandatory_capsule_review": "UNKNOWN_FAIL",
+    "manifest_integrity_version": "PASS_CI_signed_18e77026_public_key_filesystem_origin_dev",
+    "openspec_strict": "PASS",
+    "publish_precheck": "PASS_not_publication",
+    "requirements_mapping": "PASS_planned_maturity_not_execution",
+    "smart_tests": 5060,
+    "subtests": 95,
+    "type_check": "PASS",
+    "yaml": "PASS"
+  },
+  "schema": "specfact-native-delivery-checkpoint-v1",
+  "socket_readiness_followup": {
+    "bounded_agent_review": "no findings after P2 deadline correction",
+    "client_route_red": 1,
+    "helper_red": 4,
+    "hosted_acceptance": "dc8eb069:macos14/15/26-fixed-startup-and-control-passed",
+    "metadata_budget_red": 2,
+    "native_unit_explicit_skips": 5,
+    "native_unit_passed": 304,
+    "physical_complete_boundary": false,
+    "production_eligible": false,
+    "workflow_unit_passed": 84
+  },
+  "z3_darwin_projection": {
+    "bounded_agent_review": "no findings",
+    "candidate_analyzer_results": {
+      "cp311": {
+        "abi": "3.11",
+        "completed_cases": 20,
+        "library_loading_experiment": true,
+        "members": 10,
+        "passed": 10,
+        "production_eligible": false,
+        "semgrep_reference_passed": 14,
+        "semgrep_reference_required": 14
+      },
+      "cp312": {
+        "abi": "3.12",
+        "completed_cases": 20,
+        "library_loading_experiment": true,
+        "members": 10,
+        "passed": 10,
+        "production_eligible": false,
+        "semgrep_reference_passed": 14,
+        "semgrep_reference_required": 14
+      },
+      "cp313": {
+        "abi": "3.13",
+        "completed_cases": 20,
+        "library_loading_experiment": true,
+        "members": 10,
+        "passed": 10,
+        "production_eligible": false,
+        "semgrep_reference_passed": 14,
+        "semgrep_reference_required": 14
+      }
+    },
+    "candidate_policy_sha256": "f95986d5dd36bec439c37a753d90c438df08b27186e83b61ec93fb441fa2c451",
+    "complete_boundary": false,
+    "complete_offline_lock_sync_abis": [
+      "cp311",
+      "cp312",
+      "cp313"
+    ],
+    "corrected_wheel_sha256": "81d7e08869fc34877ad9b1315de5bb5398792bc8858f44e45c38a974f310f7e7",
+    "dependency_admitted": false,
+    "historical_identity_note": "The wheel_sha256 and wheel_bytes fields record the original measured derivative. The later authenticated dist-info/licenses placement correction changes wheel bytes; current locks use corrected_wheel_sha256. See TDD_EVIDENCE.md license-path correction.",
+    "legacy_wheel_sha256": "af669755eabd97268a4141983a391cb4a832116d5a2c3cf04a4c53c7650ce72c",
+    "license_sha256": "e617cad2ab9347e3129c2b171e87909332174e17961c5c3412d0799469111337",
+    "omitted_foreign_members": 10,
+    "production_eligible": false,
+    "repeated_bytes_identical": true,
+    "retained_members": 29,
+    "source_commit_signature_rechecked": "2026-10-06:valid:0b6cdcdbc65da25ef0f73ac9da210574d0f66cf8",
+    "unit_passed": 51,
+    "version": "5.1.0.0+specfact.2",
+    "wheel_bytes": 82436032,
+    "wheel_sha256": "03eb2624d4d19d06020e9a6c5823cf8ac4f6b3fcb0a73e25ef2514d1129982bd"
+  }
+}

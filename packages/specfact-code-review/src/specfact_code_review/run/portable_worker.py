@@ -8,6 +8,7 @@ import json
 import os
 import shlex
 import subprocess
+from collections import Counter
 from collections.abc import Callable, Iterator
 from pathlib import Path
 from typing import Any
@@ -39,10 +40,16 @@ def _strings(value: object) -> tuple[str, ...]:
     return ()
 
 
-def _matching_source_tests(relative: str, candidates: set[str], explicit_tests: set[str]) -> set[str]:
+def _matching_source_tests(
+    relative: str, candidates: set[str], explicit_tests: set[str], *, multiple_sources: bool
+) -> set[str]:
     stem = Path(relative).stem
     matches = {candidate for candidate in candidates if Path(candidate).name in {f"test_{stem}.py", f"{stem}_test.py"}}
     if selected := matches & explicit_tests:
+        if multiple_sources and selected != matches:
+            raise ProjectRuntimeError(
+                f"project_test_selection_ambiguous:{relative}; include all matching test paths or use full scope"
+            )
         return selected
     if len(matches) > 1:
         raise ProjectRuntimeError(f"project_test_selection_ambiguous:{relative}; include explicit test paths")
@@ -146,10 +153,20 @@ def select_test_paths(plan: ProjectPlan, files: list[Path], *, full: bool) -> tu
         for relative in relative_paths
         if any(fnmatch.fnmatch(Path(relative).name, pattern) for pattern in patterns)
     }
+    source_modules = {
+        Path(relative).with_suffix("")
+        for relative in set(relative_paths) - explicit_tests
+        if Path(relative).suffix in {".py", ".pyi"}
+    }
+    source_stems = Counter(path.name for path in source_modules)
     selected = set(explicit_tests)
     for relative in relative_paths:
-        if relative not in explicit_tests:
-            selected.update(_matching_source_tests(relative, candidates, explicit_tests))
+        if relative not in explicit_tests and Path(relative).suffix in {".py", ".pyi"}:
+            selected.update(
+                _matching_source_tests(
+                    relative, candidates, explicit_tests, multiple_sources=source_stems[Path(relative).stem] > 1
+                )
+            )
     if not selected:
         raise ProjectRuntimeError("project_test_selection_empty: include corresponding test files")
     return tuple(sorted(selected))
@@ -348,9 +365,15 @@ def _installed_coverage_findings(
 
 def _portable_pytest_command(files: list[Path], encoded: str) -> tuple[CoverageBridge, list[str]]:
     """Bind native measurement inputs to controller-verified installed ownership."""
-    request = json.loads(encoded)
-    # Preserve native mapping errors before unused installed-coverage setup.
-    request["coverage_directories"] = []
+    try:
+        request = json.loads(encoded)
+    except ValueError as exc:
+        raise ValueError("project_pytest_request_invalid") from exc
+    if not isinstance(request, dict):
+        raise ValueError("project_pytest_request_invalid")
+    selectors = request.get("selectors")
+    if not isinstance(selectors, list) or any(not isinstance(value, str) or not value for value in selectors):
+        raise ValueError("project_pytest_request_invalid")
     bridge = plan_installed_coverage(
         files, snapshot=Path(".").resolve(), site_packages=Path("/opt/specfact/project-runtime/site-packages")
     )
@@ -371,8 +394,8 @@ def run_portable_pytest(files: list[Path], adapter_argv: tuple[str, ...]) -> lis
         return [tool_error(tool="pytest", file_path=anchor, message="project_pytest_request_invalid")]
 
     try:
-        bridge, command = _portable_pytest_command(files, adapter_argv[1])
         Path("/opt/specfact/tmp/pytest-observation.json").unlink(missing_ok=True)
+        bridge, command = _portable_pytest_command(files, adapter_argv[1])
         completed = subprocess.run(command, text=True, capture_output=True, check=False, timeout=1200)
         observation = json.loads(Path("/opt/specfact/tmp/pytest-observation.json").read_text(encoding="utf-8"))
         records = observation["records"]

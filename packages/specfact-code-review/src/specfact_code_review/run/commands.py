@@ -443,7 +443,20 @@ def _replace_line_range(
     return True
 
 
+def _render_evidence_diagnostics(report: ReviewReport) -> None:
+    diagnostics = {
+        diagnostic
+        for evidence in report.analyzer_evidence or []
+        if evidence.get("evidence_outcome") == "UNKNOWN"
+        and isinstance(diagnostic := evidence.get("diagnostic"), str)
+        and diagnostic.strip()
+    }
+    for diagnostic in sorted(diagnostics):
+        console.print(f"Required evidence unavailable: {diagnostic}", markup=False, highlight=False)
+
+
 def _render_report(report: ReviewReport) -> None:
+    _render_evidence_diagnostics(report)
     grouped: dict[str, list[ReviewFinding]] = defaultdict(list)
     for finding in report.findings:
         grouped[finding.category].append(finding)

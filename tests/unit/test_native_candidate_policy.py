@@ -93,3 +93,10 @@ def test_proposed_policy_is_a_frozen_reviewed_input(policy):
     assert evidence["proposal_only"] is True
     assert evidence["proposed_dependency_pins"]["semgrep"] == "1.175.0"
     assert evidence["proposed_dependency_pins"]["mcp"] == "1.29.0"
+
+
+def test_native_policy_selects_explicit_darwin_only_z3_derivative(policy):
+    evidence = policy.version_evidence()
+    assert evidence["proposed_dependency_pins"]["z3-solver"] == "5.1.0.0+specfact.2"
+    assert evidence["proposal_only"] is True
+    assert evidence["production_policy_updated"] is False

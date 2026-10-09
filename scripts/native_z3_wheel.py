@@ -31,6 +31,8 @@ UPSTREAM_SHA256 = "399a38a85d784105e5df5a05c04a581481bfdb80af7424779cf76fa843b4e
 UPSTREAM_DIST_INFO = "z3_solver-5.1.0.0.dist-info"
 DOWNSTREAM_DIST_INFO = "z3_solver-5.1.0.0+specfact.1.dist-info"
 OUTPUT_FILENAME = "z3_solver-5.1.0.0+specfact.1-py3-none-macosx_14_0_arm64.whl"
+DARWIN_DIST_INFO = "z3_solver-5.1.0.0+specfact.2.dist-info"
+DARWIN_OUTPUT_FILENAME = "z3_solver-5.1.0.0+specfact.2-py3-none-macosx_14_0_arm64.whl"
 MAX_ARCHIVE_BYTES = 64 * 1024 * 1024
 MAX_EXPANDED_BYTES = 160 * 1024 * 1024
 MAX_MEMBERS = 256
@@ -191,7 +193,7 @@ def corrected_members(files: dict[str, bytes]) -> dict[str, bytes]:
     return result
 
 
-def wheel_bytes(files: dict[str, bytes]) -> bytes:
+def wheel_bytes(files: dict[str, bytes], *, prefix: str = DOWNSTREAM_DIST_INFO) -> bytes:
     """Use sorted, stored members and fixed ZIP attributes for reproducible bytes."""
     stream = io.BytesIO()
     with zipfile.ZipFile(stream, "w", compression=zipfile.ZIP_STORED) as archive:
@@ -205,7 +207,7 @@ def wheel_bytes(files: dict[str, bytes]) -> bytes:
     restored = read_members(data)
     if restored != files:
         raise ValueError("output payload mismatch")
-    verify_record(restored, DOWNSTREAM_DIST_INFO)
+    verify_record(restored, prefix)
     return data
 
 
@@ -335,17 +337,100 @@ def provenance(data: bytes, upstream_files: dict[str, bytes], release_archive: P
     }
 
 
-def prepare(source: Path, destination: Path, *, release_archive: Path | None = None) -> Path:
-    """Authenticate and validate fully before creating an exclusive output directory."""
-    upstream_files = read_members(read_authenticated(source))
-    files = corrected_members(upstream_files)
-    data = wheel_bytes(files)
-    receipt = json.dumps(provenance(data, upstream_files, release_archive), indent=2, sort_keys=True) + "\n"
-    license_data = _bounded_input(LICENSE_INPUT, 64 * 1024) if release_archive is not None else None
-    if license_data is not None and hashlib.sha256(license_data).hexdigest() != LICENSE_SHA256:
+def _authenticated_license_bytes() -> bytes:
+    """Recheck actual license bytes immediately before wheel/sidecar composition."""
+    data = _bounded_input(LICENSE_INPUT, 64 * 1024)
+    if hashlib.sha256(data).hexdigest() != LICENSE_SHA256:
         raise ValueError("supplemental license digest mismatch before output")
+    return data
+
+
+def _recorded_members(files: dict[str, bytes], prefix: str) -> dict[str, bytes]:
+    """Regenerate the new derivative's complete RECORD without changing payloads."""
+    record_name = prefix + "/RECORD"
+    files = {name: data for name, data in files.items() if name != record_name}
+    stream = io.StringIO(newline="")
+    writer = csv.writer(stream, lineterminator="\n")
+    for name, data in sorted(files.items()):
+        writer.writerow([name, digest(data), str(len(data))])
+    writer.writerow([record_name, "", ""])
+    return {**files, record_name: stream.getvalue().encode("utf-8")}
+
+
+def _projected_members(upstream: dict[str, bytes], supplemental: dict, license_data: bytes) -> dict[str, bytes]:
+    """Omit only authenticated foreign identities and add the linked license."""
+    omitted = supplemental["unlinked_non_darwin_payload"]
+    corrected = corrected_members(upstream)
+    result = {
+        (
+            DARWIN_DIST_INFO + name[len(DOWNSTREAM_DIST_INFO) :]
+            if name.startswith(DOWNSTREAM_DIST_INFO + "/")
+            else name
+        ): data
+        for name, data in corrected.items()
+        if name not in omitted and name != DOWNSTREAM_DIST_INFO + "/RECORD"
+    }
+    metadata = result[DARWIN_DIST_INFO + "/METADATA"].replace(
+        b"Version: 5.1.0.0+specfact.1\n", b"Version: 5.1.0.0+specfact.2\n"
+    )
+    header, separator, body = metadata.partition(b"\n\n")
+    if not separator:
+        raise ValueError("missing derivative metadata header")
+    result[DARWIN_DIST_INFO + "/METADATA"] = header + b"\nLicense-File: LICENSE.txt\n\n" + body
+    result[DARWIN_DIST_INFO + "/licenses/LICENSE.txt"] = license_data
+    return _recorded_members(result, DARWIN_DIST_INFO)
+
+
+def _projection_provenance(data: bytes, upstream: dict[str, bytes], supplemental: dict) -> dict:
+    """Bind retained/omitted bytes and the actual in-wheel authenticated license."""
+    restored = read_members(data)
+    license_data = _authenticated_license_bytes()
+    if restored != _projected_members(upstream, supplemental, license_data):
+        raise ValueError("output payload differs from approved Darwin projection")
+    verify_record(restored, DARWIN_DIST_INFO)
+    omitted = supplemental["unlinked_non_darwin_payload"]
+    metadata = {UPSTREAM_DIST_INFO + "/" + name for name in ("METADATA", "WHEEL", "RECORD")}
+    unchanged = {
+        name: {"sha256": hashlib.sha256(content).hexdigest(), "size": len(content)}
+        for name, content in sorted(upstream.items())
+        if name not in omitted and name not in metadata
+    }
+    license_name = DARWIN_DIST_INFO + "/licenses/LICENSE.txt"
+    return {
+        "schema_version": 4,
+        "derivative": "darwin-only-v1",
+        "supplemental_license": supplemental,
+        "z3_source_and_native_license_verified": True,
+        "unchanged_members": unchanged,
+        "omitted_members": omitted,
+        "licenses": {license_name: {"sha256": hashlib.sha256(license_data).hexdigest(), "size": len(license_data)}},
+        "license_payload_complete": True,
+        "admission_gaps": [],
+        "dependency_admitted": False,
+        "production_eligible": False,
+        "upstream": {"url": UPSTREAM_URL, "sha256": UPSTREAM_SHA256},
+        "output": {"filename": DARWIN_OUTPUT_FILENAME, "sha256": hashlib.sha256(data).hexdigest()},
+        "corrections": {
+            "METADATA.Version": {"from": "5.1.0.0", "to": "5.1.0.0+specfact.2"},
+            "METADATA.License-File": "LICENSE.txt",
+            "WHEEL.Tag": {"from": "py3-none-macosx_13_3_arm64", "to": "py3-none-macosx_14_0_arm64"},
+            "WHEEL.Root-Is-Purelib": {"from": True, "to": False},
+            "dist-info": {"from": UPSTREAM_DIST_INFO, "to": DARWIN_DIST_INFO},
+            "filename_platform": {"from": "macosx_13_0_arm64", "to": "macosx_14_0_arm64"},
+            "RECORD": "regenerated SHA-256 and sizes for every member; RECORD row unhashed",
+        },
+        "payload": "retained source/native/header bytes unchanged; only exact reviewed foreign DLLs omitted",
+        "limitations": "native minimum OS/architecture inventory and resolver/pip check remain separate gates",
+    }
+
+
+def _write_prepared_output(
+    destination: Path, filename: str, data: bytes, receipt: dict, license_data: bytes | None
+) -> Path:
+    """Create an exclusive output directory only after all authentication succeeds."""
+    serialized = json.dumps(receipt, indent=2, sort_keys=True) + "\n"
     destination.mkdir(mode=0o700, parents=False, exist_ok=False)
-    output = destination / OUTPUT_FILENAME
+    output = destination / filename
     try:
         with output.open("xb") as stream:
             stream.write(data)
@@ -353,11 +438,32 @@ def prepare(source: Path, destination: Path, *, release_archive: Path | None = N
             with (destination / "Z3-LICENSE.txt").open("xb") as stream:
                 stream.write(license_data)
         with output.with_suffix(".provenance.json").open("x", encoding="utf-8") as stream:
-            stream.write(receipt)
+            stream.write(serialized)
     except BaseException:
         shutil.rmtree(destination)
         raise
     return output
+
+
+def prepare(source: Path, destination: Path, *, release_archive: Path | None = None, darwin_only: bool = False) -> Path:
+    """Authenticate inputs; preserve legacy bytes unless the new derivative is explicit."""
+    if darwin_only and release_archive is None:
+        raise ValueError("Darwin-only release archive required")
+    upstream = read_members(read_authenticated(source))
+    if darwin_only:
+        assert release_archive is not None
+        supplemental = release_license_evidence(upstream, release_archive)
+        license_data = _authenticated_license_bytes()
+        files = _projected_members(upstream, supplemental, license_data)
+        data = wheel_bytes(files, prefix=DARWIN_DIST_INFO)
+        receipt = _projection_provenance(data, upstream, supplemental)
+        filename = DARWIN_OUTPUT_FILENAME
+    else:
+        data = wheel_bytes(corrected_members(upstream))
+        receipt = provenance(data, upstream, release_archive)
+        license_data = _authenticated_license_bytes() if release_archive is not None else None
+        filename = OUTPUT_FILENAME
+    return _write_prepared_output(destination, filename, data, receipt, license_data)
 
 
 def main() -> None:
@@ -368,9 +474,16 @@ def main() -> None:
     parser.add_argument(
         "--release-archive", type=Path, help="exact authenticated upstream ARM64 ZIP for supplemental license/linkage"
     )
+    parser.add_argument(
+        "--darwin-only",
+        action="store_true",
+        help="explicit specfact.2 projection; requires authenticated release archive",
+    )
     args = parser.parse_args()
     try:
-        output = prepare(args.source, args.destination, release_archive=args.release_archive)
+        output = prepare(
+            args.source, args.destination, release_archive=args.release_archive, darwin_only=args.darwin_only
+        )
     except (ValueError, OSError, zipfile.BadZipFile) as exc:
         parser.exit(1, f"Z3 preparation failed: {exc}\n")
     sys.stdout.write(os.fspath(output) + "\n")

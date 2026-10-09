@@ -535,6 +535,7 @@ def test_direct_snapshot_row_cannot_erase_post_plan_identity_change(installed_pr
 
 
 def test_missing_native_alias_api_retains_observation_and_origin_diagnostic(monkeypatch, tmp_path):
+    monkeypatch.setitem(sys.modules, "_specfact_target_coverage", SimpleNamespace(active_plugin=lambda: None))
     monkeypatch.setattr(target_pytest, "SNAPSHOT_ROOT", tmp_path)
     observer = target_pytest.Observer()
     observer.coverage_origin["candidates"] = ["/opt/specfact/project-runtime/site-packages/pkg/app.py"]
@@ -689,3 +690,14 @@ def test_single_module_changed_after_execution_cannot_receive_credit(installed_s
     attributed, diagnostics = _normalize(project, bridge, raw)
     assert diagnostics[str(project.source)] == "source_identity_changed_after_execution"
     assert str(project.source) not in attributed["files"]
+
+
+@pytest.mark.parametrize("relative", [None, "README.md"])
+def test_empty_python_attribution_does_not_scan_distribution_records(tmp_path, monkeypatch, relative):
+    def unexpected_read(*_args):
+        pytest.fail("empty attribution scanned ownership metadata")
+
+    monkeypatch.setattr(installed_coverage, "_distribution_context", unexpected_read)
+    files = [] if relative is None else [tmp_path / relative]
+    bridge = installed_coverage.plan_installed_coverage(files, snapshot=tmp_path, site_packages=tmp_path / "site")
+    assert bridge == installed_coverage.CoverageBridge((), (), {}, {})

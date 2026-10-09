@@ -199,3 +199,49 @@ with SDK MIG decoding. BSD unit mocks retain historical transition checks only;
 they are not a runtime fallback or proof of the Mach transport. Startup/analyzer
 fixtures retain their separate evidence. Exact signed hosted acceptance remains
 mandatory before any support claim.
+
+
+## Owner-approved release continuation — 6 October 2026
+
+The owner explicitly requested implementation of the three remaining delivery
+issues: protected release/catalog, exact loader acceptance, and independent
+ordinary installation. Paid Apple membership, Developer ID and notarization
+remain optional #488. A normal first-run trust warning is acceptable for this
+initial release; record its actual presence and acknowledgement. Do not strip
+quarantine or disable system protections. Integrity, native signing, confinement,
+dependency separation, resource limits and cleanup requirements remain mandatory.
+
+Reuse the existing deterministic assembler, native cache, GHCR blob reader and
+managed broker. Freeze the initial library profile to disable-library-validation
+only on CPython and Semgrep Core; all other native images retain empty
+entitlements. Secret-free build/acceptance precedes protected data-only manifest
+signing. Signing/publishing code executes only from a protected reviewed ref;
+candidate payloads are data and are never executed with the publisher key.
+
+The first complete slice is cp312 final-byte release validation and signed
+catalog acquisition, followed by three ABIs and all supported macOS cells.
+Independent installation uses the signed module's packaged catalog and standard
+client, with cold anonymous acquisition and offline reuse. Test fixture keys and
+local artifact overrides establish unit evidence only. Human merge/promotion
+remains required; a prepared workflow or green fixture does not mean publication.
+No new core interface is planned. Maintainer builds may use existing SDK/Rust
+tools; customers need no build tools, container engine, admin or Apple account.
+
+
+## Approved test contexts — 2026-10-07
+
+The maintainer explicitly approved separating ordinary-host/macOS proofs from confined Linux tests while retaining every assertion, and approved sending the bounded autofix diff to CodeRabbit. The completed approved review of 2aea48da..082e8b6d returns no findings. This resolves the earlier pending decisions; no publication or merge is authorized.
+
+Use existing pytest filename discovery and explicit job invocations, rather than adding controller policy, granting host tools to confinement, or modifying authenticated installed 0.51.0. Keep the baseline proof files unchanged so an index review does not import unavailable proof contexts on its base side. Revised proof modules use proof_ filenames below tests/host or tests/native; portable additions use ordinary test_ modules. Required full/SMART host runs explicitly include host proofs. Required macOS jobs execute native parser proofs and retain the original broker/lifecycle repetitions and five-second cleanup bounds. All revised assertions remain verbatim or receive only module-reference relocation. Original baseline tests remain available.
+
+This changes the repository's test context mapping, not analyzer budgets, artifact admission, skip verdicts, credential/network boundaries or customer behavior. Every scope's required execution remains blocking; unsupported proof-only capsule selection still fails visibly. The installed reviewer is unchanged. Preserve existing commands through their normal full-host wrappers and prove supported selection against the installed controller before claiming hosted acceptance.
+
+The four baseline proof modules remain byte-identical to `origin/dev` so the
+immutable index reviewer does not select their unavailable baseline contexts.
+The full and SMART host entrypoints ignore those obsolete versions and explicitly
+execute the current host module. Every current portable function moves into normal
+`test_*.py` discovery; every current native function remains in an explicit
+`proof_*.py` module. Required native jobs run the parser proofs on all three OS
+labels and the minimal CPython proof with all three existing hash-pinned inputs.
+The minimal CPython proof reuses the existing secret-free preparer; its additional
+CI cost is three input preparations, without adding a new acquisition mechanism.

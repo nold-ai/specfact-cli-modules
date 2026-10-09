@@ -1,5 +1,21 @@
 # Change: Dedicated macOS ARM64 Code Review Capsule
 
+## Delivery correction — 2026-10-06 (Europe/Berlin)
+
+Code Review 0.51.0 and core 0.55.4 are released, but the authenticated native
+catalog is empty. Issue #460 was reopened and moved to Todo on 2026-10-05;
+merged implementation is not customer delivery. Continue this change without
+archiving it. Prepare patch 0.51.3 (above the now-published 0.51.2) for corrections to the promised delivery,
+rather than another additive capability or a new minor version.
+
+The current worktree reproduces complete CPython 3.11–3.13 native assembly.
+Empty-entitlement runtime candidates fail actual extension loading; the existing
+library-loading experiment completes ten-analyzer fixtures for every ABI but
+remains experimental. The protected release path, dependency/profile admission,
+final-artifact OS/ABI matrix and independent signed installation remain required.
+See DELIVERY_CHECKPOINT_2026-10-06.md for exact results and gaps. No publication,
+customer support claim, production flag or complete-boundary flag is added.
+
 ## Current project-driven revision — 2026-10-04 (Europe/Berlin)
 
 Reuse released portable discovery and caller configuration for unfamiliar projects.
@@ -141,3 +157,30 @@ contracts and current limits. The public native command, all-ten-analyzer manage
 integration, four-manager corpus, immutable runtime delivery and independent-Mac
 installation still require implementation/admission; this checkpoint does not
 claim those capabilities or justify a module release bump.
+
+
+## Owner-approved release continuation — 6 October 2026
+
+The owner explicitly requested implementation of the three remaining delivery
+issues: protected release/catalog, exact loader acceptance, and independent
+ordinary installation. Paid Apple membership, Developer ID and notarization
+remain optional #488. A normal first-run trust warning is acceptable for this
+initial release; record its actual presence and acknowledgement. Do not strip
+quarantine or disable system protections. Integrity, native signing, confinement,
+dependency separation, resource limits and cleanup requirements remain mandatory.
+
+Reuse the existing deterministic assembler, native cache, GHCR blob reader and
+managed broker. Freeze the initial library profile to disable-library-validation
+only on CPython and Semgrep Core; all other native images retain empty
+entitlements. Secret-free build/acceptance precedes protected data-only manifest
+signing. Signing/publishing code executes only from a protected reviewed ref;
+candidate payloads are data and are never executed with the publisher key.
+
+The first complete slice is cp312 final-byte release validation and signed
+catalog acquisition, followed by three ABIs and all supported macOS cells.
+Independent installation uses the signed module's packaged catalog and standard
+client, with cold anonymous acquisition and offline reuse. Test fixture keys and
+local artifact overrides establish unit evidence only. Human merge/promotion
+remains required; a prepared workflow or green fixture does not mean publication.
+No new core interface is planned. Maintainer builds may use existing SDK/Rust
+tools; customers need no build tools, container engine, admin or Apple account.

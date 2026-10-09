@@ -19,19 +19,31 @@ and 3.13.14. Absolute paths below are placeholders to replace, not PATH lookups.
 
 1. Package the authenticated Node/BasedPyright archives using the linked runbook.
 2. Download the Z3 wheel from `UPSTREAM_URL` in `scripts/native_z3_wheel.py`.
-   The offline preparation command verifies its pinned hash, corrects only
-   documented metadata and records downstream provenance:
+   Also obtain the exact ARM64 release ZIP named in the authenticated license
+   provenance. The explicit Darwin-only command verifies both pinned hashes,
+   preserves native/source bytes, omits the ten reviewed Windows DLLs and copies
+   the release-linked MIT license into the new versioned wheel:
 
    ```sh
    /absolute/python scripts/native_z3_wheel.py \
      /absolute/inputs/z3_solver-5.1.0.0-py3-none-macosx_13_0_arm64.whl \
-     /absolute/new-z3-candidate
+     /absolute/new-z3-candidate \
+     --release-archive /absolute/inputs/z3-5.1.0-arm64-osx-13.3.zip \
+     --darwin-only
    ```
 
    The output directory must not exist. The downstream distribution is visibly
-   named `z3-solver==5.1.0.0+specfact.1`; its native/source/license bytes are
-   unchanged. Normal resolution must use this version, not a renamed upstream
-   archive or a resolver bypass.
+   named `z3-solver==5.1.0.0+specfact.2`; its retained native/source bytes are
+   unchanged. The observed wheel SHA-256 is
+   `81d7e08869fc34877ad9b1315de5bb5398792bc8858f44e45c38a974f310f7e7`.
+   Its `License-File: LICENSE.txt` declaration resolves relative to the wheel
+   `dist-info/licenses/` directory to the retained authenticated license.
+   The three locks select that exact candidate; the other pins in the closure of
+   94 distributions stay unchanged. Normal resolution must use this version without a resolver
+   bypass. Omitting `--darwin-only` preserves the historical specfact.1 bytes.
+   Missing or altered release/source/license/foreign-payload linkage fails before
+   output. The projection does not license or redistribute omitted DLLs and does
+   not grant dependency or production admission.
 3. Create a native environment and install the matching lock, for example:
 
    ```sh
@@ -59,6 +71,22 @@ MACOSX_DEPLOYMENT_TARGET=14.0 /absolute/uv pip compile \
 Lock regeneration can select newer transitive dependencies and requires review;
 reproduction of the recorded run uses the committed locks. The minimum OS tag
 is a candidate constraint, not macOS 14 acceptance proof.
+
+## Relocated standard-library source
+
+The native CPython candidate retains the same bounded captured standard-library
+`.py` bytes in its deterministic ZIP and at their relocated filesystem paths.
+Astroid resolves frozen modules such as `collections.abc` through the filesystem
+path in `__file__`; a ZIP-only runtime can cause import errors or internal Pylint
+crashes despite successful ordinary Python imports. The input hashes and complete
+payload inventory bind both projections. Site-packages, test trees and source
+symlinks remain excluded. Captured hashes alone do not establish upstream or
+publisher authentication; final artifact admission still requires those checks.
+
+Fatal Pylint diagnostics are incomplete analyzer evidence. The independent corpus
+checker rejects fatal diagnostics and tool errors even when an older report labels
+a crash as a style finding. Actual project findings may remain FAIL after every
+analyzer completes.
 
 ## Run the ten real adapters
 
@@ -132,12 +160,12 @@ Raw emitted IDs remain exact. Raw invalid-pattern Python/native exit and scanned
 1.175.0. The owner-authorized versioned adapter below preserves the released
 result semantics using independently measured target discovery; raw errors remain.
 
-The authenticated upstream Z3 wheel contains **no license file** despite MIT
+The historical authenticated upstream Z3 wheel contains **no license file** despite MIT
 METADATA. The sidecar records the missing in-wheel text (`license_payload_complete=false`)
 and hashes all 39 unchanged members; the wheel remains byte-identical to the
-existing correction. It does not fabricate or insert license text. Final license
-admission requires separately authenticated redistribution terms, including the
-bundled Windows DLL payloads. Existing source/native preservation and correct
+existing correction. It does not fabricate or insert license text. The new explicit specfact.2 projection above includes the authenticated license
+and omits those exact DLL identities. Final dependency/production admission
+still requires complete native compatibility and final-artifact acceptance. Existing source/native preservation and correct
 RECORD/metadata are evidence, not dependency admission.
 
 Exact dependency-task contract and measured scope are in
@@ -174,14 +202,19 @@ checked offline), then prepare license-bearing candidate artifacts:
   --release-archive /absolute/inputs/z3-5.1.0-arm64-osx-13.3.zip
 ```
 
-The schema-3 sidecar verifies tagged source/metadata identity and byte-links 28
+This command intentionally describes the historical specfact.1 path. It omits
+`--darwin-only` and does not produce the specfact.2 wheel pinned by the current
+Darwin locks. For current preparation, use the explicit `--darwin-only` command
+and hash in the opening section.
+
+The historical schema-3 sidecar verifies tagged source/metadata identity and byte-links 28
 native/source/header members to that authenticated release. The output directory
 also contains the exact supplemental `Z3-LICENSE.txt`; the corrected wheel is
 byte-identical. Final signed redistribution must carry and authenticate that
 license file separately: installing the wheel alone does not include it.
 
-The supplemental MIT text covers the verified Z3 Darwin/source payload; it does
-not supply Microsoft VC runtime terms or Windows binary-source linkage. Exact
-unlinked DLL identities remain named in the reviewed provenance and sidecar.
+For that historical specfact.1 wheel, the supplemental MIT text covers the verified
+Z3 Darwin/source payload; it does not supply Microsoft VC runtime terms or Windows
+binary-source linkage. Exact unlinked DLL identities remain named in the reviewed provenance and sidecar.
 Neither this evidence nor adapter conformance admits the complete dependency
 closure or enables production execution.

@@ -79,3 +79,17 @@ def test_dynamic_paired_core_workflows_have_no_dead_manual_checkout_paths() -> N
 
         assert f"{checkout_name} (manual main)" not in workflow
         assert f"{checkout_name} (manual dev)" not in workflow
+
+
+def test_lean_docs_workflow_keeps_serial_suite_and_failure_propagation() -> None:
+    suite = _step_text("docs-review.yml", "docs-review", "Run docs review suite")
+    assert '-o "addopts=-ra -v --import-mode=importlib"' in suite
+    expected = {
+        "tests/unit/docs/test_docs_review.py",
+        "tests/unit/docs/test_code_review_docs_parity.py",
+        "tests/unit/test_core_documentation_accountability.py",
+        "tests/unit/test_pre_commit_quality_parity.py",
+        "tests/unit/docs/test_llms_overview_freshness.py",
+    }
+    assert set(re.findall(r"tests/[^\s]+\.py", suite)) == expected
+    assert 'exit "${PIPESTATUS[0]:-$?}"' in suite

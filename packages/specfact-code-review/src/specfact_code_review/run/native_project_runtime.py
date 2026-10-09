@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import csv
 import hashlib
 import json
 import os
@@ -23,7 +24,7 @@ from specfact_code_review.run import native_backend, native_execution, native_pr
 from specfact_code_review.run.native_project_catalog import resolve_project_artifact
 from specfact_code_review.run.runtime_artifacts import load_runtime, seal_runtime, validate_build_artifact
 from specfact_code_review.run.runtime_models import PreparedRuntime, ProjectPlan, ProjectRuntimeError, document_digest
-from specfact_code_review.run.runtime_sources import source_identity, verify_inputs
+from specfact_code_review.run.runtime_sources import is_excluded_source, source_identity, verify_inputs
 
 
 _MANAGER_VERSIONS = {"pip": "26.2.1", "hatch": "1.18.0", "uv": "0.12.13", "poetry": "2.4.3"}
@@ -58,7 +59,7 @@ def _identity(metadata: os.stat_result) -> _Identity:
     )
 
 
-def _runtime_tree(root: Path) -> dict[str, _TreeEntry]:
+def _runtime_tree(root: Path, *, exclude_vcs: bool = False) -> dict[str, _TreeEntry]:
     """Capture a bounded, indirection-free tree without following project links."""
     entries: dict[str, _TreeEntry] = {}
     files = 0
@@ -76,6 +77,8 @@ def _runtime_tree(root: Path) -> dict[str, _TreeEntry]:
             entries[relative] = ("directory", _identity(metadata))
             children = sorted(os.scandir(current), key=lambda entry: entry.name)
             for child in children:
+                if exclude_vcs and current == root and child.name == ".git":
+                    continue  # Copied VCS context has its own verification boundary.
                 path = Path(child.path)
                 child_relative = path.relative_to(root).as_posix()
                 child_metadata = child.stat(follow_symlinks=False)
@@ -413,8 +416,10 @@ class _AcquisitionTarInfo(tarfile.TarInfo):
         maximum = _MAX_ACQUISITION_ARCHIVE_BYTES + 1024 * _MAX_ACQUISITION_FILES
         metadata = {tarfile.XHDTYPE, tarfile.XGLTYPE, tarfile.GNUTYPE_LONGNAME, tarfile.GNUTYPE_LONGLINK}
         chain = getattr(source, "_specfact_acquisition_metadata_chain", 0) + 1 if self.type in metadata else 0
+        # Extension metadata always requires a following physical header.
+        maximum_headers = 2 * _MAX_ACQUISITION_FILES - int(self.type in metadata)
         if (
-            count > 2 * _MAX_ACQUISITION_FILES
+            count > maximum_headers
             or source.fileobj.tell() > maximum
             or chain > 64
             or self.size < 0
@@ -1040,10 +1045,12 @@ def _prepare_project_on_demand(plan: ProjectPlan, runtime: Any, artifact: Path) 
             }:
                 raise ProjectRuntimeError("project_native_inventory_invalid")
             _record_native_inventory(runtime, metadata)
+            artifact.chmod(0o700)
             inventory = {
                 **metadata,
                 "pytest_arguments": [],
-                "source_roots": list(plan.source_roots) or _bound_source_roots(snapshot, project_wheels),
+                "source_roots": list(plan.source_roots)
+                or _bound_source_roots(snapshot, project_wheels, generated_destination=artifact / "source-overlay"),
                 "native_extensions": _admit_native_extensions(
                     site, capsule_root=Path(runtime.root), declared_count=count
                 ),
@@ -1128,7 +1135,9 @@ def _prepare_uv_on_demand(plan: ProjectPlan, runtime: Any, artifact: Path) -> di
         )
         inventory.update(
             source_roots=list(plan.source_roots)
-            or _bound_source_roots(snapshot, artifact / "site-packages", installed=True),
+            or _bound_source_roots(
+                snapshot, artifact / "site-packages", installed=True, generated_destination=artifact / "source-overlay"
+            ),
             pytest_arguments=[],
             native_extensions=_admit_native_extensions(
                 artifact / "site-packages", capsule_root=Path(runtime.root), declared_count=count
@@ -1148,6 +1157,40 @@ def _prepare_uv_on_demand(plan: ProjectPlan, runtime: Any, artifact: Path) -> di
         return inventory
 
 
+def _materialize_native_source_aliases(snapshot: Path) -> None:
+    """Project only verified copied source aliases into an ordinary private tree."""
+    if not any(path.is_symlink() for path in snapshot.rglob("*")):
+        return
+    from specfact_code_review.run.runner import _capture_native_snapshot
+
+    expected = source_identity(snapshot)
+    identity = _identity(snapshot.lstat())
+    directories: list[str] = []
+    entries = _capture_native_snapshot(snapshot, directories=directories, exclude_directory=is_excluded_source)
+    with tempfile.TemporaryDirectory(prefix=".materializing-", dir=snapshot.parent) as raw:
+        projection = Path(raw) / "snapshot"
+        projection.mkdir(mode=0o700)
+        for name in sorted(directories, key=lambda value: (len(PurePosixPath(value).parts), value)):
+            (projection / name).mkdir(mode=0o700)
+        for name, content in entries:
+            target = projection / name
+            target.write_bytes(content)
+            target.chmod(0o500 if (snapshot / name).stat().st_mode & 0o111 else 0o400)
+        _runtime_tree(projection)
+        if source_identity(snapshot) != expected or _identity(snapshot.lstat()) != identity:
+            raise ProjectRuntimeError("project_runtime_source_changed_during_copy")
+        original = Path(raw) / "original"
+        os.rename(snapshot, original)
+        try:
+            os.rename(projection, snapshot)
+        except BaseException:
+            os.rename(original, snapshot)
+            raise
+        for directory, _children, _files in os.walk(original, followlinks=False):
+            Path(directory).chmod(0o700, follow_symlinks=False)
+        shutil.rmtree(original)
+
+
 def _copy_native_snapshot(plan: ProjectPlan, destination: Path) -> None:
     from specfact_code_review.run.runtime_builder import copy_project
     from specfact_code_review.run.runtime_vcs import copy_vcs_context
@@ -1155,6 +1198,7 @@ def _copy_native_snapshot(plan: ProjectPlan, destination: Path) -> None:
     copy_project(plan.root, destination, include_vcs=False)
     if source_identity(destination) != plan.source_identity:
         raise ProjectRuntimeError("project_runtime_source_changed_during_copy")
+    _materialize_native_source_aliases(destination)
     if plan.vcs:
         copy_vcs_context(
             plan.vcs_repository or plan.root,
@@ -1332,9 +1376,14 @@ def _prepare_hatch_on_demand(plan: ProjectPlan, runtime: Any, artifact: Path) ->
         count = sum(
             path.suffix in {".so", ".dylib"} for path in runtime_native._macho_candidates(artifact / "site-packages")
         )
-        source_roots = list(plan.source_roots) or _bound_source_roots(snapshot, project_wheels)
+        artifact.chmod(0o700)
+        source_roots = list(plan.source_roots) or _bound_source_roots(
+            snapshot, project_wheels, generated_destination=artifact / "source-overlay"
+        )
         for member_wheels in workspace_wheels:
-            source_roots.extend(_bound_source_roots(snapshot, member_wheels))
+            source_roots.extend(
+                _bound_source_roots(snapshot, member_wheels, generated_destination=artifact / "source-overlay")
+            )
         inventory.update(
             source_roots=list(dict.fromkeys(source_roots)),
             pytest_arguments=[],
@@ -1561,8 +1610,10 @@ def _prepare_poetry_on_demand(plan: ProjectPlan, runtime: Any, artifact: Path) -
         count = sum(
             path.suffix in {".so", ".dylib"} for path in runtime_native._macho_candidates(artifact / "site-packages")
         )
+        artifact.chmod(0o700)
         inventory.update(
-            source_roots=list(plan.source_roots) or _bound_source_roots(snapshot, project_wheels),
+            source_roots=list(plan.source_roots)
+            or _bound_source_roots(snapshot, project_wheels, generated_destination=artifact / "source-overlay"),
             pytest_arguments=[],
             native_extensions=_admit_native_extensions(
                 artifact / "site-packages", capsule_root=Path(runtime.root), declared_count=count
@@ -1697,34 +1748,169 @@ def _read_preparation_document(path: Path) -> dict[str, Any]:
     return document
 
 
-def _bound_source_roots(project: Path, wheels: Path, *, installed: bool = False) -> list[str]:
-    """Infer source imports only from unambiguous byte matches with the built root."""
+def _source_suffix_index(project: Path) -> dict[tuple[str, ...], list[tuple[PurePosixPath, int]]]:
+    candidates: dict[tuple[str, ...], list[tuple[PurePosixPath, int]]] = {}
+    index_entries = 0
+    for relative, (kind, identity) in _runtime_tree(project, exclude_vcs=True).items():
+        path = PurePosixPath(relative)
+        if kind != "file" or path.suffix not in {".py", ".pyi"}:
+            continue
+        for offset in range(len(path.parts)):
+            index_entries += 1
+            if index_entries > _MAX_RUNTIME_FILES:
+                raise ProjectRuntimeError("project_native_source_root_bounds_exceeded:provide explicit source_roots")
+            candidates.setdefault(path.parts[offset:], []).append((path, identity[4]))
+    return candidates
+
+
+def _matching_source_roots(
+    project: Path, path: PurePosixPath, payload: bytes, candidates: list[tuple[PurePosixPath, int]]
+) -> list[tuple[str, ...]]:
+    return [
+        candidate.parts[: -len(path.parts)]
+        for candidate, size in candidates
+        if size == len(payload) and (project / candidate).read_bytes() == payload
+    ]
+
+
+def _generated_source_files(
+    packages: dict[str, set[tuple[str, ...]]],
+    missing: list[tuple[PurePosixPath, bytes]],
+    *,
+    installed: bool,
+    owners: dict[str, str] | None = None,
+    owned_packages: dict[tuple[str, tuple[str, ...]], set[tuple[str, ...]]] | None = None,
+) -> list[tuple[PurePosixPath, bytes]] | None:
+    generated: list[tuple[PurePosixPath, bytes]] = []
+    lookups = 0
+    for path, payload in missing:
+        owner = owners.get(path.as_posix(), "") if owners is not None else path.parts[0]
+        roots = packages.get(owner, set()) if owned_packages is None else set()
+        if owned_packages is not None:
+            for length in range(1, len(path.parts)):
+                lookups += 1
+                if lookups > _MAX_RUNTIME_FILES:
+                    raise ProjectRuntimeError(
+                        "project_native_source_root_bounds_exceeded:provide explicit source_roots"
+                    )
+                roots.update(owned_packages.get((owner, path.parts[:length]), set()))
+        if owned_packages is not None and path.name in {"__init__.py", "__init__.pyi"}:
+            roots.update(owned_packages.get((owner, path.parts), set()))
+        if not roots and installed:
+            continue
+        if len(roots) != 1:
+            return None
+        generated.append((PurePosixPath(*next(iter(roots))) / path, payload))
+    return generated
+
+
+def _write_generated_source_files(destination: Path, generated: list[tuple[PurePosixPath, bytes]]) -> None:
+    for path, payload in generated:
+        target = destination / path
+        target.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+        with target.open("xb") as stream:
+            stream.write(payload)
+        target.chmod(0o400)
+
+
+def _distinct_source_roots(packages: dict[str, set[tuple[str, ...]]]) -> list[str]:
+    return sorted({PurePosixPath(*root).as_posix() for roots in packages.values() for root in roots if root})
+
+
+def _bound_source_roots(
+    project: Path,
+    wheels: Path,
+    *,
+    installed: bool = False,
+    generated_destination: Path | None = None,
+) -> list[str]:
+    """Infer byte-bound imports while preserving missing built package modules."""
     if not wheels.is_dir():
         return []
-    sources = _runtime_tree(project)
-    candidates: dict[tuple[str, int], list[PurePosixPath]] = {}
-    for relative, (kind, identity) in sources.items():
-        path = PurePosixPath(relative)
-        if kind == "file" and path.suffix in {".py", ".pyi"}:
-            candidates.setdefault((path.name, identity[4]), []).append(path)
-    roots: set[str] = set()
+    candidates = _source_suffix_index(project)
+    owners = _installed_python_owners(wheels) if installed and generated_destination is not None else None
+    packages: dict[str, set[tuple[str, ...]]] = {}
+    source_packages: set[str] = set()
+    owned_packages: dict[tuple[str, tuple[str, ...]], set[tuple[str, ...]]] | None = {} if owners is not None else None
+    missing: list[tuple[PurePosixPath, bytes]] = []
     comparisons = 0
     files = _installed_python_files(wheels) if installed else _wheel_python_files(wheels)
     for path, payload in files:
-        matches = []
-        for candidate in candidates.get((path.name, len(payload)), ()):
-            comparisons += 1
-            if comparisons > _MAX_RUNTIME_FILES:
-                raise ProjectRuntimeError("project_native_source_root_bounds_exceeded:provide explicit source_roots")
-            if candidate.parts[-len(path.parts) :] == path.parts and (project / candidate).read_bytes() == payload:
-                matches.append(candidate.parts[: -len(path.parts)])
-        if not matches and installed:
+        represented = candidates.get(path.parts, [])
+        if not represented:
+            missing.append((path, payload))
             continue
+        comparisons += len(represented)
+        if comparisons > _MAX_RUNTIME_FILES:
+            raise ProjectRuntimeError("project_native_source_root_bounds_exceeded:provide explicit source_roots")
+        matches = _matching_source_roots(project, path, payload, represented)
         if len(matches) != 1:
             return []
-        if matches[0]:
-            roots.add(PurePosixPath(*matches[0]).as_posix())
-    return sorted(roots)
+        owner = owners.get(path.as_posix()) if owners is not None else path.parts[0]
+        if owner is None:
+            return []
+        packages.setdefault(owner, set()).add(matches[0])
+        source_packages.add(path.parts[0])
+        if owned_packages is not None:
+            owned_packages.setdefault((owner, path.parts[:-1]), set()).add(matches[0])
+            for length in range(1, len(path.parts) - 1):
+                owned_packages.setdefault((owner, (*path.parts[:length], "__init__.py")), set()).add(matches[0])
+                owned_packages.setdefault((owner, (*path.parts[:length], "__init__.pyi")), set()).add(matches[0])
+            if len(owned_packages) > _MAX_RUNTIME_FILES:
+                raise ProjectRuntimeError("project_native_source_root_bounds_exceeded:provide explicit source_roots")
+    if owners is not None and any(
+        path.parts[0] in source_packages and path.as_posix() not in owners for path, _payload in missing
+    ):
+        return []
+    generated = _generated_source_files(
+        packages, missing, installed=installed, owners=owners, owned_packages=owned_packages
+    )
+    if generated is None or (generated and generated_destination is None):
+        return []
+    if generated_destination is not None:
+        _write_generated_source_files(generated_destination, generated)
+    return _distinct_source_roots(packages)
+
+
+def _installed_python_owners(site: Path) -> dict[str, str]:
+    """Bind overlay candidates to unique hashed installation RECORD owners."""
+    from specfact_code_review.run.installed_coverage import _record_row, _verified_record
+
+    owners: dict[str, str] = {}
+    rows = 0
+    try:
+        for relative, (kind, identity) in _runtime_tree(site).items():
+            path = PurePosixPath(relative)
+            if (
+                kind != "file"
+                or len(path.parts) != 2
+                or not path.parts[0].endswith(".dist-info")
+                or path.name != "RECORD"
+            ):
+                continue
+            if identity[4] > _MAX_RESULT_BYTES:
+                raise ValueError("installation RECORD exceeds bounds")
+            files: dict[str, str] = {}
+            for row in csv.reader((site / relative).read_text(encoding="utf-8").splitlines()):
+                rows += 1
+                if rows > _MAX_RUNTIME_FILES:
+                    raise ValueError("installation RECORD rows exceed bounds")
+                if len(row) == 3 and (PurePosixPath(row[0]).is_absolute() or ".." in PurePosixPath(row[0]).parts):
+                    # RECORD legitimately lists launch scripts outside site-packages.
+                    normalized = Path(os.path.abspath(site / row[0]))
+                    try:
+                        relative_file = normalized.relative_to(Path(os.path.abspath(site)))
+                    except ValueError:
+                        continue
+                    row = [relative_file.as_posix(), *row[1:]]
+                _record_row(row, files, python_suffixes=(".py", ".pyi"))
+            for name, digest in files.items():
+                if name in owners or not _verified_record(site / name, digest, site):
+                    raise ValueError("installation ownership is ambiguous or changed")
+                owners[name] = path.parts[0]
+    except (OSError, ValueError, csv.Error) as exc:
+        raise ProjectRuntimeError("project_native_source_ownership_invalid") from exc
+    return owners
 
 
 def _installed_python_files(site: Path) -> Iterator[tuple[PurePosixPath, bytes]]:

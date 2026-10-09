@@ -81,3 +81,14 @@ Tests cover determinism, manifest acquisition compatibility, closure faults,
 architecture/signature/rpath faults, unsafe paths, and every current schema
 limit. Output summaries contain only identities, counts, sizes, and digests.
 Raw tool output and private receipts remain local and ignored.
+
+## CI-only manifest signing correction — 2026-10-05
+
+The `--unsigned` build path requires no private key and emits final deterministic
+archive/manifest bytes with no signature sidecar. It retains every structural,
+native signature, closure and resource check. Its summary explicitly records
+`manifest_authenticated=false` and `production_eligible=false`. The signed path
+remains compatible; actual publisher keys are used only in separate protected
+CI/CD signing jobs. Fixture keys in unit tests do not authenticate release
+artifacts. An unsigned build does not populate the customer catalog or admit a
+platform. Build and signing separation is necessary but is not release acceptance.

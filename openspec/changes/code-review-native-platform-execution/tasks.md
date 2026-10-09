@@ -65,7 +65,7 @@
 - [ ] Admit Node/npm, Semgrep and Z3 closure, Mach-O loading, signed caches and versioned evidence.
 - [ ] Implement first-use acquisition, offline reuse and compatibility rejection; repeat signed customer installation.
 - [ ] Complete native ARM64 CI and physical-Mac proof plus Linux regression, all repository gates and independent review.
-- [ ] Bump module minor version, manifests/signatures, changelog and registry only for the completed capability.
+- [ ] Prepare patch 0.51.3 above published 0.51.2 for completion/correction of the released 0.51.0 promise; sign and publish through CI only after acceptance, and update registry identities from actual release bytes.
 - [ ] Open implementation PR to dev and resolve current-head reviews/checks; no automatic merge or publication.
 
 ## 7. Parallel native compatibility (owner approved 2026-10-02)
@@ -118,3 +118,113 @@ applicable stapling and certificate renewal/revocation belong only to #488.
 - [ ] Validate all ten analyzers, manager corpus, plugins, coverage and compatible native extensions against unrelated projects.
 - [ ] Pass clean ordinary-user installation in an independent macOS ARM64 VM or Mac, supported macOS matrix and Linux x86-64 CI VM regression.
 - [ ] Run final repository gates and independent security/defect review; update PR #489 and actual current-head reviews with CI-only signing follow-up.
+
+## Delivery continuation — 2026-10-06 (Europe/Berlin)
+
+Earlier umbrella tasks remain unchecked until their complete acceptance passes.
+The following bounded checkpoint preserves historical failures and does not
+replace sections 3, 4 or 6. Exact facts: DELIVERY_CHECKPOINT_2026-10-06.md.
+
+- [x] Reopen #460, restore Todo, verify parent/labels/project/dependencies and create one isolated codex worktree from current origin/dev; confirm main release files are present.
+- [x] Specify, reproduce and correct missing ordinary-output diagnostics; preserve JSON and literal rendering.
+- [x] Specify, reproduce and add keyless deterministic archive/manifest assembly; use no local publisher key.
+- [x] Assemble actual cp311/cp312/cp313 empty-entitlement archive candidates; retain their extension-loading rejection and unsigned identities.
+- [x] Run actual ten-analyzer clean/defective fixtures and plugin/coverage/native-extension observers for each ABI using the existing library-loading experiment; retain candidate-only status.
+- [x] Reproduce generated controller bytecode changing the sealed payload identity; exclude exactly the signing boundary's cache/bytecode categories with four regression cases.
+- [x] Run full unit/contract/smart suites and bounded independent security/defect review; these do not complete the UNKNOWN capsule review gate.
+- [ ] Complete current-head Linux CI and obtain a non-UNKNOWN required SpecFact review; any local deferral requires explicit human approval under the quality rule.
+- [ ] Admit exact native loader entitlements, complete dependency policies and four-manager upstream corpus with final artifact bytes.
+- [x] Implement the native build/accept/sign/stage workflow in `.github/workflows/native-capsule-release.yml`; protected release acceptance remains open.
+- [ ] Configure and verify its protected native release environment and signing authority; all signing remains CI-only and candidate code cannot control signing authority.
+- [ ] Populate authenticated cp311/cp312/cp313 catalog resources from accepted, CI-signed immutable GHCR artifact identities.
+- [ ] Pass final-artifact macOS 14/15/26 x cp311/cp312/cp313 and independent signed installation, cold/offline reuse, physical changecost/unrelated project and Linux regression.
+- [ ] Open reviewed implementation PR to dev after applicable gate/approved-deferral handling; complete current-head findings and human merge/promotion review.
+- [ ] After authorized publication, repeat canonical fresh installation, close #460 and archive with openspec archive.
+
+- [x] Correct the hosted independent reviewer's unavailable literal version pin to the signed published 0.51.0 baseline; retain isolation and all required review execution.
+- [x] Reproduce and correct staged bug-hunt activation and explicit matching-test ambiguity; preserve required coverage and analysis budgets.
+- [x] Add bounded tracked public finding locations and fixed native connection failure classes so hosted failures remain diagnosable without publishing private reports.
+- [ ] Obtain current-head hosted review completion and resolve every valid changed finding; fixed macOS14/15/26 boundary fixtures passed at dc8eb069, while final native and physical-Mac acceptance remain open.
+
+- [x] Open draft PR #498 toward dev under the explicit local capsule-only deferral; keep hosted review and human merge/promotion pending.
+
+- [x] Reduce introduced builder/workflow complexity while preserving exact controlled archive/manifest/summary bytes and public maintainer arguments.
+- [x] Specify/reproduce fixed missing-report/timeout diagnostics and execution-error priority within the unchanged public200-location cap.
+- [x] Add explicit authenticated Darwin-only Z3 specfact.2 projection; preserve historical specfact.1 bytes, update only candidate Z3 lock/policy identities and pass all three complete offline closures and confined analyzer/parity fixtures. No production admission.
+
+
+### Incomplete runtime correction — 6 October 2026
+
+- [x] Specify and reproduce maintained uv signature/provenance drift; preserve verified bytes and reject changed/missing preparation or assembly receipts.
+- [x] Align nested Python environment exclusion across source capture and ordinary worktree identity, preserving selected/tracked input and alias rejection.
+- [x] Retain bounded native pytest execution and coverage observations in local CLI reports with project-origin-v1 authority.
+- [x] Materialize valid contained source aliases before native preparation sealing, preserving empty directories and source identity checks.
+- [x] Run initial real cp313 candidate module-command reviews and diagnose insufficient completion-checker PASS from Pylint fatal/style misclassification; retain actual offline/test/coverage observations without claiming release acceptance.
+- [x] Preserve executable modes and safely clean owned read-only source aliases with failing-before/passing-after regressions.
+- [x] Retain verified relocated frozen stdlib source for Astroid and classify every fatal Pylint diagnostic as incomplete evidence.
+- [x] Correct real Hatch source inference when generated wheel modules coexist with byte-identical project sources; retain size/byte/ambiguity rejection.
+- [x] Retain actually observed Poetry distributed-test selectors without inventing requested selectors or protected authority.
+- [x] Recheck actual four-manager cp313 project commands; retain fixture trust, actual findings and remaining final-byte acceptance limits.
+- [x] Preserve sealed generated imports and ordinary venv source packages; bound exact suffix matching and resolve measured introduced complexity.
+- [x] Record stable local current-source repository gates and bounded independent review.
+- [ ] Verify fresh CI signature and exact-head hosted review for the runtime correction.
+- [ ] Complete final current-source mandatory gates, CI-only module signing and exact-head blocking review; keep prior hosted failures.
+
+- [x] Reproduce and preserve blocking timeout exit124; wire existing capsule progress and bounded fixed-analyzer timeout diagnostics without exposing raw content or changing budgets.
+
+- [x] Reproduce actual cp311 Hatch hook launch failure and compact managed uv requests with native parser/literal round-trip and unchanged-budget rejection tests.
+- [x] Rebuild the changed managed uv image, verify full provenance, and repeat exact archive manager execution; retain old candidate failures.
+
+
+### Owner-approved release implementation continuation — 6 October 2026
+
+- [x] Record explicit acceptance of normal initial trust warnings while retaining all integrity/boundary gates and optional Apple follow-up.
+- [x] Implement exact archive/profile/acceptance validation, protected data-only signing and authenticated catalog preparation with RED/GREEN tests.
+- [x] Implement reproducible secret-free native builds and all nine final-byte acceptance jobs; prove the real cp312 build and local execution.
+- [ ] Execute and pass all nine hosted final-byte acceptance cells at the reviewed source identity.
+- [x] Implement independent signed installed-customer cold/offline execution, exact composition comparison and read-only quarantine observation; preserve unattended dialog limits.
+- [ ] Execute independent ordinary installation after approved public catalog/module publication and record actual trust behavior.
+- [ ] Configure reviewed protected signing/staging environments and prepare human promotion with immutable identities; do not auto-merge or publish.
+
+Runbook and exact candidate limitations: [NATIVE_RELEASE.md](NATIVE_RELEASE.md). Implementation checkmarks do not replace pending release acceptance.
+
+### PR Actions correction — 6 October 2026
+
+- [x] Identify exact-head Linux timeout failures and measure the unchanged targeted inventory.
+- [x] Reproduce accidental caller-checkout hashing in synthetic enforcement contracts; isolate subjects while preserving all assertions and real identity/security coverage.
+- [ ] Pass fresh exact-head staged and independent signed review within existing budgets; retain timeout outcomes until verified.
+
+- [x] Diagnose repeated hosted review timeout without weakening its deadline; implement candidate-only bounded private profiling and public static-symbol summary.
+- [ ] Obtain hosted profile evidence and fix the measured bottleneck; require both exact-head Linux reviews and quality gates to pass.
+- [x] Correct observed native artifact mode loss and cp311 bootstrap-only setuptools before unchanged strict input admission; retain fresh hosted acceptance as pending.
+
+- [x] Obtain bounded hosted leaf samples and reproduce unnecessary ownership I/O for malformed pytest requests and empty attribution; preserve stale-observation rejection and valid mapping checks.
+- [ ] Verify fresh CI signing and both unchanged-budget reviewers after the ownership-I/O correction.
+
+- [x] Reproduce38synthetic observation cases reading host installed metadata; isolate their fixture ownership with permanent guards while retaining actual discovery and installed-attribution tests.
+
+- [x] Diagnose hosted macOS15 proof teardown PID-exit race; retain identity checks, actual denial/deadline assertions and strict unexpected-error failures.
+- [ ] Pass fresh supported boundary jobs after proof cleanup correction.
+
+### Resumed upstream integration (9 October 2026)
+
+- [x] Resolve current dev integration conflicts while retaining native isolation, diagnostics and current reviewer bootstrap regressions.
+- [x] Fix transferred #502 same-stem source/test ambiguity with spec-first failing tests and passing affected regression coverage.
+- [x] Configure protected signing/publication environments with djm81 as required approver, self-review prevention and admin bypass disabled.
+- [x] Owner provisioned the dedicated native key/passphrase secrets; authenticated metadata confirms both names. Protected CI still must validate values against the public root.
+- [ ] Pass the current-head hosted review/build/acceptance gates, promote through dev/main with human review, publish and verify installed customer execution.
+
+
+## PR #498 current review corrections (9 October 2026)
+
+- [x] Specify and reproduce fatal Pylint attribution on a later selected source; preserve selected paths and lines while retaining global fatal fallback.
+- [x] Specify and reproduce native source/registry acceptance drift; require exact source manifest identity for native version selection and receipt verification while preserving the published Linux candidate baseline.
+- [ ] Complete current-head quality gates, normal CI payload signing and review; registry/catalog publication and installed native acceptance remain outstanding.
+
+- [x] Reproduce malformed/oversized diagnostic crashes and reviewer exit masking, bound both public readers and preserve the original failed review exit across all candidate diagnostics.
+
+- [x] Reproduce missing native workflow triggers with real transitive input paths and negative controls; include native build/acceptance/proof/corpus and pytest/bootstrap inputs without changing matrix or protected release gates.
+
+- [x] Reproduce uv installed generated-module implicit-root loss; preserve byte-bound generated modules in the existing private overlay with mismatch/ambiguity, explicit-root and lock controls.
+
+- [x] Reproduce candidate failure-projector host import shadowing through actual workflow launch flags; isolate Python while retaining bounded diagnostics, private stderr and original reviewer exits.
