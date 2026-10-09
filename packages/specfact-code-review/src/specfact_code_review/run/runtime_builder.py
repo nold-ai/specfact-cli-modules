@@ -62,6 +62,7 @@ _BUILDER_FILES = (
     "target_coverage.py",
     "installed_coverage.py",
     "target_pylint.py",
+    "target_crosshair.py",
     "sitecustomize.py",
 )
 _BUILD_TIMEOUT_SECONDS = 4500

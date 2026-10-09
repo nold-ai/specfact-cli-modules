@@ -40,3 +40,9 @@ All tasks below are future implementation work. This planning change completes n
 - [ ] 5.1 Prove the implementation remains unpublished and excludes external adapters, checkpoint execution, and final conformance.
 - [ ] 5.2 Open the implementation PR to `dev` as the final pre-merge task, linking both repositories and all evidence.
 - [ ] 5.3 After merge, run `openspec archive preflight-02-assurance-runtime`, update ordering/source mirrors, and remove the dedicated worktree and merged branch.
+
+## Agentic SDLC follow-up acceptance
+
+- [ ] Verify the 2026-10-04 approved scope against live issue/release readiness before implementation.
+- [ ] Derive negative tests from the amendment scenarios before behavior edits; implement seal additions only through the owning released contracts.
+- [ ] Preserve independent producer status, optional context/assurance and existing lean release dependencies; document exact versions and rollback.

@@ -103,3 +103,107 @@ Runtime Requirements integration and adoption SHALL validate the exact immutable
 - **WHEN** the installed combination passes the existing representative acceptance fixtures
 - **THEN** the compatibility prerequisite is satisfied for that exact combination
 - **AND** this does not activate or replace the separate R09 required-policy cutover.
+
+### Requirement: Optional context and advisory producer feedback
+
+Producer adapters SHALL retain original severity/rule, producer identity, artifact digest, snapshot identity and verification basis separately from producer trust. Optional decision-context drift SHALL present affected obligations, test/configuration changes and missing evidence. R09 SHALL remain pure reconciliation; execution SHALL remain in workflow adapters. Structured pytest identity SHALL be certified first. One controller SHALL bound total attempts/elapsed time across selected loops and SHALL stop on exhaustion, no progress, oscillation or required human decisions.
+
+#### Scenario: Heuristic finding from trusted producer
+
+- **GIVEN** an authenticated producer emitting a heuristic finding
+- **WHEN** feedback is normalized
+- **THEN** producer trust and heuristic basis remain distinct and the original finding is available.
+
+#### Scenario: Advisory convergence with failed tests
+
+- **GIVEN** a converged advisory and a failed required test
+- **WHEN** verification is aggregated
+- **THEN** the test remains failed and the result cannot pass.
+
+#### Scenario: Context drift during verification
+
+- **GIVEN** a bound context, test or configuration changing during execution
+- **WHEN** result reuse is evaluated
+- **THEN** reuse is rejected for affected obligations and source/index bytes are preserved.
+
+#### Scenario: Nested repair would exceed budget
+
+- **GIVEN** an optional checkpoint requesting repair within an active workflow loop
+- **WHEN** the request is handled
+- **THEN** it consumes the same controller budget rather than starting a new independent attempt allowance.
+
+### Requirement: Early Critical Assumption Guidance
+
+Reusable workflow guidance SHALL select one or two approach-invalidating assumptions for nontrivial behavior changes and require the smallest relevant existing observable probe before dependent implementation. Results and limitations SHALL use existing planning/evidence sections. Disproved assumptions SHALL return dependent work to design; unsupported probes SHALL remain unresolved. Probe evidence SHALL NOT replace required verification or imply broader PASS. Documentation-only work SHALL record an applicability rationale.
+
+#### Scenario: Routine change uses proportionate checks
+
+- **GIVEN** a routine change with existing applicable checks
+- **WHEN** the workflow selects review and evidence work
+- **THEN** it uses those checks without an extra default review lane or mandatory reviewer panel.
+
+#### Scenario: Critical boundary is exercised early
+
+- **GIVEN** a nontrivial assurance, persistence, signing or compatibility change
+- **WHEN** dependent implementation is about to begin
+- **THEN** one or two critical assumptions and the smallest relevant existing boundary probe are recorded and exercised first, with limitations visible.
+
+#### Scenario: Probe disproves the approach
+
+- **GIVEN** evidence disproving a selected assumption
+- **WHEN** dependent readiness is considered
+- **THEN** dependent work returns to design and cannot be presented as ready; independent work may continue.
+
+#### Scenario: Probe is unsupported
+
+- **GIVEN** a selected assumption whose observable probe cannot run in the available environment
+- **WHEN** readiness is summarized
+- **THEN** that assumption remains unresolved with the missing evidence stated; independent work can continue without a proof or dependent-readiness claim.
+
+#### Scenario: Documentation-only applicability
+
+- **GIVEN** a change containing planning or documentation edits only
+- **WHEN** assumption checks are selected
+- **THEN** a brief applicability rationale is recorded without fabricated executable or failing-first evidence.
+
+### Requirement: Evidence-Based Finding Disposition
+
+Workflow guidance SHALL distinguish confirmed defects, disproved concerns, suggestions and unresolved claims using the violated requirement or concrete invariant, reachable failure path and supporting evidence. Model agreement SHALL NOT establish proof. Review input SHALL include assumptions, evidence, affected obligations and exclusions within applicable existing review lanes. A disposition SHALL NOT waive a required finding under effective governance, alter producer verdicts or reset controller budgets.
+
+#### Scenario: Confirmed defect and preference have different dispositions
+
+- **GIVEN** an evidenced reachable invariant violation and a separate preference without that violation
+- **WHEN** findings are triaged
+- **THEN** the defect remains actionable and the preference receives an evidenced disposition subject to effective governance, retaining original producer references and any required remediation.
+
+#### Scenario: Agreement lacks failure evidence
+
+- **GIVEN** multiple models agreeing with an unsupported claim
+- **WHEN** the claim is triaged
+- **THEN** agreement remains supporting context and the claim stays unresolved until evidence or the owning policy supplies a decision.
+
+### Requirement: Compact Repair Handoffs Preserve Coverage
+
+Guidance SHALL keep one writer, batch compatible fixes and reuse existing handoffs containing the delta, affected assumptions, remaining findings and original evidence references. Boundary drift or uncertain impact SHALL broaden review and affected-gate rechecks. Handoffs SHALL retain consumed budgets and SHALL NOT weaken required final candidate coverage.
+
+#### Scenario: Boundary changes during a correction batch
+
+- **GIVEN** a correction affecting a public, assurance, persistence, signing or compatibility boundary, or uncertain dependency impact
+- **WHEN** the next review/recheck is selected
+- **THEN** review broadens, all affected gates are rebound to current inputs and uncertain applicability selects the complete lane within the same controller budget.
+
+#### Scenario: Compact PR repair handoff retains authority and budget
+
+- **GIVEN** an authorized PR correction batch and consumed shared controller budget
+- **WHEN** repair hands off its delta, affected assumptions, remaining findings and original evidence references
+- **THEN** one writer retains the same authority and consumed budget; boundary drift broadens review and current-head affected-gate rechecks before external writes.
+
+### Requirement: Honest Delivery Overhead Evaluation
+
+Guidance SHALL reuse existing records and distinguish token categories, billed charges, elapsed time, active effort and waiting with units and source references. Missing values SHALL remain unknown. Bounded trials SHALL report early discoveries, later escapes, correction batches and overhead without claiming causal or monetary savings. No ledger, schema or automatic collection SHALL be introduced by this amendment.
+
+#### Scenario: Billing or active effort is unavailable
+
+- **GIVEN** existing timings/token records without actual billed charges or measured active effort
+- **WHEN** a subsequently authorized trial is assessed
+- **THEN** available measures retain their categories and units, unavailable values remain unknown and savings are unproven.

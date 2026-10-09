@@ -449,3 +449,105 @@ def test_portable_pytest_command_transmits_verified_module_names(monkeypatch):
     assert request["coverage_modules"] == ["standalone"]
     assert request["coverage_directories"] == []
     assert request["selectors"] == ["tests"]
+
+
+def _reject_response_imports(monkeypatch):
+    import builtins
+
+    original = builtins.__import__
+
+    def guarded(name, *args, **kwargs):
+        if name == "specfact_code_review.run.runner":
+            raise AssertionError("response helpers must wait for observations")
+        return original(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", guarded)
+
+
+def test_malformed_pytest_json_avoids_coverage_and_response_setup(monkeypatch):
+    _reject_response_imports(monkeypatch)
+    planned = []
+    monkeypatch.setattr(portable_worker, "plan_installed_coverage", lambda *a, **k: planned.append((a, k)))
+    findings = portable_worker.run_portable_pytest([Path("test_app.py")], ("portable-pytest-v2", "{"))
+    assert planned == []
+    assert len(findings) == 1
+    assert findings[0].tool == "pytest" and findings[0].category == "tool_error"
+    assert "Expecting property name" in findings[0].message
+    assert findings[0].severity == "error"
+
+
+def test_failed_pytest_command_setup_does_not_load_response_helpers(monkeypatch):
+    _reject_response_imports(monkeypatch)
+
+    def fail(*_args):
+        raise ValueError("existing preparation failure")
+
+    monkeypatch.setattr(portable_worker, "_portable_pytest_command", fail)
+    findings = portable_worker.run_portable_pytest([Path("test_app.py")], ("portable-pytest-v2", "{}"))
+    assert len(findings) == 1
+    assert findings[0].message == "existing preparation failure"
+    assert findings[0].severity == "error"
+
+
+def test_valid_pytest_command_retains_bridge_fields_and_selected_inputs(monkeypatch):
+    bridge = CoverageBridge(
+        directories=(Path("measured"),),
+        mappings=(),
+        diagnostics={},
+        candidates={"source.py": ("candidate.py",)},
+        measured_origins=("installed.py",),
+        modules=("module",),
+    )
+    calls = []
+    monkeypatch.setattr(
+        portable_worker, "plan_installed_coverage", lambda files, **kw: calls.append((files, kw)) or bridge
+    )
+    monkeypatch.setattr(portable_worker, "target_command", lambda domain, argv: [domain, *argv])
+    files = [Path("source.py")]
+    actual_bridge, command = portable_worker._portable_pytest_command(
+        files, '{"selected_tests":["tests/test_source.py"]}'
+    )
+    assert actual_bridge is bridge
+    assert calls == [
+        (files, {"snapshot": Path.cwd(), "site_packages": Path("/opt/specfact/project-runtime/site-packages")})
+    ]
+    assert command[0] == "pytest-observe"
+    assert json.loads(command[1]) == {
+        "selected_tests": ["tests/test_source.py"],
+        "coverage_directories": ["measured"],
+        "coverage_modules": ["module"],
+        "coverage_candidates": ["candidate.py", "installed.py"],
+    }
+
+
+def test_malformed_pytest_command_decodes_before_planning(monkeypatch):
+    def unexpected_plan(*_args, **_kwargs):
+        raise AssertionError("malformed JSON must not plan coverage")
+
+    monkeypatch.setattr(portable_worker, "plan_installed_coverage", unexpected_plan)
+    with pytest.raises(json.JSONDecodeError):
+        portable_worker._portable_pytest_command([Path("source.py")], "{")
+
+
+@pytest.mark.parametrize("fail_import", [False, True])
+def test_response_helpers_wait_for_completed_observation(monkeypatch, observe_coverage_policy, fail_import):
+    import builtins
+
+    original = builtins.__import__
+
+    def guarded(name, *args, **kwargs):
+        if name == "specfact_code_review.run.runner":
+            assert portable_worker.Path("/opt/specfact/tmp/pytest-observation.json").is_file()
+            if fail_import:
+                raise ImportError("controlled unavailable response helper")
+        return original(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", guarded)
+    if fail_import:
+        with pytest.raises(ImportError, match="controlled unavailable response helper"):
+            observe_coverage_policy(_coverage_observation(), 1)
+    else:
+        findings = observe_coverage_policy(_coverage_observation(), 1)
+        assert len(findings) == 1
+        assert findings[0].rule == "TEST_COVERAGE_POLICY_FAILED"
+        assert findings[0].severity == "error"

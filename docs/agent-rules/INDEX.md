@@ -14,7 +14,7 @@ tracks:
   - .github/copilot-instructions.md
   - docs/agent-rules/**
   - scripts/validate_agent_rule_applies_when.py
-last_reviewed: 2026-04-12
+last_reviewed: 2026-10-05
 exempt: false
 exempt_reason: ""
 id: agent-rules-index
@@ -43,6 +43,7 @@ This page is the canonical loader for repository governance instructions. `AGENT
 6. Reject implementation from the `dev` or `main` checkout unless the user explicitly overrides that rule.
 7. If GitHub hierarchy metadata is needed and `.specfact/backlog/github_hierarchy_cache.md` is missing or stale, refresh it with `python scripts/sync_github_hierarchy_cache.py`.
 8. Load additional rule files from the applicability matrix below before implementation.
+9. Load [`15-intent-and-scope.md`](./15-intent-and-scope.md) and apply its ask-decide-challenge checkpoint before architecture or scope expansion.
 
 ## Precedence
 
@@ -60,6 +61,7 @@ This page is the canonical loader for repository governance instructions. `AGENT
 | 0 | `INDEX.md` | Deterministic rule dispatch and precedence |
 | 5 | `05-non-negotiable-checklist.md` | Invariant SHALL gates |
 | 10 | `10-session-bootstrap.md` | Startup checks and stop conditions |
+| 15 | `15-intent-and-scope.md` | Actual use case, design tradeoffs, effort bounds, and scope challenges |
 
 ## Applicability matrix
 
@@ -87,7 +89,7 @@ Use these canonical `applies_when` tokens in rule file frontmatter under `docs/a
 
 | Matrix row (human summary) | Canonical signals (`applies_when`) | Required rule files | Optional rule files |
 | --- | --- | --- | --- |
-| Any implementation request | `implementation`, `openspec-change-selection`, `verification` | `10-session-bootstrap.md`, `40-openspec-and-tdd.md`, `50-quality-gates-and-review.md` | `20-repository-context.md` |
+| Any implementation request | `implementation`, `openspec-change-selection`, `verification` | `10-session-bootstrap.md`, `15-intent-and-scope.md`, `40-openspec-and-tdd.md`, `50-quality-gates-and-review.md` | `20-repository-context.md` |
 | Code or docs changes on a branch | `branch-management`, `implementation` | `30-worktrees-and-branching.md` | `80-current-guidance-catalog.md` |
 | Public GitHub issue work | `github-public-work`, `change-readiness` | `60-github-change-governance.md` | `30-worktrees-and-branching.md` |
 | Release or finalization work | `finalization`, `release`, `documentation-update`, `verification` | `70-release-commit-and-docs.md`, `50-quality-gates-and-review.md` | `80-current-guidance-catalog.md` |
@@ -97,6 +99,7 @@ Use these canonical `applies_when` tokens in rule file frontmatter under `docs/a
 
 - [`05-non-negotiable-checklist.md`](./05-non-negotiable-checklist.md): always-load SHALL gates
 - [`10-session-bootstrap.md`](./10-session-bootstrap.md): startup checks, compact context loading, and stop behavior
+- [`15-intent-and-scope.md`](./15-intent-and-scope.md): ask-decide-challenge checkpoint for use cases, trust assumptions, architecture, and effort
 - [`20-repository-context.md`](./20-repository-context.md): project overview, commands, architecture, and layout
 - [`30-worktrees-and-branching.md`](./30-worktrees-and-branching.md): branch protection, worktree policy, and conflict avoidance
 - [`40-openspec-and-tdd.md`](./40-openspec-and-tdd.md): OpenSpec selection, change validity, strict TDD order, and archive rules

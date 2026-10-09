@@ -195,3 +195,18 @@ requirements:
         observable: >-
           Strict OpenSpec validation retains the requirement and its scenarios
           without claiming implementation or test execution.
+  openspec:preflight-02-assurance-runtime:preflight-assurance-runtime:optional-decision-context-binding:
+    rationale: Make the approved planning requirement reviewable without claiming runtime evidence.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#431
+    touchpoints:
+    - id: preflight-assurance-runtime-spec
+      kind: config_file
+      locator: openspec/changes/preflight-02-assurance-runtime/specs/preflight-assurance-runtime/spec.md
+    verification_cases:
+    - case_id: optional-decision-context-binding-inspection
+      scenario_id: optional-decision-context-binding
+      method: inspection
+      intent: Inspect Optional decision context binding and all its acceptance scenarios.
+      observable: Strict OpenSpec validation retains the requirement and scenarios. Planning inspection only; tests,
+        implementation and signed producer acceptance remain pending.

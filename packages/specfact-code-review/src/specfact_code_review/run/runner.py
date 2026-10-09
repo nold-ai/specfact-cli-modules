@@ -8107,6 +8107,16 @@ def _not_applicable_range_member(
     }
 
 
+def _incomplete_snapshot_findings(
+    base_findings: list[ReviewFinding],
+    head_findings: list[ReviewFinding],
+) -> list[ReviewFinding]:
+    """Keep incomplete tool evidence from both snapshots beside ordinary head findings."""
+    selected = list(head_findings)
+    selected.extend(finding for finding in base_findings if finding.category == "tool_error")
+    return [finding.model_copy(update={"differential_state": "unknown"}) for finding in selected]
+
+
 def _classify_range_member(
     member: str,
     context: RangeDifferentialContext,
@@ -8125,9 +8135,7 @@ def _classify_range_member(
     if not _member_snapshot_is_consistent(base_evidence, base_findings) or not _member_snapshot_is_consistent(
         head_evidence, head_findings
     ):
-        unknown_findings = [
-            finding.model_copy(update={"differential_state": "unknown"}) for finding in (head_findings or base_findings)
-        ]
+        unknown_findings = _incomplete_snapshot_findings(base_findings, head_findings)
         return (
             _unknown_range_member(
                 member,

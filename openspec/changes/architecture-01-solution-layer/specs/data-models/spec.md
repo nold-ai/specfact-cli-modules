@@ -1,13 +1,13 @@
-## MODIFIED Requirements
+## ADDED Requirements
 
-### Requirement: Data Models
-The system SHALL extend project-level models with an architecture namespace linked to requirements.
+### Requirement: Architecture Namespace Consumer
+The modules runtime SHALL consume the released optional core architecture namespace, preserving requirement associations when present, without defining a competing project model.
 
 #### Scenario: Architecture model references requirement IDs
 - **GIVEN** a solution architecture artifact
 - **WHEN** model validation runs
-- **THEN** each architecture document includes requirement identifiers
-- **AND** referenced IDs preserve stable cross-layer linkage.
+- **THEN** present requirement identifiers preserve stable cross-layer linkage
+- **AND** absent requirement associations are reported as missing evidence without rejecting the imported artifact.
 
 #### Scenario: Architecture namespace remains optional for backward compatibility
 - **GIVEN** older bundles without architecture data

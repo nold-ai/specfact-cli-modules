@@ -329,6 +329,8 @@ For every checkpoint/conformance invocation, human and JSON renderers SHALL deri
 
 When optional checkpoint/conformance assurance is explicitly selected, the first rollout SHALL measure checkpoint behavior in shadow mode and SHALL exercise both accepted defect fixtures and representative known-green controls. Every corpus result and live observation SHALL bind the exact candidate implementation commit/tree and runtime/module identity, release-surface, policy, relevant configuration, corpus, runner, and toolchain digests. Any promotion-relevant identity change, including release preparation, SHALL invalidate the affected evidence and require recollection; evidence from an older candidate SHALL NOT authorize blocking for changed behavior. Blocking SHALL remain disabled until every corpus case produces its predeclared status, authority, finding set, and exit behavior; the exact current candidate's corpus has zero false PASS, zero false block, and no destructive/ambiguous behavior; and its live shadow observations meet a rollout-policy threshold declared before collection. The default threshold SHALL require at least 20 applicable known-good observations for each enabled scope/profile pair and at least 100 in aggregate, with both each pair's false-block rate and the aggregate rate no greater than 1%. Repository policy MAY require a larger per-pair or aggregate sample or lower rate but SHALL NOT weaken those defaults.
 
+The thresholds SHALL be presented as operational sample gates and observed rates, not proof of a population false-block rate at most 1%. With zero failures, reports SHALL show the one-sided 95% binomial upper bound `1 - 0.05^(1/n)` and its independent representative sampling assumptions: approximately 13.9% at n=20 and 3.0% at n=100. A bound below 1% requires 299 zero-failure observations under those assumptions; this SHALL NOT change ordinary delivery requirements.
+
 #### Scenario: C14 regression fixture is exercised
 
 - **GIVEN** an accepted fixture represents an illegal exit, cache identity drift, malformed input, deletion-only change, difficult path, suppression relocation, or FAIL/UNKNOWN precedence defect
@@ -405,3 +407,29 @@ The implementation PR SHALL prepare the versioned manifest and SHALL use the doc
 - **WHEN** it resolves the canonical module and workflow identities
 - **THEN** it consumes the exact signed #434 module identity, preflight workflow identity/digest, and implementation-check workflow identity/digest
 - **AND** #434 contains no harness-specific adapter package.
+
+### Requirement: Policy-selected decision context conformance
+
+Selected context-bound assurance SHALL include the decision/source digest in cache and affected-obligation identity. It SHALL reuse existing finding categories with specific reason codes: changed context is stale/UNKNOWN, unavailable required resolution is unverifiable/UNKNOWN and a reconciled behavioral contradiction is violated/FAIL. An unresolved ordinary assumption SHALL remain advisory. Shared workflow presentation and repair budgets SHALL preserve independent producer outcomes. Missing trace association SHALL NOT prove missing behavior.
+
+#### Scenario: Required resolution is unavailable
+
+- **GIVEN** selected policy requires resolution of a touched bound assumption
+- **WHEN** matching evidence is unavailable
+- **THEN** the assurance obligation is unverifiable/UNKNOWN with its source, not a demonstrated contradiction.
+
+#### Scenario: Contradiction has current evidence
+
+- **GIVEN** current correctly bound evidence contradicts a required decision observable
+- **WHEN** conformance is evaluated
+- **THEN** it is violated/FAIL and no advisory verdict can mask it.
+
+### Requirement: Operational samples retain uncertainty
+
+Promotion reports SHALL preserve observed rates, denominators and sampling limitations separately from population confidence claims. Existing 20-per-pair/100-overall operational thresholds SHALL remain unchanged.
+
+#### Scenario: Zero false blocks in the operational sample
+
+- **GIVEN** 20 per-pair or 100 aggregate known-good observations without false blocks
+- **WHEN** rollout evidence is reported
+- **THEN** the operational gate and the approximately 13.9% or 3.0% one-sided upper bound are distinct, without a <=1% population assertion.

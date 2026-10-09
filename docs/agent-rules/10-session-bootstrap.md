@@ -12,7 +12,7 @@ tracks:
   - docs/agent-rules/**
   - .specfact/backlog/github_hierarchy_cache.md
   - scripts/sync_github_hierarchy_cache.py
-last_reviewed: 2026-04-12
+last_reviewed: 2026-10-05
 exempt: false
 exempt_reason: ""
 id: agent-rules-session-bootstrap
@@ -41,6 +41,7 @@ depends_on:
 5. If GitHub hierarchy data is required, confirm `.specfact/backlog/github_hierarchy_cache.md` is present and fresh enough for the task.
 6. If the cache is missing or stale, refresh it with `python scripts/sync_github_hierarchy_cache.py`.
 7. Load the additional rule files required by the task signal from the index.
+8. Apply [`15-intent-and-scope.md`](./15-intent-and-scope.md); reuse confirmed intent and decisions from the session, and identify consequential gaps before architectural work. Do not require clarification for read-only explanations or routine choices with clear scope.
 
 ## Hatch environment bootstrap
 

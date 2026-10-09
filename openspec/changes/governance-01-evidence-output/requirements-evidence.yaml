@@ -46,3 +46,18 @@ requirements:
         observable: Policy serialization retains original verdicts, policy identity and exception context while
           separating current execution from optional chronology. This is planned inspection, not runtime execution
           or implementation proof.
+  openspec:governance-01-evidence-output:governance-evidence-output:optional-digest-bound-standard-attestation-export:
+    rationale: Make the approved planning requirement reviewable without claiming runtime evidence.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#169
+    touchpoints:
+    - id: governance-evidence-output-spec
+      kind: config_file
+      locator: openspec/changes/governance-01-evidence-output/specs/governance-evidence-output/spec.md
+    verification_cases:
+    - case_id: optional-digest-bound-standard-attestation-export-inspection
+      scenario_id: optional-digest-bound-standard-attestation-export
+      method: inspection
+      intent: Inspect Optional digest-bound standard attestation export and all its acceptance scenarios.
+      observable: Strict OpenSpec validation retains the requirement and scenarios. Planning inspection only; tests,
+        implementation and signed producer acceptance remain pending.

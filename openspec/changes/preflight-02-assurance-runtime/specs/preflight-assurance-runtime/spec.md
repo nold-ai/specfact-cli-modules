@@ -194,3 +194,19 @@ When optional preflight assurance is explicitly selected, consumers SHALL be abl
 - **WHEN** the referenced workflow is installed
 - **THEN** the agent can invoke the canonical loop through the harness-native form
 - **AND** the detailed workflow remains sourced from the module-owned skill.
+
+### Requirement: Optional decision context binding
+
+An explicitly selected assurance policy MAY bind a versioned decision-context digest and original sources to a seal. Imported owner/disposition strings SHALL NOT authenticate approval. Legacy plan hashes SHALL remain unchanged. Missing optional context SHALL NOT block ordinary delivery or existing context-free optional assurance. Structural readiness SHALL NOT be represented as architecture quality approval.
+
+#### Scenario: Accepted decision changes after binding
+
+- **GIVEN** a seal bound to an accepted decision digest
+- **WHEN** the decision changes
+- **THEN** context-bound assurance is stale until reviewed context is rebound; ordinary current execution remains a separate claim.
+
+#### Scenario: Imported answer has no authority
+
+- **GIVEN** an imported answered_by value without authenticated approval
+- **WHEN** a required approval is evaluated
+- **THEN** the answer is retained as an assertion and cannot satisfy the authenticated obligation.
