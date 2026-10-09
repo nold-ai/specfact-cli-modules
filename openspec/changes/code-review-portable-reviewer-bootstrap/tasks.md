@@ -54,3 +54,12 @@
 - [ ] Resolve the fresh P1 after its final verified fix is pushed.
 
 - [x] Reproduce and isolate parent-test CrossHair icontract mutation; preserve the unchanged project ViolationError assertion.
+
+## Release PR #502 upstream patch
+
+- [x] Reproduce both valid no-impact preparation failures and malformed-claim controls.
+- [x] Preserve normal review, cleanup, exact failure exits and privacy while accepting valid no-impact preparation.
+- [x] Triage CodeQL fixture findings without weakening deliberate hash errors or exceptional cache teardown.
+- [x] Prepare patch 0.51.2 in bugfix/release-502-autofix and separate PR #503 to dev; normal CI signing precedes promotion.
+
+- [x] Reproduce and fix release review's exact child pass-count false failure without changing selections, bounds or contract assertions.

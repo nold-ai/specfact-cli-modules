@@ -231,3 +231,13 @@ parsers and projection. Stale metadata cannot enable it; ordinary request bytes,
 native completed errors and timeout error/UNKNOWN remain. The user approved
 known reviewer timeout failures as an exception pending promotion, not as PASS;
 real process crashes and tests remain required triage.
+
+## Release autofix scope (2026-10-09)
+
+The owner explicitly requested #502 triage and a separate patch-level bugfix PR
+to dev. Reuse the active portable reviewer scope for the two reproduced hosted
+no-impact preparation defects and fixture annotations. Accept only exact
+no-governed-impact outcomes with successful commands; retain normal review and
+all deadlines, failure propagation and cleanup. Patch 0.51.2 follows published
+0.51.1; no direct dev/main commits, merge or publication is authorized. Known
+reviewer timeout exceptions remain incomplete evidence.

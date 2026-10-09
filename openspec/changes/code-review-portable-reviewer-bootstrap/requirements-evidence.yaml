@@ -216,3 +216,31 @@ requirements:
       method: test
       intent: Preserve every literal value, type and identity, constructor/union inputs, existing registrations and restoration on every exit.
       observable: Actual pinned CLI counterexample regressions fail before code; no contract selection or deadline change is permitted. Hosted TypeError attribution remains separate until exact-head execution confirms it.
+
+  openspec:code-review-portable-reviewer-bootstrap:review-portable-bootstrap:no-impact-release-preparation-preserves-normal-review:
+    rationale: Registry-only and workflow-only release changes must retain legitimate no-impact scope without accepting incomplete preparation.
+    stakeholder_refs: [nold-ai/specfact-cli-modules#460]
+    touchpoints:
+    - id: no-impact-release-preparation
+      kind: config_file
+      locator: openspec/changes/code-review-portable-reviewer-bootstrap/specs/review-portable-bootstrap/spec.md
+    verification_cases:
+    - case_id: release-no-impact
+      scenario_id: no-impact-release-preparation-preserves-normal-review
+      method: test
+      intent: Execute actual candidate shell and isolated independent controller for successful and invalid no-impact outcomes.
+      observable: Failing-first tests demonstrate both preparation rejections; valid no-impact invokes normal review and retains 0/2/7 exits, malformed claims remain blocked.
+
+  openspec:code-review-portable-reviewer-bootstrap:review-portable-bootstrap:ordered-contract-regression-accepts-additional-valid-cases:
+    rationale: A fixed child summary count incorrectly rejects additional successful constructor cases.
+    stakeholder_refs: [nold-ai/specfact-cli-modules#460]
+    touchpoints:
+    - id: ordered-contract-regression
+      kind: config_file
+      locator: openspec/changes/code-review-portable-reviewer-bootstrap/specs/review-portable-bootstrap/spec.md
+    verification_cases:
+    - case_id: ordered-contract-additional-case
+      scenario_id: ordered-contract-regression-accepts-additional-valid-cases
+      method: test
+      intent: Add a controlled valid constructor parameter and reproduce the fixed-summary false failure before removing the count assertion.
+      observable: Child tests all pass but the original ordered regression fails; after removing only the summary count, both expanded and ordinary selections pass with original bounds and assertions.

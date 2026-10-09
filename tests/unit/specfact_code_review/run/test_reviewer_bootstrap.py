@@ -107,9 +107,13 @@ def test_cache_distinguishes_minima_and_evicts_without_changing_windows():
 @pytest.mark.parametrize("error", [RuntimeError, SystemExit])
 def test_cache_restores_upstream_function_after_exception(error):
     original = symilar.hash_lineset
-    with pytest.raises(error), target_pylint._bounded_similarity_hashes() as cached:
-        cached(symilar.LineSet("fixture", ["a\n", "b\n", "c\n", "d\n"]), 3)
-        raise error("fixture failure")
+    cached = None
+    with pytest.raises(error):
+        assert symilar.hash_lineset is original
+        with target_pylint._bounded_similarity_hashes() as cached:
+            cached(symilar.LineSet("fixture", ["a\n", "b\n", "c\n", "d\n"]), 3)
+            raise error("fixture failure")
+    assert cached is not None
     assert symilar.hash_lineset is original
     assert cached.cache_info().currsize == 0
 

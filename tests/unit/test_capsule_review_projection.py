@@ -79,8 +79,15 @@ def _write_preparation_fixture(tmp_path, case):
     descriptor = tmp_path / "descriptor.json"
     descriptor.write_text("{}")
     payload = {"runtimes": {side: {"descriptor": str(descriptor)} for side in ("base", "head")}}
-    if case == "not_applicable":
-        payload = {"status": "NOT_APPLICABLE", "runtimes": {}}
+    if case.startswith("not_applicable"):
+        payload = {"scope": "index", "status": "NOT_APPLICABLE", "diagnostic": "no_governed_impact", "runtimes": {}}
+        overrides = {
+            "not_applicable_reason": {"diagnostic": "private-reason"},
+            "not_applicable_scope": {"scope": "full"},
+            "not_applicable_runtimes": {"runtimes": ["private"]},
+            "not_applicable_nonempty": {"runtimes": {"head": {"descriptor": str(descriptor)}}},
+        }
+        payload.update(overrides.get(case, {}))
     elif case == "missing_base":
         payload["runtimes"].pop("base")
     elif case == "missing_files":
@@ -94,7 +101,16 @@ def _write_preparation_fixture(tmp_path, case):
     "case,expected",
     [
         ("prepared", (0, "PREPARED", "prepared", True, True, True, True)),
-        ("not_applicable", (1, "INCOMPLETE", "not_applicable", False, False, False, False)),
+        ("not_applicable", (0, "NOT_APPLICABLE", "not_applicable", False, False, False, False)),
+        *[
+            (case, (1, "INCOMPLETE", "invalid_not_applicable", False, False, False, False))
+            for case in (
+                "not_applicable_reason",
+                "not_applicable_scope",
+                "not_applicable_runtimes",
+                "not_applicable_nonempty",
+            )
+        ],
         ("missing_base", (1, "INCOMPLETE", "missing_descriptor_fields", False, True, False, True)),
         ("invalid", (1, "INCOMPLETE", "invalid_json", False, False, False, False)),
         ("missing_files", (1, "INCOMPLETE", "missing_descriptor_files", True, True, False, False)),
@@ -200,7 +216,8 @@ def test_namespace_audit_retains_only_fixed_observation_booleans(tmp_path, monke
     result = _run_projector(tmp_path, program)
     assert result.returncode == 0
     public = json.loads(result.stdout)
-    assert public.pop("phase") == "namespace_audit"
+    phase = public.pop("phase")
+    assert phase == "namespace_audit"
     assert set(map(type, public.values())) == {bool}
     keys = (
         "audit_captured",
@@ -723,7 +740,7 @@ def preparation_shell(tmp_path, monkeypatch):
 
     def invoke(preparation):
         preparation_exit, report_case = preparation
-        report = _write_preparation_fixture(tmp_path, "invalid" if report_case == "invalid" else "prepared")
+        report = _write_preparation_fixture(tmp_path, "prepared" if report_case == "missing" else report_case)
         (tmp_path / "controlled-report.json").write_text(report.read_text())
         for name, value in {
             "CUSTOMER_ROOT": str(tmp_path),
@@ -748,6 +765,9 @@ def preparation_shell(tmp_path, monkeypatch):
     "preparation,expected",
     [
         ((0, "prepared"), (0, "PREPARED", "prepared")),
+        ((0, "not_applicable"), (0, "NOT_APPLICABLE", "not_applicable")),
+        ((7, "not_applicable"), (7, "INCOMPLETE", "preparation_command_failed")),
+        ((0, "not_applicable_reason"), (1, "INCOMPLETE", "invalid_not_applicable")),
         ((7, "prepared"), (7, "INCOMPLETE", "preparation_command_failed")),
         ((0, "invalid"), (1, "INCOMPLETE", "invalid_json")),
         ((7, "invalid"), (7, "INCOMPLETE", "invalid_json")),
@@ -759,13 +779,13 @@ def test_preparation_shell_preserves_failure_and_projects_incomplete(preparation
     import json
 
     expected_exit, expected_status, expected_outcome = expected
-    prepared = expected_status == "PREPARED"
+    accepted = expected_status in {"PREPARED", "NOT_APPLICABLE"}
     result = preparation_shell(preparation)
     assert result.returncode == expected_exit
     lines = result.stdout.splitlines()
     assert lines, "every preparation exit must produce bounded diagnosis"
     projection = json.loads(lines[0])
     assert projection["status"] == expected_status
-    assert ("REVIEW_STARTED" in lines) is prepared
+    assert ("REVIEW_STARTED" in lines) is accepted
     assert "private" not in result.stdout + result.stderr
     assert projection["report_outcome"] == expected_outcome

@@ -9,6 +9,11 @@ and this project follows SemVer for bundle versions.
 
 ### Fixed
 
+- Prepare Code Review 0.51.2 release follow-up: accept successful index
+  no-governed-impact preparation for registry/workflow-only capsule jobs while
+  preserving normal review, cleanup and failure exits. Keep malformed or failed
+  no-impact claims blocking and preserve deliberate fixture error coverage.
+
 - Preserve every declared Literal input in pinned CrossHair 0.0.109, including
   constructor fields, unions and exact boolean/integer/enum identity. Restore
   the invocation-scoped model on exit and retire temporary stack sampling.
