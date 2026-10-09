@@ -1022,3 +1022,19 @@ not-yet-available; the earlier unstaged no-impact run was not counted as planned
 validation. All seven module checksum/version checks pass on the unsigned 0.51.2
 draft. Signing remains ordinary CI; no private key is accessed. Local Darwin
 capsule review is explicitly DEFERRED under the existing owner approval.
+
+## Exact pass-count review correction (2026-10-09, Europe/Berlin)
+
+CodeRabbit Minor: **Remove the exact pass-count assertion.** Spec precedes a
+controlled extra valid DefaultPrefixConstructor parameter in the existing
+selected constructor test. RED: the actual child reports **14 passed in 1.20s**
+and returns zero, while the original outer proof fails only on its fixed
+`13 passed` assertion (**1 failed in 1.67s**). Remove only that summary assertion.
+Expanded GREEN: ordered proof **1 passed in 1.65s**. Restore the temporary added
+parameter so final source is a single-line removal, then run original dispatch,
+constructor and bridge modules: **66 passed in 4.03s**. Selected node IDs, every
+native/contract assertion, child exit enforcement and 30-second bound remain.
+Changed AST/AI-bloat/Radon have zero findings; strict OpenSpec and all seven
+signature/checksum/version checks pass. Module bytes are unchanged, so the
+already prepared upstream 0.51.2 version/signature remains correct. No extra
+full-suite or unchanged paid-review run is used for the one-line test correction.

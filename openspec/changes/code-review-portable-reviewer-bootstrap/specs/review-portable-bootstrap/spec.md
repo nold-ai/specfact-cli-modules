@@ -340,3 +340,16 @@ commands SHALL remain blocking.
 - **WHEN** a no-impact claim has a failed command, wrong reason/scope, malformed runtimes, selected governed paths or nonzero scope exit
 - **THEN** preparation remains INCOMPLETE and cannot reach review
 - **AND** the original command failure takes precedence and raw diagnostic data remains private
+
+### Requirement: Ordered contract regression accepts additional valid cases
+
+The ordered dispatch/constructor/project-contract regression SHALL retain its
+explicit node selections, zero-exit requirement and 30-second bound, while
+accepting additional successful parametrized cases without a fixed summary count.
+
+#### Scenario: Additional valid constructor case is collected
+
+- **WHEN** another valid constructor case joins the selected constructor test
+- **THEN** the ordered regression succeeds when all selected tests succeed
+- **AND** the original bridge contract and constructor assertions remain executed
+- **AND** any nonzero child exit remains blocking

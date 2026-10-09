@@ -406,4 +406,3 @@ def test_dispatch_fixture_retains_later_project_contract_enforcement():
         check=False,
     )
     assert result.returncode == 0, result.stdout + result.stderr
-    assert "13 passed" in result.stdout
