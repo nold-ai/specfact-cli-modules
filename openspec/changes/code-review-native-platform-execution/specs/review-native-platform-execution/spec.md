@@ -1184,3 +1184,11 @@ The repository SHALL execute every retained assertion in a required context that
 - **THEN** it SHALL read at most the existing 32 MiB diagnostic bound plus one overflow byte and emit only a fixed incomplete diagnostic
 - **AND** execution failure in any diagnostic command in the failed candidate/review branches cannot prevent the final original nonzero review exit, including timeout124; no failure becomes PASS and private payload/trace text stays private
 - **AND** unexpected projector stderr is retained only in a private diagnostic file and the public log receives fixed `review_projection_failed` incomplete evidence
+
+
+#### Scenario: Native PR verification follows transitive release inputs
+
+- **WHEN** a PR changes a native preparer, transitive analyzer/build helper, shared acceptance helper, native proof, corpus fixture or repository pytest/bootstrap input
+- **THEN** native release PR filtering SHALL schedule the unchanged secret-free build and nine-cell execution matrix for that change
+- **AND** unrelated documentation, packages and unit tests retain filtered execution; matrix dimensions, deadlines, protected-main signing/publication approval and runtime bytes remain unchanged
+- **AND** trigger regressions distinguish single-star segment matches from recursive double-star matches, so a root script glob cannot conceal missing directory coverage

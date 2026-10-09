@@ -7,10 +7,17 @@ on:
       - scripts/native_release/**
       - scripts/native_analyzer_inputs/**
       - scripts/macos_managed_boundary/**
-      - scripts/*macos*native*.py
-      - scripts/build_macos_managed_*.py
+      - scripts/*native*.py
+      - scripts/*macos*.py
+      - scripts/external_capsule_corpus.py
+      - scripts/capsule_customer_gate.py
       - packages/specfact-code-review/**
-      - tests/native/proof_python_candidate_matrix.py
+      - tests/native/**
+      - tests/fixtures/portable-runtime/**
+      - tests/unit/native_release/**
+      - pyproject.toml
+      - tests/conftest.py
+      - src/specfact_cli_modules/**
       - tests/unit/test_macos_python_candidate_source.py
       - .github/workflows/native-capsule-release.yml
   workflow_dispatch:
