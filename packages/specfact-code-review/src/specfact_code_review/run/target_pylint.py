@@ -3,12 +3,28 @@
 from __future__ import annotations
 
 import sys
+from contextlib import contextmanager
+from functools import lru_cache
 from pathlib import Path
 
+from pylint.checkers import symilar
 from pylint.lint import PyLinter, Run
 
 
 SNAPSHOT_ROOT = Path(globals().get("SNAPSHOT_ROOT", "/opt/specfact/snapshot"))
+
+
+@contextmanager
+def _bounded_similarity_hashes():
+    """Reuse pinned immutable LineSet windows only within this Pylint invocation."""
+    original = symilar.hash_lineset
+    cached = lru_cache(maxsize=256)(original)
+    symilar.hash_lineset = cached
+    try:
+        yield cached
+    finally:
+        symilar.hash_lineset = original
+        cached.cache_clear()
 
 
 def _runtime_source_roots() -> list[str]:
@@ -34,4 +50,5 @@ class _RuntimeRun(Run):
 
 
 if __name__ == "__main__":
-    _RuntimeRun(sys.argv[1:])
+    with _bounded_similarity_hashes():
+        _RuntimeRun(sys.argv[1:])
