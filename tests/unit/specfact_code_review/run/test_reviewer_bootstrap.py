@@ -164,9 +164,10 @@ def test_smart_entry_preserves_required_host_and_portable_failures(codes, expect
     assert module._run_pytest(extra_args) == expected
     assert len(invoked) == calls
     assert "tests/host/proof_capsule_deferred_review_ci.py" in invoked[0]
-    assert invoked[0][-2:] == [
+    assert invoked[0][-3:] == [
         "tests/host/proof_capsule_deferred_review_ci.py",
         "tests/native/proof_native_canonical_path.py",
+        "tests/host/proof_capsule_review_projection_shell.py",
     ]
     if calls == 2:
         if extra_args:

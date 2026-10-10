@@ -349,7 +349,7 @@ run_code_review_gate() {
       .github/workflows/pr-orchestrator.yml scripts/pre-commit-quality-checks.sh scripts/check_capsule_deferral.py scripts/pre_commit_code_review.py \
       tests/native tests/unit/specfact_code_review tests/unit/test_native_broker_cleanup.py pyproject.toml tools/smart_test_coverage.py \
       .github/workflows/code-review-macos-boundary.yml \
-      tests/unit/test_capsule_proof_contexts.py tests/host/proof_capsule_deferred_review_ci.py \
+      tests/unit/test_capsule_proof_contexts.py tests/host/proof_capsule_deferred_review_ci.py tests/host/proof_capsule_review_projection_shell.py \
       tests/unit/test_pre_commit_quality_parity.py tests/unit/test_capsule_review_projection.py tests/unit/scripts/test_pre_commit_code_review.py \
       tests/support/capsule_review_fixtures.py)"; then
       error "Capsule review deferral cannot determine the staged candidate delta against origin/dev."

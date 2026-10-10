@@ -9,6 +9,9 @@ from pathlib import Path
 from typing import Any
 
 
+__all__ = ["WorkerContractError", "_capture_pytest_observation", "_read_pytest_artifact", "_root"]
+
+
 class WorkerContractError(ValueError):
     """The fixed worker invocation, request, or result violated its contract."""
 

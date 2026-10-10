@@ -23,7 +23,11 @@ def test_full_and_smart_host_runs_require_the_retained_host_proof(monkeypatch):
 
     configuration = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
     assert (
-        "pytest " + HOST_PROOF + " tests/native/proof_native_canonical_path.py && pytest tests "
+        "pytest "
+        + HOST_PROOF
+        + " tests/native/proof_native_canonical_path.py "
+        + CONTROLLER_SHELL_PROOF
+        + " && pytest tests "
         in configuration["tool"]["hatch"]["envs"]["default"]["scripts"]["test"]
     )
     monkeypatch.syspath_prepend(str(ROOT / "tools"))
@@ -46,6 +50,7 @@ def test_full_and_smart_host_runs_require_the_retained_host_proof(monkeypatch):
         "pytest",
         HOST_PROOF,
         "tests/native/proof_native_canonical_path.py",
+        CONTROLLER_SHELL_PROOF,
     ]
     assert calls[1][:4] == [module.sys.executable, "-m", "pytest", "tests"]
     assert calls[1][-2:] == ["-n", "0"]
@@ -257,7 +262,7 @@ def _assert_canonical_full(proof):
 
     configuration = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
     command = configuration["tool"]["hatch"]["envs"]["default"]["scripts"]["test"]
-    assert "pytest " + HOST_PROOF + " " + proof + " && pytest tests " in command
+    assert "pytest " + HOST_PROOF + " " + proof + " " + CONTROLLER_SHELL_PROOF + " && pytest tests " in command
 
 
 def _assert_canonical_smart(proof):
@@ -358,8 +363,10 @@ def test_portable_indexed_validator_rejects_uncovered_surface(indexed_review, pa
         checker.validate_indexed_scheduling(paths, paths, "baseline")
 
 
-def test_portable_review_source_policy_measures_scripts(tmp_path, monkeypatch):
+@pytest.mark.parametrize("inherited_destination", [False, True])
+def test_portable_review_source_policy_measures_scripts(tmp_path, monkeypatch, inherited_destination):
     import json
+    import os
     import subprocess
     import sys
     import tomllib
@@ -368,12 +375,16 @@ def test_portable_review_source_policy_measures_scripts(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     for name in ("src", "packages", "tools", "scripts"):
         (tmp_path / name).mkdir()
+    if inherited_destination:
+        blocked = tmp_path / "not-a-directory"
+        blocked.write_text("owned blocker", encoding="utf-8")
+        monkeypatch.setenv("COVERAGE_FILE", str(blocked / "collector"))
     script = tmp_path / "scripts/check_capsule_deferral.py"
     script.write_text("def validate():\n    return True\n\nassert validate()\n", encoding="utf-8")
     probe = """import coverage, json, runpy, sys
 from pathlib import Path
 script = Path(sys.argv[1])
-collector = coverage.Coverage(source=json.loads(sys.argv[2]), branch=True, data_file=None)
+collector = coverage.Coverage(source=json.loads(sys.argv[2]), branch=True, data_file=None, config_file=False)
 collector.start()
 try:
     runpy.run_path(str(script))
@@ -384,6 +395,7 @@ assert collector.analysis2(str(script))[3] == []
 """
     result = subprocess.run(
         [sys.executable, "-c", probe, str(script), json.dumps(configuration["source"])],
+        env={key: value for key, value in os.environ.items() if key != "COVERAGE_FILE"},
         cwd=tmp_path,
         text=True,
         capture_output=True,
@@ -501,3 +513,69 @@ def test_portable_validator_admits_only_complete_approved_job_budget(indexed_rev
     else:
         with pytest.raises(ValueError):
             checker.validate_indexed_scheduling(paths, paths, "baseline")
+
+
+CONTROLLER_SHELL_PROOF = "tests/host/proof_capsule_review_projection_shell.py"
+
+
+@pytest.mark.parametrize("surface", ["full", "smart", "native_ci", "discovery", "trigger"])
+def test_controller_shell_proofs_have_required_host_context(surface):
+    checks = {
+        "full": _assert_controller_shell_full,
+        "smart": _assert_controller_shell_smart,
+        "native_ci": _assert_controller_shell_ci,
+        "discovery": _assert_controller_shell_discovery,
+        "trigger": _assert_controller_shell_trigger,
+    }
+    checks[surface]()
+
+
+def _assert_controller_shell_full():
+    import tomllib
+
+    configuration = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    command = configuration["tool"]["hatch"]["envs"]["default"]["scripts"]["test"]
+    assert CONTROLLER_SHELL_PROOF + " && pytest tests " in command
+
+
+def _assert_controller_shell_smart():
+    assert '"' + CONTROLLER_SHELL_PROOF + '"' in (ROOT / "tools/smart_test_coverage.py").read_text(encoding="utf-8")
+
+
+def _assert_controller_shell_ci():
+    workflow = yaml.safe_load((ROOT / ".github/workflows/code-review-macos-boundary.yml").read_text(encoding="utf-8"))
+    for job_name in ("canonical-linux", "native-boundary"):
+        job = workflow["jobs"][job_name]
+        assert not job.get("continue-on-error", False) and "if" not in job
+        assert CONTROLLER_SHELL_PROOF in "\n".join(str(step.get("run", "")) for step in job["steps"])
+
+
+def _assert_controller_shell_discovery():
+    assert (ROOT / CONTROLLER_SHELL_PROOF).is_file()
+    plan = ProjectPlan(ROOT, manager="hatch", pytest_config={"testpaths": ["tests"], "python_files": ["test_*.py"]})
+    portable = ROOT / "tests/unit/test_capsule_proof_contexts.py"
+    assert select_test_paths(plan, [portable, ROOT / CONTROLLER_SHELL_PROOF], full=False) == (
+        portable.relative_to(ROOT).as_posix(),
+    )
+
+
+def _assert_controller_shell_trigger():
+    workflow = yaml.safe_load((ROOT / ".github/workflows/pr-orchestrator.yml").read_text(encoding="utf-8"))
+    filter_step = next(step for step in workflow["jobs"]["changes"]["steps"] if step.get("id") == "filter")
+    assert CONTROLLER_SHELL_PROOF in yaml.safe_load(filter_step["with"]["filters"])["capsule"]
+
+
+def test_controller_import_isolation_proof_has_no_complexity_warning():
+    from radon.complexity import cc_visit
+
+    from specfact_code_review.tools.radon_runner import _allowed_paths, _map_radon_complexity_findings
+
+    host = ROOT / CONTROLLER_SHELL_PROOF
+    path = host if host.exists() else ROOT / "tests/unit/test_capsule_review_projection.py"
+    blocks = [
+        {"name": block.name, "lineno": block.lineno, "complexity": block.complexity}
+        for block in cc_visit(path.read_text(encoding="utf-8"))
+        if host.exists() or block.name == "test_actual_projector_launch_excludes_untrusted_imports"
+    ]
+    findings = _map_radon_complexity_findings({str(path): blocks}, _allowed_paths([path]))
+    assert findings == [], [(finding.rule, finding.message) for finding in findings]

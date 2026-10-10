@@ -1377,3 +1377,27 @@ The required consumer remains blocking for failed/skipped customer review; no ho
 - **THEN** the finite job limit SHALL permit both phases plus15minutes of setup/diagnostic headroom: independent75minutes, customer90minutes unchanged
 - **AND** indexed deferral SHALL admit only integrated independent45to75minutes, rejecting45,60,90 or unsupported job bounds on the candidate and preserving every other parsed execution field
 - **AND** no phase deadline, analysis input, artifact handoff, isolation, error verdict or failure propagation SHALL change
+
+
+#### Scenario: Controller Bash proofs execute in required host contexts
+
+- **GIVEN** the sealed portable analyzer intentionally provides no Bash executable and hosted evidence reports31 actual Bash-launch FileNotFoundError cases
+- **WHEN** Full, SMART, Linux or any of the three macOS controller boundaries validate release diagnostics
+- **THEN** all original preparation/crash/import-isolation cases and assertions SHALL execute in a required host proof, separately from portable discovery
+- **AND** every host failure SHALL propagate; no case SHALL be skipped, assertion weakened, or shell added to the sealed capsule
+- **AND** pure Python report projection tests SHALL remain portable; the workflow trigger and local deferral surface SHALL include the required new host proof
+
+#### Scenario: Extracted evidence helpers retain scoped analysis and existing consumers
+
+- **GIVEN** worker imports/calls the extracted evidence helpers and scoped Basedpyright reports two unused-function errors
+- **WHEN** their existing cross-module exports are declared explicitly
+- **THEN** the same scoped analyzer SHALL report no unused-function error without changing names, caller binding, identity/path/artifact validation or failure handling
+- **AND** the controller import-isolation fixture SHALL meet unchanged production complexity policy after bounded setup extraction, preserving every original poison and review-exit assertion
+
+
+#### Scenario: Coverage policy probes own their collector state
+
+- **GIVEN** a parent analyzer exports a coverage data path outside the proof-owned temporary directory
+- **WHEN** the real isolated coverage policy probe measures an executed reviewed script
+- **THEN** it SHALL use only proof-owned in-memory collector state and ignore the inherited data-file destination, while still asserting actual script execution and complete measured lines
+- **AND** no parent analyzer coverage configuration, production threshold or admission policy SHALL change

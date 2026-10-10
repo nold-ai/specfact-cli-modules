@@ -20,6 +20,7 @@ def _run_pytest(extra_args: list[str]) -> int:
             "pytest",
             "tests/host/proof_capsule_deferred_review_ci.py",
             "tests/native/proof_native_canonical_path.py",
+            "tests/host/proof_capsule_review_projection_shell.py",
         ],
         cwd=ROOT,
         check=False,

@@ -57,6 +57,7 @@ jobs:
               - ".github/workflows/code-review-macos-boundary.yml"
               - "tests/unit/test_capsule_proof_contexts.py"
               - "tests/host/proof_capsule_deferred_review_ci.py"
+              - "tests/host/proof_capsule_review_projection_shell.py"
               - "tests/support/capsule_review_fixtures.py"
               - "scripts/pre-commit-quality-checks.sh"
               - "scripts/check_capsule_deferral.py"
