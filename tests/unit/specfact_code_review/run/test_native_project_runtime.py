@@ -14,7 +14,7 @@ import zipfile
 from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, Self
 
 import pytest
 from cryptography.hazmat.primitives import serialization
@@ -705,7 +705,7 @@ def test_prepares_authenticated_bundle_through_closed_native_project_plan(monkey
         def __init__(self, _transport: object) -> None:
             self.request: SimpleNamespace | None = None
 
-        def __enter__(self) -> Session:
+        def __enter__(self) -> Self:
             return self
 
         def __exit__(self, *_args: object) -> None:
@@ -1699,15 +1699,19 @@ def test_uv_generated_module_preserves_only_byte_bound_implicit_source(
     overlay = artifact / "source-overlay"
     if source_binding == "matching" and not explicit_roots:
         assert inventory["source_roots"] == ["src"]
-        generated = overlay / "src/customer" / generated_name
-        assert generated.read_bytes() == generated_bytes
-        assert generated.stat().st_mode & 0o777 == 0o400
-        assert {path.relative_to(overlay).as_posix() for path in overlay.rglob("*") if path.is_file()} == {
-            f"src/customer/{generated_name}"
-        }
+        _assert_generated_source_overlay(overlay, generated_name, generated_bytes)
     else:
         assert inventory["source_roots"] == (["src"] if explicit_roots else [])
         assert not overlay.exists()
+
+
+def _assert_generated_source_overlay(overlay, generated_name, generated_bytes):
+    generated = overlay / "src/customer" / generated_name
+    assert generated.read_bytes() == generated_bytes
+    assert generated.stat().st_mode & 0o777 == 0o400
+    assert {path.relative_to(overlay).as_posix() for path in overlay.rglob("*") if path.is_file()} == {
+        f"src/customer/{generated_name}"
+    }
 
 
 @pytest.mark.parametrize("namespace", [False, True])
@@ -1748,23 +1752,7 @@ def test_uv_overlay_excludes_shared_package_dependencies(tmp_path, namespace, ge
         site, "customer", [f"{package}/__init__.py", f"{package}/{generated_name}"]
     )
     foreign_record = _write_native_distribution_record(site, "plugin", [f"{dependency}/__init__.py"])
-    if ownership == "same_owner":
-        record.write_text(record.read_text() + foreign_record.read_text())
-        foreign_record.unlink()
-    elif ownership == "outside_script":
-        record.write_text(record.read_text() + "../../../bin/tool.py,,\n/opt/external/tool.py,,\n")
-    if ownership == "missing":
-        record.unlink()
-    elif ownership == "unrecorded_generated":
-        record.write_text(
-            "".join(line for line in record.read_text().splitlines(keepends=True) if generated_name not in line)
-        )
-    elif ownership == "ambiguous":
-        _write_native_distribution_record(site, "duplicate", [f"{package}/{generated_name}"])
-    elif ownership == "changed_digest":
-        (installed / generated_name).write_bytes(b"VERSION='changed after record'\n")
-    elif ownership == "malformed":
-        record.write_text("malformed,record\n")
+    _mutate_distribution_ownership(record, foreign_record, ownership, installed, generated_name)
     overlay = tmp_path / "overlay"
     if ownership in {"ambiguous", "changed_digest", "malformed"}:
         with pytest.raises(ProjectRuntimeError, match="project_native_source_ownership_invalid"):
@@ -1782,6 +1770,28 @@ def test_uv_overlay_excludes_shared_package_dependencies(tmp_path, namespace, ge
         assert not overlay.exists()
     assert (foreign / "data.txt").read_text() == "dependency resource\n"
     assert not (source / generated_name).exists()
+
+
+def _mutate_distribution_ownership(record, foreign_record, ownership, installed, generated_name):
+    site = record.parent.parent
+    package = installed.relative_to(site).as_posix()
+    if ownership == "same_owner":
+        record.write_text(record.read_text() + foreign_record.read_text())
+        foreign_record.unlink()
+    elif ownership == "outside_script":
+        record.write_text(record.read_text() + "../../../bin/tool.py,,\n/opt/external/tool.py,,\n")
+    if ownership == "missing":
+        record.unlink()
+    elif ownership == "unrecorded_generated":
+        record.write_text(
+            "".join(line for line in record.read_text().splitlines(keepends=True) if generated_name not in line)
+        )
+    elif ownership == "ambiguous":
+        _write_native_distribution_record(site, "duplicate", [f"{package}/{generated_name}"])
+    elif ownership == "changed_digest":
+        (installed / generated_name).write_bytes(b"VERSION='changed after record'\n")
+    elif ownership == "malformed":
+        record.write_text("malformed,record\n")
 
 
 @pytest.mark.parametrize("ancestor", ["customer", "customer/sub"])

@@ -902,3 +902,9 @@ requirements:
       method: test
       intent: Require the integrated executable detector contract before deferring to its hosted output.
       observable: Nine runner, dependency, matrix, checkout and filter-reference REDs plus two baseline-rule and duplicate-filter REDs precede parsed detector binding; equivalent outer/embedded formatting and all prior proof controls remain accepted.
+
+    - case_id: 460-21-14
+      scenario_id: release-review-corrections-preserve-source-and-failure-boundaries
+      method: test
+      intent: Remove independently reproduced native worker and ownership-proof complexity blockers without changing admission or test behavior.
+      observable: Two production-policy REDs reproduce eight blocking Radon findings; pure parser and unchanged production mapping confirm the same baseline failures. Retained worker/replay/ownership/result tests and supported Self annotation preserve behavior. No policy threshold, analyzer input or deadline changes.

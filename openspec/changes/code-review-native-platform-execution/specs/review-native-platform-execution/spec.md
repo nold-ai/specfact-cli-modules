@@ -1314,3 +1314,13 @@ The trigger validator SHALL admit null or mapping PR event configuration and SHA
 - **AND** the detector's parsed execution contract SHALL equal the integrated dev job except for the validated capsule trigger inventory; comments and formatting may differ, but runner, dependencies, strategy, checkout, all filter options and other outputs/steps SHALL stay bound
 
 Detector capsule trigger inventories SHALL retain every integrated baseline rule and SHALL reject duplicate filter mapping keys. Added validated trigger rules and equivalent formatting remain supported.
+
+
+#### Scenario: Native worker quality preserves admission and replay contracts
+
+- **GIVEN** authoritative capsule review reports blocking complexity/nesting findings in the native worker and retained ownership proofs
+- **WHEN** their validation and fixture preparation are decomposed
+- **THEN** the unchanged production Radon policy SHALL report no blocking complexity/nesting finding in those files
+- **AND** every admitted/rejected argument, request, path, reply, replay option, output bound and source ownership case SHALL retain its exact behavior, diagnostics and existing assertions; no analyzer input, deadline or quality threshold SHALL change
+
+The retained local context-manager proof SHALL express its self-return type using the supported Python3.11+ typing.Self identity, avoiding an unresolved local class name while preserving its enter/exit behavior and every fixture assertion.
