@@ -1334,3 +1334,13 @@ The retained local context-manager proof SHALL express its self-return type usin
 - **AND** unsupported false continue-on-error, runs-on, steps, env and timeout-minutes SHALL reject even when they appear nonblocking; equivalent parsed formatting remains admitted
 
 This binds the caller without changing the hosted review or targeted pytest deadlines, analyzer inputs, existing failure propagation or any native isolation/ownership contract.
+
+
+#### Scenario: Required quality consumers retain hosted-review failure propagation
+
+- **GIVEN** owner-approved local deferral relies on required quality checks consuming the customer-review result
+- **WHEN** the indexed orchestrator removes that dependency, changes or disables its prerequisite assertion, or changes any job/root execution configuration
+- **THEN** deferral SHALL reject unless the complete parsed orchestration execution equals integrated dev after only the independently validated PR event and capsule trigger inventory are normalized
+- **AND** all jobs, prerequisites, steps, matrices, workflow environment/defaults/permissions/concurrency SHALL stay bound; equivalent formatting and existing admissible trigger additions remain supported
+
+The required consumer remains blocking for failed/skipped customer review; no hosted analyzer input, deadline, native isolation/ownership contract or original proof assertion changes.

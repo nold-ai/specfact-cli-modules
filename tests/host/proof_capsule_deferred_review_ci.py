@@ -608,3 +608,58 @@ def test_deferral_requires_integrated_reusable_review_caller(tmp_path: Path, key
     path.write_text(yaml.safe_dump(document, sort_keys=False))
     _git(worktree, "add", ".")
     _assert_local_deferral(worktree, tmp_path / "calls", 1)
+
+
+@pytest.mark.parametrize(
+    "mutation",
+    [
+        "missing_dependency",
+        "missing_prerequisite",
+        "ignored_prerequisite",
+        "skipped_prerequisite",
+        "skipped_quality",
+        "nonblocking_quality",
+        "empty_matrix",
+        "root_environment",
+        "root_defaults",
+        "root_permissions",
+        "root_concurrency",
+    ],
+)
+def test_deferral_requires_integrated_quality_consumer(tmp_path: Path, mutation: str) -> None:
+    scenario = ("Darwin", "", "github-linux", "tests/native/proof_macos_native_broker_wait.py", False, True, 1)
+    worktree = deferral_worktree(tmp_path, scenario)
+    path = worktree / ".github/workflows/pr-orchestrator.yml"
+    document = yaml.safe_load(path.read_text())
+    document["on"] = document.pop(True)
+    quality = document["jobs"]["quality"]
+    if mutation == "missing_dependency":
+        quality["needs"].remove("customer-capsules")
+    elif mutation == "missing_prerequisite":
+        quality["steps"].pop(0)
+    elif mutation == "ignored_prerequisite":
+        quality["steps"][0]["run"] = "exit 0"
+    elif mutation == "skipped_prerequisite":
+        quality["steps"][0]["if"] = False
+    elif mutation == "skipped_quality":
+        quality["if"] = False
+    elif mutation == "nonblocking_quality":
+        quality["continue-on-error"] = True
+    elif mutation == "empty_matrix":
+        quality["strategy"] = {"matrix": {"include": []}}
+    else:
+        _mutate_orchestration_execution(document, mutation)
+    path.write_text(yaml.safe_dump(document, sort_keys=False))
+    _git(worktree, "add", ".")
+    _assert_local_deferral(worktree, tmp_path / "calls", 1)
+
+
+def _mutate_orchestration_execution(document: dict, mutation: str) -> None:
+    updates = {
+        "root_environment": ("env", {"CAPSULE_REQUIRED": "false"}),
+        "root_defaults": ("defaults", {"run": {"working-directory": "unavailable-directory"}}),
+        "root_permissions": ("permissions", {}),
+        "root_concurrency": ("concurrency", {"group": "unverified-review", "cancel-in-progress": True}),
+    }
+    key, value = updates[mutation]
+    document[key] = value

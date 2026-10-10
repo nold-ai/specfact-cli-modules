@@ -107,6 +107,14 @@ def _detector_contract(changes: dict) -> dict:
     return contract
 
 
+def _orchestration_contract(workflow: dict) -> dict:
+    """Bind consumers and workflow execution after independently validated triggers."""
+    contract = copy.deepcopy(workflow)
+    contract["on"]["pull_request"] = None
+    contract["jobs"]["changes"] = _detector_contract(contract["jobs"]["changes"])
+    return contract
+
+
 def _validate_detector_execution(changes: dict, baseline: str) -> None:
     integrated = _workflow_yaml(".github/workflows/pr-orchestrator.yml", baseline)["jobs"]["changes"]
     if not set(_capsule_rules(integrated)).issubset(_capsule_rules(changes)):
@@ -177,6 +185,9 @@ def validate_indexed_scheduling(paths: list[str], candidate_paths: list[str], ba
     if job != integrated:
         raise ValueError("reusable review caller differs from the integrated dev contract")
     _validate_reusable_review(baseline)
+    integrated_workflow = _workflow_yaml(".github/workflows/pr-orchestrator.yml", baseline)
+    if _orchestration_contract(workflow) != _orchestration_contract(integrated_workflow):
+        raise ValueError("review orchestration differs from the integrated dev contract")
 
 
 def main() -> int:

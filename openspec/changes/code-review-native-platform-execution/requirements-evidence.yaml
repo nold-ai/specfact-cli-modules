@@ -914,3 +914,9 @@ requirements:
       method: test
       intent: Bind the entire reusable-review caller to integrated dev before admitting local deferral.
       observable: Nine indexed REDs independently reproduce unsupported false continue-on-error, runs-on, steps, env and timeout-minutes plus changed inputs, permissions, matrix and concurrency; equivalent-formatting and unrelated-generated-doc controls pass. Parsed caller equality corrects admission without changing hosted inputs, deadlines or failure propagation.
+
+    - case_id: 460-21-16
+      scenario_id: release-review-corrections-preserve-source-and-failure-boundaries
+      method: test
+      intent: Bind required quality consumers and workflow-level execution before deferring hosted review.
+      observable: Eleven meaningful indexed REDs reproduce detached customer dependency, absent/replaced/skipped prerequisite, disabled/nonblocking/empty-matrix quality and changed root environment/defaults/permissions/concurrency; three equivalent-formatting/generated-doc controls pass. Complete parsed orchestration binding preserves independently validated PR events and added capsule trigger inventory while retaining every failure boundary.
