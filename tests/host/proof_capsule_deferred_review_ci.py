@@ -694,3 +694,33 @@ def test_deferral_admits_only_owner_approved_budget(tmp_path: Path, budget: int,
     )
     _git(worktree, "add", ".")
     _assert_local_deferral(worktree, tmp_path / "calls", expected)
+
+
+@pytest.mark.parametrize("job_minutes,expected", [(75, 0), (45, 1), (60, 1), (90, 1)])
+def test_indexed_deferral_admits_only_complete_approved_job_budget(
+    tmp_path: Path, job_minutes: int, expected: int
+) -> None:
+    scenario = ("Darwin", "", "github-linux", "tests/native/proof_macos_native_broker_wait.py", False, True, expected)
+    worktree = deferral_worktree(tmp_path, scenario)
+    path = worktree / ".github/workflows/capsule-customer-execution.yml"
+    document = yaml.safe_load(path.read_text(encoding="utf-8"))
+    document["on"] = document.pop(True)
+    document["jobs"]["independent-review"]["timeout-minutes"] = 45
+    integrated = yaml.safe_dump(document, sort_keys=False)
+    _git(worktree, "checkout", "origin/dev")
+    path.write_text(integrated, encoding="utf-8")
+    _git(worktree, "add", str(path))
+    _git(worktree, "-c", "core.hooksPath=/dev/null", "commit", "-qm", "fixture integrated independent job budget")
+    _git(worktree, "update-ref", "refs/remotes/origin/dev", "HEAD")
+    _git(worktree, "checkout", "codex/fixture")
+    _git(worktree, "merge", "--ff-only", "origin/dev")
+    (worktree / "tests/native/proof_macos_native_broker_wait.py").write_text(
+        "candidate job budget proof\n", encoding="utf-8"
+    )
+    (worktree / "openspec/changes/code-review-native-platform-execution/spec.md").write_text(
+        "job budget candidate\n", encoding="utf-8"
+    )
+    document["jobs"]["independent-review"]["timeout-minutes"] = job_minutes
+    path.write_text(yaml.safe_dump(document, sort_keys=False), encoding="utf-8")
+    _git(worktree, "add", ".")
+    _assert_local_deferral(worktree, tmp_path / "calls", expected)

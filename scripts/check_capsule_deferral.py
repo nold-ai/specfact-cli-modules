@@ -126,9 +126,12 @@ def _validate_detector_execution(changes: dict, baseline: str) -> None:
 
 
 def _approved_review_budget(workflow: dict) -> dict:
-    """Adapt only the owner-approved whole-review bound in integrated execution."""
+    """Adapt only the owner-approved review and sequential job bounds."""
     integrated = copy.deepcopy(workflow)
-    step = _unique_step(integrated["jobs"]["independent-review"], "independent_review")
+    independent = integrated["jobs"]["independent-review"]
+    if independent["timeout-minutes"] == 45:
+        independent["timeout-minutes"] = 75
+    step = _unique_step(independent, "independent_review")
     old = "subprocess.run(sys.argv[1:],timeout=300,check=False)"
     new = "subprocess.run(sys.argv[1:],timeout=1800,check=False)"
     if step["run"].count(old) == 1:

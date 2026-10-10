@@ -1351,7 +1351,7 @@ The required consumer remains blocking for failed/skipped customer review; no ho
 - **GIVEN** the owner on 10 October 2026 explicitly authorizes enlarging the 300-second review limit and real passing portable suites now take about 177 seconds before other analyzers
 - **WHEN** candidate and independent hosted reviews execute all unchanged analyzers
 - **THEN** each whole review SHALL retain a finite 1800-second limit, original failure propagation and fixed timeout exit124; preparation, child test limits and analyzer inputs remain unchanged
-- **AND** local deferral SHALL admit only the exact independent-wrapper 300-to-1800-second adaptation to integrated dev, rejecting any other command, timeout, runner, prerequisite or execution change
+- **AND** local deferral SHALL admit only the exact independent-wrapper 300-to-1800-second and independent-job 45-to-75-minute adaptations to integrated dev, rejecting any other command, timeout, runner, prerequisite or execution change
 - **AND** the repository coverage configuration SHALL include reviewed scripts and portable regressions SHALL exercise the indexed workflow validator without relying on excluded host subprocess proofs; missing coverage remains blocking UNKNOWN rather than being waived
 
 
@@ -1368,3 +1368,12 @@ The required consumer remains blocking for failed/skipped customer review; no ho
 - **GIVEN** authoritative review reports missing contracts on public native replay, indexed scheduling and SMART entry points
 - **WHEN** explicit postconditions are added
 - **THEN** every existing successful return and propagated exception/exit SHALL retain its behavior, and contracts SHALL describe completed-process, no-value verification, mapping and existing integer exit-code results without narrowing admitted inputs or waiving incomplete execution
+
+
+#### Scenario: Sequential preparation and review retain their full phase limits
+
+- **GIVEN** independent preparation and review run sequentially, each with an unchanged1800second phase cap
+- **WHEN** both legal phases consume their full allowance after setup
+- **THEN** the finite job limit SHALL permit both phases plus15minutes of setup/diagnostic headroom: independent75minutes, customer90minutes unchanged
+- **AND** indexed deferral SHALL admit only integrated independent45to75minutes, rejecting45,60,90 or unsupported job bounds on the candidate and preserving every other parsed execution field
+- **AND** no phase deadline, analysis input, artifact handoff, isolation, error verdict or failure propagation SHALL change

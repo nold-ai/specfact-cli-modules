@@ -632,7 +632,7 @@ jobs:
     name: independent signed capsule review
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    timeout-minutes: 75
     env:
       CANDIDATE_HEAD: ${{ github.event.pull_request.head.sha }}
       CANDIDATE_BASE: ${{ github.event.pull_request.base.sha }}

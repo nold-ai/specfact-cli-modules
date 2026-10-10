@@ -473,3 +473,31 @@ def test_portable_validator_main_preserves_failure_exit(indexed_review, monkeypa
     output = capsys.readouterr()
     assert bool(output.err) is not valid
     assert "PRIVATE" not in output.err
+
+
+@pytest.mark.parametrize("setup_seconds", [0, 120, 480])
+def test_independent_job_can_complete_both_maximum_legal_phases(setup_seconds):
+    import re
+
+    workflow = yaml.safe_load((ROOT / ".github/workflows/capsule-customer-execution.yml").read_text(encoding="utf-8"))
+    job = workflow["jobs"]["independent-review"]
+    review = next(step for step in job["steps"] if step.get("id") == "independent_review")
+    phase_limits = [int(value) for value in re.findall(r"timeout=(\d+),check=False", review["run"])]
+    assert phase_limits == [1800, 1800], "Preparation and review keep their independent finite caps"
+    completion_seconds = setup_seconds + sum(phase_limits) + 60
+    assert completion_seconds < job["timeout-minutes"] * 60, "Legal preparation must not truncate legal review"
+    assert job["timeout-minutes"] * 60 - sum(phase_limits) == 15 * 60
+    assert workflow["jobs"]["customer"]["timeout-minutes"] == 90
+
+
+@pytest.mark.parametrize("job_minutes,accepted", [(75, True), (45, False), (60, False), (90, False)])
+def test_portable_validator_admits_only_complete_approved_job_budget(indexed_review, job_minutes, accepted):
+    checker, indexed, baseline, _calls = indexed_review
+    baseline["capsule-customer-execution"]["jobs"]["independent-review"]["timeout-minutes"] = 45
+    indexed["capsule-customer-execution"]["jobs"]["independent-review"]["timeout-minutes"] = job_minutes
+    paths = ["scripts/check_capsule_deferral.py"]
+    if accepted:
+        checker.validate_indexed_scheduling(paths, paths, "baseline")
+    else:
+        with pytest.raises(ValueError):
+            checker.validate_indexed_scheduling(paths, paths, "baseline")
