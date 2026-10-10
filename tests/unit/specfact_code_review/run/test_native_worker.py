@@ -12,7 +12,9 @@ from specfact_code_review.run import native_worker
 
 
 @pytest.fixture(autouse=True)
-def _restore_fixture_permissions(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> object:  # pyright: ignore[reportUnusedFunction]
+def _restore_fixture_permissions(  # pyright: ignore[reportUnusedFunction]
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> object:
     for name in native_worker._UNSAFE_ENVIRONMENT:
         monkeypatch.delenv(name, raising=False)
     yield

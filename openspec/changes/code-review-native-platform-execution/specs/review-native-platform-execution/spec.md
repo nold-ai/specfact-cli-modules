@@ -1448,3 +1448,11 @@ The required consumer remains blocking for failed/skipped customer review; no ho
 - **WHEN** its request and environment assertions are organized into bounded helpers
 - **THEN** the existing production Radon regression SHALL inspect its own proof module and every retained assertion SHALL remain identical
 - **AND** both real adapter replay cases, exact managed identities, no host spawn, restoration, private permissions and empty output assertions SHALL remain mandatory, without changing production thresholds, runtime bytes or analysis deadlines
+
+
+#### Scenario: Portable broker proof exports preserve collected cleanup tests
+
+- **GIVEN** unchanged production Pylint reports redundant self aliases, unused imports and line length in collected native cleanup proofs
+- **WHEN** those imported proof functions use explicit exports and the autouse fixture signature uses bounded formatting
+- **THEN** the same collected node identities, test decorators, assertion ASTs and autouse registration SHALL remain, while the scoped export and line-length findings disappear under unchanged policy
+- **AND** no original cleanup proof, permission restoration, rejected identity, test case or type-checker requirement SHALL be removed or weakened

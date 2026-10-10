@@ -5,10 +5,17 @@ import pytest
 
 from tests.native import proof_macos_native_broker_wait as proof
 from tests.native.proof_macos_native_broker_wait import (
-    test_cleanup_does_not_signal_absent_or_reused_identity as test_cleanup_does_not_signal_absent_or_reused_identity,
-    test_cleanup_preserves_permission_failure as test_cleanup_preserves_permission_failure,
-    test_cleanup_tolerates_owned_pid_exit_between_observation_and_signal as test_cleanup_tolerates_owned_pid_exit_between_observation_and_signal,
+    test_cleanup_does_not_signal_absent_or_reused_identity,
+    test_cleanup_preserves_permission_failure,
+    test_cleanup_tolerates_owned_pid_exit_between_observation_and_signal,
 )
+
+
+__all__ = [
+    "test_cleanup_does_not_signal_absent_or_reused_identity",
+    "test_cleanup_preserves_permission_failure",
+    "test_cleanup_tolerates_owned_pid_exit_between_observation_and_signal",
+]
 
 
 @pytest.mark.parametrize("initial", ["", "12"])
