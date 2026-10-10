@@ -65,7 +65,7 @@ def test_independent_reviewer_excludes_each_candidate_host_route(forbidden: str)
 def test_independent_reviewer_preserves_scope_budgets_and_preload_order() -> None:
     independent = independent_review_job()
     recipe = "\n".join(str(step.get("run", "")) for step in independent["steps"])
-    assert "timeout=300" in recipe and "timeout=1800" in recipe
+    assert recipe.count("timeout=1800") == 2
     assert "--scope index --enforcement changed --bug-hunt" in recipe
     assert "discover_snapshot" in recipe and "prepare_runtime" in recipe
     assert "runtime prepare --project-config" not in recipe, "Mutable worktree prep cannot prewarm index identities"
@@ -947,7 +947,7 @@ def test_public_execution_classification_never_prints_raw_messages(tmp_path: Pat
     assert "PRIVATE" not in result.stdout
 
 
-def test_trusted_review_budget_timeout_retains_three_hundred_seconds_and_fixed_exit(monkeypatch, tmp_path):
+def test_trusted_review_budget_timeout_retains_thirty_minutes_and_fixed_exit(monkeypatch, tmp_path):
     import re
     import runpy
 
@@ -970,7 +970,7 @@ def test_trusted_review_budget_timeout_retains_three_hundred_seconds_and_fixed_e
     with pytest.raises(SystemExit) as result:
         runpy.run_path(str(wrapper), run_name="__main__")
     assert result.value.code == 124
-    assert observed == [(["trusted-python", "trusted-reviewer.py"], 300, False)]
+    assert observed == [(["trusted-python", "trusted-reviewer.py"], 1800, False)]
 
 
 @pytest.mark.parametrize("job_name", ["customer", "independent-review"])

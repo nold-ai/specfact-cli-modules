@@ -29,7 +29,9 @@ from tests.support.capsule_review_fixtures import (
 def test_deferred_gate_reviews_exact_staged_tree_and_propagates_failure(
     tmp_path: Path, gate_exit: int, advanced_dev: bool
 ) -> None:
-    workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())
+    workflow = yaml.safe_load(
+        (REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text(encoding="utf-8")
+    )
     steps = workflow["jobs"]["customer"]["steps"]
     step = next((item for item in steps if item.get("name") == STEP_NAME), None)
     assert step is not None, "No blocking candidate commit review runs in hosted Linux CI"
@@ -95,7 +97,7 @@ def test_narrow_local_deferral_retains_block2_and_cannot_run_in_ci(tmp_path: Pat
     platform, ci, deferral, _bundle, _advanced_dev, _independent_review, expected = scenario
     worktree = deferral_worktree(tmp_path, scenario)
     calls = tmp_path / "calls"
-    script = (REPO_ROOT / "scripts/pre-commit-quality-checks.sh").read_text().rsplit('main "$@"', 1)[0]
+    script = (REPO_ROOT / "scripts/pre-commit-quality-checks.sh").read_text(encoding="utf-8").rsplit('main "$@"', 1)[0]
     recipe = script + _BLOCK2_HATCH_FIXTURE
     environment = os.environ | {
         "FIXTURE_PLATFORM": platform,
@@ -108,7 +110,7 @@ def test_narrow_local_deferral_retains_block2_and_cannot_run_in_ci(tmp_path: Pat
         ["bash", "-c", recipe], cwd=worktree, env=environment, capture_output=True, text=True, check=False
     )
     assert result.returncode == expected, result.stdout + result.stderr
-    invoked = calls.read_text()
+    invoked = calls.read_text(encoding="utf-8")
     assert_block2_trace(invoked, expected, result.stderr, prompt_required=not _bundle.startswith("tests/"))
 
 
@@ -125,7 +127,9 @@ def test_narrow_local_deferral_retains_block2_and_cannot_run_in_ci(tmp_path: Pat
 def test_isolated_reviewer_preloads_trusted_code_and_never_accepts_incomplete_preparation(
     tmp_path: Path, review_exit: int, preparation_status: str, fixture_reason: str
 ) -> None:
-    workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())
+    workflow = yaml.safe_load(
+        (REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text(encoding="utf-8")
+    )
     job = workflow["jobs"]["independent-review"]
     step = next(
         item
@@ -146,18 +150,20 @@ def test_isolated_reviewer_preloads_trusted_code_and_never_accepts_incomplete_pr
 def test_trusted_bootstrap_cannot_import_candidate_venv_module(tmp_path: Path) -> None:
     import textwrap
 
-    workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())
+    workflow = yaml.safe_load(
+        (REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text(encoding="utf-8")
+    )
     step = workflow["jobs"]["independent-review"]["steps"][2]
     candidate = tmp_path / "candidate"
     candidate.mkdir()
     marker = tmp_path / "host-code-executed"
     (candidate / "venv.py").write_text(
-        f"from pathlib import Path\nPath({str(marker)!r}).touch()\nraise SystemExit(9)\n"
+        f"from pathlib import Path\nPath({str(marker)!r}).touch()\nraise SystemExit(9)\n", encoding="utf-8"
     )
     launcher_dir = tmp_path / "launcher"
     launcher_dir.mkdir()
     launcher = launcher_dir / "python"
-    launcher.write_text(f"#!{sys.executable}\n" + textwrap.dedent(_TRUSTED_BOOTSTRAP_LAUNCHER))
+    launcher.write_text(f"#!{sys.executable}\n" + textwrap.dedent(_TRUSTED_BOOTSTRAP_LAUNCHER), encoding="utf-8")
     launcher.chmod(0o700)
     runner_temp = tmp_path / "runner"
     runner_temp.mkdir()
@@ -175,7 +181,7 @@ def test_trusted_bootstrap_cannot_import_candidate_venv_module(tmp_path: Path) -
 
 def test_deferred_host_fixture_does_not_alias_managed_caller_python(tmp_path: Path, monkeypatch):
     managed = tmp_path / "managed-python"
-    managed.write_text("#!/bin/sh\nexit 78\n")
+    managed.write_text("#!/bin/sh\nexit 78\n", encoding="utf-8")
     managed.chmod(0o755)
     monkeypatch.setattr(sys, "executable", str(managed))
     test_deferred_gate_reviews_exact_staged_tree_and_propagates_failure(tmp_path, 0, False)
@@ -243,7 +249,7 @@ def test_local_deferral_rejects_unscheduled_indexed_customer_review(tmp_path: Pa
     scenario = ("Darwin", "", "github-linux", "tests/native/proof_macos_native_broker_wait.py", False, True, 1)
     worktree = deferral_worktree(tmp_path, scenario)
     path = worktree / ".github/workflows/pr-orchestrator.yml"
-    source = path.read_text()
+    source = path.read_text(encoding="utf-8")
     replacements = {
         "filter_every": (
             "        with:\n          filters: |",
@@ -273,7 +279,7 @@ def test_local_deferral_rejects_unscheduled_indexed_customer_review(tmp_path: Pa
         _git(worktree, "reset", "HEAD", "tests/native/proof_macos_native_broker_wait.py")
         unrelated = worktree / "tools/unrelated.py"
         unrelated.parent.mkdir()
-        unrelated.write_text("value = 1\n")
+        unrelated.write_text("value = 1\n", encoding="utf-8")
     elif mutation == "missing_job":
         start = source.index("\n  customer-capsules:")
         end = source.index("\n  quality:", start)
@@ -282,10 +288,10 @@ def test_local_deferral_rejects_unscheduled_indexed_customer_review(tmp_path: Pa
         source += '\n# - "tests/native/**"\n'
     elif mutation == "malformed":
         source = "jobs: [unterminated"
-    path.write_text(source)
+    path.write_text(source, encoding="utf-8")
     _git(worktree, "add", ".")
     calls = tmp_path / "calls"
-    script = (REPO_ROOT / "scripts/pre-commit-quality-checks.sh").read_text().rsplit('main "$@"', 1)[0]
+    script = (REPO_ROOT / "scripts/pre-commit-quality-checks.sh").read_text(encoding="utf-8").rsplit('main "$@"', 1)[0]
     result = subprocess.run(
         ["bash", "-c", script + _BLOCK2_HATCH_FIXTURE],
         cwd=worktree,
@@ -321,7 +327,7 @@ def test_local_deferral_rejects_nonblocking_reusable_review(tmp_path: Path, muta
     scenario = ("Darwin", "", "github-linux", "tests/native/proof_macos_native_broker_wait.py", False, True, 1)
     worktree = deferral_worktree(tmp_path, scenario)
     path = worktree / ".github/workflows/capsule-customer-execution.yml"
-    document = yaml.safe_load(path.read_text())
+    document = yaml.safe_load(path.read_text(encoding="utf-8"))
     document["on"] = document.pop(True)
     job = document["jobs"]["independent-review" if mutation.startswith("independent") else "customer"]
     if mutation.endswith("job"):
@@ -336,10 +342,10 @@ def test_local_deferral_rejects_nonblocking_reusable_review(tmp_path: Path, muta
             step["if"] = False
         else:
             step["continue-on-error"] = True
-    path.write_text(yaml.safe_dump(document, sort_keys=False))
+    path.write_text(yaml.safe_dump(document, sort_keys=False), encoding="utf-8")
     _git(worktree, "add", ".")
     calls = tmp_path / "calls"
-    script = (REPO_ROOT / "scripts/pre-commit-quality-checks.sh").read_text().rsplit('main "$@"', 1)[0]
+    script = (REPO_ROOT / "scripts/pre-commit-quality-checks.sh").read_text(encoding="utf-8").rsplit('main "$@"', 1)[0]
     result = subprocess.run(
         ["bash", "-c", script + _BLOCK2_HATCH_FIXTURE],
         cwd=worktree,
@@ -361,7 +367,7 @@ def test_local_deferral_rejects_nonblocking_reusable_review(tmp_path: Path, muta
 
 
 def _assert_local_deferral(worktree: Path, calls: Path, expected: int) -> None:
-    script = (REPO_ROOT / "scripts/pre-commit-quality-checks.sh").read_text().rsplit('main "$@"', 1)[0]
+    script = (REPO_ROOT / "scripts/pre-commit-quality-checks.sh").read_text(encoding="utf-8").rsplit('main "$@"', 1)[0]
     result = subprocess.run(
         ["bash", "-c", script + _BLOCK2_HATCH_FIXTURE],
         cwd=worktree,
@@ -378,7 +384,7 @@ def _assert_local_deferral(worktree: Path, calls: Path, expected: int) -> None:
         check=False,
     )
     assert result.returncode == expected, result.stdout + result.stderr
-    assert_block2_trace(calls.read_text(), expected, result.stderr, prompt_required=False)
+    assert_block2_trace(calls.read_text(encoding="utf-8"), expected, result.stderr, prompt_required=False)
 
 
 @pytest.mark.parametrize(
@@ -399,7 +405,7 @@ def test_deferral_requires_effective_literal_pr_event(tmp_path: Path, mutation: 
     scenario = ("Darwin", "", "github-linux", "tests/native/proof_macos_native_broker_wait.py", False, True, 1)
     worktree = deferral_worktree(tmp_path, scenario)
     path = worktree / ".github/workflows/pr-orchestrator.yml"
-    document = yaml.safe_load(path.read_text())
+    document = yaml.safe_load(path.read_text(encoding="utf-8"))
     events = document.pop(True)
     document["on"] = events
     if mutation == "literal_true":
@@ -424,7 +430,7 @@ def test_deferral_requires_effective_literal_pr_event(tmp_path: Path, mutation: 
             + "\non:\n"
             + '  pull_request:\n    branches: [main, dev]\n    paths-ignore: ["**/*.md", "docs/**"]\n'
         )
-    path.write_text(serialized)
+    path.write_text(serialized, encoding="utf-8")
     _git(worktree, "add", ".")
     _assert_local_deferral(worktree, tmp_path / "calls", 1)
 
@@ -443,7 +449,7 @@ def test_deferral_rejects_mixed_unrelated_reviewable_paths(tmp_path: Path, unrel
     worktree = deferral_worktree(tmp_path, scenario)
     path = worktree / unrelated
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text("unrelated = 1\n")
+    path.write_text("unrelated = 1\n", encoding="utf-8")
     _git(worktree, "add", ".")
     _assert_local_deferral(worktree, tmp_path / "calls", 1)
 
@@ -464,7 +470,7 @@ def test_deferral_requires_integrated_review_execution_contract(tmp_path: Path, 
     scenario = ("Darwin", "", "github-linux", "tests/native/proof_macos_native_broker_wait.py", False, True, 1)
     worktree = deferral_worktree(tmp_path, scenario)
     path = worktree / ".github/workflows/capsule-customer-execution.yml"
-    document = yaml.safe_load(path.read_text())
+    document = yaml.safe_load(path.read_text(encoding="utf-8"))
     document["on"] = document.pop(True)
     customer = document["jobs"]["customer"]
     commands = {
@@ -485,7 +491,7 @@ def test_deferral_requires_integrated_review_execution_contract(tmp_path: Path, 
         customer["runs-on"] = "macos-14"
     else:
         document["env"] = {"SPECFACT_CODE_REVIEW_ENFORCEMENT": "none"}
-    path.write_text(yaml.safe_dump(document, sort_keys=False))
+    path.write_text(yaml.safe_dump(document, sort_keys=False), encoding="utf-8")
     _git(worktree, "add", ".")
     _assert_local_deferral(worktree, tmp_path / "calls", 1)
 
@@ -497,18 +503,18 @@ def test_deferral_retains_exact_review_contract_controls(tmp_path: Path, control
     if control != "unrelated_generated_docs":
         filename = "pr-orchestrator.yml" if control == "detector_formatting" else "capsule-customer-execution.yml"
         path = worktree / ".github/workflows" / filename
-        document = yaml.safe_load(path.read_text())
+        document = yaml.safe_load(path.read_text(encoding="utf-8"))
         document["on"] = document.pop(True)
         if control == "detector_formatting":
             step = next(step for step in document["jobs"]["changes"]["steps"] if step.get("id") == "filter")
             step["with"]["filters"] = "# Equivalent embedded filter formatting\n" + yaml.safe_dump(
                 yaml.safe_load(step["with"]["filters"])
             )
-        path.write_text(yaml.safe_dump(document, sort_keys=False))
+        path.write_text(yaml.safe_dump(document, sort_keys=False), encoding="utf-8")
     else:
         path = worktree / "docs/generated.md"
         path.parent.mkdir(exist_ok=True)
-        path.write_text("Generated command reference.\n")
+        path.write_text("Generated command reference.\n", encoding="utf-8")
     _git(worktree, "add", ".")
     _assert_local_deferral(worktree, tmp_path / "calls", 0)
 
@@ -518,10 +524,10 @@ def test_deferral_rejects_falsey_malformed_pr_events(tmp_path: Path, event: obje
     scenario = ("Darwin", "", "github-linux", "tests/native/proof_macos_native_broker_wait.py", False, True, 1)
     worktree = deferral_worktree(tmp_path, scenario)
     path = worktree / ".github/workflows/pr-orchestrator.yml"
-    document = yaml.safe_load(path.read_text())
+    document = yaml.safe_load(path.read_text(encoding="utf-8"))
     document["on"] = document.pop(True)
     document["on"]["pull_request"] = event
-    path.write_text(yaml.safe_dump(document, sort_keys=False))
+    path.write_text(yaml.safe_dump(document, sort_keys=False), encoding="utf-8")
     _git(worktree, "add", ".")
     _assert_local_deferral(worktree, tmp_path / "calls", 1)
 
@@ -546,7 +552,7 @@ def test_deferral_requires_integrated_change_detector_execution(tmp_path: Path, 
     scenario = ("Darwin", "", "github-linux", "tests/native/proof_macos_native_broker_wait.py", False, True, 1)
     worktree = deferral_worktree(tmp_path, scenario)
     path = worktree / ".github/workflows/pr-orchestrator.yml"
-    document = yaml.safe_load(path.read_text())
+    document = yaml.safe_load(path.read_text(encoding="utf-8"))
     document["on"] = document.pop(True)
     changes = document["jobs"]["changes"]
     updates = {
@@ -567,7 +573,7 @@ def test_deferral_requires_integrated_change_detector_execution(tmp_path: Path, 
         changes["steps"][0]["with"]["ref"] = "unrelated-source"
     else:
         _mutate_detector_filter(changes, mutation)
-    path.write_text(yaml.safe_dump(document, sort_keys=False))
+    path.write_text(yaml.safe_dump(document, sort_keys=False), encoding="utf-8")
     _git(worktree, "add", ".")
     _assert_local_deferral(worktree, tmp_path / "calls", 1)
 
@@ -602,10 +608,10 @@ def test_deferral_requires_integrated_reusable_review_caller(tmp_path: Path, key
     scenario = ("Darwin", "", "github-linux", "tests/native/proof_macos_native_broker_wait.py", False, True, 1)
     worktree = deferral_worktree(tmp_path, scenario)
     path = worktree / ".github/workflows/pr-orchestrator.yml"
-    document = yaml.safe_load(path.read_text())
+    document = yaml.safe_load(path.read_text(encoding="utf-8"))
     document["on"] = document.pop(True)
     document["jobs"]["customer-capsules"][key] = value
-    path.write_text(yaml.safe_dump(document, sort_keys=False))
+    path.write_text(yaml.safe_dump(document, sort_keys=False), encoding="utf-8")
     _git(worktree, "add", ".")
     _assert_local_deferral(worktree, tmp_path / "calls", 1)
 
@@ -630,26 +636,20 @@ def test_deferral_requires_integrated_quality_consumer(tmp_path: Path, mutation:
     scenario = ("Darwin", "", "github-linux", "tests/native/proof_macos_native_broker_wait.py", False, True, 1)
     worktree = deferral_worktree(tmp_path, scenario)
     path = worktree / ".github/workflows/pr-orchestrator.yml"
-    document = yaml.safe_load(path.read_text())
+    document = yaml.safe_load(path.read_text(encoding="utf-8"))
     document["on"] = document.pop(True)
     quality = document["jobs"]["quality"]
-    if mutation == "missing_dependency":
-        quality["needs"].remove("customer-capsules")
-    elif mutation == "missing_prerequisite":
-        quality["steps"].pop(0)
-    elif mutation == "ignored_prerequisite":
-        quality["steps"][0]["run"] = "exit 0"
-    elif mutation == "skipped_prerequisite":
-        quality["steps"][0]["if"] = False
-    elif mutation == "skipped_quality":
-        quality["if"] = False
-    elif mutation == "nonblocking_quality":
-        quality["continue-on-error"] = True
-    elif mutation == "empty_matrix":
-        quality["strategy"] = {"matrix": {"include": []}}
-    else:
-        _mutate_orchestration_execution(document, mutation)
-    path.write_text(yaml.safe_dump(document, sort_keys=False))
+    mutations = {
+        "missing_dependency": lambda: quality["needs"].remove("customer-capsules"),
+        "missing_prerequisite": lambda: quality["steps"].pop(0),
+        "ignored_prerequisite": lambda: quality["steps"][0].update(run="exit 0"),
+        "skipped_prerequisite": lambda: quality["steps"][0].update(**{"if": False}),
+        "skipped_quality": lambda: quality.update(**{"if": False}),
+        "nonblocking_quality": lambda: quality.update(**{"continue-on-error": True}),
+        "empty_matrix": lambda: quality.update(strategy={"matrix": {"include": []}}),
+    }
+    mutations.get(mutation, lambda: _mutate_orchestration_execution(document, mutation))()
+    path.write_text(yaml.safe_dump(document, sort_keys=False), encoding="utf-8")
     _git(worktree, "add", ".")
     _assert_local_deferral(worktree, tmp_path / "calls", 1)
 
@@ -663,3 +663,34 @@ def _mutate_orchestration_execution(document: dict, mutation: str) -> None:
     }
     key, value = updates[mutation]
     document[key] = value
+
+
+@pytest.mark.parametrize("budget,expected", [(1800, 0), (300, 1), (0, 1), (3600, 1)])
+def test_deferral_admits_only_owner_approved_budget(tmp_path: Path, budget: int, expected: int) -> None:
+    scenario = ("Darwin", "", "github-linux", "tests/native/proof_macos_native_broker_wait.py", False, True, expected)
+    worktree = deferral_worktree(tmp_path, scenario)
+    path = worktree / ".github/workflows/capsule-customer-execution.yml"
+    old = "subprocess.run(sys.argv[1:],timeout=300,check=False)"
+    new = "subprocess.run(sys.argv[1:],timeout=1800,check=False)"
+    current = path.read_text(encoding="utf-8")
+    assert old in current or new in current
+    prefix, suffix = current.rsplit(new, 1)
+    integrated = prefix + old + suffix
+    _git(worktree, "checkout", "origin/dev")
+    path.write_text(integrated, encoding="utf-8")
+    _git(worktree, "add", str(path))
+    _git(worktree, "-c", "core.hooksPath=/dev/null", "commit", "-qm", "fixture integrated review budget")
+    _git(worktree, "update-ref", "refs/remotes/origin/dev", "HEAD")
+    _git(worktree, "checkout", "codex/fixture")
+    _git(worktree, "merge", "--ff-only", "origin/dev")
+    (worktree / "tests/native/proof_macos_native_broker_wait.py").write_text(
+        "candidate budget proof\n", encoding="utf-8"
+    )
+    (worktree / "openspec/changes/code-review-native-platform-execution/spec.md").write_text(
+        "budget candidate\n", encoding="utf-8"
+    )
+    path.write_text(
+        integrated.replace(old, f"subprocess.run(sys.argv[1:],timeout={budget},check=False)"), encoding="utf-8"
+    )
+    _git(worktree, "add", ".")
+    _assert_local_deferral(worktree, tmp_path / "calls", expected)

@@ -21,7 +21,7 @@ NATIVE_BROKER = "tests/native/proof_macos_native_broker_wait.py"
 def test_full_and_smart_host_runs_require_the_retained_host_proof(monkeypatch):
     import tomllib
 
-    configuration = tomllib.loads((ROOT / "pyproject.toml").read_text())
+    configuration = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
     assert (
         "pytest " + HOST_PROOF + " tests/native/proof_native_canonical_path.py && pytest tests "
         in configuration["tool"]["hatch"]["envs"]["default"]["scripts"]["test"]
@@ -58,7 +58,7 @@ def test_full_and_smart_host_runs_require_the_retained_host_proof(monkeypatch):
 
 
 def test_native_parser_and_broker_proofs_remain_required_on_every_os():
-    workflow = yaml.safe_load((ROOT / ".github/workflows/code-review-macos-boundary.yml").read_text())
+    workflow = yaml.safe_load((ROOT / ".github/workflows/code-review-macos-boundary.yml").read_text(encoding="utf-8"))
     job = workflow["jobs"]["native-boundary"]
     assert {row["runner"] for row in job["strategy"]["matrix"]["include"]} == {"macos-14", "macos-15", "macos-26"}
     recipes = "\n".join(str(step.get("run", "")) for step in job["steps"])
@@ -66,7 +66,9 @@ def test_native_parser_and_broker_proofs_remain_required_on_every_os():
     for option in ("--self-test", "--failure-self-test", "--exception-self-test"):
         assert NATIVE_BROKER + " " + option in recipes
     assert "scripts/check_macos_boundary_ci_receipts.py" in recipes
-    assert '"--repetitions", "100"' in (ROOT / "scripts/check_macos_boundary_ci_receipts.py").read_text()
+    assert '"--repetitions", "100"' in (ROOT / "scripts/check_macos_boundary_ci_receipts.py").read_text(
+        encoding="utf-8"
+    )
     assert not job.get("continue-on-error", False)
 
 
@@ -82,7 +84,7 @@ def test_explicit_proof_modules_do_not_enter_default_capsule_selection():
 
 
 def test_all_three_python_native_inputs_are_required_in_the_secret_free_job():
-    workflow = yaml.safe_load((ROOT / ".github/workflows/native-capsule-release.yml").read_text())
+    workflow = yaml.safe_load((ROOT / ".github/workflows/native-capsule-release.yml").read_text(encoding="utf-8"))
     job = workflow["jobs"]["tools"]
     recipes = "\n".join(str(step.get("run", "")) for step in job["steps"])
     assert "tests/native/proof_python_candidate_matrix.py" in recipes
@@ -110,7 +112,7 @@ def test_native_failure_projection_contains_only_fixed_case_and_boolean_state(tm
         "failure_origin": True,
         "pid": 123,
     }
-    (tmp_path / "diagnostics.log").write_text(json.dumps(raw) + "\n")
+    (tmp_path / "diagnostics.log").write_text(json.dumps(raw) + "\n", encoding="utf-8")
     assert native_failure_summary(tmp_path, "3.11") == {
         "abi": "3.11",
         "case": "python-clean",
@@ -118,11 +120,11 @@ def test_native_failure_projection_contains_only_fixed_case_and_boolean_state(tm
         "state": state,
     }
     raw["failed_case"] = "/private/untrusted"
-    (tmp_path / "diagnostics.log").write_text(json.dumps(raw) + "\n")
+    (tmp_path / "diagnostics.log").write_text(json.dumps(raw) + "\n", encoding="utf-8")
     assert native_failure_summary(tmp_path, "3.11") == {"abi": "3.11"}
     raw["failed_case"] = "python-clean"
     raw["last_worker_state"]["wait_pending"] = 1
-    (tmp_path / "diagnostics.log").write_text(json.dumps(raw) + "\n")
+    (tmp_path / "diagnostics.log").write_text(json.dumps(raw) + "\n", encoding="utf-8")
     assert native_failure_summary(tmp_path, "3.11") == {"abi": "3.11", "case": "python-clean", "phase": "request-wait"}
 
 
@@ -134,7 +136,7 @@ def test_native_failure_projection_rejects_non_scalar_identity(tmp_path):
     for field in ("failed_case", "failure_phase"):
         raw: dict[str, object] = {"failed_case": "python-clean", "failure_phase": "request-wait"}
         raw[field] = []
-        (tmp_path / "diagnostics.log").write_text(json.dumps(raw) + "\n")
+        (tmp_path / "diagnostics.log").write_text(json.dumps(raw) + "\n", encoding="utf-8")
         assert native_failure_summary(tmp_path, "3.11") == {"abi": "3.11"}
     assert native_failure_summary(tmp_path, "/private/value") == {}
 
@@ -159,7 +161,7 @@ def _write_result_marker(root, fields):
         "last_worker_result": fields,
         "raw": "/private/value",
     }
-    (root / "diagnostics.log").write_text(json.dumps(marker))
+    (root / "diagnostics.log").write_text(json.dumps(marker), encoding="utf-8")
 
 
 def test_native_result_projection_requires_matching_worker(tmp_path):
@@ -229,7 +231,7 @@ def test_native_output_class_projection_rejects_unknown_payloads():
 def test_proof_only_changes_schedule_blocking_customer_review(path):
     from fnmatch import fnmatchcase
 
-    workflow = yaml.safe_load((ROOT / ".github/workflows/pr-orchestrator.yml").read_text())
+    workflow = yaml.safe_load((ROOT / ".github/workflows/pr-orchestrator.yml").read_text(encoding="utf-8"))
     step = next(item for item in workflow["jobs"]["changes"]["steps"] if item.get("id") == "filter")
     paths = yaml.safe_load(step["with"]["filters"])["capsule"]
     assert any(fnmatchcase(path, pattern) for pattern in paths)
@@ -241,25 +243,233 @@ def test_proof_only_changes_schedule_blocking_customer_review(path):
 
 @pytest.mark.parametrize("surface", ["full", "smart", "native_ci", "discovery"])
 def test_compiled_canonical_proofs_have_required_compiler_context(surface):
-    proof = "tests/native/proof_native_canonical_path.py"
-    if surface == "full":
-        import tomllib
+    assertions = {
+        "full": _assert_canonical_full,
+        "smart": _assert_canonical_smart,
+        "native_ci": _assert_canonical_native_ci,
+        "discovery": _assert_canonical_discovery,
+    }
+    assertions[surface]("tests/native/proof_native_canonical_path.py")
 
-        configuration = tomllib.loads((ROOT / "pyproject.toml").read_text())
-        command = configuration["tool"]["hatch"]["envs"]["default"]["scripts"]["test"]
-        assert "pytest " + HOST_PROOF + " " + proof + " && pytest tests " in command
-    elif surface == "smart":
-        assert '"' + proof + '"' in (ROOT / "tools/smart_test_coverage.py").read_text()
-    elif surface == "native_ci":
-        workflow = yaml.safe_load((ROOT / ".github/workflows/code-review-macos-boundary.yml").read_text())
-        for name in ("native-boundary", "canonical-linux"):
-            job = workflow["jobs"][name]
-            assert not job.get("continue-on-error", False) and "if" not in job
-            assert proof in "\n".join(str(step.get("run", "")) for step in job["steps"])
-        assert workflow["jobs"]["canonical-linux"]["runs-on"] == "ubuntu-24.04"
-    else:
-        assert (ROOT / proof).is_file()
-        plan = ProjectPlan(ROOT, manager="hatch", pytest_config={"testpaths": ["tests"], "python_files": ["test_*.py"]})
-        portable = ROOT / "tests/unit/test_native_analyzer_inputs.py"
-        assert select_test_paths(plan, [portable, ROOT / proof], full=False) == (portable.relative_to(ROOT).as_posix(),)
-        assert not (ROOT / "tests/unit/test_native_canonical_path.py").exists()
+
+def _assert_canonical_full(proof):
+    import tomllib
+
+    configuration = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    command = configuration["tool"]["hatch"]["envs"]["default"]["scripts"]["test"]
+    assert "pytest " + HOST_PROOF + " " + proof + " && pytest tests " in command
+
+
+def _assert_canonical_smart(proof):
+    assert '"' + proof + '"' in (ROOT / "tools/smart_test_coverage.py").read_text(encoding="utf-8")
+
+
+def _assert_canonical_native_ci(proof):
+    workflow = yaml.safe_load((ROOT / ".github/workflows/code-review-macos-boundary.yml").read_text(encoding="utf-8"))
+    for name in ("native-boundary", "canonical-linux"):
+        job = workflow["jobs"][name]
+        assert not job.get("continue-on-error", False) and "if" not in job
+        assert proof in "\n".join(str(step.get("run", "")) for step in job["steps"])
+    assert workflow["jobs"]["canonical-linux"]["runs-on"] == "ubuntu-24.04"
+
+
+def _assert_canonical_discovery(proof):
+    assert (ROOT / proof).is_file()
+    plan = ProjectPlan(ROOT, manager="hatch", pytest_config={"testpaths": ["tests"], "python_files": ["test_*.py"]})
+    portable = ROOT / "tests/unit/test_native_analyzer_inputs.py"
+    assert select_test_paths(plan, [portable, ROOT / proof], full=False) == (portable.relative_to(ROOT).as_posix(),)
+    assert not (ROOT / "tests/unit/test_native_canonical_path.py").exists()
+
+
+@pytest.fixture(name="indexed_review")
+def indexed_workflow_fixture(monkeypatch):
+    import copy
+
+    from scripts import check_capsule_deferral as checker
+
+    names = ("pr-orchestrator", "capsule-customer-execution")
+    indexed = {
+        name: checker._yaml_mapping((ROOT / f".github/workflows/{name}.yml").read_text(encoding="utf-8"))
+        for name in names
+    }
+    baseline = copy.deepcopy(indexed)
+    calls = []
+
+    def read_git(command, *, text):
+        assert command[:2] == ["git", "show"] and text is True
+        revision, path = command[2].split(":", 1)
+        assert revision in ("", "baseline")
+        name = Path(path).stem
+        calls.append((revision, name))
+        return yaml.safe_dump((baseline if revision else indexed)[name], sort_keys=False)
+
+    monkeypatch.setattr(checker.subprocess, "check_output", read_git)
+    return checker, indexed, baseline, calls
+
+
+def test_portable_indexed_validator_reads_both_trees_and_admits_exact_execution(indexed_review):
+    checker, _indexed, _baseline, calls = indexed_review
+    paths = ["scripts/check_capsule_deferral.py"]
+    checker.validate_indexed_scheduling(paths, paths, "baseline")
+    assert set(calls) == {
+        (revision, name) for revision in ("", "baseline") for name in ("pr-orchestrator", "capsule-customer-execution")
+    }
+
+
+@pytest.mark.parametrize("case", ["event", "caller", "consumer", "detector", "candidate", "independent", "budget"])
+def test_portable_indexed_validator_rejects_execution_changes(indexed_review, case):
+    checker, indexed, _baseline, _calls = indexed_review
+    workflow = indexed["pr-orchestrator"]
+    jobs = workflow["jobs"]
+    mutations = {
+        "event": lambda: workflow["on"].update(pull_request={"types": ["closed"]}),
+        "caller": lambda: jobs["customer-capsules"].update(env={}),
+        "consumer": lambda: jobs["quality"].update(needs=["changes"]),
+        "detector": lambda: jobs["changes"].update(**{"runs-on": "macos-14"}),
+        "candidate": lambda: indexed["capsule-customer-execution"]["jobs"]["customer"].update(
+            **{"runs-on": "macos-14"}
+        ),
+        "independent": lambda: indexed["capsule-customer-execution"]["jobs"]["independent-review"].update(
+            **{"continue-on-error": True}
+        ),
+        "budget": lambda: checker._unique_step(
+            indexed["capsule-customer-execution"]["jobs"]["independent-review"], "independent_review"
+        ).update(run="exit 0"),
+    }
+    mutations[case]()
+    with pytest.raises(ValueError):
+        checker.validate_indexed_scheduling(
+            ["scripts/check_capsule_deferral.py"], ["scripts/check_capsule_deferral.py"], "baseline"
+        )
+
+
+@pytest.mark.parametrize("source", ["on: {}\non: {}", "[]", "on: {true: 1, true: 2}"])
+def test_portable_indexed_parser_rejects_ambiguous_mappings(source):
+    from scripts import check_capsule_deferral as checker
+
+    with pytest.raises(ValueError):
+        checker._yaml_mapping(source)
+
+
+@pytest.mark.parametrize("paths", [[], ["tools/unrelated.py"], ["scripts/uncovered.py"]])
+def test_portable_indexed_validator_rejects_uncovered_surface(indexed_review, paths):
+    checker, _indexed, _baseline, _calls = indexed_review
+    with pytest.raises(ValueError):
+        checker.validate_indexed_scheduling(paths, paths, "baseline")
+
+
+def test_portable_review_source_policy_measures_scripts(tmp_path, monkeypatch):
+    import json
+    import subprocess
+    import sys
+    import tomllib
+
+    configuration = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))["tool"]["coverage"]["run"]
+    monkeypatch.chdir(tmp_path)
+    for name in ("src", "packages", "tools", "scripts"):
+        (tmp_path / name).mkdir()
+    script = tmp_path / "scripts/check_capsule_deferral.py"
+    script.write_text("def validate():\n    return True\n\nassert validate()\n", encoding="utf-8")
+    probe = """import coverage, json, runpy, sys
+from pathlib import Path
+script = Path(sys.argv[1])
+collector = coverage.Coverage(source=json.loads(sys.argv[2]), branch=True, data_file=None)
+collector.start()
+try:
+    runpy.run_path(str(script))
+finally:
+    collector.stop()
+assert str(script) in collector.get_data().measured_files(), "reviewed script excluded from evidence"
+assert collector.analysis2(str(script))[3] == []
+"""
+    result = subprocess.run(
+        [sys.executable, "-c", probe, str(script), json.dumps(configuration["source"])],
+        cwd=tmp_path,
+        text=True,
+        capture_output=True,
+        check=False,
+        timeout=30,
+    )
+    assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.parametrize(
+    "case",
+    [
+        "root_key",
+        "conditional",
+        "duplicate_step",
+        "output",
+        "filter_impl",
+        "negative_rule",
+        "baseline_rule",
+        "call_event",
+        "python_matrix",
+        "branches",
+        "ignore",
+        "caller_dependency",
+    ],
+)
+def test_portable_validator_rejects_additional_scheduling_breaks(indexed_review, case):
+    checker, indexed, _baseline, _calls = indexed_review
+    orchestration = indexed["pr-orchestrator"]
+    changes = orchestration["jobs"]["changes"]
+    filter_step = checker._unique_step(changes, "filter")
+    reusable = indexed["capsule-customer-execution"]
+    mutations = {
+        "root_key": lambda: orchestration.update(unsupported=True),
+        "conditional": lambda: changes.update(**{"if": "false"}),
+        "duplicate_step": lambda: changes["steps"].append(filter_step.copy()),
+        "output": lambda: changes["outputs"].update(capsule_changed="false"),
+        "filter_impl": lambda: filter_step.update(uses="unverified/filter@v1"),
+        "negative_rule": lambda: filter_step["with"].update(filters="capsule: ['!**']"),
+        "baseline_rule": lambda: filter_step["with"].update(filters="capsule: ['scripts/check_capsule_deferral.py']"),
+        "call_event": lambda: reusable["on"].pop("workflow_call"),
+        "python_matrix": lambda: reusable["jobs"]["customer"]["strategy"]["matrix"].update(python=["3.11"]),
+        "branches": lambda: orchestration["on"].update(pull_request={"branches": ["main"]}),
+        "ignore": lambda: orchestration["on"].update(pull_request={"paths-ignore": ["**"]}),
+        "caller_dependency": lambda: orchestration["jobs"]["customer-capsules"].update(needs=[]),
+    }
+    mutations[case]()
+    with pytest.raises(ValueError):
+        checker.validate_indexed_scheduling(
+            ["scripts/check_capsule_deferral.py"], ["scripts/check_capsule_deferral.py"], "baseline"
+        )
+
+
+def test_portable_validator_admits_review_surface_exemptions_and_budget_adaptation(indexed_review):
+    checker, indexed, baseline, _calls = indexed_review
+    for tree in (indexed, baseline):
+        tree["pr-orchestrator"]["on"]["pull_request"] = None
+    step = checker._unique_step(
+        baseline["capsule-customer-execution"]["jobs"]["independent-review"], "independent_review"
+    )
+    prefix, suffix = step["run"].rsplit("subprocess.run(sys.argv[1:],timeout=1800,check=False)", 1)
+    step["run"] = prefix + "subprocess.run(sys.argv[1:],timeout=300,check=False)" + suffix
+    paths = ["packages/specfact-code-review/src/app.py"]
+    candidate = [
+        *paths,
+        "TDD_EVIDENCE.md",
+        "README.md",
+        "openspec/changes/code-review-native-platform-execution/spec.md",
+    ]
+    checker.validate_indexed_scheduling(paths, candidate, "baseline")
+
+
+@pytest.mark.parametrize("candidate", [["docs/guide.md"], ["scripts/check_capsule_deferral.py", "tools/unrelated.py"]])
+def test_portable_validator_rejects_excluded_or_unreviewed_delta(indexed_review, candidate):
+    checker, indexed, _baseline, _calls = indexed_review
+    indexed["pr-orchestrator"]["on"]["pull_request"] = {"paths-ignore": ["**/*.md", "docs/**"]}
+    with pytest.raises(ValueError):
+        checker.validate_indexed_scheduling(["scripts/check_capsule_deferral.py"], candidate, "baseline")
+
+
+@pytest.mark.parametrize("valid", [True, False])
+def test_portable_validator_main_preserves_failure_exit(indexed_review, monkeypatch, capsys, valid):
+    checker, _indexed, _baseline, _calls = indexed_review
+    args = ["checker", "scripts/check_capsule_deferral.py", "scripts/check_capsule_deferral.py", "baseline"]
+    monkeypatch.setattr(checker.sys, "argv", args if valid else ["checker"])
+    assert checker.main() == (0 if valid else 1)
+    output = capsys.readouterr()
+    assert bool(output.err) is not valid
+    assert "PRIVATE" not in output.err

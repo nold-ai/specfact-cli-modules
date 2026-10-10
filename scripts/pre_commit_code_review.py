@@ -235,7 +235,7 @@ def _run_review_subprocess(
             capture_output=True,
             cwd=str(repo_root),
             env=env,
-            timeout=300,
+            timeout=1800,
         )
     except TimeoutExpired as error:
         analyzer = _last_capsule_analyzer(error.stderr)
@@ -252,7 +252,7 @@ def _run_review_subprocess(
                 + "\n"
             )
         joined_cmd = " ".join(cmd)
-        sys.stderr.write(f"Code review gate timed out after 300s (command: {joined_cmd!r}, files: {list(files)!r}).\n")
+        sys.stderr.write(f"Code review gate timed out after 1800s (command: {joined_cmd!r}, files: {list(files)!r}).\n")
         return None
 
 

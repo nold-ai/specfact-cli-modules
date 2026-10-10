@@ -44,9 +44,11 @@ def test_real_pytest_adapter_preserves_artifacts_before_evaluator_cleanup(
 
     def execute(*_args, **_kwargs):
         paths = runner._temporary_pytest_evidence_paths()
-        paths[0].write_text(json.dumps(coverage))
-        paths[1].write_text(json.dumps(observed))
-        paths[2].write_text('<testsuite><testcase classname="tests.test_value" name="test_value"/></testsuite>')
+        paths[0].write_text(json.dumps(coverage), encoding="utf-8")
+        paths[1].write_text(json.dumps(observed), encoding="utf-8")
+        paths[2].write_text(
+            '<testsuite><testcase classname="tests.test_value" name="test_value"/></testsuite>', encoding="utf-8"
+        )
         return subprocess.CompletedProcess([], process_exit, "", ""), *paths
 
     def evaluate(*_args, **_kwargs):
@@ -93,7 +95,7 @@ def test_completed_worker_emits_observations_with_findings_unchanged(
     monkeypatch.setitem(native_worker.EXTERNAL_ADAPTERS, "targeted-pytest-coverage", adapter)
     monkeypatch.setattr(native_worker.sys, "argv", _argv(roots))
     assert native_worker.main() == native_worker.EXIT_COMPLETE
-    response = json.loads((roots[2] / "result.json").read_text())
+    response = json.loads((roots[2] / "result.json").read_text(encoding="utf-8"))
     assert response["target_execution"] == expected
     assert response["evidence_outcome"] == "PASS"
     assert response["findings"] == []
@@ -109,18 +111,18 @@ def test_pytest_observations_reject_invalid_artifacts(
 
     def execute(*_args, **_kwargs):
         paths = runner._temporary_pytest_evidence_paths()
-        paths[0].write_text('{"files": {}}')
-        paths[1].write_text("[]")
-        paths[2].write_text("<testsuite/>")
+        paths[0].write_text('{"files": {}}', encoding="utf-8")
+        paths[1].write_text("[]", encoding="utf-8")
+        paths[2].write_text("<testsuite/>", encoding="utf-8")
         if bad == "missing":
             paths[1].unlink()
         elif bad == "symlink":
             outside = tmp_path / "outside.json"
-            outside.write_text("[]")
+            outside.write_text("[]", encoding="utf-8")
             paths[1].unlink()
             paths[1].symlink_to(outside)
         elif bad == "malformed":
-            paths[0].write_text("[]")
+            paths[0].write_text("[]", encoding="utf-8")
         else:
             paths[1].write_bytes(b" " * ((16 << 20) + 1))
         return subprocess.CompletedProcess([], 0, "", ""), *paths
@@ -150,14 +152,14 @@ def test_native_pytest_records_bind_actual_selectors_without_collection_events(t
     coverage = transport.temporary / "coverage.json"
     observer = transport.temporary / "observer.json"
     junit = transport.temporary / "junit.xml"
-    coverage.write_text('{"files": {"pkg/example.py": {}}}')
-    observer.write_text(json.dumps([{"nodeid": "tests/test_value.py::test_value", "phase": phase}]))
-    junit.write_text("<testsuite/>")
+    coverage.write_text('{"files": {"pkg/example.py": {}}}', encoding="utf-8")
+    observer.write_text(json.dumps([{"nodeid": "tests/test_value.py::test_value", "phase": phase}]), encoding="utf-8")
+    junit.write_text("<testsuite/>", encoding="utf-8")
     result = subprocess.CompletedProcess([], 0, "", ""), coverage, observer, junit
     observed = native_worker._capture_pytest_observation(result, transport)
     assert observed is not None
     assert observed["collected"] == ["tests/test_value.py::test_value"]
-    observer.write_text("[]")
+    observer.write_text("[]", encoding="utf-8")
     empty = native_worker._capture_pytest_observation(result, transport)
     assert empty is not None
     assert empty["collected"] == []
@@ -165,9 +167,9 @@ def test_native_pytest_records_bind_actual_selectors_without_collection_events(t
 
 def _capture_result(transport, records):
     paths = [transport.temporary / name for name in ("coverage.json", "observer.json", "junit.xml")]
-    paths[0].write_text('{"files": {"pkg/example.py": {}}}')
-    paths[1].write_text(json.dumps(records))
-    paths[2].write_text("<testsuite/>")
+    paths[0].write_text('{"files": {"pkg/example.py": {}}}', encoding="utf-8")
+    paths[1].write_text(json.dumps(records), encoding="utf-8")
+    paths[2].write_text("<testsuite/>", encoding="utf-8")
     return subprocess.CompletedProcess([], 0, "", ""), *paths
 
 
@@ -194,7 +196,7 @@ def test_native_pytest_observations_reject_malformed_node_identity(
     elif other_artifact == "missing-junit":
         result[3].unlink()
     elif other_artifact == "malformed-coverage":
-        result[1].write_text("[]")
+        result[1].write_text("[]", encoding="utf-8")
     with pytest.raises(native_worker.WorkerContractError, match=r"observer.*node"):
         native_worker._capture_pytest_observation(result, transport)
 
@@ -226,7 +228,7 @@ def test_native_pytest_failure_reaches_real_evaluator_with_incomplete_remedy(tmp
     transport = _transport(tmp_path)
     source = transport.project / "example.py"
     transport.project.chmod(0o700)
-    source.write_text("VALUE = 1\n")
+    source.write_text("VALUE = 1\n", encoding="utf-8")
     transport.project.chmod(0o500)
     records = [
         {"nodeid": "tests/test_value.py::test_value", "phase": phase, "passed": True, "skipped": False, "wasxfail": ""}
@@ -247,15 +249,17 @@ def test_native_pytest_failure_reaches_real_evaluator_with_incomplete_remedy(tmp
 
     def execute(*_args, **_kwargs):
         paths = runner._temporary_pytest_evidence_paths()
-        paths[0].write_text('{"files": {}}')
-        paths[1].write_text(json.dumps(records))
-        paths[2].write_text('<testsuite><testcase classname="tests.test_value" name="test_value"/></testsuite>')
+        paths[0].write_text('{"files": {}}', encoding="utf-8")
+        paths[1].write_text(json.dumps(records), encoding="utf-8")
+        paths[2].write_text(
+            '<testsuite><testcase classname="tests.test_value" name="test_value"/></testsuite>', encoding="utf-8"
+        )
         if failure in {"usage", "missing-coverage"}:
             paths[0].unlink()
         elif failure == "malformed-coverage":
-            paths[0].write_text("[]")
+            paths[0].write_text("[]", encoding="utf-8")
         elif failure.startswith("deep-"):
-            paths[0 if failure == "deep-coverage" else 1].write_text("[" * 2000 + "0" + "]" * 2000)
+            paths[0 if failure == "deep-coverage" else 1].write_text("[" * 2000 + "0" + "]" * 2000, encoding="utf-8")
         elif failure == "missing-directory":
             for path in paths:
                 path.unlink()
@@ -294,15 +298,15 @@ def test_native_pytest_failure_reaches_real_evaluator_with_incomplete_remedy(tmp
 
 
 @pytest.mark.parametrize("unsafe", ["symlink", "fifo", "oversized"])
-def test_missing_coverage_does_not_skip_later_artifact_safety(tmp_path, monkeypatch, unsafe):
+def test_missing_coverage_does_not_skip_later_artifact_safety(tmp_path, unsafe):
     transport = _transport(tmp_path)
     coverage = transport.temporary / "coverage.json"
     observer = transport.temporary / "observer.json"
     junit = transport.temporary / "junit.xml"
-    junit.write_text("<testsuite/>")
+    junit.write_text("<testsuite/>", encoding="utf-8")
     if unsafe == "symlink":
         outside = tmp_path / "outside.json"
-        outside.write_text("[]")
+        outside.write_text("[]", encoding="utf-8")
         observer.symlink_to(outside)
     elif unsafe == "fifo":
         import os
@@ -330,12 +334,12 @@ def test_pytest_artifact_parent_boundary_distinguishes_absence_from_substitution
     outside = tmp_path / "outside"
     if parent_kind == "symlink":
         outside.mkdir()
-        (outside / "coverage.json").write_text("private outside bytes")
+        (outside / "coverage.json").write_text("private outside bytes", encoding="utf-8")
         parent.symlink_to(outside, target_is_directory=True)
     elif parent_kind == "dangling-symlink":
         parent.symlink_to(outside, target_is_directory=True)
     elif parent_kind == "file":
-        parent.write_text("ordinary file")
+        parent.write_text("ordinary file", encoding="utf-8")
     path = parent / "coverage.json"
     if parent_kind == "absent":
         assert native_worker._read_pytest_artifact(path, transport.temporary) is None
@@ -356,11 +360,12 @@ def test_completed_result_bounds_whole_utf8_evidence(tmp_path: Path, large_part:
         observer = transport.temporary / "observer.json"
         junit = transport.temporary / "junit.xml"
         padding = "x" * (9 << 20)
-        coverage.write_text(json.dumps({"files": {}, "metadata": padding}))
+        coverage.write_text(json.dumps({"files": {}, "metadata": padding}), encoding="utf-8")
         observer.write_text(
-            json.dumps([{"nodeid": "tests/test_value.py::test_value", "phase": "call", "detail": padding}])
+            json.dumps([{"nodeid": "tests/test_value.py::test_value", "phase": "call", "detail": padding}]),
+            encoding="utf-8",
         )
-        junit.write_text("<testsuite/>")
+        junit.write_text("<testsuite/>", encoding="utf-8")
         assert all(path.stat().st_size <= 16 << 20 for path in (coverage, observer, junit))
         evidence = native_worker._capture_pytest_observation(
             (subprocess.CompletedProcess([], 0, "", ""), coverage, observer, junit), transport
@@ -388,7 +393,7 @@ def test_completed_result_bounds_whole_utf8_evidence(tmp_path: Path, large_part:
     output.mkdir()
     native_worker._write_result(output, response)
     assert (output / "result.json").stat().st_size <= 16 << 20
-    assert json.loads((output / "result.json").read_text()) == response
+    assert json.loads((output / "result.json").read_text(encoding="utf-8")) == response
 
 
 @pytest.mark.parametrize("extra_bytes", [0, -1])
@@ -457,6 +462,6 @@ def test_completed_worker_publishes_bounded_unknown_for_combined_evidence(
     assert native_worker.main() == native_worker.EXIT_COMPLETE
     result = roots[2] / "result.json"
     assert result.stat().st_size <= 16 << 20
-    assert json.loads(result.read_text()) == native_worker._unknown_response(
+    assert json.loads(result.read_text(encoding="utf-8")) == native_worker._unknown_response(
         "targeted-pytest-coverage", "native_worker_result_size_exceeded"
     )

@@ -783,7 +783,7 @@ jobs:
           "${trusted_env[@]}" "$TRUSTED_ROOT/venv/bin/python" -I -c \
             'import subprocess,sys
           try:
-              sys.exit(subprocess.run(sys.argv[1:],timeout=300,check=False).returncode)
+              sys.exit(subprocess.run(sys.argv[1:],timeout=1800,check=False).returncode)
           except subprocess.TimeoutExpired:
               sys.exit(124)' \
             "$TRUSTED_ROOT/venv/bin/python" -I "$TRUSTED_ROOT/reviewer.py" \

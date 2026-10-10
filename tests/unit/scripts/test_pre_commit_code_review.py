@@ -268,7 +268,7 @@ def test_main_propagates_review_gate_exit_code(
         assert "--json" in cmd
         assert module.REVIEW_JSON_OUT in cmd
         assert _kwargs.get("cwd") == str(repo_root)
-        assert _kwargs.get("timeout") == 300
+        assert _kwargs.get("timeout") == 1800
         _write_sample_review_report(repo_root, SAMPLE_FAIL_REVIEW_REPORT)
         return subprocess.CompletedProcess(cmd, 1, stdout=".specfact/code-review.json\n", stderr="")
 
@@ -448,8 +448,8 @@ def test_main_timeout_fails_hook(
 
     def _fake_run(cmd: list[str], **_kwargs: object) -> subprocess.CompletedProcess[str]:
         assert _kwargs.get("cwd") == str(repo_root)
-        assert _kwargs.get("timeout") == 300
-        raise subprocess.TimeoutExpired(cmd, 300)
+        assert _kwargs.get("timeout") == 1800
+        raise subprocess.TimeoutExpired(cmd, 1800)
 
     monkeypatch.setattr(module, "ensure_runtime_available", _fake_ensure)
     monkeypatch.setattr(module.subprocess, "run", _fake_run)
@@ -459,7 +459,7 @@ def test_main_timeout_fails_hook(
 
     assert exit_code == 124
     err = capsys.readouterr().err
-    assert "timed out after 300s" in err
+    assert "timed out after 1800s" in err
     assert "tests/unit/test_app.py" in err
 
 
@@ -484,8 +484,8 @@ def test_review_timeout_projects_only_last_fixed_analyzer(
     module = _load_script_module()
 
     def fail(cmd: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
-        assert kwargs["timeout"] == 300
-        raise subprocess.TimeoutExpired(cmd, 300, stderr=partial_stderr)
+        assert kwargs["timeout"] == 1800
+        raise subprocess.TimeoutExpired(cmd, 1800, stderr=partial_stderr)
 
     monkeypatch.setattr(module.subprocess, "run", fail)
     assert module._run_review_subprocess(["specfact"], tmp_path, [], enforcement="changed") is None

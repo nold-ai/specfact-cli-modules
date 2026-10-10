@@ -447,24 +447,16 @@ def test_controller_replies_reject_tampering(
     reply_request = cast(dict[str, object], reply["request"])
     reply_argv = cast(list[str], reply_request["argv"])
     replies = [reply]
-    if tamper == "reordered":
-        wrong = json.loads(json.dumps(reply))
-        wrong["request"]["sequence"] = 1
-        replies = [wrong, reply]
-    elif tamper == "extra":
-        extra = json.loads(json.dumps(reply))
-        extra["request"]["sequence"] = 1
-        replies.append(extra)
-    elif tamper == "duplicate":
-        replies.append(json.loads(json.dumps(reply)))
-    elif tamper == "oversized":
-        result["stdout"] = "x" * ((4 << 20) + 1)
-    elif tamper == "path":
-        reply_argv[-1] = "project/../escape.py"
-    elif tamper == "environment":
-        reply_request["environment"] = {"HOME": "/tmp/substituted"}
-    elif tamper == "argv":
-        reply_argv[1] = "--substituted"
+    mutations = {
+        "reordered": lambda: replies.insert(0, _sequenced_reply(reply)),
+        "extra": lambda: replies.append(_sequenced_reply(reply)),
+        "duplicate": lambda: replies.append(json.loads(json.dumps(reply))),
+        "oversized": lambda: result.update(stdout="x" * ((4 << 20) + 1)),
+        "path": lambda: reply_argv.__setitem__(-1, "project/../escape.py"),
+        "environment": lambda: reply_request.update(environment={"HOME": "/tmp/substituted"}),
+        "argv": lambda: reply_argv.__setitem__(1, "--substituted"),
+    }
+    mutations[tamper]()
     _clear_output(roots)
     _write_replies(roots, replies)
 
@@ -472,6 +464,12 @@ def test_controller_replies_reject_tampering(
     invalid = json.loads((roots[2] / "result.json").read_text(encoding="utf-8"))
     assert invalid["evidence_outcome"] == "UNKNOWN"
     assert str(invalid["diagnostic"]).startswith("native_worker_request_invalid:")
+
+
+def _sequenced_reply(reply):
+    changed = json.loads(json.dumps(reply))
+    changed["request"]["sequence"] = 1
+    return changed
 
 
 def test_controller_replay_relaunches_until_all_requests_complete(
@@ -583,3 +581,45 @@ def test_real_ruff_adapter_uses_managed_surface_without_host_spawn(
     assert pending["tool"] == "ruff"
     assert pending["argv"][0] == "capsule-tool:ruff"
     assert pending["argv"][-1] == "project/pkg/example.py"
+
+
+def test_native_worker_and_retained_proofs_have_no_complexity_warning():
+    from radon.complexity import cc_visit
+
+    from specfact_code_review.tools.radon_runner import _allowed_paths, _map_radon_complexity_findings
+
+    root = Path(__file__).resolve().parents[4]
+    files = [
+        Path(native_worker.__file__),
+        Path(__file__).with_name("test_native_project_runtime.py"),
+        root / "tests/unit/test_capsule_proof_contexts.py",
+    ]
+    payload = {
+        str(path): [
+            {"name": block.name, "lineno": block.lineno, "complexity": block.complexity}
+            for block in cc_visit(path.read_text(encoding="utf-8"))
+        ]
+        for path in files
+    }
+    findings = _map_radon_complexity_findings(payload, _allowed_paths(files))
+    assert findings == [], [(finding.file, finding.rule, finding.message) for finding in findings]
+
+
+def test_scoped_native_and_scheduling_entry_points_have_contracts():
+    from specfact_code_review.tools.contract_runner import _scan_file
+
+    root = Path(__file__).resolve().parents[4]
+    files = [
+        Path(native_worker.__file__),
+        root / "scripts/check_capsule_deferral.py",
+        root / "tools/smart_test_coverage.py",
+    ]
+    findings = [finding for path in files for finding in _scan_file(path)]
+    assert findings == [], [(finding.file, finding.message) for finding in findings]
+
+
+def test_controller_tamper_proof_has_no_blocking_nesting():
+    from specfact_code_review.tools.radon_runner import _kiss_metric_findings
+
+    findings = [finding for finding in _kiss_metric_findings(Path(__file__)) if finding.severity == "error"]
+    assert findings == [], [(finding.file, finding.rule, finding.message) for finding in findings]

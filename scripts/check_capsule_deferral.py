@@ -8,6 +8,7 @@ import subprocess
 import sys
 
 import yaml
+from icontract import ensure
 
 
 _PR_CONDITION = "github.event_name == 'pull_request'"
@@ -17,6 +18,7 @@ _REVIEW_CONDITION = _PR_CONDITION + " && needs.changes.outputs.capsule_changed =
 class _WorkflowLoader(yaml.SafeLoader):
     """Keep GitHub's literal on key distinct from YAML boolean keys."""
 
+    @ensure(lambda result: isinstance(result, dict))
     def construct_mapping(self, node, deep=False):
         mapping = {}
         for key_node, value_node in node.value:
@@ -123,6 +125,17 @@ def _validate_detector_execution(changes: dict, baseline: str) -> None:
         raise ValueError("change detector execution differs from the integrated dev contract")
 
 
+def _approved_review_budget(workflow: dict) -> dict:
+    """Adapt only the owner-approved whole-review bound in integrated execution."""
+    integrated = copy.deepcopy(workflow)
+    step = _unique_step(integrated["jobs"]["independent-review"], "independent_review")
+    old = "subprocess.run(sys.argv[1:],timeout=300,check=False)"
+    new = "subprocess.run(sys.argv[1:],timeout=1800,check=False)"
+    if step["run"].count(old) == 1:
+        step["run"] = step["run"].replace(old, new, 1)
+    return integrated
+
+
 def _validate_reusable_review(baseline: str) -> None:
     workflow = _workflow_yaml(".github/workflows/capsule-customer-execution.yml")
     if "workflow_call" not in workflow["on"]:
@@ -138,7 +151,9 @@ def _validate_reusable_review(baseline: str) -> None:
     # A local deferral cannot prove arbitrary changed shell/action execution.
     # Pin the entire already integrated contract, including runner/matrix,
     # commands, supporting steps, environment, inputs and deadlines.
-    if workflow != _workflow_yaml(".github/workflows/capsule-customer-execution.yml", baseline):
+    if workflow != _approved_review_budget(
+        _workflow_yaml(".github/workflows/capsule-customer-execution.yml", baseline)
+    ):
         raise ValueError("reusable review execution differs from the integrated dev contract")
 
 
@@ -168,6 +183,7 @@ def _validate_review_surface(capsule_paths: list[str], paths: list[str]) -> None
         raise ValueError("unrelated staged reviewable path cannot use capsule deferral")
 
 
+@ensure(lambda result: result is None)
 def validate_indexed_scheduling(paths: list[str], candidate_paths: list[str], baseline: str) -> None:
     workflow = _workflow_yaml(".github/workflows/pr-orchestrator.yml")
     _validate_pr_trigger(workflow, candidate_paths)
@@ -190,6 +206,7 @@ def validate_indexed_scheduling(paths: list[str], candidate_paths: list[str], ba
         raise ValueError("review orchestration differs from the integrated dev contract")
 
 
+@ensure(lambda result: result in {0, 1})
 def main() -> int:
     try:
         validate_indexed_scheduling(sys.argv[1].splitlines(), sys.argv[2].splitlines(), sys.argv[3])

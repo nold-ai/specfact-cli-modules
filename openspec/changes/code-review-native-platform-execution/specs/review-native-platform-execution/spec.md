@@ -1344,3 +1344,27 @@ This binds the caller without changing the hosted review or targeted pytest dead
 - **AND** all jobs, prerequisites, steps, matrices, workflow environment/defaults/permissions/concurrency SHALL stay bound; equivalent formatting and existing admissible trigger additions remain supported
 
 The required consumer remains blocking for failed/skipped customer review; no hosted analyzer input, deadline, native isolation/ownership contract or original proof assertion changes.
+
+
+#### Scenario: Owner-approved whole-review budget and script coverage
+
+- **GIVEN** the owner on 10 October 2026 explicitly authorizes enlarging the 300-second review limit and real passing portable suites now take about 177 seconds before other analyzers
+- **WHEN** candidate and independent hosted reviews execute all unchanged analyzers
+- **THEN** each whole review SHALL retain a finite 1800-second limit, original failure propagation and fixed timeout exit124; preparation, child test limits and analyzer inputs remain unchanged
+- **AND** local deferral SHALL admit only the exact independent-wrapper 300-to-1800-second adaptation to integrated dev, rejecting any other command, timeout, runner, prerequisite or execution change
+- **AND** the repository coverage configuration SHALL include reviewed scripts and portable regressions SHALL exercise the indexed workflow validator without relying on excluded host subprocess proofs; missing coverage remains blocking UNKNOWN rather than being waived
+
+
+#### Scenario: Warning remediation retains native evidence and fixture identity
+
+- **GIVEN** production Radon reports six scoped complexity warnings and Pylint reports nondeterministic fixture text encodings
+- **WHEN** permission, observer decoding, worker dispatch and fixture setup/assertion blocks are extracted
+- **THEN** their unchanged production complexity policy SHALL report no scoped complexity warning, while all original admissions, identity/type rejection, artifact-read and fallback order, diagnostics, replay write-before-print behavior, exit codes and proof assertions remain
+- **AND** fixture text SHALL use explicit UTF-8 and subprocesses explicitly retain check=False where their return codes are asserted; no warning threshold or malformed-evidence contract is softened
+
+
+#### Scenario: Scoped public entry points expose existing return contracts
+
+- **GIVEN** authoritative review reports missing contracts on public native replay, indexed scheduling and SMART entry points
+- **WHEN** explicit postconditions are added
+- **THEN** every existing successful return and propagated exception/exit SHALL retain its behavior, and contracts SHALL describe completed-process, no-value verification, mapping and existing integer exit-code results without narrowing admitted inputs or waiving incomplete execution

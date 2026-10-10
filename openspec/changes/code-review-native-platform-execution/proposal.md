@@ -184,3 +184,8 @@ local artifact overrides establish unit evidence only. Human merge/promotion
 remains required; a prepared workflow or green fixture does not mean publication.
 No new core interface is planned. Maintainer builds may use existing SDK/Rust
 tools; customers need no build tools, container engine, admin or Apple account.
+
+
+## Owner-approved review budget correction — 10 October 2026
+
+The owner explicitly requested timeout enlargement if the expanded workload exceeds300seconds. Full portable tests measured173–177seconds alone; independent review actually reaches its300second outer deadline while the pytest child already permits1200seconds. Reuse the existing bounded wrappers at1800seconds (30minutes), leaving job limits45/90minutes, preparation1800seconds and child/analyzer limits unchanged. This permits full review overhead without an unbounded run or relaxed verdict. The exact wrapper substitution is the only additional dev-contract deferral exception. Repository script coverage must be admitted in native configuration and exercised by portable tests; customer filters remain authoritative. Hosted historical pytest detail is unavailable, so the locally reproduced policy mismatch is not asserted as the recovered historical private message.

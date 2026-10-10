@@ -318,7 +318,7 @@ def test_review_subject_does_not_replace_authenticated_reviewer_checkout(
     result = gate._run_review_subprocess(["fixture"], subject, ["app.py"], enforcement="changed")
     assert result.returncode == 1
     assert observed["cwd"] == str(subject)
-    assert observed["timeout"] == 300
+    assert observed["timeout"] == 1800
     environment = observed["env"]
     assert environment["GITHUB_SHA"] == "a" * 40
     assert environment["SPECFACT_CODE_REVIEW_CHANGED_DIFF"] == "cached"

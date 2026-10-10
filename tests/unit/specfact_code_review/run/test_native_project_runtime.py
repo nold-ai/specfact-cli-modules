@@ -12,6 +12,8 @@ import sys
 import tarfile
 import zipfile
 from dataclasses import replace
+from functools import partial
+from itertools import product
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any, Self
@@ -36,9 +38,9 @@ _ACQUISITION_SOURCE = Path(__file__).resolve().parents[4] / "scripts/macos_manag
 def test_source_only_environment_uses_native_inventory_without_acquisition(monkeypatch, tmp_path: Path) -> None:
     calls = []
 
-    def phase(runtime, operation, inputs, destination):
+    def phase(_runtime, operation, inputs, destination):
         calls.append(operation)
-        assert json.loads((inputs / "request.json").read_text()) == {}
+        assert json.loads((inputs / "request.json").read_text(encoding="utf-8")) == {}
         assert not list((inputs / "wheels").iterdir())
         destination.mkdir()
         (destination / "site-packages").mkdir()
@@ -50,7 +52,8 @@ def test_source_only_environment_uses_native_inventory_without_acquisition(monke
                     "member_graphs": {"pylint": {"installed": [], "sealed_imports": []}},
                     "analyzer_conflicts": {},
                 }
-            )
+            ),
+            encoding="utf-8",
         )
         destination.chmod(0o500)
 
@@ -58,7 +61,7 @@ def test_source_only_environment_uses_native_inventory_without_acquisition(monke
     destination = tmp_path / "runtime"
     native_project_runtime.prepare_source_environment(SimpleNamespace(environment_id="darwin-arm64-cp311"), destination)
     assert calls == ["install"]
-    descriptor = json.loads((destination / "project-runtime.json").read_text())
+    descriptor = json.loads((destination / "project-runtime.json").read_text(encoding="utf-8"))
     assert descriptor["inventory"]["environment"]["sys_platform"] == "darwin"
     assert descriptor["inventory"]["source_roots"] == []
 
@@ -66,7 +69,7 @@ def test_source_only_environment_uses_native_inventory_without_acquisition(monke
 def test_unfamiliar_dependency_project_uses_local_preparation_without_catalog(monkeypatch: Any, tmp_path: Path) -> None:
     project = tmp_path / "unfamiliar"
     project.mkdir()
-    (project / "requirements.txt").write_text("idna==3.10\n")
+    (project / "requirements.txt").write_text("idna==3.10\n", encoding="utf-8")
     plan = discover_project(project)
     runtime = SimpleNamespace(
         backend="darwin-arm64", environment_id="darwin-arm64-cp312", identity="sha256:" + "d" * 64
@@ -83,7 +86,7 @@ def test_unfamiliar_dependency_project_uses_local_preparation_without_catalog(mo
     def prepare(selected, selected_runtime, artifact):
         calls.append((selected.identity, selected_runtime.identity))
         (artifact / "site-packages/idna").mkdir(parents=True)
-        (artifact / "site-packages/idna/__init__.py").write_text("__version__ = '3.10'\n")
+        (artifact / "site-packages/idna/__init__.py").write_text("__version__ = '3.10'\n", encoding="utf-8")
         return {
             "environment": {"python_full_version": "3.12.14"},
             "analyzer_conflicts": {},
@@ -107,12 +110,12 @@ def test_copied_snapshot_is_bound_to_discovered_plan_before_acquisition(monkeypa
 
     project = tmp_path / "project"
     project.mkdir()
-    (project / "requirements.txt").write_text("idna==3.10\n")
+    (project / "requirements.txt").write_text("idna==3.10\n", encoding="utf-8")
     plan = discover_project(project)
 
     def substituted_copy(source, destination, **_kwargs):
         shutil.copytree(source, destination)
-        (destination / "requirements.txt").write_text("idna==3.9\n")
+        (destination / "requirements.txt").write_text("idna==3.9\n", encoding="utf-8")
 
     monkeypatch.setattr(runtime_builder, "copy_project", substituted_copy)
     monkeypatch.setattr(
@@ -123,7 +126,7 @@ def test_copied_snapshot_is_bound_to_discovered_plan_before_acquisition(monkeypa
 
 
 def test_selected_uv_without_project_metadata_rejects_before_acquisition(monkeypatch, tmp_path: Path) -> None:
-    (tmp_path / "requirements.txt").write_text("idna==3.10\n")
+    (tmp_path / "requirements.txt").write_text("idna==3.10\n", encoding="utf-8")
     plan = replace(discover_project(tmp_path), manager="uv")
     monkeypatch.setattr(native_project_runtime, "_build_project_wheel", lambda *_args: pytest.fail("hook ran"))
     monkeypatch.setattr(native_project_runtime, "_run_pip_phase", lambda *_args: pytest.fail("acquisition ran"))
@@ -138,12 +141,13 @@ def test_hatch_prepares_an_unfamiliar_environment_without_project_catalog(
     project = tmp_path / "project"
     project.mkdir()
     (project / "pyproject.toml").write_text(
-        '[project]\nname="unfamiliar"\nversion="1"\n[tool.hatch.envs.review]\nskip-install=true\ndependencies=["idna==3.10"]\n'
+        '[project]\nname="unfamiliar"\nversion="1"\n[tool.hatch.envs.review]\nskip-install=true\ndependencies=["idna==3.10"]\n',
+        encoding="utf-8",
     )
     plan = discover_project(project)
     if workspace:
         (project / "backend").mkdir()
-        (project / "backend/pyproject.toml").write_text('[project]\nname="backend"\nversion="1"\n')
+        (project / "backend/pyproject.toml").write_text('[project]\nname="backend"\nversion="1"\n', encoding="utf-8")
         (project / "backend/src/backend").mkdir(parents=True)
         (project / "backend/src/backend/__init__.py").write_bytes(b"VALUE=73\n")
         plan = discover_project(project)
@@ -161,9 +165,9 @@ def test_hatch_prepares_an_unfamiliar_environment_without_project_catalog(
     def phase(_runtime, operation, inputs, destination):
         destination.mkdir()
         if operation == "hook":
-            request = json.loads((inputs / ".specfact-hook.json").read_text())
+            request = json.loads((inputs / ".specfact-hook.json").read_text(encoding="utf-8"))
             calls.append(request["operation"])
-            assert json.loads((inputs / ".specfact-hatch.json").read_text())["environment"] == "review"
+            assert json.loads((inputs / ".specfact-hatch.json").read_text(encoding="utf-8"))["environment"] == "review"
             if request["operation"] == "hatch.describe":
                 result = {
                     "requirements": ["idna==3.10"],
@@ -176,19 +180,19 @@ def test_hatch_prepares_an_unfamiliar_environment_without_project_catalog(
                 }
             else:
                 (destination / "site-packages/idna").mkdir(parents=True)
-                (destination / "site-packages/idna/__init__.py").write_text("__version__='3.10'\n")
+                (destination / "site-packages/idna/__init__.py").write_text("__version__='3.10'\n", encoding="utf-8")
                 result = {"manager": {"name": "hatch", "version": "1.18.0"}, "status": "COMPLETE"}
-            (destination / "hook-result.json").write_text(json.dumps(result))
+            (destination / "hook-result.json").write_text(json.dumps(result), encoding="utf-8")
         elif operation == "acquire":
             calls.append("acquire")
-            assert json.loads((inputs / "request.json").read_text())["requirements"] == [
+            assert json.loads((inputs / "request.json").read_text(encoding="utf-8"))["requirements"] == [
                 "idna==3.10",
                 *(["filelock==3.20.3"] if workspace else []),
             ]
             if workspace:
                 assert (inputs / "wheels/backend-1-py3-none-any.whl").is_file()
             (destination / "wheels").mkdir()
-            (destination / "wheel-manifest.json").write_text("{}")
+            (destination / "wheel-manifest.json").write_text("{}", encoding="utf-8")
         else:
             calls.append("inspect")
             (destination / "environment-inventory.json").write_text(
@@ -199,7 +203,8 @@ def test_hatch_prepares_an_unfamiliar_environment_without_project_catalog(
                         "member_graphs": {},
                         "analyzer_conflicts": {},
                     }
-                )
+                ),
+                encoding="utf-8",
             )
 
     monkeypatch.setattr(native_project_runtime, "_prepare_build_dependencies", manager_dependencies)
@@ -236,8 +241,8 @@ def test_hatch_prepares_an_unfamiliar_environment_without_project_catalog(
 def test_uv_prepares_actual_locked_project_without_catalog(monkeypatch, tmp_path: Path):
     project = tmp_path / "project"
     project.mkdir()
-    (project / "pyproject.toml").write_text('[project]\nname="unfamiliar"\nversion="1"\n[tool.uv]\n')
-    (project / "uv.lock").write_text("version=1\n")
+    (project / "pyproject.toml").write_text('[project]\nname="unfamiliar"\nversion="1"\n[tool.uv]\n', encoding="utf-8")
+    (project / "uv.lock").write_text("version=1\n", encoding="utf-8")
     plan = discover_project(project)
     calls = []
 
@@ -245,14 +250,17 @@ def test_uv_prepares_actual_locked_project_without_catalog(monkeypatch, tmp_path
         calls.append(operation)
         destination.mkdir()
         if operation == "uv":
-            request = json.loads((inputs / ".specfact-uv.json").read_text())
+            request = json.loads((inputs / ".specfact-uv.json").read_text(encoding="utf-8"))
             assert request["locked"] is True
             assert (inputs / "uv.lock").read_bytes() == (project / "uv.lock").read_bytes()
             (destination / "site-packages").mkdir()
-            (destination / "prepared.lock").write_text("version=1\n")
+            (destination / "prepared.lock").write_text("version=1\n", encoding="utf-8")
         else:
             assert operation == "inspect"
-            assert json.loads((inputs / "request.json").read_text())["schema"] == "native-site-inventory-v1"
+            assert (
+                json.loads((inputs / "request.json").read_text(encoding="utf-8"))["schema"]
+                == "native-site-inventory-v1"
+            )
             (destination / "environment-inventory.json").write_text(
                 json.dumps(
                     {
@@ -261,7 +269,8 @@ def test_uv_prepares_actual_locked_project_without_catalog(monkeypatch, tmp_path
                         "member_graphs": {},
                         "analyzer_conflicts": {},
                     }
-                )
+                ),
+                encoding="utf-8",
             )
 
     monkeypatch.setattr(native_project_runtime, "_run_pip_phase", phase)
@@ -280,23 +289,23 @@ def test_poetry_prepares_locked_dependency_environment_without_catalog(monkeypat
     project = tmp_path / "project"
     project.mkdir()
     (project / "pyproject.toml").write_text(
-        '[project]\nname="unfamiliar"\nversion="1"\n[tool.poetry]\npackage-mode=false\n'
+        '[project]\nname="unfamiliar"\nversion="1"\n[tool.poetry]\npackage-mode=false\n', encoding="utf-8"
     )
     if lock_present:
-        (project / "poetry.lock").write_text("locked fixture\n")
+        (project / "poetry.lock").write_text("locked fixture\n", encoding="utf-8")
     plan = discover_project(project)
     calls = []
 
-    def dependencies(runtime, requirements, root, name):
+    def dependencies(_runtime, requirements, root, name):
         assert requirements == ["poetry==2.4.3"]
         destination = root / name
         (destination / "site-packages").mkdir(parents=True)
         return destination
 
-    def phase(runtime, operation, inputs, destination):
+    def phase(_runtime, operation, inputs, destination):
         destination.mkdir()
         if operation == "hook":
-            operation = json.loads((inputs / ".specfact-hook.json").read_text())["operation"]
+            operation = json.loads((inputs / ".specfact-hook.json").read_text(encoding="utf-8"))["operation"]
             if lock_present:
                 assert (inputs / "poetry.lock").read_bytes() == (project / "poetry.lock").read_bytes()
             result = {
@@ -328,13 +337,13 @@ def test_poetry_prepares_locked_dependency_environment_without_catalog(monkeypat
             if operation == "poetry.install":
                 (destination / "site-packages").mkdir()
                 result["status"] = "COMPLETE"
-            (destination / "hook-result.json").write_text(json.dumps(result))
+            (destination / "hook-result.json").write_text(json.dumps(result), encoding="utf-8")
         elif operation == "acquire":
-            value = json.loads((inputs / "request.json").read_text())
+            value = json.loads((inputs / "request.json").read_text(encoding="utf-8"))
             if value["schema"] == "native-poetry-resolution-v1":
                 assert set(inputs.iterdir()) == {inputs / "request.json", inputs / ".specfact-build-dependencies"}
                 payload = '[metadata]\ncontent-hash="' + "a" * 64 + '"\n'
-                (destination / "poetry.lock").write_text(payload)
+                (destination / "poetry.lock").write_text(payload, encoding="utf-8")
                 (destination / "resolution.json").write_text(
                     json.dumps(
                         {
@@ -342,13 +351,14 @@ def test_poetry_prepares_locked_dependency_environment_without_catalog(monkeypat
                             "content_hash": "a" * 64,
                             "lock_sha256": hashlib.sha256(payload.encode()).hexdigest(),
                         }
-                    )
+                    ),
+                    encoding="utf-8",
                 )
                 calls.append(operation)
                 return
             assert value["requirements"] == ["idna==3.10"]
             (destination / "wheels").mkdir()
-            (destination / "wheel-manifest.json").write_text("{}")
+            (destination / "wheel-manifest.json").write_text("{}", encoding="utf-8")
         else:
             assert operation == "inspect"
             (destination / "environment-inventory.json").write_text(
@@ -359,7 +369,8 @@ def test_poetry_prepares_locked_dependency_environment_without_catalog(monkeypat
                         "member_graphs": {},
                         "analyzer_conflicts": {},
                     }
-                )
+                ),
+                encoding="utf-8",
             )
         calls.append(operation)
 
@@ -434,7 +445,7 @@ def test_source_root_matching_indexes_inventory_once(monkeypatch, tmp_path: Path
 def test_malformed_failure_receipt_preserves_incomplete_diagnostic(monkeypatch, tmp_path: Path) -> None:
     inputs = tmp_path / "inputs"
     inputs.mkdir()
-    (inputs / "request.json").write_text("{}")
+    (inputs / "request.json").write_text("{}", encoding="utf-8")
     monkeypatch.setattr(
         native_project_runtime.native_execution, "prepare_native_execution", lambda **kwargs: SimpleNamespace(**kwargs)
     )
@@ -451,7 +462,7 @@ def test_malformed_failure_receipt_preserves_incomplete_diagnostic(monkeypatch, 
             pass
 
         def launch(self, request):
-            (request.output_root / "preparation-error.json").write_text("[]")
+            (request.output_root / "preparation-error.json").write_text("[]", encoding="utf-8")
             return 1
 
         def wait(self, *_args):
@@ -468,7 +479,7 @@ def test_malformed_failure_receipt_preserves_incomplete_diagnostic(monkeypatch, 
 def test_malformed_hook_response_is_actionable_incomplete(monkeypatch, tmp_path: Path, response) -> None:
     project = tmp_path / "project"
     project.mkdir()
-    (project / "pyproject.toml").write_text('[build-system]\nrequires=[]\nbuild-backend="fixture"\n')
+    (project / "pyproject.toml").write_text('[build-system]\nrequires=[]\nbuild-backend="fixture"\n', encoding="utf-8")
     plan = discover_project(project)
     root = tmp_path / "preparation"
     root.mkdir()
@@ -479,7 +490,7 @@ def test_malformed_hook_response_is_actionable_incomplete(monkeypatch, tmp_path:
     def hook(_runtime, operation, _inputs, destination):
         assert operation == "hook"
         destination.mkdir()
-        (destination / "hook-result.json").write_text(json.dumps(response))
+        (destination / "hook-result.json").write_text(json.dumps(response), encoding="utf-8")
 
     monkeypatch.setattr(native_project_runtime, "_run_pip_phase", hook)
     with pytest.raises(ProjectRuntimeError, match=r"project_native_build_(result|requirements)_invalid"):
@@ -513,7 +524,7 @@ def test_package_still_prepares_and_installs_its_root(monkeypatch: Any, tmp_path
     def prepare_root(_plan, _runtime, artifact):
         calls.append(_plan.identity)
         (artifact / "site-packages").mkdir(parents=True)
-        (artifact / "site-packages/standalone.py").write_text("VALUE = 1\n")
+        (artifact / "site-packages/standalone.py").write_text("VALUE = 1\n", encoding="utf-8")
         return {"environment": {"python_full_version": "3.12.14"}, "member_graphs": {}, "analyzer_conflicts": {}}
 
     monkeypatch.setattr(native_project_runtime, "_prepare_project_on_demand", prepare_root)
@@ -750,7 +761,7 @@ def test_prepares_authenticated_bundle_through_closed_native_project_plan(monkey
     monkeypatch.setattr(
         native_project_runtime,
         "_verify_acquisition_bundle",
-        lambda selected, *_args, **_kwargs: json.loads((selected / "descriptor.json").read_text()),
+        lambda selected, *_args, **_kwargs: json.loads((selected / "descriptor.json").read_text(encoding="utf-8")),
     )
 
     monkeypatch.setattr(
@@ -772,7 +783,7 @@ def test_prepares_authenticated_bundle_through_closed_native_project_plan(monkey
     assert captured["plan_id"] == "project.pip.v1"
     assert captured["budget"].output_bytes == 64 << 20
     assert prepared.descriptor["environment_id"] == "darwin-arm64-cp312"
-    assert (prepared.root / "site-packages/fixture_dep/__init__.py").read_text() == "VALUE = 1\n"
+    assert (prepared.root / "site-packages/fixture_dep/__init__.py").read_text(encoding="utf-8") == "VALUE = 1\n"
     assert prepared.descriptor["inventory"]["native_preparation"]["status"] == "COMPLETE"
     assert prepared.descriptor["inventory"]["native_extensions"][0]["path"] == ("fixture_dep/native.so")
 
@@ -811,7 +822,10 @@ def test_extracts_bounded_bundle_archive_then_reverifies_exact_bytes(tmp_path: P
     native_project_runtime._extract_acquisition_archive(archive, extracted)
 
     descriptor = native_project_runtime._verify_acquisition_bundle(extracted, plan, runtime)
-    assert descriptor["content_sha256"] == json.loads((bundle / "descriptor.json").read_text())["content_sha256"]
+    assert (
+        descriptor["content_sha256"]
+        == json.loads((bundle / "descriptor.json").read_text(encoding="utf-8"))["content_sha256"]
+    )
 
 
 @pytest.mark.parametrize("limit", ["members", "payload"])
@@ -1148,7 +1162,7 @@ def test_cold_acquisition_installs_authenticated_content_and_reuses_it_offline(
         native_lease=object(),
     )
     staged = _bundle(tmp_path / "publisher", plan)
-    descriptor = json.loads((staged / "descriptor.json").read_text())
+    descriptor = json.loads((staged / "descriptor.json").read_text(encoding="utf-8"))
     content = descriptor["content_sha256"]
     acquisition_cache = tmp_path / "acquisitions"
     runtime_cache = tmp_path / "runtimes"
@@ -1160,7 +1174,7 @@ def test_cold_acquisition_installs_authenticated_content_and_reuses_it_offline(
         shutil.copytree(staged, destination)
 
     def verify(bundle: Path, *_args: object, **_kwargs: object) -> dict[str, Any]:
-        value = json.loads((bundle / "descriptor.json").read_text())
+        value = json.loads((bundle / "descriptor.json").read_text(encoding="utf-8"))
         if value.get("content_sha256") != content or (bundle / "CORRUPT").exists():
             raise ProjectRuntimeError("project_native_acquisition_authentication_failed")
         return value
@@ -1215,7 +1229,7 @@ def test_automatic_catalog_locator_binds_download_digest_and_size(monkeypatch: A
         root=tmp_path / "capsule",
     )
     staged = _bundle(tmp_path / "publisher", plan)
-    descriptor = json.loads((staged / "descriptor.json").read_text())
+    descriptor = json.loads((staged / "descriptor.json").read_text(encoding="utf-8"))
     observed: dict[str, object] = {}
     locator = ProjectArtifactLocator(
         url="https://ghcr.io/v2/nold-ai/specfact-project-runtimes/blobs/sha256:" + "e" * 64,
@@ -1237,7 +1251,7 @@ def test_automatic_catalog_locator_binds_download_digest_and_size(monkeypatch: A
     monkeypatch.setattr(
         native_project_runtime,
         "_verify_acquisition_bundle",
-        lambda bundle, *_args, **_kwargs: json.loads((bundle / "descriptor.json").read_text()),
+        lambda bundle, *_args, **_kwargs: json.loads((bundle / "descriptor.json").read_text(encoding="utf-8")),
     )
 
     selected = native_project_runtime._resolve_acquisition_bundle(
@@ -1278,7 +1292,7 @@ def test_explicit_url_override_does_not_consult_catalog(monkeypatch: Any, tmp_pa
     monkeypatch.setattr(
         native_project_runtime,
         "_verify_acquisition_bundle",
-        lambda bundle, *_args, **_kwargs: json.loads((bundle / "descriptor.json").read_text()),
+        lambda bundle, *_args, **_kwargs: json.loads((bundle / "descriptor.json").read_text(encoding="utf-8")),
     )
 
     native_project_runtime._resolve_acquisition_bundle(
@@ -1344,7 +1358,9 @@ def test_concurrent_acquisition_publication_verifies_winner(monkeypatch: Any, tm
 
     assert selected == cache / content
     assert verified == [staged, cache / content]
-    assert (cache / "bindings" / native_project_runtime._cache_key(plan, runtime)).read_text() == content + "\n"
+    assert (cache / "bindings" / native_project_runtime._cache_key(plan, runtime)).read_text(
+        encoding="utf-8"
+    ) == content + "\n"
 
 
 def test_corrupt_authenticated_cache_is_rejected_without_network(monkeypatch: Any, tmp_path: Path) -> None:
@@ -1405,11 +1421,11 @@ url="https://github.com/python-poetry/poetry-core.git"
 reference="HEAD"
 resolved_reference="b9663e42c808543377ae523611c4cfad68016f30"
 """
-    (tmp_path / "poetry.lock").write_text(lock)
+    (tmp_path / "poetry.lock").write_text(lock, encoding="utf-8")
     assert native_project_runtime._validated_poetry_sources(tmp_path, [declaration]) == [declaration]
     with pytest.raises(ProjectRuntimeError, match="source_lock_mismatch"):
         native_project_runtime._validated_poetry_sources(tmp_path, [{**declaration, "commit": "0" * 40}])
-    assert (tmp_path / "poetry.lock").read_text() == lock
+    assert (tmp_path / "poetry.lock").read_text(encoding="utf-8") == lock
 
 
 @pytest.mark.parametrize(
@@ -1453,7 +1469,7 @@ def test_fresh_site_inventory_cannot_claim_alternate_native_patch(monkeypatch, t
     artifact = tmp_path / "artifact"
     (artifact / "site-packages").mkdir(parents=True)
 
-    def phase(runtime, operation, inputs, output):
+    def phase(_runtime, operation, _inputs, output):
         assert operation == "inspect"
         output.mkdir()
         (output / "environment-inventory.json").write_text(
@@ -1464,7 +1480,8 @@ def test_fresh_site_inventory_cannot_claim_alternate_native_patch(monkeypatch, t
                     "member_graphs": {},
                     "analyzer_conflicts": {},
                 }
-            )
+            ),
+            encoding="utf-8",
         )
 
     monkeypatch.setattr(native_project_runtime, "_run_pip_phase", phase)
@@ -1477,7 +1494,7 @@ def test_fresh_site_inventory_cannot_claim_alternate_native_patch(monkeypatch, t
 def test_poetry_source_and_index_wheels_keep_separate_identities(tmp_path, monkeypatch):
     snapshot = tmp_path / "snapshot"
     snapshot.mkdir()
-    (snapshot / "pyproject.toml").write_text('[project]\nname="root"\nversion="1"\n')
+    (snapshot / "pyproject.toml").write_text('[project]\nname="root"\nversion="1"\n', encoding="utf-8")
     dependencies = tmp_path / "manager"
     (dependencies / "site-packages").mkdir(parents=True)
     index_wheels = tmp_path / "index-wheels"
@@ -1491,7 +1508,7 @@ def test_poetry_source_and_index_wheels_keep_separate_identities(tmp_path, monke
     root = tmp_path / "private"
     root.mkdir()
 
-    def phase(runtime, operation, inputs, output):
+    def phase(_runtime, operation, inputs, output):
         assert operation == "hook"
         assert (inputs / "wheelhouse" / filename).read_bytes().startswith(b"index artifact")
         assert (inputs / ".specfact-poetry-source-wheels" / filename).read_bytes().startswith(b"exact locked Git")
@@ -1543,7 +1560,7 @@ def test_poetry_generated_lock_receipt_binding_rejected(tmp_path, tamper):
         receipt["content_hash"] = "0" * 64
     else:
         receipt["manager"]["version"] = "2.4.2"
-    (acquired / "resolution.json").write_text(json.dumps(receipt))
+    (acquired / "resolution.json").write_text(json.dumps(receipt), encoding="utf-8")
     with pytest.raises(ProjectRuntimeError, match="resolution_binding_mismatch"):
         native_project_runtime._admit_poetry_resolution(acquired, request)
 
@@ -1626,21 +1643,20 @@ def _write_native_distribution_record(site, name, paths):
         payload = (site / relative).read_bytes()
         digest = base64.urlsafe_b64encode(hashlib.sha256(payload).digest()).decode().rstrip("=")
         rows.append(f"{relative},sha256={digest},{len(payload)}\n")
-    (metadata / "RECORD").write_text("".join(rows))
+    (metadata / "RECORD").write_text("".join(rows), encoding="utf-8")
     return metadata / "RECORD"
 
 
-@pytest.mark.parametrize("lock_present", [True, False])
-@pytest.mark.parametrize("generated_name", ["_version.py", "_version.pyi"])
-@pytest.mark.parametrize("source_binding", ["matching", "changed", "ambiguous"])
-@pytest.mark.parametrize("explicit_roots", [False, True])
-def test_uv_generated_module_preserves_only_byte_bound_implicit_source(
-    monkeypatch, tmp_path, lock_present, generated_name, source_binding, explicit_roots
-):
+@pytest.mark.parametrize(
+    "case",
+    list(product([True, False], ["_version.py", "_version.pyi"], ["matching", "changed", "ambiguous"], [False, True])),
+)
+def test_uv_generated_module_preserves_only_byte_bound_implicit_source(monkeypatch, tmp_path, case):
+    lock_present, generated_name, source_binding, explicit_roots = case
     project = tmp_path / "project"
     package = project / "src/customer"
     package.mkdir(parents=True)
-    (project / "pyproject.toml").write_text('[project]\nname="customer"\nversion="1"\n[tool.uv]\n')
+    (project / "pyproject.toml").write_text('[project]\nname="customer"\nversion="1"\n[tool.uv]\n', encoding="utf-8")
     source_bytes = b"VALUE='reviewed source'\n"
     (package / "__init__.py").write_bytes(source_bytes)
     if source_binding == "ambiguous":
@@ -1648,7 +1664,7 @@ def test_uv_generated_module_preserves_only_byte_bound_implicit_source(
         other.mkdir(parents=True)
         (other / "__init__.py").write_bytes(source_bytes)
     if lock_present:
-        (project / "uv.lock").write_text("version=1\n")
+        (project / "uv.lock").write_text("version=1\n", encoding="utf-8")
     plan = discover_project(project)
     assert not plan.source_roots
     if explicit_roots:
@@ -1657,40 +1673,22 @@ def test_uv_generated_module_preserves_only_byte_bound_implicit_source(
     generated_bytes = b"VERSION='generated build'\n"
     calls = []
 
-    def phase(_runtime, operation, inputs, destination):
-        calls.append(operation)
-        destination.mkdir()
-        if operation == "uv":
-            request = json.loads((inputs / ".specfact-uv.json").read_text())
-            assert request["locked"] is lock_present
-            site = destination / "site-packages"
-            installed = site / "customer"
-            installed.mkdir(parents=True)
-            (installed / "__init__.py").write_bytes(
-                source_bytes if source_binding != "changed" else b"VALUE='different build'\n"
-            )
-            (installed / generated_name).write_bytes(generated_bytes)
-            (site / "unrelated_dependency.py").write_text("VALUE='dependency'\n")
-            _write_native_distribution_record(site, "customer", ["customer/__init__.py", f"customer/{generated_name}"])
-            _write_native_distribution_record(site, "dependency", ["unrelated_dependency.py"])
-            (destination / "prepared.lock").write_text("version=1\n")
-        else:
-            assert operation == "inspect"
-            (destination / "environment-inventory.json").write_text(
-                json.dumps(
-                    {
-                        "installed": [],
-                        "environment": {"sys_platform": "darwin", "python_full_version": "3.11.16"},
-                        "member_graphs": {},
-                        "analyzer_conflicts": {},
-                    }
-                )
-            )
-
-    monkeypatch.setattr(native_project_runtime, "_run_pip_phase", phase)
+    context = (calls, lock_present, source_bytes, source_binding, generated_name, generated_bytes)
+    monkeypatch.setattr(native_project_runtime, "_run_pip_phase", partial(_generated_uv_phase, context))
     inventory = native_project_runtime._prepare_project_on_demand(
         plan, SimpleNamespace(root=tmp_path / "capsule", environment_id="darwin-arm64-cp311"), artifact
     )
+    _assert_generated_uv_preparation(
+        (project, package, artifact),
+        inventory,
+        calls,
+        (lock_present, source_bytes, source_binding, generated_name, generated_bytes, explicit_roots),
+    )
+
+
+def _assert_generated_uv_preparation(paths, inventory, calls, binding):
+    project, package, artifact = paths
+    lock_present, source_bytes, source_binding, generated_name, generated_bytes, explicit_roots = binding
     assert calls == ["uv", "inspect"]
     assert inventory["native_preparation"]["existing_lock_preserved"] is lock_present
     assert (project / "uv.lock").exists() is lock_present
@@ -1703,6 +1701,44 @@ def test_uv_generated_module_preserves_only_byte_bound_implicit_source(
     else:
         assert inventory["source_roots"] == (["src"] if explicit_roots else [])
         assert not overlay.exists()
+
+
+def _generated_uv_phase(context, _runtime, operation, inputs, destination):
+    calls, lock_present, source_bytes, source_binding, generated_name, generated_bytes = context
+    calls.append(operation)
+    destination.mkdir()
+    if operation == "uv":
+        request = json.loads((inputs / ".specfact-uv.json").read_text(encoding="utf-8"))
+        assert request["locked"] is lock_present
+        _install_generated_uv_site(destination, (source_bytes, source_binding, generated_name, generated_bytes))
+    else:
+        assert operation == "inspect"
+        (destination / "environment-inventory.json").write_text(
+            json.dumps(
+                {
+                    "installed": [],
+                    "environment": {"sys_platform": "darwin", "python_full_version": "3.11.16"},
+                    "member_graphs": {},
+                    "analyzer_conflicts": {},
+                }
+            ),
+            encoding="utf-8",
+        )
+
+
+def _install_generated_uv_site(destination, binding):
+    source_bytes, source_binding, generated_name, generated_bytes = binding
+    site = destination / "site-packages"
+    installed = site / "customer"
+    installed.mkdir(parents=True)
+    (installed / "__init__.py").write_bytes(
+        source_bytes if source_binding != "changed" else b"VALUE='different build'\n"
+    )
+    (installed / generated_name).write_bytes(generated_bytes)
+    (site / "unrelated_dependency.py").write_text("VALUE='dependency'\n", encoding="utf-8")
+    _write_native_distribution_record(site, "customer", ["customer/__init__.py", f"customer/{generated_name}"])
+    _write_native_distribution_record(site, "dependency", ["unrelated_dependency.py"])
+    (destination / "prepared.lock").write_text("version=1\n", encoding="utf-8")
 
 
 def _assert_generated_source_overlay(overlay, generated_name, generated_bytes):
@@ -1745,9 +1781,9 @@ def test_uv_overlay_excludes_shared_package_dependencies(tmp_path, namespace, ge
     foreign = site / dependency
     foreign.mkdir(parents=True)
     (foreign / "__init__.py").write_text(
-        "from pathlib import Path\nVALUE=Path(__file__).with_name('data.txt').read_text()\n"
+        "from pathlib import Path\nVALUE=Path(__file__).with_name('data.txt').read_text()\n", encoding="utf-8"
     )
-    (foreign / "data.txt").write_text("dependency resource\n")
+    (foreign / "data.txt").write_text("dependency resource\n", encoding="utf-8")
     record = _write_native_distribution_record(
         site, "customer", [f"{package}/__init__.py", f"{package}/{generated_name}"]
     )
@@ -1760,6 +1796,13 @@ def test_uv_overlay_excludes_shared_package_dependencies(tmp_path, namespace, ge
     else:
         roots = native_project_runtime._bound_source_roots(project, site, installed=True, generated_destination=overlay)
         assert roots == (["src"] if ownership in {"valid", "same_owner", "outside_script"} else [])
+    _assert_shared_package_overlay(overlay, (package, dependency, generated_name), ownership)
+    assert (foreign / "data.txt").read_text(encoding="utf-8") == "dependency resource\n"
+    assert not (source / generated_name).exists()
+
+
+def _assert_shared_package_overlay(overlay, paths, ownership):
+    package, dependency, generated_name = paths
     if ownership in {"valid", "same_owner", "outside_script"}:
         assert (overlay / "src" / package / generated_name).read_bytes() == b"VERSION='built'\n"
         assert not (overlay / "src" / dependency).exists()
@@ -1768,30 +1811,37 @@ def test_uv_overlay_excludes_shared_package_dependencies(tmp_path, namespace, ge
         }
     else:
         assert not overlay.exists()
-    assert (foreign / "data.txt").read_text() == "dependency resource\n"
-    assert not (source / generated_name).exists()
 
 
 def _mutate_distribution_ownership(record, foreign_record, ownership, installed, generated_name):
     site = record.parent.parent
     package = installed.relative_to(site).as_posix()
     if ownership == "same_owner":
-        record.write_text(record.read_text() + foreign_record.read_text())
+        record.write_text(
+            record.read_text(encoding="utf-8") + foreign_record.read_text(encoding="utf-8"), encoding="utf-8"
+        )
         foreign_record.unlink()
     elif ownership == "outside_script":
-        record.write_text(record.read_text() + "../../../bin/tool.py,,\n/opt/external/tool.py,,\n")
+        record.write_text(
+            record.read_text(encoding="utf-8") + "../../../bin/tool.py,,\n/opt/external/tool.py,,\n", encoding="utf-8"
+        )
     if ownership == "missing":
         record.unlink()
     elif ownership == "unrecorded_generated":
         record.write_text(
-            "".join(line for line in record.read_text().splitlines(keepends=True) if generated_name not in line)
+            "".join(
+                line
+                for line in record.read_text(encoding="utf-8").splitlines(keepends=True)
+                if generated_name not in line
+            ),
+            encoding="utf-8",
         )
     elif ownership == "ambiguous":
         _write_native_distribution_record(site, "duplicate", [f"{package}/{generated_name}"])
     elif ownership == "changed_digest":
         (installed / generated_name).write_bytes(b"VERSION='changed after record'\n")
     elif ownership == "malformed":
-        record.write_text("malformed,record\n")
+        record.write_text("malformed,record\n", encoding="utf-8")
 
 
 @pytest.mark.parametrize("ancestor", ["customer", "customer/sub"])
@@ -1813,13 +1863,13 @@ def test_uv_generated_ancestor_initializer_keeps_imports_on_reviewed_source(
     project = tmp_path / "project"
     source = project / "src/customer/sub/module.py"
     source.parent.mkdir(parents=True)
-    source.write_text("VALUE='original source'\n")
+    source.write_text("VALUE='original source'\n", encoding="utf-8")
     site = tmp_path / "site"
     installed = site / "customer/sub/module.py"
     installed.parent.mkdir(parents=True)
     installed.write_bytes(source.read_bytes())
     generated = site / ancestor / initializer
-    generated.write_text("READY=True\n")
+    generated.write_text("READY=True\n", encoding="utf-8")
     _write_native_distribution_record(site, "customer", ["customer/sub/module.py", f"{ancestor}/{initializer}"])
     overlay = tmp_path / "overlay"
     roots = native_project_runtime._bound_source_roots(project, site, installed=True, generated_destination=overlay)
@@ -1828,7 +1878,7 @@ def test_uv_generated_ancestor_initializer_keeps_imports_on_reviewed_source(
     shutil.copytree(project, staged)
     if overlay.exists():
         shutil.copytree(overlay, staged, dirs_exist_ok=True)
-    (staged / "src/customer/sub/module.py").write_text("VALUE='edited reviewed source'\n")
+    (staged / "src/customer/sub/module.py").write_text("VALUE='edited reviewed source'\n", encoding="utf-8")
     child = subprocess.run(
         [
             sys.executable,
@@ -1850,14 +1900,14 @@ def test_uv_generated_ancestor_initializer_keeps_imports_on_reviewed_source(
     assert Path(imported) == staged / "src/customer/sub/module.py"
     assert (overlay / "src" / ancestor / initializer).read_bytes() == generated.read_bytes()
     assert not (project / "src" / ancestor / initializer).exists()
-    assert source.read_text() == "VALUE='original source'\n"
+    assert source.read_text(encoding="utf-8") == "VALUE='original source'\n"
 
 
 @pytest.mark.parametrize("budget", ["files", "bytes"])
 def test_source_index_excludes_separate_vcs_budget_and_preserves_runtime_validation(tmp_path, monkeypatch, budget):
     source = tmp_path / "src/customer.py"
     source.parent.mkdir()
-    source.write_text("VALUE = 1\n")
+    source.write_text("VALUE = 1\n", encoding="utf-8")
     metadata = tmp_path / ".git/objects/pack/fixture.pack"
     metadata.parent.mkdir(parents=True)
     metadata.write_bytes(b"x" * 1024)

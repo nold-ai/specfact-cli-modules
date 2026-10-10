@@ -163,7 +163,7 @@ markers = [
 [tool.coverage.run]
 branch = true
 parallel = false
-source = ["src", "packages", "tools"]
+source = ["src", "packages", "tools", "scripts"]
 relative_files = true
 data_file = "logs/tests/coverage/.coverage"
 omit = [

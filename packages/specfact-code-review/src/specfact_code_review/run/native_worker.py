@@ -17,9 +17,16 @@ from types import ModuleType, SimpleNamespace
 from typing import Any, Final, cast
 from unittest.mock import patch
 
+from icontract import ensure
 from pydantic import ValidationError
 
 from specfact_code_review.run.findings import ReviewFinding
+from specfact_code_review.run.native_worker_evidence import (
+    WorkerContractError,
+    _capture_pytest_observation,
+    _read_pytest_artifact as _read_pytest_artifact,
+    _root,
+)
 from specfact_code_review.tools.ai_bloat_runner import run_ai_bloat
 from specfact_code_review.tools.ast_clean_code_runner import run_ast_clean_code
 
@@ -82,10 +89,6 @@ IN_PROCESS_ADAPTERS: dict[str, Adapter] = {
 }
 
 
-class WorkerContractError(ValueError):
-    """The fixed worker invocation, request, or result violated its contract."""
-
-
 class RequestPending(BaseException):
     """One exact broker request needs a controller result before replay."""
 
@@ -95,23 +98,6 @@ class RequestPending(BaseException):
 
 class ReplayContractViolation(BaseException):
     """A supplied reply or adapter launch differs from the immutable plan."""
-
-
-def _root(raw: str, *, writable: bool, private_tree: bool = False) -> Path:
-    path = Path(raw)
-    if not path.is_absolute() or path.is_symlink():
-        raise WorkerContractError("worker roots must be absolute non-symlink directories")
-    resolved = path.resolve(strict=True)
-    if not resolved.is_dir() or resolved != path:
-        raise WorkerContractError("worker root identity changed during resolution")
-    mode = resolved.stat().st_mode
-    if private_tree and (not mode & stat.S_IWUSR or mode & (stat.S_IRWXG | stat.S_IRWXO)):
-        raise WorkerContractError("private worker root is not owner-only")
-    if writable and not private_tree and not mode & stat.S_IWUSR:
-        raise WorkerContractError("writable worker root is not owner-writable")
-    if not writable and not private_tree and mode & (stat.S_IWUSR | stat.S_IWGRP | stat.S_IWOTH):
-        raise WorkerContractError("immutable worker root is writable")
-    return resolved
 
 
 def _invocation_roots() -> tuple[Path, Path, Path, Path]:
@@ -519,6 +505,7 @@ class ReplayTransport:
         }
         return request
 
+    @ensure(lambda result: isinstance(result, subprocess.CompletedProcess))
     def run(self, args: Sequence[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
         arguments = self._arguments(args)
         request = self._request(arguments, kwargs)
@@ -544,6 +531,7 @@ class ReplayTransport:
             )
         return completed
 
+    @ensure(lambda result: result is None)
     def verify_complete(self) -> None:
         if self.consumed != len(self.replies):
             raise WorkerContractError("controller supplied extra or reordered managed-launch replies")
@@ -727,70 +715,6 @@ def _bind_pytest_private_state(adapter_argv: list[str], temporary: Path) -> list
     ]
 
 
-def _read_pytest_artifact(path: Path, temporary: Path) -> bytes | None:
-    """Read one bounded ordinary artifact from the confined private state."""
-    if not path.is_relative_to(temporary):
-        raise WorkerContractError("native pytest artifact path is invalid")
-    try:
-        # Resolve existing links even when an ordinary evidence directory is gone.
-        # Dangling/substituted parents still change the canonical path and reject.
-        if path.parent.resolve(strict=False) != path.parent:
-            raise WorkerContractError("native pytest artifact path is invalid")
-        descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
-        try:
-            metadata = os.fstat(descriptor)
-            if not stat.S_ISREG(metadata.st_mode) or metadata.st_size > 16 << 20:
-                raise WorkerContractError("native pytest artifact type or size is invalid")
-            with os.fdopen(descriptor, "rb", closefd=False) as stream:
-                payload = stream.read((16 << 20) + 1)
-            if len(payload) > 16 << 20:
-                raise WorkerContractError("native pytest artifact size is invalid")
-            return payload
-        finally:
-            os.close(descriptor)
-    except FileNotFoundError:
-        return None
-    except OSError as exc:
-        raise WorkerContractError("native pytest artifact is unavailable") from exc
-
-
-def _capture_pytest_observation(result: Any, transport: ReplayTransport) -> dict[str, object] | None:
-    completed, coverage_path, observer_path, junit_path = result
-    # Validate every path before the evaluator can read any artifact, including
-    # when an earlier file is missing. Substituted/special/oversized files fail hard.
-    coverage_bytes = _read_pytest_artifact(coverage_path, transport.temporary)
-    observer_bytes = _read_pytest_artifact(observer_path, transport.temporary)
-    junit_bytes = _read_pytest_artifact(junit_path, transport.temporary)
-    if observer_bytes is None:
-        return None
-    try:
-        records = json.loads(observer_bytes)
-    except (ValueError, RecursionError):
-        return None
-    if not isinstance(records, list) or not all(isinstance(record, dict) for record in records):
-        return None
-    if not all(isinstance(record.get("nodeid"), str) for record in records):
-        raise WorkerContractError("native pytest observer node identity is invalid")
-    if coverage_bytes is None or junit_bytes is None:
-        return None
-    try:
-        coverage = json.loads(coverage_bytes)
-    except (ValueError, RecursionError):
-        return None
-    if not isinstance(coverage, dict) or not isinstance(coverage.get("files"), dict):
-        return None
-    collected = sorted(
-        {record["nodeid"] for record in records if record.get("phase") in {"collection", "setup", "call", "teardown"}}
-    )
-    return {
-        "collected": collected,
-        "records": records,
-        "coverage": coverage,
-        "process_exit": completed.returncode,
-        "result_provenance": "project-origin-v1",
-    }
-
-
 def _pytest_external_adapter(
     paths: list[Path],
     managed_run: ManagedRun,
@@ -956,6 +880,64 @@ def _write_result(output: Path, response: dict[str, object]) -> None:
         temporary.unlink(missing_ok=True)
 
 
+def _dispatch_worker(
+    invocation: tuple[str, list[str], dict[str, object], list[Path], list[str]],
+    roots: tuple[Path, Path, Path, Path],
+) -> int:
+    member, adapter_argv, request, paths, names = invocation
+    capsule, project, output, temporary = roots
+    if member in IN_PROCESS_ADAPTERS:
+        try:
+            response = _completed_response(
+                member,
+                IN_PROCESS_ADAPTERS[member](paths),
+                project=project,
+                selected=set(names),
+            )
+        except (OSError, TypeError, ValueError, ValidationError) as exc:
+            _write_result(output, _unknown_response(member, f"native_worker_result_invalid:{exc}"))
+            return EXIT_INVALID_RESULT
+        _write_result(output, response)
+        return EXIT_COMPLETE
+    transport = ReplayTransport(
+        member=member,
+        tool=_EXTERNAL_TOOLS[member],
+        replies=_read_replies(project),
+        capsule=capsule,
+        project=project,
+        temporary=temporary,
+    )
+    try:
+        findings = EXTERNAL_ADAPTERS[member](
+            paths,
+            transport.run,
+            adapter_argv,
+            cast(bool, request["bug_hunt"]),
+            cast(bool, request["complete_pytest_inventory"]),
+        )
+        transport.verify_complete()
+        response = _completed_response(
+            member, findings, project=project, selected=set(names), target_execution=transport.target_execution
+        )
+    except RequestPending as pending:
+        response = _unknown_response(member, "managed_tool_replay_required")
+        response["managed_launch_request"] = pending.request
+        _write_result(output, response)
+        print(json.dumps(pending.request, separators=(",", ":"), sort_keys=True), flush=True)
+        return EXIT_REPLAY_REQUIRED
+    except ReplayContractViolation as exc:
+        _write_result(output, _unknown_response(member, f"native_worker_request_invalid:{exc}"))
+        return EXIT_INVALID_REQUEST
+    _write_result(output, response)
+    return EXIT_COMPLETE
+
+
+@ensure(
+    lambda result: (
+        result
+        in {EXIT_COMPLETE, EXIT_REPLAY_REQUIRED, EXIT_INVALID_REQUEST, EXIT_INVALID_RESULT, EXIT_OUTPUT_COLLISION}
+    )
+)
 def main() -> int:
     """Execute one fixed in-process adapter or request broker-managed replay."""
 
@@ -970,50 +952,7 @@ def main() -> int:
         member, adapter_argv = _request_member(request)
         adapter_argv = _materialized_adapter_argv(adapter_argv, project)
         paths, names = _selected_paths(request, project)
-        if member in IN_PROCESS_ADAPTERS:
-            try:
-                response = _completed_response(
-                    member,
-                    IN_PROCESS_ADAPTERS[member](paths),
-                    project=project,
-                    selected=set(names),
-                )
-            except (OSError, TypeError, ValueError, ValidationError) as exc:
-                _write_result(output, _unknown_response(member, f"native_worker_result_invalid:{exc}"))
-                return EXIT_INVALID_RESULT
-            _write_result(output, response)
-            return EXIT_COMPLETE
-        transport = ReplayTransport(
-            member=member,
-            tool=_EXTERNAL_TOOLS[member],
-            replies=_read_replies(project),
-            capsule=capsule,
-            project=project,
-            temporary=temporary,
-        )
-        try:
-            findings = EXTERNAL_ADAPTERS[member](
-                paths,
-                transport.run,
-                adapter_argv,
-                cast(bool, request["bug_hunt"]),
-                cast(bool, request["complete_pytest_inventory"]),
-            )
-            transport.verify_complete()
-            response = _completed_response(
-                member, findings, project=project, selected=set(names), target_execution=transport.target_execution
-            )
-        except RequestPending as pending:
-            response = _unknown_response(member, "managed_tool_replay_required")
-            response["managed_launch_request"] = pending.request
-            _write_result(output, response)
-            print(json.dumps(pending.request, separators=(",", ":"), sort_keys=True), flush=True)
-            return EXIT_REPLAY_REQUIRED
-        except ReplayContractViolation as exc:
-            _write_result(output, _unknown_response(member, f"native_worker_request_invalid:{exc}"))
-            return EXIT_INVALID_REQUEST
-        _write_result(output, response)
-        return EXIT_COMPLETE
+        return _dispatch_worker((member, adapter_argv, request, paths, names), (capsule, project, output, temporary))
     except FileExistsError:
         return EXIT_OUTPUT_COLLISION
     except (KeyError, OSError, TypeError, ValueError, json.JSONDecodeError) as exc:
