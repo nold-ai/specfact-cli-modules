@@ -78,9 +78,10 @@ def test_native_local_policy_keeps_coverage_plugins_unsupported(tmp_path, local_
 
 
 @pytest.mark.parametrize("key", ["exclude_lines", "exclude_also", "partial_branches", "partial_also"])
-def test_native_local_toml_exclusions_cannot_inject_coverage_sections(tmp_path, key):
+def test_native_local_toml_exclusions_cannot_inject_coverage_sections(tmp_path, key, monkeypatch):
     from coverage.config import read_coverage_config
 
+    monkeypatch.delenv("COVERAGE_FILE", raising=False)
     expression = "foo\n[coverage:run]\nplugins = project_plugin"
     (tmp_path / "pyproject.toml").write_text(f'[tool.coverage.report]\n{key}=["""{expression}"""]\n')
     builder = runner._PolicyBindingBuilder()

@@ -366,7 +366,6 @@ def test_portable_indexed_validator_rejects_uncovered_surface(indexed_review, pa
 @pytest.mark.parametrize("inherited_destination", [False, True])
 def test_portable_review_source_policy_measures_scripts(tmp_path, monkeypatch, inherited_destination):
     import json
-    import os
     import subprocess
     import sys
     import tomllib
@@ -375,14 +374,20 @@ def test_portable_review_source_policy_measures_scripts(tmp_path, monkeypatch, i
     monkeypatch.chdir(tmp_path)
     for name in ("src", "packages", "tools", "scripts"):
         (tmp_path / name).mkdir()
+    monkeypatch.delenv("COVERAGE_FILE", raising=False)
     if inherited_destination:
         blocked = tmp_path / "not-a-directory"
         blocked.write_text("owned blocker", encoding="utf-8")
-        monkeypatch.setenv("COVERAGE_FILE", str(blocked / "collector"))
+        destination = str(blocked / "collector")
+        monkeypatch.setenv("COVERAGE_FILE", destination)
+    else:
+        destination = None
     script = tmp_path / "scripts/check_capsule_deferral.py"
     script.write_text("def validate():\n    return True\n\nassert validate()\n", encoding="utf-8")
-    probe = """import coverage, json, runpy, sys
+    probe = """import coverage, json, os, runpy, sys
 from pathlib import Path
+inherited = os.environ.pop("COVERAGE_FILE", None)
+assert inherited == json.loads(sys.argv[3]), "inherited state was not exercised"
 script = Path(sys.argv[1])
 collector = coverage.Coverage(source=json.loads(sys.argv[2]), branch=True, data_file=None, config_file=False)
 collector.start()
@@ -394,8 +399,14 @@ assert str(script) in collector.get_data().measured_files(), "reviewed script ex
 assert collector.analysis2(str(script))[3] == []
 """
     result = subprocess.run(
-        [sys.executable, "-c", probe, str(script), json.dumps(configuration["source"])],
-        env={key: value for key, value in os.environ.items() if key != "COVERAGE_FILE"},
+        [
+            sys.executable,
+            "-c",
+            probe,
+            str(script),
+            json.dumps(configuration["source"]),
+            json.dumps(destination),
+        ],
         cwd=tmp_path,
         text=True,
         capture_output=True,

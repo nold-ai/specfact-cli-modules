@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import shlex
 import subprocess
 import sys
 from pathlib import Path
@@ -16,7 +17,6 @@ from tests.unit.test_capsule_review_projection import _write_preparation_fixture
 
 
 def _write_preparation_interpreter(tmp_path):
-    import sys
 
     interpreter = tmp_path / "venv/bin/python"
     interpreter.parent.mkdir(parents=True)
@@ -33,9 +33,8 @@ def _write_preparation_interpreter(tmp_path):
     interpreter.chmod(0o700)
 
 
-@pytest.fixture
-def preparation_shell(tmp_path, monkeypatch):
-    import subprocess
+@pytest.fixture(name="preparation_shell")
+def preparation_shell_fixture(tmp_path, monkeypatch):
 
     workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())
     step = next(item for item in workflow["jobs"]["customer"]["steps"] if item.get("name") == STEP_NAME)
@@ -80,7 +79,6 @@ def preparation_shell(tmp_path, monkeypatch):
     ],
 )
 def test_preparation_shell_preserves_failure_and_projects_incomplete(preparation_shell, preparation, expected):
-    import json
 
     expected_exit, expected_status, expected_outcome = expected
     accepted = expected_status in {"PREPARED", "NOT_APPLICABLE"}
@@ -98,8 +96,6 @@ def test_preparation_shell_preserves_failure_and_projects_incomplete(preparation
 @pytest.mark.parametrize("job_name", ["customer", "independent-review"])
 @pytest.mark.parametrize("review_exit", [17, 124])
 def test_projector_crash_preserves_original_review_exit(tmp_path: Path, job_name, review_exit):
-    import shlex
-
     workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())
     name = STEP_NAME if job_name == "customer" else "Prepare and review through the authenticated installed controller"
     recipe = next(step["run"] for step in workflow["jobs"][job_name]["steps"] if step.get("name") == name)
@@ -110,7 +106,8 @@ def test_projector_crash_preserves_original_review_exit(tmp_path: Path, job_name
     report.write_text('{"analyzer_evidence":42}')
     program = public_projector(job_name)
     shell = (
-        f"set -e\nreview_exit={review_exit}\nREVIEW_PUBLIC_EXIT=$review_exit {shlex.quote(sys.executable)} - <<'PY'{guard}\n"
+        f"set -e\nreview_exit={review_exit}\n"
+        f"REVIEW_PUBLIC_EXIT=$review_exit {shlex.quote(sys.executable)} - <<'PY'{guard}\n"
         + program
         + '\nPY\nexit "$review_exit"\n'
     )
@@ -134,8 +131,6 @@ def test_projector_crash_preserves_original_review_exit(tmp_path: Path, job_name
 
 @pytest.mark.parametrize("review_exit", [17, 124])
 def test_candidate_secondary_projector_crash_preserves_review_exit(tmp_path: Path, review_exit):
-    import shlex
-
     workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())
     recipe = next(step["run"] for step in workflow["jobs"]["customer"]["steps"] if step.get("name") == STEP_NAME)
     marker = "<<'PY_CANDIDATE_FAILURE'"
@@ -203,7 +198,8 @@ def _poisoned_projector_paths(tmp_path, job_name, module_name, import_origin):
     marker = tmp_path / "untrusted-import-executed"
     poison = candidate if import_origin == "checkout" else ambient
     (poison / f"{module_name}.py").write_text(
-        f"from pathlib import Path\nPath({str(marker)!r}).write_text('executed')\nraise RuntimeError('UNTRUSTED_IMPORT')\n"
+        f"from pathlib import Path\nPath({str(marker)!r}).write_text('executed')\n"
+        "raise RuntimeError('UNTRUSTED_IMPORT')\n"
     )
     report = candidate / ".specfact/code-review.json" if job_name == "customer" else tmp_path / "review.private.json"
     report.parent.mkdir(exist_ok=True)

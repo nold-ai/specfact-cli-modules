@@ -1401,3 +1401,42 @@ The required consumer remains blocking for failed/skipped customer review; no ho
 - **WHEN** the real isolated coverage policy probe measures an executed reviewed script
 - **THEN** it SHALL use only proof-owned in-memory collector state and ignore the inherited data-file destination, while still asserting actual script execution and complete measured lines
 - **AND** no parent analyzer coverage configuration, production threshold or admission policy SHALL change
+
+
+#### Scenario: Coverage probes verify actual inherited state
+
+- **GIVEN** the parent supplies a proof-owned unusable coverage destination, or explicitly supplies none
+- **WHEN** the child probe starts
+- **THEN** it SHALL first observe the actual inherited destination state, then discard only its own data-file override before constructing its in-memory collector
+- **AND** actual script execution and complete measured-line assertions, parent state and the production 80 percent policy SHALL remain unchanged
+
+#### Scenario: Portable coverage exercises native dispatch and SMART failures
+
+- **GIVEN** unchanged production coverage reports native worker and SMART entry-point gaps
+- **WHEN** portable regressions exercise actual dispatch, managed Semgrep receipts, sealed contract inventory admission and SMART command/exit forwarding
+- **THEN** actual line-and-branch measurement SHALL meet the unchanged 80 percent production threshold for both sources
+- **AND** bootstrap and required host failures SHALL prevent later execution, malformed inventory and policy grants SHALL remain rejected, and no host executable, skipped assertion or fabricated coverage SHALL enter the portable suite
+
+
+#### Scenario: Projected coverage configuration proofs exclude parent overrides
+
+- **GIVEN** the parent collector exports COVERAGE_FILE and a fixture verifies a sealed coverage policy against injected TOML sections
+- **WHEN** the fixture reads its projected configuration
+- **THEN** it SHALL isolate its own config-reader environment from the parent data-file override, retaining exact sealed data-file, plugin and escaped-expression assertions
+- **AND** parent collection and production policy SHALL be unchanged
+
+
+#### Scenario: Controller projection fixtures reuse existing imports
+
+- **GIVEN** authoritative warning locations correspond to repeated already-loaded standard-library imports in controller projection fixtures
+- **WHEN** redundant local imports and fixture-name shadowing are corrected
+- **THEN** the same production Pylint policy SHALL report no scoped duplicate-import/shadowing family, while every original assertion, test parametrization, embedded program and public pytest fixture identity SHALL remain
+- **AND** long literal formatting SHALL preserve its exact payload; no protocol print, identity rejection or private test binding SHALL be replaced to silence unrelated warnings
+
+
+#### Scenario: Projection observation proofs retain portable collection
+
+- **GIVEN** the projection proof module exceeds unchanged production file-length policy
+- **WHEN** its bounded public-observation tests move into a separately collected portable module under the existing Code Review test surface
+- **THEN** every test name, parametrization, assertion and embedded program SHALL remain identical across the split and the scoped Pylint file-length finding SHALL disappear
+- **AND** Full/SMART and effective PR scheduling SHALL still require all cases, without adding shell execution to the portable runtime or changing report bounds and failure semantics

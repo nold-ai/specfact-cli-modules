@@ -527,7 +527,8 @@ def _print_enforcement_summary(
         )
     elif blocking_changed_findings:
         sys.stderr.write(
-            f"Code review changed-line gate: {len(blocking_changed_findings)} blocking finding(s) target staged lines.\n"
+            f"Code review changed-line gate: {len(blocking_changed_findings)} "
+            "blocking finding(s) target staged lines.\n"
         )
 
 
