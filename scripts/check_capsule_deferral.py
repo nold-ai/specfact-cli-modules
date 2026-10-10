@@ -173,6 +173,9 @@ def validate_indexed_scheduling(paths: list[str], candidate_paths: list[str], ba
     _blocking_scope(job, _REVIEW_CONDITION)
     if job["needs"] != ["changes"] or job["uses"] != "./.github/workflows/capsule-customer-execution.yml":
         raise ValueError("customer job does not invoke the required filtered review")
+    integrated = _workflow_yaml(".github/workflows/pr-orchestrator.yml", baseline)["jobs"]["customer-capsules"]
+    if job != integrated:
+        raise ValueError("reusable review caller differs from the integrated dev contract")
     _validate_reusable_review(baseline)
 
 

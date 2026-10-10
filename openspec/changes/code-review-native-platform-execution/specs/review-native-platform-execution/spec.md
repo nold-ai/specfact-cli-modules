@@ -1324,3 +1324,13 @@ Detector capsule trigger inventories SHALL retain every integrated baseline rule
 - **AND** every admitted/rejected argument, request, path, reply, replay option, output bound and source ownership case SHALL retain its exact behavior, diagnostics and existing assertions; no analyzer input, deadline or quality threshold SHALL change
 
 The retained local context-manager proof SHALL express its self-return type using the supported Python3.11+ typing.Self identity, avoiding an unresolved local class name while preserving its enter/exit behavior and every fixture assertion.
+
+
+#### Scenario: Deferral requires the integrated reusable-review caller
+
+- **GIVEN** local capsule deferral depends on the orchestrator calling its mandatory reusable reviewer
+- **WHEN** the indexed caller adds unsupported job keys or changes its inputs, permissions, strategy or concurrency
+- **THEN** deferral SHALL reject unless the complete parsed caller equals the integrated dev merge-base caller
+- **AND** unsupported false continue-on-error, runs-on, steps, env and timeout-minutes SHALL reject even when they appear nonblocking; equivalent parsed formatting remains admitted
+
+This binds the caller without changing the hosted review or targeted pytest deadlines, analyzer inputs, existing failure propagation or any native isolation/ownership contract.

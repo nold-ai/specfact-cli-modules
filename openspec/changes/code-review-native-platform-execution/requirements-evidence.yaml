@@ -908,3 +908,9 @@ requirements:
       method: test
       intent: Remove independently reproduced native worker and ownership-proof complexity blockers without changing admission or test behavior.
       observable: Two production-policy REDs reproduce eight blocking Radon findings; pure parser and unchanged production mapping confirm the same baseline failures. Retained worker/replay/ownership/result tests and supported Self annotation preserve behavior. No policy threshold, analyzer input or deadline changes.
+
+    - case_id: 460-21-15
+      scenario_id: release-review-corrections-preserve-source-and-failure-boundaries
+      method: test
+      intent: Bind the entire reusable-review caller to integrated dev before admitting local deferral.
+      observable: Nine indexed REDs independently reproduce unsupported false continue-on-error, runs-on, steps, env and timeout-minutes plus changed inputs, permissions, matrix and concurrency; equivalent-formatting and unrelated-generated-doc controls pass. Parsed caller equality corrects admission without changing hosted inputs, deadlines or failure propagation.

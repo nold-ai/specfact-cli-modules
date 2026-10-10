@@ -582,3 +582,29 @@ def _mutate_detector_filter(changes: dict, mutation: str) -> None:
         step["with"]["filters"] = "capsule: []\n" + step["with"]["filters"]
     else:
         step["with"]["base" if mutation == "filter_base" else "ref"] = "unrelated-source"
+
+
+@pytest.mark.parametrize(
+    ("key", "value"),
+    [
+        ("continue-on-error", False),
+        ("runs-on", "ubuntu-latest"),
+        ("steps", []),
+        ("env", {}),
+        ("timeout-minutes", 90),
+        ("with", {"unverified_input": True}),
+        ("permissions", {}),
+        ("strategy", {"matrix": {"include": []}}),
+        ("concurrency", {"group": "unverified-review", "cancel-in-progress": True}),
+    ],
+)
+def test_deferral_requires_integrated_reusable_review_caller(tmp_path: Path, key: str, value: object) -> None:
+    scenario = ("Darwin", "", "github-linux", "tests/native/proof_macos_native_broker_wait.py", False, True, 1)
+    worktree = deferral_worktree(tmp_path, scenario)
+    path = worktree / ".github/workflows/pr-orchestrator.yml"
+    document = yaml.safe_load(path.read_text())
+    document["on"] = document.pop(True)
+    document["jobs"]["customer-capsules"][key] = value
+    path.write_text(yaml.safe_dump(document, sort_keys=False))
+    _git(worktree, "add", ".")
+    _assert_local_deferral(worktree, tmp_path / "calls", 1)
