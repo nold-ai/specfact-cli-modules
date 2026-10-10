@@ -1440,3 +1440,11 @@ The required consumer remains blocking for failed/skipped customer review; no ho
 - **WHEN** its bounded public-observation tests move into a separately collected portable module under the existing Code Review test surface
 - **THEN** every test name, parametrization, assertion and embedded program SHALL remain identical across the split and the scoped Pylint file-length finding SHALL disappear
 - **AND** Full/SMART and effective PR scheduling SHALL still require all cases, without adding shell execution to the portable runtime or changing report bounds and failure semantics
+
+
+#### Scenario: Native dispatch proofs obey production complexity policy
+
+- **GIVEN** authoritative capsule review reports a blocking complexity finding in a portable native dispatch proof
+- **WHEN** its request and environment assertions are organized into bounded helpers
+- **THEN** the existing production Radon regression SHALL inspect its own proof module and every retained assertion SHALL remain identical
+- **AND** both real adapter replay cases, exact managed identities, no host spawn, restoration, private permissions and empty output assertions SHALL remain mandatory, without changing production thresholds, runtime bytes or analysis deadlines

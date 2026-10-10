@@ -591,6 +591,7 @@ def test_native_worker_and_retained_proofs_have_no_complexity_warning():
     root = Path(__file__).resolve().parents[4]
     files = [
         Path(native_worker.__file__),
+        Path(__file__),
         Path(__file__).with_name("test_native_project_runtime.py"),
         root / "tests/unit/test_capsule_proof_contexts.py",
     ]
@@ -625,6 +626,28 @@ def test_controller_tamper_proof_has_no_blocking_nesting():
     assert findings == [], [(finding.file, finding.rule, finding.message) for finding in findings]
 
 
+def _assert_native_semgrep_request_argv(request: dict[str, object], config_name: str) -> None:
+    """Verify the exact capsule tool and policy source binding."""
+    assert isinstance(request["argv"], list) and isinstance(request["environment"], dict)
+    managed_argv = cast(list[str], request["argv"])
+    assert managed_argv[0] == "capsule-tool:semgrep"
+    assert managed_argv[-1] == "project/pkg/example.py"
+    assert (
+        managed_argv[managed_argv.index("--config") + 1]
+        == f"project/.specfact-native-config/semgrep/.semgrep/{config_name}"
+    )
+    assert "--disable-nosem" in managed_argv
+
+
+def _assert_native_semgrep_request_environment(request: dict[str, object]) -> None:
+    """Verify private settings, disabled metrics and the existing launch budget."""
+    environment = cast(dict[str, str], request["environment"])
+    assert environment["HOME"] == "temporary/semgrep-home"
+    assert environment["SEMGREP_SETTINGS_FILE"] == "temporary/semgrep-home/.semgrep/settings.yml"
+    assert environment["SEMGREP_SEND_METRICS"] == "off"
+    assert request["cwd"] == "project" and request["timeout_ms"] == 90000
+
+
 @pytest.mark.parametrize("member,config_name", [("semgrep-clean", "clean_code.yaml"), ("semgrep-bugs", "bugs.yaml")])
 def test_real_semgrep_adapter_replays_owned_policy_without_host_spawn(tmp_path, monkeypatch, member, config_name):
     from specfact_code_review.tools import semgrep_runner
@@ -646,20 +669,8 @@ def test_real_semgrep_adapter_replays_owned_policy_without_host_spawn(tmp_path, 
     with pytest.raises(native_worker.RequestPending) as pending:
         native_worker._semgrep_external_adapter(member, [source], transport.run, [str(policy)], False, False)
     request = pending.value.request
-    assert isinstance(request["argv"], list) and isinstance(request["environment"], dict)
-    managed_argv = cast(list[str], request["argv"])
-    environment = cast(dict[str, str], request["environment"])
-    assert managed_argv[0] == "capsule-tool:semgrep"
-    assert managed_argv[-1] == "project/pkg/example.py"
-    assert (
-        managed_argv[managed_argv.index("--config") + 1]
-        == f"project/.specfact-native-config/semgrep/.semgrep/{config_name}"
-    )
-    assert "--disable-nosem" in managed_argv
-    assert environment["HOME"] == "temporary/semgrep-home"
-    assert environment["SEMGREP_SETTINGS_FILE"] == "temporary/semgrep-home/.semgrep/settings.yml"
-    assert environment["SEMGREP_SEND_METRICS"] == "off"
-    assert request["cwd"] == "project" and request["timeout_ms"] == 90000
+    _assert_native_semgrep_request_argv(request, config_name)
+    _assert_native_semgrep_request_environment(request)
     transport.replies.append(
         {
             "request": request,
