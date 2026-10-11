@@ -313,6 +313,8 @@ def deferral_worktree(tmp_path: Path, scenario, *, validator_present=True):
     _git(repository, "update-ref", "refs/remotes/origin/dev", "HEAD")
     worktree = tmp_path / "worktree"
     _git(repository, "worktree", "add", "-qb", "codex/fixture", str(worktree))
+    (repository / ".git/info/exclude").write_text(".venv\n")
+    (worktree / ".venv").symlink_to(sys.prefix, target_is_directory=True)
     if advanced_dev:
         capsule_manifest.write_text("version: 2\n")
         _git(repository, "add", ".")

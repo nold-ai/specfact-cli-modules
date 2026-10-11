@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import json
 import os
+import shlex
 import subprocess
 import sys
 import venv
@@ -825,3 +827,46 @@ def test_local_deferral_pinned_authority_lifecycle(tmp_path, monkeypatch, mode, 
     _assert_local_deferral(worktree, tmp_path / "calls", expected)
     assert not marker.exists(), "Candidate checker executed instead of the trusted authority"
     assert not list(private_tmp.iterdir()), "Extracted trusted checker leaked after validation"
+
+
+@pytest.mark.parametrize("missing_caller", [False, True])
+@pytest.mark.parametrize("missing_interpreter", [False, True])
+def test_local_deferral_ignores_real_candidate_hatch_python_alias(tmp_path, missing_caller, missing_interpreter):
+    worktree, candidate_marker = _tampered_deferral_candidate(
+        tmp_path, staged_checker=True, missing_caller=missing_caller
+    )
+    alias_marker = tmp_path / "candidate-hatch-alias-executed"
+    config = worktree / "pyproject.toml"
+    command = f"sh -c 'touch {shlex.quote(str(alias_marker))}; exit 0' --"
+    config.write_text(
+        '[project]\nname="owned-hatch-alias-proof"\nversion="0.0.0"\n'
+        '[tool.hatch.envs.default]\ndetached=true\npath=".hatch-alias-env"\n'
+        "[tool.hatch.envs.default.scripts]\npython=" + json.dumps(command) + "\n"
+    )
+    _git(worktree, "add", "pyproject.toml")
+    if missing_interpreter:
+        (worktree / ".venv").unlink()
+    shell = (REPO_ROOT / "scripts/pre-commit-quality-checks.sh").read_text().rsplit('main "$@"', 1)[0]
+    paths = _git(worktree, "diff", "--cached", "--name-only", "origin/dev")
+    capsule_paths = "\n".join(path for path in paths.splitlines() if not path.startswith("openspec/"))
+    result = subprocess.run(
+        [
+            "bash",
+            "-c",
+            shell + '\nrun_trusted_capsule_deferral "$@"',
+            "owned-hatch-proof",
+            capsule_paths,
+            paths,
+            "origin/dev",
+        ],
+        cwd=worktree,
+        env=os.environ | {"HATCH_ENV": "default"},
+        text=True,
+        capture_output=True,
+        timeout=30,
+        check=False,
+    )
+    expected = 127 if missing_interpreter else int(missing_caller)
+    assert result.returncode == expected, result.stderr
+    assert not alias_marker.exists(), "Candidate Hatch script replaced trusted validation"
+    assert not candidate_marker.exists(), "Candidate checker replaced trusted validation"

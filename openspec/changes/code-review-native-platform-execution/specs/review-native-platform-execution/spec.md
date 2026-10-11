@@ -1530,3 +1530,11 @@ The required consumer remains blocking for failed/skipped customer review; no ho
 - **AND** bootstrap SHALL expire once that commit is an ancestor of dev or the checker has appeared in integrated dev history, including squash integration; a subsequently absent checker SHALL fail closed
 - **AND** missing authority objects, incomplete shallow bootstrap history, extraction failures and validator failures SHALL reject deferral without fallback; Git replacement objects SHALL not redirect the authority
 - **AND** extracted bytes SHALL use a private temporary file removed on success or failure; DEFERRED remains incomplete until mandatory exact-head Linux review, never PASS
+
+#### Scenario: Trusted deferral validation bypasses candidate Hatch dispatch
+
+- **GIVEN** a staged candidate Hatch configuration aliases `python` to a successful no-op, with or without a removed indexed customer caller
+- **WHEN** the local hook validates the independently extracted checker
+- **THEN** it SHALL invoke the existing repository `.venv/bin/python` directly with `-I`, without dispatch through candidate Hatch scripts or environment configuration
+- **AND** missing interpreter or validator failure SHALL reject deferral; an effective unchanged caller SHALL remain eligible, and candidate aliases SHALL never execute
+- **AND** checker authority, private temporary cleanup, complete index scheduling, ordinary hooks and mandatory exact-head Linux review SHALL remain unchanged

@@ -322,6 +322,7 @@ run_trusted_capsule_deferral() (
   local bootstrap_commit="c65a41e61a6b4e61e8dd2b69526a1cfc8650b3ad"
   local bootstrap_blob="cc549b5bbd945b64d055afe111bcaeeb059d585a"
   local integrated_dev validator_source resolved_blob ancestor_status trusted_validator integrated_history shallow_history
+  local repository_root
   export GIT_NO_REPLACE_OBJECTS=1
   if ! integrated_dev="$(git rev-parse --verify 'refs/remotes/origin/dev^{commit}')"; then
     return 1
@@ -355,7 +356,9 @@ run_trusted_capsule_deferral() (
   if ! git show "${validator_source}" > "${trusted_validator}"; then
     return 1
   fi
-  hatch run python -I "${trusted_validator}" "$@"
+  if ! repository_root="$(git rev-parse --show-toplevel)"; then return 1; fi
+  # Invoke the installed local environment directly; candidate Hatch aliases are not authority.
+  "${repository_root}/.venv/bin/python" -I "${trusted_validator}" "$@"
 )
 
 run_code_review_gate() {
