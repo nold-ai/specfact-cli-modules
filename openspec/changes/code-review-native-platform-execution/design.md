@@ -245,3 +245,7 @@ execute the current host module. Every current portable function moves into norm
 labels and the minimal CPython proof with all three existing hash-pinned inputs.
 The minimal CPython proof reuses the existing secret-free preparer; its additional
 CI cost is three input preparations, without adding a new acquisition mechanism.
+
+### Owner decision: temporary validator bootstrap authority (11 October 2026)
+
+The owner explicitly authorized the immutable checker from c65a41e61a6b4e61e8dd2b69526a1cfc8650b3ad, blob cc549b5bbd945b64d055afe111bcaeeb059d585a, as temporary bootstrap authority until dev integration. This authority comes from that decision, not runtime signing provenance. Prefer the actual integrated origin/dev tip checker; use the exact approved commit/blob only while it has not reached dev and the integrated checker is absent. Ignore Git replacement objects for authority resolution and extract to a private temporary file. Missing objects, incomplete shallow bootstrap history, integrated checker removal after integration (including squash integration, detected through dev path history), and checker failures reject deferral. Candidate scheduling still uses the unchanged complete index and merge-base arguments.

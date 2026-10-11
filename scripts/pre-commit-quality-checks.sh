@@ -315,6 +315,49 @@ run_lint_if_staged_python() {
   fi
 }
 
+# Owner-approved bootstrap expires when its commit reaches integrated dev.
+# Resolve trusted bytes independently of the candidate index/worktree and replacement refs.
+run_trusted_capsule_deferral() (
+  local validator_path="scripts/check_capsule_deferral.py"
+  local bootstrap_commit="c65a41e61a6b4e61e8dd2b69526a1cfc8650b3ad"
+  local bootstrap_blob="cc549b5bbd945b64d055afe111bcaeeb059d585a"
+  local integrated_dev validator_source resolved_blob ancestor_status trusted_validator integrated_history shallow_history
+  export GIT_NO_REPLACE_OBJECTS=1
+  if ! integrated_dev="$(git rev-parse --verify 'refs/remotes/origin/dev^{commit}')"; then
+    return 1
+  fi
+  validator_source="${integrated_dev}:${validator_path}"
+  if ! git cat-file -e "${validator_source}" 2>/dev/null; then
+    if ! shallow_history="$(git rev-parse --is-shallow-repository)" \
+      || [[ "${shallow_history}" != false ]]; then
+      return 1
+    fi
+    if ! integrated_history="$(git log -1 --format=%H "${integrated_dev}" -- "${validator_path}")" \
+      || [[ -n "${integrated_history}" ]]; then
+      return 1
+    fi
+    validator_source="${bootstrap_commit}:${validator_path}"
+    if ! resolved_blob="$(git rev-parse --verify "${validator_source}")" \
+      || [[ "${resolved_blob}" != "${bootstrap_blob}" ]]; then
+      return 1
+    fi
+    if git merge-base --is-ancestor "${bootstrap_commit}" "${integrated_dev}"; then
+      return 1
+    else
+      ancestor_status=$?
+      if [[ "${ancestor_status}" != 1 ]]; then return 1; fi
+    fi
+  fi
+  if ! trusted_validator="$(mktemp "${TMPDIR:-/tmp}/specfact-capsule-deferral.XXXXXX")"; then
+    return 1
+  fi
+  trap 'rm -f "${trusted_validator}"' EXIT
+  if ! git show "${validator_source}" > "${trusted_validator}"; then
+    return 1
+  fi
+  hatch run python -I "${trusted_validator}" "$@"
+)
+
 run_code_review_gate() {
   local deferral="${SPECFACT_CODE_REVIEW_DEFER_TO_CI:-}"
   if [[ -n "${deferral}" ]]; then
@@ -363,7 +406,7 @@ run_code_review_gate() {
       error "Capsule review deferral cannot determine the complete staged candidate surface."
       exit 1
     fi
-    if ! hatch run python -I scripts/check_capsule_deferral.py "${capsule_paths}" "${candidate_paths}" "${candidate_base}"; then
+    if ! run_trusted_capsule_deferral "${capsule_paths}" "${candidate_paths}" "${candidate_base}"; then
       error "Capsule review deferral requires effective indexed blocking customer scheduling."
       exit 1
     fi

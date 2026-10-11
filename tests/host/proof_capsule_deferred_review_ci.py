@@ -724,3 +724,104 @@ def test_indexed_deferral_admits_only_complete_approved_job_budget(
     path.write_text(yaml.safe_dump(document, sort_keys=False), encoding="utf-8")
     _git(worktree, "add", ".")
     _assert_local_deferral(worktree, tmp_path / "calls", expected)
+
+
+_PINNED_VALIDATOR_COMMIT = "c65a41e61a6b4e61e8dd2b69526a1cfc8650b3ad"
+_PINNED_VALIDATOR_BLOB = "cc549b5bbd945b64d055afe111bcaeeb059d585a"
+
+
+def _tampered_deferral_candidate(tmp_path, *, staged_checker, missing_caller, bootstrap=False):
+    worktree = deferral_worktree(
+        tmp_path,
+        ("Darwin", "", "github-linux", "tests/native/proof_native_canonical_path.py", False, True, 0),
+        validator_present=not bootstrap,
+    )
+    marker = tmp_path / "candidate-validator-executed"
+    checker = worktree / "scripts/check_capsule_deferral.py"
+    checker.parent.mkdir(exist_ok=True)
+    checker.write_text(f"from pathlib import Path\nPath({str(marker)!r}).touch()\n", encoding="utf-8")
+    if staged_checker:
+        _git(worktree, "add", "scripts/check_capsule_deferral.py")
+    if missing_caller:
+        path = worktree / ".github/workflows/pr-orchestrator.yml"
+        workflow = yaml.safe_load(path.read_text())
+        del workflow["jobs"]["customer-capsules"]
+        path.write_text(yaml.safe_dump(workflow))
+        _git(worktree, "add", str(path))
+    return worktree, marker
+
+
+@pytest.mark.parametrize("staged_checker", [False, True])
+@pytest.mark.parametrize("missing_caller", [False, True])
+def test_local_deferral_never_executes_candidate_validator(tmp_path, staged_checker, missing_caller):
+    worktree, marker = _tampered_deferral_candidate(
+        tmp_path, staged_checker=staged_checker, missing_caller=missing_caller
+    )
+    _assert_local_deferral(worktree, tmp_path / "calls", int(missing_caller))
+    assert not marker.exists(), "Candidate checker bytes executed on the hook host"
+
+
+def _advance_validator_authority(tmp_path, mode):
+    repository = tmp_path / "repository"
+    checker = repository / "scripts/check_capsule_deferral.py"
+    if mode == "integrated_reject":
+        checker.write_text("raise SystemExit(9)\n", encoding="utf-8")
+    elif checker.exists():
+        checker.unlink()
+    _git(repository, "add", ".")
+    _git(repository, "-c", "core.hooksPath=/dev/null", "commit", "--allow-empty", "-qm", "fixture integrated authority")
+    integrated = _git(repository, "rev-parse", "HEAD")
+    if mode != "missing_object":
+        # Local transport from the full-history checkout; no network, candidate ref or synthesized authority.
+        _git(repository, "fetch", "--quiet", str(REPO_ROOT), _PINNED_VALIDATOR_COMMIT)
+        assert _git(repository, "rev-parse", f"{_PINNED_VALIDATOR_COMMIT}:scripts/check_capsule_deferral.py") == (
+            _PINNED_VALIDATOR_BLOB
+        )
+    if mode == "expired":
+        integrated = _git(
+            repository,
+            "commit-tree",
+            _git(repository, "rev-parse", "HEAD^{tree}"),
+            "-p",
+            integrated,
+            "-p",
+            _PINNED_VALIDATOR_COMMIT,
+            "-m",
+            "fixture integrated bootstrap ancestor",
+        )
+    if mode == "replacement":
+        _git(repository, "replace", _PINNED_VALIDATOR_COMMIT, integrated)
+    _git(repository, "update-ref", "refs/remotes/origin/dev", integrated)
+    if mode == "shallow":
+        # Retain a common fixture merge-base while deliberately withholding older dev history.
+        (repository / ".git/shallow").write_text(_git(repository, "rev-parse", "HEAD^") + "\n")
+
+
+@pytest.mark.parametrize(
+    "mode,missing_caller,expected",
+    [
+        ("bootstrap", False, 0),
+        ("bootstrap", True, 1),
+        ("replacement", False, 0),
+        ("replacement", True, 1),
+        ("missing_object", False, 1),
+        ("shallow", False, 1),
+        ("expired", False, 1),
+        ("squash_deleted", False, 1),
+        ("integrated_reject", False, 1),
+    ],
+)
+def test_local_deferral_pinned_authority_lifecycle(tmp_path, monkeypatch, mode, missing_caller, expected):
+    worktree, marker = _tampered_deferral_candidate(
+        tmp_path,
+        staged_checker=True,
+        missing_caller=missing_caller,
+        bootstrap=mode not in {"integrated_reject", "squash_deleted"},
+    )
+    _advance_validator_authority(tmp_path, mode)
+    private_tmp = tmp_path / "validator-temporaries"
+    private_tmp.mkdir(mode=0o700)
+    monkeypatch.setenv("TMPDIR", str(private_tmp))
+    _assert_local_deferral(worktree, tmp_path / "calls", expected)
+    assert not marker.exists(), "Candidate checker executed instead of the trusted authority"
+    assert not list(private_tmp.iterdir()), "Extracted trusted checker leaked after validation"

@@ -89,8 +89,8 @@ _BLOCK2_HATCH_FIXTURE = (
     'uname() { if [[ "${1:-}" == "-m" ]]; then echo arm64; else echo "$FIXTURE_PLATFORM"; fi; }\n'
     "hatch() {\n"
     '  printf \'%s\\n\' "$*" >> "$FIXTURE_CALLS"\n'
-    f'  if [[ "${{4:-}}" == scripts/check_capsule_deferral.py ]]; then {shlex.quote(sys.executable)} -I '
-    f'{shlex.quote(str(REPO_ROOT / "scripts/check_capsule_deferral.py"))} "${{@:5}}"; return $?; fi\n'
+    f'  if [[ "${{2:-}}" == python && "${{3:-}}" == -I ]]; then {shlex.quote(sys.executable)} '
+    '"${@:3}"; return $?; fi\n'
     '  if [[ "$*" == *pre_commit_code_review.py* ]]; then return 99; fi\n'
     '  if [[ "$*" == *contract-test-status* ]]; then return 1; fi\n'
     "  return 0\n"
@@ -271,7 +271,7 @@ def deferred_review_repository(tmp_path: Path, advanced_dev: bool):
     return repository, base, head
 
 
-def deferral_worktree(tmp_path: Path, scenario):
+def deferral_worktree(tmp_path: Path, scenario, *, validator_present=True):
     _platform, _ci, _deferral, bundle, advanced_dev, independent_review, _expected = scenario
     repository = tmp_path / "repository"
     repository.mkdir()
@@ -304,6 +304,10 @@ def deferral_worktree(tmp_path: Path, scenario):
     capsule_manifest = repository / "packages/specfact-code-review/module-package.yaml"
     capsule_manifest.parent.mkdir(parents=True, exist_ok=True)
     capsule_manifest.write_text("version: 1\n")
+    checker = repository / "scripts/check_capsule_deferral.py"
+    checker.parent.mkdir()
+    if validator_present:
+        checker.write_bytes((REPO_ROOT / "scripts/check_capsule_deferral.py").read_bytes())
     _git(repository, "add", ".")
     _git(repository, "-c", "core.hooksPath=/dev/null", "commit", "-qm", "fixture base")
     _git(repository, "update-ref", "refs/remotes/origin/dev", "HEAD")

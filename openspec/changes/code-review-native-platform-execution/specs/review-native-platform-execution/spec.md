@@ -1520,3 +1520,13 @@ The required consumer remains blocking for failed/skipped customer review; no ho
 - **WHEN** either direct input changes without changing the shell proof itself
 - **THEN** the native boundary workflow SHALL schedule the existing Linux canonical and all three macOS boundary jobs through its pull-request path filter
 - **AND** all existing jobs, matrices, commands, prerequisites, assertions, deadlines, failure propagation and capsule admission SHALL remain unchanged
+
+#### Scenario: Local deferral executes only independently trusted validator bytes
+
+- **GIVEN** owner-authorized local Darwin ARM64 deferral and a complete indexed candidate delta
+- **WHEN** the candidate modifies or replaces the checker, including an unstaged no-op paired with a missing indexed customer caller
+- **THEN** the hook SHALL execute the checker extracted from the actual integrated origin/dev tip, never worktree or index checker bytes, and retain every existing parsed scheduling and failure contract
+- **AND** until commit c65a41e61a6b4e61e8dd2b69526a1cfc8650b3ad reaches dev, an absent integrated checker MAY use only the explicitly owner-approved checker at that exact commit with blob cc549b5bbd945b64d055afe111bcaeeb059d585a
+- **AND** bootstrap SHALL expire once that commit is an ancestor of dev or the checker has appeared in integrated dev history, including squash integration; a subsequently absent checker SHALL fail closed
+- **AND** missing authority objects, incomplete shallow bootstrap history, extraction failures and validator failures SHALL reject deferral without fallback; Git replacement objects SHALL not redirect the authority
+- **AND** extracted bytes SHALL use a private temporary file removed on success or failure; DEFERRED remains incomplete until mandatory exact-head Linux review, never PASS
