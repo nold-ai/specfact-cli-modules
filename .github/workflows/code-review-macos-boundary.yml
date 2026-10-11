@@ -14,6 +14,8 @@ on:
       - tests/unit/test_macos_boundary_ci_receipts.py
       - tests/native/**
       - tests/host/proof_capsule_review_projection_shell.py
+      - .github/workflows/capsule-customer-execution.yml
+      - tests/unit/test_capsule_review_projection.py
       - tests/support/**
       - tests/unit/test_macos_native_file_budget.py
       - tests/unit/specfact_code_review/run/test_native_*.py

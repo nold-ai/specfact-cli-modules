@@ -590,3 +590,19 @@ def test_controller_import_isolation_proof_has_no_complexity_warning():
     ]
     findings = _map_radon_complexity_findings({str(path): blocks}, _allowed_paths([path]))
     assert findings == [], [(finding.rule, finding.message) for finding in findings]
+
+
+@pytest.mark.parametrize(
+    "dependency",
+    [
+        CONTROLLER_SHELL_PROOF,
+        ".github/workflows/capsule-customer-execution.yml",
+        "tests/unit/test_capsule_review_projection.py",
+    ],
+)
+def test_controller_shell_dependencies_trigger_native_proofs(dependency):
+    workflow = yaml.load(
+        (ROOT / ".github/workflows/code-review-macos-boundary.yml").read_text(encoding="utf-8"),
+        Loader=yaml.BaseLoader,
+    )
+    assert dependency in workflow["on"]["pull_request"]["paths"]

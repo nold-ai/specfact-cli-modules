@@ -1512,3 +1512,11 @@ The required consumer remains blocking for failed/skipped customer review; no ho
 - **WHEN** source/archive/wheel setup and the fixed acquisition request are factored into bounded private fixture helpers
 - **THEN** request fields, source member path/payload/metadata, wheel bytes, trust permissions, signing and source-verification callbacks, and acquisition call order SHALL remain exact
 - **AND** every original assertion, test name, decorator, parameterized identity and mandatory native/portable context SHALL remain, with no signed runtime, analyzer, deadline, threshold or admission change
+
+
+#### Scenario: Native controller-shell proofs are scheduled for direct input changes
+
+- **GIVEN** required controller-shell proofs read the customer capsule workflow and use preparation fixtures from the portable projection test module
+- **WHEN** either direct input changes without changing the shell proof itself
+- **THEN** the native boundary workflow SHALL schedule the existing Linux canonical and all three macOS boundary jobs through its pull-request path filter
+- **AND** all existing jobs, matrices, commands, prerequisites, assertions, deadlines, failure propagation and capsule admission SHALL remain unchanged
