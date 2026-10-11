@@ -244,3 +244,15 @@ def test_native_admission_and_ownership_proofs_have_no_blocking_complexity(relat
     findings = radon_runner._map_radon_blocks(blocks, str(source)) + radon_runner._kiss_metric_findings(source)
     blocking = [finding for finding in findings if finding.severity == "error"]
     assert not blocking, [(finding.rule, finding.line, finding.message) for finding in blocking]
+
+
+def test_native_acquisition_fixture_has_no_function_length_warning() -> None:
+    """Apply unchanged production source-shape policy to the authenticated fixture."""
+    from specfact_code_review.tools.radon_runner import _kiss_metric_findings
+
+    fixture = (
+        Path(__file__).resolve().parents[4] / "tests/unit/specfact_code_review/run/native_project_runtime_fixtures.py"
+    )
+    findings = _kiss_metric_findings(fixture)
+
+    assert not [finding for finding in findings if finding.rule == "kiss.loc.warning"]

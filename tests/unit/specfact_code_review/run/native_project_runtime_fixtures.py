@@ -103,6 +103,43 @@ def _bundle(root: Path, plan: ProjectPlan) -> Path:
     return bundle
 
 
+def _acquisition_inputs(root: Path) -> tuple[Path, Path]:
+    """Write the original source archive and synthetic wheel inputs."""
+    source_archive = root / "source-input.tar.gz"
+    root.mkdir(parents=True, exist_ok=True)
+    with tarfile.open(source_archive, "w:gz") as archive:
+        payload = b"[project]\nname='fixture'\nversion='1.0'\n"
+        member = tarfile.TarInfo("project/pyproject.toml")
+        member.size = len(payload)
+        member.mode = 0o644
+        member.mtime = 0
+        archive.addfile(member, io.BytesIO(payload))
+    wheel = root / "fixture_dep-2.0-py3-none-any.whl"
+    wheel.write_bytes(b"authenticated wheel fixture")
+    return source_archive, wheel
+
+
+def _acquisition_request(plan: ProjectPlan) -> dict[str, Any]:
+    """Return the existing fixed request bound to the selected corpus identity."""
+    commit = "1" * 40
+    return {
+        "schema": "specfact-macos-project-acquisition-request-v1",
+        "project": "fixture",
+        "corpus_identity": plan.identity,
+        "source": {
+            "url": "https://github.com/example/fixture.git",
+            "commit": commit,
+            "archive_url": f"https://github.com/example/fixture/archive/{commit}.tar.gz",
+        },
+        "manager": {"name": "pip", "version": "26.2.1"},
+        "selection": {"groups": ["default"], "environment": "default"},
+        "abi": "cp312",
+        "platform": "macos-arm64",
+        "network": "trusted-acquisition-only",
+        "execute_project_code": False,
+    }
+
+
 def _authenticated_bundle(root: Path, plan: ProjectPlan, capsule: Path) -> Path:
     spec = importlib.util.spec_from_file_location("focused_project_acquisition", _ACQUISITION_SOURCE)
     assert spec is not None and spec.loader is not None
@@ -119,34 +156,8 @@ def _authenticated_bundle(root: Path, plan: ProjectPlan, capsule: Path) -> Path:
     public_key = trust / "project-acquisition-public.pem"
     public_key.write_bytes(public_pem)
     public_key.chmod(0o444)
-    source_archive = root / "source-input.tar.gz"
-    root.mkdir(parents=True, exist_ok=True)
-    with tarfile.open(source_archive, "w:gz") as archive:
-        payload = b"[project]\nname='fixture'\nversion='1.0'\n"
-        member = tarfile.TarInfo("project/pyproject.toml")
-        member.size = len(payload)
-        member.mode = 0o644
-        member.mtime = 0
-        archive.addfile(member, io.BytesIO(payload))
-    wheel = root / "fixture_dep-2.0-py3-none-any.whl"
-    wheel.write_bytes(b"authenticated wheel fixture")
-    commit = "1" * 40
-    request = {
-        "schema": "specfact-macos-project-acquisition-request-v1",
-        "project": "fixture",
-        "corpus_identity": plan.identity,
-        "source": {
-            "url": "https://github.com/example/fixture.git",
-            "commit": commit,
-            "archive_url": f"https://github.com/example/fixture/archive/{commit}.tar.gz",
-        },
-        "manager": {"name": "pip", "version": "26.2.1"},
-        "selection": {"groups": ["default"], "environment": "default"},
-        "abi": "cp312",
-        "platform": "macos-arm64",
-        "network": "trusted-acquisition-only",
-        "execute_project_code": False,
-    }
+    source_archive, wheel = _acquisition_inputs(root)
+    request = _acquisition_request(plan)
 
     def sign(payload: bytes) -> dict[str, str]:
         return {

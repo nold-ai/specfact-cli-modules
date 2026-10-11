@@ -1504,3 +1504,11 @@ The required consumer remains blocking for failed/skipped customer review; no ho
 - **WHEN** absent, valid, whitespace/case-normalized or invalid configured values are selected
 - **THEN** the result SHALL remain one of the existing full, changed or shadow modes, retaining changed fallback and existing invalid-value diagnostics
 - **AND** the production AST contract checker SHALL accept the selector without changing enforcement policy, review/analyzer inputs, deadlines, native isolation or incomplete-evidence semantics
+
+
+#### Scenario: Authenticated acquisition fixture setup remains bounded and byte-exact
+
+- **GIVEN** unchanged production KISS policy flags the native authenticated acquisition fixture's function length
+- **WHEN** source/archive/wheel setup and the fixed acquisition request are factored into bounded private fixture helpers
+- **THEN** request fields, source member path/payload/metadata, wheel bytes, trust permissions, signing and source-verification callbacks, and acquisition call order SHALL remain exact
+- **AND** every original assertion, test name, decorator, parameterized identity and mandatory native/portable context SHALL remain, with no signed runtime, analyzer, deadline, threshold or admission change
