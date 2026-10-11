@@ -1488,3 +1488,11 @@ The required consumer remains blocking for failed/skipped customer review; no ho
 - **WHEN** the literal is bounded without changing its bytes, the existing constructor is bound directly and PID observation explicitly keeps non-raising return-code handling
 - **THEN** those scoped quality findings SHALL disappear without changing any test identity, assertion, generated program, lifecycle deadline or process admission rule
 - **AND** disappearance of a PID SHALL still admit the existing return code 1 observation; forwarded import-proof subprocess options SHALL retain the caller's explicit check=True setting
+
+
+#### Scenario: Native project runtime proofs retain collection across bounded modules
+
+- **GIVEN** unchanged production Pylint reports the native project runtime proof module above its 1000-line bound
+- **WHEN** preparation/acquisition and inventory/source-binding cases are organized into bounded portable test modules with shared fixture builders
+- **THEN** every original test name, argument, decorator, parametrization, assertion and generated program SHALL remain identical, and complete collected case identities SHALL be retained across the split
+- **AND** fixture source paths and private bindings SHALL remain exact; Full/SMART and effective indexed PR scheduling SHALL require all moved cases, without changing runtime bytes, analyzers, deadlines, quality policy or admission contracts

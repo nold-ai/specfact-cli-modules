@@ -228,6 +228,8 @@ def test_run_radon_applies_parameter_count_rule_to_cli_decorators(
     [
         "packages/specfact-code-review/src/specfact_code_review/run/native_worker.py",
         "tests/unit/specfact_code_review/run/test_native_project_runtime.py",
+        "tests/unit/specfact_code_review/run/test_native_project_inventory.py",
+        "tests/unit/specfact_code_review/run/native_project_runtime_fixtures.py",
     ],
 )
 def test_native_admission_and_ownership_proofs_have_no_blocking_complexity(relative: str) -> None:

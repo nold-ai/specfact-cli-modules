@@ -595,6 +595,8 @@ def test_native_worker_and_retained_proofs_have_no_complexity_warning():
         Path(native_worker.__file__),
         Path(__file__),
         Path(__file__).with_name("test_native_project_runtime.py"),
+        Path(__file__).with_name("test_native_project_inventory.py"),
+        Path(__file__).with_name("native_project_runtime_fixtures.py"),
         root / "tests/unit/test_capsule_proof_contexts.py",
         root / "tests/unit/scripts/test_pre_commit_code_review.py",
         root / "scripts/pre_commit_code_review.py",
