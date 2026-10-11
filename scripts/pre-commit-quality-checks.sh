@@ -358,7 +358,7 @@ run_trusted_capsule_deferral() (
   fi
   if ! repository_root="$(git rev-parse --show-toplevel)"; then return 1; fi
   # Invoke the installed local environment directly; candidate Hatch aliases are not authority.
-  "${repository_root}/.venv/bin/python" -I "${trusted_validator}" "$@"
+  "${repository_root}/.venv/bin/python" -I "${trusted_validator}" "$1" "$2" "${integrated_dev}"
 )
 
 run_code_review_gate() {
@@ -409,7 +409,7 @@ run_code_review_gate() {
       error "Capsule review deferral cannot determine the complete staged candidate surface."
       exit 1
     fi
-    if ! run_trusted_capsule_deferral "${capsule_paths}" "${candidate_paths}" "${candidate_base}"; then
+    if ! run_trusted_capsule_deferral "${capsule_paths}" "${candidate_paths}"; then
       error "Capsule review deferral requires effective indexed blocking customer scheduling."
       exit 1
     fi

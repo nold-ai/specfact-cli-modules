@@ -1554,3 +1554,12 @@ The required consumer remains blocking for failed/skipped customer review; no ho
 - **WHEN** the added test reuses the already imported public Radon runner
 - **THEN** unchanged Pylint SHALL no longer report the introduced duplicate-import collision, while every earlier acquisition/complexity test definition, original assertion, deferred binding and parametrized identity remains exact
 - **AND** the real runner SHALL complete and retain the original production KISS policy producer; no analyzer configuration, runtime, workflow, threshold or scheduling behavior SHALL change
+
+
+#### Scenario: Behind-dev local deferral enforces the current integrated contract
+
+- **GIVEN** an eligible local feature worktree whose merge base predates current dev workflow controls
+- **WHEN** the trusted executor validates the complete indexed candidate scheduling
+- **THEN** it SHALL compare detector execution, reusable caller and review, quality consumers and root execution against the same resolved integrated dev tip used for checker authority, never the historical merge base
+- **AND** a stale indexed contract SHALL reject deferral, while an index matching current dev remains eligible even before branch integration
+- **AND** candidate paths SHALL still be computed from the merge base; pinned bootstrap authority, isolated interpreter, complete scheduling, every original proof and mandatory exact-head Linux review SHALL remain unchanged

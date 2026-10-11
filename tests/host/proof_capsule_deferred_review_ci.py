@@ -873,3 +873,48 @@ def test_local_deferral_ignores_real_candidate_hatch_python_alias(tmp_path, miss
     assert result.returncode == expected, result.stderr
     assert not alias_marker.exists(), "Candidate Hatch script replaced trusted validation"
     assert not candidate_marker.exists(), "Candidate checker replaced trusted validation"
+
+
+def _advance_deferral_workflow_contract(tmp_path: Path, mutation: str) -> Path:
+    repository = tmp_path / "repository"
+    filename = "capsule-customer-execution.yml" if mutation == "reusable" else "pr-orchestrator.yml"
+    path = repository / ".github/workflows" / filename
+    document = yaml.safe_load(path.read_text(encoding="utf-8"))
+    document["on"] = document.pop(True)
+    enforcement = {"SPECFACT_CODE_REVIEW_ENFORCEMENT": "full"}
+    match mutation:
+        case "detector":
+            document["jobs"]["changes"]["env"] = enforcement
+        case "caller":
+            document["jobs"]["customer-capsules"]["secrets"] = "inherit"
+        case "reusable":
+            document["jobs"]["independent-review"]["env"] = enforcement
+        case "quality":
+            document["jobs"]["quality"]["env"] = enforcement
+        case "root_environment":
+            document["env"] = enforcement
+    path.write_text(yaml.safe_dump(document, sort_keys=False), encoding="utf-8")
+    _git(repository, "add", str(path))
+    _git(repository, "-c", "core.hooksPath=/dev/null", "commit", "-qm", "fixture current integrated workflow contract")
+    _git(repository, "update-ref", "refs/remotes/origin/dev", "HEAD")
+    return path
+
+
+@pytest.mark.parametrize("mutation", ["detector", "caller", "reusable", "quality", "root_environment"])
+@pytest.mark.parametrize("current_index", [False, True])
+def test_behind_dev_deferral_binds_current_integrated_contract(
+    tmp_path: Path, mutation: str, current_index: bool
+) -> None:
+    worktree = deferral_worktree(
+        tmp_path,
+        ("Darwin", "", "github-linux", "tests/native/proof_native_canonical_path.py", False, True, 0),
+    )
+    original_base = _git(worktree, "merge-base", "HEAD", "origin/dev")
+    integrated_path = _advance_deferral_workflow_contract(tmp_path, mutation)
+    assert _git(worktree, "merge-base", "HEAD", "origin/dev") == original_base
+    assert _git(worktree, "rev-parse", "origin/dev") != original_base
+    if current_index:
+        candidate_path = worktree / ".github/workflows" / integrated_path.name
+        candidate_path.write_bytes(integrated_path.read_bytes())
+        _git(worktree, "add", str(candidate_path))
+    _assert_local_deferral(worktree, tmp_path / "calls", 0 if current_index else 1)
