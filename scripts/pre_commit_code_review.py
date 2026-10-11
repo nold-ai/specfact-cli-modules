@@ -113,6 +113,7 @@ def _specfact_review_paths(paths: Sequence[str]) -> list[str]:
     return result
 
 
+@ensure(lambda result: result in VALID_ENFORCEMENT_MODES)
 def review_enforcement_mode() -> str:
     """Return configured pre-commit review enforcement mode."""
     configured = os.environ.get("SPECFACT_CODE_REVIEW_ENFORCEMENT", DEFAULT_ENFORCEMENT_MODE).strip().lower()

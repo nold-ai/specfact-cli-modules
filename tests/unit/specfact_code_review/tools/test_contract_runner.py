@@ -265,3 +265,11 @@ def test_crosshair_failure_exit_without_stdout_cannot_establish_clean_evidence(
         "UNKNOWN",
     )
     assert stderr in findings[0].message
+
+
+def test_pre_commit_enforcement_selector_exposes_existing_contract() -> None:
+    """The real AST producer accepts the governed selector, without launching analysis."""
+    script = Path(__file__).resolve().parents[4] / "scripts" / "pre_commit_code_review.py"
+    findings = run_contract_check([script], crosshair_files=[])
+
+    assert not [finding for finding in findings if finding.rule == "MISSING_ICONTRACT"]

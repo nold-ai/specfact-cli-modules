@@ -1496,3 +1496,11 @@ The required consumer remains blocking for failed/skipped customer review; no ho
 - **WHEN** preparation/acquisition and inventory/source-binding cases are organized into bounded portable test modules with shared fixture builders
 - **THEN** every original test name, argument, decorator, parametrization, assertion and generated program SHALL remain identical, and complete collected case identities SHALL be retained across the split
 - **AND** fixture source paths and private bindings SHALL remain exact; Full/SMART and effective indexed PR scheduling SHALL require all moved cases, without changing runtime bytes, analyzers, deadlines, quality policy or admission contracts
+
+
+#### Scenario: Pre-commit enforcement exposes its existing allowed-mode return contract
+
+- **GIVEN** authoritative scoped contract review identifies the public enforcement selector without a postcondition
+- **WHEN** absent, valid, whitespace/case-normalized or invalid configured values are selected
+- **THEN** the result SHALL remain one of the existing full, changed or shadow modes, retaining changed fallback and existing invalid-value diagnostics
+- **AND** the production AST contract checker SHALL accept the selector without changing enforcement policy, review/analyzer inputs, deadlines, native isolation or incomplete-evidence semantics

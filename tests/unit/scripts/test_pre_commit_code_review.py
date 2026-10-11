@@ -550,3 +550,32 @@ def test_main_prints_actionable_setup_guidance_when_runtime_missing(
 
     assert exit_code == 1
     assert "dev-deps" in capsys.readouterr().out
+
+
+@pytest.mark.parametrize(
+    ("configured", "expected", "invalid"),
+    [
+        (None, "changed", False),
+        ("full", "full", False),
+        ("changed", "changed", False),
+        ("shadow", "shadow", False),
+        ("  FuLL  ", "full", False),
+        ("strict", "changed", True),
+        ("", "changed", True),
+    ],
+)
+def test_enforcement_return_contract_preserves_existing_admission(
+    configured: str | None,
+    expected: str,
+    invalid: bool,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Normalize valid modes and retain diagnostic fallback for every invalid control."""
+    module = _load_script_module()
+    monkeypatch.delenv("SPECFACT_CODE_REVIEW_ENFORCEMENT", raising=False)
+    if configured is not None:
+        monkeypatch.setenv("SPECFACT_CODE_REVIEW_ENFORCEMENT", configured)
+
+    assert module.review_enforcement_mode() == expected
+    assert ("Invalid SPECFACT_CODE_REVIEW_ENFORCEMENT" in capsys.readouterr().err) is invalid
