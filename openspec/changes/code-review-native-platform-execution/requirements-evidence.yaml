@@ -999,3 +999,18 @@ requirements:
       method: test
       intent: Reject candidate interpreter replacement before and during normal hooks without executing replacement bytes.
       observable: Two genuine real Git bypass REDs precede interpreter path/target/byte binding; both reject after correction, while valid dispatcher and complete-history controls remain. The owner-installed external runtime is existing trusted tooling, not a new checker authority or hostile-code containment claim.
+
+  openspec:code-review-native-platform-execution:review-native-platform-execution:unambiguous-staged-pathname-serialization:
+    rationale: Prevent Git pathname quoting from omitting unrelated staged review surfaces.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#460
+    touchpoints:
+    - id: owner-pathname-spec
+      kind: config_file
+      locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
+    verification_cases:
+    - case_id: 460-27-1
+      scenario_id: unambiguous-staged-pathname-serialization
+      method: test
+      intent: Reject unrelated quoted and multiline paths in real Git dispatcher and external-entry controls.
+      observable: Genuine failed-before assertions precede NUL parsing and fail-closed line-protocol adaptation; valid literal capsule paths and existing authority controls remain required.

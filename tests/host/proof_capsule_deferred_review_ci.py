@@ -1234,3 +1234,60 @@ def test_owner_entry_rejects_candidate_interpreter_replacement(tmp_path: Path, p
     assert not marker.exists()
     assert normal_marker.exists() == (phase == "during")
     assert _git(worktree, "rev-parse", "HEAD") == before
+
+
+@pytest.mark.parametrize("suffix", ["\n", "\r", "\t", '"', "\\", "\u2028"])
+def test_deferral_rejects_unrelated_quoted_pathnames(tmp_path: Path, suffix: str) -> None:
+    worktree = deferral_worktree(
+        tmp_path, ("Darwin", "", "github-linux", "tests/native/proof_macos_native_broker_wait.py", False, True, 1)
+    )
+    path = worktree / ("tests/unit/unrelated" + suffix + ".py")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("unrelated = 1\n")
+    _git(worktree, "add", ".")
+    _assert_local_deferral(worktree, tmp_path / "calls", 1)
+
+
+@pytest.mark.parametrize("suffix", ["\n", "\r", "\t", '"', "\\", "\u2028"])
+def test_owner_entry_rejects_unrelated_quoted_pathnames(tmp_path: Path, suffix: str) -> None:
+    worktree = deferral_worktree(
+        tmp_path, ("Darwin", "", "github-linux", "tests/native/proof_macos_native_broker_wait.py", False, True, 0)
+    )
+    path = worktree / ("tests/unit/unrelated" + suffix + ".py")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("unrelated = 1\n")
+    _git(worktree, "add", ".")
+    hooks, marker, _, _ = _owner_entry_normal_fixture(worktree, tmp_path, "valid")
+    before = _git(worktree, "rev-parse", "HEAD")
+    result = subprocess.run(
+        ["git", "-c", f"core.hooksPath={hooks}", "commit", "-qm", "fixture quoted pathname"],
+        cwd=worktree,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode != 0, result.stdout + result.stderr
+    assert not marker.exists()
+    assert _git(worktree, "rev-parse", "HEAD") == before
+
+
+@pytest.mark.parametrize("suffix", [" ", "\t", '"', "\\"])
+def test_owner_entry_preserves_representable_capsule_pathnames(tmp_path: Path, suffix: str) -> None:
+    worktree = deferral_worktree(
+        tmp_path, ("Darwin", "", "github-linux", "tests/native/proof_macos_native_broker_wait.py", False, True, 0)
+    )
+    path = worktree / ("tests/native/proof_literal" + suffix + ".py")
+    path.write_text("literal = 1\n")
+    _git(worktree, "add", ".")
+    hooks, marker, _, _ = _owner_entry_normal_fixture(worktree, tmp_path, "valid")
+    before = _git(worktree, "rev-parse", "HEAD")
+    result = subprocess.run(
+        ["git", "-c", f"core.hooksPath={hooks}", "commit", "-qm", "fixture literal pathname"],
+        cwd=worktree,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert marker.read_text() == "normal\n"
+    assert _git(worktree, "rev-parse", "HEAD") != before

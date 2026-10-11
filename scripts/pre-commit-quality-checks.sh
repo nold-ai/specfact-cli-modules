@@ -361,6 +361,25 @@ run_trusted_capsule_deferral() (
   "${repository_root}/.venv/bin/python" -I "${trusted_validator}" "$1" "$2" "${integrated_dev}"
 )
 
+# Decode Git NUL-delimited names before adapting to the approved checker line protocol.
+collect_deferral_paths() {
+  local repository_root
+  if ! repository_root="$(git rev-parse --show-toplevel)"; then return 1; fi
+  "${repository_root}/.venv/bin/python" -I - "$@" <<'PYTHON'
+import os
+import subprocess
+import sys
+raw = subprocess.check_output(
+    ["git", "diff", "--cached", "--name-only", "-z", *sys.argv[1:]],
+    env=os.environ | {"GIT_NO_REPLACE_OBJECTS": "1"},
+)
+paths = raw.decode("utf-8").split("\0")[:-1]
+if any(path.splitlines() != [path] for path in paths):
+    raise SystemExit("Staged pathname cannot be represented by the approved checker line protocol")
+sys.stdout.write("\n".join(paths))
+PYTHON
+}
+
 run_code_review_gate() {
   local deferral="${SPECFACT_CODE_REVIEW_DEFER_TO_CI:-}"
   if [[ -n "${deferral}" ]]; then
@@ -390,7 +409,7 @@ run_code_review_gate() {
       error "Capsule review deferral cannot determine the PR merge-base against origin/dev."
       exit 1
     fi
-    if ! capsule_paths="$(git diff --cached --name-only "${candidate_base}" -- \
+    if ! capsule_paths="$(collect_deferral_paths "${candidate_base}" -- \
       packages/specfact-code-review .github/workflows/capsule-customer-execution.yml \
       .github/workflows/pr-orchestrator.yml scripts/pre-commit-quality-checks.sh scripts/check_capsule_deferral.py scripts/owner_commit_entry.py scripts/pre_commit_code_review.py \
       tests/native tests/unit/specfact_code_review tests/unit/test_native_broker_cleanup.py pyproject.toml tools/smart_test_coverage.py \
@@ -405,7 +424,7 @@ run_code_review_gate() {
       error "Capsule review deferral requires a candidate change that schedules the blocking capsule workflow."
       exit 1
     fi
-    if ! candidate_paths="$(git diff --cached --name-only "${candidate_base}")"; then
+    if ! candidate_paths="$(collect_deferral_paths "${candidate_base}" --)"; then
       error "Capsule review deferral cannot determine the complete staged candidate surface."
       exit 1
     fi

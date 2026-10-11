@@ -151,13 +151,24 @@ def _checker_source(root: Path, integrated_dev: str) -> str:
     return source
 
 
+def _checker_paths(root: Path, base: str, *selectors: str) -> str:
+    raw = subprocess.check_output(
+        ["git", "-C", str(root), "diff", "--cached", "--name-only", "-z", base, "--", *selectors],
+        env=os.environ | {"GIT_NO_REPLACE_OBJECTS": "1"},
+    )
+    paths = raw.decode("utf-8").split("\0")[:-1]
+    if any(path.splitlines() != [path] for path in paths):
+        raise ValueError("Staged pathname cannot be represented by the approved checker line protocol")
+    return "\n".join(paths)
+
+
 def validate_index(binding: dict[str, str]) -> None:
     root = _validate_binding(binding)
     integrated_dev = _git(root, "rev-parse", "--verify", "refs/remotes/origin/dev^{commit}")
     source = _checker_source(root, integrated_dev)
     base = _git(root, "merge-base", "HEAD", integrated_dev)
-    candidate = _git(root, "diff", "--cached", "--name-only", base)
-    capsule = _git(root, "diff", "--cached", "--name-only", base, "--", *CAPSULE_PATHS)
+    candidate = _checker_paths(root, base)
+    capsule = _checker_paths(root, base, *CAPSULE_PATHS)
     if not capsule:
         raise ValueError("Owner entry requires a scheduled capsule candidate delta")
     with tempfile.TemporaryDirectory(prefix="specfact-owner-checker-") as temporary:

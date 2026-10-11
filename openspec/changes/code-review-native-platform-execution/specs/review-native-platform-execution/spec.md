@@ -1639,3 +1639,15 @@ The invocation-scoped owner entry SHALL resolve the existing owner-installed int
 - **GIVEN** an installed owner entry and a candidate dispatcher capable of replacing its worktree interpreter
 - **WHEN** replacement occurs before entry or after valid pre-hook validation and the scheduler is disabled
 - **THEN** real Git commit rejects, replacement markers stay absent, and the original HEAD remains
+
+### Requirement: Unambiguous staged pathname serialization
+
+The local deferral dispatcher and owner-installed external commit entry SHALL consume NUL-delimited Git paths, preserve each representable filename exactly, and reject pathnames that cannot be represented by the unchanged approved checker line protocol. The approved checker byte authority and existing scheduling, normal-hook and ownership checks SHALL remain unchanged.
+
+#### Scenario: unrelated quoted or multiline staged path
+- **WHEN** a qualifying capsule delta accompanies an unrelated reviewable path containing newline, carriage return, tab, quote, backslash or a Unicode line separator
+- **THEN** local deferral and the external real Git commit reject the unrelated surface before reporting success
+
+#### Scenario: representable capsule filename
+- **WHEN** an eligible capsule filename includes literal spaces, tab, quote or backslash without a line boundary
+- **THEN** its exact pathname reaches the approved checker and normal commit checks remain required
