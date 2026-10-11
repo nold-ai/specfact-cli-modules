@@ -936,3 +936,35 @@ requirements:
       method: test
       intent: Preserve original compiled cases while removing the actual unchanged-policy function-length warning.
       observable: The real public-runner regression fails at 93 lines against threshold 80, then passes with caller 29 and helpers 28/42. Inlining reconstructs the whole original module AST; generated C bytes and compiler/execution requests match all three sinks. Focused 129 tests include all ten compiled cases; mandatory Full and separate SMART retain 186 host/native proofs and 5774 portable tests. Local capsule review remains DEFERRED; exact-head hosted and independent installed native acceptance remain unproven.
+
+
+  openspec:code-review-native-platform-execution:review-native-platform-execution:bounded-project-runtime-proof-callbacks:
+    rationale: Bound retained proof setup without weakening native project preparation or authenticated acquisition controls.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#460
+    touchpoints:
+    - id: project-runtime-proof-spec
+      kind: config_file
+      locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
+    verification_cases:
+    - case_id: 460-23-1
+      scenario_id: bounded-project-runtime-proof-callbacks
+      method: test
+      intent: Preserve original project-runtime proofs while removing their actual unchanged-policy function-length warnings.
+      observable: Three actual public-runner REDs at 102/104/98 lines against threshold 80 become complete scoped GREEN, with callers 59/34/72 and helpers 47/74/28. Whole original module AST reconstructs exactly (52 definitions/24 tests/73 assertions); all original preparation cases remain. Focused61PASS; Full186host+5777portable and separateSMART186host+5777portable PASS with 71skips95subtests5warnings. Patch remains uncommitted against 01d4313; trusted commit-entry decision and final normal hooks pending. Hosted failures, parameter warnings and independent installed acceptance remain unwaived/unproven.
+
+
+  openspec:code-review-native-platform-execution:review-native-platform-execution:owner-bound-external-commit-enforcement:
+    rationale: Enforce the explicitly approved monitor commit workflow outside candidate dispatcher control.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#460
+    touchpoints:
+    - id: owner-commit-entry-spec
+      kind: config_file
+      locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
+    verification_cases:
+    - case_id: 460-24-1
+      scenario_id: owner-bound-external-commit-enforcement
+      method: test
+      intent: Reject independently reproduced dispatcher bypass and final-index mutation while retaining normal hooks and approved authority.
+      observable: Real isolated Git commits exercise candidate-dispatcher removal, disabled scheduling, normal-hook failure, post-hook indexed mutation and caller binding; valid commits execute existing normal pre-commit before independent final validation. External installation is invocation-scoped and does not modify shared hooks/config; hosted and installed native acceptance remain separate. Three genuine Git REDs precede15real commit controls; one real public Radon RED precedes exact fixture-helper preservation. Final focused16PASS, Full201host+5778portable and separateSMART201host+5778portable PASS; original71skips95subtests5warnings retained; actual external-entry normal hooks PASS.

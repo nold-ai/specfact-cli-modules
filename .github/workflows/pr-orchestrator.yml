@@ -61,6 +61,7 @@ jobs:
               - "tests/support/capsule_review_fixtures.py"
               - "scripts/pre-commit-quality-checks.sh"
               - "scripts/check_capsule_deferral.py"
+              - "scripts/owner_commit_entry.py"
               - "scripts/pre_commit_code_review.py"
               - "tests/unit/test_pre_commit_quality_parity.py"
               - "tests/unit/scripts/test_pre_commit_code_review.py"

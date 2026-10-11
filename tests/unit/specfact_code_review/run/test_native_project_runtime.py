@@ -155,50 +155,7 @@ def test_hatch_prepares_an_unfamiliar_environment_without_project_catalog(
         (path / "site-packages").mkdir(parents=True)
         return path
 
-    def phase(_runtime, operation, inputs, destination):
-        destination.mkdir()
-        if operation == "hook":
-            request = json.loads((inputs / ".specfact-hook.json").read_text(encoding="utf-8"))
-            calls.append(request["operation"])
-            assert json.loads((inputs / ".specfact-hatch.json").read_text(encoding="utf-8"))["environment"] == "review"
-            if request["operation"] == "hatch.describe":
-                result = {
-                    "requirements": ["idna==3.10"],
-                    "extras": [],
-                    "groups": [],
-                    "skip_install": True,
-                    "dev_mode": True,
-                    "locked": False,
-                    "workspace": [{"name": "backend", "path": "backend", "extras": ["extra"]}] if workspace else [],
-                }
-            else:
-                (destination / "site-packages/idna").mkdir(parents=True)
-                (destination / "site-packages/idna/__init__.py").write_text("__version__='3.10'\n", encoding="utf-8")
-                result = {"manager": {"name": "hatch", "version": "1.18.0"}, "status": "COMPLETE"}
-            (destination / "hook-result.json").write_text(json.dumps(result), encoding="utf-8")
-        elif operation == "acquire":
-            calls.append("acquire")
-            assert json.loads((inputs / "request.json").read_text(encoding="utf-8"))["requirements"] == [
-                "idna==3.10",
-                *(["filelock==3.20.3"] if workspace else []),
-            ]
-            if workspace:
-                assert (inputs / "wheels/backend-1-py3-none-any.whl").is_file()
-            (destination / "wheels").mkdir()
-            (destination / "wheel-manifest.json").write_text("{}", encoding="utf-8")
-        else:
-            calls.append("inspect")
-            (destination / "environment-inventory.json").write_text(
-                json.dumps(
-                    {
-                        "installed": [],
-                        "environment": {"sys_platform": "darwin", "python_full_version": "3.11.16"},
-                        "member_graphs": {},
-                        "analyzer_conflicts": {},
-                    }
-                ),
-                encoding="utf-8",
-            )
+    phase = _hatch_project_phase(calls, workspace)
 
     monkeypatch.setattr(native_project_runtime, "_prepare_build_dependencies", manager_dependencies)
 
@@ -295,77 +252,7 @@ def test_poetry_prepares_locked_dependency_environment_without_catalog(monkeypat
         (destination / "site-packages").mkdir(parents=True)
         return destination
 
-    def phase(_runtime, operation, inputs, destination):
-        destination.mkdir()
-        if operation == "hook":
-            operation = json.loads((inputs / ".specfact-hook.json").read_text(encoding="utf-8"))["operation"]
-            if lock_present:
-                assert (inputs / "poetry.lock").read_bytes() == (project / "poetry.lock").read_bytes()
-            result = {
-                "requirements": ["idna==3.10"],
-                "groups": ["main"],
-                "extras": [],
-                "locked": True,
-                "lock_preserved": True,
-                "package_mode": False,
-                "manager": {"name": "poetry", "version": "2.4.3"},
-                "hook_provenance": "local_build",
-                "production_eligible": False,
-            }
-            if operation == "poetry.describe" and not (inputs / "poetry.lock").exists():
-                result.update(
-                    locked=False,
-                    lock_preserved=False,
-                    resolution={
-                        "schema": "native-poetry-resolution-v1",
-                        "content_hash": "a" * 64,
-                        "pyproject": {
-                            "project": {"name": "unfamiliar", "version": "1"},
-                            "tool": {"poetry": {"package-mode": False}},
-                        },
-                        "groups": ["main"],
-                        "extras": [],
-                    },
-                )
-            if operation == "poetry.install":
-                (destination / "site-packages").mkdir()
-                result["status"] = "COMPLETE"
-            (destination / "hook-result.json").write_text(json.dumps(result), encoding="utf-8")
-        elif operation == "acquire":
-            value = json.loads((inputs / "request.json").read_text(encoding="utf-8"))
-            if value["schema"] == "native-poetry-resolution-v1":
-                assert set(inputs.iterdir()) == {inputs / "request.json", inputs / ".specfact-build-dependencies"}
-                payload = '[metadata]\ncontent-hash="' + "a" * 64 + '"\n'
-                (destination / "poetry.lock").write_text(payload, encoding="utf-8")
-                (destination / "resolution.json").write_text(
-                    json.dumps(
-                        {
-                            "manager": {"name": "poetry", "version": "2.4.3"},
-                            "content_hash": "a" * 64,
-                            "lock_sha256": hashlib.sha256(payload.encode()).hexdigest(),
-                        }
-                    ),
-                    encoding="utf-8",
-                )
-                calls.append(operation)
-                return
-            assert value["requirements"] == ["idna==3.10"]
-            (destination / "wheels").mkdir()
-            (destination / "wheel-manifest.json").write_text("{}", encoding="utf-8")
-        else:
-            assert operation == "inspect"
-            (destination / "environment-inventory.json").write_text(
-                json.dumps(
-                    {
-                        "installed": [],
-                        "environment": {"sys_platform": "darwin", "python_full_version": "3.11.16"},
-                        "member_graphs": {},
-                        "analyzer_conflicts": {},
-                    }
-                ),
-                encoding="utf-8",
-            )
-        calls.append(operation)
+    phase = _poetry_project_phase(calls, lock_present, project)
 
     monkeypatch.setattr(native_project_runtime, "_prepare_build_dependencies", dependencies)
     monkeypatch.setattr(native_project_runtime, "_run_pip_phase", phase)
@@ -570,33 +457,7 @@ def test_prepares_authenticated_bundle_through_closed_native_project_plan(monkey
             return None
 
         def launch(self, request: SimpleNamespace) -> int:
-            self.request = request
-            site = request.output_root / "site-packages/fixture_dep"
-            site.mkdir(parents=True)
-            (site / "__init__.py").write_text("VALUE = 1\n", encoding="utf-8")
-            (site / "native.so").write_bytes(_thin_macho(loads=("/usr/lib/libSystem.B.dylib",)))
-            (request.output_root / "project-preparation.json").write_text(
-                json.dumps(
-                    {
-                        "schema": "specfact-native-project-preparation-result-v1",
-                        "status": "COMPLETE",
-                        "evidence": {
-                            "schema": "specfact-native-project-preparation-evidence-v1",
-                            "status": "COMPLETE",
-                            "manager": {"name": "pip", "version": "26.2.1"},
-                            "artifact_count": 1,
-                            "file_count": 1,
-                            "native_extension_count": 1,
-                            "network_used": False,
-                            "host_manager_used": False,
-                            "project_code_executed": False,
-                            "build_hooks_executed": False,
-                        },
-                    }
-                ),
-                encoding="utf-8",
-            )
-            return 9
+            return _launch_authenticated_project_session(self, request)
 
         def wait(self, handle: int, timeout_ms: int) -> SimpleNamespace:
             assert (handle, timeout_ms) == (9, 900_000)
@@ -860,3 +721,158 @@ def test_catalog_ghcr_download_uses_bounded_authenticated_registry_reader(monkey
     assert observed["digest"] == digest
     assert observed["size"] == len(payload)
     assert observed["max_redirects"] == 4
+
+
+def _hatch_project_phase(calls, workspace):
+    def phase(_runtime, operation, inputs, destination):
+        destination.mkdir()
+        if operation == "hook":
+            request = json.loads((inputs / ".specfact-hook.json").read_text(encoding="utf-8"))
+            calls.append(request["operation"])
+            assert json.loads((inputs / ".specfact-hatch.json").read_text(encoding="utf-8"))["environment"] == "review"
+            if request["operation"] == "hatch.describe":
+                result = {
+                    "requirements": ["idna==3.10"],
+                    "extras": [],
+                    "groups": [],
+                    "skip_install": True,
+                    "dev_mode": True,
+                    "locked": False,
+                    "workspace": [{"name": "backend", "path": "backend", "extras": ["extra"]}] if workspace else [],
+                }
+            else:
+                (destination / "site-packages/idna").mkdir(parents=True)
+                (destination / "site-packages/idna/__init__.py").write_text("__version__='3.10'\n", encoding="utf-8")
+                result = {"manager": {"name": "hatch", "version": "1.18.0"}, "status": "COMPLETE"}
+            (destination / "hook-result.json").write_text(json.dumps(result), encoding="utf-8")
+        elif operation == "acquire":
+            calls.append("acquire")
+            assert json.loads((inputs / "request.json").read_text(encoding="utf-8"))["requirements"] == [
+                "idna==3.10",
+                *(["filelock==3.20.3"] if workspace else []),
+            ]
+            if workspace:
+                assert (inputs / "wheels/backend-1-py3-none-any.whl").is_file()
+            (destination / "wheels").mkdir()
+            (destination / "wheel-manifest.json").write_text("{}", encoding="utf-8")
+        else:
+            calls.append("inspect")
+            (destination / "environment-inventory.json").write_text(
+                json.dumps(
+                    {
+                        "installed": [],
+                        "environment": {"sys_platform": "darwin", "python_full_version": "3.11.16"},
+                        "member_graphs": {},
+                        "analyzer_conflicts": {},
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+    return phase
+
+
+def _poetry_project_phase(calls, lock_present, project):
+    def phase(_runtime, operation, inputs, destination):
+        destination.mkdir()
+        if operation == "hook":
+            operation = json.loads((inputs / ".specfact-hook.json").read_text(encoding="utf-8"))["operation"]
+            if lock_present:
+                assert (inputs / "poetry.lock").read_bytes() == (project / "poetry.lock").read_bytes()
+            result = {
+                "requirements": ["idna==3.10"],
+                "groups": ["main"],
+                "extras": [],
+                "locked": True,
+                "lock_preserved": True,
+                "package_mode": False,
+                "manager": {"name": "poetry", "version": "2.4.3"},
+                "hook_provenance": "local_build",
+                "production_eligible": False,
+            }
+            if operation == "poetry.describe" and not (inputs / "poetry.lock").exists():
+                result.update(
+                    locked=False,
+                    lock_preserved=False,
+                    resolution={
+                        "schema": "native-poetry-resolution-v1",
+                        "content_hash": "a" * 64,
+                        "pyproject": {
+                            "project": {"name": "unfamiliar", "version": "1"},
+                            "tool": {"poetry": {"package-mode": False}},
+                        },
+                        "groups": ["main"],
+                        "extras": [],
+                    },
+                )
+            if operation == "poetry.install":
+                (destination / "site-packages").mkdir()
+                result["status"] = "COMPLETE"
+            (destination / "hook-result.json").write_text(json.dumps(result), encoding="utf-8")
+        elif operation == "acquire":
+            value = json.loads((inputs / "request.json").read_text(encoding="utf-8"))
+            if value["schema"] == "native-poetry-resolution-v1":
+                assert set(inputs.iterdir()) == {inputs / "request.json", inputs / ".specfact-build-dependencies"}
+                payload = '[metadata]\ncontent-hash="' + "a" * 64 + '"\n'
+                (destination / "poetry.lock").write_text(payload, encoding="utf-8")
+                (destination / "resolution.json").write_text(
+                    json.dumps(
+                        {
+                            "manager": {"name": "poetry", "version": "2.4.3"},
+                            "content_hash": "a" * 64,
+                            "lock_sha256": hashlib.sha256(payload.encode()).hexdigest(),
+                        }
+                    ),
+                    encoding="utf-8",
+                )
+                calls.append(operation)
+                return
+            assert value["requirements"] == ["idna==3.10"]
+            (destination / "wheels").mkdir()
+            (destination / "wheel-manifest.json").write_text("{}", encoding="utf-8")
+        else:
+            assert operation == "inspect"
+            (destination / "environment-inventory.json").write_text(
+                json.dumps(
+                    {
+                        "installed": [],
+                        "environment": {"sys_platform": "darwin", "python_full_version": "3.11.16"},
+                        "member_graphs": {},
+                        "analyzer_conflicts": {},
+                    }
+                ),
+                encoding="utf-8",
+            )
+        calls.append(operation)
+
+    return phase
+
+
+def _launch_authenticated_project_session(self, request):
+    self.request = request
+    site = request.output_root / "site-packages/fixture_dep"
+    site.mkdir(parents=True)
+    (site / "__init__.py").write_text("VALUE = 1\n", encoding="utf-8")
+    (site / "native.so").write_bytes(_thin_macho(loads=("/usr/lib/libSystem.B.dylib",)))
+    (request.output_root / "project-preparation.json").write_text(
+        json.dumps(
+            {
+                "schema": "specfact-native-project-preparation-result-v1",
+                "status": "COMPLETE",
+                "evidence": {
+                    "schema": "specfact-native-project-preparation-evidence-v1",
+                    "status": "COMPLETE",
+                    "manager": {"name": "pip", "version": "26.2.1"},
+                    "artifact_count": 1,
+                    "file_count": 1,
+                    "native_extension_count": 1,
+                    "network_used": False,
+                    "host_manager_used": False,
+                    "project_code_executed": False,
+                    "build_hooks_executed": False,
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    return 9

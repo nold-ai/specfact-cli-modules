@@ -333,3 +333,48 @@ def test_canonical_allocation_proof_functions_have_no_function_length_warning() 
         if finding.line in {node.lineno for node in definitions}
         and finding.rule in {"kiss.loc.warning", "kiss.loc.error"}
     ]
+
+
+@pytest.mark.parametrize(
+    "function_name",
+    [
+        "test_hatch_prepares_an_unfamiliar_environment_without_project_catalog",
+        "test_poetry_prepares_locked_dependency_environment_without_catalog",
+        "test_prepares_authenticated_bundle_through_closed_native_project_plan",
+    ],
+)
+def test_project_runtime_proof_callbacks_have_no_function_length_warning(function_name: str) -> None:
+    """Apply real KISS policy while retaining original preparation proof cases."""
+    source = Path(__file__).resolve().parents[4] / "tests/unit/specfact_code_review/run/test_native_project_runtime.py"
+    definitions = [node for node in ast.parse(source.read_text()).body if isinstance(node, ast.FunctionDef)]
+    target = next(node for node in definitions if node.name == function_name)
+    factories = [
+        node
+        for node in definitions
+        if node.name in {"_hatch_project_phase", "_poetry_project_phase", "_launch_authenticated_project_session"}
+    ]
+    findings = run_radon([source])
+    assert not [finding for finding in findings if finding.category == "tool_error"]
+    assert not [
+        finding
+        for finding in findings
+        if finding.line in {target.lineno, *(node.lineno for node in factories)}
+        and finding.rule in {"kiss.loc.warning", "kiss.loc.error"}
+    ]
+
+
+def test_owner_entry_proof_fixtures_satisfy_unchanged_complexity_policy() -> None:
+    source = Path(__file__).resolve().parents[4] / "tests/host/proof_capsule_deferred_review_ci.py"
+    targets = {
+        node.lineno
+        for node in ast.parse(source.read_text()).body
+        if isinstance(node, ast.FunctionDef)
+        and (
+            node.name.startswith("test_owner_")
+            or node.name.startswith("_owner_entry_")
+            or node.name.startswith("_assert_owner_entry_")
+        )
+    }
+    findings = run_radon([source])
+    assert not [finding for finding in findings if finding.category == "tool_error"]
+    assert not [finding for finding in findings if finding.line in targets]

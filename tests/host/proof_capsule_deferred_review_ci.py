@@ -918,3 +918,224 @@ def test_behind_dev_deferral_binds_current_integrated_contract(
         candidate_path.write_bytes(integrated_path.read_bytes())
         _git(worktree, "add", str(candidate_path))
     _assert_local_deferral(worktree, tmp_path / "calls", 0 if current_index else 1)
+
+
+@pytest.mark.parametrize("case", ["valid", "disabled", "post-index", "normal-failure", "wrong-branch"])
+def test_owner_commit_entry_enforces_real_git_commit(tmp_path: Path, case: str) -> None:
+    worktree = deferral_worktree(
+        tmp_path, ("Darwin", "", "github-linux", "tests/native/proof_macos_native_broker_wait.py", False, True, 0)
+    )
+    hooks, marker, workflow, disabled = _owner_entry_normal_fixture(worktree, tmp_path, case)
+    if case == "disabled":
+        (worktree / workflow).write_text(disabled)
+        _git(worktree, "add", workflow)
+    if case == "wrong-branch":
+        _git(worktree, "checkout", "-qb", "codex/other")
+    before = _git(worktree, "rev-parse", "HEAD")
+    shared_hook = worktree / ".git"
+    shared_bytes = shared_hook.read_bytes()
+    config_before = _git(worktree, "config", "--local", "--list")
+    result = subprocess.run(
+        ["git", "-c", f"core.hooksPath={hooks}", "commit", "-qm", "fixture owner entry"],
+        cwd=worktree,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert shared_hook.read_bytes() == shared_bytes
+    assert _git(worktree, "config", "--local", "--list") == config_before
+    _assert_owner_entry_commit(worktree, marker, result, case, before)
+
+
+@pytest.mark.parametrize(
+    "case", ["valid", "disabled", "missing-interpreter", "changed-hook", "changed-config", "candidate-checker"]
+)
+def test_owner_entry_freezes_dispatch_and_retains_installed_pre_commit(tmp_path: Path, case: str) -> None:
+    worktree = deferral_worktree(
+        tmp_path, ("Darwin", "", "github-linux", "tests/native/proof_macos_native_broker_wait.py", False, True, 0)
+    )
+    normal = tmp_path / "normal-pre-commit"
+    normal.write_text(
+        "#!/bin/sh\nexec " + shlex.quote(sys.executable) + " -m pre_commit run --all-files --show-diff-on-failure\n"
+    )
+    normal.chmod(0o700)
+    marker = tmp_path / "dispatcher-ran"
+    dispatcher = worktree / "scripts/pre-commit-quality-checks.sh"
+    dispatcher.write_text("#!/bin/sh\nprintf 'normal\\n' > " + shlex.quote(str(marker)) + "\n")
+    (worktree / ".pre-commit-config.yaml").write_text(
+        "repos:\n- repo: local\n  hooks:\n  - id: retained-dispatch\n    name: retained dispatch\n"
+        "    entry: bash scripts/pre-commit-quality-checks.sh\n    language: system\n"
+        "    pass_filenames: false\n    always_run: true\n"
+    )
+    _git(worktree, "add", ".")
+    hooks = tmp_path / "owner-entry"
+    subprocess.run(
+        [
+            sys.executable,
+            "-I",
+            str(REPO_ROOT / "scripts/owner_commit_entry.py"),
+            "install",
+            str(worktree),
+            str(hooks),
+            str(normal),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    config_before = _git(worktree, "config", "--local", "--list")
+    candidate_marker = _owner_entry_mutation(worktree, tmp_path, normal, case)
+    _git(worktree, "add", ".")
+    before = _git(worktree, "rev-parse", "HEAD")
+    result = subprocess.run(
+        ["git", "-c", f"core.hooksPath={hooks}", "commit", "-qm", "fixture frozen dispatch"],
+        cwd=worktree,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert not candidate_marker.exists()
+    assert _git(worktree, "config", "--local", "--list") == config_before
+    _assert_owner_entry_dispatch(worktree, marker, result, case, before)
+
+
+@pytest.mark.parametrize("case", ["valid", "missing-bootstrap", "shallow", "squash-deleted"])
+def test_owner_entry_uses_only_approved_bootstrap_when_dev_has_no_checker(tmp_path: Path, case: str) -> None:
+    worktree = deferral_worktree(
+        tmp_path,
+        ("Darwin", "", "github-linux", "tests/native/proof_macos_native_broker_wait.py", False, True, 0),
+        validator_present=False,
+    )
+    if case != "missing-bootstrap":
+        _git(worktree, "fetch", "--no-tags", str(REPO_ROOT), "c65a41e61a6b4e61e8dd2b69526a1cfc8650b3ad")
+    if case == "shallow":
+        common = Path(_git(worktree, "rev-parse", "--path-format=absolute", "--git-common-dir"))
+        (common / "shallow").write_text(_git(worktree, "rev-parse", "refs/remotes/origin/dev") + "\n")
+    if case == "squash-deleted":
+        repository = tmp_path / "repository"
+        checker = repository / "scripts/check_capsule_deferral.py"
+        checker.write_text("raise SystemExit(0)\n")
+        _git(repository, "add", ".")
+        _git(repository, "-c", "core.hooksPath=/dev/null", "commit", "-qm", "fixture integrated checker")
+        checker.unlink()
+        _git(repository, "add", ".")
+        _git(repository, "-c", "core.hooksPath=/dev/null", "commit", "-qm", "fixture deleted checker")
+        _git(repository, "update-ref", "refs/remotes/origin/dev", "HEAD")
+    normal = tmp_path / "normal-pre-commit"
+    marker = tmp_path / "normal-ran"
+    normal.write_text("#!/bin/sh\ntouch " + shlex.quote(str(marker)) + "\n")
+    normal.chmod(0o700)
+    hooks = tmp_path / "owner-entry"
+    subprocess.run(
+        [
+            sys.executable,
+            "-I",
+            str(REPO_ROOT / "scripts/owner_commit_entry.py"),
+            "install",
+            str(worktree),
+            str(hooks),
+            str(normal),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    before = _git(worktree, "rev-parse", "HEAD")
+    result = subprocess.run(
+        ["git", "-c", f"core.hooksPath={hooks}", "commit", "-qm", "fixture approved bootstrap"],
+        cwd=worktree,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert (result.returncode == 0) == (case == "valid"), result.stdout + result.stderr
+    assert marker.exists() == (case == "valid")
+    assert (_git(worktree, "rev-parse", "HEAD") != before) == (case == "valid")
+
+
+def _owner_entry_normal_fixture(worktree: Path, tmp_path: Path, case: str) -> tuple[Path, Path, str, str]:
+    normal = tmp_path / "normal-pre-commit"
+    marker = tmp_path / "normal-ran"
+    workflow = ".github/workflows/pr-orchestrator.yml"
+    disabled = (
+        (worktree / workflow).read_text().replace("  customer-capsules:\n", "  customer-capsules:\n    if: false\n", 1)
+    )
+    assert "    if: false" in disabled
+    mutation = ""
+    if case == "post-index":
+        payload = tmp_path / "disabled-workflow"
+        payload.write_text(disabled)
+        mutation = (
+            f"blob=$(git hash-object -w {shlex.quote(str(payload))})\n"
+            f"git update-index --cacheinfo 100644,$blob,{workflow}\n"
+        )
+    normal.write_text(
+        "#!/bin/bash\nset -eu\n"
+        f"printf 'normal\\n' >> {shlex.quote(str(marker))}\n"
+        + mutation
+        + ("exit 7\n" if case == "normal-failure" else "exit 0\n")
+    )
+    normal.chmod(0o700)
+    hooks = tmp_path / "owner-entry"
+    subprocess.run(
+        [
+            sys.executable,
+            "-I",
+            str(REPO_ROOT / "scripts/owner_commit_entry.py"),
+            "install",
+            str(worktree),
+            str(hooks),
+            str(normal),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return hooks, marker, workflow, disabled
+
+
+def _owner_entry_mutation(worktree: Path, tmp_path: Path, normal: Path, case: str) -> Path:
+    candidate_marker = tmp_path / "candidate-checker-ran"
+    if case == "disabled":
+        workflow = worktree / ".github/workflows/pr-orchestrator.yml"
+        workflow.write_text(
+            workflow.read_text().replace("  customer-capsules:\n", "  customer-capsules:\n    if: false\n", 1)
+        )
+    if case == "candidate-checker":
+        (worktree / "scripts/check_capsule_deferral.py").write_text(
+            "from pathlib import Path\nPath(" + repr(str(candidate_marker)) + ").touch()\n"
+        )
+    if case == "missing-interpreter":
+        (worktree / ".venv").unlink()
+    if case == "changed-hook":
+        normal.write_text("#!/bin/sh\nexit 0\n")
+    if case == "changed-config":
+        (worktree / ".pre-commit-config.yaml").write_text("repos: []\n")
+    return candidate_marker
+
+
+def _assert_owner_entry_dispatch(
+    worktree: Path, marker: Path, result: subprocess.CompletedProcess[str], case: str, before: str
+) -> None:
+    if case in {"valid", "candidate-checker"}:
+        assert result.returncode == 0, result.stdout + result.stderr
+        assert marker.read_text() == "normal\n"
+        assert "validated before normal hooks" in result.stderr
+        assert "validated after normal hooks" in result.stderr
+    else:
+        assert result.returncode != 0, result.stdout + result.stderr
+        assert not marker.exists()
+        assert _git(worktree, "rev-parse", "HEAD") == before
+
+
+def _assert_owner_entry_commit(
+    worktree: Path, marker: Path, result: subprocess.CompletedProcess[str], case: str, before: str
+) -> None:
+    if case == "valid":
+        assert result.returncode == 0, result.stdout + result.stderr
+        assert _git(worktree, "rev-parse", "HEAD") != before
+        assert marker.read_text() == "normal\n"
+    else:
+        assert result.returncode != 0, result.stdout + result.stderr
+        assert _git(worktree, "rev-parse", "HEAD") == before
+        assert marker.exists() == (case in {"post-index", "normal-failure"})

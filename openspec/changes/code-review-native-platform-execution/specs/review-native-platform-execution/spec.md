@@ -1592,3 +1592,30 @@ Native canonical allocation proofs SHALL satisfy the unchanged function-length p
 - **THEN** the real public Radon runner SHALL complete without a scoped function-length warning or error
 - **AND** inlining the helpers SHALL reconstruct the entire original module AST, including all literal bytes, conditions, native-source paths, flags, deadlines, assertions and the two original parametrized test identities
 - **AND** all ten compiled cases SHALL execute in mandatory Full/SMART/Linux/all three macOS host contexts, without changed runtime, workflow, admission, lifecycle, threshold, shell/compiler capsule content or installed acceptance claims
+
+
+### Requirement: Bounded project runtime proof callbacks
+
+Project runtime preparation proofs SHALL satisfy the unchanged function-length policy while retaining their existing scenarios, callbacks and authenticated preparation evidence.
+
+#### Scenario: Extract exact callbacks without changing project-runtime proofs
+
+- **GIVEN** actual unchanged KISS policy flags the retained Hatch, Poetry and authenticated preparation proof functions above 80 lines
+- **WHEN** their existing phase callbacks use bounded private factories and the retained session launch body uses one direct helper in the same test module
+- **THEN** the real public Radon runner SHALL complete without scoped function-length warnings or errors for the original proofs or new helpers
+- **AND** inlining factory bindings and the direct helper call SHALL reconstruct the whole original module AST, including all test identities, arguments, decorators, assertions, closure inputs, request/result bytes and preparation/admission cases
+- **AND** Full and separate SMART SHALL retain every host/native and portable proof, declared skip and coverage obligation without changing runtime, signature, checker authority, workflow, deadline, threshold, admission or lifecycle policy
+
+
+### Requirement: Owner-bound external commit enforcement
+
+The approved monitor workflow SHALL execute independently installed scheduling enforcement outside the candidate checkout before and after all existing normal hooks, scoped to the exact worktree, Git directory and branch, without changing shared hooks or persistent configuration.
+
+#### Scenario: Candidate dispatcher cannot remove enforcement
+- **GIVEN** the owner-approved private commit entry and the existing trusted tooling environment
+- **WHEN** candidate dispatcher/config removes its checker call, normal hooks fail, scheduling is disabled, the final index changes, or the caller/interpreter binding is invalid
+- **THEN** the explicit Git commit invocation SHALL fail closed without executing candidate checker as authority
+- **AND** valid commits SHALL retain all normal hooks and the same integrated-dev or exact owner-approved bootstrap checker, complete-history/object/expiry guards and temporary-file cleanup
+- **AND** installed invocation evidence SHALL remain separate from hosted review, arbitrary commit paths and independent installed native acceptance
+
+- **AND** new real-commit fixtures and their helpers SHALL satisfy the unchanged public Radon complexity and KISS policies while retaining every control assertion
