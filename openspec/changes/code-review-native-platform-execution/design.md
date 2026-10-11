@@ -306,3 +306,7 @@ The existing worktree-only owner authorization includes correction of the interp
 ### Unambiguous staged pathname serialization
 
 Within the already approved worktree-only entry, consume Git NUL-delimited pathname bytes before calling the unchanged approved checker. The checker currently accepts line-delimited arguments: reject filenames containing any splitlines boundary rather than changing its byte authority or allowing a lossy conversion. Preserve literal quote, backslash, tab and spaces in representable names. Apply the same adapter to the local dispatcher; the independent external entry remains mandatory. This is a bounded input correction, with no shared hook/config, signed runtime or checker change. Real Git commits and local dispatcher controls precede implementation.
+
+### Immutable integrated-dev binding across normal hooks
+
+Within the existing approved external entry, freeze the independently verified integrated-dev commit in owner-installed binding metadata alongside caller/interpreter/hook identity. Every validation rejects any live ref mismatch before selecting checker bytes, and both use that same immutable bound SHA as authority/baseline. This also rejects ref substitution before invocation. A mutable per-call ref is insufficient; invocation-only capture would miss prior ref replacement. Refresh binding only in the authorized owner workflow after verifying actual remote dev, not from candidate-controlled hooks. Legitimate dev advancement requires that verified refresh; no shared hook/config or new checker authority.

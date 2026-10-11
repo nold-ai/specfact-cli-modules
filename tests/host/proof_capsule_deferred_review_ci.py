@@ -1291,3 +1291,76 @@ def test_owner_entry_preserves_representable_capsule_pathnames(tmp_path: Path, s
     assert result.returncode == 0, result.stdout + result.stderr
     assert marker.read_text() == "normal\n"
     assert _git(worktree, "rev-parse", "HEAD") != before
+
+
+@pytest.mark.parametrize("phase", ["before", "during"])
+@pytest.mark.parametrize("disable_scheduling", [False, True])
+def test_owner_entry_rejects_integrated_dev_ref_substitution(
+    tmp_path: Path, phase: str, disable_scheduling: bool
+) -> None:
+    worktree = deferral_worktree(
+        tmp_path, ("Darwin", "", "github-linux", "tests/native/proof_macos_native_broker_wait.py", False, True, 0)
+    )
+    workflow = ".github/workflows/pr-orchestrator.yml"
+    disabled = tmp_path / "disabled-workflow"
+    disabled.write_text(
+        (worktree / workflow).read_text().replace("  customer-capsules:\n", "  customer-capsules:\n    if: false\n", 1)
+    )
+    checker_marker = tmp_path / "forged-checker-ran"
+    checker = tmp_path / "forged-checker.py"
+    checker.write_text("from pathlib import Path\nPath(" + repr(str(checker_marker)) + ").touch()\n")
+    checker_blob = _git(worktree, "hash-object", "-w", str(checker))
+    disabled_blob = _git(worktree, "hash-object", "-w", str(disabled))
+    index = tmp_path / "forged-index"
+    environment = os.environ | {"GIT_INDEX_FILE": str(index), "GIT_NO_REPLACE_OBJECTS": "1"}
+    subprocess.run(["git", "read-tree", _git(worktree, "write-tree")], cwd=worktree, env=environment, check=True)
+    subprocess.run(
+        ["git", "update-index", "--cacheinfo", "100644," + checker_blob + ",scripts/check_capsule_deferral.py"],
+        cwd=worktree,
+        env=environment,
+        check=True,
+    )
+    if disable_scheduling:
+        subprocess.run(
+            ["git", "update-index", "--cacheinfo", "100644," + disabled_blob + "," + workflow],
+            cwd=worktree,
+            env=environment,
+            check=True,
+        )
+    tree = subprocess.check_output(["git", "write-tree"], cwd=worktree, env=environment, text=True).strip()
+    forged = _git(
+        worktree, "commit-tree", tree, "-p", _git(worktree, "rev-parse", "origin/dev"), "-m", "fixture forged dev"
+    )
+    mutation = "git update-ref refs/remotes/origin/dev " + forged + "\n"
+    if disable_scheduling:
+        mutation += "git update-index --cacheinfo 100644," + disabled_blob + "," + workflow + "\n"
+    normal = tmp_path / "normal-pre-commit"
+    normal.write_text("#!/bin/sh\nset -eu\n" + (mutation if phase == "during" else "exit 0\n"))
+    normal.chmod(0o700)
+    hooks = tmp_path / "owner-entry"
+    subprocess.run(
+        [
+            sys.executable,
+            "-I",
+            str(REPO_ROOT / "scripts/owner_commit_entry.py"),
+            "install",
+            str(worktree),
+            str(hooks),
+            str(normal),
+        ],
+        check=True,
+        capture_output=True,
+    )
+    if phase == "before":
+        subprocess.run(["sh", "-c", mutation], cwd=worktree, check=True)
+    before = _git(worktree, "rev-parse", "HEAD")
+    result = subprocess.run(
+        ["git", "-c", f"core.hooksPath={hooks}", "commit", "-qm", "fixture immutable dev"],
+        cwd=worktree,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode != 0, result.stdout + result.stderr
+    assert not checker_marker.exists(), "Substituted integrated-dev checker executed as authority"
+    assert _git(worktree, "rev-parse", "HEAD") == before

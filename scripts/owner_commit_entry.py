@@ -79,6 +79,7 @@ def _binding(root: Path, normal_hook: Path, interpreter: Path) -> dict[str, str]
         "root": str(root),
         "gitdir": _git(root, "rev-parse", "--absolute-git-dir"),
         "branch": branch,
+        "integrated_dev": _git(root, "rev-parse", "--verify", "refs/remotes/origin/dev^{commit}"),
         **_interpreter_binding(root, interpreter),
         "normal_hook": str(normal_hook),
         "normal_digest": _digest(normal_hook),
@@ -164,7 +165,7 @@ def _checker_paths(root: Path, base: str, *selectors: str) -> str:
 
 def validate_index(binding: dict[str, str]) -> None:
     root = _validate_binding(binding)
-    integrated_dev = _git(root, "rev-parse", "--verify", "refs/remotes/origin/dev^{commit}")
+    integrated_dev = binding["integrated_dev"]
     source = _checker_source(root, integrated_dev)
     base = _git(root, "merge-base", "HEAD", integrated_dev)
     candidate = _checker_paths(root, base)

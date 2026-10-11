@@ -1014,3 +1014,18 @@ requirements:
       method: test
       intent: Reject unrelated quoted and multiline paths in real Git dispatcher and external-entry controls.
       observable: Genuine failed-before assertions precede NUL parsing and fail-closed line-protocol adaptation; valid literal capsule paths and existing authority controls remain required.
+
+  openspec:code-review-native-platform-execution:review-native-platform-execution:immutable-integrated-dev-entry-binding:
+    rationale: Prevent candidate hooks from redirecting approved checker authority through mutable local refs.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#460
+    touchpoints:
+    - id: bound-dev-spec
+      kind: config_file
+      locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
+    verification_cases:
+    - case_id: 460-28-1
+      scenario_id: immutable-integrated-dev-entry-binding
+      method: test
+      intent: Reject actual forged checker execution and false commits before and during normal hooks.
+      observable: Genuine real Git false-success REDs precede immutable owner binding; forged checker markers remain absent after correction and all original valid scheduling/bootstrap/path/interpreter controls remain required.

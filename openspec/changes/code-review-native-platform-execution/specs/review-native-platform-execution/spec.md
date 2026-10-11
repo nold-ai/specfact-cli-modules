@@ -1651,3 +1651,15 @@ The local deferral dispatcher and owner-installed external commit entry SHALL co
 #### Scenario: representable capsule filename
 - **WHEN** an eligible capsule filename includes literal spaces, tab, quote or backslash without a line boundary
 - **THEN** its exact pathname reaches the approved checker and normal commit checks remain required
+
+### Requirement: Immutable integrated-dev entry binding
+
+The approved external commit entry SHALL bind the independently verified integrated-dev commit when installed, reject any live origin/dev ref mismatch before checker selection, and reuse the immutable bound commit for every authority and baseline validation. Candidate normal hooks SHALL NOT redirect authority by replacing origin/dev before or during a commit. Legitimate dev advancement SHALL require owner-workflow refresh from actual verified dev.
+
+#### Scenario: substituted dev checker before or during hooks
+- **WHEN** an installed entry encounters a forged origin/dev with a permissive checker before invocation or while normal hooks run, with valid or disabled indexed scheduling
+- **THEN** the commit is rejected, forged checker bytes do not execute, and no new commit is created
+
+#### Scenario: unchanged integrated dev
+- **WHEN** the verified bound dev remains unchanged
+- **THEN** normal hooks and both validations retain the same approved authority and valid commits remain admitted
