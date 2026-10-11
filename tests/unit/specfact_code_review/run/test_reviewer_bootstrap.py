@@ -164,8 +164,64 @@ def test_smart_entry_preserves_required_host_and_portable_failures(codes, expect
     assert module._run_pytest(extra_args) == expected
     assert len(invoked) == calls
     assert "tests/host/proof_capsule_deferred_review_ci.py" in invoked[0]
-    assert invoked[0][-1] == "tests/host/proof_capsule_deferred_review_ci.py"
+    assert invoked[0][-3:] == [
+        "tests/host/proof_capsule_deferred_review_ci.py",
+        "tests/native/proof_native_canonical_path.py",
+        "tests/host/proof_capsule_review_projection_shell.py",
+    ]
     if calls == 2:
         if extra_args:
             assert invoked[1][-len(extra_args) :] == extra_args
         assert "--ignore=tests/unit/test_capsule_deferred_review_ci.py" in invoked[1]
+
+
+@pytest.fixture(name="smart_entry")
+def smart_entry_fixture(monkeypatch):
+    import importlib.util
+
+    root = Path(__file__).resolve().parents[4]
+    monkeypatch.syspath_prepend(str(root / "tools"))
+    spec = importlib.util.spec_from_file_location("covered_smart_entry", root / "tools/smart_test_coverage.py")
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    monkeypatch.setattr(module, "ensure_core_dependency", lambda path: 0)
+    return module
+
+
+def test_smart_bootstrap_failure_prevents_argument_parsing_and_test_launch(smart_entry, monkeypatch):
+    monkeypatch.setattr(smart_entry, "ensure_core_dependency", lambda path: 19)
+    monkeypatch.setattr(smart_entry.sys, "argv", ["smart-test", "invalid-command"])
+    monkeypatch.setattr(smart_entry, "_run_pytest", lambda args: pytest.fail("tests ran after bootstrap failure"))
+    assert smart_entry.main() == 19
+
+
+@pytest.mark.parametrize("command", ["run", "force"])
+def test_smart_commands_forward_exact_arguments_and_exit(smart_entry, monkeypatch, command):
+    calls = []
+    monkeypatch.setattr(smart_entry.sys, "argv", ["smart-test", command, "-k", "owned_selection", "-n", "0"])
+    monkeypatch.setattr(smart_entry, "_run_pytest", lambda args: calls.append(args) or 23)
+    assert smart_entry.main() == 23
+    assert calls == [["-k", "owned_selection", "-n", "0"]]
+
+
+@pytest.mark.parametrize(
+    "command,expected",
+    [
+        ("check", "smart-test check: configured (modules repo scoped)"),
+        ("status", "smart-test status: ready (uses pytest tests/)"),
+    ],
+)
+def test_smart_information_commands_do_not_run_tests(smart_entry, monkeypatch, capsys, command, expected):
+    monkeypatch.setattr(smart_entry.sys, "argv", ["smart-test", command])
+    monkeypatch.setattr(smart_entry, "_run_pytest", lambda args: pytest.fail("information command ran tests"))
+    assert smart_entry.main() == 0
+    assert capsys.readouterr().out == expected + "\n"
+
+
+def test_smart_invalid_command_is_rejected(smart_entry, monkeypatch, capsys):
+    monkeypatch.setattr(smart_entry.sys, "argv", ["smart-test", "invalid-command"])
+    with pytest.raises(SystemExit) as failure:
+        smart_entry.main()
+    assert failure.value.code == 2
+    assert "invalid choice" in capsys.readouterr().err

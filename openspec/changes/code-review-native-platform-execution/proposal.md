@@ -184,3 +184,18 @@ local artifact overrides establish unit evidence only. Human merge/promotion
 remains required; a prepared workflow or green fixture does not mean publication.
 No new core interface is planned. Maintainer builds may use existing SDK/Rust
 tools; customers need no build tools, container engine, admin or Apple account.
+
+
+## Owner-approved review budget correction — 10 October 2026
+
+The owner explicitly requested timeout enlargement if the expanded workload exceeds300seconds. Full portable tests measured173–177seconds alone; independent review actually reaches its300second outer deadline while the pytest child already permits1200seconds. Reuse the existing bounded wrappers at1800seconds (30minutes), retaining preparation1800seconds and child/analyzer limits unchanged. This permits full review overhead without an unbounded run or relaxed verdict. The exact wrapper substitution is admitted against integrated dev. Repository script coverage must be admitted in native configuration and exercised by portable tests; customer filters remain authoritative. Hosted historical pytest detail is unavailable, so the locally reproduced policy mismatch is not asserted as the recovered historical private message.
+
+
+### Sequential phase job budget
+
+The completed8780 CodeRabbit review independently identifies a real scheduling mismatch: preparation and review each permit1800seconds in one2700second job. Under the owner's explicit authorization to enlarge inadequate hard limits, use the smallest direct scheduling adaptation: independent job75minutes, comprising both30minute phases plus15minutes for setup and bounded diagnostics. Customer job90minutes remains unchanged. Splitting preparation into a new job would require transferring isolated prepared state and additional trust/cleanup plumbing; that complexity is unnecessary for the authorized outcome. Keep both phase caps, all inputs, isolation, diagnostic failure propagation and prerequisites unchanged. Local deferral admits only the exact45to75minute independent-job adaptation plus the already approved wrapper substitution; any other job limit or execution change still rejects. This is a finite scheduling correction, not an analyzer timeout waiver or publication proof.
+
+
+### Portable shell-proof boundary and scoped helper exports
+
+Exact signed-head8780 candidate114314205246 provides31 actual FileNotFoundError test cases in four Bash-controller proofs. Bash is intentionally unavailable inside the sealed portable analyzer. Route those proofs, without deleting any assertion/case, through existing required Full/SMART host execution and Linux/three macOS CI boundaries. Keep Python-only public projector proofs portable; do not add a shell to the capsule or mark cases skipped. The import-poisoning fixture retains every malicious import/failure-exit case while bounded setup extraction corrects its reproducedCC16. Exact scoped Basedpyright reports unused private helpers although worker callers import/use them; declare the existing cross-module helper exports explicitly without renaming functions, changing admission or disabling diagnostics. Remaining pytest coverage and CrossHair unrecognized-output findings require fresh finite evidence after this correction and remain unwaived.

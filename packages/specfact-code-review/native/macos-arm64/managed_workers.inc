@@ -13,8 +13,7 @@ static int cf_string(CFTypeRef value, char *output, size_t capacity) {
 }
 
 static int inherited_path(const struct worker *owner, const char *path) {
-    char canonical[SPECFACT_MAX_PATH];
-    if (!realpath(path, canonical) || strcmp(path, canonical)) return 0;
+    if (!specfact_canonical_path(path)) return 0;
     const char *roots[] = {owner->grant.project, owner->grant.output, owner->grant.temporary};
     for (size_t i = 0; i < 3; i++)
         if (!strcmp(path, roots[i]) || beneath(path, roots[i])) return 1;

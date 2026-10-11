@@ -8,12 +8,20 @@ import subprocess
 import sys
 
 from dev_bootstrap_support import ROOT, ensure_core_dependency
+from icontract import ensure
 
 
 def _run_pytest(extra_args: list[str]) -> int:
     # Separate explicit proofs from parent discovery so pytest collects them once.
     host = subprocess.run(
-        [sys.executable, "-m", "pytest", "tests/host/proof_capsule_deferred_review_ci.py"],
+        [
+            sys.executable,
+            "-m",
+            "pytest",
+            "tests/host/proof_capsule_deferred_review_ci.py",
+            "tests/native/proof_native_canonical_path.py",
+            "tests/host/proof_capsule_review_projection_shell.py",
+        ],
         cwd=ROOT,
         check=False,
     )
@@ -37,6 +45,7 @@ def _run_pytest(extra_args: list[str]) -> int:
     return subprocess.run(cmd, cwd=ROOT, check=False).returncode
 
 
+@ensure(lambda result: isinstance(result, int))
 def main() -> int:
     bootstrap_result = ensure_core_dependency(ROOT)
     if bootstrap_result != 0:

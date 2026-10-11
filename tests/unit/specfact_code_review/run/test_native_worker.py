@@ -7,12 +7,16 @@ from pathlib import Path
 from typing import cast
 
 import pytest
+from radon.cli.tools import cc_to_dict
+from radon.complexity import cc_visit
 
 from specfact_code_review.run import native_worker
 
 
 @pytest.fixture(autouse=True)
-def _restore_fixture_permissions(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> object:  # pyright: ignore[reportUnusedFunction]
+def _restore_fixture_permissions(  # pyright: ignore[reportUnusedFunction]
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> object:
     for name in native_worker._UNSAFE_ENVIRONMENT:
         monkeypatch.delenv(name, raising=False)
     yield
@@ -447,24 +451,16 @@ def test_controller_replies_reject_tampering(
     reply_request = cast(dict[str, object], reply["request"])
     reply_argv = cast(list[str], reply_request["argv"])
     replies = [reply]
-    if tamper == "reordered":
-        wrong = json.loads(json.dumps(reply))
-        wrong["request"]["sequence"] = 1
-        replies = [wrong, reply]
-    elif tamper == "extra":
-        extra = json.loads(json.dumps(reply))
-        extra["request"]["sequence"] = 1
-        replies.append(extra)
-    elif tamper == "duplicate":
-        replies.append(json.loads(json.dumps(reply)))
-    elif tamper == "oversized":
-        result["stdout"] = "x" * ((4 << 20) + 1)
-    elif tamper == "path":
-        reply_argv[-1] = "project/../escape.py"
-    elif tamper == "environment":
-        reply_request["environment"] = {"HOME": "/tmp/substituted"}
-    elif tamper == "argv":
-        reply_argv[1] = "--substituted"
+    mutations = {
+        "reordered": lambda: replies.insert(0, _sequenced_reply(reply)),
+        "extra": lambda: replies.append(_sequenced_reply(reply)),
+        "duplicate": lambda: replies.append(json.loads(json.dumps(reply))),
+        "oversized": lambda: result.update(stdout="x" * ((4 << 20) + 1)),
+        "path": lambda: reply_argv.__setitem__(-1, "project/../escape.py"),
+        "environment": lambda: reply_request.update(environment={"HOME": "/tmp/substituted"}),
+        "argv": lambda: reply_argv.__setitem__(1, "--substituted"),
+    }
+    mutations[tamper]()
     _clear_output(roots)
     _write_replies(roots, replies)
 
@@ -472,6 +468,12 @@ def test_controller_replies_reject_tampering(
     invalid = json.loads((roots[2] / "result.json").read_text(encoding="utf-8"))
     assert invalid["evidence_outcome"] == "UNKNOWN"
     assert str(invalid["diagnostic"]).startswith("native_worker_request_invalid:")
+
+
+def _sequenced_reply(reply):
+    changed = json.loads(json.dumps(reply))
+    changed["request"]["sequence"] = 1
+    return changed
 
 
 def test_controller_replay_relaunches_until_all_requests_complete(
@@ -583,3 +585,168 @@ def test_real_ruff_adapter_uses_managed_surface_without_host_spawn(
     assert pending["tool"] == "ruff"
     assert pending["argv"][0] == "capsule-tool:ruff"
     assert pending["argv"][-1] == "project/pkg/example.py"
+
+
+def test_native_worker_and_retained_proofs_have_no_complexity_warning():
+    from specfact_code_review.tools.radon_runner import _allowed_paths, _map_radon_complexity_findings
+
+    root = Path(__file__).resolve().parents[4]
+    files = [
+        Path(native_worker.__file__),
+        Path(__file__),
+        Path(__file__).with_name("test_native_project_runtime.py"),
+        Path(__file__).with_name("test_native_project_inventory.py"),
+        Path(__file__).with_name("native_project_runtime_fixtures.py"),
+        root / "tests/unit/test_capsule_proof_contexts.py",
+        root / "tests/unit/scripts/test_pre_commit_code_review.py",
+        root / "scripts/pre_commit_code_review.py",
+        Path(__file__).with_name("test_portable_snapshot.py"),
+    ]
+    payload = {str(path): [cc_to_dict(block) for block in cc_visit(path.read_text(encoding="utf-8"))] for path in files}
+    findings = _map_radon_complexity_findings(payload, _allowed_paths(files))
+    assert findings == [], [(finding.file, finding.rule, finding.message) for finding in findings]
+
+
+def test_scoped_native_and_scheduling_entry_points_have_contracts():
+    from specfact_code_review.tools.contract_runner import _scan_file
+
+    root = Path(__file__).resolve().parents[4]
+    files = [
+        Path(native_worker.__file__),
+        root / "scripts/check_capsule_deferral.py",
+        root / "tools/smart_test_coverage.py",
+    ]
+    findings = [finding for path in files for finding in _scan_file(path)]
+    assert findings == [], [(finding.file, finding.message) for finding in findings]
+
+
+def test_controller_tamper_proof_has_no_blocking_nesting():
+    from specfact_code_review.tools.radon_runner import _kiss_metric_findings
+
+    findings = [finding for finding in _kiss_metric_findings(Path(__file__)) if finding.severity == "error"]
+    assert findings == [], [(finding.file, finding.rule, finding.message) for finding in findings]
+
+
+def _assert_native_semgrep_request_argv(request: dict[str, object], config_name: str) -> None:
+    """Verify the exact capsule tool and policy source binding."""
+    assert isinstance(request["argv"], list) and isinstance(request["environment"], dict)
+    managed_argv = cast(list[str], request["argv"])
+    assert managed_argv[0] == "capsule-tool:semgrep"
+    assert managed_argv[-1] == "project/pkg/example.py"
+    assert (
+        managed_argv[managed_argv.index("--config") + 1]
+        == f"project/.specfact-native-config/semgrep/.semgrep/{config_name}"
+    )
+    assert "--disable-nosem" in managed_argv
+
+
+def _assert_native_semgrep_request_environment(request: dict[str, object]) -> None:
+    """Verify private settings, disabled metrics and the existing launch budget."""
+    environment = cast(dict[str, str], request["environment"])
+    assert environment["HOME"] == "temporary/semgrep-home"
+    assert environment["SEMGREP_SETTINGS_FILE"] == "temporary/semgrep-home/.semgrep/settings.yml"
+    assert environment["SEMGREP_SEND_METRICS"] == "off"
+    assert request["cwd"] == "project" and request["timeout_ms"] == 90000
+
+
+@pytest.mark.parametrize("member,config_name", [("semgrep-clean", "clean_code.yaml"), ("semgrep-bugs", "bugs.yaml")])
+def test_real_semgrep_adapter_replays_owned_policy_without_host_spawn(tmp_path, monkeypatch, member, config_name):
+    from specfact_code_review.tools import semgrep_runner
+
+    capsule, project, output, temporary = _roots(tmp_path)
+    project.chmod(0o700)
+    policy = project / ".specfact-native-config" / "semgrep"
+    (policy / ".semgrep").mkdir(parents=True)
+    (policy / ".semgrep" / config_name).write_text("rules: []\n", encoding="utf-8")
+    source = project / "pkg/example.py"
+    transport = native_worker.ReplayTransport(
+        member=member, tool="semgrep", replies=[], capsule=capsule, project=project, temporary=temporary
+    )
+    original_process = semgrep_runner.subprocess
+    original_temporary = semgrep_runner.tempfile
+    original_command = semgrep_runner.analyzer_command
+    monkeypatch.setattr(native_worker.subprocess, "run", lambda *args, **kwargs: pytest.fail("host process executed"))
+    monkeypatch.delenv("SEMGREP_SEND_METRICS", raising=False)
+    with pytest.raises(native_worker.RequestPending) as pending:
+        native_worker._semgrep_external_adapter(member, [source], transport.run, [str(policy)], False, False)
+    request = pending.value.request
+    _assert_native_semgrep_request_argv(request, config_name)
+    _assert_native_semgrep_request_environment(request)
+    transport.replies.append(
+        {
+            "request": request,
+            "result": {
+                "returncode": 0,
+                "stdout": json.dumps({"results": [], "paths": {"scanned": [str(source)], "skipped": []}}),
+                "stderr": "",
+            },
+        }
+    )
+    assert native_worker._semgrep_external_adapter(member, [source], transport.run, [str(policy)], False, False) == []
+    transport.verify_complete()
+    assert semgrep_runner.subprocess is original_process
+    assert semgrep_runner.tempfile is original_temporary
+    assert semgrep_runner.analyzer_command is original_command
+    assert (temporary / "semgrep-home").stat().st_mode & 0o777 == 0o700
+    assert list(output.iterdir()) == []
+
+
+@pytest.mark.parametrize("policy_case", ["multiple", "outside", "default_outside"])
+def test_native_semgrep_rejects_unbound_policies_before_launch(tmp_path, policy_case):
+    capsule, project, _output, temporary = _roots(tmp_path)
+    transport = native_worker.ReplayTransport(
+        member="semgrep-clean", tool="semgrep", replies=[], capsule=capsule, project=project, temporary=temporary
+    )
+    policies = {"multiple": [str(project), str(project)], "outside": [str(capsule)], "default_outside": []}
+    with pytest.raises(native_worker.ReplayContractViolation):
+        native_worker._semgrep_external_adapter(
+            "semgrep-clean", [project / "pkg/example.py"], transport.run, policies[policy_case], False, False
+        )
+    assert transport.consumed == 0
+    assert list(temporary.iterdir()) == []
+
+
+@pytest.mark.parametrize("roots", [None, "tests", [True], ["."], ["../outside"], ["/outside"], ["a" * 241]])
+def test_native_contract_inventory_rejects_invalid_root_identity(roots):
+    with pytest.raises(native_worker.WorkerContractError, match="inventory paths"):
+        native_worker._validated_contract_roots(roots)
+
+
+@pytest.mark.parametrize(
+    "document",
+    [[], {}, {"schema": "wrong", "test_roots": []}, {"schema": "contract-inputs-v2", "test_roots": [], "extra": 1}],
+)
+def test_native_contract_inventory_rejects_invalid_schema(tmp_path, document):
+    policy = tmp_path / ".specfact-native-config/contracts.json"
+    policy.parent.mkdir()
+    policy.write_text(json.dumps(document), encoding="utf-8")
+    with pytest.raises(native_worker.WorkerContractError, match="inventory schema"):
+        native_worker._native_contract_roots(["contract-inputs-v2", str(policy)], tmp_path)
+
+
+def test_native_contract_inventory_preserves_valid_and_legacy_roots(tmp_path):
+    policy = tmp_path / ".specfact-native-config/contracts.json"
+    policy.parent.mkdir()
+    policy.write_text(
+        json.dumps({"schema": "contract-inputs-v2", "test_roots": ["tests", "checks/unit"]}), encoding="utf-8"
+    )
+    assert native_worker._native_contract_roots(["contract-inputs-v2", str(policy)], tmp_path) == (
+        Path("tests"),
+        Path("checks/unit"),
+    )
+    assert native_worker._native_contract_roots(["contract-inputs-v1", "--test-root", "tests"], tmp_path) == (
+        Path("tests"),
+    )
+
+
+def test_native_contract_inventory_rejects_symlink_and_outside_grant(tmp_path):
+    outside = tmp_path / "outside.json"
+    outside.write_text(json.dumps({"schema": "contract-inputs-v2", "test_roots": []}), encoding="utf-8")
+    link = tmp_path / ".specfact-native-config/contracts.json"
+    link.parent.mkdir()
+    link.symlink_to(outside)
+    for policy in (link, outside):
+        with pytest.raises(native_worker.WorkerContractError, match="sealed config grant"):
+            native_worker._native_contract_roots(["contract-inputs-v2", str(policy)], tmp_path)
+    with pytest.raises(native_worker.WorkerContractError, match="manifest request"):
+        native_worker._native_contract_roots(["contract-inputs-v2"], tmp_path)

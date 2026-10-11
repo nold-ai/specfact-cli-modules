@@ -1,4 +1,5 @@
 #include "native_protocol.h"
+#include "canonical_path.h"
 #include "sandbox_diagnostics.h"
 #include "git_child_policy.h"
 
@@ -96,9 +97,9 @@ static int native_child_execute(int fd, const struct specfact_request *request, 
     close(fd); /* Project/build code never receives startup configuration. */
     if (!startup.argc || startup.argc > 128 || startup.envc > 128) return 76;
     unsigned char *cursor = startup.data, *end = (unsigned char *)&startup + envelope.length;
-    char *cwd = startup_string(&cursor, end), canonical[SPECFACT_MAX_PATH];
+    char *cwd = startup_string(&cursor, end);
     struct stat info;
-    if (!cwd || !realpath(cwd, canonical) || strcmp(cwd, canonical) || stat(cwd, &info) || !S_ISDIR(info.st_mode)) return 76;
+    if (!specfact_canonical_path(cwd) || stat(cwd, &info) || !S_ISDIR(info.st_mode)) return 76;
     const char *roots[] = {request->project, request->output, request->temporary};
     int private_cwd = 0;
     for (size_t i = 0; i < 3; i++) {

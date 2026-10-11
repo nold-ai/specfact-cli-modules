@@ -854,3 +854,69 @@ requirements:
       method: test
       intent: Handle missing ordinary artifact parents without weakening substituted-parent rejection.
       observable: Two helper REDs distinguish absent directories and typed dangling-symlink rejection; three controls including the real evaluator already returning UNKNOWN pass. Final parent handling keeps canonical-path equality, lexical confinement, no-follow regular-file reads and all bounds.
+
+    - case_id: 460-21-6
+      scenario_id: release-review-corrections-preserve-source-and-failure-boundaries
+      method: test
+      intent: Observe complete native worker PID writes and preserve managed attachment in source-precedence proofs.
+      observable: Six PID publication/deadline/identity REDs and four actual managed-argument REDs precede proof-only corrections. Original WAIT/lifecycle deadlines and import value/file/initializer/source/no-write assertions remain; complete focused proof files pass 140 tests.
+
+    - case_id: 460-21-7
+      scenario_id: release-review-corrections-preserve-source-and-failure-boundaries
+      method: test
+      intent: Schedule mandatory customer review for proof-only fixes and bind approved local deferral to indexed scheduling.
+      observable: Six canonical host/index/workflow REDs precede trigger/deferral updates; ten unrelated/missing-review/missing-trigger/CI/platform controls remain. No enforcement, analysis input, deadline or failure assertion is weakened.
+
+    - case_id: 460-21-8
+      scenario_id: release-review-corrections-preserve-source-and-failure-boundaries
+      method: test
+      intent: Bound complete serialized native evidence without partial success or relaxed artifact validation.
+      observable: Four genuine response-budget REDs cover individually valid combined artifacts, multibyte collected identities, findings and newline boundary; normalized finding identity rejection and exact-boundary complete evidence remain controls.
+
+    - case_id: 460-21-9
+      scenario_id: release-review-corrections-preserve-source-and-failure-boundaries
+      method: test
+      intent: Bind local deferral to effective indexed blocking orchestration.
+      observable: Eight effective-scheduling REDs plus two explicit false-condition REDs precede parsed workflow validation; malformed and unrelated scheduling controls retain failure and canonical scheduling remains admitted. Six sibling reusable-job/step/condition REDs precede shared blocking-scope validation.
+
+    - case_id: 460-21-10
+      scenario_id: release-review-corrections-preserve-source-and-failure-boundaries
+      method: test
+      intent: Remove fixed-buffer realpath assumptions at bootstrap, managed Git and inherited worker boundaries.
+      observable: Three source-backed sink REDs under an injected larger-allocation contract precede the shared allocated predicate; balanced allocation/free and seven real filesystem canonical, alias, relative, dot, missing, protocol-bound and null cases pass. The injected contract is not asserted as an observed macOS exploit.
+
+    - case_id: 460-21-11
+      scenario_id: release-review-corrections-preserve-source-and-failure-boundaries
+      method: test
+      intent: Require literal effective PR events, complete staged review scope and actual integrated reviewer execution before deferral.
+      observable: Eighteen REDs cover PR trigger/branch/path/lifecycle exclusions, mixed unrelated reviewable files and reusable runner/matrix/command/environment bypasses; two further duplicate/boolean root-key REDs precede parser identity checks and four falsey malformed PR-event REDs precede null-only defaulting. Existing controls remain, including comments/formatting equivalence and generated nonreviewed docs. Native payload/signatures remain unchanged.
+
+    - case_id: 460-21-12
+      scenario_id: release-review-corrections-preserve-source-and-failure-boundaries
+      method: test
+      intent: Execute every compiler-dependent canonical path proof in required host and native contexts.
+      observable: Ten compiler-unavailable failures and four required-context REDs precede explicit Full/SMART and Linux/macOS CI execution of the unchanged ten compiled security assertions. No capsule compiler or skip is added.
+
+    - case_id: 460-21-13
+      scenario_id: release-review-corrections-preserve-source-and-failure-boundaries
+      method: test
+      intent: Require the integrated executable detector contract before deferring to its hosted output.
+      observable: Nine runner, dependency, matrix, checkout and filter-reference REDs plus two baseline-rule and duplicate-filter REDs precede parsed detector binding; equivalent outer/embedded formatting and all prior proof controls remain accepted.
+
+    - case_id: 460-21-14
+      scenario_id: release-review-corrections-preserve-source-and-failure-boundaries
+      method: test
+      intent: Remove independently reproduced native worker and ownership-proof complexity blockers without changing admission or test behavior.
+      observable: Two production-policy REDs reproduce eight blocking Radon findings; pure parser and unchanged production mapping confirm the same baseline failures. Retained worker/replay/ownership/result tests and supported Self annotation preserve behavior. No policy threshold, analyzer input or deadline changes.
+
+    - case_id: 460-21-15
+      scenario_id: release-review-corrections-preserve-source-and-failure-boundaries
+      method: test
+      intent: Bind the entire reusable-review caller to integrated dev before admitting local deferral.
+      observable: Nine indexed REDs independently reproduce unsupported false continue-on-error, runs-on, steps, env and timeout-minutes plus changed inputs, permissions, matrix and concurrency; equivalent-formatting and unrelated-generated-doc controls pass. Parsed caller equality corrects admission without changing hosted inputs, deadlines or failure propagation.
+
+    - case_id: 460-21-16
+      scenario_id: release-review-corrections-preserve-source-and-failure-boundaries
+      method: test
+      intent: Bind required quality consumers and workflow-level execution before deferring hosted review.
+      observable: Eleven meaningful indexed REDs reproduce detached customer dependency, absent/replaced/skipped prerequisite, disabled/nonblocking/empty-matrix quality and changed root environment/defaults/permissions/concurrency; three equivalent-formatting/generated-doc controls pass. Complete parsed orchestration binding preserves independently validated PR events and added capsule trigger inventory while retaining every failure boundary.

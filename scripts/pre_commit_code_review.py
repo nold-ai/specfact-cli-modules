@@ -235,7 +235,7 @@ def _run_review_subprocess(
             capture_output=True,
             cwd=str(repo_root),
             env=env,
-            timeout=300,
+            timeout=1800,
         )
     except TimeoutExpired as error:
         analyzer = _last_capsule_analyzer(error.stderr)
@@ -252,7 +252,7 @@ def _run_review_subprocess(
                 + "\n"
             )
         joined_cmd = " ".join(cmd)
-        sys.stderr.write(f"Code review gate timed out after 300s (command: {joined_cmd!r}, files: {list(files)!r}).\n")
+        sys.stderr.write(f"Code review gate timed out after 1800s (command: {joined_cmd!r}, files: {list(files)!r}).\n")
         return None
 
 
@@ -332,6 +332,17 @@ def _repo_relative_report_path(repo_root: Path, raw_path: object) -> str | None:
     return path.as_posix()
 
 
+@ensure(lambda result: result is None or isinstance(result, range))
+def _added_lines_from_hunk(line: str) -> range | None:
+    """Return the exact new-side hunk range, or unavailable malformed evidence."""
+    match = re.search(r"\+(\d+)(?:,(\d+))?", line)
+    if match is None:
+        return None
+    start = int(match.group(1))
+    count = int(match.group(2) or "1")
+    return range(start, start + count)
+
+
 def _parse_added_lines_from_cached_diff(diff_text: str) -> dict[str, set[int]] | None:
     """Return staged new-line numbers by repo-relative file from a zero-context diff."""
     changed_lines: dict[str, set[int]] = {}
@@ -360,13 +371,10 @@ def _parse_added_lines_from_cached_diff(diff_text: str) -> dict[str, set[int]] |
             return None
         if current_file is None:
             continue
-        match = re.search(r"\+(\d+)(?:,(\d+))?", line)
-        if match is None:
+        added_lines = _added_lines_from_hunk(line)
+        if added_lines is None:
             return None
-        start = int(match.group(1))
-        count = int(match.group(2) or "1")
-        if count > 0:
-            changed_lines[current_file].update(range(start, start + count))
+        changed_lines[current_file].update(added_lines)
     return changed_lines
 
 
@@ -527,7 +535,8 @@ def _print_enforcement_summary(
         )
     elif blocking_changed_findings:
         sys.stderr.write(
-            f"Code review changed-line gate: {len(blocking_changed_findings)} blocking finding(s) target staged lines.\n"
+            f"Code review changed-line gate: {len(blocking_changed_findings)} "
+            "blocking finding(s) target staged lines.\n"
         )
 
 

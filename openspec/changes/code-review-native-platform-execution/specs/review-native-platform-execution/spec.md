@@ -1242,3 +1242,257 @@ Source-to-test collision detection SHALL count distinct Python production module
 - **WHEN** artifact capture checks the unchanged confined artifact paths
 - **THEN** absent ordinary parent directories SHALL reach incomplete-evidence evaluation
 - **AND** existing or dangling symlink parents, non-directory parents and lexical escapes SHALL retain hard rejection before reading artifact bytes
+
+
+#### Scenario: Controller-loss proof awaits complete worker identity
+- **GIVEN** the owned native self-test creates its PID marker before completing the newline-terminated PID write
+- **WHEN** the controller-loss proof observes that marker
+- **THEN** it SHALL await complete PID contents within the original five-second deadline before reporting launch or sending WAIT
+- **AND** absent/incomplete markers SHALL fail within that deadline and malformed/non-positive complete identities SHALL reject; controller-loss, exception-denial and bootstrap assertions remain unchanged
+
+#### Scenario: Generated-source import proof preserves managed runtime attachment
+- **WHEN** the generated-ancestor source-precedence proof runs under a managed project Python launcher
+- **THEN** its real child import SHALL use supported Python arguments that preserve required runtime attachment and exclude implicit working-directory imports
+- **AND** it SHALL still assert the edited reviewed-source value and exact imported file, immutable original source, owned initializer bytes and absence of generated writes in the original project
+
+
+#### Scenario: Proof-only fixes retain blocking customer review
+- **GIVEN** a native broker proof, its cleanup regressions or Code Review unit proof changes without signed runtime edits
+- **WHEN** the PR change filter and owner-approved local Darwin deferral evaluate the staged delta
+- **THEN** those proof paths SHALL schedule the same blocking candidate/independent customer review and qualify only for that local deferral
+- **AND** unrelated test changes SHALL NOT qualify; missing indexed scheduling rules, absent independent review and CI-side deferral SHALL reject
+
+
+#### Scenario: Combined native evidence fits the controller result budget
+
+- **GIVEN** independently valid pytest artifacts and normalized findings whose combined completed response may exceed 16 MiB
+- **WHEN** the worker serializes the completed result as UTF-8 including its terminating newline
+- **THEN** a response at or below the controller's existing budget SHALL preserve every finding and observation unchanged
+- **AND** an oversized combined response SHALL become a bounded UNKNOWN/error result with fixed `native_worker_result_size_exceeded` diagnostic, never a partial PASS
+- **AND** original artifact confinement, type, size and node-identity validation SHALL remain before this fallback
+
+#### Scenario: Indexed orchestration schedules a blocking customer review
+
+- **GIVEN** an owner-approved local ARM64 Darwin capsule-only review deferral
+- **WHEN** the staged orchestrator, effective capsule filter and reusable customer workflow are inspected as data
+- **THEN** the effective capsule filter SHALL cover each qualifying staged path, including the orchestrator itself, and bind its output to the blocking customer job's unchanged PR/filter condition and local reusable-workflow target
+- **AND** missing, disabled, nonblocking, unrelated-filter or malformed scheduling, including either required reusable review job/step, SHALL reject deferral while valid staged scheduling remains admitted
+
+#### Scenario: Canonical native paths cannot overflow protocol storage
+
+- **GIVEN** a managed child cwd, Git private path or inherited worker path originating in the startup/worker protocol
+- **WHEN** the fixed native code canonicalizes that path
+- **THEN** canonicalization SHALL use allocation sized by the system rather than a fixed protocol buffer, reject noncanonical or protocol-overlong paths, and free the allocation on every outcome
+- **AND** existing private-root, directory, symlink and launch restrictions SHALL remain unchanged
+
+
+#### Scenario: Deferral covers the entire staged review and a real PR invocation
+
+- **GIVEN** a qualifying capsule delta with a complete staged review surface against the same dev merge-base
+- **WHEN** local deferral validates the indexed workflow
+- **THEN** it SHALL reject unrelated reviewable paths instead of hiding them through a path-limited diff; only capsule changes, explicitly related active native OpenSpec metadata and the existing nonreviewed generated paths retain the approved exception
+- **AND** literal GitHub `on` keys SHALL remain distinguishable from YAML boolean keys; the PR event SHALL cover both target branches and the candidate's path surface with the original opened/synchronize lifecycle
+- **AND** the reusable review execution contract, including Linux runner, effective Python 3.12 matrix, commands and their supporting steps/environment, SHALL equal the already integrated dev merge-base workflow; changed execution SHALL require real review rather than local deferral
+- **AND** parsed comments/formatting may differ while execution, enforcement, inputs, deadlines and failure propagation remain unchanged
+
+The trigger validator SHALL admit null or mapping PR event configuration and SHALL reject false, numeric, sequence or string event configuration instead of interpreting falsey malformed values as defaults.
+
+
+#### Scenario: Canonical C proofs execute in an admitted compiler context
+
+- **GIVEN** native canonical-path security proofs require a C compiler absent from the sealed Python analysis capsule
+- **WHEN** required Full, SMART and native CI gates execute
+- **THEN** all ten original compiled sink and real filesystem assertions SHALL execute explicitly in the host/native proof context, including Linux and all retained macOS boundary runners
+- **AND** ordinary capsule discovery SHALL not falsely classify those compiler-dependent proofs as portable Python tests; no skip, weakened assertion, added capsule tool or altered deadline SHALL replace execution
+
+
+#### Scenario: Deferral requires an executable change detector
+
+- **GIVEN** local deferral depends on the indexed orchestrator's change-detector output
+- **WHEN** the detector loses its runner, gains missing/conditional dependencies, becomes an empty matrix, or changes checkout/filter execution
+- **THEN** deferral SHALL reject rather than imply that the dependent hosted reviewer will run
+- **AND** the detector's parsed execution contract SHALL equal the integrated dev job except for the validated capsule trigger inventory; comments and formatting may differ, but runner, dependencies, strategy, checkout, all filter options and other outputs/steps SHALL stay bound
+
+Detector capsule trigger inventories SHALL retain every integrated baseline rule and SHALL reject duplicate filter mapping keys. Added validated trigger rules and equivalent formatting remain supported.
+
+
+#### Scenario: Native worker quality preserves admission and replay contracts
+
+- **GIVEN** authoritative capsule review reports blocking complexity/nesting findings in the native worker and retained ownership proofs
+- **WHEN** their validation and fixture preparation are decomposed
+- **THEN** the unchanged production Radon policy SHALL report no blocking complexity/nesting finding in those files
+- **AND** every admitted/rejected argument, request, path, reply, replay option, output bound and source ownership case SHALL retain its exact behavior, diagnostics and existing assertions; no analyzer input, deadline or quality threshold SHALL change
+
+The retained local context-manager proof SHALL express its self-return type using the supported Python3.11+ typing.Self identity, avoiding an unresolved local class name while preserving its enter/exit behavior and every fixture assertion.
+
+
+#### Scenario: Deferral requires the integrated reusable-review caller
+
+- **GIVEN** local capsule deferral depends on the orchestrator calling its mandatory reusable reviewer
+- **WHEN** the indexed caller adds unsupported job keys or changes its inputs, permissions, strategy or concurrency
+- **THEN** deferral SHALL reject unless the complete parsed caller equals the integrated dev merge-base caller
+- **AND** unsupported false continue-on-error, runs-on, steps, env and timeout-minutes SHALL reject even when they appear nonblocking; equivalent parsed formatting remains admitted
+
+This binds the caller without changing the hosted review or targeted pytest deadlines, analyzer inputs, existing failure propagation or any native isolation/ownership contract.
+
+
+#### Scenario: Required quality consumers retain hosted-review failure propagation
+
+- **GIVEN** owner-approved local deferral relies on required quality checks consuming the customer-review result
+- **WHEN** the indexed orchestrator removes that dependency, changes or disables its prerequisite assertion, or changes any job/root execution configuration
+- **THEN** deferral SHALL reject unless the complete parsed orchestration execution equals integrated dev after only the independently validated PR event and capsule trigger inventory are normalized
+- **AND** all jobs, prerequisites, steps, matrices, workflow environment/defaults/permissions/concurrency SHALL stay bound; equivalent formatting and existing admissible trigger additions remain supported
+
+The required consumer remains blocking for failed/skipped customer review; no hosted analyzer input, deadline, native isolation/ownership contract or original proof assertion changes.
+
+
+#### Scenario: Owner-approved whole-review budget and script coverage
+
+- **GIVEN** the owner on 10 October 2026 explicitly authorizes enlarging the 300-second review limit and real passing portable suites now take about 177 seconds before other analyzers
+- **WHEN** candidate and independent hosted reviews execute all unchanged analyzers
+- **THEN** each whole review SHALL retain a finite 1800-second limit, original failure propagation and fixed timeout exit124; preparation, child test limits and analyzer inputs remain unchanged
+- **AND** local deferral SHALL admit only the exact independent-wrapper 300-to-1800-second and independent-job 45-to-75-minute adaptations to integrated dev, rejecting any other command, timeout, runner, prerequisite or execution change
+- **AND** the repository coverage configuration SHALL include reviewed scripts and portable regressions SHALL exercise the indexed workflow validator without relying on excluded host subprocess proofs; missing coverage remains blocking UNKNOWN rather than being waived
+
+
+#### Scenario: Warning remediation retains native evidence and fixture identity
+
+- **GIVEN** production Radon reports six scoped complexity warnings and Pylint reports nondeterministic fixture text encodings
+- **WHEN** permission, observer decoding, worker dispatch and fixture setup/assertion blocks are extracted
+- **THEN** their unchanged production complexity policy SHALL report no scoped complexity warning, while all original admissions, identity/type rejection, artifact-read and fallback order, diagnostics, replay write-before-print behavior, exit codes and proof assertions remain
+- **AND** fixture text SHALL use explicit UTF-8 and subprocesses explicitly retain check=False where their return codes are asserted; no warning threshold or malformed-evidence contract is softened
+
+
+#### Scenario: Scoped public entry points expose existing return contracts
+
+- **GIVEN** authoritative review reports missing contracts on public native replay, indexed scheduling and SMART entry points
+- **WHEN** explicit postconditions are added
+- **THEN** every existing successful return and propagated exception/exit SHALL retain its behavior, and contracts SHALL describe completed-process, no-value verification, mapping and existing integer exit-code results without narrowing admitted inputs or waiving incomplete execution
+
+
+#### Scenario: Sequential preparation and review retain their full phase limits
+
+- **GIVEN** independent preparation and review run sequentially, each with an unchanged1800second phase cap
+- **WHEN** both legal phases consume their full allowance after setup
+- **THEN** the finite job limit SHALL permit both phases plus15minutes of setup/diagnostic headroom: independent75minutes, customer90minutes unchanged
+- **AND** indexed deferral SHALL admit only integrated independent45to75minutes, rejecting45,60,90 or unsupported job bounds on the candidate and preserving every other parsed execution field
+- **AND** no phase deadline, analysis input, artifact handoff, isolation, error verdict or failure propagation SHALL change
+
+
+#### Scenario: Controller Bash proofs execute in required host contexts
+
+- **GIVEN** the sealed portable analyzer intentionally provides no Bash executable and hosted evidence reports31 actual Bash-launch FileNotFoundError cases
+- **WHEN** Full, SMART, Linux or any of the three macOS controller boundaries validate release diagnostics
+- **THEN** all original preparation/crash/import-isolation cases and assertions SHALL execute in a required host proof, separately from portable discovery
+- **AND** every host failure SHALL propagate; no case SHALL be skipped, assertion weakened, or shell added to the sealed capsule
+- **AND** pure Python report projection tests SHALL remain portable; the workflow trigger and local deferral surface SHALL include the required new host proof
+
+#### Scenario: Extracted evidence helpers retain scoped analysis and existing consumers
+
+- **GIVEN** worker imports/calls the extracted evidence helpers and scoped Basedpyright reports two unused-function errors
+- **WHEN** their existing cross-module exports are declared explicitly
+- **THEN** the same scoped analyzer SHALL report no unused-function error without changing names, caller binding, identity/path/artifact validation or failure handling
+- **AND** the controller import-isolation fixture SHALL meet unchanged production complexity policy after bounded setup extraction, preserving every original poison and review-exit assertion
+
+
+#### Scenario: Coverage policy probes own their collector state
+
+- **GIVEN** a parent analyzer exports a coverage data path outside the proof-owned temporary directory
+- **WHEN** the real isolated coverage policy probe measures an executed reviewed script
+- **THEN** it SHALL use only proof-owned in-memory collector state and ignore the inherited data-file destination, while still asserting actual script execution and complete measured lines
+- **AND** no parent analyzer coverage configuration, production threshold or admission policy SHALL change
+
+
+#### Scenario: Coverage probes verify actual inherited state
+
+- **GIVEN** the parent supplies a proof-owned unusable coverage destination, or explicitly supplies none
+- **WHEN** the child probe starts
+- **THEN** it SHALL first observe the actual inherited destination state, then discard only its own data-file override before constructing its in-memory collector
+- **AND** actual script execution and complete measured-line assertions, parent state and the production 80 percent policy SHALL remain unchanged
+
+#### Scenario: Portable coverage exercises native dispatch and SMART failures
+
+- **GIVEN** unchanged production coverage reports native worker and SMART entry-point gaps
+- **WHEN** portable regressions exercise actual dispatch, managed Semgrep receipts, sealed contract inventory admission and SMART command/exit forwarding
+- **THEN** actual line-and-branch measurement SHALL meet the unchanged 80 percent production threshold for both sources
+- **AND** bootstrap and required host failures SHALL prevent later execution, malformed inventory and policy grants SHALL remain rejected, and no host executable, skipped assertion or fabricated coverage SHALL enter the portable suite
+
+
+#### Scenario: Projected coverage configuration proofs exclude parent overrides
+
+- **GIVEN** the parent collector exports COVERAGE_FILE and a fixture verifies a sealed coverage policy against injected TOML sections
+- **WHEN** the fixture reads its projected configuration
+- **THEN** it SHALL isolate its own config-reader environment from the parent data-file override, retaining exact sealed data-file, plugin and escaped-expression assertions
+- **AND** parent collection and production policy SHALL be unchanged
+
+
+#### Scenario: Controller projection fixtures reuse existing imports
+
+- **GIVEN** authoritative warning locations correspond to repeated already-loaded standard-library imports in controller projection fixtures
+- **WHEN** redundant local imports and fixture-name shadowing are corrected
+- **THEN** the same production Pylint policy SHALL report no scoped duplicate-import/shadowing family, while every original assertion, test parametrization, embedded program and public pytest fixture identity SHALL remain
+- **AND** long literal formatting SHALL preserve its exact payload; no protocol print, identity rejection or private test binding SHALL be replaced to silence unrelated warnings
+
+
+#### Scenario: Projection observation proofs retain portable collection
+
+- **GIVEN** the projection proof module exceeds unchanged production file-length policy
+- **WHEN** its bounded public-observation tests move into a separately collected portable module under the existing Code Review test surface
+- **THEN** every test name, parametrization, assertion and embedded program SHALL remain identical across the split and the scoped Pylint file-length finding SHALL disappear
+- **AND** Full/SMART and effective PR scheduling SHALL still require all cases, without adding shell execution to the portable runtime or changing report bounds and failure semantics
+
+
+#### Scenario: Native dispatch proofs obey production complexity policy
+
+- **GIVEN** authoritative capsule review reports a blocking complexity finding in a portable native dispatch proof
+- **WHEN** its request and environment assertions are organized into bounded helpers
+- **THEN** the existing production Radon regression SHALL inspect its own proof module and every retained assertion SHALL remain identical
+- **AND** both real adapter replay cases, exact managed identities, no host spawn, restoration, private permissions and empty output assertions SHALL remain mandatory, without changing production thresholds, runtime bytes or analysis deadlines
+
+
+#### Scenario: Portable broker proof exports preserve collected cleanup tests
+
+- **GIVEN** unchanged production Pylint reports redundant self aliases, unused imports and line length in collected native cleanup proofs
+- **WHEN** those imported proof functions use explicit exports and the autouse fixture signature uses bounded formatting
+- **THEN** the same collected node identities, test decorators, assertion ASTs and autouse registration SHALL remain, while the scoped export and line-length findings disappear under unchanged policy
+- **AND** no original cleanup proof, permission restoration, rejected identity, test case or type-checker requirement SHALL be removed or weakened
+
+
+#### Scenario: Review-gate and snapshot proofs obey unchanged complexity policy
+
+- **GIVEN** authoritative capsule review reports complexity warnings in review-gate failure propagation and native snapshot argv proofs
+- **WHEN** the retained production Radon regression covers those proof modules and bounded helpers group their existing assertions
+- **THEN** both actual warning blocks SHALL disappear under unchanged policy, with complete production Radon serialization including nested closures and every original assertion, parametrization and collected case retained
+- **AND** exact report counts, failing verdict/exit propagation, projected pytest argv, full discovery, config-root checks and unavailable-member semantics SHALL remain unchanged, without production runtime, workflow, deadline or assertion weakening
+
+
+#### Scenario: Cached-diff admission retains exact behavior under complexity policy
+
+- **GIVEN** authoritative review reports the cached-diff added-line parser above the unchanged complexity warning threshold
+- **WHEN** the retained production-policy regression covers the script and hunk-range parsing is factored into a bounded helper
+- **THEN** the warning SHALL disappear while header ordering, quoted destination rejection, deleted-file handling, default and zero hunk counts, malformed hunks, file resets and accumulated added-line identities remain exact
+- **AND** existing review inputs, verdict propagation, private execution, deadlines, no-write guarantees and all original assertions SHALL remain, without weakening the policy or silently accepting unavailable diff evidence
+
+
+#### Scenario: Native proof literals preserve complete generated programs
+
+- **GIVEN** unchanged production Pylint reports overlong embedded C and shell/Python fixture literals
+- **WHEN** adjacent literal formatting bounds those source lines
+- **THEN** the same Pylint policy SHALL no longer report those line-length findings, while complete generated program bytes, every original assertion, test name and parametrization remain identical
+- **AND** all ten canonical allocation/admission proofs and required isolated reviewer fixtures SHALL still execute in their existing mandatory host contexts, without a compiler or shell added to the sealed capsule or any deadline, policy or failure propagation change
+
+
+#### Scenario: Native preparation and process proofs retain explicit call semantics
+
+- **GIVEN** unchanged production Pylint reports an overlong preparation fixture literal, a redundant constructor forwarding lambda and implicit subprocess failure handling in the current native PID observation proof
+- **WHEN** the literal is bounded without changing its bytes, the existing constructor is bound directly and PID observation explicitly keeps non-raising return-code handling
+- **THEN** those scoped quality findings SHALL disappear without changing any test identity, assertion, generated program, lifecycle deadline or process admission rule
+- **AND** disappearance of a PID SHALL still admit the existing return code 1 observation; forwarded import-proof subprocess options SHALL retain the caller's explicit check=True setting
+
+
+#### Scenario: Native project runtime proofs retain collection across bounded modules
+
+- **GIVEN** unchanged production Pylint reports the native project runtime proof module above its 1000-line bound
+- **WHEN** preparation/acquisition and inventory/source-binding cases are organized into bounded portable test modules with shared fixture builders
+- **THEN** every original test name, argument, decorator, parametrization, assertion and generated program SHALL remain identical, and complete collected case identities SHALL be retained across the split
+- **AND** fixture source paths and private bindings SHALL remain exact; Full/SMART and effective indexed PR scheduling SHALL require all moved cases, without changing runtime bytes, analyzers, deadlines, quality policy or admission contracts

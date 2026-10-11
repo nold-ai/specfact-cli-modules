@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import json
 import os
+import shlex
 import subprocess
+import sys
 import venv
 from pathlib import Path
 from string import Template
@@ -87,6 +89,8 @@ _BLOCK2_HATCH_FIXTURE = (
     'uname() { if [[ "${1:-}" == "-m" ]]; then echo arm64; else echo "$FIXTURE_PLATFORM"; fi; }\n'
     "hatch() {\n"
     '  printf \'%s\\n\' "$*" >> "$FIXTURE_CALLS"\n'
+    f'  if [[ "${{4:-}}" == scripts/check_capsule_deferral.py ]]; then {shlex.quote(sys.executable)} -I '
+    f'{shlex.quote(str(REPO_ROOT / "scripts/check_capsule_deferral.py"))} "${{@:5}}"; return $?; fi\n'
     '  if [[ "$*" == *pre_commit_code_review.py* ]]; then return 99; fi\n'
     '  if [[ "$*" == *contract-test-status* ]]; then return 1; fi\n'
     "  return 0\n"
@@ -162,7 +166,9 @@ _ISOLATED_REVIEWER_TEMPLATES = {
     "    assert request.scope=='index' and "
     "request.portable_project_runtime\n"
     "    return "
-    "SimpleNamespace(status=$STATUS,reason=$REASON,selected_paths=$SELECTED_PATHS,ci_exit_code=$SCOPE_EXIT,base_snapshot=SimpleNamespace(root=request.repository/'base'),head_snapshot=SimpleNamespace(root=request.repository/'head'))\n"
+    "SimpleNamespace(status=$STATUS,reason=$REASON,selected_paths=$SELECTED_PATHS,ci_exit_code=$SCOPE_EXIT,"
+    "base_snapshot=SimpleNamespace(root=request.repository/'base'),"
+    "head_snapshot=SimpleNamespace(root=request.repository/'head'))\n"
     "def cleanup_scope_resolution(resolution):\n"
     "    import os\n    from pathlib import Path\n"
     "    (Path(os.environ['HOME']).parent/'cleaned').touch()\n",
@@ -278,12 +284,18 @@ def deferral_worktree(tmp_path: Path, scenario):
     workflow.write_text(
         workflow_source if independent_review else workflow_source.split("\n  independent-review:", 1)[0]
     )
+    orchestrator = repository / ".github/workflows/pr-orchestrator.yml"
+    orchestration = (REPO_ROOT / ".github/workflows/pr-orchestrator.yml").read_text()
+    if independent_review == "missing_trigger":
+        orchestration = orchestration.replace('              - "tests/native/**"\n', "")
+    orchestrator.write_text(orchestration)
+    candidate_path = bundle if bundle.startswith("tests/") else f"packages/{bundle}/resources/example.py"
     files = [
         "llms.txt",
         "docs/reference/commands.generated.json",
         "docs/reference/commands.generated.md",
-        f"packages/{bundle}/resources/example.py",
-        "openspec/changes/example/spec.md",
+        candidate_path,
+        "openspec/changes/code-review-native-platform-execution/spec.md",
     ]
     for relative in files:
         path = repository / relative
@@ -314,17 +326,20 @@ def deferral_worktree(tmp_path: Path, scenario):
     return worktree
 
 
-def assert_block2_trace(invoked, expected, stderr):
+def assert_block2_trace(invoked, expected, stderr, *, prompt_required=True):
     for command in [
         "generate-command-overview",
         "check-command-overview",
         "check-command-contract",
         "check-core-documentation-accountability",
         "check-docs-commands.py",
-        "check-prompt-commands.py",
         "requirements_evidence_gate.py --staged",
     ]:
         assert command in invoked
+    if prompt_required:
+        assert "check-prompt-commands.py" in invoked
+    else:
+        assert "check-prompt-commands.py" not in invoked
     assert "pre_commit_code_review.py" not in invoked
     if expected == 0:
         assert "DEFERRED" in stderr

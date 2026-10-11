@@ -78,9 +78,10 @@ def test_native_local_policy_keeps_coverage_plugins_unsupported(tmp_path, local_
 
 
 @pytest.mark.parametrize("key", ["exclude_lines", "exclude_also", "partial_branches", "partial_also"])
-def test_native_local_toml_exclusions_cannot_inject_coverage_sections(tmp_path, key):
+def test_native_local_toml_exclusions_cannot_inject_coverage_sections(tmp_path, key, monkeypatch):
     from coverage.config import read_coverage_config
 
+    monkeypatch.delenv("COVERAGE_FILE", raising=False)
     expression = "foo\n[coverage:run]\nplugins = project_plugin"
     (tmp_path / "pyproject.toml").write_text(f'[tool.coverage.report]\n{key}=["""{expression}"""]\n')
     builder = runner._PolicyBindingBuilder()
@@ -205,6 +206,17 @@ def test_project_snapshot_configures_basedpyright_for_platform_runtime(
         assert all("/bin/python" not in argument for argument in member_argv["basedpyright"])
 
 
+def _assert_native_pytest_argv(
+    argv: tuple[str, ...], full_discovery: bool, settings: runner.CapsuleSnapshotSettings
+) -> None:
+    assert argv[0] == "-c"
+    assert argv[2:4] == ("--rootdir", "/opt/specfact/snapshot")
+    assert argv[4] == "--cov-config"
+    assert argv[-1:] == ("--",) if full_discovery else argv[-2:] == ("--", "tests/test_runtime.py")
+    assert runner._complete_snapshot_pytest("targeted-pytest-coverage", settings)
+    assert "portable-pytest-v2" not in argv
+
+
 @pytest.mark.parametrize("projection_fails", [False, True])
 @pytest.mark.parametrize("full_discovery", [False, True])
 @pytest.mark.parametrize("declared_roots", [["tests"], ["."], []])
@@ -254,12 +266,7 @@ def test_darwin_project_snapshot_binds_native_managed_pytest_contract(
             assert settings.unavailable_members["targeted-pytest-coverage"]["evidence_outcome"] == "UNKNOWN"
             return runner.CapsuleSnapshotResult({}, {})
         argv = settings.member_argv["targeted-pytest-coverage"]
-        assert argv[0] == "-c"
-        assert argv[2:4] == ("--rootdir", "/opt/specfact/snapshot")
-        assert argv[4] == "--cov-config"
-        assert argv[-1:] == ("--",) if full_discovery else argv[-2:] == ("--", "tests/test_runtime.py")
-        assert runner._complete_snapshot_pytest("targeted-pytest-coverage", settings)
-        assert "portable-pytest-v2" not in argv
+        _assert_native_pytest_argv(argv, full_discovery, settings)
         assert settings.portable_runtime is False
         assert len(settings.config_roots) == 3
         assert all(root.is_dir() for root in settings.config_roots)

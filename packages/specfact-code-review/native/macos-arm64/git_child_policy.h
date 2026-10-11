@@ -2,6 +2,7 @@
 #define SPECFACT_GIT_CHILD_POLICY_H
 
 #include "native_protocol.h"
+#include "canonical_path.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -15,12 +16,10 @@
 
 static inline int specfact_git_private_path(const char *value, const char *cwd,
     const struct specfact_request *request, char selected[SPECFACT_MAX_PATH]) {
-    char canonical[SPECFACT_MAX_PATH];
     int used = value[0] == '/' ? snprintf(selected, SPECFACT_MAX_PATH, "%s", value)
         : snprintf(selected, SPECFACT_MAX_PATH, "%s/%s", cwd, value);
     struct stat info;
-    if (used <= 0 || (size_t)used >= SPECFACT_MAX_PATH || !realpath(selected, canonical) ||
-        strcmp(selected, canonical) || stat(selected, &info) || !S_ISDIR(info.st_mode)) return 0;
+    if (used <= 0 || (size_t)used >= SPECFACT_MAX_PATH || !specfact_canonical_path(selected) || stat(selected, &info) || !S_ISDIR(info.st_mode)) return 0;
     const char *roots[] = {request->project, request->output, request->temporary};
     for (size_t i = 0; i < 3; i++) {
         size_t length = strlen(roots[i]);

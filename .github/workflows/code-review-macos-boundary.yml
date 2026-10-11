@@ -13,6 +13,7 @@ on:
       - tests/unit/test_macos_control_*.py
       - tests/unit/test_macos_boundary_ci_receipts.py
       - tests/native/**
+      - tests/host/proof_capsule_review_projection_shell.py
       - tests/support/**
       - tests/unit/test_macos_native_file_budget.py
       - tests/unit/specfact_code_review/run/test_native_*.py
@@ -28,6 +29,21 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  canonical-linux:
+    name: Linux canonical path allocation proofs
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: "3.12"
+      - run: python -m pip install pytest==9.1.1 PyYAML==6.0.3
+      - name: Prove canonical admission with the actual Linux C compiler
+        run: python -m pytest -p no:cacheprovider -c /dev/null --confcutdir=tests/native tests/native/proof_native_canonical_path.py tests/host/proof_capsule_review_projection_shell.py
+
   native-boundary:
     name: boundary (${{ matrix.runner }}, ARM64)
     runs-on: ${{ matrix.runner }}
@@ -128,8 +144,10 @@ jobs:
           PY
       - name: Run native parser context proofs with real SDK and Rust
         run: |
-          python -m pip install specfact-cli==0.55.4 pytest==9.1.1 pytest-xdist==3.8.0 pytest-cov==7.1.0
+          python -m pip install specfact-cli==0.55.4 pytest==9.1.1 pytest-xdist==3.8.0 pytest-cov==7.1.0 PyYAML==6.0.3
           python -m pytest -n 0 tests/native/proof_macos_managed_uv_child.py
+          python -m pytest -n 0 tests/native/proof_native_canonical_path.py
+          python -m pytest -n 0 tests/host/proof_capsule_review_projection_shell.py
       - name: Prove release broker cleans up controller loss during WAIT
         env:
           SPECFACT_NATIVE_CONTROL: "1"

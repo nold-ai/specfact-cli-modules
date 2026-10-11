@@ -221,3 +221,26 @@ def test_run_radon_applies_parameter_count_rule_to_cli_decorators(
     )
 
     assert ("kiss.parameter-count.warning" in findings) is expects_parameter_count_warning
+
+
+@pytest.mark.parametrize(
+    "relative",
+    [
+        "packages/specfact-code-review/src/specfact_code_review/run/native_worker.py",
+        "tests/unit/specfact_code_review/run/test_native_project_runtime.py",
+        "tests/unit/specfact_code_review/run/test_native_project_inventory.py",
+        "tests/unit/specfact_code_review/run/native_project_runtime_fixtures.py",
+    ],
+)
+def test_native_admission_and_ownership_proofs_have_no_blocking_complexity(relative: str) -> None:
+    """Exercise actual production policy without replacing admission behavior tests."""
+    source = Path(__file__).resolve().parents[4] / relative
+    from radon.cli.tools import cc_to_dict
+    from radon.complexity import cc_visit
+
+    from specfact_code_review.tools import radon_runner
+
+    blocks = [cc_to_dict(block) for block in cc_visit(source.read_text())]
+    findings = radon_runner._map_radon_blocks(blocks, str(source)) + radon_runner._kiss_metric_findings(source)
+    blocking = [finding for finding in findings if finding.severity == "error"]
+    assert not blocking, [(finding.rule, finding.line, finding.message) for finding in blocking]

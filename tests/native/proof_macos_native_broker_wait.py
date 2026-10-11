@@ -47,13 +47,25 @@ def _assert_bootstrap_failure(parent, broker, invocation: Path, reply) -> None:
     sys.stdout.flush()
 
 
-def _hold_worker(parent, broker, temporary: Path, handle: int) -> None:
+def _worker_pid(temporary: Path) -> int:
+    """Await the complete owned marker write within the existing launch deadline."""
     marker = temporary / "native-self-test.pid"
     deadline = time.monotonic() + 5
-    while not marker.is_file() and time.monotonic() < deadline:
+    while time.monotonic() < deadline:
+        try:
+            contents = marker.read_text()
+        except FileNotFoundError:
+            contents = ""
+        if contents.endswith("\n"):
+            worker = int(contents.strip())
+            assert worker > 0, "held worker reported an invalid PID"
+            return worker
         time.sleep(0.01)
-    assert marker.is_file(), "held worker did not report its PID"
-    worker = int(marker.read_text().strip())
+    raise AssertionError("held worker did not report its PID")
+
+
+def _hold_worker(parent, broker, temporary: Path, handle: int) -> None:
+    worker = _worker_pid(temporary)
     sys.stdout.write(json.dumps({"broker": broker.pid, "worker": worker, "handle": handle}) + "\n")
     sys.stdout.flush()
     parent.sendall(REQUEST.pack(0x53464E31, 1, 2, 0, handle, 900_000, 0, 0, 0, 0, b"", b"", b"", b""))
@@ -132,7 +144,9 @@ def _line(process: subprocess.Popen[str], timeout: float) -> str:
 
 def _identity(pid: int) -> str | None:
     """Observe a process externally; a reused PID has a different start time."""
-    observed = subprocess.run(["/bin/ps", "-p", str(pid), "-o", "lstart="], capture_output=True, text=True, timeout=2)
+    observed = subprocess.run(
+        ["/bin/ps", "-p", str(pid), "-o", "lstart="], check=False, capture_output=True, text=True, timeout=2
+    )
     assert not observed.stderr, observed.stderr
     assert observed.returncode in (0, 1), observed.returncode
     return observed.stdout.strip() or None

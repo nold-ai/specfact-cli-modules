@@ -17,9 +17,16 @@ from types import ModuleType, SimpleNamespace
 from typing import Any, Final, cast
 from unittest.mock import patch
 
+from icontract import ensure
 from pydantic import ValidationError
 
 from specfact_code_review.run.findings import ReviewFinding
+from specfact_code_review.run.native_worker_evidence import (
+    WorkerContractError,
+    _capture_pytest_observation,
+    _read_pytest_artifact as _read_pytest_artifact,
+    _root,
+)
 from specfact_code_review.tools.ai_bloat_runner import run_ai_bloat
 from specfact_code_review.tools.ast_clean_code_runner import run_ast_clean_code
 
@@ -63,6 +70,7 @@ _MEMBERS: Final = frozenset({"ai-bloat-ast", "ast-clean-code", *_EXTERNAL_TOOLS}
 _MAX_PATHS: Final = 100_000
 _MAX_PATH_BYTES: Final = 240
 _MAX_REQUEST_BYTES: Final = 16 << 20
+_MAX_RESULT_BYTES: Final = 16 << 20
 _MAX_ADAPTER_ARGUMENTS: Final = 128
 _MAX_ARGUMENT_BYTES: Final = 1024
 _MAX_PROCESS_ARGUMENT_BYTES: Final = 64 << 10
@@ -81,10 +89,6 @@ IN_PROCESS_ADAPTERS: dict[str, Adapter] = {
 }
 
 
-class WorkerContractError(ValueError):
-    """The fixed worker invocation, request, or result violated its contract."""
-
-
 class RequestPending(BaseException):
     """One exact broker request needs a controller result before replay."""
 
@@ -94,23 +98,6 @@ class RequestPending(BaseException):
 
 class ReplayContractViolation(BaseException):
     """A supplied reply or adapter launch differs from the immutable plan."""
-
-
-def _root(raw: str, *, writable: bool, private_tree: bool = False) -> Path:
-    path = Path(raw)
-    if not path.is_absolute() or path.is_symlink():
-        raise WorkerContractError("worker roots must be absolute non-symlink directories")
-    resolved = path.resolve(strict=True)
-    if not resolved.is_dir() or resolved != path:
-        raise WorkerContractError("worker root identity changed during resolution")
-    mode = resolved.stat().st_mode
-    if private_tree and (not mode & stat.S_IWUSR or mode & (stat.S_IRWXG | stat.S_IRWXO)):
-        raise WorkerContractError("private worker root is not owner-only")
-    if writable and not private_tree and not mode & stat.S_IWUSR:
-        raise WorkerContractError("writable worker root is not owner-writable")
-    if not writable and not private_tree and mode & (stat.S_IWUSR | stat.S_IWGRP | stat.S_IWOTH):
-        raise WorkerContractError("immutable worker root is writable")
-    return resolved
 
 
 def _invocation_roots() -> tuple[Path, Path, Path, Path]:
@@ -159,6 +146,78 @@ def _safe_relative(value: str) -> bool:
     return bool(value) and not path.is_absolute() and ".." not in path.parts and "\x00" not in value
 
 
+def _valid_ruff_argv(argv: list[str]) -> bool:
+    return argv == ["--isolated", "--no-cache", "--no-force-exclude"] or (
+        len(argv) == 4
+        and argv[0] == "--config"
+        and bool(_CONFIG_PATH.fullmatch(argv[1]))
+        and argv[2:] == ["--no-cache", "--no-force-exclude"]
+    )
+
+
+def _valid_pylint_argv(argv: list[str]) -> bool:
+    return (
+        len(argv) >= 2
+        and argv[0] == "--rcfile"
+        and bool(_CONFIG_PATH.fullmatch(argv[1]))
+        and all(_PYLINT_OPTION.fullmatch(item) for item in argv[2:])
+    )
+
+
+def _valid_contract_argv(argv: list[str]) -> bool:
+    legacy = (
+        len(argv) >= 3
+        and argv[0] == "contract-inputs-v1"
+        and len(argv[1:]) % 2 == 0
+        and all(
+            flag == "--test-root" and _safe_relative(value) for flag, value in zip(argv[1::2], argv[2::2], strict=True)
+        )
+    )
+    return legacy or (len(argv) == 2 and argv[0] == "contract-inputs-v2" and bool(_CONFIG_PATH.fullmatch(argv[1])))
+
+
+def _valid_pytest_policy(policy: list[str]) -> bool:
+    return (
+        len(policy) >= 6
+        and policy[:1] == ["-c"]
+        and bool(_CONFIG_PATH.fullmatch(policy[1]))
+        and policy[2:4] == ["--rootdir", "/opt/specfact/snapshot"]
+        and policy[4:5] == ["--cov-config"]
+        and bool(_CONFIG_PATH.fullmatch(policy[5]))
+        and len(policy[6:]) % 2 == 0
+        and all(
+            flag == "-p" and bool(_PLUGIN_NAME.fullmatch(plugin))
+            for flag, plugin in zip(policy[6::2], policy[7::2], strict=True)
+        )
+    )
+
+
+def _valid_pytest_argv(argv: list[str]) -> bool:
+    try:
+        separator = argv.index("--")
+    except ValueError:
+        separator = len(argv)
+    policy = argv[:separator]
+    selectors = argv[separator + 1 :] if separator < len(argv) else []
+    return _valid_pytest_policy(policy) and all(_safe_relative(selector) for selector in selectors)
+
+
+def _valid_semgrep_argv(argv: list[str]) -> bool:
+    return len(argv) == 1 and bool(re.fullmatch(r"/opt/specfact/config/[1-9][0-9]*", argv[0]))
+
+
+_ADAPTER_ARGV_VALIDATORS: Final[dict[str, Callable[[list[str]], bool]]] = {
+    "ruff": _valid_ruff_argv,
+    "radon": lambda argv: argv == ["radon-full-result-v1"],
+    "semgrep-clean": _valid_semgrep_argv,
+    "semgrep-bugs": _valid_semgrep_argv,
+    "basedpyright": lambda argv: len(argv) == 2 and argv[0] == "--project" and bool(_CONFIG_PATH.fullmatch(argv[1])),
+    "pylint": _valid_pylint_argv,
+    "contracts": _valid_contract_argv,
+    "targeted-pytest-coverage": _valid_pytest_argv,
+}
+
+
 def _validated_adapter_argv(member: str, raw: object) -> list[str]:
     if (
         not isinstance(raw, list)
@@ -172,59 +231,8 @@ def _validated_adapter_argv(member: str, raw: object) -> list[str]:
     argv = cast(list[str], raw)
     if not argv:
         return []
-    valid = False
-    if member == "ruff":
-        valid = argv == ["--isolated", "--no-cache", "--no-force-exclude"] or (
-            len(argv) == 4
-            and argv[0] == "--config"
-            and bool(_CONFIG_PATH.fullmatch(argv[1]))
-            and argv[2:] == ["--no-cache", "--no-force-exclude"]
-        )
-    elif member == "radon":
-        valid = argv == ["radon-full-result-v1"]
-    elif member in {"semgrep-clean", "semgrep-bugs"}:
-        valid = len(argv) == 1 and bool(re.fullmatch(r"/opt/specfact/config/[1-9][0-9]*", argv[0]))
-    elif member == "basedpyright":
-        valid = len(argv) == 2 and argv[0] == "--project" and bool(_CONFIG_PATH.fullmatch(argv[1]))
-    elif member == "pylint":
-        valid = (
-            len(argv) >= 2
-            and argv[0] == "--rcfile"
-            and bool(_CONFIG_PATH.fullmatch(argv[1]))
-            and all(_PYLINT_OPTION.fullmatch(item) for item in argv[2:])
-        )
-    elif member == "contracts":
-        valid = (
-            (len(argv) >= 3 and argv[0] == "contract-inputs-v1")
-            and len(argv[1:]) % 2 == 0
-            and all(
-                flag == "--test-root" and _safe_relative(value)
-                for flag, value in zip(argv[1::2], argv[2::2], strict=True)
-            )
-        )
-        valid = valid or (len(argv) == 2 and argv[0] == "contract-inputs-v2" and bool(_CONFIG_PATH.fullmatch(argv[1])))
-    elif member == "targeted-pytest-coverage":
-        try:
-            separator = argv.index("--")
-        except ValueError:
-            separator = len(argv)
-        policy = argv[:separator]
-        selectors = argv[separator + 1 :] if separator < len(argv) else []
-        valid = (
-            len(policy) >= 6
-            and policy[:1] == ["-c"]
-            and bool(_CONFIG_PATH.fullmatch(policy[1]))
-            and policy[2:4] == ["--rootdir", "/opt/specfact/snapshot"]
-            and policy[4:5] == ["--cov-config"]
-            and bool(_CONFIG_PATH.fullmatch(policy[5]))
-            and len(policy[6:]) % 2 == 0
-            and all(
-                flag == "-p" and bool(_PLUGIN_NAME.fullmatch(plugin))
-                for flag, plugin in zip(policy[6::2], policy[7::2], strict=True)
-            )
-            and all(_safe_relative(selector) for selector in selectors)
-        )
-    if not valid:
+    validate = _ADAPTER_ARGV_VALIDATORS.get(member)
+    if validate is None or not validate(argv):
         raise WorkerContractError("adapter argv does not match the fixed member plan")
     return argv
 
@@ -265,6 +273,33 @@ def _materialized_adapter_argv(adapter_argv: list[str], project: Path) -> list[s
     return materialized
 
 
+def _selected_path(raw: str, project: Path) -> tuple[Path, str]:
+    if not raw or len(raw.encode("utf-8")) > _MAX_PATH_BYTES or "\x00" in raw:
+        raise WorkerContractError("selected path exceeds its bound")
+    relative = Path(raw)
+    if relative.is_absolute() or any(part in {"", ".", ".."} for part in relative.parts):
+        raise WorkerContractError("selected path escapes the project")
+    candidate = project / relative
+    current = project
+    for part in relative.parts:
+        current = current / part
+        if current.is_symlink():
+            raise WorkerContractError("selected path contains a symlink")
+    resolved = _immutable_selected_file(candidate, project)
+    return resolved, relative.as_posix()
+
+
+def _immutable_selected_file(candidate: Path, project: Path) -> Path:
+    if not candidate.is_file():
+        raise WorkerContractError("selected path is not a regular file")
+    resolved = candidate.resolve(strict=True)
+    if not resolved.is_relative_to(project) or resolved != candidate:
+        raise WorkerContractError("selected path identity changed during resolution")
+    if resolved.stat().st_mode & (stat.S_IWUSR | stat.S_IWGRP | stat.S_IWOTH):
+        raise WorkerContractError("selected project file is writable")
+    return resolved
+
+
 def _selected_paths(request: dict[str, object], project: Path) -> tuple[list[Path], list[str]]:
     raw_paths = request["paths"]
     if (
@@ -277,25 +312,7 @@ def _selected_paths(request: dict[str, object], project: Path) -> tuple[list[Pat
     relative_names: list[str] = []
     resolved_paths: list[Path] = []
     for raw in cast(list[str], raw_paths):
-        if not raw or len(raw.encode("utf-8")) > _MAX_PATH_BYTES or "\x00" in raw:
-            raise WorkerContractError("selected path exceeds its bound")
-        relative = Path(raw)
-        if relative.is_absolute() or any(part in {"", ".", ".."} for part in relative.parts):
-            raise WorkerContractError("selected path escapes the project")
-        candidate = project / relative
-        current = project
-        for part in relative.parts:
-            current = current / part
-            if current.is_symlink():
-                raise WorkerContractError("selected path contains a symlink")
-        if not candidate.is_file():
-            raise WorkerContractError("selected path is not a regular file")
-        resolved = candidate.resolve(strict=True)
-        if not resolved.is_relative_to(project) or resolved != candidate:
-            raise WorkerContractError("selected path identity changed during resolution")
-        if resolved.stat().st_mode & (stat.S_IWUSR | stat.S_IWGRP | stat.S_IWOTH):
-            raise WorkerContractError("selected project file is writable")
-        normalized = relative.as_posix()
+        resolved, normalized = _selected_path(raw, project)
         if normalized in relative_names or normalized in {_REQUEST_NAME, _REPLIES_NAME}:
             raise WorkerContractError("selected paths collide")
         relative_names.append(normalized)
@@ -320,6 +337,10 @@ def _read_replies(project: Path) -> list[dict[str, object]]:
         document = json.loads(reply_path.read_text(encoding="utf-8"))
     except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise WorkerContractError("reply document is not UTF-8 JSON") from exc
+    return _validated_replies(_reply_entries(document))
+
+
+def _reply_entries(document: object) -> list[object]:
     if not isinstance(document, dict) or set(document) != {"replies", "schema"}:
         raise WorkerContractError("reply document fields differ from schema v1")
     if document["schema"] != _REPLIES_SCHEMA:
@@ -327,29 +348,38 @@ def _read_replies(project: Path) -> list[dict[str, object]]:
     raw_replies = document["replies"]
     if not isinstance(raw_replies, list) or len(raw_replies) > _MAX_REPLIES:
         raise WorkerContractError("reply count exceeds its bound")
+    return raw_replies
+
+
+def _validated_reply(raw: object) -> tuple[dict[str, object], str]:
+    if not isinstance(raw, dict) or set(raw) != {"request", "result"}:
+        raise WorkerContractError("reply entry fields differ from schema v1")
+    request = raw["request"]
+    result = raw["result"]
+    if not isinstance(request, dict) or not isinstance(result, dict):
+        raise WorkerContractError("reply request and result must be objects")
+    if set(result) != {"returncode", "stderr", "stdout"}:
+        raise WorkerContractError("reply result fields differ from schema v1")
+    returncode = result["returncode"]
+    if type(returncode) is not int or not -255 <= returncode <= 255:
+        raise WorkerContractError("reply return code is invalid")
+    for field in ("stdout", "stderr"):
+        value = result[field]
+        if not isinstance(value, str) or len(value.encode("utf-8")) > _MAX_PROCESS_OUTPUT_BYTES:
+            raise WorkerContractError("reply process output exceeds its bound")
+    identity = json.dumps(request, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
+    return cast(dict[str, object], raw), identity
+
+
+def _validated_replies(raw_replies: list[object]) -> list[dict[str, object]]:
     replies: list[dict[str, object]] = []
     identities: set[str] = set()
     for raw in raw_replies:
-        if not isinstance(raw, dict) or set(raw) != {"request", "result"}:
-            raise WorkerContractError("reply entry fields differ from schema v1")
-        request = raw["request"]
-        result = raw["result"]
-        if not isinstance(request, dict) or not isinstance(result, dict):
-            raise WorkerContractError("reply request and result must be objects")
-        if set(result) != {"returncode", "stderr", "stdout"}:
-            raise WorkerContractError("reply result fields differ from schema v1")
-        returncode = result["returncode"]
-        if type(returncode) is not int or not -255 <= returncode <= 255:
-            raise WorkerContractError("reply return code is invalid")
-        for field in ("stdout", "stderr"):
-            value = result[field]
-            if not isinstance(value, str) or len(value.encode("utf-8")) > _MAX_PROCESS_OUTPUT_BYTES:
-                raise WorkerContractError("reply process output exceeds its bound")
-        identity = json.dumps(request, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
+        reply, identity = _validated_reply(raw)
         if identity in identities:
             raise WorkerContractError("duplicate managed-launch reply")
         identities.add(identity)
-        replies.append(cast(dict[str, object], raw))
+        replies.append(reply)
     return replies
 
 
@@ -424,7 +454,7 @@ class ReplayTransport:
             result[name] = self._logical_path(value) if value.startswith("/") else value
         return result
 
-    def run(self, args: Sequence[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+    def _arguments(self, args: Sequence[str]) -> list[str]:
         if (
             isinstance(args, str)
             or not args
@@ -441,6 +471,9 @@ class ReplayTransport:
         executable = f"capsule-tool:{self.tool}"
         if arguments[0] != executable:
             raise ReplayContractViolation("adapter requested an unbound executable")
+        return arguments
+
+    def _validate_options(self, kwargs: dict[str, object]) -> None:
         allowed = {"capture_output", "text", "check", "timeout", "cwd", "env", "encoding", "errors"}
         if set(kwargs) - allowed:
             raise ReplayContractViolation("adapter requested unsupported process options")
@@ -448,12 +481,16 @@ class ReplayTransport:
             raise ReplayContractViolation("adapter requested unsupported process streams")
         if kwargs.get("encoding", "utf-8") != "utf-8" or kwargs.get("errors", "strict") != "strict":
             raise ReplayContractViolation("adapter requested unsupported output decoding")
+
+    def _request(self, arguments: list[str], kwargs: dict[str, object]) -> dict[str, object]:
+        self._validate_options(kwargs)
         cwd = kwargs.get("cwd", self.project)
         if Path(cast(str | Path, cwd)).resolve() != self.project:
             raise ReplayContractViolation("adapter requested an unbound working directory")
         timeout = kwargs.get("timeout", 5)
         if not isinstance(timeout, int | float) or isinstance(timeout, bool) or not 0 < timeout <= 240:
             raise ReplayContractViolation("adapter timeout is invalid")
+        executable = f"capsule-tool:{self.tool}"
         request: dict[str, object] = {
             "argv": [executable, *(self._logical_path(argument) for argument in arguments[1:])],
             "capture_output": True,
@@ -466,6 +503,12 @@ class ReplayTransport:
             "timeout_ms": int(timeout * 1000),
             "tool": self.tool,
         }
+        return request
+
+    @ensure(lambda result: isinstance(result, subprocess.CompletedProcess))
+    def run(self, args: Sequence[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        arguments = self._arguments(args)
+        request = self._request(arguments, kwargs)
         if self.consumed >= len(self.replies):
             raise RequestPending(request)
         reply = self.replies[self.consumed]
@@ -488,6 +531,7 @@ class ReplayTransport:
             )
         return completed
 
+    @ensure(lambda result: result is None)
     def verify_complete(self) -> None:
         if self.consumed != len(self.replies):
             raise WorkerContractError("controller supplied extra or reordered managed-launch replies")
@@ -557,15 +601,15 @@ def _native_contract_roots(argv: list[str], project: Path) -> tuple[Path, ...]:
         or document["schema"] != "contract-inputs-v2"
     ):
         raise WorkerContractError("invalid native contract inventory schema")
-    roots = document["test_roots"]
-    if (
-        not isinstance(roots, list)
-        or len(roots) > _MAX_PATHS
-        or any(
-            not isinstance(root, str) or len(root.encode()) > _MAX_PATH_BYTES or not _safe_relative(root) or root == "."
-            for root in roots
-        )
-    ):
+    return _validated_contract_roots(document["test_roots"])
+
+
+def _valid_contract_root(root: object) -> bool:
+    return isinstance(root, str) and len(root.encode()) <= _MAX_PATH_BYTES and _safe_relative(root) and root != "."
+
+
+def _validated_contract_roots(roots: object) -> tuple[Path, ...]:
+    if not isinstance(roots, list) or len(roots) > _MAX_PATHS or any(not _valid_contract_root(root) for root in roots):
         raise WorkerContractError("invalid native contract inventory paths")
     return tuple(Path(value) for value in roots)
 
@@ -669,70 +713,6 @@ def _bind_pytest_private_state(adapter_argv: list[str], temporary: Path) -> list
         f"cache_dir={temporary / 'pytest/cache-dir'}",
         *adapter_argv[separator:],
     ]
-
-
-def _read_pytest_artifact(path: Path, temporary: Path) -> bytes | None:
-    """Read one bounded ordinary artifact from the confined private state."""
-    if not path.is_relative_to(temporary):
-        raise WorkerContractError("native pytest artifact path is invalid")
-    try:
-        # Resolve existing links even when an ordinary evidence directory is gone.
-        # Dangling/substituted parents still change the canonical path and reject.
-        if path.parent.resolve(strict=False) != path.parent:
-            raise WorkerContractError("native pytest artifact path is invalid")
-        descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
-        try:
-            metadata = os.fstat(descriptor)
-            if not stat.S_ISREG(metadata.st_mode) or metadata.st_size > 16 << 20:
-                raise WorkerContractError("native pytest artifact type or size is invalid")
-            with os.fdopen(descriptor, "rb", closefd=False) as stream:
-                payload = stream.read((16 << 20) + 1)
-            if len(payload) > 16 << 20:
-                raise WorkerContractError("native pytest artifact size is invalid")
-            return payload
-        finally:
-            os.close(descriptor)
-    except FileNotFoundError:
-        return None
-    except OSError as exc:
-        raise WorkerContractError("native pytest artifact is unavailable") from exc
-
-
-def _capture_pytest_observation(result: Any, transport: ReplayTransport) -> dict[str, object] | None:
-    completed, coverage_path, observer_path, junit_path = result
-    # Validate every path before the evaluator can read any artifact, including
-    # when an earlier file is missing. Substituted/special/oversized files fail hard.
-    coverage_bytes = _read_pytest_artifact(coverage_path, transport.temporary)
-    observer_bytes = _read_pytest_artifact(observer_path, transport.temporary)
-    junit_bytes = _read_pytest_artifact(junit_path, transport.temporary)
-    if observer_bytes is None:
-        return None
-    try:
-        records = json.loads(observer_bytes)
-    except (ValueError, RecursionError):
-        return None
-    if not isinstance(records, list) or not all(isinstance(record, dict) for record in records):
-        return None
-    if not all(isinstance(record.get("nodeid"), str) for record in records):
-        raise WorkerContractError("native pytest observer node identity is invalid")
-    if coverage_bytes is None or junit_bytes is None:
-        return None
-    try:
-        coverage = json.loads(coverage_bytes)
-    except (ValueError, RecursionError):
-        return None
-    if not isinstance(coverage, dict) or not isinstance(coverage.get("files"), dict):
-        return None
-    collected = sorted(
-        {record["nodeid"] for record in records if record.get("phase") in {"collection", "setup", "call", "teardown"}}
-    )
-    return {
-        "collected": collected,
-        "records": records,
-        "coverage": coverage,
-        "process_exit": completed.returncode,
-        "result_provenance": "project-origin-v1",
-    }
 
 
 def _pytest_external_adapter(
@@ -865,6 +845,8 @@ def _completed_response(
     }
     if target_execution is not None:
         response["target_execution"] = target_execution
+    if len(_result_payload(response)) > _MAX_RESULT_BYTES:
+        return _unknown_response(member, "native_worker_result_size_exceeded")
     return response
 
 
@@ -878,14 +860,18 @@ def _unknown_response(member: str, diagnostic: str) -> dict[str, object]:
     }
 
 
+def _result_payload(response: dict[str, object]) -> bytes:
+    return (json.dumps(response, ensure_ascii=False, separators=(",", ":"), sort_keys=True) + "\n").encode("utf-8")
+
+
 def _write_result(output: Path, response: dict[str, object]) -> None:
     destination = output / "result.json"
     if destination.exists() or destination.is_symlink():
         raise FileExistsError("result output already exists")
     temporary = output / f".result.{os.getpid()}.tmp"
-    payload = json.dumps(response, ensure_ascii=False, separators=(",", ":"), sort_keys=True) + "\n"
+    payload = _result_payload(response)
     try:
-        with temporary.open("x", encoding="utf-8") as stream:
+        with temporary.open("xb") as stream:
             stream.write(payload)
             stream.flush()
             os.fsync(stream.fileno())
@@ -894,6 +880,64 @@ def _write_result(output: Path, response: dict[str, object]) -> None:
         temporary.unlink(missing_ok=True)
 
 
+def _dispatch_worker(
+    invocation: tuple[str, list[str], dict[str, object], list[Path], list[str]],
+    roots: tuple[Path, Path, Path, Path],
+) -> int:
+    member, adapter_argv, request, paths, names = invocation
+    capsule, project, output, temporary = roots
+    if member in IN_PROCESS_ADAPTERS:
+        try:
+            response = _completed_response(
+                member,
+                IN_PROCESS_ADAPTERS[member](paths),
+                project=project,
+                selected=set(names),
+            )
+        except (OSError, TypeError, ValueError, ValidationError) as exc:
+            _write_result(output, _unknown_response(member, f"native_worker_result_invalid:{exc}"))
+            return EXIT_INVALID_RESULT
+        _write_result(output, response)
+        return EXIT_COMPLETE
+    transport = ReplayTransport(
+        member=member,
+        tool=_EXTERNAL_TOOLS[member],
+        replies=_read_replies(project),
+        capsule=capsule,
+        project=project,
+        temporary=temporary,
+    )
+    try:
+        findings = EXTERNAL_ADAPTERS[member](
+            paths,
+            transport.run,
+            adapter_argv,
+            cast(bool, request["bug_hunt"]),
+            cast(bool, request["complete_pytest_inventory"]),
+        )
+        transport.verify_complete()
+        response = _completed_response(
+            member, findings, project=project, selected=set(names), target_execution=transport.target_execution
+        )
+    except RequestPending as pending:
+        response = _unknown_response(member, "managed_tool_replay_required")
+        response["managed_launch_request"] = pending.request
+        _write_result(output, response)
+        print(json.dumps(pending.request, separators=(",", ":"), sort_keys=True), flush=True)
+        return EXIT_REPLAY_REQUIRED
+    except ReplayContractViolation as exc:
+        _write_result(output, _unknown_response(member, f"native_worker_request_invalid:{exc}"))
+        return EXIT_INVALID_REQUEST
+    _write_result(output, response)
+    return EXIT_COMPLETE
+
+
+@ensure(
+    lambda result: (
+        result
+        in {EXIT_COMPLETE, EXIT_REPLAY_REQUIRED, EXIT_INVALID_REQUEST, EXIT_INVALID_RESULT, EXIT_OUTPUT_COLLISION}
+    )
+)
 def main() -> int:
     """Execute one fixed in-process adapter or request broker-managed replay."""
 
@@ -908,50 +952,7 @@ def main() -> int:
         member, adapter_argv = _request_member(request)
         adapter_argv = _materialized_adapter_argv(adapter_argv, project)
         paths, names = _selected_paths(request, project)
-        if member in IN_PROCESS_ADAPTERS:
-            try:
-                response = _completed_response(
-                    member,
-                    IN_PROCESS_ADAPTERS[member](paths),
-                    project=project,
-                    selected=set(names),
-                )
-            except (OSError, TypeError, ValueError, ValidationError) as exc:
-                _write_result(output, _unknown_response(member, f"native_worker_result_invalid:{exc}"))
-                return EXIT_INVALID_RESULT
-            _write_result(output, response)
-            return EXIT_COMPLETE
-        transport = ReplayTransport(
-            member=member,
-            tool=_EXTERNAL_TOOLS[member],
-            replies=_read_replies(project),
-            capsule=capsule,
-            project=project,
-            temporary=temporary,
-        )
-        try:
-            findings = EXTERNAL_ADAPTERS[member](
-                paths,
-                transport.run,
-                adapter_argv,
-                cast(bool, request["bug_hunt"]),
-                cast(bool, request["complete_pytest_inventory"]),
-            )
-            transport.verify_complete()
-            response = _completed_response(
-                member, findings, project=project, selected=set(names), target_execution=transport.target_execution
-            )
-        except RequestPending as pending:
-            response = _unknown_response(member, "managed_tool_replay_required")
-            response["managed_launch_request"] = pending.request
-            _write_result(output, response)
-            print(json.dumps(pending.request, separators=(",", ":"), sort_keys=True), flush=True)
-            return EXIT_REPLAY_REQUIRED
-        except ReplayContractViolation as exc:
-            _write_result(output, _unknown_response(member, f"native_worker_request_invalid:{exc}"))
-            return EXIT_INVALID_REQUEST
-        _write_result(output, response)
-        return EXIT_COMPLETE
+        return _dispatch_worker((member, adapter_argv, request, paths, names), (capsule, project, output, temporary))
     except FileExistsError:
         return EXIT_OUTPUT_COLLISION
     except (KeyError, OSError, TypeError, ValueError, json.JSONDecodeError) as exc:
