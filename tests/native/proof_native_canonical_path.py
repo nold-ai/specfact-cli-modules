@@ -12,8 +12,7 @@ import pytest
 NATIVE = Path(__file__).resolve().parents[2] / "packages/specfact-code-review/native/macos-arm64"
 
 
-@pytest.mark.parametrize("sink", ["bootstrap", "git", "inherited"])
-def test_native_canonical_sinks_use_system_allocation_and_preserve_rejection(tmp_path: Path, sink: str) -> None:
+def _canonical_sink_admission(sink: str) -> tuple[str, str]:
     if sink == "bootstrap":
         source = (NATIVE / "bootstrap.c").read_text()
         block = source.split("char *cwd = startup_string(&cursor, end)", 1)[1].split("const char *roots[]", 1)[0]
@@ -40,6 +39,10 @@ def test_native_canonical_sinks_use_system_allocation_and_preserve_rejection(tmp
             + body[body.index("const struct worker") :]
         )
         call = "inherited_path(&owner, argv[1]) == 1"
+    return body, call
+
+
+def _write_canonical_sink_source(tmp_path: Path, sink: str, body: str, call: str) -> Path:
     header = '#include "canonical_path.h"\n' if (NATIVE / "canonical_path.h").exists() else ""
     source = tmp_path / "canonical.c"
     source.write_text(
@@ -80,6 +83,13 @@ int main(int argc, char **argv) {
         + f"int admitted = ({call});\n"
         + "assert(admitted == atoi(argv[2])); assert(allocations == releases); return 0; }\n"
     )
+    return source
+
+
+@pytest.mark.parametrize("sink", ["bootstrap", "git", "inherited"])
+def test_native_canonical_sinks_use_system_allocation_and_preserve_rejection(tmp_path: Path, sink: str) -> None:
+    body, call = _canonical_sink_admission(sink)
+    source = _write_canonical_sink_source(tmp_path, sink, body, call)
     binary = tmp_path / "canonical"
     subprocess.run(
         [

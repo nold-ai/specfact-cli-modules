@@ -1579,3 +1579,16 @@ The required consumer remains blocking for failed/skipped customer review; no ho
 - **WHEN** its artifact mutation callback uses flat guarded dispatch
 - **THEN** every original guard, mutation body, order and fallback SHALL reconstruct exactly in the whole original module AST, retaining every test name, argument, decorator, assertion and parametrized identity
 - **AND** usage, missing/malformed/deep coverage, missing/deep observer and missing-directory cases SHALL exercise the same real evaluator and incomplete remedy without changing analyzer thresholds, runtime, authority, deadline, coverage, lifecycle or artifact admission
+
+
+### Requirement: Bounded canonical allocation proof construction
+
+Native canonical allocation proofs SHALL satisfy the unchanged function-length policy while retaining their original compiled admissions, allocator/free assertions and rejection controls.
+
+#### Scenario: Extract source assembly without weakening compiler proofs
+
+- **GIVEN** the retained canonical sink test exceeds the current function-length warning threshold
+- **WHEN** its existing sink-source selection and C-source assembly move into bounded private helpers in the same module
+- **THEN** the real public Radon runner SHALL complete without a scoped function-length warning or error
+- **AND** inlining the helpers SHALL reconstruct the entire original module AST, including all literal bytes, conditions, native-source paths, flags, deadlines, assertions and the two original parametrized test identities
+- **AND** all ten compiled cases SHALL execute in mandatory Full/SMART/Linux/all three macOS host contexts, without changed runtime, workflow, admission, lifecycle, threshold, shell/compiler capsule content or installed acceptance claims

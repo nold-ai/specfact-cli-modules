@@ -319,3 +319,17 @@ def test_pytest_failure_fixture_has_no_nesting_warning() -> None:
         for finding in findings
         if finding.line == callback.lineno and finding.rule in {"kiss.nesting.warning", "kiss.nesting.error"}
     ]
+
+
+def test_canonical_allocation_proof_functions_have_no_function_length_warning() -> None:
+    """Retain compiled controls while bounding their existing source construction."""
+    source = Path(__file__).resolve().parents[4] / "tests/native/proof_native_canonical_path.py"
+    definitions = [node for node in ast.parse(source.read_text()).body if isinstance(node, ast.FunctionDef)]
+    findings = run_radon([source])
+    assert not [finding for finding in findings if finding.category == "tool_error"]
+    assert not [
+        finding
+        for finding in findings
+        if finding.line in {node.lineno for node in definitions}
+        and finding.rule in {"kiss.loc.warning", "kiss.loc.error"}
+    ]
