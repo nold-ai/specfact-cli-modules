@@ -809,32 +809,35 @@ def _assert_shared_package_overlay(overlay, paths, ownership):
 def _mutate_distribution_ownership(record, foreign_record, ownership, installed, generated_name):
     site = record.parent.parent
     package = installed.relative_to(site).as_posix()
-    if ownership == "same_owner":
-        record.write_text(
-            record.read_text(encoding="utf-8") + foreign_record.read_text(encoding="utf-8"), encoding="utf-8"
-        )
-        foreign_record.unlink()
-    elif ownership == "outside_script":
-        record.write_text(
-            record.read_text(encoding="utf-8") + "../../../bin/tool.py,,\n/opt/external/tool.py,,\n", encoding="utf-8"
-        )
-    if ownership == "missing":
-        record.unlink()
-    elif ownership == "unrecorded_generated":
-        record.write_text(
-            "".join(
-                line
-                for line in record.read_text(encoding="utf-8").splitlines(keepends=True)
-                if generated_name not in line
-            ),
-            encoding="utf-8",
-        )
-    elif ownership == "ambiguous":
-        _write_native_distribution_record(site, "duplicate", [f"{package}/{generated_name}"])
-    elif ownership == "changed_digest":
-        (installed / generated_name).write_bytes(b"VERSION='changed after record'\n")
-    elif ownership == "malformed":
-        record.write_text("malformed,record\n", encoding="utf-8")
+    match ownership:
+        case _ if ownership == "same_owner":
+            record.write_text(
+                record.read_text(encoding="utf-8") + foreign_record.read_text(encoding="utf-8"), encoding="utf-8"
+            )
+            foreign_record.unlink()
+        case _ if ownership == "outside_script":
+            record.write_text(
+                record.read_text(encoding="utf-8") + "../../../bin/tool.py,,\n/opt/external/tool.py,,\n",
+                encoding="utf-8",
+            )
+    match ownership:
+        case _ if ownership == "missing":
+            record.unlink()
+        case _ if ownership == "unrecorded_generated":
+            record.write_text(
+                "".join(
+                    line
+                    for line in record.read_text(encoding="utf-8").splitlines(keepends=True)
+                    if generated_name not in line
+                ),
+                encoding="utf-8",
+            )
+        case _ if ownership == "ambiguous":
+            _write_native_distribution_record(site, "duplicate", [f"{package}/{generated_name}"])
+        case _ if ownership == "changed_digest":
+            (installed / generated_name).write_bytes(b"VERSION='changed after record'\n")
+        case _ if ownership == "malformed":
+            record.write_text("malformed,record\n", encoding="utf-8")
 
 
 @pytest.mark.parametrize("ancestor", ["customer", "customer/sub"])

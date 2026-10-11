@@ -280,3 +280,22 @@ def test_host_deferral_mutation_proofs_have_no_nesting_warning(function_name: st
         for finding in findings
         if finding.line == definition.lineno and finding.rule in {"kiss.nesting.warning", "kiss.nesting.error"}
     ]
+
+
+def test_distribution_ownership_mutation_has_no_nesting_warning() -> None:
+    """Exercise actual KISS policy while retaining every ownership mutation."""
+    source = (
+        Path(__file__).resolve().parents[4] / "tests/unit/specfact_code_review/run/test_native_project_inventory.py"
+    )
+    definition = next(
+        node
+        for node in ast.parse(source.read_text()).body
+        if getattr(node, "name", None) == "_mutate_distribution_ownership"
+    )
+    findings = run_radon([source])
+    assert not [finding for finding in findings if finding.category == "tool_error"]
+    assert not [
+        finding
+        for finding in findings
+        if finding.line == definition.lineno and finding.rule in {"kiss.nesting.warning", "kiss.nesting.error"}
+    ]

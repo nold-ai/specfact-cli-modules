@@ -1563,3 +1563,11 @@ The required consumer remains blocking for failed/skipped customer review; no ho
 - **THEN** it SHALL compare detector execution, reusable caller and review, quality consumers and root execution against the same resolved integrated dev tip used for checker authority, never the historical merge base
 - **AND** a stale indexed contract SHALL reject deferral, while an index matching current dev remains eligible even before branch integration
 - **AND** candidate paths SHALL still be computed from the merge base; pinned bootstrap authority, isolated interpreter, complete scheduling, every original proof and mandatory exact-head Linux review SHALL remain unchanged
+
+
+#### Scenario: Distribution ownership proof mutation dispatch remains flat and exact
+
+- **GIVEN** unchanged production KISS policy flags nesting in the retained native distribution-ownership mutation helper
+- **WHEN** its two independent mutation chains use flat guarded dispatch
+- **THEN** every original condition, branch body, evaluation order and no-match behavior SHALL be recoverable exactly, with the whole original module AST and all tests, assertions, arguments, decorators and parametrized identities retained
+- **AND** valid and negative distribution RECORD/ownership/source precedence proofs SHALL remain mandatory in Full/SMART and native contexts, without changing runtime, analyzer policy, thresholds, deadlines, checker authority or admission contracts
