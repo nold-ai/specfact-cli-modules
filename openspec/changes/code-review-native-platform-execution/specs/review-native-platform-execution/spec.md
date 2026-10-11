@@ -1480,3 +1480,11 @@ The required consumer remains blocking for failed/skipped customer review; no ho
 - **WHEN** adjacent literal formatting bounds those source lines
 - **THEN** the same Pylint policy SHALL no longer report those line-length findings, while complete generated program bytes, every original assertion, test name and parametrization remain identical
 - **AND** all ten canonical allocation/admission proofs and required isolated reviewer fixtures SHALL still execute in their existing mandatory host contexts, without a compiler or shell added to the sealed capsule or any deadline, policy or failure propagation change
+
+
+#### Scenario: Native preparation and process proofs retain explicit call semantics
+
+- **GIVEN** unchanged production Pylint reports an overlong preparation fixture literal, a redundant constructor forwarding lambda and implicit subprocess failure handling in the current native PID observation proof
+- **WHEN** the literal is bounded without changing its bytes, the existing constructor is bound directly and PID observation explicitly keeps non-raising return-code handling
+- **THEN** those scoped quality findings SHALL disappear without changing any test identity, assertion, generated program, lifecycle deadline or process admission rule
+- **AND** disappearance of a PID SHALL still admit the existing return code 1 observation; forwarded import-proof subprocess options SHALL retain the caller's explicit check=True setting

@@ -144,7 +144,9 @@ def _line(process: subprocess.Popen[str], timeout: float) -> str:
 
 def _identity(pid: int) -> str | None:
     """Observe a process externally; a reused PID has a different start time."""
-    observed = subprocess.run(["/bin/ps", "-p", str(pid), "-o", "lstart="], capture_output=True, text=True, timeout=2)
+    observed = subprocess.run(
+        ["/bin/ps", "-p", str(pid), "-o", "lstart="], check=False, capture_output=True, text=True, timeout=2
+    )
     assert not observed.stderr, observed.stderr
     assert observed.returncode in (0, 1), observed.returncode
     return observed.stdout.strip() or None

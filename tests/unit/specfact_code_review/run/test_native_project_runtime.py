@@ -141,7 +141,8 @@ def test_hatch_prepares_an_unfamiliar_environment_without_project_catalog(
     project = tmp_path / "project"
     project.mkdir()
     (project / "pyproject.toml").write_text(
-        '[project]\nname="unfamiliar"\nversion="1"\n[tool.hatch.envs.review]\nskip-install=true\ndependencies=["idna==3.10"]\n',
+        '[project]\nname="unfamiliar"\nversion="1"\n[tool.hatch.envs.review]\n'
+        'skip-install=true\ndependencies=["idna==3.10"]\n',
         encoding="utf-8",
     )
     plan = discover_project(project)
@@ -446,9 +447,7 @@ def test_malformed_failure_receipt_preserves_incomplete_diagnostic(monkeypatch, 
     inputs = tmp_path / "inputs"
     inputs.mkdir()
     (inputs / "request.json").write_text("{}", encoding="utf-8")
-    monkeypatch.setattr(
-        native_project_runtime.native_execution, "prepare_native_execution", lambda **kwargs: SimpleNamespace(**kwargs)
-    )
+    monkeypatch.setattr(native_project_runtime.native_execution, "prepare_native_execution", SimpleNamespace)
     monkeypatch.setattr(native_project_runtime.native_execution, "BinaryNativeExecutionTransport", lambda lease: lease)
 
     class FailedSession:
