@@ -53,18 +53,33 @@ def _digest(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def _binding(root: Path, normal_hook: Path) -> dict[str, str]:
+def _interpreter_binding(root: Path, interpreter: Path) -> dict[str, str]:
+    caller = root / ".venv/bin/python"
+    interpreter = interpreter.absolute()
+    if interpreter.is_relative_to(root) or interpreter.resolve().is_relative_to(root):
+        raise ValueError("Owner entry interpreter must be outside the candidate checkout")
+    if not os.access(caller, os.X_OK) or not os.access(interpreter, os.X_OK):
+        raise ValueError("Owner-installed interpreters are required")
+    return {
+        "interpreter": str(interpreter),
+        "interpreter_target": str(interpreter.resolve(strict=True)),
+        "interpreter_digest": _digest(interpreter),
+        "caller_interpreter_target": str(caller.resolve(strict=True)),
+        "caller_interpreter_digest": _digest(caller),
+    }
+
+
+def _binding(root: Path, normal_hook: Path, interpreter: Path) -> dict[str, str]:
     branch = _git(root, "symbolic-ref", "--short", "HEAD")
     if branch in {"dev", "main"} or not (root / ".git").is_file():
         raise ValueError("Owner entry requires a non-protected linked worktree")
-    interpreter = root / ".venv/bin/python"
-    if not os.access(interpreter, os.X_OK) or not os.access(normal_hook, os.X_OK):
+    if not os.access(normal_hook, os.X_OK):
         raise ValueError("Owner-installed interpreter and existing normal hook are required")
     return {
         "root": str(root),
         "gitdir": _git(root, "rev-parse", "--absolute-git-dir"),
         "branch": branch,
-        "interpreter": str(interpreter),
+        **_interpreter_binding(root, interpreter),
         "normal_hook": str(normal_hook),
         "normal_digest": _digest(normal_hook),
         "normal_config_digest": _digest(root / ".pre-commit-config.yaml")
@@ -73,12 +88,12 @@ def _binding(root: Path, normal_hook: Path) -> dict[str, str]:
     }
 
 
-def install(root: Path, destination: Path, normal_hook: Path) -> None:
+def install(root: Path, destination: Path, normal_hook: Path, interpreter: Path) -> None:
     """Freeze reviewed entry bytes and bindings; never change shared hooks/config."""
     root, destination, normal_hook = root.resolve(), destination.resolve(), normal_hook.resolve()
     if destination.is_relative_to(root):
         raise ValueError("Owner entry must be installed outside the candidate checkout")
-    binding = _binding(root, normal_hook)
+    binding = _binding(root, normal_hook, interpreter)
     destination.mkdir(mode=0o700)
     entry = destination / "owner_commit_entry.py"
     shutil.copyfile(Path(__file__).resolve(), entry)
@@ -100,7 +115,7 @@ def install(root: Path, destination: Path, normal_hook: Path) -> None:
 def _validate_binding(binding: dict[str, str]) -> Path:
     root = Path(binding["root"])
     actual_root = Path(_git(Path.cwd(), "rev-parse", "--show-toplevel")).resolve()
-    if actual_root != root or _binding(root, Path(binding["normal_hook"])) != binding:
+    if actual_root != root or _binding(root, Path(binding["normal_hook"]), Path(binding["interpreter"])) != binding:
         raise ValueError("Owner commit entry caller/interpreter/hook binding changed")
     return root
 
@@ -177,13 +192,14 @@ def main() -> int:
     installer.add_argument("worktree", type=Path)
     installer.add_argument("destination", type=Path)
     installer.add_argument("normal_hook", type=Path)
+    installer.add_argument("--interpreter", type=Path, default=Path(sys.executable))
     checker = commands.add_parser("check")
     checker.add_argument("config", type=Path)
     checker.add_argument("hook_arguments", nargs="*")
     arguments = parser.parse_args()
     try:
         if arguments.command == "install":
-            install(arguments.worktree, arguments.destination, arguments.normal_hook)
+            install(arguments.worktree, arguments.destination, arguments.normal_hook, arguments.interpreter)
             return 0
         return enforce(arguments.config, arguments.hook_arguments)
     except (OSError, ValueError, KeyError, subprocess.CalledProcessError) as error:

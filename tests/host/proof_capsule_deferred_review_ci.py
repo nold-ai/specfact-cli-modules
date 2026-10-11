@@ -276,21 +276,7 @@ def test_local_deferral_rejects_unscheduled_indexed_customer_review(tmp_path: Pa
     }
     if mutation in replacements:
         source = source.replace(*replacements[mutation])
-    match mutation:
-        case "self_trigger":
-            # Only the orchestrator qualifies; unrelated code cannot schedule review.
-            _git(worktree, "reset", "HEAD", "tests/native/proof_macos_native_broker_wait.py")
-            unrelated = worktree / "tools/unrelated.py"
-            unrelated.parent.mkdir()
-            unrelated.write_text("value = 1\n", encoding="utf-8")
-        case "missing_job":
-            start = source.index("\n  customer-capsules:")
-            end = source.index("\n  quality:", start)
-            source = source[:start] + source[end:]
-        case "decoy_rule":
-            source += '\n# - "tests/native/**"\n'
-        case "malformed":
-            source = "jobs: [unterminated"
+    source = _indexed_customer_source_variant(worktree, source, mutation)
     path.write_text(source, encoding="utf-8")
     _git(worktree, "add", ".")
     calls = tmp_path / "calls"
@@ -481,20 +467,7 @@ def test_deferral_requires_integrated_review_execution_contract(tmp_path: Path, 
         "independent_echo": ("independent-review", "independent_review"),
         "early_exit": ("customer", "deferred_review"),
     }
-    match mutation:
-        case _ if mutation in commands:
-            job_name, identity = commands[mutation]
-            job = document["jobs"][job_name]
-            step = next(step for step in job["steps"] if step.get("id") == identity)
-            step["run"] = "exit 0\n" + step["run"] if mutation == "early_exit" else "echo skipped"
-        case "literal_true":
-            document[True] = document.pop("on")
-        case "excluded_cp312":
-            customer["strategy"]["matrix"]["exclude"] = [{"python": "3.12"}]
-        case "nonlinux":
-            customer["runs-on"] = "macos-14"
-        case _:
-            document["env"] = {"SPECFACT_CODE_REVIEW_ENFORCEMENT": "none"}
+    _mutate_reusable_review_execution(document, customer, commands, mutation)
     path.write_text(yaml.safe_dump(document, sort_keys=False), encoding="utf-8")
     _git(worktree, "add", ".")
     _assert_local_deferral(worktree, tmp_path / "calls", 1)
@@ -564,20 +537,7 @@ def test_deferral_requires_integrated_change_detector_execution(tmp_path: Path, 
         "missing_dependency": {"needs": ["absent_precheck"]},
         "empty_matrix": {"strategy": {"matrix": {"include": []}}},
     }
-    match mutation:
-        case _ if mutation in updates:
-            changes.update(updates[mutation])
-        case "missing_runner":
-            changes.pop("runs-on")
-        case "conditional_dependency":
-            changes["needs"] = ["precheck"]
-            document["jobs"]["precheck"] = {"runs-on": "ubuntu-latest", "if": False, "steps": [{"run": "exit 0"}]}
-        case "skip_checkout":
-            changes["steps"][0]["if"] = False
-        case "wrong_checkout_ref":
-            changes["steps"][0]["with"]["ref"] = "unrelated-source"
-        case _:
-            _mutate_detector_filter(changes, mutation)
+    _mutate_detector_execution(document, changes, updates, mutation)
     path.write_text(yaml.safe_dump(document, sort_keys=False), encoding="utf-8")
     _git(worktree, "add", ".")
     _assert_local_deferral(worktree, tmp_path / "calls", 1)
@@ -882,17 +842,7 @@ def _advance_deferral_workflow_contract(tmp_path: Path, mutation: str) -> Path:
     document = yaml.safe_load(path.read_text(encoding="utf-8"))
     document["on"] = document.pop(True)
     enforcement = {"SPECFACT_CODE_REVIEW_ENFORCEMENT": "full"}
-    match mutation:
-        case "detector":
-            document["jobs"]["changes"]["env"] = enforcement
-        case "caller":
-            document["jobs"]["customer-capsules"]["secrets"] = "inherit"
-        case "reusable":
-            document["jobs"]["independent-review"]["env"] = enforcement
-        case "quality":
-            document["jobs"]["quality"]["env"] = enforcement
-        case "root_environment":
-            document["env"] = enforcement
+    _mutate_advanced_dev_contract(document, enforcement, mutation)
     path.write_text(yaml.safe_dump(document, sort_keys=False), encoding="utf-8")
     _git(repository, "add", str(path))
     _git(repository, "-c", "core.hooksPath=/dev/null", "commit", "-qm", "fixture current integrated workflow contract")
@@ -1139,3 +1089,148 @@ def _assert_owner_entry_commit(
         assert result.returncode != 0, result.stdout + result.stderr
         assert _git(worktree, "rev-parse", "HEAD") == before
         assert marker.exists() == (case in {"post-index", "normal-failure"})
+
+
+def _indexed_customer_source_variant(worktree: Path, source: str, mutation: str) -> str:
+    if mutation == "self_trigger":
+        # Only the orchestrator qualifies; unrelated code cannot schedule review.
+        _git(worktree, "reset", "HEAD", "tests/native/proof_macos_native_broker_wait.py")
+        unrelated = worktree / "tools/unrelated.py"
+        unrelated.parent.mkdir()
+        unrelated.write_text("value = 1\n", encoding="utf-8")
+        return source
+    if mutation == "missing_job":
+        start = source.index("\n  customer-capsules:")
+        end = source.index("\n  quality:", start)
+        return source[:start] + source[end:]
+    if mutation == "decoy_rule":
+        source += '\n# - "tests/native/**"\n'
+        return source
+    if mutation == "malformed":
+        return "jobs: [unterminated"
+    return source
+
+
+def _mutate_reusable_review_execution(document: dict, customer: dict, commands: dict, mutation: str) -> None:
+    if mutation in commands:
+        job_name, identity = commands[mutation]
+        job = document["jobs"][job_name]
+        step = next(step for step in job["steps"] if step.get("id") == identity)
+        step["run"] = "exit 0\n" + step["run"] if mutation == "early_exit" else "echo skipped"
+        return
+    if mutation == "literal_true":
+        document[True] = document.pop("on")
+        return
+    if mutation == "excluded_cp312":
+        customer["strategy"]["matrix"]["exclude"] = [{"python": "3.12"}]
+        return
+    if mutation == "nonlinux":
+        customer["runs-on"] = "macos-14"
+        return
+    document["env"] = {"SPECFACT_CODE_REVIEW_ENFORCEMENT": "none"}
+
+
+def _mutate_detector_execution(document: dict, changes: dict, updates: dict, mutation: str) -> None:
+    if mutation in updates:
+        changes.update(updates[mutation])
+        return
+    if mutation == "missing_runner":
+        changes.pop("runs-on")
+        return
+    if mutation == "conditional_dependency":
+        changes["needs"] = ["precheck"]
+        document["jobs"]["precheck"] = {"runs-on": "ubuntu-latest", "if": False, "steps": [{"run": "exit 0"}]}
+        return
+    if mutation == "skip_checkout":
+        changes["steps"][0]["if"] = False
+        return
+    if mutation == "wrong_checkout_ref":
+        changes["steps"][0]["with"]["ref"] = "unrelated-source"
+        return
+    _mutate_detector_filter(changes, mutation)
+
+
+def _mutate_advanced_dev_contract(document: dict, enforcement: dict, mutation: str) -> None:
+    if mutation == "detector":
+        document["jobs"]["changes"]["env"] = enforcement
+        return
+    if mutation == "caller":
+        document["jobs"]["customer-capsules"]["secrets"] = "inherit"
+        return
+    if mutation == "reusable":
+        document["jobs"]["independent-review"]["env"] = enforcement
+        return
+    if mutation == "quality":
+        document["jobs"]["quality"]["env"] = enforcement
+        return
+    if mutation == "root_environment":
+        document["env"] = enforcement
+        return
+
+
+@pytest.mark.parametrize("phase", ["before", "during"])
+def test_owner_entry_rejects_candidate_interpreter_replacement(tmp_path: Path, phase: str) -> None:
+    worktree = deferral_worktree(
+        tmp_path,
+        ("Darwin", "", "github-linux", "tests/native/proof_macos_native_broker_wait.py", False, True, 0),
+    )
+    interpreter = worktree / ".venv/bin/python"
+    marker, normal_marker = tmp_path / "replacement-ran", tmp_path / "normal-ran"
+    replacement = tmp_path / "replacement-python"
+    replacement.write_text("#!/bin/sh\ntouch " + shlex.quote(str(marker)) + "\nexit 0\n")
+    replacement.chmod(0o700)
+    workflow = ".github/workflows/pr-orchestrator.yml"
+    disabled = tmp_path / "disabled-workflow"
+    disabled.write_text(
+        (worktree / workflow).read_text().replace("  customer-capsules:\n", "  customer-capsules:\n    if: false\n", 1)
+    )
+    replace = (
+        f"rm {shlex.quote(str(worktree / '.venv'))}\n"
+        f"mkdir -p {shlex.quote(str(interpreter.parent))}\n"
+        f"cp {shlex.quote(str(replacement))} {shlex.quote(str(interpreter))}\n"
+    )
+    mutation = (
+        f"blob=$(git hash-object -w {shlex.quote(str(disabled))})\n"
+        f"git update-index --cacheinfo 100644,$blob,{workflow}\n" + replace
+    )
+    normal = tmp_path / "normal-pre-commit"
+    normal.write_text(
+        "#!/bin/bash\nset -eu\ntouch "
+        + shlex.quote(str(normal_marker))
+        + "\n"
+        + (mutation if phase == "during" else "")
+    )
+    normal.chmod(0o700)
+    hooks = tmp_path / "owner-entry"
+    subprocess.run(
+        [
+            sys.executable,
+            "-I",
+            str(REPO_ROOT / "scripts/owner_commit_entry.py"),
+            "install",
+            str(worktree),
+            str(hooks),
+            str(normal),
+        ],
+        check=True,
+        capture_output=True,
+    )
+    if phase == "before":
+        (worktree / workflow).write_text(disabled.read_text())
+        (worktree / ".venv").unlink()
+        interpreter.parent.mkdir(parents=True)
+        interpreter.write_bytes(replacement.read_bytes())
+        interpreter.chmod(0o700)
+    _git(worktree, "add", ".")
+    before = _git(worktree, "rev-parse", "HEAD")
+    result = subprocess.run(
+        ["git", "-c", f"core.hooksPath={hooks}", "commit", "-qm", "fixture interpreter"],
+        cwd=worktree,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode != 0, result.stdout + result.stderr
+    assert not marker.exists()
+    assert normal_marker.exists() == (phase == "during")
+    assert _git(worktree, "rev-parse", "HEAD") == before

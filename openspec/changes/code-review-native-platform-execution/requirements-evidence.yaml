@@ -968,3 +968,34 @@ requirements:
       method: test
       intent: Reject independently reproduced dispatcher bypass and final-index mutation while retaining normal hooks and approved authority.
       observable: Real isolated Git commits exercise candidate-dispatcher removal, disabled scheduling, normal-hook failure, post-hook indexed mutation and caller binding; valid commits execute existing normal pre-commit before independent final validation. External installation is invocation-scoped and does not modify shared hooks/config; hosted and installed native acceptance remain separate. Three genuine Git REDs precede15real commit controls; one real public Radon RED precedes exact fixture-helper preservation. Final focused16PASS, Full201host+5778portable and separateSMART201host+5778portable PASS; original71skips95subtests5warnings retained; actual external-entry normal hooks PASS.
+
+
+  openspec:code-review-native-platform-execution:review-native-platform-execution:pinned-parser-compatible-native-proof-construction:
+    rationale: Remove independently reproduced pinned parser failures without weakening retained proof behavior or analyzer policy.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#460
+    touchpoints:
+    - id: pinned-parser-proof-spec
+      kind: config_file
+      locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
+    verification_cases:
+    - case_id: 460-25-1
+      scenario_id: pinned-parser-compatible-native-proof-construction
+      method: test
+      intent: Parse all three complete retained modules with actual Semgrep1.144.0 in both original packs while retaining every fixture predicate/assertion and KISS gate.
+      observable: Independent real pinned-parser REDs precede guard/helper correction; whole original ASTs reconstruct under reversal, and original native preparation/ownership/artifact remedies remain. Local evidence never waives original incomplete diagnostics or establishes new hosted/installed acceptance.
+
+  openspec:code-review-native-platform-execution:review-native-platform-execution:owner-entry-interpreter-identity:
+    rationale: Bind the approved external entry to existing owner-installed interpreter bytes outside candidate control.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#460
+    touchpoints:
+    - id: owner-interpreter-spec
+      kind: config_file
+      locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
+    verification_cases:
+    - case_id: 460-26-1
+      scenario_id: owner-entry-interpreter-identity
+      method: test
+      intent: Reject candidate interpreter replacement before and during normal hooks without executing replacement bytes.
+      observable: Two genuine real Git bypass REDs precede interpreter path/target/byte binding; both reject after correction, while valid dispatcher and complete-history controls remain. The owner-installed external runtime is existing trusted tooling, not a new checker authority or hostile-code containment claim.

@@ -1619,3 +1619,23 @@ The approved monitor workflow SHALL execute independently installed scheduling e
 - **AND** installed invocation evidence SHALL remain separate from hosted review, arbitrary commit paths and independent installed native acceptance
 
 - **AND** new real-commit fixtures and their helpers SHALL satisfy the unchanged public Radon complexity and KISS policies while retaining every control assertion
+
+
+### Requirement: Pinned parser compatible native proof construction
+
+Native proof construction SHALL parse completely with the unchanged Semgrep1.144.0 while retaining all original predicates, branch order/bodies/fallback, test identities/arguments/decorators/assertions and unchanged KISS policy.
+
+#### Scenario: Complete original proof modules parse with the pinned analyzer
+- **GIVEN** actual Semgrep1.144.0 reports syntax errors in the three retained host/ownership/pytest proof modules
+- **WHEN** match-case mutation phases use bounded direct helpers and equivalent ordered guard branches
+- **THEN** both complete clean-code and bug rule-pack scans SHALL report no structured parser error on those complete modules
+- **AND** reversing only the branch/helper transformation SHALL reconstruct each original whole-module AST; Full/SMART/native obligations, analyzer versions, policy thresholds and every existing test case remain
+- **AND** local parser evidence SHALL remain separate from original private CI diagnostics and new exact-head hosted acceptance; other findings remain unwaived
+
+### Requirement: Owner entry interpreter identity
+The invocation-scoped owner entry SHALL resolve the existing owner-installed interpreter outside the candidate worktree, bind its executable bytes, and use that resolved path for entry and checker execution. Replacing the candidate worktree interpreter before or during normal hooks SHALL reject without executing replacement bytes. Shared hooks/config and approved checker authority remain unchanged.
+
+#### Scenario: Candidate interpreter replacement cannot bypass owner enforcement
+- **GIVEN** an installed owner entry and a candidate dispatcher capable of replacing its worktree interpreter
+- **WHEN** replacement occurs before entry or after valid pre-hook validation and the scheduler is disabled
+- **THEN** real Git commit rejects, replacement markers stay absent, and the original HEAD remains

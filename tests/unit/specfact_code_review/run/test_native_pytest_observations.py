@@ -254,21 +254,7 @@ def test_native_pytest_failure_reaches_real_evaluator_with_incomplete_remedy(tmp
         paths[2].write_text(
             '<testsuite><testcase classname="tests.test_value" name="test_value"/></testsuite>', encoding="utf-8"
         )
-        match failure:
-            case _ if failure in {"usage", "missing-coverage"}:
-                paths[0].unlink()
-            case _ if failure == "malformed-coverage":
-                paths[0].write_text("[]", encoding="utf-8")
-            case _ if failure.startswith("deep-"):
-                paths[0 if failure == "deep-coverage" else 1].write_text(
-                    "[" * 2000 + "0" + "]" * 2000, encoding="utf-8"
-                )
-            case _ if failure == "missing-directory":
-                for path in paths:
-                    path.unlink()
-                paths[0].parent.rmdir()
-            case _:
-                paths[1].unlink()
+        _write_pytest_failure_artifacts(paths, failure)
         return subprocess.CompletedProcess([], 4 if failure == "usage" else 0, "", ""), *paths
 
     def evaluate(*_args, **_kwargs):
@@ -468,3 +454,21 @@ def test_completed_worker_publishes_bounded_unknown_for_combined_evidence(
     assert json.loads(result.read_text(encoding="utf-8")) == native_worker._unknown_response(
         "targeted-pytest-coverage", "native_worker_result_size_exceeded"
     )
+
+
+def _write_pytest_failure_artifacts(paths: tuple[Path, Path, Path], failure: str) -> None:
+    if failure in {"usage", "missing-coverage"}:
+        paths[0].unlink()
+        return
+    if failure == "malformed-coverage":
+        paths[0].write_text("[]", encoding="utf-8")
+        return
+    if failure.startswith("deep-"):
+        paths[0 if failure == "deep-coverage" else 1].write_text("[" * 2000 + "0" + "]" * 2000, encoding="utf-8")
+        return
+    if failure == "missing-directory":
+        for path in paths:
+            path.unlink()
+        paths[0].parent.rmdir()
+        return
+    paths[1].unlink()
