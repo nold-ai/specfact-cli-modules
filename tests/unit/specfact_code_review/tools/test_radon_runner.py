@@ -9,7 +9,7 @@ from unittest.mock import Mock
 import pytest
 from pytest import MonkeyPatch
 
-from specfact_code_review.tools.radon_runner import _kiss_metric_findings, run_radon
+from specfact_code_review.tools.radon_runner import run_radon
 from tests.unit.specfact_code_review.tools.helpers import assert_tool_run, completed_process, create_noisy_file
 
 
@@ -273,7 +273,8 @@ def test_host_deferral_mutation_proofs_have_no_nesting_warning(function_name: st
     definition = next(
         node for node in ast.parse(source.read_text()).body if getattr(node, "name", None) == function_name
     )
-    findings = _kiss_metric_findings(source)
+    findings = run_radon([source])
+    assert not [finding for finding in findings if finding.category == "tool_error"]
     assert not [
         finding
         for finding in findings

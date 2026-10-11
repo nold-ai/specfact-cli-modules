@@ -258,3 +258,8 @@ An independently reproduced candidate `python` Hatch alias can return zero witho
 ### Host mutation-proof nesting correction (11 October 2026)
 
 The actual finite candidate identifies three long if/elif mutation selectors in host deferral proofs. Reuse Python's existing flat match dispatch to retain each mutually exclusive string case, guarded table membership and fallback body directly. A helper table would obscure fixture setup and add callbacks; splitting tests would disturb their parameter identities. This proof-only change retains all admission/assertion behavior and introduces no analyzer or trust-policy changes. Reconstruct each original if chain from match cases and compare the whole original module AST, in addition to the unchanged production policy and all required execution contexts.
+
+
+### Added host policy import collision (11 October 2026)
+
+The top-level KISS producer import added for host nesting controls collides with the existing acquisition test's required deferred import. Remove only the added private import and reuse the already imported public Radon runner in the added caller. Require completed analyzer evidence before inspecting KISS findings. Moving or deleting the old deferred import would change an original test body; changing analyzer policy would hide a genuine finding. The public runner already composes the same KISS producer with actual Radon execution; no wrapper, new import or analyzer policy is required. A private alias still triggers Pylint duplicate-import identity detection and is rejected before final gates. This is within the authorized proof-quality correction and does not attribute unavailable hosted Semgrep syntax diagnostics to this source.

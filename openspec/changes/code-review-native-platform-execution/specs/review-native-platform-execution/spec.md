@@ -1546,3 +1546,11 @@ The required consumer remains blocking for failed/skipped customer review; no ho
 - **WHEN** their mutually exclusive mutation branches use flat scenario dispatch
 - **THEN** every original branch condition and body SHALL be recoverable exactly, with all original assertions, test names, arguments, decorators and parametrized cases retained
 - **AND** production scheduling, pinned authority, isolated interpreter, workflows, signed runtime, thresholds and mandatory Full/SMART/native contexts SHALL remain unchanged
+
+
+#### Scenario: Added host policy imports preserve prior deferred bindings
+
+- **GIVEN** an added host nesting policy test imports the same private KISS producer as an existing deferred acquisition policy test
+- **WHEN** the added test reuses the already imported public Radon runner
+- **THEN** unchanged Pylint SHALL no longer report the introduced duplicate-import collision, while every earlier acquisition/complexity test definition, original assertion, deferred binding and parametrized identity remains exact
+- **AND** the real runner SHALL complete and retain the original production KISS policy producer; no analyzer configuration, runtime, workflow, threshold or scheduling behavior SHALL change
