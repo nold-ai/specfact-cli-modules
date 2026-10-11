@@ -597,6 +597,7 @@ def test_native_worker_and_retained_proofs_have_no_complexity_warning():
         Path(__file__).with_name("test_native_project_runtime.py"),
         root / "tests/unit/test_capsule_proof_contexts.py",
         root / "tests/unit/scripts/test_pre_commit_code_review.py",
+        root / "scripts/pre_commit_code_review.py",
         Path(__file__).with_name("test_portable_snapshot.py"),
     ]
     payload = {str(path): [cc_to_dict(block) for block in cc_visit(path.read_text(encoding="utf-8"))] for path in files}

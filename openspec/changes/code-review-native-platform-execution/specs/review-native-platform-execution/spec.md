@@ -1464,3 +1464,11 @@ The required consumer remains blocking for failed/skipped customer review; no ho
 - **WHEN** the retained production Radon regression covers those proof modules and bounded helpers group their existing assertions
 - **THEN** both actual warning blocks SHALL disappear under unchanged policy, with complete production Radon serialization including nested closures and every original assertion, parametrization and collected case retained
 - **AND** exact report counts, failing verdict/exit propagation, projected pytest argv, full discovery, config-root checks and unavailable-member semantics SHALL remain unchanged, without production runtime, workflow, deadline or assertion weakening
+
+
+#### Scenario: Cached-diff admission retains exact behavior under complexity policy
+
+- **GIVEN** authoritative review reports the cached-diff added-line parser above the unchanged complexity warning threshold
+- **WHEN** the retained production-policy regression covers the script and hunk-range parsing is factored into a bounded helper
+- **THEN** the warning SHALL disappear while header ordering, quoted destination rejection, deleted-file handling, default and zero hunk counts, malformed hunks, file resets and accumulated added-line identities remain exact
+- **AND** existing review inputs, verdict propagation, private execution, deadlines, no-write guarantees and all original assertions SHALL remain, without weakening the policy or silently accepting unavailable diff evidence

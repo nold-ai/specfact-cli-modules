@@ -6,7 +6,7 @@ import subprocess
 from pathlib import Path
 
 import yaml
-from pytest import MonkeyPatch
+from pytest import MonkeyPatch, mark
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -379,3 +379,28 @@ def test_helper_forwards_explicit_project_configuration(monkeypatch: MonkeyPatch
     monkeypatch.setenv("SPECFACT_CODE_REVIEW_PROJECT_CONFIG", str(config))
     command = gate.build_review_command(["app.py"])
     assert command[command.index("--project-config") + 1] == str(config)
+
+
+@mark.parametrize(
+    ("diff_text", "expected"),
+    [
+        ("", {}),
+        ("diff --git a/a.py b/a.py\n+++ b/a.py\n@@ -1 +2 @@", {"a.py": {2}}),
+        ("diff --git a/a.py b/a.py\n+++ b/a.py\n@@ -1 +2,0 @@", {"a.py": set()}),
+        ("diff --git a/a.py b/a.py\n+++ /dev/null\n@@ -1 +0,0 @@", {}),
+        ('diff --git a/a.py b/a.py\n+++ "b/a.py"\n@@ -1 +2 @@', None),
+        ("@@ -1 +2 @@", None),
+        ("diff --git a/a.py b/a.py\n+++ b/a.py\n@@ -1 missing @@", None),
+        ("diff --git a/a.py b/a.py\n+++ b/a.py\n@@ -1 +1 @@\ndiff --git a/b.py b/b.py\n@@ -1 +2 @@", None),
+        ("diff --git a/a.py b/a.py\n+++ b/a.py\t\n@@ -0,0 +0,1 @@", {"a.py": {0}}),
+        (
+            "diff --git a/a.py b/a.py\n+++ b/a.py\n@@ -1 +3,2 @@\ndiff --git a/a.py b/a.py\n+++ b/a.py\n@@ -1 +6 @@",
+            {"a.py": {3, 4, 6}},
+        ),
+    ],
+)
+def test_cached_diff_parser_preserves_admission_boundaries(
+    diff_text: str, expected: dict[str, set[int]] | None
+) -> None:
+    review_gate = _load_pre_commit_code_review_module()
+    assert review_gate._parse_added_lines_from_cached_diff(diff_text) == expected
