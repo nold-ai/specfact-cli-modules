@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 import json
 import subprocess
 from pathlib import Path
@@ -8,7 +9,7 @@ from unittest.mock import Mock
 import pytest
 from pytest import MonkeyPatch
 
-from specfact_code_review.tools.radon_runner import run_radon
+from specfact_code_review.tools.radon_runner import _kiss_metric_findings, run_radon
 from tests.unit.specfact_code_review.tools.helpers import assert_tool_run, completed_process, create_noisy_file
 
 
@@ -256,3 +257,25 @@ def test_native_acquisition_fixture_has_no_function_length_warning() -> None:
     findings = _kiss_metric_findings(fixture)
 
     assert not [finding for finding in findings if finding.rule == "kiss.loc.warning"]
+
+
+@pytest.mark.parametrize(
+    "function_name",
+    [
+        "test_local_deferral_rejects_unscheduled_indexed_customer_review",
+        "test_deferral_requires_integrated_review_execution_contract",
+        "test_deferral_requires_integrated_change_detector_execution",
+    ],
+)
+def test_host_deferral_mutation_proofs_have_no_nesting_warning(function_name: str) -> None:
+    """Apply actual KISS policy without changing any host mutation scenario."""
+    source = Path(__file__).resolve().parents[4] / "tests/host/proof_capsule_deferred_review_ci.py"
+    definition = next(
+        node for node in ast.parse(source.read_text()).body if getattr(node, "name", None) == function_name
+    )
+    findings = _kiss_metric_findings(source)
+    assert not [
+        finding
+        for finding in findings
+        if finding.line == definition.lineno and finding.rule in {"kiss.nesting.warning", "kiss.nesting.error"}
+    ]

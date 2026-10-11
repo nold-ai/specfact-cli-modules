@@ -253,3 +253,8 @@ The owner explicitly authorized the immutable checker from c65a41e61a6b4e61e8dd2
 ### Deferral executor correction (11 October 2026)
 
 An independently reproduced candidate `python` Hatch alias can return zero without running the pinned checker. Use the existing owner-installed repository `.venv/bin/python` directly with isolated Python startup, rather than resolving it through candidate Hatch scripts or environment configuration. This reuses the integrated default environment path and dependencies without creating another environment or granting a new checker authority. Missing interpreter fails closed. The existing developer-owned local tooling environment remains trusted; this correction does not claim containment against replacement of installed host executables or site packages. Real Hatch alias probes must reject a missing caller and retain valid scheduling without executing the alias.
+
+
+### Host mutation-proof nesting correction (11 October 2026)
+
+The actual finite candidate identifies three long if/elif mutation selectors in host deferral proofs. Reuse Python's existing flat match dispatch to retain each mutually exclusive string case, guarded table membership and fallback body directly. A helper table would obscure fixture setup and add callbacks; splitting tests would disturb their parameter identities. This proof-only change retains all admission/assertion behavior and introduces no analyzer or trust-policy changes. Reconstruct each original if chain from match cases and compare the whole original module AST, in addition to the unchanged production policy and all required execution contexts.

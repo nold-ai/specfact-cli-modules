@@ -1538,3 +1538,11 @@ The required consumer remains blocking for failed/skipped customer review; no ho
 - **THEN** it SHALL invoke the existing repository `.venv/bin/python` directly with `-I`, without dispatch through candidate Hatch scripts or environment configuration
 - **AND** missing interpreter or validator failure SHALL reject deferral; an effective unchanged caller SHALL remain eligible, and candidate aliases SHALL never execute
 - **AND** checker authority, private temporary cleanup, complete index scheduling, ordinary hooks and mandatory exact-head Linux review SHALL remain unchanged
+
+
+#### Scenario: Host deferral mutation proofs retain flat scenario dispatch
+
+- **GIVEN** unchanged production KISS policy flags nesting in the three host deferral workflow mutation proofs
+- **WHEN** their mutually exclusive mutation branches use flat scenario dispatch
+- **THEN** every original branch condition and body SHALL be recoverable exactly, with all original assertions, test names, arguments, decorators and parametrized cases retained
+- **AND** production scheduling, pinned authority, isolated interpreter, workflows, signed runtime, thresholds and mandatory Full/SMART/native contexts SHALL remain unchanged

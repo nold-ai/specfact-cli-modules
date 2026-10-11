@@ -276,20 +276,21 @@ def test_local_deferral_rejects_unscheduled_indexed_customer_review(tmp_path: Pa
     }
     if mutation in replacements:
         source = source.replace(*replacements[mutation])
-    if mutation == "self_trigger":
-        # Only the orchestrator qualifies; unrelated code cannot schedule review.
-        _git(worktree, "reset", "HEAD", "tests/native/proof_macos_native_broker_wait.py")
-        unrelated = worktree / "tools/unrelated.py"
-        unrelated.parent.mkdir()
-        unrelated.write_text("value = 1\n", encoding="utf-8")
-    elif mutation == "missing_job":
-        start = source.index("\n  customer-capsules:")
-        end = source.index("\n  quality:", start)
-        source = source[:start] + source[end:]
-    elif mutation == "decoy_rule":
-        source += '\n# - "tests/native/**"\n'
-    elif mutation == "malformed":
-        source = "jobs: [unterminated"
+    match mutation:
+        case "self_trigger":
+            # Only the orchestrator qualifies; unrelated code cannot schedule review.
+            _git(worktree, "reset", "HEAD", "tests/native/proof_macos_native_broker_wait.py")
+            unrelated = worktree / "tools/unrelated.py"
+            unrelated.parent.mkdir()
+            unrelated.write_text("value = 1\n", encoding="utf-8")
+        case "missing_job":
+            start = source.index("\n  customer-capsules:")
+            end = source.index("\n  quality:", start)
+            source = source[:start] + source[end:]
+        case "decoy_rule":
+            source += '\n# - "tests/native/**"\n'
+        case "malformed":
+            source = "jobs: [unterminated"
     path.write_text(source, encoding="utf-8")
     _git(worktree, "add", ".")
     calls = tmp_path / "calls"
@@ -480,19 +481,20 @@ def test_deferral_requires_integrated_review_execution_contract(tmp_path: Path, 
         "independent_echo": ("independent-review", "independent_review"),
         "early_exit": ("customer", "deferred_review"),
     }
-    if mutation in commands:
-        job_name, identity = commands[mutation]
-        job = document["jobs"][job_name]
-        step = next(step for step in job["steps"] if step.get("id") == identity)
-        step["run"] = "exit 0\n" + step["run"] if mutation == "early_exit" else "echo skipped"
-    elif mutation == "literal_true":
-        document[True] = document.pop("on")
-    elif mutation == "excluded_cp312":
-        customer["strategy"]["matrix"]["exclude"] = [{"python": "3.12"}]
-    elif mutation == "nonlinux":
-        customer["runs-on"] = "macos-14"
-    else:
-        document["env"] = {"SPECFACT_CODE_REVIEW_ENFORCEMENT": "none"}
+    match mutation:
+        case _ if mutation in commands:
+            job_name, identity = commands[mutation]
+            job = document["jobs"][job_name]
+            step = next(step for step in job["steps"] if step.get("id") == identity)
+            step["run"] = "exit 0\n" + step["run"] if mutation == "early_exit" else "echo skipped"
+        case "literal_true":
+            document[True] = document.pop("on")
+        case "excluded_cp312":
+            customer["strategy"]["matrix"]["exclude"] = [{"python": "3.12"}]
+        case "nonlinux":
+            customer["runs-on"] = "macos-14"
+        case _:
+            document["env"] = {"SPECFACT_CODE_REVIEW_ENFORCEMENT": "none"}
     path.write_text(yaml.safe_dump(document, sort_keys=False), encoding="utf-8")
     _git(worktree, "add", ".")
     _assert_local_deferral(worktree, tmp_path / "calls", 1)
@@ -562,19 +564,20 @@ def test_deferral_requires_integrated_change_detector_execution(tmp_path: Path, 
         "missing_dependency": {"needs": ["absent_precheck"]},
         "empty_matrix": {"strategy": {"matrix": {"include": []}}},
     }
-    if mutation in updates:
-        changes.update(updates[mutation])
-    elif mutation == "missing_runner":
-        changes.pop("runs-on")
-    elif mutation == "conditional_dependency":
-        changes["needs"] = ["precheck"]
-        document["jobs"]["precheck"] = {"runs-on": "ubuntu-latest", "if": False, "steps": [{"run": "exit 0"}]}
-    elif mutation == "skip_checkout":
-        changes["steps"][0]["if"] = False
-    elif mutation == "wrong_checkout_ref":
-        changes["steps"][0]["with"]["ref"] = "unrelated-source"
-    else:
-        _mutate_detector_filter(changes, mutation)
+    match mutation:
+        case _ if mutation in updates:
+            changes.update(updates[mutation])
+        case "missing_runner":
+            changes.pop("runs-on")
+        case "conditional_dependency":
+            changes["needs"] = ["precheck"]
+            document["jobs"]["precheck"] = {"runs-on": "ubuntu-latest", "if": False, "steps": [{"run": "exit 0"}]}
+        case "skip_checkout":
+            changes["steps"][0]["if"] = False
+        case "wrong_checkout_ref":
+            changes["steps"][0]["with"]["ref"] = "unrelated-source"
+        case _:
+            _mutate_detector_filter(changes, mutation)
     path.write_text(yaml.safe_dump(document, sort_keys=False), encoding="utf-8")
     _git(worktree, "add", ".")
     _assert_local_deferral(worktree, tmp_path / "calls", 1)
