@@ -4800,3 +4800,25 @@ Full passes 159 required host/native proofs in 20.41 seconds plus 5,754 portable
 Root-owned separate complete read-only diff/consumer audit finds no qualifying introduced defect, with no delegation or external review retry. Normal hooks remain required. The local capsule stage stays owner-approved DEFERRED to mandatory exact-head Linux CI, never PASS. Runtime bundle 7fec3580/checksum sha256:5d5663174cfc69d828c8f45b8e4c75bb721e6c4df7402b9add7033c20d79f1b1 retains inspected normal CI c65a41e6 authentication. Only the pre-commit script, tests and spec/evidence change; unpublished 0.51.5 needs no new version/signature. Paused CodeRabbit success still covers historical 9bbd, never current-head completion. No extra resume/review command was sent. Hosted/installed acceptance and remaining genuine warnings/incomplete evidence stay outstanding.
 
 Evidence prefix: /private/tmp/specfact509-hb0046- (hierarchy, spec-before, parser-red, parser-green, parser-parity, identity, format, type, lint, yaml, imports, spec, strict-signatures-dev, contracts, full, smart, readonly-audit).
+
+
+## 11 October 2026 (Europe/Berlin): exact-head warning evidence and literal identity
+
+Exact parent `eb9232eaa02f3ce65a493031df46578e2fd36f91` candidate job `114354414873` in run `38100200530` exits 1 with 140 finite public locations: zero errors, 119 warnings and 21 info. Executed diagnostics retain incomplete contracts, unrecognized CrossHair output and five counterexample locations; original private messages are unavailable and these remain UNWAIVED. No executed analysis_timeout/exit124 was verified. The previous parser CC14 warning is absent, confirming that specific correction. Absence of projected pytest errors does not prove complete analyzer or pytest execution. Independent review was still active at observation.
+
+Specification scenario `Native proof literals preserve complete generated programs` was added before the formal unchanged-policy Pylint RED. Pylint 4.0.7 with the existing repository policy reports exactly four C0301 warnings: canonical proof lines 31/113 and support fixture lines 92/168 (126, 218, 200 and 234 characters versus 120). Adjacent literal formatting clears all four under that same complete policy; no disabled rule or changed threshold.
+
+Post-format complete AST equality holds for both entire modules, including every assertion, decorator, argument, test and generated program. Separate exact equality confirms 126 and 388 literal/interpolation nodes respectively; all embedded C and Python/shell bytes are preserved for the same inputs. Two canonical parametrized functions retain their ten cases. No production runtime, manifest, workflow, deadline, input, discovery or failure-propagation change.
+
+Completed validation:
+
+- Focused actual canonical and isolated reviewer/projection host proofs: 159 passed in 19.51 seconds.
+- Full: 159 required host/native passed in 19.24 seconds plus 5,754 portable in 150.41 seconds.
+- SMART: 159 required host/native passed in 19.23 seconds plus 5,754 portable in 153.82 seconds. Both retain 71 declared skips, 95 passing subtests and five existing warnings.
+- Format, type (zero errors/warnings), lint (10.00/10), YAML, imports, strict OpenSpec and 28 contracts pass.
+- All seven strict public-key signatures/checksums/upstream version gates pass with tracked `scripts/native_release/module-signing-public.pem` and `--version-check-base origin/dev` against integrated published dev 0.51.4. Runtime 7fec3580, checksum 5d566317 and inspected normal CI c65a41e6 signature remain unchanged; unpublished 0.51.5 remains. No private key access or new signature/version needed.
+- Separate complete root-owned read-only four-file diff/consumer audit: No findings. Local capsule review remains owner-approved DEFERRED to mandatory exact-head Linux CI, never PASS.
+
+An initial SMART process was prematurely launched before the Full tool session confirmed completion and explicitly interrupted during its host phase; the final SMART gate ran separately after Full exit 0. The interrupted invocation is not product RED or passing evidence. A local status-only regex scan was also interrupted and replaced by bounded line parsing; no test or analyzer behavior changed.
+
+Public evidence/log prefix `/private/tmp/specfact509-hb0116-`, including red/green Pylint, identity, literal-identity, focused, Full, SMART, gates, read-only audit and invocation note. Existing hosted failures/genuine warnings remain UNWAIVED. CodeRabbit remains paused with historical 9bbd coverage at pre-push observation, not completed current-head review. No extra resume/review command or external review retry. #506 budget finding awaits actual dev integration; alert 11 awaits main integration/CodeQL closure and #460/OpenSpec remains open until independent installed acceptance.

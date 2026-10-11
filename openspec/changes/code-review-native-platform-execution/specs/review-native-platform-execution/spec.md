@@ -1472,3 +1472,11 @@ The required consumer remains blocking for failed/skipped customer review; no ho
 - **WHEN** the retained production-policy regression covers the script and hunk-range parsing is factored into a bounded helper
 - **THEN** the warning SHALL disappear while header ordering, quoted destination rejection, deleted-file handling, default and zero hunk counts, malformed hunks, file resets and accumulated added-line identities remain exact
 - **AND** existing review inputs, verdict propagation, private execution, deadlines, no-write guarantees and all original assertions SHALL remain, without weakening the policy or silently accepting unavailable diff evidence
+
+
+#### Scenario: Native proof literals preserve complete generated programs
+
+- **GIVEN** unchanged production Pylint reports overlong embedded C and shell/Python fixture literals
+- **WHEN** adjacent literal formatting bounds those source lines
+- **THEN** the same Pylint policy SHALL no longer report those line-length findings, while complete generated program bytes, every original assertion, test name and parametrization remain identical
+- **AND** all ten canonical allocation/admission proofs and required isolated reviewer fixtures SHALL still execute in their existing mandatory host contexts, without a compiler or shell added to the sealed capsule or any deadline, policy or failure propagation change

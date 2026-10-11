@@ -28,7 +28,10 @@ def test_native_canonical_sinks_use_system_allocation_and_preserve_rejection(tmp
     else:
         source = (NATIVE / "managed_workers.inc").read_text()
         body = "struct worker { struct specfact_request grant; };\n"
-        body += "static int beneath(const char *p,const char *r) { size_t n=strlen(r); return !strncmp(p,r,n)&&p[n]=='/'; }\n"
+        body += (
+            "static int beneath(const char *p,const char *r) { size_t n=strlen(r); "
+            "return !strncmp(p,r,n)&&p[n]=='/'; }\n"
+        )
         body += source.split("static int inherited_path(", 1)[1].split("static int inherited_python_path", 1)[0]
         body = body.replace("const struct worker *owner", "const struct worker *owner", 1)
         body = (
@@ -110,7 +113,9 @@ def test_allocated_canonical_predicate_preserves_real_filesystem_policy(tmp_path
     source = tmp_path / "filesystem.c"
     binary = tmp_path / "filesystem"
     source.write_text(
-        '#include "canonical_path.h"\n#include <stdio.h>\nint main(int argc,char **argv) { if(argc!=3)return 2; const char *p=!strcmp(argv[1],"NULL")?NULL:argv[1]; return specfact_canonical_path(p)!=atoi(argv[2]); }\n'
+        '#include "canonical_path.h"\n#include <stdio.h>\n'
+        'int main(int argc,char **argv) { if(argc!=3)return 2; const char *p=!strcmp(argv[1],"NULL")?NULL:argv[1]; '
+        "return specfact_canonical_path(p)!=atoi(argv[2]); }\n"
     )
     subprocess.run(
         [
