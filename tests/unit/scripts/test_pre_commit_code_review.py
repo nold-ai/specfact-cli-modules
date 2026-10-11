@@ -250,6 +250,14 @@ def test_main_preserves_ai_bloat_json_when_error_blocks(
     assert [finding["category"] for finding in report["findings"]] == ["ai_bloat", "security"]
 
 
+def _assert_failed_review_counts(err: str) -> None:
+    assert "Code review summary: 2 finding(s)" in err
+    assert "Code review enforcement: full" in err
+    assert "errors=1" in err
+    assert "warnings=1" in err
+    assert "overall_verdict='FAIL'" in err
+
+
 def test_main_propagates_review_gate_exit_code(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -283,11 +291,7 @@ def test_main_propagates_review_gate_exit_code(
     captured = capsys.readouterr()
     assert captured.out == ""
     err = captured.err
-    assert "Code review summary: 2 finding(s)" in err
-    assert "Code review enforcement: full" in err
-    assert "errors=1" in err
-    assert "warnings=1" in err
-    assert "overall_verdict='FAIL'" in err
+    _assert_failed_review_counts(err)
     assert "Code review report file:" in err
     assert "absolute path:" in err
     assert "Copy-paste for Copilot or Cursor:" in err

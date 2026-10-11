@@ -7,6 +7,8 @@ from pathlib import Path
 from typing import cast
 
 import pytest
+from radon.cli.tools import cc_to_dict
+from radon.complexity import cc_visit
 
 from specfact_code_review.run import native_worker
 
@@ -586,8 +588,6 @@ def test_real_ruff_adapter_uses_managed_surface_without_host_spawn(
 
 
 def test_native_worker_and_retained_proofs_have_no_complexity_warning():
-    from radon.complexity import cc_visit
-
     from specfact_code_review.tools.radon_runner import _allowed_paths, _map_radon_complexity_findings
 
     root = Path(__file__).resolve().parents[4]
@@ -596,14 +596,10 @@ def test_native_worker_and_retained_proofs_have_no_complexity_warning():
         Path(__file__),
         Path(__file__).with_name("test_native_project_runtime.py"),
         root / "tests/unit/test_capsule_proof_contexts.py",
+        root / "tests/unit/scripts/test_pre_commit_code_review.py",
+        Path(__file__).with_name("test_portable_snapshot.py"),
     ]
-    payload = {
-        str(path): [
-            {"name": block.name, "lineno": block.lineno, "complexity": block.complexity}
-            for block in cc_visit(path.read_text(encoding="utf-8"))
-        ]
-        for path in files
-    }
+    payload = {str(path): [cc_to_dict(block) for block in cc_visit(path.read_text(encoding="utf-8"))] for path in files}
     findings = _map_radon_complexity_findings(payload, _allowed_paths(files))
     assert findings == [], [(finding.file, finding.rule, finding.message) for finding in findings]
 

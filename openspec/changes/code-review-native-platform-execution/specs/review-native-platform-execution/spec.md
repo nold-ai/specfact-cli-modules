@@ -1456,3 +1456,11 @@ The required consumer remains blocking for failed/skipped customer review; no ho
 - **WHEN** those imported proof functions use explicit exports and the autouse fixture signature uses bounded formatting
 - **THEN** the same collected node identities, test decorators, assertion ASTs and autouse registration SHALL remain, while the scoped export and line-length findings disappear under unchanged policy
 - **AND** no original cleanup proof, permission restoration, rejected identity, test case or type-checker requirement SHALL be removed or weakened
+
+
+#### Scenario: Review-gate and snapshot proofs obey unchanged complexity policy
+
+- **GIVEN** authoritative capsule review reports complexity warnings in review-gate failure propagation and native snapshot argv proofs
+- **WHEN** the retained production Radon regression covers those proof modules and bounded helpers group their existing assertions
+- **THEN** both actual warning blocks SHALL disappear under unchanged policy, with complete production Radon serialization including nested closures and every original assertion, parametrization and collected case retained
+- **AND** exact report counts, failing verdict/exit propagation, projected pytest argv, full discovery, config-root checks and unavailable-member semantics SHALL remain unchanged, without production runtime, workflow, deadline or assertion weakening
