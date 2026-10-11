@@ -13,6 +13,8 @@ import sys
 import tempfile
 from pathlib import Path
 
+from icontract import ensure
+
 
 CHECKER = "scripts/check_capsule_deferral.py"
 BOOTSTRAP_COMMIT = "c65a41e61a6b4e61e8dd2b69526a1cfc8650b3ad"
@@ -89,8 +91,14 @@ def _binding(root: Path, normal_hook: Path, interpreter: Path) -> dict[str, str]
     }
 
 
+@ensure(lambda result: result is None)
 def install(root: Path, destination: Path, normal_hook: Path, interpreter: Path) -> None:
-    """Freeze reviewed entry bytes and bindings; never change shared hooks/config."""
+    """Freeze reviewed entry bytes and bindings; never change shared hooks/config.
+
+    :raises OSError: the private installation or an installed tool cannot be accessed.
+    :raises ValueError: caller, interpreter or destination violates the approved scope.
+    :raises subprocess.CalledProcessError: verified Git metadata cannot be read.
+    """
     root, destination, normal_hook = root.resolve(), destination.resolve(), normal_hook.resolve()
     if destination.is_relative_to(root):
         raise ValueError("Owner entry must be installed outside the candidate checkout")
@@ -163,7 +171,15 @@ def _checker_paths(root: Path, base: str, *selectors: str) -> str:
     return "\n".join(paths)
 
 
+@ensure(lambda result: result is None)
 def validate_index(binding: dict[str, str]) -> None:
+    """Validate the actual index using only the bound approved authority.
+
+    :raises OSError: required private files or installed tooling are unavailable.
+    :raises ValueError: binding, authority, path protocol or scheduling is invalid.
+    :raises KeyError: a required frozen binding field is missing.
+    :raises subprocess.CalledProcessError: Git or the approved checker rejects validation.
+    """
     root = _validate_binding(binding)
     integrated_dev = binding["integrated_dev"]
     source = _checker_source(root, integrated_dev)
@@ -187,7 +203,15 @@ def validate_index(binding: dict[str, str]) -> None:
         )
 
 
+@ensure(lambda result: isinstance(result, int) and not isinstance(result, bool))
 def enforce(config: Path, hook_arguments: list[str]) -> int:
+    """Retain normal-hook status only after both approved index validations.
+
+    :raises OSError: private config or bound installed tooling is unavailable.
+    :raises ValueError: config, binding, authority or scheduling is invalid.
+    :raises KeyError: a required frozen binding field is missing.
+    :raises subprocess.CalledProcessError: Git or the approved checker rejects validation.
+    """
     binding = json.loads(config.read_text(encoding="utf-8"))
     validate_index(binding)
     print("Owner entry: indexed scheduling validated before normal hooks", file=sys.stderr)
@@ -197,7 +221,12 @@ def enforce(config: Path, hook_arguments: list[str]) -> int:
     return normal.returncode
 
 
+@ensure(lambda result: isinstance(result, int) and not isinstance(result, bool))
 def main() -> int:
+    """Return the entry status or preserve argparse's own exit protocol.
+
+    :raises SystemExit: invalid CLI arguments or an explicit help request.
+    """
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
     installer = commands.add_parser("install")

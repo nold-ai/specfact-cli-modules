@@ -4,11 +4,13 @@ import importlib.metadata
 import inspect
 import subprocess
 import sys
+from argparse import Namespace
 from pathlib import Path
 from typing import Literal
 
 import pytest
 from crosshair import condition_parser, core, dynamic_typing
+from crosshair.options import AnalysisOptionSet
 from crosshair.register_contract import REGISTERED_CONTRACTS, ContractOverride
 from icontract import ensure
 
@@ -421,3 +423,145 @@ def test_dispatch_fixture_retains_later_project_contract_enforcement():
         check=False,
     )
     assert result.returncode == 0, result.stdout + result.stderr
+
+
+@pytest.mark.parametrize("phase", ["import", "call"])
+@pytest.mark.parametrize("violated", [False, True])
+def test_pinned_dispatch_separates_target_output_from_real_diagnostics(tmp_path: Path, phase: str, violated: bool):
+    """Target prints cannot forge evidence; actual contract failures still report."""
+    source = tmp_path / "target_output.py"
+    noise = "print('TARGET_OUTPUT_MARKER'); print('TARGET_ERROR_MARKER', file=sys.stderr)"
+    imported = noise if phase == "import" else ""
+    called = "    " + noise if phase == "call" else ""
+    source.write_text(
+        "import sys\nfrom icontract import ensure\n"
+        + imported
+        + "\n@ensure(lambda value, result: result == value)\ndef observed(value: int) -> int:\n"
+        + called
+        + "\n    return "
+        + ("0" if violated else "value")
+        + "\n"
+    )
+    dispatch = (
+        Path(__file__).parents[4] / "packages/specfact-code-review/src/specfact_code_review/run/target_crosshair.py"
+    )
+    result = subprocess.run(
+        [sys.executable, str(dispatch), "check", str(source), "--per_condition_timeout=3"],
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+    )
+    assert result.returncode == int(violated), result.stdout + result.stderr
+    assert "TARGET_OUTPUT_MARKER" not in result.stdout
+    assert "TARGET_ERROR_MARKER" not in result.stderr
+    if violated:
+        assert str(source) in result.stdout and ": error:" in result.stdout
+        assert "false when calling" in result.stdout
+
+
+def test_pinned_dispatch_rejects_target_output_over_existing_bound(tmp_path: Path):
+    source = tmp_path / "excess_output.py"
+    source.write_text(
+        "from icontract import ensure\nprint('x' * (4 * 1024 * 1024 + 1))\n"
+        "@ensure(lambda result: result == 1)\ndef observed() -> int:\n    return 1\n"
+    )
+    dispatch = (
+        Path(__file__).parents[4] / "packages/specfact-code-review/src/specfact_code_review/run/target_crosshair.py"
+    )
+    result = subprocess.run(
+        [sys.executable, str(dispatch), "check", str(source), "--per_condition_timeout=3"],
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+    )
+    assert result.returncode != 0, "Oversized analyzed output was admitted"
+    assert "crosshair_target_output_limit_exceeded" in result.stderr
+
+
+@pytest.mark.parametrize("length", [0, 2])
+def test_pinned_dispatch_preserves_actual_symbolic_tuple_truth(crosshair_dispatch, length: int):
+    from crosshair.core_and_libs import NoTracing, standalone_statespace
+    from crosshair.libimpl.builtinslib import SymbolicArrayBasedUniformTuple
+
+    def inspect_dispatch(*_args, **_kwargs):
+        with standalone_statespace as space, NoTracing():
+            sequence = SymbolicArrayBasedUniformTuple("tuple_truth", tuple[str, ...])
+            space.add(sequence._len() == length)
+            observed = bool(sequence)
+            assert type(observed) is bool and observed == (length != 0)
+            assert space.is_possible(sequence._len() == length)
+
+    crosshair_dispatch(inspect_dispatch)
+
+
+@pytest.mark.parametrize("implementation", ["1 if values else 0", "0", "1"])
+def test_pinned_dispatch_keeps_empty_and_nonempty_contract_paths(tmp_path: Path, implementation: str):
+    source = tmp_path / "sequence_truth.py"
+    source.write_text(
+        "from icontract import ensure\n"
+        "@ensure(lambda values, result: result == (1 if values else 0))\n"
+        "def observed(values: tuple[str, ...]) -> int:\n    return " + implementation + "\n"
+    )
+    dispatch = (
+        Path(__file__).parents[4] / "packages/specfact-code-review/src/specfact_code_review/run/target_crosshair.py"
+    )
+    result = subprocess.run(
+        [sys.executable, str(dispatch), "check", str(source), "--per_condition_timeout=3"],
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+    )
+    assert result.returncode == int(implementation != "1 if values else 0"), result.stdout + result.stderr
+    assert "TypeError" not in result.stdout + result.stderr
+    if implementation in {"0", "1"}:
+        assert "false when calling" in result.stdout
+
+
+@pytest.mark.parametrize("failure", [None, RuntimeError, SystemExit])
+def test_diagnostic_scope_retains_reporter_streams_exit_and_restoration(monkeypatch, failure):
+    import io
+
+    from crosshair import main
+
+    from specfact_code_review.run.target_crosshair import _diagnostic_channel_compatibility
+
+    reporter_stdout, reporter_stderr = io.StringIO(), io.StringIO()
+    initial_stdout, initial_stderr = sys.stdout, sys.stderr
+    arguments, options = Namespace(target=["fixture.py"]), AnalysisOptionSet()
+
+    def original(actual_arguments, actual_options, stdout, stderr):
+        assert actual_arguments is arguments and actual_options is options
+        assert stdout is reporter_stdout and stderr is reporter_stderr
+        print("target output")
+        print("target error", file=sys.stderr)
+        print("real diagnostic", file=stdout)
+        print("real analyzer error", file=stderr)
+        if failure:
+            raise failure(7)
+        return 7
+
+    monkeypatch.setattr(main, "check", original)
+    if failure:
+        with pytest.raises(failure), _diagnostic_channel_compatibility():
+            main.check(arguments, options, reporter_stdout, reporter_stderr)
+    else:
+        with _diagnostic_channel_compatibility():
+            assert main.check(arguments, options, reporter_stdout, reporter_stderr) == 7
+    assert main.check is original and sys.stdout is initial_stdout and sys.stderr is initial_stderr
+    assert reporter_stdout.getvalue() == "real diagnostic\n"
+    assert reporter_stderr.getvalue() == "real analyzer error\n"
+
+
+def test_target_output_bound_counts_utf8_bytes_without_retaining_text():
+    from specfact_code_review.run.target_crosshair import _TargetOutput
+
+    sink = _TargetOutput()
+    assert sink.write("é" * (2 * 1024 * 1024)) == 2 * 1024 * 1024
+    with pytest.raises(ValueError, match="crosshair_target_output_limit_exceeded"):
+        sink.write("x")
+    with pytest.raises(UnicodeEncodeError):
+        _TargetOutput().write("\ud800")
+    assert not hasattr(sink, "getvalue")

@@ -3,15 +3,17 @@
 from __future__ import annotations
 
 import inspect
+import io
 import runpy
 import sys
-from contextlib import contextmanager
+from contextlib import contextmanager, redirect_stderr, redirect_stdout
 from importlib.metadata import version
 from types import FunctionType
 from typing import Literal
 
 from crosshair import condition_parser, core, dynamic_typing
 from crosshair.util import IgnoreAttempt
+from icontract import ensure
 
 
 def _ordered_signature(*, parameters, return_annotation):
@@ -143,7 +145,69 @@ def _literal_compatibility():
             del registry[Literal]
 
 
+@contextmanager
+def _sequence_truth_compatibility():
+    """Preserve the pinned length predicate while returning a Python Boolean."""
+    from crosshair.libimpl.builtinslib import SymbolicArrayBasedUniformTuple
+    from crosshair.tracers import NoTracing
+
+    original = SymbolicArrayBasedUniformTuple.__bool__
+
+    def sequence_truth(sequence):
+        with NoTracing():
+            return bool(original(sequence))
+
+    SymbolicArrayBasedUniformTuple.__bool__ = sequence_truth
+    try:
+        yield
+    finally:
+        SymbolicArrayBasedUniformTuple.__bool__ = original
+
+
+class _TargetOutput(io.TextIOBase):
+    """Bound discarded target output without collecting private text."""
+
+    def __init__(self):
+        self._written = 0
+
+    @ensure(lambda text, result: result == len(text))
+    def write(self, text: str) -> int:
+        """Consume normal target output; reject overflow before acceptance.
+
+        :raises ValueError: output exceeds the existing per-stream bound.
+        :raises UnicodeEncodeError: target output is not valid UTF-8.
+        """
+        self._written += len(text.encode("utf-8"))
+        if self._written > 4 * 1024 * 1024:
+            raise ValueError("crosshair_target_output_limit_exceeded")
+        return len(text)
+
+
+@contextmanager
+def _diagnostic_channel_compatibility():
+    """Keep reporter arguments intact while isolating analyzed code output."""
+    from crosshair import main
+
+    original = main.check
+
+    def check(arguments, options, stdout, stderr):
+        with redirect_stdout(_TargetOutput()), redirect_stderr(_TargetOutput()):
+            return original(arguments, options, stdout, stderr)
+
+    main.check = check
+    try:
+        yield
+    finally:
+        main.check = original
+
+
 if __name__ == "__main__":
     sys.argv[0] = globals().get("ENTRY_PROGRAM", sys.argv[0])
-    with _constructor_compatibility(), _contract_lookup_compatibility(), _literal_compatibility():
+    with (
+        _constructor_compatibility(),
+        _contract_lookup_compatibility(),
+        _literal_compatibility(),
+        _sequence_truth_compatibility(),
+        _diagnostic_channel_compatibility(),
+    ):
         runpy.run_module("crosshair", run_name="__main__", alter_sys=True)

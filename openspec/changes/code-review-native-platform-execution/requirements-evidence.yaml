@@ -1029,3 +1029,108 @@ requirements:
       method: test
       intent: Reject actual forged checker execution and false commits before and during normal hooks.
       observable: Genuine real Git false-success REDs precede immutable owner binding; forged checker markers remain absent after correction and all original valid scheduling/bootstrap/path/interpreter controls remain required.
+
+  openspec:code-review-native-platform-execution:review-native-platform-execution:isolated-crosshair-diagnostic-channels:
+    rationale: Keep analyzed code output distinct from trusted analyzer evidence without weakening failure gates.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#460
+    touchpoints:
+    - id: isolated-crosshair-spec
+      kind: config_file
+      locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
+    verification_cases:
+    - case_id: 460-29-1
+      scenario_id: isolated-crosshair-diagnostic-channels
+      method: test
+      intent: Prove actual pinned CLI target-output contamination before scoped isolation and retain real counterexamples and error exits.
+      observable: Genuine before-code failed assertions precede bounded target-stream isolation; reporter output, exits, exceptions and original dispatch restoration remain enforced.
+
+  openspec:code-review-native-platform-execution:review-native-platform-execution:faithful-pinned-symbolic-sequence-truth:
+    rationale: Preserve Python Boolean protocol and both symbolic length branches without changing application guards.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#460
+    touchpoints:
+    - id: symbolic-sequence-spec
+      kind: config_file
+      locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
+    verification_cases:
+    - case_id: 460-30-1
+      scenario_id: faithful-pinned-symbolic-sequence-truth
+      method: test
+      intent: Prove pinned SMT false/true conversion and actual CLI counterexample preservation.
+      observable: Genuine failed assertions precede scoped model correction; both lengths and real violations remain observed with original application ASTs unchanged.
+
+  openspec:code-review-native-platform-execution:review-native-platform-execution:exact-replay-exception-contracts:
+    rationale: Describe existing closed-plan control and rejection exceptions without admitting unrelated failures.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#460
+    touchpoints:
+    - id: replay-exception-spec
+      kind: config_file
+      locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
+    verification_cases:
+    - case_id: 460-31-1
+      scenario_id: exact-replay-exception-contracts
+      method: test
+      intent: Real replay handoff, rejection, checked failure and extra reply controls bind exact analyzer exception declarations.
+      observable: Missing declarations fail before correction; original exceptions and postconditions remain enforced afterward.
+
+  openspec:code-review-native-platform-execution:review-native-platform-execution:faithful-workflow-mapping-contract:
+    rationale: Give contract analysis the real YAML node protocol without weakening any scheduling rejection.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#460
+    touchpoints:
+    - id: workflow-mapping-spec
+      kind: config_file
+      locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
+    verification_cases:
+    - case_id: 460-32-1
+      scenario_id: faithful-workflow-mapping-contract
+      method: test
+      intent: Bind annotations and exact existing exceptions to real YAML values and malformed nodes.
+      observable: Missing contract metadata fails before correction; executable YAML and scheduling semantics remain exact.
+
+  openspec:code-review-native-platform-execution:review-native-platform-execution:portable-owner-entry-contract-verification:
+    rationale: Measure actual owner-entry guard branches in portable tests while preserving mandatory real host proof and every enforcement boundary.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#460
+    touchpoints:
+    - id: portable-owner-entry-spec
+      kind: config_file
+      locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
+    verification_cases:
+    - case_id: 460-33-1
+      scenario_id: portable-owner-entry-contract-verification
+      method: test
+      intent: Real public contract-runner RED and measured actual Python entry guards, status propagation and private cleanup.
+      observable: Missing public contracts fail before correction; measured coverage satisfies unchanged80% while real host proofs remain required.
+
+  openspec:code-review-native-platform-execution:review-native-platform-execution:exact-owner-cli-parser-exception:
+    rationale: Preserve real argparse rejection/help outcomes while allowing complete contract analysis.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#460
+    touchpoints:
+    - id: owner-cli-parser-spec
+      kind: config_file
+      locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
+    verification_cases:
+    - case_id: 460-34-1
+      scenario_id: exact-owner-cli-parser-exception
+      method: test
+      intent: Retain real invalid/help SystemExit statuses and precise pinned exception metadata.
+      observable: Missing declaration fails after real parser exits; exact statuses and complete analysis are retained after correction.
+
+  openspec:code-review-native-platform-execution:review-native-platform-execution:exact-owner-entry-rejection-contracts:
+    rationale: Preserve precise fail-closed rejection exceptions alongside public return contracts.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#460
+    touchpoints:
+    - id: owner-entry-rejection-spec
+      kind: config_file
+      locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
+    verification_cases:
+    - case_id: 460-35-1
+      scenario_id: exact-owner-entry-rejection-contracts
+      method: test
+      intent: Retain actual candidate-local destination, missing binding and malformed JSON errors with exact declarations.
+      observable: Missing declarations fail after actual rejections; existing exceptions and original CLI status1 conversion remain intact.

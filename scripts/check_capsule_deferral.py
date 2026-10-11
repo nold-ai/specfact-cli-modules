@@ -19,7 +19,13 @@ class _WorkflowLoader(yaml.SafeLoader):
     """Keep GitHub's literal on key distinct from YAML boolean keys."""
 
     @ensure(lambda result: isinstance(result, dict))
-    def construct_mapping(self, node, deep=False):
+    def construct_mapping(self, node: yaml.nodes.MappingNode, deep: bool = False) -> dict:
+        """Construct mapping values or retain the original YAML rejection.
+
+        :raises ValueError: duplicate keys or malformed mapping entries.
+        :raises TypeError: a constructed mapping key is unhashable.
+        :raises yaml.constructor.ConstructorError: an unsupported YAML tag or node.
+        """
         mapping = {}
         for key_node, value_node in node.value:
             key = self.construct_object(key_node, deep=deep)

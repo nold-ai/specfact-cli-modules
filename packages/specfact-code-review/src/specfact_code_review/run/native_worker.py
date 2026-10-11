@@ -507,6 +507,12 @@ class ReplayTransport:
 
     @ensure(lambda result: isinstance(result, subprocess.CompletedProcess))
     def run(self, args: Sequence[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        """Return the exact reply or retain the original closed-plan rejection.
+
+        :raises RequestPending: the controller must supply the exact next reply.
+        :raises ReplayContractViolation: launch options or replies violate the plan.
+        :raises subprocess.CalledProcessError: check requests failure on a nonzero reply.
+        """
         arguments = self._arguments(args)
         request = self._request(arguments, kwargs)
         if self.consumed >= len(self.replies):
@@ -533,6 +539,10 @@ class ReplayTransport:
 
     @ensure(lambda result: result is None)
     def verify_complete(self) -> None:
+        """Reject unused replies rather than accepting incomplete replay.
+
+        :raises WorkerContractError: the controller supplied extra or reordered replies.
+        """
         if self.consumed != len(self.replies):
             raise WorkerContractError("controller supplied extra or reordered managed-launch replies")
 

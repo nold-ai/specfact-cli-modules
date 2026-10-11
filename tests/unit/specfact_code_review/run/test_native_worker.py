@@ -750,3 +750,42 @@ def test_native_contract_inventory_rejects_symlink_and_outside_grant(tmp_path):
             native_worker._native_contract_roots(["contract-inputs-v2", str(policy)], tmp_path)
     with pytest.raises(native_worker.WorkerContractError, match="manifest request"):
         native_worker._native_contract_roots(["contract-inputs-v2"], tmp_path)
+
+
+@pytest.mark.parametrize("outcome", ["pending", "invalid", "checked", "extra"])
+def test_replay_contract_declares_only_actual_control_and_rejection_exceptions(tmp_path: Path, outcome: str) -> None:
+    from crosshair.condition_parser import parse_sphinx_raises
+
+    transport = native_worker.ReplayTransport(
+        member="ruff",
+        tool="ruff",
+        replies=[],
+        capsule=tmp_path / "capsule",
+        project=tmp_path,
+        temporary=tmp_path / "temporary",
+    )
+    if outcome == "extra":
+        transport.replies.append({"request": {}, "result": {}})
+        with pytest.raises(native_worker.WorkerContractError, match="extra or reordered"):
+            transport.verify_complete()
+        assert parse_sphinx_raises(native_worker.ReplayTransport.verify_complete) == {native_worker.WorkerContractError}
+        return
+    if outcome == "invalid":
+        with pytest.raises(native_worker.ReplayContractViolation, match="argv is invalid"):
+            transport.run([])
+    else:
+        with pytest.raises(native_worker.RequestPending) as pending:
+            transport.run(["capsule-tool:ruff"], check=outcome == "checked")
+        assert transport.consumed == 0
+        if outcome == "checked":
+            transport.replies.append(
+                {"request": pending.value.request, "result": {"returncode": 7, "stdout": "", "stderr": "failed"}}
+            )
+            with pytest.raises(subprocess.CalledProcessError) as failure:
+                transport.run(["capsule-tool:ruff"], check=True)
+            assert failure.value.returncode == 7 and failure.value.stderr == "failed"
+    assert parse_sphinx_raises(native_worker.ReplayTransport.run) == {
+        native_worker.RequestPending,
+        native_worker.ReplayContractViolation,
+        subprocess.CalledProcessError,
+    }

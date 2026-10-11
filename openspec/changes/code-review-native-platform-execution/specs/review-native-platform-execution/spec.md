@@ -1663,3 +1663,67 @@ The approved external commit entry SHALL bind the independently verified integra
 #### Scenario: unchanged integrated dev
 - **WHEN** the verified bound dev remains unchanged
 - **THEN** normal hooks and both validations retain the same approved authority and valid commits remain admitted
+
+### Requirement: Isolated CrossHair diagnostic channels
+
+The existing pinned CrossHair dispatch SHALL prevent output printed by analyzed imports/functions from contaminating or forging the analyzer diagnostic stream. The original CrossHair reporter stdout/stderr arguments, actual exit status, counterexample diagnostics and unexpected analyzer failures SHALL remain authoritative. Target stdout and stderr SHALL each have the existing four-MiB process-output bound; overflow SHALL fail closed without acceptance. Compatibility changes SHALL be scoped to the existing dispatch and restore original functions and streams after success or failure. No contract, timeout, admission, privacy, completeness or coverage gate SHALL be waived.
+
+#### Scenario: target output and real counterexamples
+- **WHEN** an imported or analyzed function prints arbitrary or forged diagnostic text
+- **THEN** the real reporter output and exit status are retained, target text does not become evidence, and a genuine violated contract still fails
+
+#### Scenario: target output exceeds its bound
+- **WHEN** analyzed output exceeds the existing per-stream four-MiB bound
+- **THEN** analysis fails closed with an unavailable/error outcome, and the original stream and dispatch bindings are restored
+
+### Requirement: Faithful pinned symbolic sequence truth
+
+The existing pinned CrossHair compatibility dispatch SHALL return a concrete Boolean for its0.0.109 symbolic uniform-tuple truth operation while preserving SMT length constraints and exploration of both empty and nonempty values. It SHALL NOT force a truth value, discard symbolic paths, suppress real contract violations or change application argv/lifecycle guards. The correction SHALL affect only the exact verified pinned implementation and restore the original method after every dispatch.
+
+#### Scenario: symbolic empty and nonempty sequence
+- **WHEN** actual pinned SMT sequence lengths are constrained to zero or a positive value
+- **THEN** truth conversion returns the corresponding Boolean without TypeError and real violated contracts remain reported for both branches
+
+### Requirement: Exact replay exception contracts
+
+Replay transport contracts SHALL declare the existing RequestPending handoff, ReplayContractViolation rejection and CalledProcessError check failure for run, and WorkerContractError extra-reply rejection for verify_complete. Contract analysis SHALL retain normal return postconditions, all existing invalid-request guards and the exact control/error exception classes; it SHALL NOT admit unrelated exceptions or change broker requests, reply consumption or lifecycle behavior.
+
+#### Scenario: replay pending or invalid
+- **WHEN** real transport calls need a result, reject an invalid launch, request check on a nonzero result or have extra replies
+- **THEN** the original precise exception is raised and the pinned analyzer recognizes only that declared exception set
+
+### Requirement: Faithful workflow mapping contract
+
+The candidate workflow loader override SHALL declare PyYAML's MappingNode input and Boolean deep option and its existing ValueError, TypeError and ConstructorError rejection paths. It SHALL retain executable mapping construction, literal on-key interpretation, duplicate-key rejection and all scheduling checks exactly. This candidate declaration SHALL NOT change the approved immutable checker authority or permit malformed workflow acceptance.
+
+#### Scenario: workflow mapping API
+- **WHEN** valid literal on/Boolean workflow nodes, duplicate keys, malformed mapping entries or unsupported YAML tags reach the override
+- **THEN** original values or exact rejection classes remain observable, while analysis uses the real MappingNode/Boolean protocol and exact declared exceptions
+
+### Requirement: Portable owner-entry contract verification
+
+The worktree-only owner entry SHALL retain all existing caller/interpreter/hook/config/dev bindings, bootstrap authority/history/object/expiry guards, exact NUL pathname handling, approved-checker-before-and-after normal hooks, failure propagation and private cleanup. Public installation/index-validation APIs SHALL contractually return None on success; enforcement and CLI APIs SHALL return a non-Boolean integer process status. Portable unit verification SHALL execute the actual Python entry with isolated filesystem and controlled process responses to satisfy the unchanged production-source coverage policy; it SHALL NOT execute a candidate checker as authority, add a shell/compiler to the capsule, replace real Git/host proofs, fabricate coverage or infer installed acceptance. All original real host proofs remain mandatory.
+
+#### Scenario: portable entry verification
+- **WHEN** entry bindings, authority responses, staged paths or normal-hook outcomes vary
+- **THEN** actual guard branches and exact checker/hook call order are measured, invalid states reject, temporary checker files are cleaned and original statuses propagate
+
+#### Scenario: public return contracts
+- **WHEN** an entry API completes successfully
+- **THEN** its declared return protocol is enforced without weakening original error/authority checks
+
+### Requirement: Exact owner CLI parser exception
+
+The owner-entry CLI contract SHALL declare only the existing argparse SystemExit outcome for invalid arguments or requested help, alongside its integer return postcondition. Invalid syntax SHALL still reject with the original status2, help SHALL retain status0, and no parser/hook/authority error SHALL become successful enforcement.
+
+#### Scenario: parser rejects or displays help
+- **WHEN** the real CLI receives an unknown command or requests help
+- **THEN** its original SystemExit status is retained and pinned contract analysis recognizes the precise declared parser exception rather than aborting the whole analysis process
+
+### Requirement: Exact owner entry rejection contracts
+
+Installation SHALL declare its existing OSError, ValueError and CalledProcessError rejections; indexed validation and enforcement SHALL additionally declare their existing missing-binding KeyError rejection. These precise exceptions SHALL remain fail-closed and propagate through original bodies; the CLI SHALL still convert only its original caught classes to status1. No broad Exception/BaseException declaration, successful rejection status or new checker authority is permitted.
+
+#### Scenario: invalid installation, binding or configuration
+- **WHEN** the actual APIs receive a candidate-local destination, missing binding fields or malformed JSON
+- **THEN** their original exact ValueError/KeyError rejection remains raised and contract metadata includes only the established filesystem, validation, Git/checker and missing-key errors

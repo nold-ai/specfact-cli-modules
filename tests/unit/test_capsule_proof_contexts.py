@@ -606,3 +606,34 @@ def test_controller_shell_dependencies_trigger_native_proofs(dependency):
         Loader=yaml.BaseLoader,
     )
     assert dependency in workflow["on"]["pull_request"]["paths"]
+
+
+@pytest.mark.parametrize("source", ["on: true\n", "key: 1\nkey: 2\n", "key: !unavailable value\n"])
+def test_workflow_mapping_contract_preserves_real_yaml_protocol(source: str):
+    from typing import get_type_hints
+
+    from crosshair.condition_parser import parse_sphinx_raises
+
+    from scripts import check_capsule_deferral as checker
+
+    if source.startswith("on:"):
+        assert checker._yaml_mapping(source) == {"on": True}
+    elif "!unavailable" in source:
+        with pytest.raises(yaml.constructor.ConstructorError):
+            checker._yaml_mapping(source)
+    else:
+        with pytest.raises(ValueError, match="duplicate"):
+            checker._yaml_mapping(source)
+    loader = checker._WorkflowLoader("")
+    try:
+        with pytest.raises(ValueError):
+            loader.construct_mapping(yaml.nodes.MappingNode("", "x"))
+    finally:
+        loader.dispose()
+    hints = get_type_hints(checker._WorkflowLoader.construct_mapping)
+    assert hints.get("node") is yaml.nodes.MappingNode and hints.get("deep") is bool
+    assert parse_sphinx_raises(checker._WorkflowLoader.construct_mapping) == {
+        ValueError,
+        TypeError,
+        yaml.constructor.ConstructorError,
+    }
