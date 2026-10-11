@@ -254,18 +254,21 @@ def test_native_pytest_failure_reaches_real_evaluator_with_incomplete_remedy(tmp
         paths[2].write_text(
             '<testsuite><testcase classname="tests.test_value" name="test_value"/></testsuite>', encoding="utf-8"
         )
-        if failure in {"usage", "missing-coverage"}:
-            paths[0].unlink()
-        elif failure == "malformed-coverage":
-            paths[0].write_text("[]", encoding="utf-8")
-        elif failure.startswith("deep-"):
-            paths[0 if failure == "deep-coverage" else 1].write_text("[" * 2000 + "0" + "]" * 2000, encoding="utf-8")
-        elif failure == "missing-directory":
-            for path in paths:
-                path.unlink()
-            paths[0].parent.rmdir()
-        else:
-            paths[1].unlink()
+        match failure:
+            case _ if failure in {"usage", "missing-coverage"}:
+                paths[0].unlink()
+            case _ if failure == "malformed-coverage":
+                paths[0].write_text("[]", encoding="utf-8")
+            case _ if failure.startswith("deep-"):
+                paths[0 if failure == "deep-coverage" else 1].write_text(
+                    "[" * 2000 + "0" + "]" * 2000, encoding="utf-8"
+                )
+            case _ if failure == "missing-directory":
+                for path in paths:
+                    path.unlink()
+                paths[0].parent.rmdir()
+            case _:
+                paths[1].unlink()
         return subprocess.CompletedProcess([], 4 if failure == "usage" else 0, "", ""), *paths
 
     def evaluate(*_args, **_kwargs):

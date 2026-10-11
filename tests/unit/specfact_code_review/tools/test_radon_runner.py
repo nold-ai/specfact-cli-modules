@@ -299,3 +299,23 @@ def test_distribution_ownership_mutation_has_no_nesting_warning() -> None:
         for finding in findings
         if finding.line == definition.lineno and finding.rule in {"kiss.nesting.warning", "kiss.nesting.error"}
     ]
+
+
+def test_pytest_failure_fixture_has_no_nesting_warning() -> None:
+    """Exercise actual KISS policy without weakening artifact failure controls."""
+    source = (
+        Path(__file__).resolve().parents[4] / "tests/unit/specfact_code_review/run/test_native_pytest_observations.py"
+    )
+    definition = next(
+        node
+        for node in ast.parse(source.read_text()).body
+        if getattr(node, "name", None) == "test_native_pytest_failure_reaches_real_evaluator_with_incomplete_remedy"
+    )
+    callback = next(node for node in ast.walk(definition) if getattr(node, "name", None) == "execute")
+    findings = run_radon([source])
+    assert not [finding for finding in findings if finding.category == "tool_error"]
+    assert not [
+        finding
+        for finding in findings
+        if finding.line == callback.lineno and finding.rule in {"kiss.nesting.warning", "kiss.nesting.error"}
+    ]

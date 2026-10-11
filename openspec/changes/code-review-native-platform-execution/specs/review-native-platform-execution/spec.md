@@ -1571,3 +1571,11 @@ The required consumer remains blocking for failed/skipped customer review; no ho
 - **WHEN** its two independent mutation chains use flat guarded dispatch
 - **THEN** every original condition, branch body, evaluation order and no-match behavior SHALL be recoverable exactly, with the whole original module AST and all tests, assertions, arguments, decorators and parametrized identities retained
 - **AND** valid and negative distribution RECORD/ownership/source precedence proofs SHALL remain mandatory in Full/SMART and native contexts, without changing runtime, analyzer policy, thresholds, deadlines, checker authority or admission contracts
+
+
+#### Scenario: Pytest incomplete-evidence proof dispatch remains flat and exact
+
+- **GIVEN** actual unchanged KISS policy flags nesting in the retained pytest failure evaluator proof
+- **WHEN** its artifact mutation callback uses flat guarded dispatch
+- **THEN** every original guard, mutation body, order and fallback SHALL reconstruct exactly in the whole original module AST, retaining every test name, argument, decorator, assertion and parametrized identity
+- **AND** usage, missing/malformed/deep coverage, missing/deep observer and missing-directory cases SHALL exercise the same real evaluator and incomplete remedy without changing analyzer thresholds, runtime, authority, deadline, coverage, lifecycle or artifact admission
