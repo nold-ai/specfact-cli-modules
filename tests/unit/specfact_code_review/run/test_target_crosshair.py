@@ -4,6 +4,7 @@ import importlib.metadata
 import inspect
 import io as stdio
 import json as json_codec
+import os
 import subprocess
 import sys
 from argparse import Namespace
@@ -17,6 +18,7 @@ from crosshair.register_contract import REGISTERED_CONTRACTS, ContractOverride
 from icontract import ensure
 
 from specfact_code_review.run import target_bootstrap, target_crosshair
+from specfact_code_review.tools.basedpyright_runner import run_basedpyright
 
 
 _stream_sink = vars(target_crosshair)["_TargetOutput"]
@@ -414,8 +416,14 @@ def test_dispatch_fixture_retains_later_project_contract_enforcement():
             sys.executable,
             "-m",
             "pytest",
-            "tests/unit/specfact_code_review/run/test_crosshair_dispatch.py::test_production_dispatch_preserves_attachment_argv_and_exit_without_sampling",
-            "tests/unit/specfact_code_review/run/test_target_crosshair.py::test_dispatch_preserves_constructor_arguments",
+            (
+                "tests/unit/specfact_code_review/run/test_crosshair_dispatch.py::"
+                "test_production_dispatch_preserves_attachment_argv_and_exit_without_sampling"
+            ),
+            (
+                "tests/unit/specfact_code_review/run/test_target_crosshair.py::"
+                "test_dispatch_preserves_constructor_arguments"
+            ),
             "tests/unit/sync_runtime/test_bridge_probe.py::TestBridgeProbe::test_auto_generate_bridge_unknown",
             "-o",
             "addopts=" + shlex.join(serial),
@@ -633,7 +641,7 @@ def test_real_standard_stream_protocol_remains_valid_under_pinned_dispatch(
             "import json,sys; s=sys."
             + channel
             + "; print(json.dumps([s.encoding,s.errors,s.line_buffering,s.write_through,"
-            "s.name,s.mode,s.buffer.name,s.buffer.mode,s.isatty(),s.fileno()]))",
+            "s.name,s.mode,s.buffer.name,s.buffer.mode,s.isatty()]))",
         ],
         capture_output=True,
         text=True,
@@ -643,7 +651,7 @@ def test_real_standard_stream_protocol_remains_valid_under_pinned_dispatch(
     properties = json_codec.loads(profile.stdout)
     operations = {
         "metadata": "    return int((s.encoding,s.errors,s.line_buffering,s.write_through,"
-        "s.name,s.mode,s.buffer.name,s.buffer.mode,s.isatty(),s.fileno()) == " + repr(tuple(properties)) + ")\n",
+        "s.name,s.mode,s.buffer.name,s.buffer.mode,s.isatty()) == " + repr(tuple(properties)) + ")\n",
         "reconfigure": "    s.reconfigure(encoding='latin-1',errors='replace',"
         "line_buffering=False,write_through=True)\n"
         "    s.write('é'); s.flush()\n"
@@ -842,3 +850,34 @@ def test_discard_physical_quota_rejection_stays_terminal_even_for_empty_write(su
         writer = {"text": sink, "buffer": sink.buffer, "raw": sink.buffer.raw}[surface]
         with pytest.raises(ValueError, match="crosshair_target_output_limit_exceeded"):
             writer.write("" if surface == "text" else b"")
+
+
+@pytest.mark.parametrize("channel", ["stdout", "stderr"])
+@pytest.mark.parametrize("surface", ["text", "binary", "raw"])
+def test_target_descriptor_access_cannot_write_original_reporter(tmp_path, monkeypatch, channel, surface):
+    reporter_path = tmp_path / (channel + ".txt")
+    crosshair_cli = importlib.import_module("crosshair.main")
+
+    def target(arguments, options, stdout, stderr):
+        assert arguments is None and options is None
+        assert stdout is reporter and stderr is reporter
+        stream = getattr(sys, channel)
+        layers = {"text": stream, "binary": stream.buffer, "raw": stream.buffer.raw}
+        return os.write(layers[surface].fileno(), b"TARGET_REPORTER_DESCRIPTOR_ESCAPE")
+
+    monkeypatch.setattr(crosshair_cli, "check", target)
+    with reporter_path.open("w+", encoding="utf-8") as reporter:
+        monkeypatch.setattr(sys, channel, reporter)
+        with vars(target_crosshair)["_diagnostic_channel_compatibility"](), pytest.raises(stdio.UnsupportedOperation):
+            crosshair_cli.check(None, None, reporter, reporter)
+        assert getattr(sys, channel) is reporter and not reporter.closed
+        reporter.flush()
+        assert reporter_path.read_bytes() == b""
+
+
+def test_complete_crosshair_adapter_has_no_public_type_findings():
+    source = (
+        Path(__file__).parents[4] / "packages/specfact-code-review/src/specfact_code_review/run/target_crosshair.py"
+    )
+    findings = run_basedpyright([source])
+    assert not findings, [(finding.rule, finding.line, finding.message) for finding in findings]

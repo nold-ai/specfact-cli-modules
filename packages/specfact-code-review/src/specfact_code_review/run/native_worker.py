@@ -258,18 +258,20 @@ def _materialized_adapter_argv(adapter_argv: list[str], project: Path) -> list[s
     for argument in adapter_argv:
         if argument == snapshot_prefix:
             materialized.append(str(project))
-        elif argument.startswith(snapshot_prefix + "/"):
+            continue
+        if argument.startswith(snapshot_prefix + "/"):
             relative = Path(argument.removeprefix(snapshot_prefix + "/"))
             if ".." in relative.parts:
                 raise WorkerContractError("snapshot policy path escapes the project")
             materialized.append(str(project / relative))
-        elif argument.startswith(config_prefix):
+            continue
+        if argument.startswith(config_prefix):
             relative = Path(argument.removeprefix(config_prefix))
             if ".." in relative.parts:
                 raise WorkerContractError("configuration policy path escapes the project")
             materialized.append(str(project / ".specfact-native-config" / relative))
-        else:
-            materialized.append(argument)
+            continue
+        materialized.append(argument)
     return materialized
 
 

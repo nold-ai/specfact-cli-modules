@@ -637,3 +637,66 @@ def test_workflow_mapping_contract_preserves_real_yaml_protocol(source: str):
         TypeError,
         yaml.constructor.ConstructorError,
     }
+
+
+STANDALONE_BOOTSTRAP_PROBES = (
+    "test_additive_startup_hooks_preserve_verified_member_dispatch",
+    "test_analyzer_dependency_origin_survives_snapshot_collision_and_pth_preload",
+    "test_analyzer_rejects_dependency_loaded_before_bootstrap",
+    "test_executable_editable_finder_remains_available_behind_sealed_imports",
+    "test_executable_editable_namespace_path_hook_is_retained",
+    "test_executable_pth_cannot_change_protected_import_state",
+    "test_executable_pth_cannot_substitute_analyzer_dispatch",
+    "test_loader_filename_substitution_cannot_redirect_verified_dispatch",
+    "test_native_pytest_adds_flat_test_module_root_without_runtime_override",
+    "test_path_only_pth_retains_rebased_workspace_import",
+    "test_preloaded_analyzer_origin_failure_uses_startup_exit",
+    "test_pth_paths_outside_runtime_roots_have_actionable_diagnostic",
+    "test_startup_rejection_has_distinct_exit_despite_analyzer_shaped_stdout",
+    "test_target_pytest_preserves_built_or_explicit_source_imports",
+    "test_target_startup_cannot_replace_registered_virtual_lookup",
+)
+
+
+def test_standalone_bootstrap_probes_use_mandatory_host_registration():
+    host = importlib.import_module("tests.host.proof_capsule_review_projection_shell")
+    portable = importlib.import_module("tests.unit.specfact_code_review.run.test_target_bootstrap")
+    for name in STANDALONE_BOOTSTRAP_PROBES:
+        function = getattr(host, name, None)
+        assert callable(function) and function.__name__ == name
+        assert not hasattr(portable, name)
+    unit_path = ROOT / "tests/unit/specfact_code_review/run/test_target_bootstrap.py"
+    host_path = ROOT / CONTROLLER_SHELL_PROOF
+    plan = ProjectPlan(root=ROOT, manager="pip", pytest_config={"testpaths": ["tests"]})
+    selection = select_test_paths(plan, [unit_path, host_path], full=False)
+    assert unit_path.relative_to(ROOT).as_posix() in selection
+    assert CONTROLLER_SHELL_PROOF not in selection
+
+
+def test_standalone_bootstrap_host_source_and_direct_dependencies_are_declared():
+    workflow = yaml.safe_load((ROOT / ".github/workflows/code-review-macos-boundary.yml").read_text())
+    for job in [workflow["jobs"]["canonical-linux"], workflow["jobs"]["native-boundary"]]:
+        assert "packages/specfact-code-review/src" in job.get("env", {}).get("PYTHONPATH", "").split(":")
+        commands = "\n".join(step.get("run", "") for step in job["steps"])
+        assert "icontract==2.7.3" in commands
+        assert "packaging==26.3" in commands
+        assert CONTROLLER_SHELL_PROOF in commands
+
+
+def test_required_signature_job_checks_final_committed_capsule_scheduling():
+    workflow = yaml.load((ROOT / ".github/workflows/sign-modules.yml").read_text(), Loader=yaml.BaseLoader)
+    trigger = workflow["on"]["pull_request"]
+    assert set(trigger) == {"branches", "paths"}
+    assert trigger["branches"] == ["dev", "main"]
+    assert "**" in trigger["paths"] and all(not path.startswith("!") for path in trigger["paths"])
+    steps = workflow["jobs"]["verify"]["steps"]
+    step = next((item for item in steps if item.get("name") == "Validate committed capsule review scheduling"), None)
+    assert step is not None
+    assert step["if"] == "github.event_name == 'pull_request' && github.base_ref == 'dev'"
+    assert step["env"] == {
+        "CANDIDATE_HEAD": "${{ github.event.pull_request.head.sha }}",
+        "CANDIDATE_BASE": "${{ github.event.pull_request.base.sha }}",
+    }
+    assert "continue-on-error" not in step
+    assert step["run"] == 'python -I scripts/owner_commit_entry.py --head "$CANDIDATE_HEAD" --base "$CANDIDATE_BASE"'
+    assert steps.index(step) < next(i for i, item in enumerate(steps) if item["name"].startswith("Auto-sign"))

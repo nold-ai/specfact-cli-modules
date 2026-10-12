@@ -954,22 +954,6 @@ requirements:
       observable: Three actual public-runner REDs at 102/104/98 lines against threshold 80 become complete scoped GREEN, with callers 59/34/72 and helpers 47/74/28. Whole original module AST reconstructs exactly (52 definitions/24 tests/73 assertions); all original preparation cases remain. Focused61PASS; Full186host+5777portable and separateSMART186host+5777portable PASS with 71skips95subtests5warnings. Patch remains uncommitted against 01d4313; trusted commit-entry decision and final normal hooks pending. Hosted failures, parameter warnings and independent installed acceptance remain unwaived/unproven.
 
 
-  openspec:code-review-native-platform-execution:review-native-platform-execution:owner-bound-external-commit-enforcement:
-    rationale: Enforce the explicitly approved monitor commit workflow outside candidate dispatcher control.
-    stakeholder_refs:
-    - nold-ai/specfact-cli-modules#460
-    touchpoints:
-    - id: owner-commit-entry-spec
-      kind: config_file
-      locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
-    verification_cases:
-    - case_id: 460-24-1
-      scenario_id: owner-bound-external-commit-enforcement
-      method: test
-      intent: Reject independently reproduced dispatcher bypass and final-index mutation while retaining normal hooks and approved authority.
-      observable: Real isolated Git commits exercise candidate-dispatcher removal, disabled scheduling, normal-hook failure, post-hook indexed mutation and caller binding; valid commits execute existing normal pre-commit before independent final validation. External installation is invocation-scoped and does not modify shared hooks/config; hosted and installed native acceptance remain separate. Three genuine Git REDs precede15real commit controls; one real public Radon RED precedes exact fixture-helper preservation. Final focused16PASS, Full201host+5778portable and separateSMART201host+5778portable PASS; original71skips95subtests5warnings retained; actual external-entry normal hooks PASS.
-
-
   openspec:code-review-native-platform-execution:review-native-platform-execution:pinned-parser-compatible-native-proof-construction:
     rationale: Remove independently reproduced pinned parser failures without weakening retained proof behavior or analyzer policy.
     stakeholder_refs:
@@ -985,21 +969,6 @@ requirements:
       intent: Parse all three complete retained modules with actual Semgrep1.144.0 in both original packs while retaining every fixture predicate/assertion and KISS gate.
       observable: Independent real pinned-parser REDs precede guard/helper correction; whole original ASTs reconstruct under reversal, and original native preparation/ownership/artifact remedies remain. Local evidence never waives original incomplete diagnostics or establishes new hosted/installed acceptance.
 
-  openspec:code-review-native-platform-execution:review-native-platform-execution:owner-entry-interpreter-identity:
-    rationale: Bind the approved external entry to existing owner-installed interpreter bytes outside candidate control.
-    stakeholder_refs:
-    - nold-ai/specfact-cli-modules#460
-    touchpoints:
-    - id: owner-interpreter-spec
-      kind: config_file
-      locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
-    verification_cases:
-    - case_id: 460-26-1
-      scenario_id: owner-entry-interpreter-identity
-      method: test
-      intent: Reject candidate interpreter replacement before and during normal hooks without executing replacement bytes.
-      observable: Two genuine real Git bypass REDs precede interpreter path/target/byte binding; both reject after correction, while valid dispatcher and complete-history controls remain. The owner-installed external runtime is existing trusted tooling, not a new checker authority or hostile-code containment claim.
-
   openspec:code-review-native-platform-execution:review-native-platform-execution:unambiguous-staged-pathname-serialization:
     rationale: Prevent Git pathname quoting from omitting unrelated staged review surfaces.
     stakeholder_refs:
@@ -1014,21 +983,6 @@ requirements:
       method: test
       intent: Reject unrelated quoted and multiline paths in real Git dispatcher and external-entry controls.
       observable: Genuine failed-before assertions precede NUL parsing and fail-closed line-protocol adaptation; valid literal capsule paths and existing authority controls remain required.
-
-  openspec:code-review-native-platform-execution:review-native-platform-execution:immutable-integrated-dev-entry-binding:
-    rationale: Prevent candidate hooks from redirecting approved checker authority through mutable local refs.
-    stakeholder_refs:
-    - nold-ai/specfact-cli-modules#460
-    touchpoints:
-    - id: bound-dev-spec
-      kind: config_file
-      locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
-    verification_cases:
-    - case_id: 460-28-1
-      scenario_id: immutable-integrated-dev-entry-binding
-      method: test
-      intent: Reject actual forged checker execution and false commits before and during normal hooks.
-      observable: Genuine real Git false-success REDs precede immutable owner binding; forged checker markers remain absent after correction and all original valid scheduling/bootstrap/path/interpreter controls remain required.
 
   openspec:code-review-native-platform-execution:review-native-platform-execution:isolated-crosshair-diagnostic-channels:
     rationale: Keep analyzed code output distinct from trusted analyzer evidence without weakening failure gates.
@@ -1089,51 +1043,6 @@ requirements:
       method: test
       intent: Bind annotations and exact existing exceptions to real YAML values and malformed nodes.
       observable: Missing contract metadata fails before correction; executable YAML and scheduling semantics remain exact.
-
-  openspec:code-review-native-platform-execution:review-native-platform-execution:portable-owner-entry-contract-verification:
-    rationale: Measure actual owner-entry guard branches in portable tests while preserving mandatory real host proof and every enforcement boundary.
-    stakeholder_refs:
-    - nold-ai/specfact-cli-modules#460
-    touchpoints:
-    - id: portable-owner-entry-spec
-      kind: config_file
-      locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
-    verification_cases:
-    - case_id: 460-33-1
-      scenario_id: portable-owner-entry-contract-verification
-      method: test
-      intent: Real public contract-runner RED and measured actual Python entry guards, status propagation and private cleanup.
-      observable: Missing public contracts fail before correction; measured coverage satisfies unchanged80% while real host proofs remain required.
-
-  openspec:code-review-native-platform-execution:review-native-platform-execution:exact-owner-cli-parser-exception:
-    rationale: Preserve real argparse rejection/help outcomes while allowing complete contract analysis.
-    stakeholder_refs:
-    - nold-ai/specfact-cli-modules#460
-    touchpoints:
-    - id: owner-cli-parser-spec
-      kind: config_file
-      locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
-    verification_cases:
-    - case_id: 460-34-1
-      scenario_id: exact-owner-cli-parser-exception
-      method: test
-      intent: Retain real invalid/help SystemExit statuses and precise pinned exception metadata.
-      observable: Missing declaration fails after real parser exits; exact statuses and complete analysis are retained after correction.
-
-  openspec:code-review-native-platform-execution:review-native-platform-execution:exact-owner-entry-rejection-contracts:
-    rationale: Preserve precise fail-closed rejection exceptions alongside public return contracts.
-    stakeholder_refs:
-    - nold-ai/specfact-cli-modules#460
-    touchpoints:
-    - id: owner-entry-rejection-spec
-      kind: config_file
-      locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
-    verification_cases:
-    - case_id: 460-35-1
-      scenario_id: exact-owner-entry-rejection-contracts
-      method: test
-      intent: Retain actual candidate-local destination, missing binding and malformed JSON errors with exact declarations.
-      observable: Missing declarations fail after actual rejections; existing exceptions and original CLI status1 conversion remain intact.
 
   openspec:code-review-native-platform-execution:review-native-platform-execution:faithful-target-stream-closed-state-rejection:
     rationale: Preserve real target I/O failures while isolating standard output from analyzer diagnostics.
@@ -1255,36 +1164,6 @@ requirements:
       intent: Complete public style analysis supplements real pinned CLI open/closed and non-text protocol cases.
       observable: Real W0125 producer RED precedes explicit standard descriptor retrieval; neither a shadow flag nor suppression is admitted.
 
-  openspec:code-review-native-platform-execution:review-native-platform-execution:bind-approved-scheduling-through-actual-commit-creation:
-    rationale: Preserve the already approved authority and complete normal hooks while rejecting actual post-hook index races before reference advancement.
-    stakeholder_refs:
-    - nold-ai/specfact-cli-modules#460
-    touchpoints:
-    - id: immutable-proposed-tree-spec
-      kind: config_file
-      locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
-    verification_cases:
-    - case_id: 460-44-1
-      scenario_id: bind-approved-scheduling-through-actual-commit-creation
-      method: test
-      intent: Actual Git detached-child race and valid controls bind complete proposed trees to the same approved checker before ref updates.
-      observable: Real false-commit RED precedes worktree-only prepared-transaction validation; bad HEAD advancement rejects without weakening normal hooks or policy.
-
-  openspec:code-review-native-platform-execution:review-native-platform-execution:bounded-actual-commit-race-proof-phases:
-    rationale: Preserve genuine complete-tree race rejection and actual process lifecycle under unchanged quality policy.
-    stakeholder_refs:
-    - nold-ai/specfact-cli-modules#460
-    touchpoints:
-    - id: bounded-race-proof-spec
-      kind: config_file
-      locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
-    verification_cases:
-    - case_id: 460-45-1
-      scenario_id: bounded-actual-commit-race-proof-phases
-      method: test
-      intent: Complete public producer RED/GREEN supplements unchanged real Git race requests and assertions.
-      observable: Actual new length/resource/import-order findings precede exact preparation phase separation and process context management.
-
   openspec:code-review-native-platform-execution:review-native-platform-execution:faithful-bounded-standard-output-protocol:
     rationale: Preserve real standard stream behavior and exact bounded discard semantics without reporter contamination or policy changes.
     stakeholder_refs:
@@ -1300,17 +1179,98 @@ requirements:
       intent: Real standard-stream CLI baselines and pinned CrossHair RED/GREEN cover metadata, reconfiguration and binary writes with unchanged reporter and quota controls.
       observable: Genuine false contract failures precede native bounded adapters; valid protocol succeeds, actual counterexamples and all bounds still reject.
 
-  openspec:code-review-native-platform-execution:review-native-platform-execution:portable-transaction-controls-without-host-process-tools:
-    rationale: Retain complete portable transaction guard proofs inside analyzer capsules without unrelated host tool dependencies.
+  openspec:code-review-native-platform-execution:review-native-platform-execution:no-reporter-descriptor-capability-from-discard-streams:
+    rationale: Preserve standard discard behavior without handing analyzed code the original reporter write capability.
     stakeholder_refs:
     - nold-ai/specfact-cli-modules#460
     touchpoints:
-    - id: portable-transaction-fixture-spec
+    - id: reporter-descriptor-isolation-spec
       kind: config_file
       locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
     verification_cases:
-    - case_id: 460-47-1
-      scenario_id: portable-transaction-controls-without-host-process-tools
+    - case_id: 460-48-1
+      scenario_id: no-reporter-descriptor-capability-from-discard-streams
       method: test
-      intent: Real pytest PATH-isolated RED/GREEN retains original portable assertions and unchanged mandatory real Git host proofs.
-      observable: Actual old fixture FileNotFoundError precedes owned simulated process-birth metadata; corrected controls pass without weakening production validation.
+      intent: Real target handler and OS-write RED/GREEN retain original reporter bytes and all stream quotas.
+      observable: Actual descriptor exposure RED precedes standard UnsupportedOperation at every adapter layer; unchanged valid text/binary controls continue to pass.
+
+  openspec:code-review-native-platform-execution:review-native-platform-execution:flat-materialized-native-adapter-argument-branches:
+    rationale: Reduce genuine native materialization nesting without changing any request or path security semantics.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#460
+    touchpoints:
+    - id: native-materialization-nesting-spec
+      kind: config_file
+      locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
+    verification_cases:
+    - case_id: 460-49-1
+      scenario_id: flat-materialized-native-adapter-argument-branches
+      method: test
+      intent: Actual complete public producer RED/GREEN plus full-module AST reversal preserve every original native argument guard and request.
+      observable: Genuine unchanged-production nesting5 RED precedes flat ordered branches; threshold3 and all original assertions remain.
+
+  openspec:code-review-native-platform-execution:review-native-platform-execution:mandatory-host-execution-for-standalone-bootstrap-probes:
+    rationale: Retain every standalone isolated-startup control in mandatory host execution while keeping attached runtime rejection intact.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#460
+    touchpoints:
+    - id: standalone-bootstrap-host-role-spec
+      kind: config_file
+      locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
+    verification_cases:
+    - case_id: 460-50-1
+      scenario_id: mandatory-host-execution-for-standalone-bootstrap-probes
+      method: test
+      intent: Genuine registration/dependency REDs precede mandatory host relocation; actual collection and complete AST reconstruction preserve all original probes.
+      observable: Fifteen functions/fifty-four unchanged parameter cases move to required Full/SMART/Linux/all macOS host execution, with deliberate attached-launcher rejection unchanged.
+
+  openspec:code-review-native-platform-execution:review-native-platform-execution:complete-pinned-crosshair-adapter-typing-without-suppression:
+    rationale: Correct independently reproduced complete-file type errors without altering runtime bindings or weakening policy.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#460
+    touchpoints:
+    - id: complete-crosshair-typing-spec
+      kind: config_file
+      locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
+    verification_cases:
+    - case_id: 460-51-1
+      scenario_id: complete-pinned-crosshair-adapter-typing-without-suppression
+      method: test
+      intent: Actual public type-producer RED/GREEN and complete reversal preserve every old adapter control.
+      observable: Twelve genuine old-source errors precede type-only correction; complete real producer returns no findings without skips or ignores.
+
+  openspec:code-review-native-platform-execution:review-native-platform-execution:exact-retained-pytest-selector-literals-within-line-policy:
+    rationale: Correct genuine line-length findings without changing any original pytest selector or behavior.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#460
+    touchpoints:
+    - id: retained-selector-line-spec
+      kind: config_file
+      locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
+    verification_cases:
+    - case_id: 460-52-1
+      scenario_id: exact-retained-pytest-selector-literals-within-line-policy
+      method: inspection
+      intent: Actual complete public producer RED/GREEN plus full-module AST equality preserve original test and subprocess identities.
+      observable: Two genuine unchanged-source C0301 rows precede adjacent literal layout; no targeted row remains and all original values are exact.
+
+
+  openspec:code-review-native-platform-execution:review-native-platform-execution:final-committed-review-scheduling-in-required-ci:
+    rationale: Reuse existing required hosted checks on the final PR commit instead of custom local commit containment.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#460
+    touchpoints:
+    - id: committed-ci-scheduling-spec
+      kind: config_file
+      locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
+    verification_cases:
+    - case_id: 460-53-1
+      scenario_id: final-committed-review-scheduling-in-required-ci
+      method: test
+      intent: Actual Git commits and alternate indexes prove final-head selection and invalid scheduling rejection before CI acceptance.
+      observable: Valid committed trees pass; disabled, filtered and nonblocking final scheduling fails regardless of live index/worktree content.
+    - case_id: 460-53-2
+      scenario_id: final-committed-review-scheduling-in-required-ci
+      method: test
+      intent: Retain approved checker authority, cleanup and required quality failure propagation while retiring private hook installation.
+      observable: Missing or expired authority and nonsuccess review outcomes fail; ordinary Git state and all existing gates remain.

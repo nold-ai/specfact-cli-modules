@@ -432,3 +432,17 @@ def test_actual_commit_race_proofs_preserve_complete_quality_policy() -> None:
         )
     }
     assert not any(row.line in target_lines and row.rule.startswith("kiss.loc.") for row in findings)
+
+
+def test_native_argument_materialization_satisfies_complete_nesting_policy() -> None:
+    source = Path("packages/specfact-code-review/src/specfact_code_review/run/native_worker.py").resolve()
+    target = next(
+        node
+        for node in ast.parse(source.read_text(encoding="utf-8")).body
+        if isinstance(node, ast.FunctionDef) and node.name == "_materialized_adapter_argv"
+    )
+    findings = run_radon([source], full_result=True)
+    assert not any(row.category == "tool_error" for row in findings)
+    assert not any(
+        row.line == target.lineno and row.rule in {"kiss.nesting.warning", "kiss.nesting.error"} for row in findings
+    )

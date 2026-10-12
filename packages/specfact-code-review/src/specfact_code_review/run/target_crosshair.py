@@ -44,7 +44,7 @@ def _constructor_member_signature(cls, name):
     function = getattr(cls, name)
     if function is getattr(object, name):
         return None
-    signature = core.resolve_signature(function)
+    signature = vars(core)["resolve_signature"](function)
     if not isinstance(signature, inspect.Signature):
         return None
     parameters = list(signature.parameters.values())
@@ -75,7 +75,7 @@ def _constructor_compatibility():
 
     def constructor_signature(cls):
         if hasattr(cls, "__signature__"):
-            explicit = core.resolve_signature(cls)
+            explicit = vars(core)["resolve_signature"](cls)
             if isinstance(explicit, inspect.Signature):
                 return explicit
         signatures = [
@@ -106,15 +106,15 @@ def _registered_lookup(original):
 @contextmanager
 def _contract_lookup_compatibility():
     """Keep the impossible-key guard local to the verified pinned invocation."""
-    original_core = core.get_contract
-    original_parser = condition_parser.get_contract
-    core.get_contract = _registered_lookup(original_core)
-    condition_parser.get_contract = _registered_lookup(original_parser)
+    original_core = vars(core)["get_contract"]
+    original_parser = vars(condition_parser)["get_contract"]
+    cast(dict[str, object], vars(core))["get_contract"] = _registered_lookup(original_core)
+    cast(dict[str, object], vars(condition_parser))["get_contract"] = _registered_lookup(original_parser)
     try:
         yield
     finally:
-        core.get_contract = original_core
-        condition_parser.get_contract = original_parser
+        cast(dict[str, object], vars(core))["get_contract"] = original_core
+        cast(dict[str, object], vars(condition_parser))["get_contract"] = original_parser
 
 
 def _literal_value(creator, *values):
@@ -137,7 +137,7 @@ def _literal_compatibility():
     registry = vars(core)["_SIMPLE_PROXIES"]
     added = Literal not in registry
     if added:
-        core.register_type(Literal, _literal_value)
+        core.register_type(cast(type, Literal), _literal_value)
     try:
         yield
     finally:
@@ -206,13 +206,13 @@ class _TargetRaw(io.RawIOBase):
 
     @ensure(lambda result: isinstance(result, int) and not isinstance(result, bool))
     def fileno(self) -> int:
-        """Retain supported descriptor metadata without owning the descriptor.
+        """Reject descriptor access to keep the original reporter private.
 
-        :raises ValueError: the private or captured stream is closed.
-        :raises OSError: the captured stream has no supported descriptor.
+        :raises ValueError: the private stream is closed.
+        :raises OSError: the discard stream has no exposed descriptor.
         """
         self._require_open()
-        return super().fileno() if self._source is None else self._source.fileno()
+        return super().fileno()
 
     @ensure(lambda data, result: result == memoryview(data).nbytes)
     def write(self, data) -> int:
@@ -267,7 +267,7 @@ class _TargetOutput(io.TextIOWrapper):
         :raises TypeError: target writes a non-text value.
         :raises UnicodeEncodeError: text violates the active encoding/error policy.
         """
-        errors = self.errors
+        errors = cast(str, self.errors)
         result = super().write(text)
         self.flush()
         cast(_TargetRaw, cast(_TargetBinary, self.buffer).raw).verify_output_bound()
@@ -285,7 +285,10 @@ def _diagnostic_channel_compatibility():
     original = main.check
 
     def check(arguments, options, stdout, stderr):
-        with redirect_stdout(_TargetOutput(sys.stdout)), redirect_stderr(_TargetOutput(sys.stderr)):
+        with (
+            redirect_stdout(_TargetOutput(cast(io.TextIOBase, sys.stdout))),
+            redirect_stderr(_TargetOutput(cast(io.TextIOBase, sys.stderr))),
+        ):
             return original(arguments, options, stdout, stderr)
 
     main.check = check

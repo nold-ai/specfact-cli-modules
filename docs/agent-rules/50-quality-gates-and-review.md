@@ -13,7 +13,7 @@ tracks:
   - scripts/pre_commit_code_review.py
   - scripts/verify-modules-signature.py
   - docs/agent-rules/**
-last_reviewed: 2026-10-05
+last_reviewed: 2026-10-13
 exempt: false
 exempt_reason: ""
 id: agent-rules-quality-gates-and-review
@@ -66,7 +66,12 @@ An explicitly approved local ARM64 Darwin feature-worktree exception may set
 to the blocking exact-head GitHub Linux customer job. Every other hook component
 still executes. This reports DEFERRED, never PASS; it is rejected in CI, on other
 platforms or protected checkouts. Record maintainer approval in change evidence
-and require hosted review completion before merge.
+and require hosted review completion before merge. Local hooks validate development inputs; they do not
+claim an immutable local commit boundary. The existing required Verify Module
+Signatures CI job additionally validates final committed capsule scheduling for
+feature PRs to dev. The three quality jobs retain their blocking review
+prerequisites. Ordinary hooks remain mandatory; no private hook installer,
+transaction record, broker or administrator provisioning is required.
 
 ## SpecFact code review JSON
 

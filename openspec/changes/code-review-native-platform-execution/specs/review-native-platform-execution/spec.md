@@ -1607,20 +1607,6 @@ Project runtime preparation proofs SHALL satisfy the unchanged function-length p
 - **AND** Full and separate SMART SHALL retain every host/native and portable proof, declared skip and coverage obligation without changing runtime, signature, checker authority, workflow, deadline, threshold, admission or lifecycle policy
 
 
-### Requirement: Owner-bound external commit enforcement
-
-The approved monitor workflow SHALL execute independently installed scheduling enforcement outside the candidate checkout before and after all existing normal hooks, scoped to the exact worktree, Git directory and branch, without changing shared hooks or persistent configuration.
-
-#### Scenario: Candidate dispatcher cannot remove enforcement
-- **GIVEN** the owner-approved private commit entry and the existing trusted tooling environment
-- **WHEN** candidate dispatcher/config removes its checker call, normal hooks fail, scheduling is disabled, the final index changes, or the caller/interpreter binding is invalid
-- **THEN** the explicit Git commit invocation SHALL fail closed without executing candidate checker as authority
-- **AND** valid commits SHALL retain all normal hooks and the same integrated-dev or exact owner-approved bootstrap checker, complete-history/object/expiry guards and temporary-file cleanup
-- **AND** installed invocation evidence SHALL remain separate from hosted review, arbitrary commit paths and independent installed native acceptance
-
-- **AND** new real-commit fixtures and their helpers SHALL satisfy the unchanged public Radon complexity and KISS policies while retaining every control assertion
-
-
 ### Requirement: Pinned parser compatible native proof construction
 
 Native proof construction SHALL parse completely with the unchanged Semgrep1.144.0 while retaining all original predicates, branch order/bodies/fallback, test identities/arguments/decorators/assertions and unchanged KISS policy.
@@ -1632,37 +1618,17 @@ Native proof construction SHALL parse completely with the unchanged Semgrep1.144
 - **AND** reversing only the branch/helper transformation SHALL reconstruct each original whole-module AST; Full/SMART/native obligations, analyzer versions, policy thresholds and every existing test case remain
 - **AND** local parser evidence SHALL remain separate from original private CI diagnostics and new exact-head hosted acceptance; other findings remain unwaived
 
-### Requirement: Owner entry interpreter identity
-The invocation-scoped owner entry SHALL resolve the existing owner-installed interpreter outside the candidate worktree, bind its executable bytes, and use that resolved path for entry and checker execution. Replacing the candidate worktree interpreter before or during normal hooks SHALL reject without executing replacement bytes. Shared hooks/config and approved checker authority remain unchanged.
-
-#### Scenario: Candidate interpreter replacement cannot bypass owner enforcement
-- **GIVEN** an installed owner entry and a candidate dispatcher capable of replacing its worktree interpreter
-- **WHEN** replacement occurs before entry or after valid pre-hook validation and the scheduler is disabled
-- **THEN** real Git commit rejects, replacement markers stay absent, and the original HEAD remains
-
 ### Requirement: Unambiguous staged pathname serialization
 
-The local deferral dispatcher and owner-installed external commit entry SHALL consume NUL-delimited Git paths, preserve each representable filename exactly, and reject pathnames that cannot be represented by the unchanged approved checker line protocol. The approved checker byte authority and existing scheduling, normal-hook and ownership checks SHALL remain unchanged.
+The local deferral dispatcher and committed-tree CI validator SHALL consume NUL-delimited Git paths, preserve each representable filename exactly, and reject pathnames that cannot be represented by the unchanged approved checker line protocol. The approved checker byte authority and existing scheduling, normal-hook and ownership checks SHALL remain unchanged.
 
 #### Scenario: unrelated quoted or multiline staged path
 - **WHEN** a qualifying capsule delta accompanies an unrelated reviewable path containing newline, carriage return, tab, quote, backslash or a Unicode line separator
-- **THEN** local deferral and the external real Git commit reject the unrelated surface before reporting success
+- **THEN** local deferral and committed-tree CI validation reject the unrelated surface before reporting success
 
 #### Scenario: representable capsule filename
 - **WHEN** an eligible capsule filename includes literal spaces, tab, quote or backslash without a line boundary
 - **THEN** its exact pathname reaches the approved checker and normal commit checks remain required
-
-### Requirement: Immutable integrated-dev entry binding
-
-The approved external commit entry SHALL bind the independently verified integrated-dev commit when installed, reject any live origin/dev ref mismatch before checker selection, and reuse the immutable bound commit for every authority and baseline validation. Candidate normal hooks SHALL NOT redirect authority by replacing origin/dev before or during a commit. Legitimate dev advancement SHALL require owner-workflow refresh from actual verified dev.
-
-#### Scenario: substituted dev checker before or during hooks
-- **WHEN** an installed entry encounters a forged origin/dev with a permissive checker before invocation or while normal hooks run, with valid or disabled indexed scheduling
-- **THEN** the commit is rejected, forged checker bytes do not execute, and no new commit is created
-
-#### Scenario: unchanged integrated dev
-- **WHEN** the verified bound dev remains unchanged
-- **THEN** normal hooks and both validations retain the same approved authority and valid commits remain admitted
 
 ### Requirement: Isolated CrossHair diagnostic channels
 
@@ -1699,34 +1665,6 @@ The candidate workflow loader override SHALL declare PyYAML's MappingNode input 
 #### Scenario: workflow mapping API
 - **WHEN** valid literal on/Boolean workflow nodes, duplicate keys, malformed mapping entries or unsupported YAML tags reach the override
 - **THEN** original values or exact rejection classes remain observable, while analysis uses the real MappingNode/Boolean protocol and exact declared exceptions
-
-### Requirement: Portable owner-entry contract verification
-
-The worktree-only owner entry SHALL retain all existing caller/interpreter/hook/config/dev bindings, bootstrap authority/history/object/expiry guards, exact NUL pathname handling, approved-checker-before-and-after normal hooks, failure propagation and private cleanup. Public installation/index-validation APIs SHALL contractually return None on success; enforcement and CLI APIs SHALL return a non-Boolean integer process status. Portable unit verification SHALL execute the actual Python entry with isolated filesystem and controlled process responses to satisfy the unchanged production-source coverage policy; it SHALL NOT execute a candidate checker as authority, add a shell/compiler to the capsule, replace real Git/host proofs, fabricate coverage or infer installed acceptance. All original real host proofs remain mandatory.
-
-#### Scenario: portable entry verification
-- **WHEN** entry bindings, authority responses, staged paths or normal-hook outcomes vary
-- **THEN** actual guard branches and exact checker/hook call order are measured, invalid states reject, temporary checker files are cleaned and original statuses propagate
-
-#### Scenario: public return contracts
-- **WHEN** an entry API completes successfully
-- **THEN** its declared return protocol is enforced without weakening original error/authority checks
-
-### Requirement: Exact owner CLI parser exception
-
-The owner-entry CLI contract SHALL declare only the existing argparse SystemExit outcome for invalid arguments or requested help, alongside its integer return postcondition. Invalid syntax SHALL still reject with the original status2, help SHALL retain status0, and no parser/hook/authority error SHALL become successful enforcement.
-
-#### Scenario: parser rejects or displays help
-- **WHEN** the real CLI receives an unknown command or requests help
-- **THEN** its original SystemExit status is retained and pinned contract analysis recognizes the precise declared parser exception rather than aborting the whole analysis process
-
-### Requirement: Exact owner entry rejection contracts
-
-Installation SHALL declare its existing OSError, ValueError and CalledProcessError rejections; indexed validation and enforcement SHALL additionally declare their existing missing-binding KeyError rejection. These precise exceptions SHALL remain fail-closed and propagate through original bodies; the CLI SHALL still convert only its original caught classes to status1. No broad Exception/BaseException declaration, successful rejection status or new checker authority is permitted.
-
-#### Scenario: invalid installation, binding or configuration
-- **WHEN** the actual APIs receive a candidate-local destination, missing binding fields or malformed JSON
-- **THEN** their original exact ValueError/KeyError rejection remains raised and contract metadata includes only the established filesystem, validation, Git/checker and missing-key errors
 
 ### Requirement: Faithful target stream closed-state rejection
 
@@ -1808,36 +1746,6 @@ The output sink SHALL read the same standard TextIOBase readonly closed descript
 - **WHEN** the complete public producer and actual CLI evaluate writes before and after closing the standard stream
 - **THEN** the producer completes without a targeted constant-condition report and actual closed writes still raise the genuine ValueError counterexample
 
-### Requirement: Bind approved scheduling through actual commit creation
-
-The already authorized worktree-only external entry SHALL validate the actual proposed commit tree before Git advances its bound branch, in addition to both existing index checks and every normal hook. Prepared reference-transaction input SHALL bind exact current old HEAD, a real new commit and only the bound branch/HEAD references. The proposed immutable tree SHALL be loaded into a private alternate index and checked using the SAME approved checker/current-dev baseline/history/object rules. Temporary index state and environment SHALL restore on success or rejection. Invalid/changed trees SHALL abort reference advancement; candidate normal-hook descendants modifying the original index SHALL NOT cause a false accepted commit. The mandatory git -c core.hooksPath route, external tooling trust and shared hook/config immutability remain unchanged. No arbitrary unwrapped Git or hostile installed-tool containment is claimed.
-
-#### Scenario: index mutation after final pre-commit validation
-- **WHEN** an actual detached hook child atomically replaces the staged workflow after the last pre-commit check but before Git commit creation
-- **THEN** actual proposed-tree validation rejects and HEAD remains unchanged
-
-#### Scenario: valid commit with all normal hooks
-- **WHEN** the immutable proposed tree preserves mandatory exact-head scheduling
-- **THEN** normal hooks and approved checker validations run and Git commits that exact validated tree
-
-The complete immutable post-normal-hook tree SHALL be checked and recorded in the trusted private entry namespace, and every proposed branch/HEAD commit tree SHALL equal that recorded tree. Re-running only the scheduling checker on a different tree is insufficient: a detached child replacing non-scheduling source SHALL also reject before reference advancement. The same private snapshot validation SHALL retain exact authority, baseline and cleanup rules.
-
-### Requirement: Bounded actual commit-race proof phases
-
-Actual commit-race proofs SHALL retain every generated child/barrier byte, Git request, timing bound, assertion and valid cached-tree fallback while using bounded direct preparation phases and the owned process context manager. Complete public Radon and configured Pylint analysis SHALL complete without targeted function-length, resource-lifecycle or import-order findings under unchanged policy.
-
-#### Scenario: complete race proof quality
-- **WHEN** actual public producers evaluate the complete retained proof and portable entry tests
-- **THEN** no new targeted length/resource/import-order finding remains and all real Git race and valid controls still execute
-
-New transaction diagnostics SHALL preserve their exact CLI text using the existing stderr channel without a new print-policy finding, and new proof names SHALL describe Git cleanup explicitly without a generic public-name finding. All earlier diagnostic calls and proof identities remain unchanged.
-
-Private checked-tree record creation SHALL remove its temporary allocation on write, flush or rename failure and reject commit acceptance.
-
-#### Scenario: checked-tree record cannot be written
-- **WHEN** writing the real private record allocation raises an actual filesystem failure
-- **THEN** validation fails and the temporary allocation is removed without accepted commit authority
-
 ### Requirement: Faithful bounded standard output protocol
 
 The scoped target stdout/stderr discard adapter SHALL preserve each original standard TextIOWrapper stream's encoding, errors, line-buffering and write-through metadata, native reconfiguration and binary-buffer write protocol without mutating or writing target data to the original reporter streams. Text, binary-buffer and raw-buffer writes SHALL share the unchanged four-MiB per-stream physical budget, and text SHALL retain its canonical UTF-8 charge using the active error policy. Draining accepted writes synchronously SHALL reject overflow before analyzed contract acceptance. The adapter SHALL preserve real closed/type/encoding error semantics and contain no readable output collector. Default standalone UTF-8/strict behavior, original analyzer args/options/status/counterexamples/reporter identity and restoration SHALL remain. Direct OS descriptor writes and general file/seek emulation remain outside the existing scoped output-isolation claim.
@@ -1860,10 +1768,63 @@ The physical counter SHALL include every actual text/binary/raw byte. The separa
 - **WHEN** Latin-1 and UTF-16 text together reach exactly four MiB of canonical UTF-8 while physical output remains below four MiB
 - **THEN** the valid writes succeed and the next text byte rejects at the unchanged canonical limit
 
-### Requirement: Portable transaction controls without host process tools
+### Requirement: No reporter descriptor capability from discard streams
 
-Portable transaction unit controls SHALL supply a fixed owned process-birth identity as part of their existing simulated Git metadata. They SHALL exercise unchanged private-record/tree/PID/mode/malformed/environment/cleanup validations without launching host-only process tools inside the analyzer capsule. Real Git host proofs SHALL continue to exercise actual process birth lookup and before-reference enforcement; production entry source and caller bindings SHALL remain unchanged. No required test or assertion may be skipped or weakened.
+The target stdout/stderr discard adapters SHALL reject fileno access with standard UnsupportedOperation through text, binary and raw layers, without exposing the original reporter descriptor. Encoding/errors/private reconfiguration/non-capability metadata/binary writes and every existing output quota SHALL remain. Actual OS writes using a descriptor requested from an adapter SHALL fail before any original reporter write. Metadata proofs SHALL preserve every original assertion/identity/argument while comparing only the promised non-capability metadata. No arbitrary raw-descriptor or hostile-code containment claim is introduced.
 
-#### Scenario: transaction controls inside a process-tool-free capsule
-- **WHEN** the portable prepared-transaction controls execute with no host process executable on PATH
-- **THEN** private record and tree validation completes with every original assertion retained, while actual real Git host proofs remain mandatory
+#### Scenario: descriptor writes cannot reach the reporter
+- **WHEN** analyzed code requests a target standard stream descriptor from text/binary/raw layers and attempts an actual OS write
+- **THEN** standard descriptor rejection occurs and original reporter bytes remain empty while normal binary/text writes retain unchanged quotas
+
+### Requirement: Flat materialized native adapter argument branches
+
+Native adapter argument materialization SHALL retain every original predicate, branch body, iteration order, traversal rejection and fallback while meeting the unchanged complete public KISS nesting policy. No adapter parameter, request/reply contract, ownership/origin boundary, timeout, tool dispatch or assertion SHALL be removed or weakened. Reversal of the flat ordered guards SHALL reconstruct the original complete worker AST.
+
+#### Scenario: complete native materialization nesting policy
+- **WHEN** the real public Radon producer evaluates the complete retained native worker
+- **THEN** argument materialization has no nesting-policy warning/error, producer execution completes and all original behavioral guards remain
+
+### Requirement: Mandatory host execution for standalone bootstrap probes
+
+All fifteen standalone bootstrap proof functions and their fifty-four parameter cases SHALL execute through the existing mandatory host entry in Full, SMART, Linux canonical and every macOS boundary matrix cell. Their original bodies, flags, parameters, decorators, assertions and parameter case identities SHALL remain exact. The complete factory/fixture closure SHALL be retained without duplication; any portable consumer of a shared factory SHALL remain unchanged. Default portable discovery SHALL not collect probes requiring a fresh isolated host interpreter. The production attached launcher SHALL continue rejecting -I/-S/-E; no raw interpreter bypass, skipped control, fabricated coverage or reduced gate is permitted. Existing shell/compiler controls, deadlines/coverage, orchestration and independent-controller authority SHALL remain unchanged.
+
+#### Scenario: retained probes execute in their mandatory host role
+- **WHEN** the actual pytest collection inventories and required host workflow are inspected
+- **THEN** all original standalone case identities are registered in the required host entry, absent from portable discovery, and run with the declared direct dependency/source environment without changing original invocation flags
+
+### Requirement: Complete pinned CrossHair adapter typing without suppression
+
+The complete CrossHair compatibility adapter SHALL pass the actual public basedpyright producer with unchanged repository policy. Dynamic re-export access SHALL preserve the exact live module binding and restoration; registry registration SHALL retain the original typing marker and callback identities. Standard reporter protocols and guaranteed native codec errors SHALL be represented accurately without changing stream behavior, quotas, constructor arguments, contract discovery or diagnostics. No ignore directive, policy relaxation, private-binding substitution or test removal is permitted.
+
+#### Scenario: complete adapter type analysis
+- **WHEN** the actual public type producer analyzes the complete retained compatibility adapter
+- **THEN** all twelve reproduced type errors are absent, producer execution completes, and all existing live-binding, constructor, stream, real counterexample and descriptor controls remain
+
+### Requirement: Exact retained pytest selector literals within line policy
+
+The complete retained CrossHair proof module SHALL meet the unchanged public line-length policy for its pytest selector literals. Splitting adjacent literals SHALL preserve the whole original module AST, exact subprocess argument values, test identities, assertions, decorators and runtime behavior. No deferred import, private binding, callback signature, tool policy or test selection may change.
+
+#### Scenario: complete retained selector line quality
+- **WHEN** the actual complete public Pylint producer analyzes the retained proof module
+- **THEN** no line-length diagnostic remains for the original selectors, the producer completes, and every original subprocess selector and module AST remains exact
+
+
+### Requirement: Final committed review scheduling in required CI
+
+Developers SHALL retain all ordinary commit hooks and the approved local ARM64 Darwin capsule-only DEFERRED exception. Required hosted CI SHALL validate the immutable PR head tree and its complete delta against the actual PR base/merge-base, using the existing integrated checker or exact approved bootstrap and every existing history/object/expiry/path/cleanup guard. A private alternate index SHALL be populated from that commit without changing the caller index, worktree, HEAD or persistent Git configuration. No private hook installation, transaction records, separate owner, broker or administrator setup SHALL be required. Local hooks provide development feedback; hosted review completion on the current PR head remains required before merge.
+
+#### Scenario: changed final commit is reviewed
+- **WHEN** content changes after a local check and the resulting commit is pushed
+- **THEN** scheduling validation and existing candidate/independent reviews operate on the pushed commit, never the earlier index or old-head result
+
+#### Scenario: final tree removes required review scheduling
+- **WHEN** the actual committed tree disables a review, excludes a required path, changes failure propagation or has invalid checker authority
+- **THEN** the existing required CI check fails; earlier local success cannot satisfy it
+
+#### Scenario: mixed and ordinary non-capsule changes
+- **WHEN** the final commit retains scheduling alongside unrelated source changes or has no relevant capsule delta
+- **THEN** the scheduling checker covers the complete capsule delta while existing reviews retain the full committed subject, and preserves caller Git state and existing hook/signature/test requirements, without creating a private commit guard
+
+#### Scenario: review prerequisite does not succeed
+- **WHEN** a required customer or independent review fails, is canceled, is missing or is unexpectedly skipped
+- **THEN** all three existing required quality jobs retain their blocking prerequisite behavior and no test, threshold, deadline or signature requirement is weakened
