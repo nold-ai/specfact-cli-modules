@@ -1284,3 +1284,33 @@ requirements:
       method: test
       intent: Complete public producer RED/GREEN supplements unchanged real Git race requests and assertions.
       observable: Actual new length/resource/import-order findings precede exact preparation phase separation and process context management.
+
+  openspec:code-review-native-platform-execution:review-native-platform-execution:faithful-bounded-standard-output-protocol:
+    rationale: Preserve real standard stream behavior and exact bounded discard semantics without reporter contamination or policy changes.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#460
+    touchpoints:
+    - id: standard-discard-protocol-spec
+      kind: config_file
+      locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
+    verification_cases:
+    - case_id: 460-46-1
+      scenario_id: faithful-bounded-standard-output-protocol
+      method: test
+      intent: Real standard-stream CLI baselines and pinned CrossHair RED/GREEN cover metadata, reconfiguration and binary writes with unchanged reporter and quota controls.
+      observable: Genuine false contract failures precede native bounded adapters; valid protocol succeeds, actual counterexamples and all bounds still reject.
+
+  openspec:code-review-native-platform-execution:review-native-platform-execution:portable-transaction-controls-without-host-process-tools:
+    rationale: Retain complete portable transaction guard proofs inside analyzer capsules without unrelated host tool dependencies.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#460
+    touchpoints:
+    - id: portable-transaction-fixture-spec
+      kind: config_file
+      locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
+    verification_cases:
+    - case_id: 460-47-1
+      scenario_id: portable-transaction-controls-without-host-process-tools
+      method: test
+      intent: Real pytest PATH-isolated RED/GREEN retains original portable assertions and unchanged mandatory real Git host proofs.
+      observable: Actual old fixture FileNotFoundError precedes owned simulated process-birth metadata; corrected controls pass without weakening production validation.

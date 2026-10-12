@@ -9,7 +9,7 @@ import sys
 from contextlib import contextmanager, redirect_stderr, redirect_stdout
 from importlib.metadata import version
 from types import FunctionType
-from typing import Literal
+from typing import Literal, cast
 
 from crosshair import condition_parser, core, dynamic_typing
 from crosshair.util import IgnoreAttempt
@@ -164,29 +164,117 @@ def _sequence_truth_compatibility():
         SymbolicArrayBasedUniformTuple.__bool__ = original
 
 
-class _TargetOutput(io.TextIOBase):
-    """Bound discarded target output without collecting private text."""
+class _TargetRaw(io.RawIOBase):
+    """Discard bytes while retaining the unchanged shared stream budgets."""
 
-    def __init__(self):
+    def __init__(self, source: io.TextIOBase | None):
+        self._source = source
+        self.name = getattr(source, "name", None)
+        self.mode = getattr(getattr(source, "buffer", None), "mode", "wb")
         self._written = 0
+
+    def _require_open(self) -> None:
+        self._checkClosed()
+
+    @ensure(lambda result: result is None)
+    def verify_output_bound(self) -> None:
+        """Reject physical output beyond the unchanged per-stream limit.
+
+        :raises ValueError: discarded physical output exceeded its bound.
+        """
+        if self._written > 4 * 1024 * 1024:
+            raise ValueError("crosshair_target_output_limit_exceeded")
+
+    @ensure(lambda result: result is True)
+    def writable(self) -> bool:
+        """Retain the write-only native standard-stream interface.
+
+        :raises ValueError: the private stream is closed.
+        """
+        self._require_open()
+        return True
+
+    @ensure(lambda result: isinstance(result, bool))
+    def isatty(self) -> bool:
+        """Retain the original standard-stream terminal metadata.
+
+        :raises ValueError: the private or captured stream is closed.
+        :raises OSError: original terminal metadata cannot be queried.
+        """
+        self._require_open()
+        return False if self._source is None else self._source.isatty()
+
+    @ensure(lambda result: isinstance(result, int) and not isinstance(result, bool))
+    def fileno(self) -> int:
+        """Retain supported descriptor metadata without owning the descriptor.
+
+        :raises ValueError: the private or captured stream is closed.
+        :raises OSError: the captured stream has no supported descriptor.
+        """
+        self._require_open()
+        return super().fileno() if self._source is None else self._source.fileno()
+
+    @ensure(lambda data, result: result == memoryview(data).nbytes)
+    def write(self, data) -> int:
+        """Accept standard contiguous bytes-like input without collecting it.
+
+        :raises ValueError: the stream is closed or its shared budget is exceeded.
+        :raises TypeError: input has no byte-buffer protocol.
+        :raises BufferError: input is not C-contiguous.
+        """
+        self._require_open()
+        view = memoryview(data)
+        if not view.c_contiguous:
+            raise BufferError("memoryview: underlying buffer is not C-contiguous")
+        self._written += view.nbytes
+        self.verify_output_bound()
+        return view.nbytes
+
+
+class _TargetBinary(io.BufferedWriter):
+    """Preserve the native binary interface while draining each accepted write."""
+
+    @ensure(lambda data, result: result == memoryview(data).nbytes)
+    def write(self, data) -> int:
+        """Use the native readonly raw binding and reject overflow synchronously.
+
+        :raises ValueError: the stream is closed, detached or exceeds its bound.
+        :raises TypeError: input has no byte-buffer protocol.
+        :raises BufferError: input is not C-contiguous.
+        """
+        return cast(_TargetRaw, self.raw).write(data)
+
+
+class _TargetOutput(io.TextIOWrapper):
+    """Retain native codec/reconfiguration behavior without collecting output."""
+
+    def __init__(self, source: io.TextIOBase | None = None):
+        self._utf8_written = 0
+        self.mode = getattr(source, "mode", "w")
+        super().__init__(
+            _TargetBinary(_TargetRaw(source)),
+            encoding=getattr(source, "encoding", None) or "utf-8",
+            errors=getattr(source, "errors", None) or "strict",
+            line_buffering=getattr(source, "line_buffering", False),
+            write_through=getattr(source, "write_through", False),
+        )
 
     @ensure(lambda text, result: result == len(text))
     def write(self, text: str) -> int:
-        """Consume normal target output; reject overflow before acceptance.
+        """Retain standard text errors and both unchanged shared byte budgets.
 
-        :raises ValueError: the stream is closed or output exceeds the per-stream bound.
+        :raises ValueError: the stream is closed or output exceeds its bound.
         :raises TypeError: target writes a non-text value.
-        :raises UnicodeEncodeError: target output is not valid UTF-8.
+        :raises UnicodeEncodeError: text violates the active encoding/error policy.
         """
-        closed = inspect.getattr_static(io.TextIOBase, "closed").__get__(self)
-        if closed:
-            raise ValueError("I/O operation on closed file")
-        if not isinstance(text, str):
-            raise TypeError("write() argument must be str")
-        self._written += len(text.encode("utf-8"))
-        if self._written > 4 * 1024 * 1024:
+        errors = self.errors
+        result = super().write(text)
+        self.flush()
+        cast(_TargetRaw, cast(_TargetBinary, self.buffer).raw).verify_output_bound()
+        self._utf8_written += len(text.encode("utf-8", errors))
+        if self._utf8_written > 4 * 1024 * 1024:
             raise ValueError("crosshair_target_output_limit_exceeded")
-        return len(text)
+        return result
 
 
 @contextmanager
@@ -197,7 +285,7 @@ def _diagnostic_channel_compatibility():
     original = main.check
 
     def check(arguments, options, stdout, stderr):
-        with redirect_stdout(_TargetOutput()), redirect_stderr(_TargetOutput()):
+        with redirect_stdout(_TargetOutput(sys.stdout)), redirect_stderr(_TargetOutput(sys.stderr)):
             return original(arguments, options, stdout, stderr)
 
     main.check = check

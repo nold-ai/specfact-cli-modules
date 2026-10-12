@@ -1837,3 +1837,33 @@ Private checked-tree record creation SHALL remove its temporary allocation on wr
 #### Scenario: checked-tree record cannot be written
 - **WHEN** writing the real private record allocation raises an actual filesystem failure
 - **THEN** validation fails and the temporary allocation is removed without accepted commit authority
+
+### Requirement: Faithful bounded standard output protocol
+
+The scoped target stdout/stderr discard adapter SHALL preserve each original standard TextIOWrapper stream's encoding, errors, line-buffering and write-through metadata, native reconfiguration and binary-buffer write protocol without mutating or writing target data to the original reporter streams. Text, binary-buffer and raw-buffer writes SHALL share the unchanged four-MiB per-stream physical budget, and text SHALL retain its canonical UTF-8 charge using the active error policy. Draining accepted writes synchronously SHALL reject overflow before analyzed contract acceptance. The adapter SHALL preserve real closed/type/encoding error semantics and contain no readable output collector. Default standalone UTF-8/strict behavior, original analyzer args/options/status/counterexamples/reporter identity and restoration SHALL remain. Direct OS descriptor writes and general file/seek emulation remain outside the existing scoped output-isolation claim.
+
+#### Scenario: real CLI standard metadata and reconfiguration
+- **WHEN** analyzed code reads its standard codec/error/line/write metadata or reconfigures its private standard output before writing
+- **THEN** code that succeeds with real standard streams still succeeds under pinned CrossHair, the private metadata follows native reconfiguration and reporter streams remain unchanged
+
+#### Scenario: real CLI binary standard output
+- **WHEN** analyzed code writes bytes, bytearray or memoryview through either standard stream's buffer
+- **THEN** valid writes succeed, target markers remain discarded and genuine contract failures are still reported
+
+#### Scenario: shared text and binary quotas
+- **WHEN** text and binary/raw writes together exceed the unchanged per-stream physical or canonical UTF-8 charge
+- **THEN** the actual write rejects before acceptance with the existing output-limit error, without collection, skipped analysis or relaxed bounds
+
+The physical counter SHALL include every actual text/binary/raw byte. The separate canonical UTF-8 counter SHALL include text writes, preserving the original text threshold. No alternate-codec write below both limits SHALL falsely reject from transient double charging.
+
+#### Scenario: alternate codec near the exact text limit
+- **WHEN** Latin-1 and UTF-16 text together reach exactly four MiB of canonical UTF-8 while physical output remains below four MiB
+- **THEN** the valid writes succeed and the next text byte rejects at the unchanged canonical limit
+
+### Requirement: Portable transaction controls without host process tools
+
+Portable transaction unit controls SHALL supply a fixed owned process-birth identity as part of their existing simulated Git metadata. They SHALL exercise unchanged private-record/tree/PID/mode/malformed/environment/cleanup validations without launching host-only process tools inside the analyzer capsule. Real Git host proofs SHALL continue to exercise actual process birth lookup and before-reference enforcement; production entry source and caller bindings SHALL remain unchanged. No required test or assertion may be skipped or weakened.
+
+#### Scenario: transaction controls inside a process-tool-free capsule
+- **WHEN** the portable prepared-transaction controls execute with no host process executable on PATH
+- **THEN** private record and tree validation completes with every original assertion retained, while actual real Git host proofs remain mandatory

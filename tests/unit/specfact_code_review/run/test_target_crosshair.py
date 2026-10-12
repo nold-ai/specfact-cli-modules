@@ -2,6 +2,8 @@
 
 import importlib.metadata
 import inspect
+import io as stdio
+import json as json_codec
 import subprocess
 import sys
 from argparse import Namespace
@@ -14,7 +16,10 @@ from crosshair.options import AnalysisOptionSet
 from crosshair.register_contract import REGISTERED_CONTRACTS, ContractOverride
 from icontract import ensure
 
-from specfact_code_review.run import target_bootstrap
+from specfact_code_review.run import target_bootstrap, target_crosshair
+
+
+_stream_sink = vars(target_crosshair)["_TargetOutput"]
 
 
 class NamedConstructor:
@@ -614,3 +619,226 @@ def test_pinned_dispatch_preserves_standard_nontext_write_rejection(tmp_path: Pa
     )
     assert result.returncode == 0, result.stdout + result.stderr
     assert "AttributeError" not in result.stdout + result.stderr
+
+
+@pytest.mark.parametrize("channel", ["stdout", "stderr"])
+@pytest.mark.parametrize("operation", ["metadata", "reconfigure", "bytes", "bytearray", "memoryview"])
+def test_real_standard_stream_protocol_remains_valid_under_pinned_dispatch(
+    tmp_path: Path, channel: str, operation: str
+):
+    profile = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "import json,sys; s=sys."
+            + channel
+            + "; print(json.dumps([s.encoding,s.errors,s.line_buffering,s.write_through,"
+            "s.name,s.mode,s.buffer.name,s.buffer.mode,s.isatty(),s.fileno()]))",
+        ],
+        capture_output=True,
+        text=True,
+        timeout=10,
+        check=True,
+    )
+    properties = json_codec.loads(profile.stdout)
+    operations = {
+        "metadata": "    return int((s.encoding,s.errors,s.line_buffering,s.write_through,"
+        "s.name,s.mode,s.buffer.name,s.buffer.mode,s.isatty(),s.fileno()) == " + repr(tuple(properties)) + ")\n",
+        "reconfigure": "    s.reconfigure(encoding='latin-1',errors='replace',"
+        "line_buffering=False,write_through=True)\n"
+        "    s.write('é'); s.flush()\n"
+        "    return int(s.encoding == 'latin-1' and s.errors == 'replace' "
+        "and s.write_through and not s.line_buffering)\n",
+        "bytes": "    s.buffer.write(b'TARGET_BINARY_MARKER'); s.buffer.flush(); return 1\n",
+        "bytearray": "    s.buffer.write(bytearray(b'TARGET_BINARY_MARKER')); s.buffer.flush(); return 1\n",
+        "memoryview": "    s.buffer.write(memoryview(b'TARGET_BINARY_MARKER')); s.buffer.flush(); return 1\n",
+    }
+    source = tmp_path / "standard_protocol.py"
+    source.write_text(
+        "import sys\nfrom icontract import ensure\n"
+        "@ensure(lambda result: result == 1)\ndef observed() -> int:\n"
+        + "    s=sys."
+        + channel
+        + "\n"
+        + operations[operation]
+        + "if __name__ == '__main__': assert observed() == 1\n",
+        encoding="utf-8",
+    )
+    baseline = subprocess.run([sys.executable, str(source)], capture_output=True, timeout=30, check=False)
+    assert baseline.returncode == 0, baseline.stderr.decode("utf-8", errors="replace")
+    dispatch = (
+        Path(__file__).parents[4] / "packages/specfact-code-review/src/specfact_code_review/run/target_crosshair.py"
+    )
+    actual = subprocess.run(
+        [sys.executable, str(dispatch), "check", str(source), "--per_condition_timeout=3"],
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+    )
+    assert actual.returncode == 0, actual.stdout + actual.stderr
+    assert "TARGET_BINARY_MARKER" not in actual.stdout + actual.stderr
+    assert "AttributeError" not in actual.stdout + actual.stderr
+
+
+@pytest.mark.parametrize(
+    "codec,errors", [("utf-8", "surrogateescape"), ("ascii", "backslashreplace"), ("latin-1", "replace")]
+)
+@pytest.mark.parametrize("line_buffering,write_through", [(False, True), (True, False)])
+def test_discard_native_standard_properties_and_reconfiguration_preserve_reporter(
+    codec, errors, line_buffering, write_through
+):
+    with stdio.TextIOWrapper(
+        stdio.BytesIO(), encoding=codec, errors=errors, line_buffering=line_buffering, write_through=write_through
+    ) as reporter:
+        original = reporter.encoding, reporter.errors, reporter.line_buffering, reporter.write_through
+        with _stream_sink(reporter) as sink:
+            assert (sink.encoding, sink.errors, sink.line_buffering, sink.write_through) == original
+            assert sink.isatty() == reporter.isatty() and sink.writable()
+            sink.reconfigure(encoding="utf-8", errors="backslashreplace", line_buffering=False, write_through=True)
+            assert (sink.encoding, sink.errors, sink.line_buffering, sink.write_through) == (
+                "utf-8",
+                "backslashreplace",
+                False,
+                True,
+            )
+            assert sink.write("é\ud800") == 2
+            assert sink.buffer.write(b"PRIVATE_BINARY") == 14
+            assert sink.buffer.raw.write(b"PRIVATE_RAW") == 11
+            assert (
+                not hasattr(sink, "getvalue")
+                and not hasattr(sink.buffer, "getvalue")
+                and not hasattr(sink.buffer.raw, "getvalue")
+            )
+        assert not reporter.closed and reporter.buffer.getvalue() == b""
+        assert (reporter.encoding, reporter.errors, reporter.line_buffering, reporter.write_through) == original
+
+
+@pytest.mark.parametrize("surface", ["buffer", "raw"])
+def test_discard_binary_surface_preserves_exact_physical_bound(surface):
+    with _stream_sink() as sink:
+        writer = sink.buffer if surface == "buffer" else sink.buffer.raw
+        assert writer.write(b"x" * (4 * 1024 * 1024)) == 4 * 1024 * 1024
+        with pytest.raises(ValueError, match="crosshair_target_output_limit_exceeded"):
+            writer.write(b"x")
+
+
+@pytest.mark.parametrize("final_surface", ["text", "buffer", "raw"])
+def test_discard_mixed_writes_share_exact_physical_bound_after_reconfiguration(final_surface):
+    with _stream_sink() as sink:
+        sink.reconfigure(encoding="utf-8", errors="strict")
+        assert sink.write("é" * (1024 * 1024)) == 1024 * 1024
+        assert sink.buffer.write(b"x" * (2 * 1024 * 1024)) == 2 * 1024 * 1024
+        writer = {"text": sink, "buffer": sink.buffer, "raw": sink.buffer.raw}[final_surface]
+        with pytest.raises(ValueError, match="crosshair_target_output_limit_exceeded"):
+            writer.write("x" if final_surface == "text" else b"x")
+
+
+def test_discard_reconfigured_encoding_retains_exact_physical_bound():
+    with _stream_sink() as sink:
+        sink.reconfigure(encoding="utf-16", errors="strict")
+        baseline = subprocess.run(
+            [
+                sys.executable,
+                "-c",
+                "import sys;sys.stdout.reconfigure(encoding='utf-16',errors='strict');sys.stdout.write('x')",
+            ],
+            capture_output=True,
+            timeout=10,
+            check=True,
+        )
+        assert len(baseline.stdout) == 2, "Native pipe reconfiguration must supply the actual byte count"
+        characters = (4 * 1024 * 1024) // len(baseline.stdout)
+        assert sink.write("x" * characters) == characters
+        with pytest.raises(ValueError, match="crosshair_target_output_limit_exceeded"):
+            sink.buffer.write(b"x")
+
+
+@pytest.mark.parametrize("surface", ["text", "buffer", "raw"])
+def test_discard_surface_close_rejects_real_writes_without_closing_reporter(surface):
+    with stdio.TextIOWrapper(stdio.BytesIO(), encoding="utf-8") as reporter:
+        sink = _stream_sink(reporter)
+        writer = {"text": sink, "buffer": sink.buffer, "raw": sink.buffer.raw}[surface]
+        writer.close()
+        with pytest.raises(ValueError, match="closed"):
+            writer.write("x" if surface == "text" else b"x")
+        assert not reporter.closed and reporter.buffer.getvalue() == b""
+        sink.close()
+
+
+@pytest.mark.parametrize("value", ["text", True, 1, None])
+@pytest.mark.parametrize("surface", ["buffer", "raw"])
+def test_discard_binary_surface_retains_standard_type_rejection(value, surface):
+    with stdio.BytesIO() as baseline, pytest.raises(TypeError):
+        baseline.write(value)
+    with _stream_sink() as sink:
+        writer = sink.buffer if surface == "buffer" else sink.buffer.raw
+        with pytest.raises(TypeError):
+            writer.write(value)
+
+
+def test_discard_raw_surface_rejects_noncontiguous_buffer_like_native_io():
+    view = memoryview(b"abcd")[::2]
+    with stdio.BytesIO() as baseline, pytest.raises(BufferError):
+        baseline.write(view)
+    with _stream_sink() as sink, pytest.raises(BufferError):
+        sink.buffer.raw.write(view)
+
+
+@pytest.mark.parametrize("surface", ["text", "buffer", "raw"])
+def test_discard_writelines_retains_shared_quota(surface):
+    with _stream_sink() as sink:
+        writer = {"text": sink, "buffer": sink.buffer, "raw": sink.buffer.raw}[surface]
+        unit = "x" if surface == "text" else b"x"
+        with pytest.raises(ValueError, match="crosshair_target_output_limit_exceeded"):
+            writer.writelines([unit * (4 * 1024 * 1024), unit])
+
+
+@pytest.mark.parametrize("violated", [False, True])
+def test_native_discard_preserves_real_symbolic_text_contract_paths(tmp_path: Path, violated: bool):
+    source = tmp_path / "symbolic_output.py"
+    source.write_text(
+        "import sys\nfrom icontract import require,ensure\n"
+        "@require(lambda value: value.isascii() and len(value) < 10)\n"
+        "@ensure(lambda value,result: result == value)\n"
+        "def observed(value: str) -> str:\n    sys.stdout.write(value)\n    return "
+        + ("'wrong'" if violated else "value")
+        + "\n",
+        encoding="utf-8",
+    )
+    dispatch = (
+        Path(__file__).parents[4] / "packages/specfact-code-review/src/specfact_code_review/run/target_crosshair.py"
+    )
+    result = subprocess.run(
+        [sys.executable, str(dispatch), "check", str(source), "--per_condition_timeout=3"],
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+    )
+    assert result.returncode == int(violated), result.stdout + result.stderr
+    assert "TypeError" not in result.stdout + result.stderr
+    if violated:
+        assert "false when calling" in result.stdout
+
+
+@pytest.mark.parametrize("chunks", [("xx",), ("x", "x")])
+def test_discard_codec_transition_at_exact_original_text_bound_has_no_false_rejection(chunks):
+    with _stream_sink() as sink:
+        sink.reconfigure(encoding="latin-1", errors="strict")
+        assert sink.write("é" * (2 * 1024 * 1024 - 1)) == 2 * 1024 * 1024 - 1
+        sink.reconfigure(encoding="utf-16", errors="strict")
+        for chunk in chunks:
+            assert sink.write(chunk) == len(chunk)
+        with pytest.raises(ValueError, match="crosshair_target_output_limit_exceeded"):
+            sink.write("x")
+
+
+@pytest.mark.parametrize("surface", ["text", "buffer", "raw"])
+def test_discard_physical_quota_rejection_stays_terminal_even_for_empty_write(surface):
+    with _stream_sink() as sink:
+        with pytest.raises(ValueError, match="crosshair_target_output_limit_exceeded"):
+            sink.buffer.raw.write(b"x" * (4 * 1024 * 1024 + 1))
+        writer = {"text": sink, "buffer": sink.buffer, "raw": sink.buffer.raw}[surface]
+        with pytest.raises(ValueError, match="crosshair_target_output_limit_exceeded"):
+            writer.write("" if surface == "text" else b"")

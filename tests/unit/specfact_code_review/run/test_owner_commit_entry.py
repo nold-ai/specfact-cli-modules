@@ -305,6 +305,7 @@ def test_owner_entry_rejection_contracts_match_actual_errors(owner, tmp_path, ap
 
 @pytest.fixture(name="transaction")
 def transaction_fixture(owner, tmp_path, monkeypatch):
+    monkeypatch.setattr(entry, "_parent_started", lambda: "owned fixture Git process birth")
     binding = entry._binding(owner.root, owner.normal, owner.interpreter)
     config = tmp_path / "transaction-binding.json"
     config.write_text(json.dumps(binding), encoding="utf-8")
@@ -550,3 +551,13 @@ def test_owner_checked_tree_write_failure_cleans_real_private_allocation(transac
         entry._finish_index(transaction.binding, transaction.config, True, transaction.tree)
     assert set(transaction.config.parent.iterdir()) == before
     assert not entry._record_path(transaction.config).exists()
+
+
+def test_owner_transaction_controls_run_without_host_ps(tmp_path, monkeypatch, request):
+    tools = tmp_path / "empty-process-tools"
+    tools.mkdir()
+    monkeypatch.setenv("PATH", str(tools))
+    transaction = request.getfixturevalue("transaction")
+    assert entry.validate_transaction(transaction.config, "prepared", transaction.payload) is None
+    assert len(transaction.checked) == 1
+    assert not transaction.checked[0].parent.exists()
