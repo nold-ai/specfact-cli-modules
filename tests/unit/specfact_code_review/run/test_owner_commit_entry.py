@@ -2,15 +2,23 @@
 
 from __future__ import annotations
 
+import importlib
+import io
 import json
 import subprocess
 from pathlib import Path
 from types import SimpleNamespace
+from typing import TYPE_CHECKING
 
 import pytest
 
-from scripts import owner_commit_entry as entry
 from specfact_code_review.tools.contract_runner import _scan_file
+
+
+if TYPE_CHECKING:
+    from scripts import owner_commit_entry as entry
+else:
+    entry = importlib.import_module("scripts.owner_commit_entry")
 
 
 @pytest.fixture(name="owner")
@@ -293,3 +301,252 @@ def test_owner_entry_rejection_contracts_match_actual_errors(owner, tmp_path, ap
     if api != "install":
         expected.add(KeyError)
     assert parse_sphinx_raises(getattr(entry, api)) == expected
+
+
+@pytest.fixture(name="transaction")
+def transaction_fixture(owner, tmp_path, monkeypatch):
+    binding = entry._binding(owner.root, owner.normal, owner.interpreter)
+    config = tmp_path / "transaction-binding.json"
+    config.write_text(json.dumps(binding), encoding="utf-8")
+    old, proposed, tree = "a" * 40, "b" * 40, "c" * 40
+    owner.values.update(
+        {
+            ("rev-parse", "HEAD"): old,
+            ("cat-file", "-t", proposed): "commit",
+            ("rev-parse", proposed + "^{tree}"): tree,
+            ("read-tree", tree): "",
+            ("write-tree",): tree,
+        }
+    )
+    payload = f"{old} {proposed} refs/heads/{binding['branch']}\n"
+    record = entry._record_path(config)
+    record.write_text(
+        json.dumps({"git_pid": str(entry.os.getppid()), "started": entry._parent_started(), "head": old, "tree": tree}),
+        encoding="utf-8",
+    )
+    record.chmod(0o600)
+    checked = []
+
+    def check(actual):
+        assert actual == binding
+        path = Path(entry.os.environ["GIT_INDEX_FILE"])
+        assert path.parent != owner.root and path.name == "index"
+        checked.append(path)
+
+    monkeypatch.setattr(entry, "validate_index", check)
+    return SimpleNamespace(
+        owner=owner,
+        binding=binding,
+        config=config,
+        payload=payload,
+        old=old,
+        proposed=proposed,
+        tree=tree,
+        checked=checked,
+    )
+
+
+def test_owner_transaction_has_precise_public_contracts():
+    findings = _scan_file(Path(entry.__file__))
+    assert not [finding for finding in findings if "'validate_transaction'" in finding.message]
+
+
+@pytest.mark.parametrize("previous", [None, "existing-caller-index"])
+@pytest.mark.parametrize("reject", [False, True])
+def test_owner_transaction_restores_private_index_and_environment(transaction, monkeypatch, previous, reject):
+    if previous is None:
+        monkeypatch.delenv("GIT_INDEX_FILE", raising=False)
+    else:
+        monkeypatch.setenv("GIT_INDEX_FILE", previous)
+    if reject:
+
+        def reject_index(_binding):
+            transaction.checked.append(Path(entry.os.environ["GIT_INDEX_FILE"]))
+            raise ValueError("genuine approved checker rejection")
+
+        monkeypatch.setattr(entry, "validate_index", reject_index)
+        with pytest.raises(ValueError, match="genuine approved checker rejection"):
+            entry.validate_transaction(transaction.config, "prepared", transaction.payload)
+    else:
+        assert entry.validate_transaction(transaction.config, "prepared", transaction.payload) is None
+    assert len(transaction.checked) == 1
+    assert not transaction.checked[0].parent.exists()
+    assert entry.os.environ.get("GIT_INDEX_FILE") == previous
+
+
+def test_owner_transaction_rejects_changed_private_tree(transaction):
+    transaction.owner.values[("write-tree",)] = "d" * 40
+    with pytest.raises(ValueError, match="Proposed tree index changed"):
+        entry.validate_transaction(transaction.config, "prepared", transaction.payload)
+    assert len(transaction.checked) == 1 and not transaction.checked[0].parent.exists()
+
+
+@pytest.mark.parametrize(
+    "invalid",
+    [
+        "empty",
+        "oversized",
+        "incomplete",
+        "fields",
+        "oid",
+        "duplicate",
+        "other-reference",
+        "old",
+        "conflicting-head",
+        "not-commit",
+        "metadata-update",
+        "other-deletion",
+    ],
+)
+def test_owner_transaction_rejects_noncanonical_or_unbound_reference_input(transaction, invalid):
+    old, new = transaction.old, transaction.proposed
+    cases = {
+        "empty": "",
+        "oversized": "x" * 4097 + "\n",
+        "incomplete": transaction.payload.rstrip("\n"),
+        "fields": old + "\n",
+        "oid": transaction.payload.replace(old, "not-a-git-object", 1),
+        "duplicate": transaction.payload * 2,
+        "other-reference": f"{old} {new} refs/heads/other\n",
+        "old": transaction.payload.replace(old, "d" * 40, 1),
+        "conflicting-head": transaction.payload + f"{old} {'d' * 40} HEAD\n",
+        "not-commit": transaction.payload,
+        "metadata-update": f"{old} {new} AUTO_MERGE\n",
+        "other-deletion": f"{old} {'0' * 40} refs/heads/other\n",
+    }
+    if invalid == "not-commit":
+        transaction.owner.values[("cat-file", "-t", new)] = "tree"
+    with pytest.raises(ValueError):
+        entry.validate_transaction(transaction.config, "prepared", cases[invalid])
+    assert transaction.checked == []
+
+
+def test_owner_transaction_validates_head_notification_actual_tree(transaction):
+    transaction.owner.values[("rev-parse", "HEAD")] = transaction.proposed
+    payload = f"{transaction.old} {transaction.proposed} HEAD\n"
+    assert entry.validate_transaction(transaction.config, "prepared", payload) is None
+    assert len(transaction.checked) == 1
+
+
+def test_owner_transaction_git_cleanup_deletion_has_no_commit_authority(transaction):
+    payload = f"{'0' * 40} {'0' * 40} AUTO_MERGE\n"
+    assert entry.validate_transaction(transaction.config, "prepared", payload) is None
+    assert transaction.checked == []
+
+
+@pytest.mark.parametrize("phase", ["preparing", "committed", "aborted"])
+def test_owner_transaction_notifications_are_not_commit_authority(transaction, phase):
+    assert entry.validate_transaction(transaction.config, phase, "") is None
+    assert transaction.checked == []
+
+
+def test_owner_transaction_unknown_phase_rejects(transaction):
+    with pytest.raises(ValueError, match="Unknown reference transaction phase"):
+        entry.validate_transaction(transaction.config, "unknown", transaction.payload)
+    assert transaction.checked == []
+
+
+@pytest.mark.parametrize("successful", [False, True])
+def test_owner_commit_lifecycle_checks_and_records_same_complete_tree(transaction, monkeypatch, successful):
+    monkeypatch.setenv("GIT_INDEX_FILE", "original-caller-index")
+    entry._record_path(transaction.config).unlink()
+    checked = entry._starting_index(transaction.binding)
+    assert checked == transaction.tree
+    assert entry._finish_index(transaction.binding, transaction.config, successful, checked) is None
+    assert len(transaction.checked) == 2
+    assert all(not path.parent.exists() for path in transaction.checked)
+    assert entry.os.environ["GIT_INDEX_FILE"] == "original-caller-index"
+    if successful:
+        assert entry._recorded_tree(transaction.config, transaction.old) == transaction.tree
+    else:
+        assert not entry._record_path(transaction.config).exists()
+
+
+def test_owner_commit_lifecycle_rejects_normal_hook_index_change(transaction, monkeypatch):
+    monkeypatch.setenv("GIT_INDEX_FILE", "original-caller-index")
+    entry._record_path(transaction.config).unlink()
+    checked = entry._starting_index(transaction.binding)
+    transaction.owner.values[("write-tree",)] = "d" * 40
+    with pytest.raises(ValueError, match="Normal hooks changed the complete checked index"):
+        entry._finish_index(transaction.binding, transaction.config, True, checked)
+    assert len(transaction.checked) == 1
+    assert not entry._record_path(transaction.config).exists()
+
+
+@pytest.mark.parametrize(
+    "invalid", ["mode", "symlink", "shape", "keys", "pid", "birth", "head", "tree-type", "tree-oid"]
+)
+def test_owner_transaction_rejects_unbound_private_record(transaction, invalid):
+    path = entry._record_path(transaction.config)
+    value = json.loads(path.read_text(encoding="utf-8"))
+    mutations = {
+        "keys": {"unexpected": 1},
+        "pid": {"git_pid": "other"},
+        "birth": {"started": "old process"},
+        "head": {"head": "d" * 40},
+        "tree-type": {"tree": True},
+        "tree-oid": {"tree": "invalid"},
+    }
+    if invalid == "mode":
+        path.chmod(0o644)
+    elif invalid == "symlink":
+        target = path.with_suffix(".target")
+        path.rename(target)
+        path.symlink_to(target)
+    else:
+        content = [] if invalid == "shape" else value | mutations[invalid]
+        path.write_text(json.dumps(content), encoding="utf-8")
+    with pytest.raises(ValueError):
+        entry.validate_transaction(transaction.config, "prepared", transaction.payload)
+    assert transaction.checked == []
+
+
+def test_owner_transaction_requires_private_record_and_exact_tree(transaction):
+    path = entry._record_path(transaction.config)
+    path.unlink()
+    with pytest.raises(OSError):
+        entry.validate_transaction(transaction.config, "prepared", transaction.payload)
+    path.write_text(
+        json.dumps(
+            {
+                "git_pid": str(entry.os.getppid()),
+                "started": entry._parent_started(),
+                "head": transaction.old,
+                "tree": "d" * 40,
+            }
+        ),
+        encoding="utf-8",
+    )
+    path.chmod(0o600)
+    with pytest.raises(ValueError, match="differs from the tree checked after normal hooks"):
+        entry.validate_transaction(transaction.config, "prepared", transaction.payload)
+    assert transaction.checked == []
+
+
+def test_owner_transaction_aborted_notification_removes_only_own_record(transaction):
+    record = entry._record_path(transaction.config)
+    assert record.exists()
+    assert entry.validate_transaction(transaction.config, "aborted", "") is None
+    assert not record.exists() and transaction.config.exists()
+    assert transaction.checked == []
+
+
+@pytest.mark.parametrize("invalid", [False, True])
+def test_owner_transaction_cli_retains_zero_or_rejection_status(transaction, monkeypatch, invalid):
+    monkeypatch.setattr(entry.sys, "argv", ["owner-entry", "transaction", str(transaction.config), "prepared"])
+    monkeypatch.setattr(entry.sys, "stdin", io.StringIO("invalid\n" if invalid else transaction.payload))
+    assert entry.main() == (1 if invalid else 0)
+
+
+def test_owner_checked_tree_write_failure_cleans_real_private_allocation(transaction, monkeypatch):
+    entry._record_path(transaction.config).unlink()
+
+    def reject_write(*_arguments):
+        raise OSError("private record write failed")
+
+    monkeypatch.setattr(entry.json, "dump", reject_write)
+    before = set(transaction.config.parent.iterdir())
+    with pytest.raises(OSError, match="private record write failed"):
+        entry._finish_index(transaction.binding, transaction.config, True, transaction.tree)
+    assert set(transaction.config.parent.iterdir()) == before
+    assert not entry._record_path(transaction.config).exists()

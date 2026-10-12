@@ -565,3 +565,52 @@ def test_target_output_bound_counts_utf8_bytes_without_retaining_text():
     with pytest.raises(UnicodeEncodeError):
         _TargetOutput().write("\ud800")
     assert not hasattr(sink, "getvalue")
+
+
+@pytest.mark.parametrize("channel", ["stdout", "stderr"])
+def test_pinned_dispatch_reports_real_write_after_target_stream_close(tmp_path: Path, channel: str):
+    source = tmp_path / "closed_stream.py"
+    source.write_text(
+        "import sys\nfrom icontract import ensure\n"
+        "@ensure(lambda result: result == 1)\ndef observed() -> int:\n"
+        f"    sys.{channel}.close()\n    print('after close', file=sys.{channel})\n    return 1\n"
+    )
+    dispatch = (
+        Path(__file__).parents[4] / "packages/specfact-code-review/src/specfact_code_review/run/target_crosshair.py"
+    )
+    result = subprocess.run(
+        [sys.executable, str(dispatch), "check", str(source), "--per_condition_timeout=3"],
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+    )
+    assert result.returncode == 1, "Closed target stream falsely accepted writes: " + result.stdout + result.stderr
+    assert str(source) in result.stdout and ": error:" in result.stdout
+    assert "ValueError" in result.stdout and "closed" in result.stdout.lower()
+
+
+@pytest.mark.parametrize("channel", ["stdout", "stderr"])
+@pytest.mark.parametrize("value", ["b'bytes'", "1", "True", "None"])
+def test_pinned_dispatch_preserves_standard_nontext_write_rejection(tmp_path: Path, channel: str, value: str):
+    source = tmp_path / "nontext_stream.py"
+    source.write_text(
+        "import sys\nfrom icontract import ensure\n"
+        "@ensure(lambda result: result == 1)\ndef observed() -> int:\n"
+        f"    try:\n        sys.{channel}.write({value})\n    except TypeError:\n        return 1\n    return 0\n"
+        "if __name__ == '__main__':\n    assert observed() == 1\n"
+    )
+    baseline = subprocess.run([sys.executable, str(source)], capture_output=True, text=True, timeout=30, check=False)
+    assert baseline.returncode == 0, baseline.stdout + baseline.stderr
+    dispatch = (
+        Path(__file__).parents[4] / "packages/specfact-code-review/src/specfact_code_review/run/target_crosshair.py"
+    )
+    result = subprocess.run(
+        [sys.executable, str(dispatch), "check", str(source), "--per_condition_timeout=3"],
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "AttributeError" not in result.stdout + result.stderr

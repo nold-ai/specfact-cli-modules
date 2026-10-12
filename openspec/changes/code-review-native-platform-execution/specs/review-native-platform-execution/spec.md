@@ -1727,3 +1727,113 @@ Installation SHALL declare its existing OSError, ValueError and CalledProcessErr
 #### Scenario: invalid installation, binding or configuration
 - **WHEN** the actual APIs receive a candidate-local destination, missing binding fields or malformed JSON
 - **THEN** their original exact ValueError/KeyError rejection remains raised and contract metadata includes only the established filesystem, validation, Git/checker and missing-key errors
+
+### Requirement: Faithful target stream closed-state rejection
+
+The bounded target-output sink SHALL preserve standard text-stream closed-state semantics: after analyzed code closes its redirected stdout or stderr, subsequent writes SHALL raise ValueError rather than succeed. Original reporter streams SHALL remain open and authoritative so the analyzer can report this genuine unexpected target error. Closed-state rejection SHALL NOT relax output budgets, suppress counterexamples, change target return values or close the reporter's actual streams.
+
+#### Scenario: target writes after closing a redirected stream
+- **WHEN** an analyzed function closes its standard stdout or stderr and then prints to it
+- **THEN** actual CLI analysis rejects with the target's genuine closed-stream counterexample and reports it through the original reporter stream
+
+### Requirement: Faithful target stream text protocol
+
+The bounded target-output sink SHALL accept text under the standard write protocol and reject non-text values with TypeError, preserving genuine target contracts that catch this standard exception. It SHALL retain closed-state ValueError precedence, exact returned character count, UTF-8 byte budget and independent reporter streams. Bytes, integers, Boolean values and None SHALL NOT become accepted text or an unrelated AttributeError.
+
+#### Scenario: valid caller catches the standard non-text error
+- **WHEN** a real function catches TypeError from writing bytes, an integer, Boolean or None to stdout or stderr
+- **THEN** both ordinary Python and pinned CLI analysis retain the valid return contract without a fabricated counterexample
+
+### Requirement: Complete declared CrossHair dispatch dependency
+
+Both Linux and native CrossHair execution graphs SHALL explicitly include the existing icontract distribution required by the builtin dispatch. The existing distribution selector SHALL preserve customer-owned icontract and its declared dependency graph when present; otherwise only recorded, verified analyzer-owned icontract and its required closure SHALL be exposed. Missing required distribution/RECORD payload or incompatible dependencies SHALL reject through existing guards. No unrelated analyzer fallback, module-origin bypass, project-Python import widening, lock/version change or new authority is permitted.
+
+#### Scenario: customer has no icontract
+- **WHEN** a project without an icontract dependency enters the actual CrossHair dispatch
+- **THEN** recorded analyzer icontract and its required modules are included in that member graph and startup completes without ModuleNotFoundError
+
+#### Scenario: customer owns icontract
+- **WHEN** the selected customer environment declares icontract
+- **THEN** its version and Requires-Dist remain authoritative and analyzer icontract does not shadow the customer
+
+#### Scenario: required analyzer dependency is missing
+- **WHEN** a required fallback distribution is unavailable or its origin is substituted
+- **THEN** graph/lookup validation rejects rather than silently omitting it or broadening paths
+
+### Requirement: Verified registered Six virtual namespace
+
+Analyzer startup SHALL support the recorded Six distribution's registered six.moves namespaces through only that verified parent module's actual importer. The parent origin/file SHALL bind the selected analyzer root; the virtual spec name and loader SHALL match the owning registered importer. Foreign parents/loaders, unknown names and unrelated namespaces SHALL remain rejected. Virtual modules SHALL retain their real synthetic specs without fabricated filesystem origins. Existing cached-module validation and startup machinery fingerprinting SHALL include this lookup; project-owned Six precedence SHALL remain unchanged.
+
+#### Scenario: analyzer-owned Six virtual package
+- **WHEN** the declared icontract/asttokens dependency closure imports real six.moves
+- **THEN** the owning registered importer resolves that synthetic package, ordinary xrange behavior works and cached-module validation remains valid
+
+#### Scenario: counterfeit virtual ownership
+- **WHEN** a foreign parent/loader, unknown namespace or changed lookup implementation is supplied
+- **THEN** startup rejects without foreign execution or a generic path fallback
+
+### Requirement: Bounded registered namespace verification phases
+
+Physical module-origin verification and registered virtual namespace identity verification SHALL use direct bounded phases, retaining every original registered-parent/name/loader and filesystem-origin rejection predicate. The real public Radon runner SHALL complete without a new complexity warning for either phase under the unchanged configured threshold. Existing unrelated warnings remain separate and unwaived.
+
+#### Scenario: complete physical and virtual verification policy
+- **WHEN** the actual public runner evaluates the complete retained startup module
+- **THEN** both validation phases have no targeted complexity or incomplete-tool finding, and all existing positive/negative namespace controls remain enforced
+
+### Requirement: Complete configured registered namespace quality
+
+The new registered-owner phase SHALL pass complete configured public type/style analysis without optional origin/loader diagnostics, using the real ModuleSpec protocol and unchanged exact importer class identity. Missing origins/loaders SHALL reject. Only newly added fixture imports and source formatting may change; all pre-existing deferred/private bindings and predicates SHALL remain exact.
+
+#### Scenario: complete registered-owner analysis
+- **WHEN** configured public BasedPyright and Pylint analyze the complete startup module
+- **THEN** the new registered-owner phase has no type/style findings, and cached/foreign loader, origin and startup mutation rejection remain proven
+
+### Requirement: Immutable registered importer startup binding
+
+Analyzer-owned Six SHALL be loaded through the verified finder before customer startup, and its actual module namespace, importer identity/class implementation and registered map SHALL be bound by existing before/after startup validation. Replacing the importer/class, changing callable code, substituting the registered namespace map or spec factory SHALL reject. Legitimate moves/xrange lazy imports SHALL remain valid; project-owned Six and existing startup/import routing SHALL retain precedence. This adds no arbitrary in-process hostile-tool containment claim.
+
+#### Scenario: customer startup substitutes owned importer state
+- **WHEN** real .pth execution changes an analyzer-owned importer, implementation, map or spec factory while retaining the original six.py origin
+- **THEN** startup fails with the existing protected-import-state rejection before analyzer dispatch
+
+#### Scenario: legitimate registered lazy lookup during startup
+- **WHEN** real .pth execution imports six.moves.xrange from the unchanged verified importer
+- **THEN** startup and normal namespace validation succeed
+
+### Requirement: Faithful readonly output-state analysis
+
+The output sink SHALL read the same standard TextIOBase readonly closed descriptor without inventing a parallel mutable flag. The real public Pylint producer SHALL have no constant-condition finding for this guard, and real open/closed CLI and non-text controls SHALL retain identical status/errors, byte budgets and reporter preservation. No suppression or review-policy exception is permitted.
+
+#### Scenario: native readonly state varies
+- **WHEN** the complete public producer and actual CLI evaluate writes before and after closing the standard stream
+- **THEN** the producer completes without a targeted constant-condition report and actual closed writes still raise the genuine ValueError counterexample
+
+### Requirement: Bind approved scheduling through actual commit creation
+
+The already authorized worktree-only external entry SHALL validate the actual proposed commit tree before Git advances its bound branch, in addition to both existing index checks and every normal hook. Prepared reference-transaction input SHALL bind exact current old HEAD, a real new commit and only the bound branch/HEAD references. The proposed immutable tree SHALL be loaded into a private alternate index and checked using the SAME approved checker/current-dev baseline/history/object rules. Temporary index state and environment SHALL restore on success or rejection. Invalid/changed trees SHALL abort reference advancement; candidate normal-hook descendants modifying the original index SHALL NOT cause a false accepted commit. The mandatory git -c core.hooksPath route, external tooling trust and shared hook/config immutability remain unchanged. No arbitrary unwrapped Git or hostile installed-tool containment is claimed.
+
+#### Scenario: index mutation after final pre-commit validation
+- **WHEN** an actual detached hook child atomically replaces the staged workflow after the last pre-commit check but before Git commit creation
+- **THEN** actual proposed-tree validation rejects and HEAD remains unchanged
+
+#### Scenario: valid commit with all normal hooks
+- **WHEN** the immutable proposed tree preserves mandatory exact-head scheduling
+- **THEN** normal hooks and approved checker validations run and Git commits that exact validated tree
+
+The complete immutable post-normal-hook tree SHALL be checked and recorded in the trusted private entry namespace, and every proposed branch/HEAD commit tree SHALL equal that recorded tree. Re-running only the scheduling checker on a different tree is insufficient: a detached child replacing non-scheduling source SHALL also reject before reference advancement. The same private snapshot validation SHALL retain exact authority, baseline and cleanup rules.
+
+### Requirement: Bounded actual commit-race proof phases
+
+Actual commit-race proofs SHALL retain every generated child/barrier byte, Git request, timing bound, assertion and valid cached-tree fallback while using bounded direct preparation phases and the owned process context manager. Complete public Radon and configured Pylint analysis SHALL complete without targeted function-length, resource-lifecycle or import-order findings under unchanged policy.
+
+#### Scenario: complete race proof quality
+- **WHEN** actual public producers evaluate the complete retained proof and portable entry tests
+- **THEN** no new targeted length/resource/import-order finding remains and all real Git race and valid controls still execute
+
+New transaction diagnostics SHALL preserve their exact CLI text using the existing stderr channel without a new print-policy finding, and new proof names SHALL describe Git cleanup explicitly without a generic public-name finding. All earlier diagnostic calls and proof identities remain unchanged.
+
+Private checked-tree record creation SHALL remove its temporary allocation on write, flush or rename failure and reject commit acceptance.
+
+#### Scenario: checked-tree record cannot be written
+- **WHEN** writing the real private record allocation raises an actual filesystem failure
+- **THEN** validation fails and the temporary allocation is removed without accepted commit authority

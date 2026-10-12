@@ -174,9 +174,15 @@ class _TargetOutput(io.TextIOBase):
     def write(self, text: str) -> int:
         """Consume normal target output; reject overflow before acceptance.
 
-        :raises ValueError: output exceeds the existing per-stream bound.
+        :raises ValueError: the stream is closed or output exceeds the per-stream bound.
+        :raises TypeError: target writes a non-text value.
         :raises UnicodeEncodeError: target output is not valid UTF-8.
         """
+        closed = inspect.getattr_static(io.TextIOBase, "closed").__get__(self)
+        if closed:
+            raise ValueError("I/O operation on closed file")
+        if not isinstance(text, str):
+            raise TypeError("write() argument must be str")
         self._written += len(text.encode("utf-8"))
         if self._written > 4 * 1024 * 1024:
             raise ValueError("crosshair_target_output_limit_exceeded")

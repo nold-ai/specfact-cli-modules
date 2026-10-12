@@ -1,5 +1,6 @@
 """Worker fallbacks include only the selected member's dependency closure."""
 
+import shutil
 from importlib.metadata import Distribution
 from pathlib import Path
 
@@ -8,6 +9,7 @@ import pytest
 from specfact_code_review.run import runtime_domains
 from specfact_code_review.run.runtime_domains import _top_level_imports, member_dependency_graphs
 from specfact_code_review.run.runtime_models import ProjectRuntimeError
+from specfact_code_review.run.target_bootstrap import DomainFinder
 
 
 def _distribution(
@@ -150,3 +152,64 @@ def test_missing_file_inventory_cannot_guess_analyzer_ownership(tmp_path: Path) 
     (metadata / "RECORD").unlink()
     with pytest.raises(ProjectRuntimeError, match="project_analyzer_import_inventory_missing:fixture"):
         _top_level_imports(Distribution.at(metadata))
+
+
+@pytest.mark.parametrize("native", [False, True])
+@pytest.mark.parametrize("project_owned", [False, True])
+def test_crosshair_graph_includes_dispatch_contract_dependency_with_project_precedence(
+    tmp_path: Path, native: bool, project_owned: bool
+) -> None:
+    _distribution(tmp_path, "pylint")
+    metadata = tmp_path / "icontract-1.0.dist-info/METADATA"
+    metadata.write_text(metadata.read_text() + "Requires-Dist: asttokens>=1\n")
+    _distribution(tmp_path, "asttokens")
+    inventory = (
+        {"installed": [{"metadata": {"name": "icontract", "version": "2.7.3", "requires_dist": []}}]}
+        if project_owned
+        else {"installed": []}
+    )
+    graph = (
+        runtime_domains.native_member_dependency_graphs(inventory, tmp_path)[0]["crosshair"]
+        if native
+        else member_dependency_graphs(inventory, tmp_path)["crosshair"]
+    )
+    dependency = next((row for row in graph["installed"] if row["name"] == "icontract"), None)
+    assert dependency is not None, "Required builtin dispatch dependency was omitted"
+    assert dependency["origin"] == ("project" if project_owned else "analyzer")
+    finder = DomainFinder(graph, analyzer_root=tmp_path)
+    if project_owned:
+        assert dependency["version"] == "2.7.3" and dependency["dependencies"] == []
+        assert finder.find_spec("icontract") is None
+    else:
+        spec = finder.find_spec("icontract")
+        assert spec is not None and spec.origin == str(tmp_path / "icontract.py")
+        assert {"icontract", "asttokens"} <= set(graph["sealed_imports"])
+
+
+def test_crosshair_required_dispatch_dependency_cannot_be_silently_omitted(tmp_path: Path) -> None:
+    _distribution(tmp_path, "pylint")
+    shutil.rmtree(tmp_path / "icontract-1.0.dist-info")
+    (tmp_path / "icontract.py").unlink()
+    with pytest.raises(ProjectRuntimeError, match="project_analyzer_dependency_missing:crosshair:icontract"):
+        member_dependency_graphs({"installed": []}, tmp_path)
+
+
+@pytest.fixture(autouse=True)
+def required_dispatch_dependency(tmp_path: Path) -> None:
+    """Seed the new required closure without changing any original fixture/control."""
+    _distribution(tmp_path, "icontract")
+
+
+def test_required_dispatch_dependency_retains_record_and_origin_rejection(tmp_path: Path, tmp_path_factory) -> None:
+    _distribution(tmp_path, "pylint")
+    graph = member_dependency_graphs({"installed": []}, tmp_path)["crosshair"]
+    finder = DomainFinder(graph, analyzer_root=tmp_path)
+    foreign = tmp_path_factory.mktemp("foreign-dispatch")
+    marker = foreign / "executed"
+    (foreign / "icontract.py").write_text(f"from pathlib import Path\nPath({str(marker)!r}).touch()\n")
+    with pytest.raises(ImportError, match="project_worker_analyzer_origin_mismatch:icontract"):
+        finder.find_spec("icontract", [str(foreign)])
+    assert not marker.exists()
+    (tmp_path / "icontract-1.0.dist-info/RECORD").unlink()
+    with pytest.raises(ProjectRuntimeError, match="project_analyzer_import_inventory_missing:icontract"):
+        member_dependency_graphs({"installed": []}, tmp_path)

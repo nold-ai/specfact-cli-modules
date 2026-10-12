@@ -338,3 +338,53 @@ Offline pinned CPython3.12.13/CrossHair0.0.109 whole-file analysis exits2 with n
 ### Owner rejection contract completeness
 
 Public return postconditions require corresponding precise rejection contracts: installation fails on invalid/private filesystem or unavailable Git data; validation/enforcement reject invalid JSON/fields/bindings or checker failures. Declare only the same concrete filesystem/validation/subprocess/key classes already recognized by owner main. Real rejected input controls and pinned metadata tests precede declarations. Original executable functions and main's exact exception handler remain unchanged; do not admit unexpected assertion/attribute/programming errors.
+
+### Post-sign read-only audit: output closed-state semantics
+
+The source/signature checkpoint1c1c4628/9a8d01cf passes all local and strict public-key gates, but final read-only review finds that overriding TextIOBase.write without checking closed accepts writes after target close. Reproduce using actual CLI stdout/stderr functions before adding the standard closed guard. This minimal existing-sink adaptation restores ordinary text-stream rejection without closing the original reporter or changing any review policy. Earlier audit/gates retain their bounded checkpoint scope; new final validation, checksum refresh and normal signing are required after this correction.
+
+### Standard text-write error diagnosis
+
+The same sink review identifies another precise protocol mismatch: calling encode on a non-text input raises AttributeError instead of standard TypeError, fabricating a counterexample for a valid caller that catches TypeError. Real ordinary-Python controls and pinned CLI cases precede a str guard after the standard closed-state guard. Preserve text subclasses, character-count returns, UTF-8 accounting and real error/counterexample reporting. This is a minimal existing-sink correction, not a policy exception, new launcher or broad exception allowance.
+
+### Exact-head external-corpus startup root cause
+
+Actual9a8 CPython3.11/3.13 artifacts contain five external projects each with CROSSHAIR_INCOMPLETE_EVIDENCE: target_crosshair.py's newly required icontract import is absent in customer environments. Local/full/offline environments contained icontract and masked this regression. Preserve the real helper postcondition and customer contract behavior. Reuse existing _DOMAIN_ENTRIES plus _selected_distribution/_domain_graph: declare icontract as a CrossHair entry without adding it to pinned ownership, so customer precedence and dependency metadata remain exact and absent customers use the existing recorded sealed fallback. This one declarative dependency change avoids a custom loader, decorator stub/waiver or broad analyzer sys.path fallback. Existing origin/RECORD/missing/incompatibility guards and all other domains remain intact. Actual isolated startup and provider/missing/substitution controls precede acceptance; checksum and normalCI signing remain required.
+
+### Required dependency's owned virtual namespace
+
+The real isolated pinned Linux startup after declaring icontract reaches another source-proven issue: asttokens2.4.1 imports Six's synthetic six.moves, whose actual spec has no file origin. The current PathFinder-only analyzer finder rejects it despite owning verified six.py. Reuse the registered importer of the verified Six parent for only its known six.moves names; validate exact parent origin/file and importer/spec identity, retaining real virtual specs and no generic fallback or fabricated origin. Bind the new lookup callable into existing startup fingerprinting. Real Six source/in-process controls and real isolated before/after CLI precede acceptance. Customer-owned libraries retain existing precedence. This is required package semantics within existing verified dependency routing, not a new checker/commit authority or arbitrary importer exemption.
+
+### Virtual validation phase quality
+
+The real public Radon runner reports new CC14 in the amended filesystem verifier (unchanged warning threshold12). A real public-runner policy assertion precedes a direct virtual-spec identity verification helper. The helper retains exact registered-parent/name/loader predicates and the same ImportError fallback; the filesystem caller retains all original location/origin checks. No threshold, predicate, side attribution or suppression changes; caller/helper source and AST reversibility are reviewed independently.
+
+### Complete configured startup quality
+
+Complete public BasedPyright/Pylint scans of the new registered-owner phase independently reproduce optional origin/loader diagnostics and a generic type-check advisory. Declare the actual ModuleSpec return protocol, retain exact loader class identity (subclasses remain rejected), and explicitly reject missing loader/origin before consumption. Hoist only newly introduced fixture imports, preserve all older deferred/private bindings, use public cached-module validation for the foreign virtual-loader proof and preserve literal startup mutation bytes under normal line formatting. No checker, analyzer policy or suppression changes.
+
+Complete source scanning after explicit optional guards reveals CC13 in the registered-parent phase. Extend the same real policy case to every new phase before separating verified parent/importer acquisition from registered spec matching. Exact parent origin/file, missing-loader, exact class and namespace checks retain their order; bind the new parent verifier into the same startup fingerprint and exercise both replacement/in-place mutation negatives. No changed warning is hidden or threshold adjusted.
+
+### Read-only ownership audit: registered importer startup binding
+
+A separate root-owned audit identifies that checking a Six parent path and claimed class module is insufficient after customer startup: .pth code may replace both importer/class, mutate its implementation or registered map, or replace the spec factory without changing six.py origin. Real site.addsitedir controls precede binding. Preload only analyzer-owned Six through the existing verified finder before startup, then add its actual module namespace, importer class/function states and registered map identities to the existing before/after snapshot. Legitimate moves/xrange lazy lookup must pass; no generic importer or project-owned Six is changed. This binds the new dispatch participant under the established startup enforcement, not hostile installed-tool containment or new authority.
+
+### Source-bound readonly I/O flag analysis
+
+Actual pinned Linux Pylint4.0.7 reports W0125 for TextIOBase.closed despite real open/closed CLI cases proving that native readonly flag varies. Retrieve that same standard readonly descriptor explicitly through inspect.getattr_static before the same Boolean guard, avoiding inaccurate constant inference while preserving the C-owned state, exception text, no shadow flag and unchanged output/error budgets. A complete public producer RED precedes this narrow expression correction; existing genuine closed-stream and non-text controls remain mandatory. No diagnostic suppression, exception waiver or duplicated mutable closed state is introduced.
+
+### Current-head commit tree race review
+
+Codex P1 PRRT_kwDORVEFbs6rSvC- reports a detached normal-hook child changing the index after the last pre-commit validation. Pre-commit runs before Git creates a commit (Git githooks documentation, accessed12October2026). Independently reproduce with real Git, the actual approved checker, a detached bounded child and a commit-msg timing barrier; this barrier supplies scheduling only, never checker authority. Preserve the same mandatory git -c core.hooksPath route and both existing validations/all normal hooks. Add a worktree-only external prepared reference-transaction callback: it validates the actual immutable proposed commit tree through a private alternate index and the SAME approved checker before Git advances the bound branch. Nonzero prepared status aborts ref advancement; committed/aborted notifications do not become authority. No shared hook/config, checker policy, new signing authority, arbitrary Git-path containment or hostile installed-tool containment is introduced.
+
+Actual Git valid-control diagnostics show a second prepared transaction deleting the AUTO_MERGE pseudo-ref after the real branch transaction succeeds. This is metadata cleanup, not commit/tree promotion. Permit only a canonical AUTO_MERGE-only deletion (new zero OID) after validating the same caller binding; never accept a nonzero metadata update or a different reference. Preserve actual branch/HEAD commit validation and all normal hooks. The earlier draft rejected cleanup after the valid branch update and is not passing evidence.
+
+The accepted tree is the complete actual index snapshot captured before normal hooks. Validate that immutable snapshot with the approved checker, execute every normal hook against the original caller index, require the index to remain identical on successful completion, then validate the same immutable tree again and record it privately. Intentional hook staging/repair changes require a review/retry; they cannot silently authorize a different source tree. This retains both real authority checks and normal status propagation while removing the last mutable-index handoff. The prepared callback additionally checks actual proposed-tree equality and the same authority before reference advancement.
+
+### Bounded actual commit-race proof phases
+
+Separate the existing late-barrier fixture preparation into direct private phases without altering any generated child/barrier bytes, Git arguments, timing, assertions or valid-tree fallback. Use the actual Popen context manager for the owned Git process and retain reader/marker/result behavior. The complete public Radon and configured Pylint producers must report no new targeted length, resource-lifecycle or import-order findings; unchanged thresholds and earlier definitions remain mandatory.
+
+The complete original pinned Semgrep packs also cover the new transaction diagnostic and cleanup proof name. Preserve CLI bytes and old calls; use an explicit stderr write for the new diagnostic and a specific Git cleanup test identity. Do not suppress original retained fixture findings.
+
+The private complete-tree acceptance record must clean its allocation even if writing/flush/rename fails. A real NamedTemporaryFile allocation with an injected filesystem write rejection proves no private temporary file remains; failure never yields commit authority.

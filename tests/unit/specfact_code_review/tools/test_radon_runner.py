@@ -9,6 +9,8 @@ from unittest.mock import Mock
 import pytest
 from pytest import MonkeyPatch
 
+from specfact_code_review.tools.basedpyright_runner import run_basedpyright
+from specfact_code_review.tools.pylint_runner import run_pylint
 from specfact_code_review.tools.radon_runner import run_radon
 from tests.unit.specfact_code_review.tools.helpers import assert_tool_run, completed_process, create_noisy_file
 
@@ -378,3 +380,55 @@ def test_owner_entry_proof_fixtures_satisfy_unchanged_complexity_policy() -> Non
     findings = run_radon([source])
     assert not [finding for finding in findings if finding.category == "tool_error"]
     assert not [finding for finding in findings if finding.line in targets]
+
+
+def test_registered_namespace_verification_phases_preserve_real_complexity_policy() -> None:
+    source = Path("packages/specfact-code-review/src/specfact_code_review/run/target_bootstrap.py").resolve()
+    tree = ast.parse(source.read_text(encoding="utf-8"))
+    phase_lines = {
+        node.lineno
+        for node in tree.body
+        if isinstance(node, ast.FunctionDef)
+        and node.name
+        in {"_verified_analyzer_spec", "_verified_virtual_spec", "_registered_six_spec", "_verified_six_importer"}
+    }
+    findings = run_radon([source], full_result=True)
+    assert not any(row.category == "tool_error" for row in findings)
+    assert not any(row.line in phase_lines for row in findings)
+
+
+def test_registered_namespace_owner_passes_complete_configured_type_style_policy() -> None:
+    source = Path("packages/specfact-code-review/src/specfact_code_review/run/target_bootstrap.py").resolve()
+    tree = ast.parse(source.read_text(encoding="utf-8"))
+    owner = next(
+        node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == "_registered_six_spec"
+    )
+    assert owner.end_lineno is not None
+    findings = run_basedpyright([source]) + run_pylint([source])
+    assert not any(row.category == "tool_error" for row in findings)
+    assert not any(owner.lineno <= row.line <= owner.end_lineno for row in findings)
+
+
+def test_target_output_guard_has_no_constant_condition_in_complete_public_style_analysis() -> None:
+    source = Path("packages/specfact-code-review/src/specfact_code_review/run/target_crosshair.py").resolve()
+    findings = run_pylint([source])
+    assert not any(row.category == "tool_error" for row in findings)
+    assert not any(row.rule == "W0125" for row in findings)
+
+
+def test_actual_commit_race_proofs_preserve_complete_quality_policy() -> None:
+    source = Path("tests/host/proof_capsule_deferred_review_ci.py").resolve()
+    portable = Path("tests/unit/specfact_code_review/run/test_owner_commit_entry.py").resolve()
+    findings = run_radon([source], full_result=True) + run_pylint([source, portable])
+    assert not any(row.category == "tool_error" for row in findings)
+    assert not any(row.rule in {"R1732", "C0411"} for row in findings)
+    target_lines = {
+        node.lineno
+        for node in ast.parse(source.read_text(encoding="utf-8")).body
+        if isinstance(node, ast.FunctionDef)
+        and (
+            node.name.startswith("_late_commit_race_")
+            or node.name == "test_owner_entry_rejects_actual_post_hook_index_race"
+        )
+    }
+    assert not any(row.line in target_lines and row.rule.startswith("kiss.loc.") for row in findings)

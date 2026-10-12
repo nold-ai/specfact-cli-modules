@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import shlex
+import shutil
 import subprocess
 import sys
 import venv
@@ -1364,3 +1365,205 @@ def test_owner_entry_rejects_integrated_dev_ref_substitution(
     assert result.returncode != 0, result.stdout + result.stderr
     assert not checker_marker.exists(), "Substituted integrated-dev checker executed as authority"
     assert _git(worktree, "rev-parse", "HEAD") == before
+
+
+def _late_commit_race_child(tmp_path: Path, index: Path, bad: Path, mutate: bool):
+    ready, done = tmp_path / "after-precommit", tmp_path / "child-finished"
+    attack = tmp_path / "child.py"
+    attack.write_text(
+        "import os,sys,time\nfrom pathlib import Path\n"
+        + f"ready=Path({str(ready)!r}); deadline=time.monotonic()+10\n"
+        + "while not ready.exists() and time.monotonic()<deadline: time.sleep(0.01)\n"
+        + "if not ready.exists(): raise SystemExit(1)\n"
+        + (f"os.replace({str(bad)!r},os.environ.get('GIT_INDEX_FILE',{str(index)!r}))\n" if mutate else "")
+        + f"Path({str(done)!r}).touch()\n",
+        encoding="utf-8",
+    )
+    return attack, ready, done
+
+
+def _late_commit_race_hooks(worktree: Path, hooks: Path, normal_marker: Path, attack: Path, signals: tuple[Path, Path]):
+    tmp_path = normal_marker.parent
+    ready, done = signals
+    normal = tmp_path / "normal-pre-commit"
+    normal.write_text(
+        "#!/bin/sh\n"
+        + f"printf 'normal\\n' >> {shlex.quote(str(normal_marker))}\n"
+        + f"{shlex.quote(sys.executable)} -I -c "
+        + shlex.quote(
+            "import subprocess,sys; subprocess.Popen([sys.executable,'-I',sys.argv[1]],"
+            "stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,start_new_session=True)"
+        )
+        + " "
+        + shlex.quote(str(attack))
+        + "\n",
+        encoding="utf-8",
+    )
+    # Reinstall the actual reviewed entry after the fixture's normal-hook change.
+    shutil.rmtree(hooks)
+    subprocess.run(
+        [
+            sys.executable,
+            "-I",
+            str(REPO_ROOT / "scripts/owner_commit_entry.py"),
+            "install",
+            str(worktree),
+            str(hooks),
+            str(normal),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    barrier = hooks / "commit-msg"
+    barrier.write_text(
+        "#!/bin/sh\n"
+        + f"touch {shlex.quote(str(ready))}\n"
+        + f"{shlex.quote(sys.executable)} -I -c "
+        + shlex.quote(
+            "import sys,time;from pathlib import Path;p=Path(sys.argv[1]);deadline=time.monotonic()+10;"
+            "exec('while not p.exists() and time.monotonic()<deadline: time.sleep(0.01)');"
+            "sys.exit(0 if p.exists() else 1)"
+        )
+        + " "
+        + shlex.quote(str(done))
+        + "\n",
+        encoding="utf-8",
+    )
+    barrier.chmod(0o700)
+
+
+@pytest.mark.parametrize("mutate", [False, True])
+def test_owner_entry_rejects_actual_post_hook_index_race(tmp_path: Path, mutate: bool) -> None:
+    worktree = deferral_worktree(
+        tmp_path, ("Darwin", "", "github-linux", "tests/native/proof_macos_native_broker_wait.py", False, True, 0)
+    )
+    hooks, normal_marker, workflow, disabled = _owner_entry_normal_fixture(worktree, tmp_path, "valid")
+    before = _git(worktree, "rev-parse", "HEAD")
+    expected_tree = _git(worktree, "write-tree")
+    index = Path(_git(worktree, "rev-parse", "--git-path", "index"))
+    index = index if index.is_absolute() else worktree / index
+    bad = tmp_path / "bad-index"
+    bad.write_bytes(index.read_bytes())
+    payload = tmp_path / "disabled-workflow"
+    payload.write_text(disabled, encoding="utf-8")
+    blob = _git(worktree, "hash-object", "-w", str(payload))
+    subprocess.run(
+        ["git", "update-index", "--cacheinfo", f"100644,{blob},{workflow}"],
+        cwd=worktree,
+        env=os.environ | {"GIT_INDEX_FILE": str(bad)},
+        check=True,
+    )
+    attack, ready, done = _late_commit_race_child(tmp_path, index, bad, mutate)
+    _late_commit_race_hooks(worktree, hooks, normal_marker, attack, (ready, done))
+    result = subprocess.run(
+        ["git", "-c", f"core.hooksPath={hooks}", "commit", "-qm", "fixture post-hook race"],
+        cwd=worktree,
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=20,
+    )
+    assert done.exists() and normal_marker.exists(), result.stdout + result.stderr
+    if mutate and result.returncode == 0:
+        # This later window may leave Git's previously cached validated tree intact.
+        assert _git(worktree, "rev-parse", "HEAD^{tree}") == expected_tree
+    elif mutate:
+        assert _git(worktree, "rev-parse", "HEAD") == before
+    else:
+        assert result.returncode == 0, result.stdout + result.stderr
+        assert _git(worktree, "rev-parse", "HEAD^{tree}") == expected_tree
+
+
+def _write_actual_commit_race_child(tmp_path: Path, index: Path, bad: Path, mutate: bool | str):
+    ready, done, pid = tmp_path / "validated", tmp_path / "child-finished", tmp_path / "owned-git-pid"
+    attack = tmp_path / "bounded-child.py"
+    attack.write_text(
+        "import os,signal,time\nfrom pathlib import Path\n"
+        + f"ready=Path({str(ready)!r}); pid=Path({str(pid)!r}); deadline=time.monotonic()+10\n"
+        + "while not pid.exists() and time.monotonic()<deadline: time.sleep(0.01)\n"
+        + "git_pid=int(pid.read_text()); os.kill(git_pid,signal.SIGSTOP)\ntry:\n"
+        + "    while not ready.exists() and time.monotonic()<deadline: time.sleep(0.01)\n"
+        + "    if not ready.exists(): raise SystemExit(1)\n"
+        + (f"    os.replace({str(bad)!r},os.environ.get('GIT_INDEX_FILE',{str(index)!r}))\n" if mutate else "")
+        + f"    Path({str(done)!r}).touch()\nfinally: os.kill(git_pid,signal.SIGCONT)\n",
+        encoding="utf-8",
+    )
+    return attack, ready, done, pid
+
+
+def _run_actual_commit_race(worktree: Path, hooks: Path, ready: Path, pid: Path):
+    command = ["git", "-c", f"core.hooksPath={hooks}", "commit", "-qm", "fixture actual commit-tree race"]
+    with subprocess.Popen(command, cwd=worktree, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) as process:
+        pid.write_text(str(process.pid), encoding="utf-8")
+        stderr = []
+        assert process.stderr is not None and process.stdout is not None
+        for line in process.stderr:
+            stderr.append(line)
+            if "indexed scheduling validated after normal hooks" in line:
+                ready.touch()
+        return subprocess.CompletedProcess(command, process.wait(timeout=20), process.stdout.read(), "".join(stderr))
+
+
+@pytest.mark.parametrize("mutate", [False, True, "payload"])
+def test_owner_entry_validates_actual_proposed_commit_tree(tmp_path: Path, mutate: bool | str) -> None:
+    worktree = deferral_worktree(
+        tmp_path, ("Darwin", "", "github-linux", "tests/native/proof_macos_native_broker_wait.py", False, True, 0)
+    )
+    hooks, marker, workflow, disabled = _owner_entry_normal_fixture(worktree, tmp_path, "valid")
+    if mutate == "payload":
+        workflow = "tests/native/proof_macos_native_broker_wait.py"
+        disabled = "raise AssertionError('unvalidated source substitution')\n"
+    before, expected = _git(worktree, "rev-parse", "HEAD"), _git(worktree, "write-tree")
+    index = Path(_git(worktree, "rev-parse", "--git-path", "index"))
+    index = index if index.is_absolute() else worktree / index
+    bad = tmp_path / "bad-index"
+    bad.write_bytes(index.read_bytes())
+    payload = tmp_path / "disabled-workflow"
+    payload.write_text(disabled, encoding="utf-8")
+    blob = _git(worktree, "hash-object", "-w", str(payload))
+    subprocess.run(
+        ["git", "update-index", "--cacheinfo", f"100644,{blob},{workflow}"],
+        cwd=worktree,
+        env=os.environ | {"GIT_INDEX_FILE": str(bad)},
+        check=True,
+    )
+    attack, ready, done, pid = _write_actual_commit_race_child(tmp_path, index, bad, mutate)
+    normal = tmp_path / "normal-pre-commit"
+    normal.write_text(
+        "#!/bin/sh\n"
+        + f"printf 'normal\\n' >> {shlex.quote(str(marker))}\n"
+        + f"{shlex.quote(sys.executable)} -I -c "
+        + shlex.quote(
+            "import subprocess,sys; subprocess.Popen([sys.executable,'-I',sys.argv[1]],"
+            "stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,start_new_session=True)"
+        )
+        + " "
+        + shlex.quote(str(attack))
+        + "\n",
+        encoding="utf-8",
+    )
+    shutil.rmtree(hooks)
+    subprocess.run(
+        [
+            sys.executable,
+            "-I",
+            str(REPO_ROOT / "scripts/owner_commit_entry.py"),
+            "install",
+            str(worktree),
+            str(hooks),
+            str(normal),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    result = _run_actual_commit_race(worktree, hooks, ready, pid)
+    assert done.exists() and marker.exists(), result.stdout + result.stderr
+    if mutate:
+        assert result.returncode != 0, "Actual unvalidated disabled commit advanced HEAD"
+        assert _git(worktree, "rev-parse", "HEAD") == before
+    else:
+        assert result.returncode == 0, result.stdout + result.stderr
+        assert _git(worktree, "rev-parse", "HEAD^{tree}") == expected
+        assert "immutable proposed commit tree validated" in result.stderr

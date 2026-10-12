@@ -33,13 +33,58 @@ _TOOL_IMPORTS = {
 }
 
 
-def _verified_analyzer_spec(fullname: str, spec, *, analyzer_root: Path | None = None):
+def _verified_six_importer(parent: ModuleType, root: Path, fullname: str):
+    """Bind the physical Six parent and the exact registered importer class."""
+    owner = _verified_analyzer_spec("six", getattr(parent, "__spec__", None), analyzer_root=root)
+    filename = getattr(parent, "__file__", None)
+    origin = owner.origin
+    if not filename or not origin or Path(filename).resolve() != Path(origin).resolve():
+        raise ImportError(f"project_worker_analyzer_origin_mismatch:{fullname}")
+    loader = getattr(parent, "_importer", None)
+    factory = getattr(parent, "_SixMetaPathImporter", None)
+    loader_type = type(loader)
+    if loader is None or loader_type is not factory or getattr(factory, "__module__", None) != "six":
+        raise ImportError(f"project_worker_analyzer_origin_mismatch:{fullname}")
+    return loader
+
+
+def _registered_six_spec(fullname: str, root: Path) -> importlib.machinery.ModuleSpec | None:
+    """Delegate only known virtual names to the verified Six parent's importer."""
+    if fullname != "six.moves" and not fullname.startswith("six.moves."):
+        return None
+    parent = sys.modules.get("six")
+    if parent is None:
+        return None
+    loader = _verified_six_importer(parent, root, fullname)
+    spec = loader.find_spec(fullname, None)
+    if spec is None or spec.loader is not loader or spec.name != fullname:
+        raise ImportError(f"project_worker_analyzer_origin_mismatch:{fullname}")
+    return spec
+
+
+def _verified_virtual_spec(fullname: str, spec, root: Path):
+    """Validate a synthetic spec against its verified parent's registered importer."""
+    registered = _registered_six_spec(fullname, root)
+    if registered is not None and registered.loader is spec.loader and registered.name == spec.name:
+        return spec
+    raise ImportError(f"project_worker_analyzer_origin_mismatch:{fullname}")
+
+
+def _verified_analyzer_spec(
+    fullname: str, spec: importlib.machinery.ModuleSpec | None, *, analyzer_root: Path | None = None
+) -> importlib.machinery.ModuleSpec:
     """Confine module origins and every namespace portion to the verified mount."""
     locations = [] if spec is None else list(spec.submodule_search_locations or ())
     if spec is not None and spec.origin:
         locations.append(spec.origin)
     root = (analyzer_root or ANALYZERS).resolve()
-    if not locations or any(not Path(location).resolve().is_relative_to(root) for location in locations):
+    if spec is not None and not locations:
+        return _verified_virtual_spec(fullname, spec, root)
+    if (
+        spec is None
+        or not locations
+        or any(not Path(location).resolve().is_relative_to(root) for location in locations)
+    ):
         raise ImportError(f"project_worker_analyzer_origin_mismatch:{fullname}")
     return spec
 
@@ -56,6 +101,8 @@ class AnalyzerFinder:
         if fullname.split(".")[0] not in self.names:
             return None
         spec = importlib.machinery.PathFinder.find_spec(fullname, path or [str(self.analyzer_root)])
+        if spec is None:
+            spec = _registered_six_spec(fullname, self.analyzer_root)
         return _verified_analyzer_spec(fullname, spec, analyzer_root=self.analyzer_root)
 
     def validate_loaded(self) -> None:
@@ -186,12 +233,32 @@ def _protected_dispatch_state() -> tuple:
     return namespace, class_state, tuple(_dispatch_callable_state(value) for value in primitives), modules
 
 
+def _registered_importer_state(finder: AnalyzerFinder) -> tuple:
+    """Bind only the analyzer-owned participant before candidate startup."""
+    if "six" not in finder.names:
+        return ()
+    parent = sys.modules["six"]
+    loader = _verified_six_importer(parent, finder.analyzer_root, "six.moves")
+    return (
+        _dispatch_namespace_state(vars(parent)),
+        _dispatch_namespace_state(vars(type(loader))),
+        _dispatch_namespace_state(vars(loader)),
+        tuple((name, id(value)) for name, value in loader.known_modules.items()),
+        id(loader),
+    )
+
+
 def _protected_import_state(finder: AnalyzerFinder) -> tuple:
     """Snapshot the lookup machinery and graph that startup hooks must preserve."""
     return (
         builtins.__import__,
         importlib.machinery.PathFinder.find_spec,
         _verified_analyzer_spec,
+        _dispatch_callable_state(_registered_six_spec),
+        _dispatch_callable_state(_verified_six_importer),
+        _dispatch_callable_state(_registered_importer_state),
+        _registered_importer_state(finder),
+        _dispatch_callable_state(_verified_virtual_spec),
         finder.find_spec,
         finder.validate_loaded,
         getattr(finder, "find_distributions", None),
@@ -218,6 +285,8 @@ def _validate_target_paths(allowed: tuple[Path, ...]) -> None:
 
 def _configure_member_site(finder: AnalyzerFinder, stdlib_paths: list[str]) -> None:
     """Preserve additive editable hooks and reestablish member lookup precedence."""
+    if "six" in finder.names:
+        importlib.import_module("six")
     state = _protected_import_state
     expected = state(finder)
     protected = {id(entry) for entry in sys.meta_path}

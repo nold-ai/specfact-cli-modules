@@ -19,7 +19,7 @@ from specfact_code_review.run.runtime_models import ProjectRuntimeError
 _DOMAIN_ENTRIES = {
     "pylint": ("pylint",),
     "basedpyright": ("basedpyright",),
-    "crosshair": ("crosshair-tool",),
+    "crosshair": ("crosshair-tool", "icontract"),
     "pytest-observe": ("pytest", "pytest-cov"),
 }
 _PINNED = frozenset(name for _, names in MEMBER_DISTRIBUTIONS.values() for name in names)

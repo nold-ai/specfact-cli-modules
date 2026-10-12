@@ -1134,3 +1134,153 @@ requirements:
       method: test
       intent: Retain actual candidate-local destination, missing binding and malformed JSON errors with exact declarations.
       observable: Missing declarations fail after actual rejections; existing exceptions and original CLI status1 conversion remain intact.
+
+  openspec:code-review-native-platform-execution:review-native-platform-execution:faithful-target-stream-closed-state-rejection:
+    rationale: Preserve real target I/O failures while isolating standard output from analyzer diagnostics.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#460
+    touchpoints:
+    - id: target-stream-closed-state-spec
+      kind: config_file
+      locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
+    verification_cases:
+    - case_id: 460-36-1
+      scenario_id: faithful-target-stream-closed-state-rejection
+      method: test
+      intent: Prove actual pinned CLI rejects genuine writes after closing either target stream.
+      observable: Real CLI false successes fail before standard closed-state guard; reporter remains authoritative and target error is retained afterward.
+
+  openspec:code-review-native-platform-execution:review-native-platform-execution:faithful-target-stream-text-protocol:
+    rationale: Match standard text-write rejection classes without false contract findings.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#460
+    touchpoints:
+    - id: target-stream-text-spec
+      kind: config_file
+      locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
+    verification_cases:
+    - case_id: 460-37-1
+      scenario_id: faithful-target-stream-text-protocol
+      method: test
+      intent: Bind actual Python and pinned CLI behavior for bytes/integer/Boolean/None writes.
+      observable: Actual false counterexample RED precedes precise TypeError rejection; no output or failure gate is softened.
+
+  openspec:code-review-native-platform-execution:review-native-platform-execution:complete-declared-crosshair-dispatch-dependency:
+    rationale: Expose the builtin dispatch's required existing contract library through the verified member closure while preserving customer ownership.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#460
+    touchpoints:
+    - id: crosshair-dependency-spec
+      kind: config_file
+      locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
+    verification_cases:
+    - case_id: 460-38-1
+      scenario_id: complete-declared-crosshair-dispatch-dependency
+      method: test
+      intent: Both execution graphs include required fallback/customer providers, reject missing/substituted origins and support real isolated startup.
+      observable: Actual source-bound corpus failures and genuine graph RED precede one declared dependency; ownership and complete fail-closed guards remain enforced.
+
+  openspec:code-review-native-platform-execution:review-native-platform-execution:verified-registered-six-virtual-namespace:
+    rationale: Resolve the required verified library's real virtual modules while retaining exact ownership and startup mutation rejection.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#460
+    touchpoints:
+    - id: verified-six-namespace-spec
+      kind: config_file
+      locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
+    verification_cases:
+    - case_id: 460-39-1
+      scenario_id: verified-registered-six-virtual-namespace
+      method: test
+      intent: Real Six registered/cached namespace controls, counterfeit ownership rejection and complete isolated startup.
+      observable: Genuine registered/cached module RED precedes checked delegation; no origins, package paths or ownership claims are fabricated.
+
+  openspec:code-review-native-platform-execution:review-native-platform-execution:bounded-registered-namespace-verification-phases:
+    rationale: Preserve full virtual and physical ownership checks with direct bounded validation phases.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#460
+    touchpoints:
+    - id: namespace-validation-phase-spec
+      kind: config_file
+      locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
+    verification_cases:
+    - case_id: 460-40-1
+      scenario_id: bounded-registered-namespace-verification-phases
+      method: test
+      intent: Run the complete real public Radon producer and retain all registered namespace rejection controls.
+      observable: Actual new CC14 policy RED precedes phase separation; no targeted warning or incomplete-tool result remains afterward.
+
+  openspec:code-review-native-platform-execution:review-native-platform-execution:complete-configured-registered-namespace-quality:
+    rationale: Retain actual ModuleSpec and exact loader identity semantics without new incomplete type/style evidence.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#460
+    touchpoints:
+    - id: configured-namespace-quality-spec
+      kind: config_file
+      locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
+    verification_cases:
+    - case_id: 460-41-1
+      scenario_id: complete-configured-registered-namespace-quality
+      method: test
+      intent: Run complete configured public type/style producers on the real startup source, retaining all ownership negatives.
+      observable: Genuine optional origin/loader and direct type-check diagnostics precede precise protocol declarations; no new targeted diagnostics remain afterward.
+
+  openspec:code-review-native-platform-execution:review-native-platform-execution:immutable-registered-importer-startup-binding:
+    rationale: Bind the actual newly admitted importer before candidate startup without substituting claimed origin/class provenance.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#460
+    touchpoints:
+    - id: registered-importer-startup-spec
+      kind: config_file
+      locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
+    verification_cases:
+    - case_id: 460-42-1
+      scenario_id: immutable-registered-importer-startup-binding
+      method: test
+      intent: Real site.addsitedir mutations and unchanged lazy-import control bind exact namespace/class/map implementation state.
+      observable: Actual false admission RED precedes the existing snapshot binding; malicious substitutions reject and legitimate lazy imports pass.
+
+  openspec:code-review-native-platform-execution:review-native-platform-execution:faithful-readonly-output-state-analysis:
+    rationale: Retain the true native readonly flag and real rejection semantics without constant-inference noise or policy changes.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#460
+    touchpoints:
+    - id: readonly-output-state-spec
+      kind: config_file
+      locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
+    verification_cases:
+    - case_id: 460-43-1
+      scenario_id: faithful-readonly-output-state-analysis
+      method: test
+      intent: Complete public style analysis supplements real pinned CLI open/closed and non-text protocol cases.
+      observable: Real W0125 producer RED precedes explicit standard descriptor retrieval; neither a shadow flag nor suppression is admitted.
+
+  openspec:code-review-native-platform-execution:review-native-platform-execution:bind-approved-scheduling-through-actual-commit-creation:
+    rationale: Preserve the already approved authority and complete normal hooks while rejecting actual post-hook index races before reference advancement.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#460
+    touchpoints:
+    - id: immutable-proposed-tree-spec
+      kind: config_file
+      locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
+    verification_cases:
+    - case_id: 460-44-1
+      scenario_id: bind-approved-scheduling-through-actual-commit-creation
+      method: test
+      intent: Actual Git detached-child race and valid controls bind complete proposed trees to the same approved checker before ref updates.
+      observable: Real false-commit RED precedes worktree-only prepared-transaction validation; bad HEAD advancement rejects without weakening normal hooks or policy.
+
+  openspec:code-review-native-platform-execution:review-native-platform-execution:bounded-actual-commit-race-proof-phases:
+    rationale: Preserve genuine complete-tree race rejection and actual process lifecycle under unchanged quality policy.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#460
+    touchpoints:
+    - id: bounded-race-proof-spec
+      kind: config_file
+      locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
+    verification_cases:
+    - case_id: 460-45-1
+      scenario_id: bounded-actual-commit-race-proof-phases
+      method: test
+      intent: Complete public producer RED/GREEN supplements unchanged real Git race requests and assertions.
+      observable: Actual new length/resource/import-order findings precede exact preparation phase separation and process context management.

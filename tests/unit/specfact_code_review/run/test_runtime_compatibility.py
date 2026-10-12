@@ -121,7 +121,7 @@ def sealed_node_analyzer_fixture(tmp_path: Path) -> Path:
     sealed.mkdir()
     _node_distribution(sealed, "basedpyright", "1.39.10", "basedpyright", "nodejs-wheel-binaries>=20.13.1")
     _node_distribution(sealed, "nodejs-wheel-binaries", "24.16.0", "nodejs_wheel")
-    for name in ("pylint", "crosshair-tool", "pytest", "pytest-cov"):
+    for name in ("pylint", "crosshair-tool", "icontract", "pytest", "pytest-cov"):
         _node_distribution(sealed, name, "1.0", name.replace("-", "_"))
     return sealed
 
