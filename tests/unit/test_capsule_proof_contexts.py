@@ -680,6 +680,8 @@ def test_standalone_bootstrap_host_source_and_direct_dependencies_are_declared()
         commands = "\n".join(step.get("run", "") for step in job["steps"])
         assert "icontract==2.7.3" in commands
         assert "packaging==26.3" in commands
+        assert "beartype==0.22.9" in commands
+        assert "pydantic==2.14.0" in commands
         assert CONTROLLER_SHELL_PROOF in commands
 
 

@@ -1790,7 +1790,7 @@ All fifteen standalone bootstrap proof functions and their fifty-four parameter 
 
 #### Scenario: retained probes execute in their mandatory host role
 - **WHEN** the actual pytest collection inventories and required host workflow are inspected
-- **THEN** all original standalone case identities are registered in the required host entry, absent from portable discovery, and run with the declared direct dependency/source environment without changing original invocation flags
+- **THEN** all original standalone case identities are registered in the required host entry, absent from portable discovery, and run with the declared direct dependency/source environment, including beartype and Pydantic required by the package import closure, without changing original invocation flags
 
 ### Requirement: Complete pinned CrossHair adapter typing without suppression
 
