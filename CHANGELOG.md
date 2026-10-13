@@ -7,6 +7,12 @@ and this project follows SemVer for bundle versions.
 
 ## [Unreleased]
 
+### Added
+
+- Prepare Code Review 0.52.0: an explicit Linux pytest/coverage execution budget
+  bounded to 1–600 seconds, with the existing 300-second default, selected-budget
+  provenance and unchanged full-scope, sandbox and incomplete-evidence policy.
+
 ### Fixed
 
 - Prepare Code Review 0.51.4: targeted selection counts distinct Python modules,

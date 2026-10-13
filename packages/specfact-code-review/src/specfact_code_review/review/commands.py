@@ -111,6 +111,7 @@ class _ReviewRunCommandInputs:
 
     project_config: Path | None = None
     project_runtime: Path | None = None
+    linux_pytest_timeout_seconds: int = 300
 
 
 def _friendly_run_command_error(exc: RunCommandError | ValueError | ViolationError) -> str:
@@ -262,6 +263,7 @@ def _execute_review_run(inputs: _ReviewRunCommandInputs) -> None:
             requirements_evidence=inputs.requirements_evidence,
             project_config=inputs.project_config,
             project_runtime=inputs.project_runtime,
+            linux_pytest_timeout_seconds=inputs.linux_pytest_timeout_seconds,
         )
     except (ValueError, ViolationError) as exc:
         raise typer.BadParameter(_friendly_run_command_error(exc)) from exc
@@ -298,6 +300,13 @@ def run(
     ),
     project_runtime: Path | None = typer.Option(
         None, "--project-runtime", help="Prepared project-runtime.json descriptor."
+    ),
+    linux_pytest_timeout_seconds: int = typer.Option(
+        300,
+        "--linux-pytest-timeout-seconds",
+        min=1,
+        max=600,
+        help="Operator Linux pytest capsule launch budget; all tests/checks remain required. Default300seconds, max600.",
     ),
     include_tests: bool | None = typer.Option(None, "--include-tests"),
     exclude_tests: bool | None = typer.Option(None, "--exclude-tests"),
@@ -380,6 +389,7 @@ def run(
             requirements_evidence=requirements_evidence,
             project_config=project_config,
             project_runtime=project_runtime,
+            linux_pytest_timeout_seconds=linux_pytest_timeout_seconds,
             interactive=interactive,
         )
     )

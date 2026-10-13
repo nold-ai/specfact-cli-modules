@@ -27,6 +27,24 @@ module has no admitted capsule for that ABI. Reinstalling the same module cannot
 supply a missing catalog entry; a signed release with accepted runtime artifacts
 is required. The JSON report retains the cause in `analyzer_evidence[].diagnostic`.
 
+## Linux full-test execution budget
+
+`--linux-pytest-timeout-seconds` selects an operator-owned deadline from 1 to
+600 seconds for the Linux targeted pytest/coverage capsule. The default remains
+300 seconds. For a larger full-suite workload, for example:
+
+```bash
+specfact code review run --scope full --linux-pytest-timeout-seconds 600 --json
+```
+
+This option does not change selected files, tests, checkers, sandbox isolation,
+coverage thresholds or completion authority. Other capsule deadlines remain
+unchanged, including Pylint's internal 30-second limit. Invalid budgets reject
+before execution; a nondefault budget on Darwin reports UNKNOWN. A timeout at
+any selected deadline still produces incomplete evidence and a failing exit.
+The report records requested/effective seconds, platform and operator-option
+provenance; these fields describe the selected deadline and never prove completion.
+
 ## Installed package layout
 
 Code Review accepts signed installations with either `src/specfact_code_review`

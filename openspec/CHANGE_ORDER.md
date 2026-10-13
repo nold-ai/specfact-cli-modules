@@ -3,6 +3,14 @@
 This document is the modules-side source of truth for active OpenSpec work. It
 must be read together with the core repo change order in `nold-ai/specfact-cli`.
 
+## Bounded Linux pytest execution budget (2026-10-13)
+
+`code-review-linux-pytest-execution-budget` is a separately authorized additive
+operator option: default300seconds, maximum600 for Linux pytest only. It preserves
+all analysis/coverage/signature gates and UNKNOWN timeout outcomes. It does not
+authorize registry publication or merge. Local tests and supplier verification
+precede a reviewed PR and the existing trusted CI signing route.
+
 ## Agentic SDLC adjustments (2026-10-04)
 
 The owner-approved [delivery roadmap](AGENTIC_SDLC_ROADMAP.md) adds bounded compatibility, optional decision-context, ecosystem and calibration stories. It preserves the lean release chain and keeps context-bound assurance opt-in. This section supersedes stale status/dependency wording below. Modules #481 is **In Progress**, with takeover authorized; follow-up fetched issues are Todo. Runtime work is not completed by this planning update. Core #742 tracking is live, but its proposal is not on the fetched core dev base.
@@ -55,12 +63,12 @@ Core #680/#679 and modules #417 were recovered from uncommitted planning-only fe
 
 | Bucket | Count | Location |
 |---|---:|---|
-| **Active-tree entries** | 33 | [`openspec/changes/`](changes/) |
+| **Active-tree entries** | 35 | [`openspec/changes/`](changes/) |
 | **Parking-lot entries** | 16 | [`openspec/parking-lot/`](parking-lot/) |
 | **Archived** | 50 | [`openspec/changes/archive/`](changes/archive/) |
 | **Abandoned history** | 1 | [`openspec/history/abandoned/`](history/abandoned/) |
 
-`openspec list` reflects all 33 direct active-tree entries (verified 2026-10-08). The closed R08
+`openspec list` reflects all 35 direct active-tree entries (verified 2026-10-13). The closed R08
 proposal is retained under non-canonical abandoned history, outside
 `openspec/changes/` and its completed-change archive; no unimplemented delta
 entered canonical specifications. Completed changes still use native OpenSpec

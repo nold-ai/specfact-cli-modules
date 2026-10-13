@@ -1,0 +1,26 @@
+schema_version: '2'
+requirements:
+  openspec:code-review-linux-pytest-execution-budget:code-review-execution-budget:bounded-operator-linux-pytest-execution-budget:
+    rationale: A complete configured Linux test workload needs an explicit bounded deadline without reducing scope.
+    touchpoints:
+      - id: budget-spec
+        kind: config_file
+        locator: openspec/changes/code-review-linux-pytest-execution-budget/specs/code-review-execution-budget/spec.md
+    verification_cases:
+      - case_id: BUDGET-001
+        scenario_id: bounded-operator-linux-pytest-execution-budget
+        method: inspection
+        intent: Inspect default300, exact integer1..600 admission, public routing and unchanged non-pytest budgets.
+        observable: The specification and focused routing tests preserve full workload selection and reject invalid budgets before execution.
+  openspec:code-review-linux-pytest-execution-budget:code-review-execution-budget:budget-provenance-and-incomplete-evidence:
+    rationale: Selected execution time must never grant completion or coverage authority.
+    touchpoints:
+      - id: incomplete-budget-spec
+        kind: config_file
+        locator: openspec/changes/code-review-linux-pytest-execution-budget/specs/code-review-execution-budget/spec.md
+    verification_cases:
+      - case_id: BUDGET-002
+        scenario_id: budget-provenance-and-incomplete-evidence
+        method: inspection
+        intent: Inspect requested/effective metadata, timeout UNKNOWN/nonzero and Darwin fail-closed override.
+        observable: Timeout and unsupported-platform controls remain incomplete; default platform behavior and signatures stay unchanged.

@@ -164,6 +164,12 @@ class ReviewOptions:
     focus: ReviewFocus | None = None
     project_config: Path | None = None
     project_runtime: Path | None = None
+    linux_pytest_timeout_seconds: int = 300
+
+    def __post_init__(self) -> None:
+        budget = self.linux_pytest_timeout_seconds
+        if type(budget) is not int or not 1 <= budget <= 600:
+            raise ValueError("linux_pytest_execution_budget_invalid: expected integer1..600seconds")
 
 
 @dataclass(frozen=True)
@@ -1380,6 +1386,13 @@ def _prepare_capsule_process_roots(process_root: Path) -> tuple[Path, Path, Path
 
 def _execute_capsule_member(request: CapsuleMemberExecutionRequest) -> dict[str, object]:
     if getattr(request.runtime, "backend", "linux-x86_64") == "darwin-arm64":
+        if request.member == "targeted-pytest-coverage" and request.options.linux_pytest_timeout_seconds != 300:
+            return {
+                "execution_state": "error",
+                "evidence_outcome": "UNKNOWN",
+                "findings": [],
+                "diagnostic": "linux_pytest_execution_budget_unsupported_platform",
+            }
         return _execute_native_capsule_member(request)
     bubblewrap = request.runtime.bubblewrap
     if bubblewrap is None:
@@ -1435,11 +1448,12 @@ def _execute_capsule_member(request: CapsuleMemberExecutionRequest) -> dict[str,
                 "findings": [],
                 "diagnostic": preflight.reason,
             }
-        execution = execute_launch_plan(
-            build_launch_plan(context),
-            bubblewrap,
-            extra_argv=("specfact_code_review.run.runner", "/opt/specfact/config/0/request.json"),
-        )
+        launch_options: dict[str, Any] = {
+            "extra_argv": ("specfact_code_review.run.runner", "/opt/specfact/config/0/request.json")
+        }
+        if request.member == "targeted-pytest-coverage" and request.options.linux_pytest_timeout_seconds != 300:
+            launch_options["timeout"] = request.options.linux_pytest_timeout_seconds
+        execution = execute_launch_plan(build_launch_plan(context), bubblewrap, **launch_options)
         response_path = output_root / "result.json"
         if execution.status != "PASS":
             return {
@@ -7388,6 +7402,7 @@ def _review_options_from_kwargs(options: ReviewOptions | None, overrides: dict[s
         "focus",
         "project_config",
         "project_runtime",
+        "linux_pytest_timeout_seconds",
     }
     unknown_keys = set(overrides) - allowed_keys
     if unknown_keys:
@@ -7424,6 +7439,7 @@ def _review_options_from_kwargs(options: ReviewOptions | None, overrides: dict[s
         focus=cast(ReviewFocus | None, focus),
         project_config=cast(Path | None, overrides.get("project_config")),
         project_runtime=cast(Path | None, overrides.get("project_runtime")),
+        linux_pytest_timeout_seconds=cast(int, overrides.get("linux_pytest_timeout_seconds", 300)),
     )
 
 
@@ -7468,6 +7484,15 @@ def _capsule_report(
     expected_versions: Mapping[str, str] | None = None,
     platform_id: str = "linux-x86_64",
 ) -> ReviewReport:
+    scope_evidence = {
+        **scope_evidence,
+        "linux_pytest_execution_budget": {
+            "requested_seconds": options.linux_pytest_timeout_seconds,
+            "effective_seconds": options.linux_pytest_timeout_seconds if platform_id == "linux-x86_64" else None,
+            "platform": platform_id,
+            "authority": "operator-option",
+        },
+    }
     activation, report_evidence = _activated_capsule_report_evidence(
         evidence,
         expected_versions,

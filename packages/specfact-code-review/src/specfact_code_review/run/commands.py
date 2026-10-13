@@ -97,6 +97,7 @@ class ReviewRunRequest:
     requirements_evidence: Path | None = None
     project_config: Path | None = None
     project_runtime: Path | None = None
+    linux_pytest_timeout_seconds: int = 300
 
 
 @dataclass(frozen=True)
@@ -114,6 +115,7 @@ class _ReviewLoopFlags:
     assurance_kind: LocalAssuranceKind = "explicit_files"
     project_config: Path | None = None
     project_runtime: Path | None = None
+    linux_pytest_timeout_seconds: int = 300
 
 
 def _changed_files_from_git_diff(*, include_tests: bool) -> list[Path]:
@@ -537,6 +539,7 @@ def _run_review_with_progress(
             assurance_kind=flags.assurance_kind,
             project_config=flags.project_config,
             project_runtime=flags.project_runtime,
+            linux_pytest_timeout_seconds=flags.linux_pytest_timeout_seconds,
         ),
     )
 
@@ -560,6 +563,7 @@ def _run_review_with_status(
             assurance_kind=flags.assurance_kind,
             project_config=flags.project_config,
             project_runtime=flags.project_runtime,
+            linux_pytest_timeout_seconds=flags.linux_pytest_timeout_seconds,
         )
         report = _run_review_once(files, base)
         applied_simplification_findings: list[ReviewFinding] = []
@@ -594,6 +598,7 @@ def _run_review_once(files: list[Path], flags: _ReviewLoopFlags) -> ReviewReport
         assurance_kind=flags.assurance_kind,
         project_config=flags.project_config,
         project_runtime=flags.project_runtime,
+        linux_pytest_timeout_seconds=flags.linux_pytest_timeout_seconds,
     )
     applied_simplification_findings: list[ReviewFinding] = []
     if flags.fix:
@@ -624,6 +629,7 @@ def _run_review_once(files: list[Path], flags: _ReviewLoopFlags) -> ReviewReport
             assurance_kind=flags.assurance_kind,
             project_config=flags.project_config,
             project_runtime=flags.project_runtime,
+            linux_pytest_timeout_seconds=flags.linux_pytest_timeout_seconds,
         )
         report = _with_applied_simplification_findings(report, applied_simplification_findings)
     if flags.preview_fixes:
@@ -771,6 +777,7 @@ def _build_review_run_request(
         requirements_evidence=requirements_evidence,
         project_config=cast(Path | None, _get_optional_param("project_config", _as_optional_path)),
         project_runtime=cast(Path | None, _get_optional_param("project_runtime", _as_optional_path)),
+        linux_pytest_timeout_seconds=cast(int, request_kwargs.pop("linux_pytest_timeout_seconds", 300)),
     )
 
     # Reject any unexpected keyword arguments
@@ -893,6 +900,7 @@ def _immutable_scope_report(request: ReviewRunRequest) -> ReviewReport:
                     no_tests=request.no_tests,
                     project_config=request.project_config,
                     project_runtime=request.project_runtime,
+                    linux_pytest_timeout_seconds=request.linux_pytest_timeout_seconds,
                     include_noise=request.include_noise,
                     bug_hunt=request.bug_hunt,
                     review_level=request.review_level,
@@ -925,6 +933,7 @@ def _immutable_scope_report(request: ReviewRunRequest) -> ReviewReport:
 
 
 def _validate_review_request(request: ReviewRunRequest) -> None:
+    ReviewOptions(linux_pytest_timeout_seconds=request.linux_pytest_timeout_seconds)
     _raise_if_targeting_styles_conflict(request.files, scope=request.scope, path_filters=request.path_filters or [])
     _validate_output_options(request)
     _validate_simplification_options(request)
@@ -997,6 +1006,7 @@ def _normalize_review_request(request: ReviewRunRequest) -> ReviewRunRequest:
         requirements_evidence=request.requirements_evidence,
         project_config=request.project_config,
         project_runtime=request.project_runtime,
+        linux_pytest_timeout_seconds=request.linux_pytest_timeout_seconds,
     )
 
 
@@ -1247,6 +1257,7 @@ def run_command(
             no_tests=request.no_tests,
             project_config=request.project_config,
             project_runtime=request.project_runtime,
+            linux_pytest_timeout_seconds=request.linux_pytest_timeout_seconds,
             include_noise=request.include_noise,
             fix=request.fix,
             preview_fixes=request.preview_fixes,

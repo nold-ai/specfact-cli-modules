@@ -2102,7 +2102,16 @@ def test_capsule_review_launches_each_active_member_in_a_fresh_sandbox(
     assert len({invocation for _member, invocation in launches}) == len(launches)
     assert report.schema_version == "1.6"
     assert report.assurance_status == "PASS"
-    assert report.scope_evidence == {"assurance_kind": "full", "capsule_execution": "required"}
+    assert report.scope_evidence == {
+        "assurance_kind": "full",
+        "capsule_execution": "required",
+        "linux_pytest_execution_budget": {
+            "requested_seconds": 300,
+            "effective_seconds": 300,
+            "platform": "linux-x86_64",
+            "authority": "operator-option",
+        },
+    }
 
 
 @pytest.mark.parametrize(

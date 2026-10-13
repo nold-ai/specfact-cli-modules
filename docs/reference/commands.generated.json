@@ -1138,6 +1138,7 @@
       "--interactive",
       "--json",
       "--level",
+      "--linux-pytest-timeout-seconds",
       "--mode",
       "--no-tests",
       "--out",
