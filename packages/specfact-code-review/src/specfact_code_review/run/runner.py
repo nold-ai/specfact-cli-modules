@@ -18,8 +18,9 @@ import sys
 import tempfile
 import tomllib
 import xml.etree.ElementTree as ET
-from collections.abc import Callable, Iterable, Mapping
-from contextlib import ExitStack, chdir, suppress
+from collections.abc import Callable, Iterable, Iterator, Mapping
+from contextlib import ExitStack, chdir, contextmanager, suppress
+from contextvars import ContextVar
 from dataclasses import dataclass, field, replace
 from functools import lru_cache, partial
 from pathlib import Path, PurePosixPath
@@ -85,6 +86,7 @@ _PR_CONTEXT_ENVS = (
 )
 _CLEAN_CODE_CONTEXT_HINTS = ("clean code", "naming", "kiss", "yagni", "dry", "solid", "complexity")
 _TARGETED_TEST_TIMEOUT = int(os.environ.get("SPECFACT_CODE_REVIEW_TARGETED_TEST_TIMEOUT", "120"))
+_PYTEST_EXECUTION_BUDGET: ContextVar[int | None] = ContextVar("linux_pytest_execution_budget", default=None)
 _PROJECT_RUNTIME_MEMBERS = frozenset(
     {"basedpyright", "contracts", "pylint", "targeted-pytest-coverage", "targeted-pytest-plugin-preflight"}
 )
@@ -1298,18 +1300,40 @@ def _capsule_adapter_request(request: dict[str, object], *, member: str) -> tupl
     return adapter_argv, True
 
 
-def _load_capsule_request(request_path: Path) -> tuple[str, list[Path], bool, tuple[str, ...], bool]:
+def _capsule_pytest_budget(request: dict[str, object], *, member: str) -> int | None:
+    if "linux_pytest_timeout_seconds" not in request:
+        return None
+    budget = request["linux_pytest_timeout_seconds"]
+    if type(budget) is not int or not 1 <= budget <= 600:
+        raise ValueError("linux_pytest_execution_budget_invalid")
+    if member != "targeted-pytest-coverage":
+        raise ValueError("linux_pytest_execution_budget_invalid_member")
+    return None if budget == 300 else budget
+
+
+@contextmanager
+def _pytest_execution_budget(budget: int | None) -> Iterator[None]:
+    token = _PYTEST_EXECUTION_BUDGET.set(budget)
+    try:
+        yield
+    finally:
+        _PYTEST_EXECUTION_BUDGET.reset(token)
+
+
+def _load_capsule_request(request_path: Path) -> tuple[str, list[Path], bool, tuple[str, ...], bool, int | None]:
     request = json.loads(request_path.read_text(encoding="utf-8"))
     if not isinstance(request, dict):
         raise ValueError("capsule request must be an object")
     member = str(request["member"])
     adapter_argv, complete_pytest_inventory = _capsule_adapter_request(request, member=member)
+    pytest_budget = _capsule_pytest_budget(request, member=member)
     return (
         member,
         _capsule_snapshot_files(request, member=member),
         bool(request.get("bug_hunt", False)),
         adapter_argv,
         complete_pytest_inventory,
+        pytest_budget,
     )
 
 
@@ -1335,17 +1359,20 @@ def _capsule_process_request(request_path: Path) -> None:
     """Run exactly one analyzer member inside the sealed capsule process."""
 
     try:
-        member, files, bug_hunt, adapter_argv, complete_pytest_inventory = _load_capsule_request(request_path)
-        response = _capsule_member_response(
-            member,
-            _member_findings(
-                member,
-                files,
-                bug_hunt=bug_hunt,
-                adapter_argv=adapter_argv,
-                complete_pytest_inventory=complete_pytest_inventory,
-            ),
+        member, files, bug_hunt, adapter_argv, complete_pytest_inventory, pytest_budget = _load_capsule_request(
+            request_path
         )
+        with _pytest_execution_budget(pytest_budget):
+            response = _capsule_member_response(
+                member,
+                _member_findings(
+                    member,
+                    files,
+                    bug_hunt=bug_hunt,
+                    adapter_argv=adapter_argv,
+                    complete_pytest_inventory=complete_pytest_inventory,
+                ),
+            )
         observation_path = Path("/opt/specfact/tmp/pytest-observation.json")
         if (
             member == "targeted-pytest-coverage"
@@ -1417,6 +1444,12 @@ def _execute_capsule_member(request: CapsuleMemberExecutionRequest) -> dict[str,
                     "complete_pytest_inventory": request.complete_pytest_inventory,
                     "member": request.member,
                     "paths": relative_paths,
+                    **(
+                        {"linux_pytest_timeout_seconds": request.options.linux_pytest_timeout_seconds}
+                        if request.member == "targeted-pytest-coverage"
+                        and request.options.linux_pytest_timeout_seconds != 300
+                        else {}
+                    ),
                 },
                 ensure_ascii=False,
                 separators=(",", ":"),
@@ -5000,7 +5033,7 @@ def _run_pytest_selection_with_coverage(
             capture_output=True,
             text=True,
             check=False,
-            timeout=_TARGETED_TEST_TIMEOUT,
+            timeout=_PYTEST_EXECUTION_BUDGET.get() or _TARGETED_TEST_TIMEOUT,
             env=pytest_env,
         )
     finally:
@@ -7490,6 +7523,16 @@ def _capsule_report(
             "requested_seconds": options.linux_pytest_timeout_seconds,
             "effective_seconds": options.linux_pytest_timeout_seconds if platform_id == "linux-x86_64" else None,
             "platform": platform_id,
+            "nonportable_inner_seconds": (
+                (
+                    options.linux_pytest_timeout_seconds
+                    if options.linux_pytest_timeout_seconds != 300
+                    else _TARGETED_TEST_TIMEOUT
+                )
+                if platform_id == "linux-x86_64"
+                else None
+            ),
+            "portable_inner_seconds": 1200 if platform_id == "linux-x86_64" else None,
             "authority": "operator-option",
         },
     }

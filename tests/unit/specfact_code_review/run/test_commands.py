@@ -1862,3 +1862,13 @@ def test_json_output_preserves_unknown_diagnostic_contract(monkeypatch: Any, tmp
     result = runner.invoke(app, ["review", "run", "--json", "--out", str(output), str(FIXTURE_FILE)])
     assert result.exit_code == 0
     assert json.loads(output.read_text())["analyzer_evidence"][0]["diagnostic"] == reason
+
+
+def test_normalized_request_preserves_explicit_linux_pytest_budget():
+    request = run_commands.ReviewRunRequest(files=[], linux_pytest_timeout_seconds=600)
+    normalized = run_commands._normalize_review_request(request)
+    assert normalized.linux_pytest_timeout_seconds == 600
+    assert (
+        run_commands._normalize_review_request(run_commands.ReviewRunRequest(files=[])).linux_pytest_timeout_seconds
+        == 300
+    )

@@ -284,7 +284,14 @@ def test_native_usage_error_retains_capsule_member_and_target_execution(tmp_path
     monkeypatch.setattr(
         runner,
         "_load_capsule_request",
-        lambda _path: ("targeted-pytest-coverage", files, False, ("portable-pytest-v2", '{"selectors": ["."]}'), False),
+        lambda _path: (
+            "targeted-pytest-coverage",
+            files,
+            False,
+            ("portable-pytest-v2", '{"selectors": ["."]}'),
+            False,
+            None,
+        ),
     )
     monkeypatch.setattr(
         runner,

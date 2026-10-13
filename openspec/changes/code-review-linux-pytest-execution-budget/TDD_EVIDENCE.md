@@ -23,3 +23,15 @@ Environment: local Hatch Python3.14.7, pytest9.1.1, core SpecFact0.55.4. The aut
 The local native capsule remains unsupported (`native_capsule_artifact_not_admitted:darwin-arm64-cp312`, UNKNOWN/exit1). The existing approved ARM64 feature-worktree CI deferral preserves all other hooks and requires exact-head blocking customer and independent signed Linux review. Independent affected source/route inspection found no blocking issue.
 
 The additive API prepares minor version0.52.0 above dev0.51.4. Local preparation contains a canonical checksum only and is explicitly UNSIGNED; the published registry is unchanged. Actual existing trusted PR-CI signing, strict signed-candidate verification, hosted Linux evidence and consumer adoption remain pending. This change authorizes no merge, registry publication or release.
+
+## PR-CI signature and review correction
+
+The earlier UNSIGNED preparation above is chronological. Existing PR-CI subsequently signed commit86304cbb5051014e71de5ef18337532fd8c870b5 with the established trusted key; all seven strict filesystem signature checks passed. CodeRabbit withdrew its signature-removal recommendation after checking that evidence. The signed863 artifact remains immutable historical evidence.
+
+Codex identified the real nonportable120-second inner cap despite the new600-second outer launch option. The accepted specification was extended before implementation; focused controls produced17ordinary failures/24passes before the request/context propagation patch. An accidentally expanded full red invocation was interrupted with1238passes/17failures/13conditional skips; it is incomplete, not passing evidence. The first focused implementation run had9invalid-path fixture failures/81passes; strict budget admission now precedes path projection. The collected focused request/public/ledger/portable regression then passed203tests.
+
+Actual hosted3.12 and independent review reported project_test_selection_ambiguous. Both changed commands.py sources share their stem with run/review/ledger command tests; native mapping requires all three explicitly. Existing public budget cases were moved to their corresponding review tests without dropping cases. Genuine request normalization and UNKNOWN budget-provenance ledger roundtrip cases cover the other matching owners. No mapper, scope, coverage or report gate was weakened.
+
+The nondefault private Linux pytest control is exact-integer1..600, member-specific and operation-local through ContextVar token restoration. Absent/default300 preserves legacy120inner/300outer, portable inner1200 and every other member policy remain unchanged. Nested/concurrent and exception controls verify restoration. Renewed canonical checksum, trusted CI signature and exact-head hosted assurance remain required before adoption.
+
+Final collected focused tests after adding actual dispatch restoration and controller-to-private-request assertions:205passed (2.10seconds). The current local draft intentionally replaces the historical863 signature with a fresh canonical checksum; only existing trusted PR-CI may sign the corrected candidate before adoption.

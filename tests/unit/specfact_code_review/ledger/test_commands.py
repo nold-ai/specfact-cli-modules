@@ -244,3 +244,33 @@ def test_ledger_reset_surfaces_delete_errors(monkeypatch: Any) -> None:
 
     assert result.exit_code == 1
     assert "Unable to reset ledger state" in result.output
+
+
+def test_ledger_preserves_budget_metadata_without_promoting_unknown(monkeypatch):
+    from types import SimpleNamespace
+
+    from specfact_code_review.run import runner as budget_runner
+
+    monkeypatch.setattr(
+        budget_runner.native_backend,
+        "select_runtime_backend",
+        lambda: SimpleNamespace(kind="linux-x86_64", environment_id="linux-x86_64-cp313"),
+    )
+    report = budget_runner._unknown_capsule_report(
+        "sandbox_launch_failed:timeout",
+        options=budget_runner.ReviewOptions(linux_pytest_timeout_seconds=600),
+        scope_evidence={},
+    )
+    captured = []
+
+    class BudgetLedger:
+        def record_run(self, received):
+            captured.append(received)
+            return {"coins": 0, "streak_pass": 0, "streak_block": 1, "last_verdict": "UNKNOWN", "top_violations": []}
+
+    monkeypatch.setattr("specfact_code_review.ledger.commands.LedgerClient", BudgetLedger)
+    result = runner.invoke(app, ["review", "ledger", "update"], input=report.model_dump_json())
+    assert result.exit_code == 0
+    assert captured[0].scope_evidence == report.scope_evidence
+    assert captured[0].assurance_status == "UNKNOWN"
+    assert captured[0].ci_exit_code == 1

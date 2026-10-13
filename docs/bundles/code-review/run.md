@@ -235,3 +235,5 @@ See [Review external Python projects](/guides/portable-project-runtime/) for pip
 - [Code review ledger](/bundles/code-review/ledger/)
 - [Code review rules](/bundles/code-review/rules/)
 - [Code review module guide](/modules/code-review/)
+
+A nondefault Linux pytest budget also reaches the sealed nonportable pytest subprocess. Omitting the option, or selecting the default300seconds, preserves its legacy120-second inner limit and300-second member launch limit. Portable pytest retains its existing inner policy; the selected outer limit still bounds the member. Requested/effective inner and outer budgets are diagnostic evidence and never make incomplete execution pass.

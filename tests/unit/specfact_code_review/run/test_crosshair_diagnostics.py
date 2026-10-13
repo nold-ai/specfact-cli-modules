@@ -23,6 +23,7 @@ def test_retired_request_fields_cannot_enable_diagnosis(tmp_path, value):
         False,
         (),
         False,
+        None,
     )
 
 

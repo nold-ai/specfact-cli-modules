@@ -7,6 +7,10 @@ and this project follows SemVer for bundle versions.
 
 ## [Unreleased]
 
+### Fixed
+
+- Propagate explicit Linux pytest execution budgets through strictly admitted sealed requests to nonportable subprocesses, preserving legacy/default limits and operation-local isolation. Keep complete corresponding command-test selection and UNKNOWN authority for budget metadata.
+
 ### Added
 
 - Prepare Code Review 0.52.0: an explicit Linux pytest/coverage execution budget

@@ -2109,6 +2109,8 @@ def test_capsule_review_launches_each_active_member_in_a_fresh_sandbox(
             "requested_seconds": 300,
             "effective_seconds": 300,
             "platform": "linux-x86_64",
+            "nonportable_inner_seconds": 120,
+            "portable_inner_seconds": 1200,
             "authority": "operator-option",
         },
     }

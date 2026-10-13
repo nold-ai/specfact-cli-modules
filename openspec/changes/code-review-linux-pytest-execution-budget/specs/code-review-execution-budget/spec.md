@@ -32,3 +32,22 @@ Native reports SHALL retain requested and effective Linux pytest budgets without
 
 - **WHEN** a nondefault Linux-only budget is requested for a Darwin broker invocation
 - **THEN** unsupported evidence is explicit and no override is silently ignored
+
+### Requirement: Sealed nonportable pytest budget propagation
+
+A nondefault explicitly admitted Linux pytest budget SHALL be carried in the immutable capsule request and applied to both the member launch and nonportable pytest subprocess. Absent or default300 SHALL preserve the legacy120-second inner deadline and300-second outer deadline. Private controls SHALL admit exact integers1..600 only for targeted-pytest-coverage, remain operation-local across nested/concurrent calls and restore after exceptions. Portable pytest keeps its existing inner policy; Darwin and the other nine members remain unchanged.
+
+#### Scenario: Explicit nonportable subprocess
+
+- **WHEN** an operator selects600seconds for sealed Linux nonportable pytest
+- **THEN** its actual subprocess receives600seconds and the report records both requested and effective inner/outer budgets
+
+#### Scenario: Invalid private control
+
+- **WHEN** a malformed budget or another member carries a pytest budget
+- **THEN** request admission fails closed before member execution
+
+#### Scenario: Restored operation context
+
+- **WHEN** nested or concurrent invocations finish or raise
+- **THEN** each invocation retains its own budget and later default calls retain the legacy deadline

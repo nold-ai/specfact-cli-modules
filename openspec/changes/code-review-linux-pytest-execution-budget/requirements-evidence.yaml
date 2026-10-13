@@ -24,3 +24,15 @@ requirements:
         method: inspection
         intent: Inspect requested/effective metadata, timeout UNKNOWN/nonzero and Darwin fail-closed override.
         observable: Timeout and unsupported-platform controls remain incomplete; default platform behavior and signatures stay unchanged.
+  openspec:code-review-linux-pytest-execution-budget:code-review-execution-budget:sealed-nonportable-pytest-budget-propagation:
+    rationale: Explicit execution intent must reach the nonportable subprocess without altering legacy limits or crossing invocation boundaries.
+    touchpoints:
+      - id: private-budget-spec
+        kind: config_file
+        locator: openspec/changes/code-review-linux-pytest-execution-budget/specs/code-review-execution-budget/spec.md
+    verification_cases:
+      - case_id: BUDGET-003
+        scenario_id: sealed-nonportable-pytest-budget-propagation
+        method: inspection
+        intent: Inspect strict private admission, actual subprocess limits and restoration across concurrent, nested and failing invocations.
+        observable: Absent/default requests preserve legacy limits, explicit requests reach the subprocess and no operation inherits another budget.

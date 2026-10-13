@@ -4,8 +4,10 @@ import re
 from pathlib import Path
 from typing import Any
 
+import pytest
 from typer.testing import CliRunner
 
+from specfact_code_review.review import commands as budget_commands
 from specfact_code_review.review.commands import InvalidOptionCombinationError, app
 
 
@@ -265,3 +267,27 @@ def test_review_run_explicit_files_do_not_prompt_and_keep_tests(monkeypatch: Any
     assert "Include changed and untracked test files" not in result.output
     assert recorded["files"] == [Path("tests/unit/specfact_code_review/run/test_commands.py")]
     assert recorded["kwargs"]["include_tests"] is True
+
+
+@pytest.mark.parametrize("budget", [1, 300, 600])
+def test_public_cli_routes_selected_budget(monkeypatch, budget):
+    captured = []
+
+    def run(files, **kwargs):
+        captured.append(kwargs["linux_pytest_timeout_seconds"])
+        return 0, None
+
+    monkeypatch.setattr(budget_commands, "run_command", run)
+    result = CliRunner().invoke(budget_commands.app, ["review", "run", "--linux-pytest-timeout-seconds", str(budget)])
+    assert result.exit_code == 0, result.output
+    assert captured == [budget]
+
+
+@pytest.mark.parametrize("budget", ["0", "601", "1.5", "false"])
+def test_public_cli_rejects_invalid_budget_before_review(monkeypatch, budget):
+    def run(files, **kwargs):
+        raise AssertionError("invalid budget reached review")
+
+    monkeypatch.setattr(budget_commands, "run_command", run)
+    result = CliRunner().invoke(budget_commands.app, ["review", "run", "--linux-pytest-timeout-seconds", budget])
+    assert result.exit_code == 2

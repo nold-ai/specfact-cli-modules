@@ -9,3 +9,5 @@ Reuse existing ReviewOptions and CLI request routing, passing the selected budge
 ## Non-goals and acceptance
 
 No runner/account changes, test/file/coverage reduction, host fallback, unsigned adoption, global interpreter tuning, release or merge. Synthetic contract tests prove admission/routing/timeout/output compatibility; supported Linux full-scope regression and trusted signed candidate are required before consumer adoption. Rollback restores legacy options while retained reports keep their explicit provenance.
+
+The explicit nondefault Linux pytest budget travels through the existing read-only sealed JSON request. Exact member-specific integer admission precedes path projection. A ContextVar with token restoration bounds the nonportable subprocess per invocation, without mutating global defaults or shared cache identities. The existing portable inner limit remains unchanged. Native report scope evidence states both inner policies and the selected outer deadline; incomplete execution retains UNKNOWN. Matching run/review/ledger command-test controls preserve complete native corresponding-test selection.
