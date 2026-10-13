@@ -131,7 +131,7 @@ def test_committed_check_restores_index_and_cleans_private_files(tmp_path, monke
     def check(command, **options):
         assert options["env"]["GIT_NO_REPLACE_OBJECTS"] == "1"
         assert Path(command[2]).is_file()
-        assert command[3:] == ["capsule", "capsule", base]
+        assert command[3:] == ["capsule", "candidate", base]
         if outcome == "checker-failure":
             raise subprocess.CalledProcessError(7, command)
         return SimpleNamespace(returncode=0)

@@ -115,6 +115,7 @@ def validate_commit(root: Path, head: str, base: str) -> bool:
             capsule = _checker_paths(root, merge_base, *CAPSULE_PATHS)
             if not capsule:
                 return False
+            complete = _checker_paths(root, merge_base)
             source = _checker_source(root, base)
             checker = Path(temporary) / "checker.py"
             checker.write_bytes(
@@ -124,7 +125,7 @@ def validate_commit(root: Path, head: str, base: str) -> bool:
                 )
             )
             subprocess.run(
-                [sys.executable, "-I", str(checker), capsule, capsule, base],
+                [sys.executable, "-I", str(checker), capsule, complete, base],
                 cwd=root,
                 env=os.environ | {"GIT_NO_REPLACE_OBJECTS": "1"},
                 check=True,

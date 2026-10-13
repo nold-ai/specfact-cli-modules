@@ -756,7 +756,34 @@ def test_ci_wrapper_authentication_is_blocking_and_immediately_precedes_validati
     assert steps.index(authentication) + 1 == steps.index(validation)
     assert authentication["if"] == validation["if"] == "github.event_name == 'pull_request' && github.base_ref == 'dev'"
     assert "continue-on-error" not in authentication
-    assert "da892a322e0036cda78874adbea9a8169ec899752c797621bebcd52446b664bb" in authentication["run"]
+    assert "9e5101db4ff22aedba86f234ab7b4fd95b5f60243ff8f9826c88aa47c43bd9a2" in authentication["run"]
     assert (
         validation["run"] == 'python -I scripts/owner_commit_entry.py --head "$CANDIDATE_HEAD" --base "$CANDIDATE_BASE"'
     )
+
+
+@pytest.mark.parametrize("suffix", ["plain", "\n", "\r", "\t", '"', "\\", "\u2028", "docs"])
+def test_committed_ci_checks_complete_path_surface(tmp_path: Path, suffix: str) -> None:
+    worktree, base, _head, _workflow = _prepare_committed_ci_subject(tmp_path, "valid")
+    relative = "llms.txt" if suffix == "docs" else "tests/unit/unrelated" + suffix + ".py"
+    path = worktree / relative
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("fixture committed path\n")
+    _git(worktree, "add", ".")
+    _git(worktree, "-c", "core.hooksPath=/dev/null", "commit", "-qm", "fixture complete committed surface")
+    head = _git(worktree, "rev-parse", "HEAD")
+    before = (_git(worktree, "write-tree"), _git(worktree, "status", "--porcelain"))
+    scratch = tmp_path / "scratch"
+    scratch.mkdir()
+    result = subprocess.run(
+        [sys.executable, "-I", str(REPO_ROOT / "scripts/owner_commit_entry.py"), "--head", head, "--base", base],
+        cwd=worktree,
+        env=os.environ | {"TMPDIR": str(scratch)},
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == (0 if suffix == "docs" else 1), result.stdout + result.stderr
+    assert _git(worktree, "rev-parse", "HEAD") == head
+    assert (_git(worktree, "write-tree"), _git(worktree, "status", "--porcelain")) == before
+    assert not list(scratch.iterdir())

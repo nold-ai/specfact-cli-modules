@@ -987,7 +987,7 @@ def test_committed_ci_check_uses_final_tree_and_preserves_caller(tmp_path: Path,
         capture_output=True,
         check=False,
     )
-    rejected = case in {"disabled", "filtered", "nonblocking", "committed-invalid-live-valid"}
+    rejected = case in {"disabled", "filtered", "nonblocking", "mixed", "committed-invalid-live-valid"}
     assert result.returncode == (1 if rejected else 0), result.stdout + result.stderr
     assert _git(worktree, "rev-parse", "HEAD") == head
     assert (_git(worktree, "write-tree"), _git(worktree, "status", "--porcelain"), workflow.read_bytes()) == before

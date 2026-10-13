@@ -1863,3 +1863,13 @@ The existing required CI job SHALL authenticate the committed scheduling wrapper
 #### Scenario: authentic wrapper keeps required outcomes
 - **WHEN** the wrapper retains reviewed bytes
 - **THEN** valid final scheduling passes and invalid final scheduling fails through the original checker, with caller Git state unchanged
+
+
+### Requirement: Complete committed review surface in CI
+
+When a committed capsule delta requires scheduling validation, the existing CI wrapper SHALL collect both the capsule-selector delta and the complete committed delta from the same merge base and immutable head tree. It SHALL pass the complete delta as the approved checker's second argument, preserving exact NUL-delimited pathname decoding and rejecting any pathname incompatible with its line protocol. Unrelated reviewable paths SHALL retain the approved checker's rejection; ordinary nonreviewable documentation paths and representable capsule paths SHALL retain their original acceptance. Checker authority, signatures, complete history, temporary index cleanup and normal gates SHALL remain unchanged.
+
+#### Scenario: committed capsule delta with unrelated paths
+- **WHEN** a qualifying capsule change accompanies an unrelated reviewable filename, including line delimiters or literal tab/quote/backslash
+- **THEN** the committed-tree validator rejects before success, using the complete committed path set
+- **AND** ordinary documentation alongside a qualifying capsule change still passes; HEAD, caller index and worktree remain unchanged

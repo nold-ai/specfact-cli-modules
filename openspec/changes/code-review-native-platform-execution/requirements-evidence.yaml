@@ -1324,3 +1324,18 @@ requirements:
       method: test
       intent: Preserve valid and invalid scheduling outcomes with authentic wrapper bytes and blocking step order.
       observable: Valid control passes, disabled schedule fails, missing source rejects, and authentication precedes the unchanged original validation command.
+
+  openspec:code-review-native-platform-execution:review-native-platform-execution:complete-committed-review-surface-in-ci:
+    rationale: Retain the unchanged approved checker review-surface gate on the complete final committed path set.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#460
+    touchpoints:
+    - id: complete-committed-paths-spec
+      kind: config_file
+      locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
+    verification_cases:
+    - case_id: 460-56-1
+      scenario_id: complete-committed-review-surface-in-ci
+      method: test
+      intent: Real Git committed filenames reproduce false admission before changing the wrapper.
+      observable: Unrelated plain and delimiter-bearing reviewable paths reject; ordinary docs pass, with caller state and temporary cleanup preserved.
