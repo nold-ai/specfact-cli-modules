@@ -1300,3 +1300,8 @@ requirements:
       method: test
       intent: Missing/malformed/oversized private report controls retain the original failed execution while exposing only bounded metadata.
       observable: Unavailable report bytes cannot expose raw diagnostics or replace the original blocking native execution failure.
+    - case_id: 460-54-4
+      scenario_id: bounded-native-acceptance-failure-diagnostics
+      method: test
+      intent: Missing fixed contract failure-observation codes fail before workflow projection changes.
+      observable: Recognized public error prefixes yield only sorted fixed codes; malformed/private content yields no raw output and never acceptance.

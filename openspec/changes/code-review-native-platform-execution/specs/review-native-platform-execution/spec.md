@@ -1832,7 +1832,7 @@ Developers SHALL retain all ordinary commit hooks and the approved local ARM64 D
 
 ### Requirement: Bounded native acceptance failure diagnostics
 
-The existing native CI execution job SHALL emit one bounded JSON diagnostic from its failed private review report only after the original acceptance step fails. The original acceptance validator and execution command SHALL remain byte-exact, with their original failure unchanged. The projection SHALL expose only the phase, a bounded report-outcome code, an allowlisted assurance status and known analyzer names with error or unknown states. It SHALL NOT expose project output, finding messages, test details, paths or unrecognized identifiers. Every existing report-completion, real extension/test/coverage, roster, signature and matrix requirement SHALL remain unchanged. The diagnostic is evidence of a failed gate, never acceptance.
+The existing native CI execution job SHALL emit one bounded JSON diagnostic from its failed private review report only after the original acceptance step fails. The original acceptance validator and execution command SHALL remain byte-exact, with their original failure unchanged. The projection SHALL expose only the phase, a bounded report-outcome code, an allowlisted assurance status, known analyzer names with error or unknown states, and fixed failure-observation codes from recognized CrossHair or native-worker diagnostic prefixes. It SHALL NOT expose project output, finding messages, test details, paths or unrecognized identifiers. Every existing report-completion, real extension/test/coverage, roster, signature and matrix requirement SHALL remain unchanged. The diagnostic is evidence of a failed gate, never acceptance.
 
 #### Scenario: failed native review identifies incomplete members
 - **WHEN** the actual native report is rejected for incomplete analysis
@@ -1845,3 +1845,9 @@ The existing native CI execution job SHALL emit one bounded JSON diagnostic from
 #### Scenario: unavailable diagnostic stream preserves the failure
 - **WHEN** the diagnostic report is missing, malformed or outside the unchanged public reader bound
 - **THEN** the projection identifies unavailable diagnostics without exposing raw data, and the existing acceptance-step failure remains blocking
+
+#### Scenario: contract failure details remain bounded
+- **WHEN** an incomplete contracts report contains a recognized CrossHair tool-error finding or native-worker error diagnostic
+- **THEN** the diagnostic emits only the corresponding fixed observation code, deduplicates codes, excludes raw messages and private identifiers, and retains UNKNOWN and the original failed acceptance
+- **WHEN** diagnostic text or rows are malformed or unrecognized
+- **THEN** no text is emitted and the existing failure and unknown-member metadata remain unchanged

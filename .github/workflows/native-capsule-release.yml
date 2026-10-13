@@ -210,6 +210,37 @@ jobs:
               "assurance_status": status if isinstance(status, str) and status in {"PASS", "FAIL", "UNKNOWN"} else "UNAVAILABLE",
               "error_analyzers": sorted({row["id"] for row in known if row.get("execution_state") == "error"}),
               "unknown_analyzers": sorted({row["id"] for row in known if row.get("evidence_outcome") == "UNKNOWN"})}
+          if "contracts" in projected["error_analyzers"]:
+              observations = set()
+              worker_codes = {
+                  "native_worker_request_invalid:": "native_worker_request_invalid_observed",
+                  "native_worker_result_invalid:": "native_worker_result_invalid_observed",
+                  "native_worker_result_size_exceeded": "native_worker_result_size_exceeded_observed",
+                  "managed_tool_replay_required": "managed_tool_replay_required_observed"}
+              for row in known:
+                  diagnostic = row.get("diagnostic")
+                  if row["id"] == "contracts" and row.get("execution_state") == "error" and isinstance(diagnostic, str):
+                      observations.update(code for prefix, code in worker_codes.items()
+                          if diagnostic == prefix or (prefix.endswith(":") and diagnostic.startswith(prefix)))
+              crosshair_codes = {
+                  "Unrecognized CrossHair output:": "crosshair_unrecognized_output_observed",
+                  "CrossHair process error:": "crosshair_process_error_observed",
+                  "CrossHair timed out before mandatory evidence completed.": "crosshair_timeout_observed",
+                  "Unable to execute CrossHair:": "crosshair_spawn_error_observed"}
+              findings = report.get("findings", [])
+              if not isinstance(findings, list):
+                  findings = []
+              for finding in findings:
+                  if not isinstance(finding, dict):
+                      continue
+                  if finding.get("tool") != "crosshair" or finding.get("rule") != "CROSSHAIR_INCOMPLETE_EVIDENCE":
+                      continue
+                  message = finding.get("message")
+                  if isinstance(message, str):
+                      observations.update(code for prefix, code in crosshair_codes.items()
+                          if message == prefix or (prefix.endswith(":") and message.startswith(prefix)))
+              if observations:
+                  projected["crosshair_failure_observations"] = sorted(observations)
           with suppress(OSError, ValueError):
               sys.stdout.write(json.dumps(projected) + "\n")
               sys.stdout.flush()

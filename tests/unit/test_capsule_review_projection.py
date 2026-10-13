@@ -868,3 +868,121 @@ def test_unavailable_native_report_diagnostic_is_bounded_without_acceptance(tmp_
         "error_analyzers": [],
         "unknown_analyzers": [],
     }
+
+
+@pytest.mark.parametrize(
+    "message,expected",
+    [
+        ("Unrecognized CrossHair output: PRIVATE_DETAIL", "crosshair_unrecognized_output_observed"),
+        ("CrossHair process error: PRIVATE_DETAIL", "crosshair_process_error_observed"),
+        ("CrossHair timed out before mandatory evidence completed.", "crosshair_timeout_observed"),
+        ("Unable to execute CrossHair: PRIVATE_DETAIL", "crosshair_spawn_error_observed"),
+    ],
+)
+def test_native_failure_projects_fixed_contract_codes_without_raw_messages(tmp_path, monkeypatch, message, expected):
+    report = tmp_path / "review.json"
+    report.write_text(
+        json.dumps(
+            {
+                "assurance_status": "FAIL",
+                "analyzer_evidence": [{"id": "contracts", "execution_state": "error", "evidence_outcome": "UNKNOWN"}],
+                "findings": [
+                    {"tool": "crosshair", "rule": "CROSSHAIR_INCOMPLETE_EVIDENCE", "message": message},
+                    {"tool": "crosshair", "rule": "CROSSHAIR_INCOMPLETE_EVIDENCE", "message": message},
+                    {"tool": "PRIVATE_TOOL", "rule": "CROSSHAIR_INCOMPLETE_EVIDENCE", "message": "PRIVATE_DETAIL"},
+                ],
+            }
+        )
+    )
+    monkeypatch.setenv("NATIVE_REVIEW_REPORT", str(report))
+    recipe = _native_review_failure_step()["run"]
+    code = recipe.split("<<'PY_NATIVE_DIAGNOSTIC'", 1)[1].split("\n", 1)[1].rsplit("\nPY_NATIVE_DIAGNOSTIC", 1)[0]
+    result = subprocess.run([sys.executable, "-c", code], cwd=tmp_path, capture_output=True, text=True, check=False)
+    assert result.returncode == 0 and not result.stderr
+    record = json.loads(result.stdout)
+    assert record["crosshair_failure_observations"] == [expected]
+    assert record["error_analyzers"] == ["contracts"] and record["unknown_analyzers"] == ["contracts"]
+    assert record["assurance_status"] == "FAIL"
+    assert "PRIVATE" not in result.stdout and len(result.stdout.encode()) <= 4096
+
+
+@pytest.mark.parametrize(
+    "diagnostic,expected",
+    [
+        ("native_worker_request_invalid:PRIVATE_DETAIL", "native_worker_request_invalid_observed"),
+        ("native_worker_result_invalid:PRIVATE_DETAIL", "native_worker_result_invalid_observed"),
+        ("native_worker_result_size_exceeded", "native_worker_result_size_exceeded_observed"),
+        ("managed_tool_replay_required", "managed_tool_replay_required_observed"),
+    ],
+)
+def test_native_failure_projects_fixed_worker_codes_without_raw_messages(tmp_path, monkeypatch, diagnostic, expected):
+    report = tmp_path / "review.json"
+    report.write_text(
+        json.dumps(
+            {
+                "assurance_status": "FAIL",
+                "analyzer_evidence": [
+                    {
+                        "id": "contracts",
+                        "execution_state": "error",
+                        "evidence_outcome": "UNKNOWN",
+                        "diagnostic": diagnostic,
+                    },
+                    {"id": "PRIVATE_TOOL", "execution_state": "error", "diagnostic": "PRIVATE_DETAIL"},
+                ],
+                "findings": [False, {"tool": "crosshair", "rule": "CROSSHAIR_INCOMPLETE_EVIDENCE", "message": []}],
+            }
+        )
+    )
+    monkeypatch.setenv("NATIVE_REVIEW_REPORT", str(report))
+    recipe = _native_review_failure_step()["run"]
+    code = recipe.split("<<'PY_NATIVE_DIAGNOSTIC'", 1)[1].split("\n", 1)[1].rsplit("\nPY_NATIVE_DIAGNOSTIC", 1)[0]
+    result = subprocess.run([sys.executable, "-c", code], cwd=tmp_path, capture_output=True, text=True, check=False)
+    assert result.returncode == 0 and not result.stderr
+    record = json.loads(result.stdout)
+    assert record["crosshair_failure_observations"] == [expected]
+    assert record["error_analyzers"] == ["contracts"] and record["unknown_analyzers"] == ["contracts"]
+    assert "PRIVATE" not in result.stdout and len(result.stdout.encode()) <= 4096
+
+
+@pytest.mark.parametrize(
+    "rows,findings",
+    [
+        (
+            [
+                {"id": "contracts", "execution_state": "error"},
+                {
+                    "id": "contracts",
+                    "execution_state": "ran",
+                    "diagnostic": "native_worker_request_invalid:PRIVATE_DETAIL",
+                },
+            ],
+            [],
+        ),
+        ([{"id": "contracts", "execution_state": "error", "diagnostic": []}], "PRIVATE_CONTENT"),
+        (
+            [{"id": "contracts", "execution_state": "error"}],
+            [
+                {
+                    "tool": "PRIVATE_TOOL",
+                    "rule": "CROSSHAIR_INCOMPLETE_EVIDENCE",
+                    "message": "CrossHair process error: PRIVATE_DETAIL",
+                },
+                {"tool": "crosshair", "rule": "PRIVATE_RULE", "message": "CrossHair process error: PRIVATE_DETAIL"},
+                {"tool": "crosshair", "rule": "CROSSHAIR_INCOMPLETE_EVIDENCE", "message": "PRIVATE_DETAIL"},
+            ],
+        ),
+    ],
+)
+def test_native_failure_excludes_unrecognized_or_successful_diagnostic_rows(tmp_path, monkeypatch, rows, findings):
+    report = tmp_path / "review.json"
+    report.write_text(json.dumps({"analyzer_evidence": rows, "findings": findings}))
+    monkeypatch.setenv("NATIVE_REVIEW_REPORT", str(report))
+    recipe = _native_review_failure_step()["run"]
+    code = recipe.split("<<'PY_NATIVE_DIAGNOSTIC'", 1)[1].split("\n", 1)[1].rsplit("\nPY_NATIVE_DIAGNOSTIC", 1)[0]
+    result = subprocess.run([sys.executable, "-c", code], cwd=tmp_path, capture_output=True, text=True, check=False)
+    assert result.returncode == 0 and not result.stderr
+    record = json.loads(result.stdout)
+    assert "crosshair_failure_observations" not in record
+    assert record["error_analyzers"] == ["contracts"]
+    assert "PRIVATE" not in result.stdout and len(result.stdout.encode()) <= 4096
