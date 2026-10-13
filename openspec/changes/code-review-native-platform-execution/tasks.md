@@ -228,3 +228,6 @@ Runbook and exact candidate limitations: [NATIVE_RELEASE.md](NATIVE_RELEASE.md).
 - [x] Reproduce uv installed generated-module implicit-root loss; preserve byte-bound generated modules in the existing private overlay with mismatch/ambiguity, explicit-root and lock controls.
 
 - [x] Reproduce candidate failure-projector host import shadowing through actual workflow launch flags; isolate Python while retaining bounded diagnostics, private stderr and original reviewer exits.
+
+- [x] Prove bounded native acceptance failure diagnostics with genuine RED/GREEN and complete local gates, preserving original acceptance failures.
+- [ ] Obtain exact new-head native analyzer diagnostics and repair the observed incomplete member without changing any acceptance gate.

@@ -163,11 +163,57 @@ jobs:
           name: darwin-arm64-${{ matrix.abi }}
           path: ${{ runner.temp }}/archive
       - name: Execute exact archive, real extensions, all analyzers and offline reuse
+        id: native_review
         env:
           PLATFORM_LABEL: ${{ matrix.runner }}
         run: |
           python -m scripts.native_release.acceptance --mode candidate \
             --artifact "$RUNNER_TEMP/archive" --work "$RUNNER_TEMP/acceptance" --runner "$PLATFORM_LABEL"
+      - name: Project failed native review diagnostics
+        if: failure() && steps.native_review.outcome == 'failure'
+        env:
+          NATIVE_REVIEW_REPORT: ${{ runner.temp }}/acceptance/review.json
+        run: |
+          python -I - <<'PY_NATIVE_DIAGNOSTIC'
+          import json
+          import os
+          import sys
+          from contextlib import suppress
+          from pathlib import Path
+
+          report, outcome = {}, "missing_report"
+          bound = 32 * 1024 * 1024
+          try:
+              with Path(os.environ["NATIVE_REVIEW_REPORT"]).open("rb") as stream:
+                  data = stream.read(bound + 1)
+              if len(data) > bound:
+                  outcome = "oversized_report"
+              else:
+                  candidate = json.loads(data)
+                  if isinstance(candidate, dict):
+                      report, outcome = candidate, "structured_report"
+                  else:
+                      outcome = "invalid_report"
+          except FileNotFoundError:
+              pass
+          except (OSError, ValueError, RecursionError):
+              outcome = "invalid_report"
+          allowed = {"ruff", "radon", "semgrep-clean", "ai-bloat-ast", "ast-clean-code",
+              "basedpyright", "pylint", "contracts", "semgrep-bugs", "targeted-pytest-coverage"}
+          rows = report.get("analyzer_evidence", [])
+          if not isinstance(rows, list):
+              rows = []
+          known = [row for row in rows if isinstance(row, dict)
+              and isinstance(row.get("id"), str) and row["id"] in allowed]
+          status = report.get("assurance_status")
+          projected = {"phase": "native_review", "report_outcome": outcome,
+              "assurance_status": status if isinstance(status, str) and status in {"PASS", "FAIL", "UNKNOWN"} else "UNAVAILABLE",
+              "error_analyzers": sorted({row["id"] for row in known if row.get("execution_state") == "error"}),
+              "unknown_analyzers": sorted({row["id"] for row in known if row.get("evidence_outcome") == "UNKNOWN"})}
+          with suppress(OSError, ValueError):
+              sys.stdout.write(json.dumps(projected) + "\n")
+              sys.stdout.flush()
+          PY_NATIVE_DIAGNOSTIC
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: receipt-${{ matrix.runner }}-${{ matrix.abi }}

@@ -1828,3 +1828,20 @@ Developers SHALL retain all ordinary commit hooks and the approved local ARM64 D
 #### Scenario: review prerequisite does not succeed
 - **WHEN** a required customer or independent review fails, is canceled, is missing or is unexpectedly skipped
 - **THEN** all three existing required quality jobs retain their blocking prerequisite behavior and no test, threshold, deadline or signature requirement is weakened
+
+
+### Requirement: Bounded native acceptance failure diagnostics
+
+The existing native CI execution job SHALL emit one bounded JSON diagnostic from its failed private review report only after the original acceptance step fails. The original acceptance validator and execution command SHALL remain byte-exact, with their original failure unchanged. The projection SHALL expose only the phase, a bounded report-outcome code, an allowlisted assurance status and known analyzer names with error or unknown states. It SHALL NOT expose project output, finding messages, test details, paths or unrecognized identifiers. Every existing report-completion, real extension/test/coverage, roster, signature and matrix requirement SHALL remain unchanged. The diagnostic is evidence of a failed gate, never acceptance.
+
+#### Scenario: failed native review identifies incomplete members
+- **WHEN** the actual native report is rejected for incomplete analysis
+- **THEN** all known failing/unknown analyzer names are emitted even if malformed or duplicate rows coexist, and the exact original exception still fails acceptance
+
+#### Scenario: valid native review stays unchanged
+- **WHEN** every required analyzer, test execution, coverage and real extension outcome is valid
+- **THEN** the original validator passes and the failure-only diagnostic step does not execute
+
+#### Scenario: unavailable diagnostic stream preserves the failure
+- **WHEN** the diagnostic report is missing, malformed or outside the unchanged public reader bound
+- **THEN** the projection identifies unavailable diagnostics without exposing raw data, and the existing acceptance-step failure remains blocking

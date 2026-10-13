@@ -1274,3 +1274,29 @@ requirements:
       method: test
       intent: Retain approved checker authority, cleanup and required quality failure propagation while retiring private hook installation.
       observable: Missing or expired authority and nonsuccess review outcomes fail; ordinary Git state and all existing gates remain.
+
+
+  openspec:code-review-native-platform-execution:review-native-platform-execution:bounded-native-acceptance-failure-diagnostics:
+    rationale: Identify actual incomplete native analyzer members without raw project output or an acceptance waiver.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#460
+    touchpoints:
+    - id: native-failure-diagnostic-spec
+      kind: config_file
+      locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
+    verification_cases:
+    - case_id: 460-54-1
+      scenario_id: bounded-native-acceptance-failure-diagnostics
+      method: test
+      intent: Genuine absence-of-diagnostic RED precedes bounded known-member projection with unchanged failing exception.
+      observable: Rejected reports identify known error/unknown members without raw details or unrecognized identifiers.
+    - case_id: 460-54-2
+      scenario_id: bounded-native-acceptance-failure-diagnostics
+      method: test
+      intent: Preserve actual complete-report, roster, test, coverage and native-extension checks.
+      observable: A complete valid report passes without any failure output.
+    - case_id: 460-54-3
+      scenario_id: bounded-native-acceptance-failure-diagnostics
+      method: test
+      intent: Missing/malformed/oversized private report controls retain the original failed execution while exposing only bounded metadata.
+      observable: Unavailable report bytes cannot expose raw diagnostics or replace the original blocking native execution failure.

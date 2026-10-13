@@ -768,3 +768,103 @@ def test_both_failed_reviews_project_fixed_analyzer_identity_without_private_tex
     }
     assert rows[0]["failure_class"] == "timeout"
     assert "PRIVATE" not in result.stdout
+
+
+def _native_review_failure_step() -> dict:
+    workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/native-capsule-release.yml").read_text())
+    steps = workflow["jobs"]["execute"]["steps"]
+    matches = [step for step in steps if step.get("name") == "Project failed native review diagnostics"]
+    assert len(matches) == 1, "native CI has no bounded failure diagnostic step"
+    return matches[0]
+
+
+def test_native_failure_projection_keeps_original_execution_blocking() -> None:
+    workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/native-capsule-release.yml").read_text())
+    execute = workflow["jobs"]["execute"]
+    original = next(
+        step
+        for step in execute["steps"]
+        if step.get("name") == "Execute exact archive, real extensions, all analyzers and offline reuse"
+    )
+    assert original["id"] == "native_review"
+    assert original["run"] == (
+        "python -m scripts.native_release.acceptance --mode candidate "
+        "\\"
+        "\n"
+        '  --artifact "$RUNNER_TEMP/archive" --work "$RUNNER_TEMP/acceptance" --runner "$PLATFORM_LABEL"\n'
+    )
+    assert "continue-on-error" not in original and "continue-on-error" not in execute
+    assert execute["timeout-minutes"] == 60
+    assert execute["strategy"]["matrix"]["runner"] == ["macos-14", "macos-15", "macos-26"]
+    assert execute["strategy"]["matrix"]["python"] == ["3.11", "3.12", "3.13"]
+    assert _native_review_failure_step()["if"] == "failure() && steps.native_review.outcome == 'failure'"
+
+
+@pytest.mark.parametrize(
+    "rows,errors,unknowns",
+    [
+        (
+            [{"id": "contracts", "execution_state": "error", "evidence_outcome": "UNKNOWN"}],
+            ["contracts"],
+            ["contracts"],
+        ),
+        ([False, {"id": ["PRIVATE_ID"]}, {"id": "PRIVATE_ID", "evidence_outcome": "UNKNOWN"}], [], []),
+        (
+            [
+                {"id": "contracts", "execution_state": "error", "evidence_outcome": "UNKNOWN"},
+                {"id": "contracts", "execution_state": "ran", "evidence_outcome": "PASS"},
+            ],
+            ["contracts"],
+            ["contracts"],
+        ),
+    ],
+)
+def test_native_ci_projector_retains_known_members_without_private_output(
+    tmp_path, monkeypatch, rows, errors, unknowns
+):
+    report = tmp_path / "review.json"
+    report.write_text(
+        json.dumps(
+            {
+                "assurance_status": "UNKNOWN",
+                "analyzer_evidence": rows,
+                "message": "PRIVATE_CONTENT",
+                "file": "PRIVATE_PATH",
+            }
+        )
+    )
+    monkeypatch.setenv("NATIVE_REVIEW_REPORT", str(report))
+    recipe = _native_review_failure_step()["run"]
+    code = recipe.split("<<'PY_NATIVE_DIAGNOSTIC'", 1)[1].split("\n", 1)[1].rsplit("\nPY_NATIVE_DIAGNOSTIC", 1)[0]
+    result = subprocess.run([sys.executable, "-c", code], cwd=tmp_path, capture_output=True, text=True, check=False)
+    assert result.returncode == 0 and not result.stderr
+    assert "PRIVATE" not in result.stdout and len(result.stdout.encode()) <= 4096
+    assert json.loads(result.stdout) == {
+        "phase": "native_review",
+        "report_outcome": "structured_report",
+        "assurance_status": "UNKNOWN",
+        "error_analyzers": errors,
+        "unknown_analyzers": unknowns,
+    }
+
+
+@pytest.mark.parametrize("kind", ["missing", "invalid", "oversized"])
+def test_unavailable_native_report_diagnostic_is_bounded_without_acceptance(tmp_path, monkeypatch, kind):
+    report = tmp_path / "review.json"
+    if kind == "invalid":
+        report.write_text("PRIVATE_INVALID_JSON")
+    elif kind == "oversized":
+        report.write_bytes(b" " * (32 * 1024 * 1024 + 1))
+    monkeypatch.setenv("NATIVE_REVIEW_REPORT", str(report))
+    recipe = _native_review_failure_step()["run"]
+    code = recipe.split("<<'PY_NATIVE_DIAGNOSTIC'", 1)[1].split("\n", 1)[1].rsplit("\nPY_NATIVE_DIAGNOSTIC", 1)[0]
+    result = subprocess.run([sys.executable, "-c", code], cwd=tmp_path, capture_output=True, text=True, check=False)
+    assert result.returncode == 0 and not result.stderr
+    assert "PRIVATE" not in result.stdout and len(result.stdout.encode()) <= 4096
+    assert json.loads(result.stdout) == {
+        "phase": "native_review",
+        "report_outcome": kind + "_report",
+        "assurance_status": "UNAVAILABLE",
+        "error_analyzers": [],
+        "unknown_analyzers": [],
+    }
