@@ -152,7 +152,8 @@ def test_subprocess_output_is_private(tmp_path):
     assert all(marker in private for marker in ("SECRET_PYTHON", "SECRET_CHILD", "SECRET_ERROR"))
 
 
-def test_unverified_context_refuses_before_subject_launch(tmp_path, monkeypatch, capfd):
+@pytest.mark.parametrize("failure", [ValueError, SyntaxError, AttributeError])
+def test_unverified_context_refuses_before_subject_launch(tmp_path, monkeypatch, capfd, failure):
     import sys
 
     from scripts import independent_review_diagnostic as diagnostic
@@ -169,7 +170,7 @@ def test_unverified_context_refuses_before_subject_launch(tmp_path, monkeypatch,
     monkeypatch.setattr(diagnostic.ctypes, "CDLL", lambda *_args, **_kwargs: LinuxCalls())
 
     def unverified(*_args):
-        raise ValueError("SECRET_IDENTITY_FAILURE")
+        raise failure("SECRET_IDENTITY_FAILURE")
 
     monkeypatch.setattr(diagnostic, "verify_context", unverified)
     launches = []
@@ -183,21 +184,38 @@ def test_unverified_context_refuses_before_subject_launch(tmp_path, monkeypatch,
 
 
 def test_package_signature_rejects_changed_installed_source(tmp_path):
-    import shutil
+    import base64
+    import hashlib
 
-    from specfact_cli.registry.module_installer import _load_public_key_pem
+    from cryptography.hazmat.primitives import serialization
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+    from specfact_cli.registry.module_installer import _module_artifact_payload_stable
 
     from scripts.independent_review_diagnostic import _verify_package
 
-    root = Path(__file__).resolve().parents[2]
-    source = root / "packages/specfact-code-review"
     package = tmp_path / "installed"
-    shutil.copytree(source, package, ignore=shutil.ignore_patterns("__pycache__"))
-    key = _load_public_key_pem()
-    assert _verify_package(package, key).metadata["name"] == "nold-ai/specfact-code-review"
-    next((package / "src").rglob("*.py")).write_text("SECRET_MODIFIED = True\n")
+    package.mkdir()
+    source = package / "module.py"
+    source.write_text("VALUE = 1\n")
+    manifest = package / "module-package.yaml"
+    metadata: dict[str, object] = {"name": "test/diagnostic", "version": "0.1.0"}
+    manifest.write_text(yaml.safe_dump(metadata))
+    payload = _module_artifact_payload_stable(package)
+    private_key = Ed25519PrivateKey.generate()
+    public_key = (
+        private_key.public_key()
+        .public_bytes(serialization.Encoding.PEM, serialization.PublicFormat.SubjectPublicKeyInfo)
+        .decode()
+    )
+    metadata["integrity"] = {
+        "checksum": "sha256:" + hashlib.sha256(payload).hexdigest(),
+        "signature": base64.b64encode(private_key.sign(payload)).decode(),
+    }
+    manifest.write_text(yaml.safe_dump(metadata))
+    assert _verify_package(package, public_key).metadata["name"] == "test/diagnostic"
+    source.write_text("SECRET_MODIFIED = True\n")
     with pytest.raises(ValueError, match="package_checksum"):
-        _verify_package(package, key)
+        _verify_package(package, public_key)
 
 
 @pytest.mark.skipif(__import__("sys").platform != "linux", reason="Linux subreaper and pidfd proof")
@@ -357,3 +375,47 @@ def test_provisioning_cancellation_reaps_setsid_grandchild(tmp_path):
     assert process.returncode == 0, stderr
     assert stdout.strip() == "cancelled"
     assert not Path("/proc", (tmp_path / "child.pid").read_text()).exists()
+
+
+def test_cleanup_rescans_after_parent_exit_for_late_adoption(monkeypatch):
+    from scripts import independent_review_diagnostic as diagnostic
+
+    parent = ProcessIdentity(100, 1, 10, "namespace")
+    child = ProcessIdentity(101, 1, 11, "namespace")
+    alive = {parent.pid: True, child.pid: False}
+    owner = diagnostic.OwnedProcesses()
+    owner.identities[parent.pid] = parent
+    owner.handles[parent.pid] = parent.pid
+
+    def observe():
+        if alive[child.pid]:
+            owner.identities[child.pid] = child
+            owner.handles[child.pid] = child.pid
+
+    def kill(handle, _signal):
+        if handle == parent.pid and alive[parent.pid]:
+            alive[child.pid] = True
+        alive[handle] = False
+
+    monkeypatch.setattr(owner, "observe", observe)
+    monkeypatch.setattr(owner, "_reap", lambda: None)
+    monkeypatch.setattr(owner, "_close", lambda: None)
+    monkeypatch.setattr(diagnostic.signal, "pidfd_send_signal", kill, raising=False)
+    monkeypatch.setattr(diagnostic, "_process_identity", lambda pid: owner.identities.get(pid) if alive[pid] else None)
+    assert owner.cleanup() is True
+    assert not any(alive.values())
+
+
+def test_insufficient_optional_budget_refuses_before_subject(tmp_path, monkeypatch):
+    import time
+
+    from scripts import independent_review_diagnostic as diagnostic
+
+    context = diagnostic.VerifiedContext(tmp_path, tmp_path, tmp_path, InstalledSymbols({}), {})
+    object.__setattr__(context, "deadline", time.monotonic() + 309)
+    launches = []
+    monkeypatch.setattr(diagnostic, "_fixed_subject", lambda *_args: launches.append(True))
+    monkeypatch.setattr(diagnostic, "_owned_run", lambda *_args: (1, 0, True))
+    observation = diagnostic.diagnose_failed_review(context)
+    assert launches == []
+    assert Gap.DEADLINE in observation.gaps

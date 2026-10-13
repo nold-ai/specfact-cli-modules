@@ -1,14 +1,14 @@
 ## ADDED Requirements
 
 ### Requirement: Preserve required review authority
-The workflow SHALL schedule diagnostics only after a failed attempted PR independent review and SHALL preserve its command, environment, full analyzer selection, deadline and failure result.
+The workflow SHALL schedule diagnostics only after a failed attempted PR independent review and both original failure projections and SHALL preserve its command, environment, full analyzer selection, deadline and failure result.
 
 #### Scenario: Any diagnostic outcome
 - **WHEN** the replay completes, fails, times out or cannot start
 - **THEN** its result is non-accepting and the original required review remains failed
 
 ### Requirement: Authenticate before observation
-The helper SHALL verify core version, installed module signatures with the established key, installed reviewer payload, immutable registry reference and fixed staged subject before subject execution.
+The helper SHALL verify core version, installed module signatures with the established key, installed reviewer payload, immutable registry reference and fixed staged subject before subject execution. The inline controller SHALL authenticate an immutable helper before execution and SHALL never execute a candidate-workspace helper.
 
 #### Scenario: Unverified identity
 - **WHEN** any binding fails verification
@@ -22,7 +22,7 @@ The helper SHALL emit only bounded numbers, static codes and verified installed 
 - **THEN** no unverified text is emitted
 
 ### Requirement: Own observation processes
-The helper SHALL bind processes by start identity and ancestry, clean up owned descendants on completion, cancellation and timeout, and report missing joins and coverage as gaps.
+The helper SHALL bind processes by start identity and ancestry, clean up owned descendants on completion, cancellation and timeout, and report missing joins and coverage as gaps. Cleanup SHALL rescan adopted descendants after parent exit. An 840-second optional allowance SHALL reserve 310 seconds before launching the full 300-second review; insufficient time SHALL refuse launch with a deadline gap.
 
 #### Scenario: Incomplete process evidence
 - **WHEN** a PID is reused, a request join is missing or a descendant is unsampled

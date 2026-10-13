@@ -15,7 +15,7 @@ import sys
 import tempfile
 import time
 from collections import Counter
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from enum import StrEnum
 from pathlib import Path
 from typing import Any, BinaryIO, TypeGuard
@@ -326,13 +326,17 @@ class OwnedProcesses:
 
     def cleanup(self) -> bool:
         deadline = time.monotonic() + 5
+        empty_scans = 0
         while time.monotonic() < deadline:
             self.observe()
             for handle in self.handles.values():
                 with contextlib.suppress(ProcessLookupError):
                     signal.pidfd_send_signal(handle, signal.SIGKILL)
             self._reap()
-            if not any(_process_identity(pid) is not None for pid in self.identities):
+            self.observe()
+            remaining = any(_process_identity(pid) is not None for pid in self.identities)
+            empty_scans = 0 if remaining else empty_scans + 1
+            if empty_scans == 2:
                 self._close()
                 return True
             time.sleep(0.05)
@@ -402,6 +406,7 @@ class VerifiedContext:
     attempt: Path
     symbols: InstalledSymbols
     environment: dict[str, str]
+    deadline: float = float("inf")
 
     @property
     def python(self) -> str:
@@ -543,7 +548,11 @@ def _owned_run(
 ) -> tuple[int, int, bool]:
     owner = OwnedProcesses()
     try:
-        return owner.run(command, context.root, context.environment, seconds, output)
+        available = context.deadline - time.monotonic() - 5
+        if available <= 0:
+            raise TimeoutError("diagnostic_deadline")
+        budget = min(seconds, int(available)) if available != float("inf") else seconds
+        return owner.run(command, context.root, context.environment, budget, output)
     finally:
         (context.attempt / "processes.private.json").write_text(
             json.dumps(
@@ -602,13 +611,21 @@ os.execv(sys.argv[1],[sys.argv[1],"record","--rate","10","--idle","--subprocesse
 
 
 def diagnose_failed_review(context: VerifiedContext) -> Observation:
+    if context.deadline - time.monotonic() < 310:
+        return Observation(ProfileCounts(), gaps=(Gap.DEADLINE,))
     subject = _fixed_subject(context)
     wrapper = [context.python, "-I", str(context.root / "reviewer.py"), str(subject)]
     prepare = [*wrapper, "prepare-index", str(context.attempt / "project.toml")]
-    code, _, cleaned = _owned_run(context, prepare, 1800)
+    available = context.deadline - time.monotonic() - 310
+    if available <= 0:
+        return Observation(ProfileCounts(), gaps=(Gap.DEADLINE,))
+    preparation_budget = min(1800, int(available)) if available != float("inf") else 1800
+    code, _, cleaned = _owned_run(context, prepare, preparation_budget)
     if code != 0 or not cleaned:
         return Observation(ProfileCounts(), gaps=(Gap.PREPARATION_FAILED,))
     profiler = _install_profiler(context)
+    if context.deadline - time.monotonic() < 310:
+        return Observation(ProfileCounts(), gaps=(Gap.DEADLINE,))
     profile = context.attempt / "profile.private.json"
     command = [
         context.python,
@@ -646,6 +663,10 @@ def diagnose_failed_review(context: VerifiedContext) -> Observation:
     if not (context.attempt / "review.private.json").is_file():
         gaps += (Gap.REVIEW_REPORT_MISSING,)
     return Observation(read_profile(profile, context.symbols), owned, int(time.monotonic() - started), gaps)
+
+
+def _deadline(_signum: int, _frame: Any) -> None:
+    raise TimeoutError("diagnostic_deadline")
 
 
 def _cancel(_signum: int, _frame: Any) -> None:
@@ -689,8 +710,13 @@ def main() -> int:
                 raise ValueError("subreaper_unavailable")
             signal.signal(signal.SIGTERM, _cancel)
             signal.signal(signal.SIGINT, _cancel)
+            deadline = time.monotonic() + 840
+            signal.signal(signal.SIGALRM, _deadline)
+            signal.alarm(840)
             context = verify_context(root, arguments.repository.resolve(), attempt)
-            observation = diagnose_failed_review(context)
+            observation = diagnose_failed_review(replace(context, deadline=deadline))
+        except TimeoutError:
+            observation = Observation(ProfileCounts(), gaps=(Gap.DEADLINE,))
         except InterruptedError:
             observation = Observation(ProfileCounts(), gaps=(Gap.CANCELLED,))
         except (
@@ -699,10 +725,14 @@ def main() -> int:
             RuntimeError,
             TypeError,
             KeyError,
+            SyntaxError,
+            AttributeError,
             subprocess.SubprocessError,
             yaml.YAMLError,
         ) as error:
             print(type(error).__name__, str(error), file=sys.stderr)
+        finally:
+            signal.alarm(0)
     print(observation.to_public_json())
     return 0
 
