@@ -58,8 +58,18 @@ def test_independent_reviewer_runs_in_fresh_job_without_candidate_host_code() ->
 )
 def test_independent_reviewer_excludes_each_candidate_host_route(forbidden: str) -> None:
     independent = independent_review_job()
-    recipe = "\n".join(str(step.get("run", "")) for step in independent["steps"])
-    assert forbidden not in recipe
+    recipes = []
+    review_index = next(
+        index for index, step in enumerate(independent["steps"]) if step.get("id") == "independent_review"
+    )
+    for index, step in enumerate(independent["steps"]):
+        recipe = str(step.get("run", ""))
+        if step.get("name") == "Observe failed independent review privately":
+            assert index > review_index
+            assert step["if"] == "failure() && steps.independent_review.outcome == 'failure'"
+            recipe = recipe.replace("$GITHUB_WORKSPACE/scripts/independent_review_diagnostic.py", "")
+        recipes.append(recipe)
+    assert forbidden not in "\n".join(recipes)
 
 
 def test_independent_reviewer_preserves_scope_budgets_and_preload_order() -> None:
@@ -1487,3 +1497,21 @@ def test_actual_projector_launch_excludes_untrusted_imports(
     assert (review_exit != 124) or rows[0]["diagnostic"] == "analysis_timeout"
     assert "PRIVATE_REPORT" not in result.stdout and "UNTRUSTED_IMPORT" not in result.stdout
     assert report.read_text() == "PRIVATE_REPORT invalid JSON"
+
+
+@pytest.mark.parametrize("mutation", ["another_helper", "guard_removed", "before_review"])
+def test_independent_diagnostic_allowance_rejects_other_host_routes(monkeypatch, mutation):
+    import copy
+
+    job = copy.deepcopy(independent_review_job())
+    step = next(item for item in job["steps"] if item.get("name") == "Observe failed independent review privately")
+    if mutation == "another_helper":
+        step["run"] += '\n"$GITHUB_WORKSPACE/scripts/another.py"\n'
+    elif mutation == "guard_removed":
+        step["if"] = "always()"
+    else:
+        job["steps"].remove(step)
+        job["steps"].insert(0, step)
+    monkeypatch.setitem(globals(), "independent_review_job", lambda: job)
+    with pytest.raises(AssertionError):
+        test_independent_reviewer_excludes_each_candidate_host_route("$GITHUB_WORKSPACE/scripts")

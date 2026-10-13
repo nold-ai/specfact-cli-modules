@@ -13,6 +13,8 @@ and this project follows SemVer for bundle versions.
 
 ### Added
 
+- Add a failure-only private diagnostic for the fixed independent signed review subject. It preserves the required failure, original deadlines and authenticated installation, and emits only verified symbols and explicit observation gaps.
+
 - Prepare Code Review 0.52.0: an explicit Linux pytest/coverage execution budget
   bounded to 1–600 seconds, with the existing 300-second default, selected-budget
   provenance and unchanged full-scope, sandbox and incomplete-evidence policy.

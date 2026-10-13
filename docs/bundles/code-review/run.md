@@ -237,3 +237,10 @@ See [Review external Python projects](/guides/portable-project-runtime/) for pip
 - [Code review module guide](/modules/code-review/)
 
 A nondefault Linux pytest budget also reaches the sealed nonportable pytest subprocess. Omitting the option, or selecting the default300seconds, preserves its legacy120-second inner limit and300-second member launch limit. Portable pytest retains its existing inner policy; the selected outer limit still bounds the member. Requested/effective inner and outer budgets are diagnostic evidence and never make incomplete execution pass.
+
+
+## Independent review timeout diagnostics
+
+The supplier PR workflow can observe a failed attempted independent review with a separate fixed-subject replay. The required review keeps its 300-second deadline and failure result. The diagnostic verifies installed signed files, samples for at most 280 seconds, and keeps raw output private on the runner. Public sample counts describe observations, not CPU or elapsed time. Unknown member joins and native coverage remain explicit. A diagnostic result never grants acceptance.
+
+The original failed installation used a mutable registry reference. A later replay can verify its current installation against an immutable reference, but cannot establish the missing original binding. Warm caches and a changed workflow identity also limit equivalence.

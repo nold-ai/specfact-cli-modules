@@ -3,6 +3,10 @@
 This document is the modules-side source of truth for active OpenSpec work. It
 must be read together with the core repo change order in `nold-ai/specfact-cli`.
 
+## Independent review timeout diagnostic (2026-10-13)
+
+`code-review-independent-timeout-diagnostic` adds the approved failure-only observation of the fixed signed supplier subject. It preserves the failed required review and all execution limits. Raw evidence stays private. It authorizes no acceptance, merge or release.
+
 ## Bounded Linux pytest execution budget (2026-10-13)
 
 `code-review-linux-pytest-execution-budget` is a separately authorized additive

@@ -1005,6 +1005,19 @@ jobs:
           PY
           fi
           exit "$review_exit"
+      - name: Observe failed independent review privately
+        if: failure() && steps.independent_review.outcome == 'failure'
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          test -f "$TRUSTED_ROOT/review-attempted" || exit 0
+          env -i HOME="$TRUSTED_ROOT/home" TMPDIR="$TRUSTED_ROOT/tmp" \
+            PATH="$TRUSTED_ROOT/venv/bin:/usr/bin:/bin" SPECFACT_MODULES_BRANCH=main \
+            SPECFACT_CODE_REVIEW_CAPSULE_CACHE="$TRUSTED_ROOT/cache" \
+            "$TRUSTED_ROOT/venv/bin/python" -I "$GITHUB_WORKSPACE/scripts/independent_review_diagnostic.py" \
+            --trusted-root "$TRUSTED_ROOT" --repository "$GITHUB_WORKSPACE" \
+            2> "$TRUSTED_ROOT/diagnostic-bootstrap.private.log"
       - name: Project independent review failure privately
         if: failure() && steps.independent_review.outcome == 'failure'
         shell: bash

@@ -1,0 +1,64 @@
+schema_version: '2'
+maturity: planned
+requirements:
+  openspec:code-review-independent-timeout-diagnostic:independent-review-diagnostic:preserve-required-review-authority:
+    rationale: Preserve the required review failure independently of every observation
+      result.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#510
+    touchpoints:
+    - id: preserve-required-review-authority
+      kind: config_file
+      locator: openspec/changes/code-review-independent-timeout-diagnostic/specs/independent-review-diagnostic/spec.md
+    verification_cases:
+    - case_id: independent-diagnostic-1
+      scenario_id: preserve-required-review-authority
+      method: test
+      intent: Preserve the required review failure independently of every observation
+        result.
+      observable: Original review failure remains blocking for every diagnostic outcome.
+  openspec:code-review-independent-timeout-diagnostic:independent-review-diagnostic:authenticate-before-observation:
+    rationale: Reject unverified installed identities before subject execution.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#510
+    touchpoints:
+    - id: authenticate-before-observation
+      kind: config_file
+      locator: openspec/changes/code-review-independent-timeout-diagnostic/specs/independent-review-diagnostic/spec.md
+    verification_cases:
+    - case_id: independent-diagnostic-2
+      scenario_id: authenticate-before-observation
+      method: test
+      intent: Reject unverified installed identities before subject execution.
+      observable: The launch spy remains unused and public output contains only static
+        unavailable fields.
+  openspec:code-review-independent-timeout-diagnostic:independent-review-diagnostic:restrict-public-projection:
+    rationale: Keep foreign frames and private markers out of public output.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#510
+    touchpoints:
+    - id: restrict-public-projection
+      kind: config_file
+      locator: openspec/changes/code-review-independent-timeout-diagnostic/specs/independent-review-diagnostic/spec.md
+    verification_cases:
+    - case_id: independent-diagnostic-3
+      scenario_id: restrict-public-projection
+      method: test
+      intent: Keep foreign frames and private markers out of public output.
+      observable: Foreign same-suffix, changed-file, malformed and oversized profiles
+        emit no unverified text.
+  openspec:code-review-independent-timeout-diagnostic:independent-review-diagnostic:own-observation-processes:
+    rationale: Preserve unknown attribution and reap owned descendants.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#510
+    touchpoints:
+    - id: own-observation-processes
+      kind: config_file
+      locator: openspec/changes/code-review-independent-timeout-diagnostic/specs/independent-review-diagnostic/spec.md
+    verification_cases:
+    - case_id: independent-diagnostic-4
+      scenario_id: own-observation-processes
+      method: test
+      intent: Preserve unknown attribution and reap owned descendants.
+      observable: PID reuse and absent joins stay unknown; timeout and cancellation
+        leave no owned descendants.
