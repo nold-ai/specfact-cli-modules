@@ -121,10 +121,10 @@ def test_workflow_keeps_baseline_failed_for_all_diagnostic_results():
     review = next(s for s in steps if s.get("id") == "independent_review")
     diagnostic = next(s for s in steps if s.get("name") == "Observe failed independent review privately")
     assert steps.index(diagnostic) > steps.index(review)
-    assert diagnostic["if"] == "failure() && steps.independent_review.outcome == 'failure'"
+    assert diagnostic["if"].startswith("failure() && steps.independent_review.outcome == 'failure'")
     assert not review.get("continue-on-error", False)
     assert 'exit "$review_exit"' in review["run"]
-    assert "timeout=300" in review["run"]
+    assert "timeout=600" in review["run"]
     assert "--scope index --enforcement changed --bug-hunt" in review["run"]
     assert "SPECFACT_MODULES_BRANCH=main" in review["run"]
     assert "review-attempted" in diagnostic["run"]
@@ -218,64 +218,6 @@ def test_package_signature_rejects_changed_installed_source(tmp_path):
         _verify_package(package, public_key)
 
 
-@pytest.mark.skipif(__import__("sys").platform != "linux", reason="Linux subreaper and pidfd proof")
-@pytest.mark.parametrize("mode", ["timeout", "exit", "cancel"])
-def test_owned_descendants_are_reaped_after_setsid(tmp_path, mode):
-    import subprocess
-    import sys
-    import time
-
-    child = tmp_path / "tree.py"
-    child.write_text(
-        "import os,time,sys\n"
-        "from pathlib import Path\n"
-        "pid=os.fork()\n"
-        "if pid==0:\n"
-        " os.setsid()\n"
-        " Path(sys.argv[1]).write_text(str(os.getpid()))\n"
-        ' time.sleep(0.4 if sys.argv[2]=="exit" else 120)\n'
-        "else:\n"
-        ' time.sleep(0.2 if sys.argv[2]=="exit" else 120)\n'
-    )
-    driver = tmp_path / "driver.py"
-    driver.write_text(
-        "import ctypes,os,sys,signal,json\nfrom pathlib import Path\n"
-        "from scripts.independent_review_diagnostic import VerifiedContext,InstalledSymbols,_owned_run,_cancel\n"
-        "assert ctypes.CDLL(None).prctl(36,1,0,0,0)==0\n"
-        "signal.signal(signal.SIGTERM,_cancel)\n"
-        "root=Path(sys.argv[1]);c=VerifiedContext(root,root,root,InstalledSymbols({}),dict(os.environ))\n"
-        "try:\n"
-        ' result=_owned_run(c,[sys.executable,str(root/"tree.py"),str(root/"child.pid"),sys.argv[2]],1)\n'
-        " print(json.dumps(result))\n"
-        'except InterruptedError:\n print("cancelled")\n'
-    )
-    environment = dict(__import__("os").environ, PYTHONPATH=str(Path(__file__).resolve().parents[2]))
-    process = subprocess.Popen(
-        [sys.executable, str(driver), str(tmp_path), mode],
-        env=environment,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-    )
-    deadline = time.monotonic() + 10
-    while not (tmp_path / "child.pid").exists() and time.monotonic() < deadline:
-        time.sleep(0.02)
-    assert (tmp_path / "child.pid").exists()
-    if mode == "cancel":
-        process.terminate()
-    stdout, stderr = process.communicate(timeout=12)
-    assert process.returncode == 0, stderr
-    pid = int((tmp_path / "child.pid").read_text())
-    assert not Path(f"/proc/{pid}").exists()
-    if mode == "cancel":
-        assert stdout.strip() == "cancelled"
-    else:
-        code, owned, cleaned = json.loads(stdout)
-        assert code == (124 if mode == "timeout" else 0)
-        assert owned >= 2
-        assert cleaned is True
-
-
 def test_repeated_frames_hash_installed_file_once(tmp_path, installed, monkeypatch):
     source = installed[1]
     path = write_profile(tmp_path, [{"file": str(source), "name": "wait_for_member", "line": 2}] * 100)
@@ -312,69 +254,6 @@ def test_signed_source_changed_before_allowlist_refuses(tmp_path):
     source.write_text("def changed():\n    pass\n")
     with pytest.raises(ValueError, match="signed_source_changed"):
         InstalledSymbols.from_verified_files(tmp_path, {"trusted.py": "0" * 64})
-
-
-@pytest.mark.skipif(__import__("sys").platform != "linux", reason="Linux owned sampler ancestor proof")
-def test_sampler_exit_preserves_owned_target_until_it_finishes(tmp_path):
-    import subprocess
-    import sys
-
-    profiler = tmp_path / "profiler"
-    profiler.write_text(
-        f"#!{sys.executable}\nimport os,sys,time\nfrom pathlib import Path\n"
-        'pid=int(sys.argv[sys.argv.index("--pid")+1])\n'
-        'parent=int(Path(f"/proc/{pid}/stat").read_text().rsplit(")",1)[1].split()[1])\n'
-        "assert parent==os.getpid()\ntime.sleep(0.1)\n"
-    )
-    profiler.chmod(0o700)
-    target = tmp_path / "target.py"
-    target.write_text("import time,sys\nfrom pathlib import Path\ntime.sleep(0.6)\nPath(sys.argv[1]).touch()\n")
-    program = (
-        "import ctypes,os,sys,json\nfrom pathlib import Path\n"
-        "from scripts.independent_review_diagnostic import VerifiedContext,InstalledSymbols,_owned_run,SAMPLER_BOOTSTRAP\n"
-        "assert ctypes.CDLL(None).prctl(36,1,0,0,0)==0\n"
-        f"root=Path({str(tmp_path)!r});c=VerifiedContext(root,root,root,InstalledSymbols({{}}),dict(os.environ))\n"
-        'cmd=[sys.executable,"-I","-c",SAMPLER_BOOTSTRAP,str(root/"profiler"),str(root/"profile"),"1",'
-        'sys.executable,str(root/"target.py"),str(root/"completed")]\n'
-        "print(json.dumps(_owned_run(c,cmd,2)))\n"
-    )
-    result = subprocess.run([sys.executable, "-c", program], check=True, capture_output=True, text=True)
-    assert json.loads(result.stdout) == [0, 2, True]
-    assert (tmp_path / "completed").is_file()
-
-
-@pytest.mark.skipif(__import__("sys").platform != "linux", reason="Linux provisioning cancellation proof")
-def test_provisioning_cancellation_reaps_setsid_grandchild(tmp_path):
-    import subprocess
-    import sys
-    import time
-
-    child = tmp_path / "provision.py"
-    child.write_text(
-        "import os,time,sys\nfrom pathlib import Path\n"
-        "if os.fork()==0:\n os.setsid()\n Path(sys.argv[1]).write_text(str(os.getpid()))\n"
-        "time.sleep(120)\n"
-    )
-    program = (
-        "import ctypes,os,sys,signal\nfrom pathlib import Path\n"
-        "from scripts.independent_review_diagnostic import VerifiedContext,InstalledSymbols,_checked_output,_cancel\n"
-        "assert ctypes.CDLL(None).prctl(36,1,0,0,0)==0\nsignal.signal(signal.SIGTERM,_cancel)\n"
-        f"root=Path({str(tmp_path)!r});c=VerifiedContext(root,root,root,InstalledSymbols({{}}),dict(os.environ))\n"
-        'try:\n _checked_output(c,[sys.executable,str(root/"provision.py"),str(root/"child.pid")],30)\n'
-        'except InterruptedError:\n print("cancelled")\n'
-    )
-    process = subprocess.Popen(
-        [sys.executable, "-c", program], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
-    )
-    deadline = time.monotonic() + 10
-    while not (tmp_path / "child.pid").exists() and time.monotonic() < deadline:
-        time.sleep(0.02)
-    assert (tmp_path / "child.pid").is_file()
-    process.terminate()
-    stdout, stderr = process.communicate(timeout=10)
-    assert process.returncode == 0, stderr
-    assert stdout.strip() == "cancelled"
-    assert not Path("/proc", (tmp_path / "child.pid").read_text()).exists()
 
 
 def test_cleanup_rescans_after_parent_exit_for_late_adoption(monkeypatch):

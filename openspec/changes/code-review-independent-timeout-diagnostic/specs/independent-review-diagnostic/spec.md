@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: Preserve required review authority
-The workflow SHALL schedule diagnostics only after a failed attempted PR independent review and both original failure projections and SHALL preserve its command, environment, full analyzer selection, deadline and failure result.
+The workflow SHALL schedule diagnostics only after a failed attempted PR independent review and both original failure projections and SHALL preserve its command, environment, full analyzer selection, member deadlines and failure result. Following the completed original 300-second observation, the required whole-CLI parent deadline SHALL be 600 seconds; expiration SHALL remain a failed exit 124.
 
 #### Scenario: Any diagnostic outcome
 - **WHEN** the replay completes, fails, times out or cannot start

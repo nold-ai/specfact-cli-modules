@@ -11,3 +11,9 @@ Every Git, profiler provisioning and capture command uses the same bounded desce
 ## Limits and rollback
 
 This is one diagnostic, not a benchmark or acceptance route. Replay caches may be warm. Ptrace denial, missing profiles, unsampled descendants and unavailable joins remain explicit. Remove the helper and optional step to roll back. The required review remains failed for every diagnostic outcome. Completion requires negative controls, independent review and one hosted observation.
+
+The sole approved observation was consumed at 826948e7. The optional attachment is restricted to that immutable head, so subsequent required CI cannot silently sample again. Ordinary-host lifecycle proofs run explicitly in both mandatory test entrypoints; the sealed target receives no new host privileges.
+
+## Subsequent parent deadline correction
+
+The original observation retains its 300-second contract. The required trusted CLI parent now receives 600 seconds because it contains both ten-member sides plus comparison/reporting, while a single member already permits 300 seconds. This is a bounded policy correction, not a guarantee all maximum member budgets fit or proof of the dominant CPU stage. The signed baseline, every member limit, full scope, failure-on-expiry and 45-minute job cap remain unchanged. A fresh hosted result is required; optional sampling stays disabled. The three shell projection host fixtures also run in the explicit host-proof lane, retaining their 22 parametrized cases.

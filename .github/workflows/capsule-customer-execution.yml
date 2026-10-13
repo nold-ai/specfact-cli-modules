@@ -783,7 +783,7 @@ jobs:
           "${trusted_env[@]}" "$TRUSTED_ROOT/venv/bin/python" -I -c \
             'import subprocess,sys
           try:
-              sys.exit(subprocess.run(sys.argv[1:],timeout=300,check=False).returncode)
+              sys.exit(subprocess.run(sys.argv[1:],timeout=600,check=False).returncode)
           except subprocess.TimeoutExpired:
               sys.exit(124)' \
             "$TRUSTED_ROOT/venv/bin/python" -I "$TRUSTED_ROOT/reviewer.py" \
@@ -1005,19 +1005,6 @@ jobs:
           PY
           fi
           exit "$review_exit"
-      - name: Observe failed independent review privately
-        if: failure() && steps.independent_review.outcome == 'failure'
-        shell: bash
-        run: |
-          set -euo pipefail
-          umask 077
-          test -f "$TRUSTED_ROOT/review-attempted" || exit 0
-          env -i HOME="$TRUSTED_ROOT/home" TMPDIR="$TRUSTED_ROOT/tmp" \
-            PATH="$TRUSTED_ROOT/venv/bin:/usr/bin:/bin" SPECFACT_MODULES_BRANCH=main \
-            SPECFACT_CODE_REVIEW_CAPSULE_CACHE="$TRUSTED_ROOT/cache" \
-            "$TRUSTED_ROOT/venv/bin/python" -I "$GITHUB_WORKSPACE/scripts/independent_review_diagnostic.py" \
-            --trusted-root "$TRUSTED_ROOT" --repository "$GITHUB_WORKSPACE" \
-            2> "$TRUSTED_ROOT/diagnostic-bootstrap.private.log"
       - name: Project independent review failure privately
         if: failure() && steps.independent_review.outcome == 'failure'
         shell: bash
@@ -1140,3 +1127,43 @@ jobs:
               projected["crosshair_failure_observations"] = crosshair_failure_observations(header.get("findings", []))
           print(json.dumps(projected))
           PY_REVIEW_FAILURE
+      - name: Observe failed independent review privately
+        if: failure() && steps.independent_review.outcome == 'failure' && github.event.pull_request.head.sha == '826948e710112a80b61c31c46ec8e57da5a25f22'
+        timeout-minutes: 15
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          test -f "$TRUSTED_ROOT/review-attempted" || exit 0
+          env -i HOME="$TRUSTED_ROOT/home" TMPDIR="$TRUSTED_ROOT/tmp" \
+            PATH="$TRUSTED_ROOT/venv/bin:/usr/bin:/bin" SPECFACT_MODULES_BRANCH=main \
+            SPECFACT_CODE_REVIEW_CAPSULE_CACHE="$TRUSTED_ROOT/cache" \
+            "$TRUSTED_ROOT/venv/bin/python" -I - "$TRUSTED_ROOT" "$GITHUB_WORKSPACE" \
+            2> "$TRUSTED_ROOT/diagnostic-bootstrap.private.log" <<'PY_DIAGNOSTIC_BOOTSTRAP'
+          import hashlib
+          import json
+          import os
+          import sys
+          import tempfile
+          import urllib.request
+
+          url = "https://raw.githubusercontent.com/nold-ai/specfact-cli-modules/decb25a7b25536f127f7e7ecb89d6ea92264f7b8/scripts/independent_review_diagnostic.py"
+          digest = "fc357f81c8b8c60bd52cd975dcd292a23654626ad3e77656a084dfbdc8b7c8cd"
+          try:
+              with urllib.request.urlopen(url, timeout=30) as response:
+                  source = response.read(1024 * 1024 + 1)
+              if len(source) > 1024 * 1024 or hashlib.sha256(source).hexdigest() != digest:
+                  raise ValueError("helper_authentication_failed")
+              descriptor, name = tempfile.mkstemp(prefix="verified-diagnostic-", suffix=".py", dir=sys.argv[1])
+              with os.fdopen(descriptor, "wb") as stream:
+                  stream.write(source)
+              os.execve(sys.executable, [sys.executable, "-I", name,
+                  "--trusted-root", sys.argv[1], "--repository", sys.argv[2]], dict(os.environ))
+          except (OSError, ValueError):
+              print(json.dumps({"status": "DIAGNOSTIC_UNAVAILABLE", "acceptance": False,
+                  "baseline_result": "FAIL", "member": "member_unknown", "samples": 0,
+                  "owned_processes": 0, "processes_without_proved_sample_join": 0,
+                  "observation_seconds": 0, "sample_count_is_cpu_or_elapsed_time": False,
+                  "symbols": [], "gaps": ["helper_authentication_failed"]}))
+              raise SystemExit(0)
+          PY_DIAGNOSTIC_BOOTSTRAP

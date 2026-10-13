@@ -23,7 +23,7 @@ def test_full_and_smart_host_runs_require_the_retained_host_proof(monkeypatch):
 
     configuration = tomllib.loads((ROOT / "pyproject.toml").read_text())
     assert (
-        "pytest " + HOST_PROOF + " && pytest tests "
+        "pytest " + HOST_PROOF + " tests/host/proof_independent_review_diagnostic.py && pytest tests "
         in configuration["tool"]["hatch"]["envs"]["default"]["scripts"]["test"]
     )
     monkeypatch.syspath_prepend(str(ROOT / "tools"))
@@ -40,7 +40,13 @@ def test_full_and_smart_host_runs_require_the_retained_host_proof(monkeypatch):
         ),
     )
     assert module._run_pytest(["-n", "0"]) == 7
-    assert calls[0] == [module.sys.executable, "-m", "pytest", HOST_PROOF]
+    assert calls[0] == [
+        module.sys.executable,
+        "-m",
+        "pytest",
+        HOST_PROOF,
+        "tests/host/proof_independent_review_diagnostic.py",
+    ]
     assert calls[1][:4] == [module.sys.executable, "-m", "pytest", "tests"]
     assert calls[1][-2:] == ["-n", "0"]
     assert set(calls[1][4:-2]) == {

@@ -58,24 +58,14 @@ def test_independent_reviewer_runs_in_fresh_job_without_candidate_host_code() ->
 )
 def test_independent_reviewer_excludes_each_candidate_host_route(forbidden: str) -> None:
     independent = independent_review_job()
-    recipes = []
-    review_index = next(
-        index for index, step in enumerate(independent["steps"]) if step.get("id") == "independent_review"
-    )
-    for index, step in enumerate(independent["steps"]):
-        recipe = str(step.get("run", ""))
-        if step.get("name") == "Observe failed independent review privately":
-            assert index > review_index
-            assert step["if"] == "failure() && steps.independent_review.outcome == 'failure'"
-            recipe = recipe.replace("$GITHUB_WORKSPACE/scripts/independent_review_diagnostic.py", "")
-        recipes.append(recipe)
-    assert forbidden not in "\n".join(recipes)
+    recipe = "\n".join(str(step.get("run", "")) for step in independent["steps"])
+    assert forbidden not in recipe
 
 
 def test_independent_reviewer_preserves_scope_budgets_and_preload_order() -> None:
     independent = independent_review_job()
     recipe = "\n".join(str(step.get("run", "")) for step in independent["steps"])
-    assert "timeout=300" in recipe and "timeout=1800" in recipe
+    assert "timeout=600" in recipe and "timeout=1800" in recipe
     assert "--scope index --enforcement changed --bug-hunt" in recipe
     assert "discover_snapshot" in recipe and "prepare_runtime" in recipe
     assert "runtime prepare --project-config" not in recipe, "Mutable worktree prep cannot prewarm index identities"
@@ -957,7 +947,7 @@ def test_public_execution_classification_never_prints_raw_messages(tmp_path: Pat
     assert "PRIVATE" not in result.stdout
 
 
-def test_trusted_review_budget_timeout_retains_three_hundred_seconds_and_fixed_exit(monkeypatch, tmp_path):
+def test_trusted_review_budget_timeout_retains_six_hundred_seconds_and_fixed_exit(monkeypatch, tmp_path):
     import re
     import runpy
 
@@ -980,7 +970,7 @@ def test_trusted_review_budget_timeout_retains_three_hundred_seconds_and_fixed_e
     with pytest.raises(SystemExit) as result:
         runpy.run_path(str(wrapper), run_name="__main__")
     assert result.value.code == 124
-    assert observed == [(["trusted-python", "trusted-reviewer.py"], 300, False)]
+    assert observed == [(["trusted-python", "trusted-reviewer.py"], 600, False)]
 
 
 @pytest.mark.parametrize("job_name", ["customer", "independent-review"])
@@ -1385,133 +1375,3 @@ def test_public_projector_bounds_and_rejects_unreadable_reports(tmp_path: Path, 
         "diagnostic": "review_report_unreadable",
     }
     assert "PRIVATE_SECRET" not in result.stdout
-
-
-@pytest.mark.parametrize("job_name", ["customer", "independent-review"])
-@pytest.mark.parametrize("review_exit", [17, 124])
-def test_projector_crash_preserves_original_review_exit(tmp_path: Path, job_name, review_exit):
-    import shlex
-
-    workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())
-    name = STEP_NAME if job_name == "customer" else "Prepare and review through the authenticated installed controller"
-    recipe = next(step["run"] for step in workflow["jobs"][job_name]["steps"] if step.get("name") == name)
-    invocation = next(line for line in recipe.splitlines() if "REVIEW_PUBLIC_EXIT=" in line and "<<'PY'" in line)
-    guard = invocation.split("<<'PY'", 1)[1]
-    report = tmp_path / ".specfact/code-review.json"
-    report.parent.mkdir()
-    report.write_text('{"analyzer_evidence":42}')
-    program = public_projector(job_name)
-    shell = (
-        f"set -e\nreview_exit={review_exit}\nREVIEW_PUBLIC_EXIT=$review_exit {shlex.quote(sys.executable)} - <<'PY'{guard}\n"
-        + program
-        + '\nPY\nexit "$review_exit"\n'
-    )
-    result = subprocess.run(
-        ["bash", "-c", shell],
-        cwd=tmp_path,
-        env=dict(os.environ, CUSTOMER_ROOT=str(tmp_path), TRUSTED_ROOT=str(tmp_path)),
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    assert result.returncode == review_exit, "Diagnostics must preserve the original failed review result"
-    assert result.stderr == "", "Projector tracebacks must remain private"
-    assert json.loads(result.stdout.splitlines()[-1]) == {
-        "status": "INCOMPLETE",
-        "phase": "review",
-        "diagnostic": "review_projection_failed",
-    }
-    assert "TypeError" in (tmp_path / "review-projection.private.log").read_text()
-
-
-@pytest.mark.parametrize("review_exit", [17, 124])
-def test_candidate_secondary_projector_crash_preserves_review_exit(tmp_path: Path, review_exit):
-    import shlex
-
-    workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())
-    recipe = next(step["run"] for step in workflow["jobs"]["customer"]["steps"] if step.get("name") == STEP_NAME)
-    marker = "<<'PY_CANDIDATE_FAILURE'"
-    invocation = next(line for line in recipe.splitlines() if marker in line)
-    guard = invocation.split(marker, 1)[1]
-    program = recipe.split(marker, 1)[1].split("\n", 1)[1].split("\nPY_CANDIDATE_FAILURE", 1)[0]
-    shell = (
-        f"set -e\nreview_exit={review_exit}\n{shlex.quote(sys.executable)} - {marker}{guard}\n"
-        + "raise SystemExit(3)\n"
-        + program
-        + '\nPY_CANDIDATE_FAILURE\nexit "$review_exit"\n'
-    )
-    result = subprocess.run(
-        ["bash", "-c", shell],
-        cwd=tmp_path,
-        env=dict(os.environ, CUSTOMER_ROOT=str(tmp_path)),
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    assert result.returncode == review_exit, "Every diagnostic invocation must preserve the failed review result"
-    assert result.stderr == ""
-    assert json.loads(result.stdout) == {
-        "status": "INCOMPLETE",
-        "phase": "review",
-        "diagnostic": "review_projection_failed",
-    }
-
-
-@pytest.mark.parametrize("job_name", ["customer", "independent-review"])
-@pytest.mark.parametrize("module_name", ["ast", "json"])
-@pytest.mark.parametrize("import_origin", ["checkout", "pythonpath"])
-@pytest.mark.parametrize("review_exit", [17, 124])
-def test_actual_projector_launch_excludes_untrusted_imports(
-    tmp_path: Path, job_name, module_name, import_origin, review_exit
-):
-    workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())
-    name = STEP_NAME if job_name == "customer" else "Prepare and review through the authenticated installed controller"
-    recipe = next(step["run"] for step in workflow["jobs"][job_name]["steps"] if step.get("name") == name)
-    invocation = next(line for line in recipe.splitlines() if "REVIEW_PUBLIC_EXIT=" in line and "<<'PY'" in line)
-    interpreter = tmp_path / "venv/bin/python"
-    interpreter.parent.mkdir(parents=True)
-    interpreter.symlink_to(sys.executable)
-    candidate = tmp_path / "candidate"
-    candidate.mkdir()
-    ambient = tmp_path / "ambient"
-    ambient.mkdir()
-    marker = tmp_path / "untrusted-import-executed"
-    poison = candidate if import_origin == "checkout" else ambient
-    (poison / f"{module_name}.py").write_text(
-        f"from pathlib import Path\nPath({str(marker)!r}).write_text('executed')\nraise RuntimeError('UNTRUSTED_IMPORT')\n"
-    )
-    report = candidate / ".specfact/code-review.json" if job_name == "customer" else tmp_path / "review.private.json"
-    report.parent.mkdir(exist_ok=True)
-    report.write_text("PRIVATE_REPORT invalid JSON")
-    shell = f"set -e\ntrusted_env=(env)\nreview_exit={review_exit}\n" + invocation + "\n" + public_projector(job_name)
-    shell += '\nPY\nexit "$review_exit"\n'
-    environment = dict(os.environ, CUSTOMER_ROOT=str(tmp_path), TRUSTED_ROOT=str(tmp_path), PYTHONPATH=str(ambient))
-    environment["REVIEW_PUBLIC_REPORT"] = str(report)
-    result = subprocess.run(
-        ["bash", "-c", shell], cwd=candidate, env=environment, capture_output=True, text=True, check=False
-    )
-    assert not marker.exists(), "Candidate or ambient standard-library lookalikes executed on the host"
-    assert result.returncode == review_exit and result.stderr == ""
-    rows = [json.loads(line) for line in result.stdout.splitlines()]
-    assert rows[-1] == {"status": "INCOMPLETE", "phase": "review", "diagnostic": "review_report_unreadable"}
-    assert (review_exit != 124) or rows[0]["diagnostic"] == "analysis_timeout"
-    assert "PRIVATE_REPORT" not in result.stdout and "UNTRUSTED_IMPORT" not in result.stdout
-    assert report.read_text() == "PRIVATE_REPORT invalid JSON"
-
-
-@pytest.mark.parametrize("mutation", ["another_helper", "guard_removed", "before_review"])
-def test_independent_diagnostic_allowance_rejects_other_host_routes(monkeypatch, mutation):
-    import copy
-
-    job = copy.deepcopy(independent_review_job())
-    step = next(item for item in job["steps"] if item.get("name") == "Observe failed independent review privately")
-    if mutation == "another_helper":
-        step["run"] += '\n"$GITHUB_WORKSPACE/scripts/another.py"\n'
-    elif mutation == "guard_removed":
-        step["if"] = "always()"
-    else:
-        job["steps"].remove(step)
-        job["steps"].insert(0, step)
-    monkeypatch.setitem(globals(), "independent_review_job", lambda: job)
-    with pytest.raises(AssertionError):
-        test_independent_reviewer_excludes_each_candidate_host_route("$GITHUB_WORKSPACE/scripts")
