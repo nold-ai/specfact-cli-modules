@@ -1851,3 +1851,15 @@ The existing native CI execution job SHALL emit one bounded JSON diagnostic from
 - **THEN** the diagnostic emits only the corresponding fixed observation code, deduplicates codes, excludes raw messages and private identifiers, and retains UNKNOWN and the original failed acceptance
 - **WHEN** diagnostic text or rows are malformed or unrecognized
 - **THEN** no text is emitted and the existing failure and unknown-member metadata remain unchanged
+
+### Requirement: Authenticated committed scheduling entry point
+
+The existing required CI job SHALL authenticate the committed scheduling wrapper against its reviewed source digest before invoking it. Missing or changed wrapper bytes SHALL fail before execution, including an accidental early-success change paired with disabled capsule scheduling. This authentication SHALL be an immediately preceding blocking step under the same pull-request-to-dev condition. The original final-validator command, immutable head/base arguments, approved checker authority, full history/object/expiry/path/index checks and ordinary hooks SHALL remain unchanged. Intended wrapper updates require a reviewed digest update through the ordinary workflow review; no broker, administrator setup or new checker authority is introduced. This is the normal reviewed CI workflow, not a claim of containment for arbitrary changes to that workflow itself.
+
+#### Scenario: changed wrapper cannot waive scheduling
+- **WHEN** a PR changes the wrapper to return success without validation while removing hosted capsule scheduling
+- **THEN** the actual CI sequence fails authentication before the changed wrapper runs and cannot report validated scheduling
+
+#### Scenario: authentic wrapper keeps required outcomes
+- **WHEN** the wrapper retains reviewed bytes
+- **THEN** valid final scheduling passes and invalid final scheduling fails through the original checker, with caller Git state unchanged

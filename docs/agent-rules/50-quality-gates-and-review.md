@@ -69,8 +69,11 @@ platforms or protected checkouts. Record maintainer approval in change evidence
 and require hosted review completion before merge. Local hooks validate development inputs; they do not
 claim an immutable local commit boundary. The existing required Verify Module
 Signatures CI job additionally validates final committed capsule scheduling for
-feature PRs to dev. The three quality jobs retain their blocking review
-prerequisites. Ordinary hooks remain mandatory; no private hook installer,
+feature PRs to dev. Immediately before that validation, the same job authenticates
+its wrapper against the reviewed source digest; missing or changed bytes fail before
+execution. Intentional wrapper updates require a reviewed digest update in that CI
+step. The integrated/approved checker authority is unchanged. The three quality jobs
+retain their blocking review prerequisites. Ordinary hooks remain mandatory; no private hook installer,
 transaction record, broker or administrator provisioning is required.
 
 ## SpecFact code review JSON

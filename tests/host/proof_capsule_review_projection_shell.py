@@ -16,6 +16,7 @@ import yaml
 
 from specfact_code_review.run import target_bootstrap
 from specfact_code_review.run.runtime_discovery import discover_project
+from tests.host.proof_capsule_deferred_review_ci import _git, _prepare_committed_ci_subject
 from tests.support.capsule_review_fixtures import REPO_ROOT, STEP_NAME, public_projector
 from tests.unit.test_capsule_review_projection import _write_preparation_fixture
 
@@ -692,3 +693,70 @@ def test_target_startup_cannot_replace_registered_virtual_lookup(collision_runti
     assert completed.returncode == 78
     assert "project_worker_startup_import_state_changed" in completed.stderr
     assert "VERIFIED_DISPATCH" not in completed.stdout
+
+
+def _prepare_ci_wrapper_source_case(tmp_path: Path, case: str) -> tuple[Path, str, str]:
+    schedule_case = "valid" if case == "valid" else "disabled"
+    worktree, base, _head, _workflow = _prepare_committed_ci_subject(tmp_path, schedule_case)
+    entry_path = worktree / "scripts/owner_commit_entry.py"
+    source = (REPO_ROOT / "scripts/owner_commit_entry.py").read_text()
+    if case == "early-success":
+        source = 'import sys\nsys.stderr.write("UNVERIFIED_WRAPPER_RAN\\n")\nraise SystemExit(0)\n'
+    elif case == "skip-validation":
+        source = source.replace("checked = validate_commit(Path.cwd(), args.head, args.base)", "checked = False")
+    if case == "missing":
+        entry_path.unlink(missing_ok=True)
+    else:
+        entry_path.write_text(source)
+    _git(worktree, "add", ".")
+    _git(
+        worktree,
+        "-c",
+        "core.hooksPath=/dev/null",
+        "commit",
+        "--allow-empty",
+        "-qm",
+        "fixture candidate wrapper regression",
+    )
+    head = _git(worktree, "rev-parse", "HEAD")
+    return worktree, base, head
+
+
+@pytest.mark.parametrize("case", ["valid", "disabled", "early-success", "skip-validation", "missing"])
+def test_required_ci_authenticates_wrapper_before_committed_validation(tmp_path: Path, case: str) -> None:
+    worktree, base, head = _prepare_ci_wrapper_source_case(tmp_path, case)
+    before = (_git(worktree, "write-tree"), _git(worktree, "status", "--porcelain"))
+    workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/sign-modules.yml").read_text())
+    names = {"Authenticate committed scheduling validator", "Validate committed capsule review scheduling"}
+    recipes = [step["run"] for step in workflow["jobs"]["verify"]["steps"] if step.get("name") in names]
+    recipe = "set -e\n" + "\n".join(recipes)
+    recipe = recipe.replace("python -I", shlex.quote(sys.executable) + " -I")
+    result = subprocess.run(
+        ["bash", "-c", recipe],
+        cwd=worktree,
+        env=os.environ | {"CANDIDATE_HEAD": head, "CANDIDATE_BASE": base},
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if case == "valid":
+        assert result.returncode == 0, result.stdout + result.stderr
+    else:
+        assert result.returncode != 0, result.stdout + result.stderr
+    assert "UNVERIFIED_WRAPPER_RAN" not in result.stderr
+    assert _git(worktree, "rev-parse", "HEAD") == head
+    assert (_git(worktree, "write-tree"), _git(worktree, "status", "--porcelain")) == before
+
+
+def test_ci_wrapper_authentication_is_blocking_and_immediately_precedes_validation() -> None:
+    workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/sign-modules.yml").read_text())
+    steps = workflow["jobs"]["verify"]["steps"]
+    authentication = next(step for step in steps if step.get("name") == "Authenticate committed scheduling validator")
+    validation = next(step for step in steps if step.get("name") == "Validate committed capsule review scheduling")
+    assert steps.index(authentication) + 1 == steps.index(validation)
+    assert authentication["if"] == validation["if"] == "github.event_name == 'pull_request' && github.base_ref == 'dev'"
+    assert "continue-on-error" not in authentication
+    assert "da892a322e0036cda78874adbea9a8169ec899752c797621bebcd52446b664bb" in authentication["run"]
+    assert (
+        validation["run"] == 'python -I scripts/owner_commit_entry.py --head "$CANDIDATE_HEAD" --base "$CANDIDATE_BASE"'
+    )

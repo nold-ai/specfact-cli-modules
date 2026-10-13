@@ -1305,3 +1305,22 @@ requirements:
       method: test
       intent: Missing fixed contract failure-observation codes fail before workflow projection changes.
       observable: Recognized public error prefixes yield only sorted fixed codes; malformed/private content yields no raw output and never acceptance.
+  openspec:code-review-native-platform-execution:review-native-platform-execution:authenticated-committed-scheduling-entry-point:
+    rationale: Prevent accidental early-success wrapper changes from bypassing the existing required final-tree check.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#460
+    touchpoints:
+    - id: authenticated-ci-entry-spec
+      kind: config_file
+      locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
+    verification_cases:
+    - case_id: 460-55-1
+      scenario_id: authenticated-committed-scheduling-entry-point
+      method: test
+      intent: Actual CI sequence rejects changed early-success wrapper before invocation.
+      observable: Two real-Git false-admission controls fail before correction and reject afterward; original HEAD/index/worktree stay unchanged.
+    - case_id: 460-55-2
+      scenario_id: authenticated-committed-scheduling-entry-point
+      method: test
+      intent: Preserve valid and invalid scheduling outcomes with authentic wrapper bytes and blocking step order.
+      observable: Valid control passes, disabled schedule fails, missing source rejects, and authentication precedes the unchanged original validation command.
