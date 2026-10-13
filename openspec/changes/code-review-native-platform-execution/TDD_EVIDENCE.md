@@ -5314,3 +5314,97 @@ All302affected controlsPASS40.99s including8new committed-path cases. Whole orig
 The first indexed requirements run rejects a newly authored scenario identity rather than the requirement identity required by the existing lifecycle importer. Correct only the new sidecar scenario_id to its actual source requirement slug; no lifecycle or maturity requirement changes. The first sandboxed checkpoint driver could not update Git's tree cache; it did not change source/state and is setup evidence. Neither error is productRED or a gate waiver.
 
 Final authoritative prefix`specfact509-hb1855-paths-complete-final-`: Full275requiredhost/native44.01s+5893portable169.53s; separateSMART275host44.91s+5893portable164.50s, bothPASS. Both71declaredskips95subtests5existingwarnings unchanged;31Bash/10compiledcanonicalproofs/80percentcoverage mandatory. Format/type0errorswarnings/lint10/YAML/import/28contracts3.94s/strictOpenSpec/configuredSMARTscope/checksum/version/publickey gatesPASS. ActualninefileindexedrequirementsPASS/planned/not-yet-available. SevenstrictPUBLIC/filesystem/version checksPASS on unchanged module payloads. No executable change after final suites. Normalhooks/push/exact-head hosted validation and review resolution remain pending until actual verification. Actual3023independent115475197005 executedexit1 at2026-10-13T19:02:02.1444880Z: oversized_report/UNAVAILABLE/incompletecontractsBASE+HEAD/targetedcoverageBASE, unknowncontracts/Pylint/Radon/coverage, observedunrecognizedCrossHair/200side-unlabelled27errors139warnings34info. Unwaived/privateoriginalsunavailable/notregressionproof; never transfer to futurehead.
+
+## PR #509 cache transition and timeout diagnosis, 13 October 2026
+
+The owner requested repairs in dependency order before their own merges. Current
+GitHub ancestry establishes sibling #509 and #510 branches above dev `593656f6`;
+#506 promotes that mutable dev head to main. The bounded repair starts with #509
+at `8c0f6bed`. No merge, publication, protected approval or gate waiver is inferred.
+
+The unchanged CP311 CI archive and exact pinned Flask inputs reproduced the
+attached contracts failure locally. The private report identifies
+`ImportError: project_worker_analyzer_origin_mismatch:six.moves` during
+`activate_project_domain` cached-module validation. The worker removed a physical
+Six parent from its original site while retaining registered synthetic descendants.
+The new verified parent consequently differs from the retained child's importer.
+The correction evicts descendants of removed parents, keeping origin validation,
+project precedence, trusted worker modules and unrelated stdlib objects intact.
+This is local attached diagnosis on a different OS build, not hosted acceptance.
+
+After the cache-transition specification, two real Six preload controls failed
+with that same ImportError on the original worker. The corrected native-tool and
+target-bootstrap group passed 53 tests; the broader native/import/CrossHair group
+passed 290 tests. Both controls replace physical and moves identities, retain
+`urllib.parse`, and validate the new registered importer without an origin waiver.
+
+The existing macOS26 helper timeout has no proven originating case. Separate
+diagnostic specification and tests preceded instrumentation. Twelve observation
+controls failed and one existing precedence control passed on the original code.
+The corrected producer/consumer group passed 282 tests with 5 existing conditional
+native-only skips. Operation snapshots use the existing private flushed log,
+fixed active case/phase and exact bounded integer counters. Suite context resets
+on every exit; the first stamped failure stops progress. The consumer retains its
+16 KiB tail and first owned failure precedence. The original 900 seconds, 100 repetitions,
+receipt acceptance, unknown failure attribution and private cleanup are unchanged.
+Observed progress is a lower bound, never completion or failure-cause authority.
+
+Full and SMART each passed 275 required host/native controls and 5908 supplier tests,
+with 71 existing conditional skips, 95 subtests and 5 existing warnings. Supplier runs
+reported 190.78 seconds and 181.71 seconds respectively. Format, type checks with zero errors and warnings,
+lint score 10.00, YAML, imports, 28 contracts and strict OpenSpec passed. The first local
+requirements invocation lacked the workflow's module PYTHONPATH; correcting that
+setup passed the planned evidence gate. The first signature invocation lacked its
+public-key argument; the established CLI 0.55.4 public key verifies the six untouched
+signed bundles and the new Code Review checksum. The checksum-only source candidate
+remains 0.51.5; normal trusted CI signing and strict exact-head verification remain
+required. No local private key or production signing authority was used.
+
+A separate read-only verify-fix assessment confirmed the supplied descriptor
+escape, authenticated CI entry, and complete committed-path findings are fixed
+under existing reviewed-workflow authority. It traced source/control/sink, executed
+non-writing stream/checker controls and did not rerun hosted CI. Three independent
+interrogate models reported no findings on this incremental repair. A scoped
+comment review identified one redundant private-helper docstring; it was removed
+after full suites without changing executable behavior, followed by focused checks.
+
+The Linux source-only diagnostic uses pinned CrossHair 0.0.109 and the actual trusted
+0.51.2 adapter. Two single-file controls pass. The combined 34-file workload emits
+target stdout and symbolic failures, including SymbolicBool, side-effect rejection
+and declared-dependency errors. This is not the sealed hosted reproducer and does
+not establish final CI root cause. Original independent review and native failures
+remain unwaived. The PR is not verified green until corrected-head signing and
+every required hosted gate complete successfully.
+
+The final normal hooks exposed a closed-scope scheduling omission: the four native
+diagnostic source/test paths were absent from the capsule selectors. Before changing
+those selectors, eight positive real-Git controls failed and two adjacent unrelated
+path controls passed. The minimal correction adds four literal paths to the existing
+workflow filter, local selector and committed selector. All 24 scheduling/authentication
+controls now pass, including the complete mixed-path and early-success rejection cases.
+The trusted checker commit/blob authority is unchanged. The immediately preceding
+wrapper authentication pin is updated to the actual reviewed source digest
+`a65627e8dda3d8dcc5de2f79f9a53972f2ec4dcc567163086fe8da06f909a02b`.
+No directory wildcard, budget, review command or blocking prerequisite was relaxed.
+
+Final Full and SMART each pass 285 required host/native proofs plus 5908 supplier
+tests, with the same 71 conditional skips, 95 subtests and 5 existing warnings.
+The normal hook pipeline passes format, YAML, imports, lint, docs, planned requirements
+evidence and 28 contracts. Only capsule review reports DEFERRED, never PASS, under the
+owner-approved Darwin ARM64 route to mandatory exact-head GitHub Linux CI.
+The ordinary local source review produces UNKNOWN for all ten analyzers because the
+Darwin ARM64 CP312 capsule is not admitted; zero reported findings is not clean analysis.
+
+The first docs check lacked paired core context. Pointing at the unrelated current
+core checkout caused the existing environment bootstrap to install its 0.55.9 editable
+version; this was a setup error, not product RED. The environment was restored to core
+0.55.4 and docs/hooks/final suites use an isolated export of the public v0.55.4 tag.
+No paired checkout source was modified. Publish preconditions pass without publication.
+
+A second independent three-model interrogate pass reports no findings on the complete
+incremental repair, including the scheduling correction. A separate read-only
+verify-fix reassessment confirms the descriptor, authenticated-entry and complete-path
+fixes with the final wrapper pin. Narrow read-only verification also confirms CodeQL
+alert 11's allocated `realpath(path, NULL)` destination and guarded/free callers in this
+branch. The alert remains open on main until integration; no hosted acceptance or
+production signature is inferred from those source assessments.

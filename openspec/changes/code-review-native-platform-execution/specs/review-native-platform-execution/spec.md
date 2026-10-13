@@ -1726,6 +1726,46 @@ The new registered-owner phase SHALL pass complete configured public type/style 
 - **WHEN** configured public BasedPyright and Pylint analyze the complete startup module
 - **THEN** the new registered-owner phase has no type/style findings, and cached/foreign loader, origin and startup mutation rejection remain proven
 
+### Requirement: Complete native analyzer cache transition
+
+Before rebinding a native tool to its verified analyzer view, removal of a cached module SHALL also remove every cached descendant of that module, including synthetic namespaces and aliases to standard-library modules. A registered virtual namespace SHALL NOT retain a loader owned by a removed parent. The fresh parent and descendants SHALL resolve through the unchanged verified finder. Unrelated standard-library modules, trusted worker modules, project dependency precedence and all origin/name/loader checks SHALL remain unchanged.
+
+#### Scenario: preloaded Six namespace enters a fresh analyzer view
+- **WHEN** native tool startup has already imported the physical Six parent and its registered moves namespace from the capsule site
+- **THEN** activation replaces both with the verified view's parent and registered importer, ordinary xrange works and cached-module validation succeeds
+
+#### Scenario: preloaded Six standard-library alias
+- **WHEN** a removed Six parent has cached six.moves.urllib_parse with a standard-library origin
+- **THEN** the stale alias is removed along with its parent, the ordinary urllib.parse module remains available and its legitimate moved alias can be resolved again
+
+### Requirement: Bounded native control timeout observations
+
+The existing control fixture SHALL emit flushed, fixed-schema observations through its private log at existing operation transitions. The suite SHALL bind its lifecycle case before construction, retain the current repetition and a lower bound of returned trials, and reset that context on every exit. The first stamped failure SHALL stop further progress emission. The existing bounded log-tail consumer MAY project only allowlisted active case/phase and exact bounded integer counters. Observations SHALL remain separate from failed-case, receipt counts and acceptance authority. The unchanged first owned failure marker SHALL retain precedence; malformed, partial or foreign observations SHALL not expose private values. The existing 900-second control ceiling, 100 repetitions, receipt validator and unconditional private cleanup SHALL remain unchanged.
+
+#### Scenario: helper timeout before receipt publication
+- **WHEN** the control helper announces an operation and reaches its original ceiling before writing a receipt
+- **THEN** the failed summary includes only the last valid active operation and observed progress, retains unknown failure attribution and deletes its private files
+
+#### Scenario: lifecycle bootstrap retains suite attribution
+- **WHEN** construction still calls its invocation protocol while a lifecycle case is active
+- **THEN** the observation retains the suite-selected case, its repetition and only already returned trials; subsequent calls inherit no stale context
+
+#### Scenario: originating failure outranks nested progress
+- **WHEN** an owned failure is followed by cleanup operations or malformed/private progress
+- **THEN** progress does not change the originating failure, no further producer progress is emitted after stamping and no private value enters the public summary
+
+### Requirement: Closed native diagnostic review scheduling
+
+The native control producer, bounded receipt consumer and their two unit proof files SHALL be explicit members of the existing capsule review trigger and both local/committed path selectors. Changes to those exact paths SHALL require the unchanged blocking candidate and independent review process. The trusted checker, complete committed-delta validation, bootstrap authority, reviewed-wrapper authentication and all rejection controls SHALL remain unchanged. Adjacent unrelated paths SHALL remain ineligible for local deferral. A deliberate wrapper path update SHALL update its existing immediately preceding authentication digest only after independent source review.
+
+#### Scenario: native diagnostic files receive existing mandatory review
+- **WHEN** a local or committed candidate changes one of the four exact native diagnostic paths
+- **THEN** the existing trusted validator admits only its covered blocking review schedule and preserves all ordinary hook components
+
+#### Scenario: adjacent unrelated path cannot acquire diagnostic eligibility
+- **WHEN** an otherwise valid candidate also changes an unrelated file beside the control producer
+- **THEN** both local and committed validation reject rather than extending an entire directory or ignoring the complete candidate surface
+
 ### Requirement: Immutable registered importer startup binding
 
 Analyzer-owned Six SHALL be loaded through the verified finder before customer startup, and its actual module namespace, importer identity/class implementation and registered map SHALL be bound by existing before/after startup validation. Replacing the importer/class, changing callable code, substituting the registered namespace map or spec factory SHALL reject. Legitimate moves/xrange lazy imports SHALL remain valid; project-owned Six and existing startup/import routing SHALL retain precedence. This adds no arbitrary in-process hostile-tool containment claim.

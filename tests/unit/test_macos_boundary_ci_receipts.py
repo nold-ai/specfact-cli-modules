@@ -84,6 +84,83 @@ def fixture_startup_receipt(boundary_ci):
     }
 
 
+def _progress_record(**changes):
+    return {
+        "control_progress": True,
+        "active_case": "timeout",
+        "active_phase": "request-wait",
+        "observed_repetition": 37,
+        "observed_completed_trials": 748,
+        **changes,
+    }
+
+
+def test_control_timeout_projects_observation_without_completion_authority(boundary_ci, monkeypatch, tmp_path):
+    def timeout(arguments, **options):
+        assert arguments[-4:] == ["--repetitions", "100", "--out", str(tmp_path / "control.json")]
+        assert options["timeout"] == 900
+        options["stdout"].write((json.dumps(_progress_record(private="/secret/98765")) + "\n").encode())
+        options["stdout"].flush()
+        raise subprocess.TimeoutExpired(arguments, 900)
+
+    monkeypatch.setattr(subprocess, "run", timeout)
+    result = boundary_ci["run_suite"]("control", tmp_path, {})
+    assert result == {
+        "suite": "control",
+        "result": "failed",
+        "category": "helper_timeout",
+        "failure_type": "unknown",
+        "failed_case": "unknown",
+        "failure_phase": "unknown",
+        "completed_cases": {},
+        "active_case": "timeout",
+        "active_phase": "request-wait",
+        "observed_repetition": 37,
+        "observed_completed_trials": 748,
+        "production_approved": False,
+        "signed_boundary_verified": False,
+    }
+    assert not (tmp_path / "control.json").exists()
+    assert not (tmp_path / "control.log").exists()
+
+
+@pytest.mark.parametrize(
+    "changes",
+    [
+        {"control_progress": 1},
+        {"active_case": "/secret"},
+        {"active_phase": "/secret"},
+        {"observed_repetition": True},
+        {"observed_repetition": -1},
+        {"observed_repetition": 101},
+        {"observed_completed_trials": False},
+        {"observed_completed_trials": -1},
+        {"observed_completed_trials": 2049},
+    ],
+)
+def test_control_timeout_discards_invalid_progress(boundary_ci, tmp_path, changes):
+    valid = _progress_record()
+    (tmp_path / "control.log").write_text(
+        json.dumps(valid) + "\n" + json.dumps(_progress_record(**changes)) + '\n{"private":'
+    )
+    result = boundary_ci["failure_summary"]("control", tmp_path / "control.json", tmp_path / "control.log")
+    assert result["active_case"] == "timeout"
+    assert result["active_phase"] == "request-wait"
+    assert result["observed_repetition"] == 37
+    assert result["observed_completed_trials"] == 748
+    assert "secret" not in json.dumps(result)
+
+
+def test_owned_failure_remains_authoritative_over_progress(boundary_ci, tmp_path):
+    marker = {"failure_origin": True, "failed_case": "cancel", "failure_phase": "request-cancel"}
+    records = [_progress_record(), marker, _progress_record(active_case="isolation", active_phase="cleanup")]
+    (tmp_path / "control.log").write_text("\n".join(json.dumps(record) for record in records))
+    result = boundary_ci["failure_summary"]("control", tmp_path / "control.json", tmp_path / "control.log")
+    assert result["failed_case"] == "cancel"
+    assert result["failure_phase"] == "request-cancel"
+    assert "active_case" not in result
+
+
 def test_complete_startup_controls_are_accepted(boundary_ci, startup_receipt):
     assert boundary_ci["checked_receipt"]("startup", startup_receipt, {"os_build": "26A434"})["result"] == "passed"
 

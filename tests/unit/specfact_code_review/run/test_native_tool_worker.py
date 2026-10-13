@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import subprocess
 import sys
 from enum import IntEnum
 from pathlib import Path
 
 import pytest
+import six
 from pytest import MonkeyPatch
 
 from specfact_code_review.run import native_tool_worker
@@ -490,6 +492,63 @@ def test_native_domain_uses_project_dependency_and_denies_unrelated_analyzer_fal
     )
     assert result.returncode == 0, result.stderr
     assert json.loads(result.stdout) == ["project-version", "sealed-tool", True]
+
+
+@pytest.mark.parametrize("preload_alias", [False, True])
+def test_native_domain_rebinds_preloaded_registered_six_namespace(tmp_path: Path, preload_alias: bool) -> None:
+    from specfact_code_review.run.native_analyzer_view import VIEW_NAME, build_analyzer_view
+
+    capsule, project, _output, _temporary = _roots(tmp_path)
+    original = capsule / f"python/lib/python{sys.version_info.major}.{sys.version_info.minor}/site-packages"
+    original.mkdir(parents=True)
+    shutil.copyfile(six.__file__, original / "six.py")
+    info = original / "six-1.dist-info"
+    info.mkdir()
+    (info / "METADATA").write_text("Metadata-Version: 2.1\nName: six\nVersion: 1\n")
+    (info / "RECORD").write_text("six.py,,\nsix-1.dist-info/METADATA,,\n")
+    project.chmod(0o700)
+    runtime = project / ".specfact-project-runtime"
+    (runtime / "site-packages").mkdir(parents=True)
+    graph = {"sealed_imports": ["six"], "installed": [{"name": "six", "version": "1", "origin": "analyzer"}]}
+    (runtime / "project-runtime.json").write_text(json.dumps({"inventory": {"member_graphs": {"crosshair": graph}}}))
+    build_analyzer_view(original, project / VIEW_NAME, graph)
+    for path in project.rglob("*"):
+        path.chmod(0o500 if path.is_dir() else 0o400)
+    project.chmod(0o500)
+    code = """
+import importlib, json, sys
+from pathlib import Path
+from specfact_code_review.run.native_tool_worker import activate_project_domain
+for name in tuple(sys.modules):
+    if name == "six" or name.startswith("six."):
+        del sys.modules[name]
+sys.path.insert(0, sys.argv[2])
+import six, six.moves, urllib.parse
+old_parent, old_moves, stdlib_parse = six, six.moves, urllib.parse
+if sys.argv[4] == "True":
+    importlib.import_module("six.moves.urllib_parse")
+activate_project_domain(Path(sys.argv[1]), Path(sys.argv[3]), "crosshair")
+assert "six.moves.urllib_parse" not in sys.modules
+import six, six.moves, urllib.parse
+from specfact_code_review.run.target_bootstrap import AnalyzerFinder
+view = Path(sys.argv[1]) / ".specfact-native-analyzers"
+AnalyzerFinder({"six"}, analyzer_root=view).validate_loaded()
+assert Path(six.__file__).parent == view
+assert six.moves.__spec__.loader is six._importer
+assert six.moves.xrange is range
+assert six.moves.urllib_parse is stdlib_parse is urllib.parse
+print(json.dumps([six is old_parent, six.moves is old_moves, six.moves.urllib_parse.urlsplit("https://example.test/x").path]))
+"""
+    result = subprocess.run(
+        [sys.executable, "-c", code, str(project), str(original), str(capsule), str(preload_alias)],
+        env={**os.environ, "PYTHONPATH": str(Path(native_tool_worker.__file__).parents[2])},
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=30,
+    )
+    assert result.returncode == 0, result.stderr
+    assert json.loads(result.stdout) == [False, False, "/x"]
 
 
 def test_project_pytest_plugins_use_only_selected_site_entrypoints(tmp_path, monkeypatch):

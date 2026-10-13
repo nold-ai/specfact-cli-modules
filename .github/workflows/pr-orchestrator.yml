@@ -66,6 +66,10 @@ jobs:
               - "tests/unit/test_pre_commit_quality_parity.py"
               - "tests/unit/scripts/test_pre_commit_code_review.py"
               - "tests/unit/test_capsule_review_projection.py"
+              - "scripts/check_macos_boundary_ci_receipts.py"
+              - "scripts/macos_managed_boundary/control.py"
+              - "tests/unit/test_macos_boundary_ci_receipts.py"
+              - "tests/unit/test_macos_managed_control.py"
               - ".github/workflows/capsule-customer-execution.yml"
               - ".github/workflows/pr-orchestrator.yml"
       - id: out

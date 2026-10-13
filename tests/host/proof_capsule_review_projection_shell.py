@@ -695,6 +695,37 @@ def test_target_startup_cannot_replace_registered_virtual_lookup(collision_runti
     assert "VERIFIED_DISPATCH" not in completed.stdout
 
 
+@pytest.mark.parametrize(
+    "relative",
+    [
+        "scripts/check_macos_boundary_ci_receipts.py",
+        "scripts/macos_managed_boundary/control.py",
+        "tests/unit/test_macos_boundary_ci_receipts.py",
+        "tests/unit/test_macos_managed_control.py",
+        "scripts/macos_managed_boundary/unrelated.py",
+    ],
+)
+def test_native_diagnostic_committed_review_scope_is_exact(tmp_path: Path, relative: str) -> None:
+    worktree, base, _head, _workflow = _prepare_committed_ci_subject(tmp_path, "valid")
+    path = worktree / relative
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("fixture native diagnostic\n")
+    _git(worktree, "add", ".")
+    _git(worktree, "-c", "core.hooksPath=/dev/null", "commit", "-qm", "fixture native diagnostic scope")
+    head = _git(worktree, "rev-parse", "HEAD")
+    before = (_git(worktree, "write-tree"), _git(worktree, "status", "--porcelain"))
+    result = subprocess.run(
+        [sys.executable, "-I", str(REPO_ROOT / "scripts/owner_commit_entry.py"), "--head", head, "--base", base],
+        cwd=worktree,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == (1 if relative.endswith("unrelated.py") else 0), result.stdout + result.stderr
+    assert _git(worktree, "rev-parse", "HEAD") == head
+    assert (_git(worktree, "write-tree"), _git(worktree, "status", "--porcelain")) == before
+
+
 def _prepare_ci_wrapper_source_case(tmp_path: Path, case: str) -> tuple[Path, str, str]:
     schedule_case = "valid" if case == "valid" else "disabled"
     worktree, base, _head, _workflow = _prepare_committed_ci_subject(tmp_path, schedule_case)
@@ -756,7 +787,7 @@ def test_ci_wrapper_authentication_is_blocking_and_immediately_precedes_validati
     assert steps.index(authentication) + 1 == steps.index(validation)
     assert authentication["if"] == validation["if"] == "github.event_name == 'pull_request' && github.base_ref == 'dev'"
     assert "continue-on-error" not in authentication
-    assert "9e5101db4ff22aedba86f234ab7b4fd95b5f60243ff8f9826c88aa47c43bd9a2" in authentication["run"]
+    assert "a65627e8dda3d8dcc5de2f79f9a53972f2ec4dcc567163086fe8da06f909a02b" in authentication["run"]
     assert (
         validation["run"] == 'python -I scripts/owner_commit_entry.py --head "$CANDIDATE_HEAD" --base "$CANDIDATE_BASE"'
     )

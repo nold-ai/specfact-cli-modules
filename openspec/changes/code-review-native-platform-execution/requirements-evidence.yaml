@@ -1339,3 +1339,45 @@ requirements:
       method: test
       intent: Real Git committed filenames reproduce false admission before changing the wrapper.
       observable: Unrelated plain and delimiter-bearing reviewable paths reject; ordinary docs pass, with caller state and temporary cleanup preserved.
+  openspec:code-review-native-platform-execution:review-native-platform-execution:complete-native-analyzer-cache-transition:
+    rationale: Replace synthetic descendants together with their cached physical parent before verified analyzer rebinding.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#460
+    touchpoints:
+    - id: native-cache-transition-worker
+      kind: config_file
+      locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
+    verification_cases:
+    - case_id: 460-57-1
+      scenario_id: complete-native-analyzer-cache-transition
+      method: test
+      intent: Real Six parent, moves namespace and standard-library alias reproduce the actual attached failure before correction.
+      observable: Both preload controls reject on the original worker and pass with new parent and importer identities after correction; urllib.parse remains intact.
+  openspec:code-review-native-platform-execution:review-native-platform-execution:bounded-native-control-timeout-observations:
+    rationale: Preserve diagnostic attribution across helper timeout without changing failure or receipt authority.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#460
+    touchpoints:
+    - id: control-timeout-observation-spec
+      kind: config_file
+      locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
+    verification_cases:
+    - case_id: 460-58-1
+      scenario_id: bounded-native-control-timeout-observations
+      method: test
+      intent: Exercise actual producer transitions and consumer timeout boundary with privacy, invalid-counter, failure-precedence and context-reset controls.
+      observable: Twelve missing-observation controls fail before correction, then active metadata survives timeout while original900seconds/100repetitions, unknown failure attribution and cleanup remain unchanged.
+  openspec:code-review-native-platform-execution:review-native-platform-execution:closed-native-diagnostic-review-scheduling:
+    rationale: Ensure the four native diagnostic source/proof paths receive the existing blocking capsule review without directory-wide eligibility.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#460
+    touchpoints:
+    - id: native-diagnostic-scheduling-spec
+      kind: config_file
+      locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
+    verification_cases:
+    - case_id: 460-59-1
+      scenario_id: closed-native-diagnostic-review-scheduling
+      method: test
+      intent: Real-Git local/committed admission fails for all four related paths before the trigger and selectors change.
+      observable: Eight positive controls fail and two unrelated controls reject before correction; all ten pass after exact-path additions with the original checker and unchanged blocking review requirements.

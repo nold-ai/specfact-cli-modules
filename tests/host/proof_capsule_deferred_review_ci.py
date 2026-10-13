@@ -26,6 +26,44 @@ from tests.support.capsule_review_fixtures import (
 )
 
 
+@pytest.mark.parametrize(
+    "relative",
+    [
+        "scripts/check_macos_boundary_ci_receipts.py",
+        "scripts/macos_managed_boundary/control.py",
+        "tests/unit/test_macos_boundary_ci_receipts.py",
+        "tests/unit/test_macos_managed_control.py",
+        "scripts/macos_managed_boundary/unrelated.py",
+    ],
+)
+def test_native_diagnostic_local_review_scope_is_exact(tmp_path: Path, relative: str) -> None:
+    worktree = deferral_worktree(tmp_path, ("Darwin", "", "github-linux", "specfact-code-review", False, True, 0))
+    path = worktree / relative
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("fixture native diagnostic\n")
+    _git(worktree, "add", ".")
+    calls = tmp_path / "calls"
+    script = (REPO_ROOT / "scripts/pre-commit-quality-checks.sh").read_text().rsplit('main "$@"', 1)[0]
+    result = subprocess.run(
+        ["bash", "-c", script + _BLOCK2_HATCH_FIXTURE],
+        cwd=worktree,
+        env=os.environ
+        | {
+            "FIXTURE_PLATFORM": "Darwin",
+            "FIXTURE_CALLS": str(calls),
+            "GITHUB_ACTIONS": "",
+            "CI": "",
+            "SPECFACT_CODE_REVIEW_DEFER_TO_CI": "github-linux",
+        },
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    expected = 1 if relative.endswith("unrelated.py") else 0
+    assert result.returncode == expected, result.stdout + result.stderr
+    assert_block2_trace(calls.read_text(), expected, result.stderr)
+
+
 @pytest.mark.parametrize("gate_exit", [0, 7])
 @pytest.mark.parametrize("advanced_dev", [False, True])
 def test_deferred_gate_reviews_exact_staged_tree_and_propagates_failure(

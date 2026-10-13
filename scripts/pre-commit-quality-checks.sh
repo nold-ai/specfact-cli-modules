@@ -416,7 +416,9 @@ run_code_review_gate() {
       .github/workflows/code-review-macos-boundary.yml \
       tests/unit/test_capsule_proof_contexts.py tests/host/proof_capsule_deferred_review_ci.py tests/host/proof_capsule_review_projection_shell.py \
       tests/unit/test_pre_commit_quality_parity.py tests/unit/test_capsule_review_projection.py tests/unit/scripts/test_pre_commit_code_review.py \
-      tests/support/capsule_review_fixtures.py)"; then
+      tests/support/capsule_review_fixtures.py \
+      scripts/check_macos_boundary_ci_receipts.py scripts/macos_managed_boundary/control.py \
+      tests/unit/test_macos_boundary_ci_receipts.py tests/unit/test_macos_managed_control.py)"; then
       error "Capsule review deferral cannot determine the staged candidate delta against origin/dev."
       exit 1
     fi

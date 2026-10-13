@@ -597,6 +597,22 @@ def _marker_diagnostics(name: str, item: JsonObject) -> JsonObject:
     }
 
 
+def _control_progress(line: str, allowed: set[str]) -> JsonObject:
+    try:
+        item = json.loads(line)
+    except ValueError:
+        return {}
+    if not isinstance(item, dict) or item.get("control_progress") is not True:
+        return {}
+    names = {"active_case": allowed | {"unknown"}, "active_phase": _FAILURE_PHASES | {"unknown"}}
+    counters = {"observed_repetition": 100, "observed_completed_trials": 100 * len(CONTROL_RACES) + len(PROTOCOL_CASES)}
+    if any(not isinstance(item.get(key), str) or item[key] not in values for key, values in names.items()):
+        return {}
+    if any(type(item.get(key)) is not int or not 0 <= item[key] <= maximum for key, maximum in counters.items()):
+        return {}
+    return {key: item[key] for key in (*names, *counters)}
+
+
 def _log_diagnostics(name: str, path: Path, allowed: set[str]) -> JsonObject:
     """Select the first explicitly owned failure in the bounded private log tail."""
     try:
@@ -605,11 +621,14 @@ def _log_diagnostics(name: str, path: Path, allowed: set[str]) -> JsonObject:
             lines = log.read(16384).decode("utf-8", errors="replace").splitlines()
     except OSError:
         return {}
+    progress = {}
     for line in lines:
         item = _owned_marker(line, allowed)
         if item is not None:
             return _marker_diagnostics(name, item)
-    return {}
+        if name == "control":
+            progress.update(_control_progress(line, allowed))
+    return progress
 
 
 def failure_summary(name: str, receipt_path: Path, log_path: Path) -> JsonObject:

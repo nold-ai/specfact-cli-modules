@@ -58,6 +58,7 @@ SOCKET_FAILURE_STATES = frozenset(
     )
 )
 _ACTIVE_OPERATION: ContextVar[tuple[object | None, str]] = ContextVar("control_operation", default=(None, "unknown"))
+_TRIAL_PROGRESS: ContextVar[tuple[str, int, int] | None] = ContextVar("control_trial_progress", default=None)
 
 
 def _activate_operation(owner: Invocation | None, phase: str) -> None:
@@ -66,10 +67,34 @@ def _activate_operation(owner: Invocation | None, phase: str) -> None:
     if owner is not None:
         owner.phase = phase
     _ACTIVE_OPERATION.set((owner, phase))
+    progress = _TRIAL_PROGRESS.get()
+    if progress is not None:
+        selected, repetition, completed = progress
+        case = getattr(owner, "case", selected)
+        case = selected if case == "protocol" else case
+        allowed = {
+            *LIFECYCLE_CASES,
+            *PROTOCOL_CASES,
+            "protocol",
+            "isolation-left",
+            "isolation-right",
+            "normal",
+            "runtime-trap",
+        }
+        _emit_json(
+            {
+                "control_progress": True,
+                "active_case": case if isinstance(case, str) and case in allowed else "unknown",
+                "active_phase": phase,
+                "observed_repetition": repetition,
+                "observed_completed_trials": completed,
+            }
+        )
 
 
 def _stamp_failure(error: BaseException) -> tuple[object | None, str]:
     """Snapshot once before any nested context emits diagnostics or cleans up."""
+    _TRIAL_PROGRESS.set(None)
     return error.__dict__.setdefault("_control_failure_origin", _ACTIVE_OPERATION.get())
 
 
@@ -963,14 +988,19 @@ def run_trials(
 ) -> list[dict[str, Any]]:
     """Reject any failed native case; do not run observer-assisted rescues as proof."""
     trials = [] if trials is None else trials
-    trials.extend(protocol_trials(broker, observer, root))
-    for index in range(repetitions):
-        for case in LIFECYCLE_CASES:
-            item = lifecycle_trial(broker, observer, root, case)
-            item["repetition"] = index + 1
-            trials.append(item)
-        if (index + 1) % 10 == 0:
-            _emit_json({"completed_repetitions": index + 1, "cases": len(LIFECYCLE_CASES)})
+    token = _TRIAL_PROGRESS.set(("protocol", 0, len(trials)))
+    try:
+        trials.extend(protocol_trials(broker, observer, root))
+        for index in range(repetitions):
+            for case in LIFECYCLE_CASES:
+                _TRIAL_PROGRESS.set((case, index + 1, len(trials)))
+                item = lifecycle_trial(broker, observer, root, case)
+                item["repetition"] = index + 1
+                trials.append(item)
+            if (index + 1) % 10 == 0:
+                _emit_json({"completed_repetitions": index + 1, "cases": len(LIFECYCLE_CASES)})
+    finally:
+        _TRIAL_PROGRESS.reset(token)
     return trials
 
 

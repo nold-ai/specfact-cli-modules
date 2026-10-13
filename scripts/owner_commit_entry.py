@@ -37,6 +37,10 @@ CAPSULE_PATHS = (
     "tests/unit/test_capsule_review_projection.py",
     "tests/unit/scripts/test_pre_commit_code_review.py",
     "tests/support/capsule_review_fixtures.py",
+    "scripts/check_macos_boundary_ci_receipts.py",
+    "scripts/macos_managed_boundary/control.py",
+    "tests/unit/test_macos_boundary_ci_receipts.py",
+    "tests/unit/test_macos_managed_control.py",
 )
 
 

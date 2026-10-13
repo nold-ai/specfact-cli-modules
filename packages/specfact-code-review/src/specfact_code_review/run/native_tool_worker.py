@@ -523,11 +523,17 @@ def _cached_analyzer_dependency(module, original_site, stdlib, admitted) -> bool
 
 def _purge_analyzer_dependencies(original_site, finder, stdlib_paths) -> None:
     stdlib = tuple(Path(path) for path in stdlib_paths)
+    removed = set()
     for fullname, module in tuple(sys.modules.items()):
         top_level = fullname.partition(".")[0]
         if top_level == "specfact_code_review" or fullname == "__main__":
             continue
         if _cached_analyzer_dependency(module, original_site, stdlib, top_level in finder.names):
+            sys.modules.pop(fullname, None)
+            removed.add(fullname)
+    prefixes = tuple(f"{fullname}." for fullname in removed)
+    for fullname in tuple(sys.modules):
+        if fullname.startswith(prefixes):
             sys.modules.pop(fullname, None)
 
 

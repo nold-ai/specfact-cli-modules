@@ -40,6 +40,60 @@ class _ControlTestCase(unittest.TestCase):
 
 
 class ControlContractTests(_ControlTestCase):
+    def test_progress_retains_lifecycle_bootstrap_and_completed_lower_bound(self):
+        emitted = []
+
+        def lifecycle(_broker, _observer, _root, case):
+            self.control._activate_operation(SimpleNamespace(case="protocol"), "bootstrap-register")
+            if case == "timeout":
+                raise RuntimeError("private-stall")
+            return {"case": case, "passed": True}
+
+        with (
+            patch.object(self.control, "_emit_json", emitted.append),
+            patch.object(self.control, "LIFECYCLE_CASES", ("cancel", "timeout")),
+            patch.object(self.control, "protocol_trials", return_value=[{"case": "version", "passed": True}]),
+            patch.object(self.control, "lifecycle_trial", lifecycle),
+        ):
+            with self.assertRaisesRegex(RuntimeError, "private-stall"):
+                self.control.run_trials(Path("/broker"), Path("/observer"), Path("/private"), 1)
+            self.assertEqual(
+                emitted[-1],
+                {
+                    "control_progress": True,
+                    "active_case": "timeout",
+                    "active_phase": "bootstrap-register",
+                    "observed_repetition": 1,
+                    "observed_completed_trials": 2,
+                },
+            )
+            count = len(emitted)
+            self.control._activate_operation(SimpleNamespace(case="cancel"), "cleanup")
+            self.assertEqual(len(emitted), count)
+
+    def test_stamped_failure_stops_cleanup_progress(self):
+        emitted = []
+
+        def lifecycle(_broker, _observer, _root, _case):
+            owner = SimpleNamespace(case="cancel")
+            self.control._activate_operation(owner, "request-wait")
+            error = RuntimeError("private-failure")
+            self.control._stamp_failure(error)
+            self.control._activate_operation(owner, "cleanup")
+            raise error
+
+        with (
+            patch.object(self.control, "_emit_json", emitted.append),
+            patch.object(self.control, "LIFECYCLE_CASES", ("cancel",)),
+            patch.object(self.control, "protocol_trials", return_value=[]),
+            patch.object(self.control, "lifecycle_trial", lifecycle),
+            self.assertRaisesRegex(RuntimeError, "private-failure"),
+        ):
+            self.control.run_trials(Path("/broker"), Path("/observer"), Path("/private"), 1)
+        self.assertEqual(len(emitted), 1)
+        self.assertEqual(emitted[0]["active_phase"], "request-wait")
+        self.assertNotIn("private", json.dumps(emitted))
+
     # Private diagnostic helpers are deliberately exercised for failure/privacy regression coverage.
     def test_exact_versioned_wire(self):
         packet = self.control.frame(b"a" * 32, 1, self.control.FrameFields(argument=2, timeout_ms=300))
