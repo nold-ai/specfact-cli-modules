@@ -3,12 +3,10 @@ from __future__ import annotations
 import ast
 import importlib.util
 import json
-import pathlib
 import subprocess
 import sys
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any
 
 import pytest
 import yaml
@@ -1672,32 +1670,33 @@ def test_native_observer_portable_counts_remain_exact(observe_native_projection)
     }
 
 
-def _actual_native_observer_class():
+def _actual_native_observer_class(tmp_path: Path):
     runner = REPO_ROOT / "packages/specfact-code-review/src/specfact_code_review/run/runner.py"
     tree = ast.parse(runner.read_text())
     producer = next(
         node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == "_pytest_observer_script"
     )
-    namespace: dict[str, Any] = {
-        "_SOURCE_ROOT": REPO_ROOT,
-        "Path": Path,
-        "sys": sys,
-        "_pytest_in_capsule": lambda: False,
-    }
-    exec(compile(ast.Module(body=[producer], type_ignores=[]), str(runner), "exec"), namespace)
-    generated = ast.parse(namespace["_pytest_observer_script"]())
+    producer_path = tmp_path / "native_producer.py"
+    producer_path.write_text(ast.unparse(producer), encoding="utf-8")
+    producer_spec = importlib.util.spec_from_file_location("native_producer_proof", producer_path)
+    assert producer_spec is not None and producer_spec.loader is not None
+    producer_module = importlib.util.module_from_spec(producer_spec)
+    producer_module.__dict__.update(_SOURCE_ROOT=REPO_ROOT, Path=Path, sys=sys, _pytest_in_capsule=lambda: False)
+    producer_spec.loader.exec_module(producer_module)
+    generated = ast.parse(producer_module._pytest_observer_script())
     observer_class = next(node for node in generated.body if isinstance(node, ast.ClassDef) and node.name == "Observer")
-    namespace = {"json": json, "pathlib": pathlib}
-    exec(
-        compile(ast.Module(body=[observer_class], type_ignores=[]), "<actual-native-observer>", "exec"),
-        namespace,
-    )
-    return namespace["Observer"]
+    observer_path = tmp_path / "native_observer.py"
+    observer_path.write_text("import json, pathlib\n" + ast.unparse(observer_class), encoding="utf-8")
+    observer_spec = importlib.util.spec_from_file_location("native_observer_proof", observer_path)
+    assert observer_spec is not None and observer_spec.loader is not None
+    observer_module = importlib.util.module_from_spec(observer_spec)
+    observer_spec.loader.exec_module(observer_module)
+    return observer_module.Observer
 
 
 def test_native_observer_actual_native_producer_failed_setup_and_skip(observe_native_projection, tmp_path):
     observer_path = tmp_path / "observer.json"
-    instance = _actual_native_observer_class()(observer_path)
+    instance = _actual_native_observer_class(tmp_path)(observer_path)
     for nodeid, skipped in [("private::failed", False), ("private::skipped", True)]:
         instance.pytest_itemcollected(SimpleNamespace(nodeid=nodeid))
         instance.pytest_runtest_logreport(SimpleNamespace(nodeid=nodeid, when="setup", passed=False, skipped=skipped))
