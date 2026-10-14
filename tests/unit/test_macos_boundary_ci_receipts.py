@@ -23,7 +23,7 @@ class _WorkflowDefinitionsLoader(importlib.machinery.SourceFileLoader):
     """Load actual CI definitions while excluding the workflow entry point."""
 
     def __init__(self, tree: ast.Module):
-        super().__init__("boundary_ci_definitions", "code-review-macos-boundary.yml")
+        super().__init__("boundary_ci_definitions", str(ROOT / "scripts/check_macos_boundary_ci_receipts.py"))
         self.tree = tree
 
     def get_code(self, fullname: str) -> CodeType:
@@ -567,11 +567,14 @@ def _control_trial(case):
                 "status": {"pid": 400, "state": "exited", "exit": 37, "signal": 0, "traced": True},
             }
         )
-    elif case == "exec-identity-swap":
+        return trial
+    if case == "exec-identity-swap":
         trial.update(_identity_swap_fields())
-    elif case in EXEC_LIFECYCLE:
+        return trial
+    if case in EXEC_LIFECYCLE:
         trial.update(_exec_lifecycle_fields(case))
-    elif case.startswith("exec-exception-"):
+        return trial
+    if case.startswith("exec-exception-"):
         kind = case.removeprefix("exec-exception-")
         trial.update(
             {
@@ -585,7 +588,8 @@ def _control_trial(case):
                 },
             }
         )
-    elif case in EXEC_PROTOCOL:
+        return trial
+    if case in EXEC_PROTOCOL:
         trial.update(_exec_protocol_fields(case))
     return trial
 

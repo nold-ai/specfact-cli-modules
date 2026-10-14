@@ -2034,3 +2034,11 @@ Native member import dispatch SHALL satisfy Python's meta-path finder protocol w
 - **THEN** all five original cases and their helper retain their exact bodies, decorators and inherited fixture and execute without skips
 - **AND** the class resides on the existing registered native proof surface, outside Linux supplier discovery; Full andSMART retain their explicit proof phase and original opt-in behavior
 - **AND** all prior native commands, platform preflight, deadlines and required gates remain unchanged
+
+### Requirement: Honest receipt checker coverage attribution
+
+The receipt fixture SHALL retain its existing actual checker AST, test cases and excluded top-level execution guards while compiling definitions under the real checker Python filename. Coverage SHALL attribute executed functions to scripts/check_macos_boundary_ci_receipts.py. Existing configured source filters, omission policy, branch measurement and coverage thresholds SHALL remain. No synthetic coverage row or automatic source-filter override is permitted.
+
+#### Scenario: compiled definitions retain their source identity
+- **WHEN** the existing receipt cases execute checker definitions under the declared scripts coverage source
+- **THEN** measured source coverage reflects those actual Python functions, every retained case keeps its result, and the existing per-source threshold is evaluated without synthetic data

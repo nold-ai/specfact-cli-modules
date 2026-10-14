@@ -1207,7 +1207,7 @@ requirements:
       scenario_id: faithful-bounded-standard-output-protocol
       method: test
       intent: Apply the owner-approved callback-free logical UTF-8 accounting while preserving native error behavior and both four-MiB ceilings.
-      observable: Six genuine failures and four controls precede the repair; all129 CrossHair cases pass afterward. Stateful callbacks run once, native UTF-7 accepts its surrogate, string and registry overrides cannot run during accounting, and exact logical and mixed physical bounds remain enforced.
+      observable: Six genuine failures and four controls precede the repair; all 129 CrossHair cases pass afterward. Stateful callbacks run once, native UTF-7 accepts its surrogate, string and registry overrides cannot run during accounting, and exact logical and mixed physical bounds remain enforced.
 
   openspec:code-review-native-platform-execution:review-native-platform-execution:no-reporter-descriptor-capability-from-discard-streams:
     rationale: Preserve standard discard behavior without handing analyzed code the original reporter write capability.
@@ -1537,3 +1537,18 @@ requirements:
       method: test
       intent: Verify the frozen reviewer through the normal signed local-marketplace installation before authoritative execution.
       observable: Private preparation records strict pre/post signatures for all4modules,117hash/mode entries, controller origins outside candidate source and16real rejection/deadline tests; exact-head hosted Linux acceptance is still required and no publication follows.
+
+  openspec:code-review-native-platform-execution:review-native-platform-execution:honest-receipt-checker-coverage-attribution:
+    rationale: Attribute executed checker definitions to their real source without overriding configured coverage policy.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#460
+    touchpoints:
+    - id: receipt-coverage-attribution-spec
+      kind: config_file
+      locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
+    verification_cases:
+    - case_id: 460-65-1
+      scenario_id: honest-receipt-checker-coverage-attribution
+      method: test
+      intent: Preserve actual checker AST and every existing receipt case while correcting the loader filename.
+      observable: The actual frozen helper on current head measures zero percent before and 95.28% after the one-line correction, with passing receipt cases on both sides and unchanged 80% threshold. Immutable base still needs its separate source configuration prerequisite.

@@ -264,17 +264,21 @@ class _TargetOutput(io.TextIOWrapper):
 
     @ensure(lambda text, result: result == len(text))
     def write(self, text: str) -> int:
-        """Retain standard text errors and both unchanged shared byte budgets.
+        """Retain native encoding and bound physical bytes and logical UTF-8 width.
+
+        Count each surrogate as three bytes without invoking codec error handlers.
 
         :raises ValueError: the stream is closed or output exceeds its bound.
         :raises TypeError: target writes a non-text value.
         :raises UnicodeEncodeError: text violates the active encoding/error policy.
         """
-        errors = cast(str, self.errors)
         result = super().write(text)
         self.flush()
         cast(_TargetRaw, cast(_TargetBinary, self.buffer).raw).verify_output_bound()
-        self._utf8_written += len(text.encode("utf-8", errors))
+        self._utf8_written += sum(
+            1 + (ord(character) > 0x7F) + (ord(character) > 0x7FF) + (ord(character) > 0xFFFF)
+            for character in str.__iter__(text)
+        )
         if self._utf8_written > 4 * 1024 * 1024:
             raise ValueError("crosshair_target_output_limit_exceeded")
         return result
