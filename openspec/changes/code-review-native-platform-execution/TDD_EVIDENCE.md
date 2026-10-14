@@ -5534,3 +5534,103 @@ requires each scenario_id to equal its requirement suffix
 (`specfact_requirements/requirements/evidence.py:333`). Correcting those five
 references preserves all scenario intents, source requirements and acceptance;
 the hook was not bypassed. The rejected commit created no Git commit.
+
+## Bounded Linux diagnostic activation, unit 2, 2026-10-14 Europe/Berlin
+
+This activation starts from immutable checker commit
+`8fb94dd5a00dbb244be1451a1aa9793311e25f66`, checker blob
+`c1af0ecad38ab788a9b3934d00516377bf96d5ad`. The preceding unit's
+prospective-program evidence remains historical evidence at its stated head.
+The user-approved scope retains signed independent reviewer 0.51.2 and all
+commands, deadlines, blocking gates, cleanup and review-path boundaries.
+
+Permanent tests now execute the actual workflow heredocs. Before activation,
+`.venv/bin/python -m pytest -q tests/unit/test_capsule_review_projection.py
+ tests/host/proof_capsule_deferred_review_ci.py -k 'linux_failure or actual_linux_observation'
+ --tb=short` produced **47 failed**. The 44 projector cases failed for absent
+observation fields. Three real-Git activation cases failed because the workflow
+still contained the old bodies. The first run used long payload-derived pytest
+IDs; concise explicit IDs replaced them without reducing the adversarial payload.
+The final RED record is
+`/private/tmp/specfact-pr506-510-repair/linux-diag-unit2-red-concise.log`.
+
+The two approved bodies were then activated without changing their frozen text.
+Candidate SHA-256 is
+`ead9d88db8dfd7e8aeb936135db7c9358cf6fb4dc861efce6a7497078508dfa1`.
+Independent SHA-256 is
+`8052e2ea961ba3109f78ea70f637827cc60f234692842acda0c5d72de61794b9`.
+Both bootstrap consumers now pin the immutable checker above. Wrapper SHA-256 is
+`8faf20d200562a77977e011db339b232967015318f692ca9af3a992473ee3af1`,
+matched by the required CI authentication and its shell proof.
+
+The first combined run found stale exact-output expectations for the additional
+fields and a fixture that stripped the final newline from Git source. The
+assertions now include the precise extra records; the Git fixture reads complete
+source bytes. No approved program changed. The final command
+`.venv/bin/python -m pytest -q tests/unit/test_capsule_review_projection.py
+ tests/host/proof_capsule_deferred_review_ci.py
+ tests/host/proof_capsule_review_projection_shell.py --tb=short` passed
+**437 tests**, recorded in
+`/private/tmp/specfact-pr506-510-repair/linux-diag-unit2-green.log`.
+
+These tests cover private canaries, invalid values, duplicate analyzers and JSON
+sides, absent data, 2 MiB and 32 MiB bounds, count bounds, side-specific coverage,
+required UNKNOWN evidence, global finding classes, semicolon-joined pre-commit
+status, and bounded long-dot parsing. Existing host proofs retain failed exits,
+private stderr, workflow mutation rejection, bootstrap expiry, integrated
+authority precedence, replacement-reference rejection and cleanup. Three permanent
+real-Git controls compare the actual new workflow to the immutable old Git
+baseline, individually and together, without temporary external fixture files.
+
+Focused Ruff check/format and BasedPyright pass with zero errors or warnings.
+Manifest/YAML validation passes for seven manifests and the registry. Restoring
+only the two old heredoc bodies reproduces both the original raw workflow bytes
+and parsed workflow exactly. Parsed active-body hashes match the frozen allowlist;
+`git diff --check` passes. Integrity evidence is
+`/private/tmp/specfact-pr506-510-repair/linux-diag-unit2-integrity-final.log`.
+This is local activation evidence. Full mandatory gates, independent review,
+normal-hook commit and exact-head hosted Linux diagnosis remain with the root owner.
+
+
+### Root-owned final activation gates, 14 October 2026
+
+Subject is immutable checker `8fb94dd5` plus the activation tree. Final Full and
+SMART each pass 304 host/canonical/shell proofs and 5,952 supplier tests,
+with 71 existing conditional skips, 95 passing subtests and five existing
+warnings. Logs are `linux-diag-full-native-final.log` and
+`linux-diag-smart-native-final.log` under the repair artifact directory.
+The first sandboxed Full/SMART attempts failed native process/tool checks,
+including an explicit `/bin/ps` EPERM. They remain retained in
+`linux-diag-full-final.log` and `linux-diag-smart-final.log`; these are
+setup/permission failures, not claimed product RED. The unchanged suites
+passed sequentially with native subprocess permissions. No assertion,
+selection, timeout or acceptance gate was changed for that verification.
+
+Format, global types with zero errors/warnings, lint10, YAML, documentation,
+all 28 module contracts and all seven strict public-key/filesystem/version
+signature checks against actual origin/dev pass. Signing assets and payload
+versions are unchanged. Local capsule review remains DEFERRED to required
+exact-head Linux CI and is not local PASS.
+
+Separate three-model activation review reports no findings. Standalone
+read-only security verification reports the supplied descriptor, authenticated
+CI-entry and complete committed-path fixes fixed, retaining its controlled
+regression scope and explicit hosted-CI proof gap. Root independently verified
+both parsed program hashes against the frozen allowlist and reconstructed the
+raw original workflow by restoring only its two program spans. Normalization
+also equals the actual integrated origin/dev contract after its previously
+approved budget adaptation. A first root hash probe used system Python without
+PyYAML; the repository interpreter completed the actual checks successfully.
+
+The canonical quality-rule wording now describes the explicitly reviewed
+immutable successor bootstrap and exact diagnostic-body exception, while
+retaining integrated-checker priority and every existing execution gate.
+The test-only projection matrix remains at its existing coupled extraction
+seam; its literal privacy/type/adversarial cases grow the file from 988 to
+1,236 lines without introducing a new production interface or executable
+trust transport. This scoped test-data growth is accepted to preserve the
+approved scheduling surface and fixture ownership.
+
+Actual Linux failure causes and current-head hosted acceptance remain unproven
+until the observation wave runs. Neither the new observations nor these local
+results permit merge, publication, waiver, or a timeout increase.

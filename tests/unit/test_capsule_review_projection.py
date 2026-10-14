@@ -320,7 +320,23 @@ def test_independent_review_failure_keeps_nested_evidence_and_private_tokens(tmp
     monkeypatch.setenv("REVIEW_LOG", str(log))
     result = _run_projector(tmp_path, program)
     assert result.returncode == 0
-    assert json.loads(result.stdout) == _expected_review_projection(expected)
+    projection = _expected_review_projection(expected)
+    projection.update(
+        snapshot_observations=[],
+        enforcement_observation={"assurance_status": "FAIL"} if expected[0] == "structured_report" else {},
+        finding_observations=[],
+    )
+    if case == "nested":
+        projection["snapshot_observations"] = [
+            {
+                "analyzer": "pylint",
+                "side": "head",
+                "execution_state": "error",
+                "evidence_outcome": "UNKNOWN",
+                "diagnostic_classes": ["namespace_unavailable"],
+            }
+        ]
+    assert json.loads(result.stdout) == projection
     assert "private-token" not in result.stdout + result.stderr
 
 
@@ -380,6 +396,10 @@ def test_candidate_crosshair_failure_emits_only_fixed_classes(tmp_path, message,
         if expected is None
         else [{"analyzer": "contracts", "diagnostic_class": expected[0], "exception_observations": expected[1]}]
     )
+    observations = []
+    if tool == "crosshair" and category == "tool_error" and message.startswith("Unrecognized CrossHair output:"):
+        observations = [{"analyzer": "contracts", "diagnostic_class": "crosshair_rejected_other_stdout"}]
+    output.append({"snapshot_observations": [], "enforcement_observation": {}, "finding_observations": observations})
     assert [json.loads(line) for line in result.stdout.splitlines()] == output
     assert "private-token" not in result.stdout + result.stderr
 
@@ -645,7 +665,9 @@ def test_candidate_large_report_retains_unavailable_marker_and_fixed_failure_cla
             }
         )
     assert result.returncode == 0
-    assert [json.loads(line) for line in result.stdout.splitlines()] == expected
+    rows = [json.loads(line) for line in result.stdout.splitlines()]
+    assert rows[:-1] == expected
+    assert rows[-1] == {"snapshot_observations": [], "enforcement_observation": {}, "finding_observations": []}
     assert "private-token" not in result.stdout + result.stderr
 
 
@@ -713,7 +735,16 @@ def test_candidate_incomplete_snapshot_projection_is_finite(tmp_path, nested, ex
     result = _run_projector(tmp_path, program)
     assert result.returncode == 0
     rows = [json.loads(line) for line in result.stdout.splitlines()]
-    assert rows == ([{"analyzer": "contracts", "incomplete_snapshot_sides": expected}] if expected else [])
+    observations = [
+        {
+            "analyzer": "contracts",
+            "side": side,
+            **{key: nested[side][key] for key in ("execution_state", "evidence_outcome") if key in nested[side]},
+        }
+        for side in expected
+    ]
+    summary = {"snapshot_observations": observations, "enforcement_observation": {}, "finding_observations": []}
+    assert rows == ([{"analyzer": "contracts", "incomplete_snapshot_sides": expected}] if expected else []) + [summary]
     assert "PRIVATE_TOKEN" not in result.stdout + result.stderr
 
 
@@ -986,3 +1017,220 @@ def test_native_failure_excludes_unrecognized_or_successful_diagnostic_rows(tmp_
     assert "crosshair_failure_observations" not in record
     assert record["error_analyzers"] == ["contracts"]
     assert "PRIVATE" not in result.stdout and len(result.stdout.encode()) <= 4096
+
+
+_FAILURE_MARKERS = ("PY_CANDIDATE_FAILURE", "PY_REVIEW_FAILURE")
+_PRIVATE_CANARY = "PRIVATE_CLASSIFIER_PATH_TEST_ID"
+
+
+def _actual_failure_observations(tmp_path, monkeypatch, marker, payload):
+    workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())
+    recipe = next(
+        step["run"] for job in workflow["jobs"].values() for step in job["steps"] if marker in step.get("run", "")
+    )
+    program = recipe.split("<<'" + marker + "'", 1)[1].split("\n", 1)[1].split("\n" + marker, 1)[0]
+    report = tmp_path / ".specfact/code-review.json"
+    report.parent.mkdir()
+    report.write_text(payload)
+    monkeypatch.setenv("REVIEW_REPORT", str(report))
+    monkeypatch.setenv("REVIEW_LOG", str(tmp_path / "missing"))
+    path = tmp_path / "projector.py"
+    path.write_text(program)
+    result = subprocess.run(
+        [sys.executable, str(path)], cwd=tmp_path, capture_output=True, text=True, timeout=4, check=False
+    )
+    assert result.returncode == 0 and not result.stderr
+    assert _PRIVATE_CANARY not in result.stdout
+    assert len(result.stdout.encode()) < 16384
+    return json.loads(result.stdout.splitlines()[-1])
+
+
+@pytest.mark.parametrize("marker", _FAILURE_MARKERS)
+def test_linux_failure_observations_preserve_side_and_required_unknown(tmp_path, monkeypatch, marker):
+    node = {
+        "execution_state": "error",
+        "evidence_outcome": "UNKNOWN",
+        "diagnostic": "project_pytest_coverage_missing; " + _PRIVATE_CANARY,
+        "target_execution": {
+            "exit_code": 1,
+            "collected": [_PRIVATE_CANARY],
+            "deselected": [],
+            "coverage": {_PRIVATE_CANARY: _PRIVATE_CANARY},
+            "internal_errors": [_PRIVATE_CANARY],
+            "records": [{"nodeid": _PRIVATE_CANARY, "phase": "call", "outcome": "failed"}],
+            "collection_errors": [{"nodeid": _PRIVATE_CANARY, "detail": _PRIVATE_CANARY}],
+            "coverage_diagnostic": "project_pytest_coverage_missing:" + _PRIVATE_CANARY,
+        },
+    }
+    data = {
+        "findings": [],
+        "analyzer_evidence": [{"id": "targeted-pytest-coverage", "base": node}],
+        "enforcement_mode": "changed",
+        "assurance_status": "UNKNOWN",
+        "has_unknown_required_evidence": True,
+        "enforcement_summary": "Changed enforcement cannot pass while required evidence is UNKNOWN.",
+    }
+    diagnostic = _actual_failure_observations(tmp_path, monkeypatch, marker, json.dumps(data))
+    assert diagnostic["snapshot_observations"] == [
+        {
+            "analyzer": "targeted-pytest-coverage",
+            "side": "base",
+            "execution_state": "error",
+            "evidence_outcome": "UNKNOWN",
+            "diagnostic_classes": ["project_pytest_coverage_missing"],
+            "target_execution_observed": True,
+            "coverage_object_observed": True,
+            "exit_code": 1,
+            "collected_count": 1,
+            "deselected_count": 0,
+            "internal_errors_count": 1,
+            "records_count": 1,
+            "collection_errors_count": 1,
+            "coverage_diagnostic_classes": ["project_pytest_coverage_missing"],
+        }
+    ]
+    assert diagnostic["enforcement_observation"] == {
+        "enforcement_mode": "changed",
+        "assurance_status": "UNKNOWN",
+        "has_unknown_required_evidence": True,
+        "advisory_projection_blocked_by_required_unknown": True,
+        "summary_class": "changed_enforcement_required_unknown",
+    }
+    assert diagnostic["finding_observations"] == []
+
+
+def _linux_boundary_payload(case):
+    target = {
+        "exit_code": True,
+        "collected": [_PRIVATE_CANARY, 1],
+        "coverage": _PRIVATE_CANARY,
+        "records": [{"nodeid": _PRIVATE_CANARY, "phase": _PRIVATE_CANARY, "outcome": "passed"}],
+        "collection_errors": [_PRIVATE_CANARY],
+        "internal_errors": [False],
+    }
+    node = {"execution_state": "error", "evidence_outcome": "UNKNOWN", "target_execution": target}
+    row = {"id": "targeted-pytest-coverage", "head": node}
+    data = {"findings": [], "analyzer_evidence": [row]}
+    if case == "duplicate_analyzer":
+        data["analyzer_evidence"].append(row.copy())
+    if case == "too_many_analyzers":
+        data["analyzer_evidence"] = [row] + [{"id": _PRIVATE_CANARY}] * 10
+    if case == "large":
+        data["padding"] = "x" * (2 * 1024 * 1024)
+    if case == "oversize":
+        data["padding"] = "x" * (32 * 1024 * 1024)
+    if case == "absent":
+        data["analyzer_evidence"] = []
+    if case == "count_bound":
+        target["collected"] = [_PRIVATE_CANARY] * 100001
+    payload = json.dumps(data)
+    if case == "duplicate_side":
+        payload = payload.replace('"head":', '"head":{},"head":', 1)
+    if case == "invalid_json":
+        payload = _PRIVATE_CANARY
+    return payload
+
+
+@pytest.mark.parametrize("marker", _FAILURE_MARKERS)
+@pytest.mark.parametrize(
+    "case",
+    [
+        "invalid_values",
+        "duplicate_analyzer",
+        "duplicate_side",
+        "too_many_analyzers",
+        "large",
+        "oversize",
+        "absent",
+        "count_bound",
+        "invalid_json",
+    ],
+)
+def test_linux_failure_observations_omit_invalid_private_or_unavailable_fields(tmp_path, monkeypatch, marker, case):
+    diagnostic = _actual_failure_observations(tmp_path, monkeypatch, marker, _linux_boundary_payload(case))
+    expected = []
+    if case in ("invalid_values", "large", "count_bound"):
+        expected = [
+            {
+                "analyzer": "targeted-pytest-coverage",
+                "side": "head",
+                "execution_state": "error",
+                "evidence_outcome": "UNKNOWN",
+                "target_execution_observed": True,
+            }
+        ]
+    assert diagnostic["snapshot_observations"] == expected
+    assert diagnostic["enforcement_observation"] == {}
+    assert diagnostic["finding_observations"] == []
+
+
+@pytest.mark.parametrize("marker", _FAILURE_MARKERS)
+@pytest.mark.parametrize(
+    "payload,expected",
+    [
+        ("hook...Passed; " + _PRIVATE_CANARY, "pre_commit_status"),
+        ("hook...Failed\n" + _PRIVATE_CANARY, "pre_commit_status"),
+        ("hook...Skipped\r\n" + _PRIVATE_CANARY, "pre_commit_status"),
+        ("...Passed", "other_stdout"),
+        ("   ...Passed", "other_stdout"),
+        ("hook..Passed", "other_stdout"),
+        ("hook...Passed" + _PRIVATE_CANARY, "other_stdout"),
+        (_PRIVATE_CANARY + "; hook...Passed", "other_stdout"),
+        ("smart-test status: ready (uses pytest tests/); " + _PRIVATE_CANARY, "smart_test_status"),
+        ("smart-test check: configured (modules repo scoped); " + _PRIVATE_CANARY, "smart_test_status"),
+        (_PRIVATE_CANARY + "." * 20000 + "unrecognized", "other_stdout"),
+    ],
+    ids=[
+        "semicolon-passed",
+        "newline-failed",
+        "crlf-skipped",
+        "no-label",
+        "blank-label",
+        "two-dots",
+        "suffix",
+        "later-segment",
+        "smart-ready",
+        "smart-configured",
+        "long-dotted-stdout",
+    ],
+)
+def test_linux_failure_global_crosshair_status_is_bounded_and_side_free(
+    tmp_path, monkeypatch, marker, payload, expected
+):
+    data = {
+        "analyzer_evidence": [],
+        "findings": [
+            {"tool": "crosshair", "category": "tool_error", "message": "Unrecognized CrossHair output: " + payload}
+        ]
+        * 32,
+    }
+    diagnostic = _actual_failure_observations(tmp_path, monkeypatch, marker, json.dumps(data))
+    assert diagnostic["snapshot_observations"] == []
+    assert diagnostic["finding_observations"] == [
+        {"analyzer": "contracts", "diagnostic_class": "crosshair_rejected_" + expected}
+    ]
+
+
+@pytest.mark.parametrize("marker", _FAILURE_MARKERS)
+def test_linux_failure_global_pylint_and_coverage_classes_do_not_infer_side(tmp_path, monkeypatch, marker):
+    data = {
+        "analyzer_evidence": [],
+        "findings": [
+            {
+                "tool": "pylint",
+                "category": "tool_error",
+                "message": "Unable to parse pylint output: Command " + _PRIVATE_CANARY + " timed out after 30 seconds",
+            },
+            {
+                "tool": "pytest",
+                "category": "tool_error",
+                "message": "project_pytest_coverage_missing; " + _PRIVATE_CANARY,
+            },
+        ],
+    }
+    diagnostic = _actual_failure_observations(tmp_path, monkeypatch, marker, json.dumps(data))
+    assert diagnostic["snapshot_observations"] == []
+    assert diagnostic["finding_observations"] == [
+        {"analyzer": "pylint", "diagnostic_class": "pylint_timeout_observed"},
+        {"analyzer": "targeted-pytest-coverage", "diagnostic_class": "project_pytest_coverage_missing"},
+    ]

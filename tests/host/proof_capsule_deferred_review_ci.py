@@ -729,8 +729,8 @@ def test_indexed_deferral_admits_only_complete_approved_job_budget(
     _assert_local_deferral(worktree, tmp_path / "calls", expected)
 
 
-_PINNED_VALIDATOR_COMMIT = "c65a41e61a6b4e61e8dd2b69526a1cfc8650b3ad"
-_PINNED_VALIDATOR_BLOB = "cc549b5bbd945b64d055afe111bcaeeb059d585a"
+_PINNED_VALIDATOR_COMMIT = "8fb94dd5a00dbb244be1451a1aa9793311e25f66"
+_PINNED_VALIDATOR_BLOB = "c1af0ecad38ab788a9b3934d00516377bf96d5ad"
 
 
 def _tampered_deferral_candidate(tmp_path, *, staged_checker, missing_caller, bootstrap=False):
@@ -1044,7 +1044,7 @@ def test_committed_ci_check_retains_actual_bootstrap_expiry(tmp_path: Path, case
         validator_present=False,
     )
     if case != "missing-bootstrap":
-        _git(worktree, "fetch", "--no-tags", str(REPO_ROOT), "c65a41e61a6b4e61e8dd2b69526a1cfc8650b3ad")
+        _git(worktree, "fetch", "--no-tags", str(REPO_ROOT), "8fb94dd5a00dbb244be1451a1aa9793311e25f66")
     base = _git(worktree, "rev-parse", "origin/dev")
     if case == "squash-deleted":
         repository = tmp_path / "repository"
@@ -1204,3 +1204,32 @@ def test_observation_contract_retains_entire_workflow(tmp_path: Path, job_name: 
     _git(repository, "add", ".")
     result = _check_observation_contract(repository, baseline)
     assert (result.returncode == 0) is (mutation == "unchanged"), result.stderr
+
+
+@pytest.mark.parametrize("job_name", ["customer", "independent-review", "both"])
+def test_actual_linux_observation_activation_matches_integrated_baseline(tmp_path: Path, job_name: str) -> None:
+    repository, path, _ = _observation_contract_repository(tmp_path)
+    relative = ".github/workflows/capsule-customer-execution.yml"
+    old_source = subprocess.check_output(
+        ["git", "show", f"8fb94dd5a00dbb244be1451a1aa9793311e25f66:{relative}"], cwd=REPO_ROOT, text=True
+    )
+    path.write_text(old_source)
+    _git(repository, "add", ".")
+    _git(repository, "commit", "--allow-empty", "-qm", "reviewed original observation programs")
+    baseline = _git(repository, "rev-parse", "HEAD")
+    document = yaml.safe_load(old_source)
+    current = yaml.safe_load((REPO_ROOT / relative).read_text())
+    jobs = ("customer", "independent-review") if job_name == "both" else (job_name,)
+    for name in jobs:
+        marker = "PY_CANDIDATE_FAILURE" if name == "customer" else "PY_REVIEW_FAILURE"
+        old_step = next(step for step in document["jobs"][name]["steps"] if marker in step.get("run", ""))
+        new_step = next(step for step in current["jobs"][name]["steps"] if marker in step.get("run", ""))
+        assert old_step["run"].rstrip() != new_step["run"].rstrip(), (
+            "Activation must exercise new body against old Git bytes"
+        )
+        old_step["run"] = new_step["run"]
+    document["on"] = document.pop(True)
+    path.write_text(yaml.safe_dump(document, sort_keys=False))
+    _git(repository, "add", ".")
+    result = _check_observation_contract(repository, baseline)
+    assert result.returncode == 0, result.stderr

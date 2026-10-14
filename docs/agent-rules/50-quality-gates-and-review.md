@@ -13,7 +13,7 @@ tracks:
   - scripts/pre_commit_code_review.py
   - scripts/verify-modules-signature.py
   - docs/agent-rules/**
-last_reviewed: 2026-10-13
+last_reviewed: 2026-10-14
 exempt: false
 exempt_reason: ""
 id: agent-rules-quality-gates-and-review
@@ -72,7 +72,7 @@ Signatures CI job additionally validates final committed capsule scheduling for
 feature PRs to dev. Immediately before that validation, the same job authenticates
 its wrapper against the reviewed source digest; missing or changed bytes fail before
 execution. Intentional wrapper updates require a reviewed digest update in that CI
-step. The integrated/approved checker authority is unchanged. The three quality jobs
+step. The integrated checker remains the preferred authority. An explicitly approved bootstrap revision requires an ordinary-hook-verified immutable checker commit/blob in both consumers and the matching authenticated CI wrapper digest. The approved Linux diagnostic revision admits only exact reviewed observation-program bytes; every other reusable-workflow execution field remains pinned. The three quality jobs
 retain their blocking review prerequisites. Ordinary hooks remain mandatory; no private hook installer,
 transaction record, broker or administrator provisioning is required.
 

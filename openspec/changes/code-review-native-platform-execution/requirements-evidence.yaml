@@ -1394,7 +1394,7 @@ requirements:
       scenario_id: owner-approved-bounded-linux-review-failure-observations
       method: test
       intent: Reproduce missing side observations in both current projectors before creating exact replacement bodies.
-      observable: Two genuine missing-observation cases fail on old bodies; frozen replacement bodies pass 18 privacy, enum, bound, duplicate and side controls. Activation and hosted root diagnosis remain pending.
+      observable: Two genuine missing-observation cases fail on old bodies; frozen replacement bodies pass 18 privacy, enum, bound, duplicate and side controls. Historical unit 1 evidence. Unit 2 later passes 437 permanent actual-workflow and host proofs after 47 genuine RED cases; exact-head hosted root diagnosis remains pending.
     - case_id: 460-60-2
       scenario_id: owner-approved-bounded-linux-review-failure-observations
       method: test
@@ -1404,7 +1404,7 @@ requirements:
       scenario_id: owner-approved-bounded-linux-review-failure-observations
       method: test
       intent: Preserve the original failure and every review prerequisite through observation.
-      observable: Existing 203 projection and shell proofs pass with active old workflow; permanent activated-projector proofs remain required in unit 2.
+      observable: Historical unit 1 ran 203 old-workflow proofs. Unit 2 runs 437 activated-workflow and host proofs, preserving original failed exits, private stderr, cleanup, all review prerequisites and signed reviewer 0.51.2.
   openspec:code-review-native-platform-execution:review-native-platform-execution:exact-reviewed-linux-observation-contract-authority:
     rationale: Admit only reviewed observation bytes under an immutable checker while retaining complete execution equality.
     stakeholder_refs:
@@ -1423,4 +1423,4 @@ requirements:
       scenario_id: exact-reviewed-linux-observation-contract-authority
       method: test
       intent: Retain rejection of body, shell, delimiter, step identity, metadata and ordering mutations.
-      observable: All 187 permanent host scheduling proofs pass, including 16 new unchanged-workflow and mutation controls; pin activation requires a separate normal-hook commit.
+      observable: Historical unit 1 ran 187 host scheduling proofs. Unit 2 includes three permanent real-Git old/new activation controls in its 437 passing proofs, retains mutation rejection, and pins both consumers to immutable checker commit 8fb94dd5a00dbb244be1451a1aa9793311e25f66 and blob c1af0ecad38ab788a9b3934d00516377bf96d5ad. Normal-hook activation commit remains pending.

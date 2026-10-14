@@ -443,6 +443,119 @@ jobs:
           import json
           from pathlib import Path
 
+
+          def unique_analyzer_rows(data):
+              allowed = ("ai-bloat-ast", "ast-clean-code", "basedpyright", "contracts", "pylint", "radon", "ruff", "semgrep-clean", "semgrep-bugs", "targeted-pytest-coverage")
+              rows = data.get("analyzer_evidence", [])
+              if not isinstance(rows, list) or len(rows) > 10:
+                  return []
+              names = [row.get("id") for row in rows if isinstance(row, dict)]
+              return [row for row in rows if isinstance(row, dict) and row.get("id") in allowed and names.count(row["id"]) == 1]
+
+
+          def diagnostic_classes(value):
+              known = ("analyzer_reported_incomplete_execution", "namespace_unavailable", "capsule_materialization_failed", "snapshot_member_incomplete", "project_runtime_prepare_failed", "project_test_selection_ambiguous", "local_pytest_inventory_failed", "project_pytest_coverage_plugin_not_activated", "project_pytest_coverage_disabled", "project_pytest_coverage_instrumentation_unavailable", "project_pytest_coverage_evidence_unavailable", "project_pytest_coverage_controller_observation_missing", "project_pytest_coverage_worker_missing", "project_pytest_coverage_diagnostic_invalid", "project_pytest_coverage_missing", "project_pytest_coverage_policy_invalid", "project_pytest_coverage_threshold_invalid")
+              if not isinstance(value, str):
+                  return []
+              return [code for code in known if value == code or value.startswith((code + ":", code + ";"))]
+
+
+          def coverage_observation(node):
+              target = node.get("target_execution")
+              if not isinstance(target, dict):
+                  return {}
+              observed = {"target_execution_observed": True}
+              if isinstance(target.get("coverage"), dict):
+                  observed["coverage_object_observed"] = True
+              code = target.get("exit_code")
+              if type(code) is int and 0 <= code <= 5:
+                  observed["exit_code"] = code
+              for key in ("collected", "deselected", "internal_errors"):
+                  items = target.get(key)
+                  if isinstance(items, list) and len(items) <= 100000 and all(isinstance(item, str) for item in items):
+                      observed[key + "_count"] = len(items)
+              records = target.get("records")
+              if isinstance(records, list) and len(records) <= 100000 and all(isinstance(item, dict) and isinstance(item.get("nodeid"), str) and item.get("phase") in ("setup", "call", "teardown", "collection") and item.get("outcome") in ("passed", "failed", "skipped") for item in records):
+                  observed["records_count"] = len(records)
+              errors = target.get("collection_errors")
+              if isinstance(errors, list) and len(errors) <= 100000 and all(isinstance(item, dict) and isinstance(item.get("nodeid"), str) and isinstance(item.get("detail"), str) for item in errors):
+                  observed["collection_errors_count"] = len(errors)
+              codes = diagnostic_classes(target.get("coverage_diagnostic"))
+              if codes:
+                  observed["coverage_diagnostic_classes"] = codes
+              return observed
+
+
+          def snapshot_observations(data):
+              observations = []
+              for row in unique_analyzer_rows(data):
+                  if row["id"] not in ("contracts", "pylint", "targeted-pytest-coverage"):
+                      continue
+                  for side in ("base", "head"):
+                      node = row.get(side)
+                      if not isinstance(node, dict) or not (node.get("execution_state") == "error" or node.get("evidence_outcome") == "UNKNOWN"):
+                          continue
+                      observed = {"analyzer": row["id"], "side": side}
+                      if node.get("execution_state") in ("ran", "error", "not_applicable"):
+                          observed["execution_state"] = node["execution_state"]
+                      if node.get("evidence_outcome") in ("PASS", "FAIL", "UNKNOWN", "NOT_APPLICABLE"):
+                          observed["evidence_outcome"] = node["evidence_outcome"]
+                      codes = diagnostic_classes(node.get("diagnostic"))
+                      if codes:
+                          observed["diagnostic_classes"] = codes
+                      if row["id"] == "targeted-pytest-coverage":
+                          observed.update(coverage_observation(node))
+                      observations.append(observed)
+              return observations
+
+
+          def enforcement_observation(data):
+              observed = {}
+              if data.get("enforcement_mode") in ("changed", "full", "shadow"):
+                  observed["enforcement_mode"] = data["enforcement_mode"]
+              if data.get("assurance_status") in ("PASS", "FAIL", "UNKNOWN", "NOT_APPLICABLE"):
+                  observed["assurance_status"] = data["assurance_status"]
+              if type(data.get("has_unknown_required_evidence")) is bool:
+                  observed["has_unknown_required_evidence"] = data["has_unknown_required_evidence"]
+              if data.get("enforcement_mode") == "changed" and (data.get("assurance_status") == "UNKNOWN" or data.get("has_unknown_required_evidence") is True):
+                  observed["advisory_projection_blocked_by_required_unknown"] = True
+              if data.get("enforcement_summary") == "Changed enforcement cannot pass while required evidence is UNKNOWN.":
+                  observed["summary_class"] = "changed_enforcement_required_unknown"
+              return observed
+
+
+          def finding_observations(data):
+              import re
+              observations = set()
+              findings = data.get("findings", [])
+              for finding in findings[:10000] if isinstance(findings, list) else []:
+                  if not isinstance(finding, dict) or finding.get("category") != "tool_error":
+                      continue
+                  message = finding.get("message")
+                  if not isinstance(message, str) or len(message) > 65536:
+                      continue
+                  if finding.get("tool") == "pylint" and re.fullmatch(r"Unable to parse pylint output: Command .+ timed out after 30 seconds", message, re.DOTALL):
+                      observations.add(("pylint", "pylint_timeout_observed"))
+                  if finding.get("tool") == "pytest":
+                      observations.update(("targeted-pytest-coverage", code) for code in diagnostic_classes(message))
+                  prefix = "Unrecognized CrossHair output: "
+                  if finding.get("tool") != "crosshair" or not message.startswith(prefix):
+                      continue
+                  payload = message[len(prefix):]
+                  code = "crosshair_rejected_other_stdout"
+                  if payload.startswith(("smart-test status: ready (uses pytest tests/)", "smart-test check: configured (modules repo scoped)")):
+                      code = "crosshair_rejected_smart_test_status"
+                  else:
+                      first_line = payload.split("; ", 1)[0].split("\n", 1)[0].split("\r", 1)[0]
+                      status = next((value for value in ("Passed", "Failed", "Skipped") if first_line.endswith(value)), "")
+                      dotted_label = first_line[:-len(status)] if status else ""
+                      label = dotted_label.rstrip(".")
+                      if label.strip() and len(dotted_label) - len(label) >= 3:
+                          code = "crosshair_rejected_pre_commit_status"
+                  observations.add(("contracts", code))
+              return [{"analyzer": name, "diagnostic_class": code} for name, code in sorted(observations)]
+
+
           def unique_candidate_json_object(pairs):
               value = {}
               for key, item in pairs:
@@ -469,7 +582,7 @@ jobs:
                   print(json.dumps({"analyzer": "contracts", "diagnostic_class": "candidate_report_unavailable"}))
               allowed = ("ai-bloat-ast", "ast-clean-code", "basedpyright", "contracts", "pylint", "radon", "ruff", "semgrep-clean", "semgrep-bugs", "targeted-pytest-coverage")
               known = ("analyzer_reported_incomplete_execution", "namespace_unavailable", "capsule_materialization_failed", "snapshot_member_incomplete", "project_runtime_prepare_failed", "project_test_selection_ambiguous", "local_pytest_inventory_failed")
-              rows = data.get("analyzer_evidence", [])
+              rows = unique_analyzer_rows(data)
               for row in rows[:10] if isinstance(rows, list) else []:
                   if not isinstance(row, dict) or row.get("id") not in allowed:
                       continue
@@ -505,6 +618,7 @@ jobs:
               for code, observed in sorted(observations.items()):
                   row = {"analyzer": "contracts", "diagnostic_class": code, "exception_observations": sorted(observed)}
                   print(json.dumps(row))
+              print(json.dumps({"snapshot_observations": snapshot_observations(data), "enforcement_observation": enforcement_observation(data), "finding_observations": finding_observations(data)}))
           PY_CANDIDATE_FAILURE
           fi
           exit "$review_exit"
@@ -1017,6 +1131,119 @@ jobs:
           import os
           from pathlib import Path
 
+
+          def unique_analyzer_rows(data):
+              allowed = ("ai-bloat-ast", "ast-clean-code", "basedpyright", "contracts", "pylint", "radon", "ruff", "semgrep-clean", "semgrep-bugs", "targeted-pytest-coverage")
+              rows = data.get("analyzer_evidence", [])
+              if not isinstance(rows, list) or len(rows) > 10:
+                  return []
+              names = [row.get("id") for row in rows if isinstance(row, dict)]
+              return [row for row in rows if isinstance(row, dict) and row.get("id") in allowed and names.count(row["id"]) == 1]
+
+
+          def diagnostic_classes(value):
+              known = ("analyzer_reported_incomplete_execution", "namespace_unavailable", "capsule_materialization_failed", "snapshot_member_incomplete", "project_runtime_prepare_failed", "project_test_selection_ambiguous", "local_pytest_inventory_failed", "project_pytest_coverage_plugin_not_activated", "project_pytest_coverage_disabled", "project_pytest_coverage_instrumentation_unavailable", "project_pytest_coverage_evidence_unavailable", "project_pytest_coverage_controller_observation_missing", "project_pytest_coverage_worker_missing", "project_pytest_coverage_diagnostic_invalid", "project_pytest_coverage_missing", "project_pytest_coverage_policy_invalid", "project_pytest_coverage_threshold_invalid")
+              if not isinstance(value, str):
+                  return []
+              return [code for code in known if value == code or value.startswith((code + ":", code + ";"))]
+
+
+          def coverage_observation(node):
+              target = node.get("target_execution")
+              if not isinstance(target, dict):
+                  return {}
+              observed = {"target_execution_observed": True}
+              if isinstance(target.get("coverage"), dict):
+                  observed["coverage_object_observed"] = True
+              code = target.get("exit_code")
+              if type(code) is int and 0 <= code <= 5:
+                  observed["exit_code"] = code
+              for key in ("collected", "deselected", "internal_errors"):
+                  items = target.get(key)
+                  if isinstance(items, list) and len(items) <= 100000 and all(isinstance(item, str) for item in items):
+                      observed[key + "_count"] = len(items)
+              records = target.get("records")
+              if isinstance(records, list) and len(records) <= 100000 and all(isinstance(item, dict) and isinstance(item.get("nodeid"), str) and item.get("phase") in ("setup", "call", "teardown", "collection") and item.get("outcome") in ("passed", "failed", "skipped") for item in records):
+                  observed["records_count"] = len(records)
+              errors = target.get("collection_errors")
+              if isinstance(errors, list) and len(errors) <= 100000 and all(isinstance(item, dict) and isinstance(item.get("nodeid"), str) and isinstance(item.get("detail"), str) for item in errors):
+                  observed["collection_errors_count"] = len(errors)
+              codes = diagnostic_classes(target.get("coverage_diagnostic"))
+              if codes:
+                  observed["coverage_diagnostic_classes"] = codes
+              return observed
+
+
+          def snapshot_observations(data):
+              observations = []
+              for row in unique_analyzer_rows(data):
+                  if row["id"] not in ("contracts", "pylint", "targeted-pytest-coverage"):
+                      continue
+                  for side in ("base", "head"):
+                      node = row.get(side)
+                      if not isinstance(node, dict) or not (node.get("execution_state") == "error" or node.get("evidence_outcome") == "UNKNOWN"):
+                          continue
+                      observed = {"analyzer": row["id"], "side": side}
+                      if node.get("execution_state") in ("ran", "error", "not_applicable"):
+                          observed["execution_state"] = node["execution_state"]
+                      if node.get("evidence_outcome") in ("PASS", "FAIL", "UNKNOWN", "NOT_APPLICABLE"):
+                          observed["evidence_outcome"] = node["evidence_outcome"]
+                      codes = diagnostic_classes(node.get("diagnostic"))
+                      if codes:
+                          observed["diagnostic_classes"] = codes
+                      if row["id"] == "targeted-pytest-coverage":
+                          observed.update(coverage_observation(node))
+                      observations.append(observed)
+              return observations
+
+
+          def enforcement_observation(data):
+              observed = {}
+              if data.get("enforcement_mode") in ("changed", "full", "shadow"):
+                  observed["enforcement_mode"] = data["enforcement_mode"]
+              if data.get("assurance_status") in ("PASS", "FAIL", "UNKNOWN", "NOT_APPLICABLE"):
+                  observed["assurance_status"] = data["assurance_status"]
+              if type(data.get("has_unknown_required_evidence")) is bool:
+                  observed["has_unknown_required_evidence"] = data["has_unknown_required_evidence"]
+              if data.get("enforcement_mode") == "changed" and (data.get("assurance_status") == "UNKNOWN" or data.get("has_unknown_required_evidence") is True):
+                  observed["advisory_projection_blocked_by_required_unknown"] = True
+              if data.get("enforcement_summary") == "Changed enforcement cannot pass while required evidence is UNKNOWN.":
+                  observed["summary_class"] = "changed_enforcement_required_unknown"
+              return observed
+
+
+          def finding_observations(data):
+              import re
+              observations = set()
+              findings = data.get("findings", [])
+              for finding in findings[:10000] if isinstance(findings, list) else []:
+                  if not isinstance(finding, dict) or finding.get("category") != "tool_error":
+                      continue
+                  message = finding.get("message")
+                  if not isinstance(message, str) or len(message) > 65536:
+                      continue
+                  if finding.get("tool") == "pylint" and re.fullmatch(r"Unable to parse pylint output: Command .+ timed out after 30 seconds", message, re.DOTALL):
+                      observations.add(("pylint", "pylint_timeout_observed"))
+                  if finding.get("tool") == "pytest":
+                      observations.update(("targeted-pytest-coverage", code) for code in diagnostic_classes(message))
+                  prefix = "Unrecognized CrossHair output: "
+                  if finding.get("tool") != "crosshair" or not message.startswith(prefix):
+                      continue
+                  payload = message[len(prefix):]
+                  code = "crosshair_rejected_other_stdout"
+                  if payload.startswith(("smart-test status: ready (uses pytest tests/)", "smart-test check: configured (modules repo scoped)")):
+                      code = "crosshair_rejected_smart_test_status"
+                  else:
+                      first_line = payload.split("; ", 1)[0].split("\n", 1)[0].split("\r", 1)[0]
+                      status = next((value for value in ("Passed", "Failed", "Skipped") if first_line.endswith(value)), "")
+                      dotted_label = first_line[:-len(status)] if status else ""
+                      label = dotted_label.rstrip(".")
+                      if label.strip() and len(dotted_label) - len(label) >= 3:
+                          code = "crosshair_rejected_pre_commit_status"
+                  observations.add(("contracts", code))
+              return [{"analyzer": name, "diagnostic_class": code} for name, code in sorted(observations)]
+
+
           def unique_json_object(pairs):
               value = {}
               for key, item in pairs:
@@ -1085,7 +1312,7 @@ jobs:
           except (OSError, ValueError, RecursionError):
               pass
           evidence_source = report if outcome == "structured_report" else header
-          rows = [row for row in evidence_source.get("analyzer_evidence", [])[:10] if isinstance(row, dict)]
+          rows = unique_analyzer_rows(evidence_source)
           nodes = rows + [row[side] for row in rows for side in ("base", "head") if isinstance(row.get(side), dict)]
           diagnostics = [node.get("diagnostic", "") for node in nodes if isinstance(node.get("diagnostic", ""), str)]
           if outcome != "structured_report":
@@ -1125,5 +1352,8 @@ jobs:
               projected["report_header_observed"] = bool(header)
               projected["error_analyzer_sides"] = incomplete_sides(members)
               projected["crosshair_failure_observations"] = crosshair_failure_observations(header.get("findings", []))
+          projected["snapshot_observations"] = snapshot_observations(evidence_source)
+          projected["enforcement_observation"] = enforcement_observation(evidence_source)
+          projected["finding_observations"] = finding_observations(evidence_source)
           print(json.dumps(projected))
           PY_REVIEW_FAILURE
