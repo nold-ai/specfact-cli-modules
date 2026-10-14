@@ -17,4 +17,4 @@
 - [x] 3.2 Reproduce stale capture admission and missing result transport against actual emitted writer, reader and shell code.
 - [x] 3.3 Propagate exact capture success through cleared environments and later-step outputs; deny missing state before file opens.
 - [x] 3.4 Pass focused inert reader/shell controls and scoped formatting, lint, type and manifest checks.
-- [ ] 3.5 Complete fresh independent closure and normal repository gates; required native failures remain unresolved.
+- [x] 3.5 Complete fresh independent closure and normal repository gates; required native failures remain unresolved. See the 2026-10-15 parent verification milestone.

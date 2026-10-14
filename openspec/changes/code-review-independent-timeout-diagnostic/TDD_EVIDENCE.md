@@ -149,3 +149,14 @@ Final focused command `.venv/bin/python -m pytest tests/unit/test_capsule_review
 Actionlint and modified shell `bash -n` checks passed. A direct optional Pylint invocation did not pass; baseline comparison retains existing test-module length, exec, fixture-name and other warnings. Added fixture execution uses runpy to avoid an additional exec warning. This does not waive the parent-owned normal repository gates.
 
 Final admission controls after switching the test driver to runpy passed **56 tests**, 3.80 seconds. The existing local runpy import was promoted to the module imports for both fixture consumers. Full scoped gates remain parent-owned after this frozen handoff.
+
+
+### Parent verification milestone, 2026-10-15 Europe/Berlin
+
+The capture-owner correction received a fresh independent affected-scope closure. The reviewer exercised 115 emitted reader/shell controls and 54 full inert required-call controls against the frozen fourteen-file tree. No actionable finding remained in that correction. This is source-level closure; it does not certify the native analyzers.
+
+The parent ran `hatch run format`, `type-check`, `lint`, `yaml-lint`, `check-bundle-imports`, `contract-test`, `test` and `smart-test`. All commands exited zero. Both full and SMART main suites passed 6,051 tests, skipped 71 explicit native cases and passed 95 subtests. Each ordinary host suite passed 122 tests and skipped five Linux-only cases. The explicit filesystem signature command used `--payload-from-filesystem --enforce-version-bump --require-signature`, the unchanged paired-core public key and base 593656f675eaf4954b609aca51aa6504367dc02e; all seven signatures passed. Skips are limitations, never assurance passes.
+
+The complete configured pre-commit pipeline also exited zero on staged tree f2c8a4964c0332d98d26e697763c3837fbbc8181. It preserved every frozen source hash and the staged tree. A normal Git commit then ran the installed hooks and produced local 80e075dd419ce23636b91f68a230463371d15678 with that same tree and a clean checkout. Capsule review explicitly remained DEFERRED under the previously approved local ARM64 exception. Exact-head Linux review is still mandatory. Private parent logs retain the full commands, outputs, hashes and independent closure.
+
+Published a7c677f9d07651eab7e5b300030d659b28bce58e remains blocked by required candidate Python 3.12 and independent signed-review failures. Both returned exit 1 with complete original captures. Semgrep and pytest causes remain unknown; the old size-marker alone does not establish a contracts failure. A separately reviewed, pinned direct-parser experiment is being prepared without weakening these gates. No provider waiver, additional optional profiling attempt, consumer adoption, merge or release is claimed.
