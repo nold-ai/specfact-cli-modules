@@ -13,6 +13,7 @@ import six
 from pytest import MonkeyPatch
 
 from specfact_code_review.run import native_tool_worker
+from specfact_code_review.run.native_analyzer_view import VIEW_NAME, build_analyzer_view
 
 
 def _roots(tmp_path: Path) -> tuple[Path, Path, Path, Path]:
@@ -460,7 +461,6 @@ def test_native_domain_uses_project_dependency_and_denies_unrelated_analyzer_fal
         "installed": [{"name": "owned-tool", "version": "1", "origin": "analyzer"}],
     }
     (runtime / "project-runtime.json").write_text(json.dumps({"inventory": {"member_graphs": {"pylint": graph}}}))
-    from specfact_code_review.run.native_analyzer_view import VIEW_NAME, build_analyzer_view
 
     build_analyzer_view(sealed, project / VIEW_NAME, graph)
     for path in project.rglob("*"):
@@ -496,8 +496,6 @@ def test_native_domain_uses_project_dependency_and_denies_unrelated_analyzer_fal
 
 @pytest.mark.parametrize("preload_alias", [False, True])
 def test_native_domain_rebinds_preloaded_registered_six_namespace(tmp_path: Path, preload_alias: bool) -> None:
-    from specfact_code_review.run.native_analyzer_view import VIEW_NAME, build_analyzer_view
-
     capsule, project, _output, _temporary = _roots(tmp_path)
     original = capsule / f"python/lib/python{sys.version_info.major}.{sys.version_info.minor}/site-packages"
     original.mkdir(parents=True)

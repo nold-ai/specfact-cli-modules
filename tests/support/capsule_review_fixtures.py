@@ -284,17 +284,15 @@ def deferral_worktree(tmp_path: Path, scenario, *, validator_present=True):
     workflow.write_text(
         workflow_source if independent_review else workflow_source.split("\n  independent-review:", 1)[0]
     )
-    orchestrator = repository / ".github/workflows/pr-orchestrator.yml"
     orchestration = (REPO_ROOT / ".github/workflows/pr-orchestrator.yml").read_text()
     if independent_review == "missing_trigger":
         orchestration = orchestration.replace('              - "tests/native/**"\n', "")
-    orchestrator.write_text(orchestration)
-    candidate_path = bundle if bundle.startswith("tests/") else f"packages/{bundle}/resources/example.py"
+    (repository / ".github/workflows/pr-orchestrator.yml").write_text(orchestration)
     files = [
         "llms.txt",
         "docs/reference/commands.generated.json",
         "docs/reference/commands.generated.md",
-        candidate_path,
+        bundle if bundle.startswith("tests/") else f"packages/{bundle}/resources/example.py",
         "openspec/changes/code-review-native-platform-execution/spec.md",
     ]
     for relative in files:

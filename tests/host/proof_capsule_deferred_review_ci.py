@@ -1185,21 +1185,22 @@ def test_observation_contract_retains_entire_workflow(tmp_path: Path, job_name: 
     marker = "PY_CANDIDATE_FAILURE" if job_name == "customer" else "PY_REVIEW_FAILURE"
     steps = document["jobs"][job_name]["steps"]
     step = next(item for item in steps if marker in item.get("run", ""))
-    if mutation == "body":
-        step["run"] = step["run"].replace("import json\n", "import json\nprint('private')\n", 1)
-    elif mutation == "shell":
-        step["run"] += "\necho private\n"
-    elif mutation == "delimiter":
-        step["run"] = step["run"].replace("\n" + marker + "\n", "\n" + marker + " \n")
-    elif mutation == "duplicate_step":
-        steps.append(step.copy())
-    elif mutation == "step_name":
-        step["name"] = "Unapproved observation"
-    elif mutation == "step_environment":
-        step["env"] = {"PYTHONPATH": "candidate"}
-    elif mutation == "step_position":
-        index = steps.index(step)
-        steps[index - 1], steps[index] = steps[index], steps[index - 1]
+    match mutation:
+        case "body":
+            step["run"] = step["run"].replace("import json\n", "import json\nprint('private')\n", 1)
+        case "shell":
+            step["run"] += "\necho private\n"
+        case "delimiter":
+            step["run"] = step["run"].replace("\n" + marker + "\n", "\n" + marker + " \n")
+        case "duplicate_step":
+            steps.append(step.copy())
+        case "step_name":
+            step["name"] = "Unapproved observation"
+        case "step_environment":
+            step["env"] = {"PYTHONPATH": "candidate"}
+        case "step_position":
+            index = steps.index(step)
+            steps[index - 1], steps[index] = steps[index], steps[index - 1]
     path.write_text(yaml.safe_dump(document, sort_keys=False))
     _git(repository, "add", ".")
     result = _check_observation_contract(repository, baseline)

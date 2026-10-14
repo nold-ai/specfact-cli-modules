@@ -18,10 +18,12 @@ from typing import Any
 
 import pytest
 
-from specfact_code_review.run import native_project_runtime
+from specfact_code_review.run import native_project_runtime, runtime_interpreter
 from specfact_code_review.run.native_project_catalog import ProjectArtifactLocator
+from specfact_code_review.run.native_project_poetry import VERSION
 from specfact_code_review.run.runtime_discovery import discover_project
 from specfact_code_review.run.runtime_models import ProjectPlan, ProjectRuntimeError
+from specfact_code_review.run.target_bootstrap import _validate_python_arguments
 from tests.unit.specfact_code_review.run.native_project_runtime_fixtures import (
     _CPU_ARM64,
     _CPU_X86_64,
@@ -430,8 +432,6 @@ resolved_reference="b9663e42c808543377ae523611c4cfad68016f30"
     ],
 )
 def test_native_inventory_requires_exact_signed_patch_version(monkeypatch, environment, environment_id):
-    from specfact_code_review.run import runtime_interpreter
-
     monkeypatch.setattr(runtime_interpreter, "signed_versions", lambda: {"darwin-arm64-cp311": "3.11.16"})
     inventory = {"installed": [], "environment": environment, "member_graphs": {}, "analyzer_conflicts": {}}
     with pytest.raises(ProjectRuntimeError, match="preparation_incomplete:python_version"):
@@ -439,8 +439,6 @@ def test_native_inventory_requires_exact_signed_patch_version(monkeypatch, envir
 
 
 def test_native_inventory_exact_version_preserves_keys(monkeypatch):
-    from specfact_code_review.run import runtime_interpreter
-
     monkeypatch.setattr(runtime_interpreter, "signed_versions", lambda: {"darwin-arm64-cp311": "3.11.16"})
     inventory = {
         "installed": [],
@@ -456,8 +454,6 @@ def test_native_inventory_exact_version_preserves_keys(monkeypatch):
 
 
 def test_fresh_site_inventory_cannot_claim_alternate_native_patch(monkeypatch, tmp_path):
-    from specfact_code_review.run import runtime_interpreter
-
     monkeypatch.setattr(runtime_interpreter, "signed_versions", lambda: {"darwin-arm64-cp311": "3.11.16"})
     artifact = tmp_path / "artifact"
     (artifact / "site-packages").mkdir(parents=True)
@@ -535,8 +531,6 @@ def test_all_known_native_versions_bind_to_resource(environment_id, exact_versio
 
 @pytest.mark.parametrize("tamper", ["digest", "binding", "manager"])
 def test_poetry_generated_lock_receipt_binding_rejected(tmp_path, tamper):
-    from specfact_code_review.run.native_project_poetry import VERSION
-
     acquired = tmp_path / "acquired"
     acquired.mkdir()
     payload = b"generated lock data"
@@ -841,8 +835,6 @@ def test_uv_generated_ancestor_initializer_keeps_imports_on_reviewed_source(
     tmp_path, ancestor, initializer, attached, monkeypatch
 ):
     if attached:
-        from specfact_code_review.run.target_bootstrap import _validate_python_arguments
-
         run = subprocess.run
 
         def attached_run(command, **options):

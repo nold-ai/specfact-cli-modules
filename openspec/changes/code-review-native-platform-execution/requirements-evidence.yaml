@@ -1448,3 +1448,8 @@ requirements:
       method: test
       intent: Activate reviewed observer bytes only after ordinary-hook immutable checker commit and keep all original execution authority.
       observable: Checker56ac770d/blob0bfb44b9, both consumer pins and wrapperSHA423a0770match;595actual focused proofs pass; Full andSMART each pass304hostproofs plus6110supplier tests, while hosted exact-head acceptance remains pending.
+    - case_id: 460-62-4
+      scenario_id: bounded-terminal-identity-and-retained-prefix-observations
+      method: test
+      intent: Preserve every observation and authority fixture while removing the concrete completed-evidence review regressions.
+      observable: Public producer RED for CC38 and nesting errors becomes GREEN without suppressions; all35fixture payloads,16mutation payloads and32Git-state combinations match frozen originals. Full andSMART each pass304host proofs and6110supplier tests;26reproduced warning diagnostics are resolved and remaining exceptions are individually documented.

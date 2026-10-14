@@ -1,5 +1,6 @@
 """Prove explicit selection and bounded upstream Pylint result parity."""
 
+import importlib.util
 from pathlib import Path
 
 import pytest
@@ -144,7 +145,6 @@ def test_runtime_wrapper_preserves_messages_statistics_and_exit_status(tmp_path,
 @pytest.mark.parametrize("extra_args", [[], ["-k", "test_target_crosshair"]])
 @pytest.mark.parametrize("codes,expected,calls", [([9], 9, 1), ([0, 7], 7, 2), ([0, 0], 0, 2)])
 def test_smart_entry_preserves_required_host_and_portable_failures(codes, expected, calls, extra_args, monkeypatch):
-    import importlib.util
     from types import SimpleNamespace
 
     root = Path(__file__).resolve().parents[4]
@@ -177,8 +177,6 @@ def test_smart_entry_preserves_required_host_and_portable_failures(codes, expect
 
 @pytest.fixture(name="smart_entry")
 def smart_entry_fixture(monkeypatch):
-    import importlib.util
-
     root = Path(__file__).resolve().parents[4]
     monkeypatch.syspath_prepend(str(root / "tools"))
     spec = importlib.util.spec_from_file_location("covered_smart_entry", root / "tools/smart_test_coverage.py")

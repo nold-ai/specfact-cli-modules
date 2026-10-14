@@ -8,10 +8,13 @@ from unittest.mock import Mock
 
 import pytest
 from pytest import MonkeyPatch
+from radon.cli.tools import cc_to_dict
+from radon.complexity import cc_visit
 
+from specfact_code_review.tools import radon_runner
 from specfact_code_review.tools.basedpyright_runner import run_basedpyright
 from specfact_code_review.tools.pylint_runner import run_pylint
-from specfact_code_review.tools.radon_runner import run_radon
+from specfact_code_review.tools.radon_runner import _kiss_metric_findings, run_radon
 from tests.unit.specfact_code_review.tools.helpers import assert_tool_run, completed_process, create_noisy_file
 
 
@@ -238,10 +241,6 @@ def test_run_radon_applies_parameter_count_rule_to_cli_decorators(
 def test_native_admission_and_ownership_proofs_have_no_blocking_complexity(relative: str) -> None:
     """Exercise actual production policy without replacing admission behavior tests."""
     source = Path(__file__).resolve().parents[4] / relative
-    from radon.cli.tools import cc_to_dict
-    from radon.complexity import cc_visit
-
-    from specfact_code_review.tools import radon_runner
 
     blocks = [cc_to_dict(block) for block in cc_visit(source.read_text())]
     findings = radon_runner._map_radon_blocks(blocks, str(source)) + radon_runner._kiss_metric_findings(source)
@@ -251,7 +250,6 @@ def test_native_admission_and_ownership_proofs_have_no_blocking_complexity(relat
 
 def test_native_acquisition_fixture_has_no_function_length_warning() -> None:
     """Apply unchanged production source-shape policy to the authenticated fixture."""
-    from specfact_code_review.tools.radon_runner import _kiss_metric_findings
 
     fixture = (
         Path(__file__).resolve().parents[4] / "tests/unit/specfact_code_review/run/native_project_runtime_fixtures.py"

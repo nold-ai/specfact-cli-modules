@@ -13,11 +13,13 @@ from typing import Literal
 
 import pytest
 from crosshair import condition_parser, core, dynamic_typing
+from crosshair.libimpl.builtinslib import SymbolicArrayBasedUniformTuple
 from crosshair.options import AnalysisOptionSet
 from crosshair.register_contract import REGISTERED_CONTRACTS, ContractOverride
 from icontract import ensure
 
 from specfact_code_review.run import target_bootstrap, target_crosshair
+from specfact_code_review.run.target_crosshair import _diagnostic_channel_compatibility, _TargetOutput
 from specfact_code_review.tools.basedpyright_runner import run_basedpyright
 
 
@@ -496,7 +498,6 @@ def test_pinned_dispatch_rejects_target_output_over_existing_bound(tmp_path: Pat
 @pytest.mark.parametrize("length", [0, 2])
 def test_pinned_dispatch_preserves_actual_symbolic_tuple_truth(crosshair_dispatch, length: int):
     from crosshair.core_and_libs import NoTracing, standalone_statespace
-    from crosshair.libimpl.builtinslib import SymbolicArrayBasedUniformTuple
 
     def inspect_dispatch(*_args, **_kwargs):
         with standalone_statespace as space, NoTracing():
@@ -535,13 +536,9 @@ def test_pinned_dispatch_keeps_empty_and_nonempty_contract_paths(tmp_path: Path,
 
 @pytest.mark.parametrize("failure", [None, RuntimeError, SystemExit])
 def test_diagnostic_scope_retains_reporter_streams_exit_and_restoration(monkeypatch, failure):
-    import io
-
     from crosshair import main
 
-    from specfact_code_review.run.target_crosshair import _diagnostic_channel_compatibility
-
-    reporter_stdout, reporter_stderr = io.StringIO(), io.StringIO()
+    reporter_stdout, reporter_stderr = stdio.StringIO(), stdio.StringIO()
     initial_stdout, initial_stderr = sys.stdout, sys.stderr
     arguments, options = Namespace(target=["fixture.py"]), AnalysisOptionSet()
 
@@ -569,8 +566,6 @@ def test_diagnostic_scope_retains_reporter_streams_exit_and_restoration(monkeypa
 
 
 def test_target_output_bound_counts_utf8_bytes_without_retaining_text():
-    from specfact_code_review.run.target_crosshair import _TargetOutput
-
     sink = _TargetOutput()
     assert sink.write("é" * (2 * 1024 * 1024)) == 2 * 1024 * 1024
     with pytest.raises(ValueError, match="crosshair_target_output_limit_exceeded"):

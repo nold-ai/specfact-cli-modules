@@ -7,10 +7,18 @@ from pathlib import Path
 from typing import cast
 
 import pytest
+from crosshair.condition_parser import parse_sphinx_raises
 from radon.cli.tools import cc_to_dict
 from radon.complexity import cc_visit
 
 from specfact_code_review.run import native_worker
+from specfact_code_review.tools import semgrep_runner
+from specfact_code_review.tools.contract_runner import _scan_file
+from specfact_code_review.tools.radon_runner import (
+    _allowed_paths,
+    _kiss_metric_findings,
+    _map_radon_complexity_findings,
+)
 
 
 @pytest.fixture(autouse=True)
@@ -588,8 +596,6 @@ def test_real_ruff_adapter_uses_managed_surface_without_host_spawn(
 
 
 def test_native_worker_and_retained_proofs_have_no_complexity_warning():
-    from specfact_code_review.tools.radon_runner import _allowed_paths, _map_radon_complexity_findings
-
     root = Path(__file__).resolve().parents[4]
     files = [
         Path(native_worker.__file__),
@@ -608,8 +614,6 @@ def test_native_worker_and_retained_proofs_have_no_complexity_warning():
 
 
 def test_scoped_native_and_scheduling_entry_points_have_contracts():
-    from specfact_code_review.tools.contract_runner import _scan_file
-
     root = Path(__file__).resolve().parents[4]
     files = [
         Path(native_worker.__file__),
@@ -621,8 +625,6 @@ def test_scoped_native_and_scheduling_entry_points_have_contracts():
 
 
 def test_controller_tamper_proof_has_no_blocking_nesting():
-    from specfact_code_review.tools.radon_runner import _kiss_metric_findings
-
     findings = [finding for finding in _kiss_metric_findings(Path(__file__)) if finding.severity == "error"]
     assert findings == [], [(finding.file, finding.rule, finding.message) for finding in findings]
 
@@ -651,8 +653,6 @@ def _assert_native_semgrep_request_environment(request: dict[str, object]) -> No
 
 @pytest.mark.parametrize("member,config_name", [("semgrep-clean", "clean_code.yaml"), ("semgrep-bugs", "bugs.yaml")])
 def test_real_semgrep_adapter_replays_owned_policy_without_host_spawn(tmp_path, monkeypatch, member, config_name):
-    from specfact_code_review.tools import semgrep_runner
-
     capsule, project, output, temporary = _roots(tmp_path)
     project.chmod(0o700)
     policy = project / ".specfact-native-config" / "semgrep"
@@ -688,7 +688,7 @@ def test_real_semgrep_adapter_replays_owned_policy_without_host_spawn(tmp_path, 
     assert semgrep_runner.tempfile is original_temporary
     assert semgrep_runner.analyzer_command is original_command
     assert (temporary / "semgrep-home").stat().st_mode & 0o777 == 0o700
-    assert list(output.iterdir()) == []
+    assert not list(output.iterdir())
 
 
 @pytest.mark.parametrize("policy_case", ["multiple", "outside", "default_outside"])
@@ -703,7 +703,7 @@ def test_native_semgrep_rejects_unbound_policies_before_launch(tmp_path, policy_
             "semgrep-clean", [project / "pkg/example.py"], transport.run, policies[policy_case], False, False
         )
     assert transport.consumed == 0
-    assert list(temporary.iterdir()) == []
+    assert not list(temporary.iterdir())
 
 
 @pytest.mark.parametrize("roots", [None, "tests", [True], ["."], ["../outside"], ["/outside"], ["a" * 241]])
@@ -754,8 +754,6 @@ def test_native_contract_inventory_rejects_symlink_and_outside_grant(tmp_path):
 
 @pytest.mark.parametrize("outcome", ["pending", "invalid", "checked", "extra"])
 def test_replay_contract_declares_only_actual_control_and_rejection_exceptions(tmp_path: Path, outcome: str) -> None:
-    from crosshair.condition_parser import parse_sphinx_raises
-
     transport = native_worker.ReplayTransport(
         member="ruff",
         tool="ruff",

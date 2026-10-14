@@ -1262,6 +1262,86 @@ _PYTEST_PRODUCER_CODES = (
 )
 
 
+def _terminal_record_variant(case, target, expected):
+    record = target["records"][0]
+    nodeids = {
+        "empty-identity": "",
+        "long-identity": "x" * 65537,
+        "record-budget": "x" * 65536,
+        "boolean-nodeid": True,
+    }
+    if case in nodeids:
+        record["nodeid"] = nodeids[case]
+    if case == "missing-nodeid":
+        record.pop("nodeid")
+    if case == "bad-outcome":
+        record["outcome"] = "PRIVATE_INVALID"
+    if case == "bad-record":
+        target["records"].append({"nodeid": _PRIVATE_CANARY, "phase": "unknown", "outcome": "passed"})
+    if case == "missing-records":
+        target.pop("records")
+    replacements = {"null-records": None, "nonmapping-record": [False]}
+    if case in replacements:
+        target["records"] = replacements[case]
+    counts = {"record-budget": 129, "record-bound": 100001, "at-record-bound": 100000}
+    if case in counts:
+        target["records"] *= counts[case]
+    invalid = {
+        *nodeids,
+        *replacements,
+        "missing-nodeid",
+        "bad-outcome",
+        "bad-record",
+        "missing-records",
+        "record-bound",
+    }
+    if case in invalid:
+        expected.clear()
+        expected["coverage_files_count"] = 1
+
+
+def _terminal_collection_variant(case, target, expected):
+    replacements = {
+        "empty-collected": [""],
+        "long-collected": ["x" * 65537],
+        "collection-budget": ["x" * 65536] * 129,
+        "bad-collected": [_PRIVATE_CANARY, False],
+    }
+    if case in replacements:
+        target["collected"] = replacements[case]
+    if case in ("combined-budget", "at-character-bound"):
+        target["collected"] = ["x" * 65536] * 64
+        target["records"][0]["nodeid"] = "x" * 65536
+        target["records"] *= 64 if case == "at-character-bound" else 65
+    counts = {"collection-bound": 100001, "at-collection-bound": 100000}
+    if case in counts:
+        target["collected"] *= counts[case]
+    if case in {*replacements, "combined-budget", "collection-bound"}:
+        expected.pop("unexecuted_collected_count")
+
+
+def _terminal_coverage_variant(case, target, expected):
+    variants = {
+        "files-null": None,
+        "files-list": [],
+        "files-empty-key": {"": {}},
+        "files-long-key": {"x" * 65537: {}},
+    }
+    if case in variants:
+        target["coverage"]["files"] = variants[case]
+    if case == "files-missing":
+        target["coverage"] = {}
+    if case == "files-bound":
+        target["coverage"]["files"] = {str(index): {} for index in range(100001)}
+    if case == "files-budget":
+        target["coverage"]["files"] = {str(index) + "x" * 65530: {} for index in range(129)}
+    if case == "files-at-bound":
+        target["coverage"]["files"] = {str(index): None for index in range(100000)}
+        expected["coverage_files_count"] = 100000
+        return
+    expected.pop("coverage_files_count")
+
+
 def _terminal_observation_target(case):
     identity = _PRIVATE_CANARY
     record: dict[str, object] = {"nodeid": identity, "phase": "call", "outcome": "passed"}
@@ -1276,105 +1356,24 @@ def _terminal_observation_target(case):
         target["collected"].append(identity + "_missing")
         target["records"].append({"nodeid": identity + "_missing", "phase": "setup", "outcome": "failed"})
         expected.update(unexecuted_collected_count=1, failed_setup_records_count=1)
-    elif case == "duplicates":
+    if case == "duplicates":
         target["collected"] *= 3
         target["records"] *= 4
-    elif case == "skipped-setup":
+    if case == "skipped-setup":
         record.update(phase="setup", outcome="skipped")
         expected["call_identity_count"] = 0
-    elif case == "failed-call":
+    if case == "failed-call":
         record["outcome"] = "failed"
-    elif case == "unrelated-record":
+    if case == "unrelated-record":
         record["nodeid"] = identity + "_other"
         expected["unexecuted_collected_count"] = 1
-    elif case == "empty":
+    if case == "empty":
         target.update(collected=[], records=[], coverage={"files": {}})
-        expected = dict.fromkeys(_DERIVED_OBSERVATION_FIELDS, 0)
-    elif case in (
-        "empty-identity",
-        "long-identity",
-        "record-budget",
-        "bad-record",
-        "record-bound",
-        "at-record-bound",
-        "missing-records",
-        "null-records",
-        "nonmapping-record",
-        "missing-nodeid",
-        "boolean-nodeid",
-        "bad-outcome",
-    ):
-        if case == "missing-records":
-            target.pop("records")
-        elif case == "null-records":
-            target["records"] = None
-        elif case == "nonmapping-record":
-            target["records"] = [False]
-        elif case == "missing-nodeid":
-            record.pop("nodeid")
-        elif case == "boolean-nodeid":
-            record["nodeid"] = True
-        elif case == "bad-outcome":
-            record["outcome"] = "PRIVATE_INVALID"
-        elif case == "empty-identity":
-            record["nodeid"] = ""
-        elif case == "long-identity":
-            record["nodeid"] = "x" * 65537
-        elif case == "record-budget":
-            record["nodeid"] = "x" * 65536
-            target["records"] *= 129
-        elif case == "bad-record":
-            target["records"].append({"nodeid": identity, "phase": "unknown", "outcome": "passed"})
-        else:
-            target["records"] *= 100000 if case == "at-record-bound" else 100001
-        if case != "at-record-bound":
-            expected = {"coverage_files_count": 1}
-    elif case in (
-        "empty-collected",
-        "long-collected",
-        "collection-budget",
-        "combined-budget",
-        "bad-collected",
-        "collection-bound",
-        "at-collection-bound",
-        "at-character-bound",
-    ):
-        if case == "empty-collected":
-            target["collected"] = [""]
-        elif case == "long-collected":
-            target["collected"] = ["x" * 65537]
-        elif case == "collection-budget":
-            target["collected"] = ["x" * 65536] * 129
-        elif case in ("combined-budget", "at-character-bound"):
-            target["collected"] = ["x" * 65536] * 64
-            record["nodeid"] = "x" * 65536
-            target["records"] *= 64 if case == "at-character-bound" else 65
-        elif case == "bad-collected":
-            target["collected"].append(False)
-        else:
-            target["collected"] *= 100000 if case == "at-collection-bound" else 100001
-        if case not in ("at-collection-bound", "at-character-bound"):
-            expected.pop("unexecuted_collected_count")
-    elif case.startswith("files-"):
-        variants = {
-            "files-null": None,
-            "files-list": [],
-            "files-empty-key": {"": {}},
-            "files-long-key": {"x" * 65537: {}},
-        }
-        if case == "files-missing":
-            target["coverage"] = {}
-        elif case == "files-bound":
-            target["coverage"]["files"] = {str(index): {} for index in range(100001)}
-        elif case == "files-budget":
-            target["coverage"]["files"] = {str(index) + "x" * 65530: {} for index in range(129)}
-        elif case == "files-at-bound":
-            target["coverage"]["files"] = {str(index): None for index in range(100000)}
-            expected["coverage_files_count"] = 100000
-        else:
-            target["coverage"]["files"] = variants[case]
-        if case != "files-at-bound":
-            expected.pop("coverage_files_count")
+        return target, dict.fromkeys(_DERIVED_OBSERVATION_FIELDS, 0)
+    _terminal_record_variant(case, target, expected)
+    _terminal_collection_variant(case, target, expected)
+    if case.startswith("files-"):
+        _terminal_coverage_variant(case, target, expected)
     return target, expected
 
 
