@@ -1,5 +1,13 @@
 # Bounded native control fixture contract
 
+Current native regression entry point, 2026-10-14 Europe/Berlin:
+
+```bash
+SPECFACT_NATIVE_CONTROL=1 PYTHONDONTWRITEBYTECODE=1 python -m pytest -n 0 tests/native/proof_native_canonical_path.py::NativeControlTests
+```
+
+The five original cases and helper moved intact to the existing native proof surface. Each required macOS14/15/26 CI cell executes this selector. Full and SMART retain their existing proof registration and opt-in behavior. The unit-discovery commands below record historical execution. Supported current-head native acceptance remains required; the local macOS27 positive-control failure is recorded in TDD_EVIDENCE.md.
+
 Recorded 2026-10-02; updated 2026-10-03 (Europe/Berlin). This owner-authorized milestone is covered by
 code-review-native-platform-execution. It is an experiment, not backend admission.
 Only the three control sources, their unit test and this contract are in scope.

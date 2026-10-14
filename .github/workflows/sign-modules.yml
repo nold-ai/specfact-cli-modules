@@ -99,7 +99,7 @@ jobs:
           from pathlib import Path
 
           # Reviewed CI wrapper bytes; intentional changes require a reviewed pin update.
-          EXPECTED_SOURCE_SHA256 = "8b7161aab9070f4e41ab2fc8565e30184456e31218d0980fc3e0af3e326e5036"
+          EXPECTED_SOURCE_SHA256 = "edfa5891892b83ffc1370c1b3af8599d5f6c1b493f6838639ebd6ff4d6908b8a"
           observed_sha256 = hashlib.sha256(Path("scripts/owner_commit_entry.py").read_bytes()).hexdigest()
           if observed_sha256 != EXPECTED_SOURCE_SHA256:
               raise SystemExit("Committed scheduling validator differs from reviewed source bytes")

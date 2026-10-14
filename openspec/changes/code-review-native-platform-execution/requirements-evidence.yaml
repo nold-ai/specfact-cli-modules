@@ -1429,6 +1429,11 @@ requirements:
       method: test
       intent: Preserve the original failure and every review prerequisite through observation.
       observable: Historical unit 1 ran 203 old-workflow proofs. Unit 2 runs 437 activated-workflow and host proofs, preserving original failed exits, private stderr, cleanup, all review prerequisites and signed reviewer 0.51.2.
+    - case_id: 460-60-4
+      scenario_id: owner-approved-bounded-linux-review-failure-observations
+      method: test
+      intent: Expose only fixed public type rules and distinguish parsed large candidate objects from unavailable evidence.
+      observable: Actual workflow tests reproduce19failures with19controls before activation; final reviewed bodies preserve private canaries and empty-object boundaries. An ordinary-hook immutable checker admits only those exact two body hashes before matching consumer pins and authenticated wrapper are activated. Reviewer0.51.5 remains frozen; deadlines and acceptance gates are unchanged and hosted diagnosis remains required.
   openspec:code-review-native-platform-execution:review-native-platform-execution:exact-reviewed-linux-observation-contract-authority:
     rationale: Admit only reviewed observation bytes under an immutable checker while retaining complete execution equality.
     stakeholder_refs:

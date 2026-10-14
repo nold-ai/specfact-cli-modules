@@ -731,8 +731,8 @@ def test_indexed_deferral_admits_only_complete_approved_job_budget(
     _assert_local_deferral(worktree, tmp_path / "calls", expected)
 
 
-_PINNED_VALIDATOR_COMMIT = "4de2662ae7967852007ba8839fff39083f13ff8d"
-_PINNED_VALIDATOR_BLOB = "bd395210239a536c5530061eae6bce5f9879f822"
+_PINNED_VALIDATOR_COMMIT = "81d94ade19415e4b0ef619bdd2354bba33bb85a5"
+_PINNED_VALIDATOR_BLOB = "ad8517efb24fd77f2b4c64651cc751085c491f86"
 
 
 def _tampered_deferral_candidate(tmp_path, *, staged_checker, missing_caller, bootstrap=False):
@@ -1046,7 +1046,7 @@ def test_committed_ci_check_retains_actual_bootstrap_expiry(tmp_path: Path, case
         validator_present=False,
     )
     if case != "missing-bootstrap":
-        _git(worktree, "fetch", "--no-tags", str(REPO_ROOT), "4de2662ae7967852007ba8839fff39083f13ff8d")
+        _git(worktree, "fetch", "--no-tags", str(REPO_ROOT), "81d94ade19415e4b0ef619bdd2354bba33bb85a5")
     base = _git(worktree, "rev-parse", "origin/dev")
     if case == "squash-deleted":
         repository = tmp_path / "repository"

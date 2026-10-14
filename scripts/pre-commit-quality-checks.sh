@@ -319,8 +319,8 @@ run_lint_if_staged_python() {
 # Resolve trusted bytes independently of the candidate index/worktree and replacement refs.
 run_trusted_capsule_deferral() (
   local validator_path="scripts/check_capsule_deferral.py"
-  local bootstrap_commit="4de2662ae7967852007ba8839fff39083f13ff8d"
-  local bootstrap_blob="bd395210239a536c5530061eae6bce5f9879f822"
+  local bootstrap_commit="81d94ade19415e4b0ef619bdd2354bba33bb85a5"
+  local bootstrap_blob="ad8517efb24fd77f2b4c64651cc751085c491f86"
   local integrated_dev validator_source resolved_blob ancestor_status trusted_validator integrated_history shallow_history
   local repository_root
   export GIT_NO_REPLACE_OBJECTS=1

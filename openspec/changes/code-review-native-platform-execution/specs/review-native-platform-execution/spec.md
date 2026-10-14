@@ -1935,6 +1935,12 @@ The existing candidate and independent Linux review failure projections SHALL ex
 - **WHEN** a reviewer fails and its observation succeeds, fails or cannot read the report
 - **THEN** the original failed exit and every required review prerequisite remain blocking
 
+#### Scenario: Fixed public type rules and parsed large-report state
+- **WHEN** a finding has category `type_safety`, tool `basedpyright`, a valid severity and one of the eight fixed public rules `reportArgumentType`, `reportCallIssue`, `reportAssignmentType`, `reportReturnType`, `reportAttributeAccessIssue`, `reportGeneralTypeIssues`, `reportInvalidTypeForm` or `reportMissingImports`
+- **THEN** both observers emit only its fixed rule classification without a raw path, message or inferred snapshot side; malformed fields and unsupported rules are omitted
+- **AND** a candidate JSON object successfully parsed within32MiB and above2MiB emits `candidate_large_report_observed`, including an empty object padded with valid JSON whitespace; parse and bound failures retain their existing failure marker
+- **AND** existing missing-report handling, authoritative reviewer, execution bounds and blocking outcomes remain unchanged
+
 ### Requirement: Exact reviewed Linux observation contract authority
 
 The scheduling checker SHALL admit only the exact owner-approved observation revision in the two existing failure projection programs. It SHALL preserve whole-workflow equality outside those reviewed bytes and the previously approved budget adaptation. A successor checker SHALL be committed through ordinary hooks before its immutable commit/blob pins are activated in both local and CI consumers. CI wrapper source authentication and all existing integrated-authority, history, object, ancestry, expiry and replacement-ref checks SHALL remain mandatory.

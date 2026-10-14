@@ -803,7 +803,7 @@ def test_ci_wrapper_authentication_is_blocking_and_immediately_precedes_validati
     assert steps.index(authentication) + 1 == steps.index(validation)
     assert authentication["if"] == validation["if"] == "github.event_name == 'pull_request' && github.base_ref == 'dev'"
     assert "continue-on-error" not in authentication
-    assert "8b7161aab9070f4e41ab2fc8565e30184456e31218d0980fc3e0af3e326e5036" in authentication["run"]
+    assert "edfa5891892b83ffc1370c1b3af8599d5f6c1b493f6838639ebd6ff4d6908b8a" in authentication["run"]
     assert (
         validation["run"] == 'python -I scripts/owner_commit_entry.py --head "$CANDIDATE_HEAD" --base "$CANDIDATE_BASE"'
     )

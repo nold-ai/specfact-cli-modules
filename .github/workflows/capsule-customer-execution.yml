@@ -563,7 +563,13 @@ jobs:
               observations = set()
               findings = data.get("findings", [])
               for finding in findings[:10000] if isinstance(findings, list) else []:
-                  if not isinstance(finding, dict) or finding.get("category") != "tool_error":
+                  if not isinstance(finding, dict):
+                      continue
+                  if finding.get("category") == "type_safety" and finding.get("tool") == "basedpyright" and finding.get("severity") in ("error", "warning", "info"):
+                      rule = finding.get("rule")
+                      if isinstance(rule, str) and rule in ("reportArgumentType", "reportCallIssue", "reportAssignmentType", "reportReturnType", "reportAttributeAccessIssue", "reportGeneralTypeIssues", "reportInvalidTypeForm", "reportMissingImports"):
+                          observations.add(("basedpyright", rule))
+                  if finding.get("category") != "tool_error":
                       continue
                   message = finding.get("message")
                   if not isinstance(message, str) or len(message) > 65536:
@@ -616,7 +622,7 @@ jobs:
                       raise ValueError("private report shape invalid")
                   data = value
                   if len(payload) > 2 * 1024 * 1024:
-                      print(json.dumps({"analyzer": "contracts", "diagnostic_class": "candidate_report_unavailable"}))
+                      print(json.dumps({"analyzer": "contracts", "diagnostic_class": "candidate_large_report_observed"}))
               except (OSError, ValueError, RecursionError):
                   print(json.dumps({"analyzer": "contracts", "diagnostic_class": "candidate_report_unavailable"}))
               allowed = ("ai-bloat-ast", "ast-clean-code", "basedpyright", "contracts", "pylint", "radon", "ruff", "semgrep-clean", "semgrep-bugs", "targeted-pytest-coverage")
@@ -1550,7 +1556,13 @@ jobs:
               observations = set()
               findings = data.get("findings", [])
               for finding in findings[:10000] if isinstance(findings, list) else []:
-                  if not isinstance(finding, dict) or finding.get("category") != "tool_error":
+                  if not isinstance(finding, dict):
+                      continue
+                  if finding.get("category") == "type_safety" and finding.get("tool") == "basedpyright" and finding.get("severity") in ("error", "warning", "info"):
+                      rule = finding.get("rule")
+                      if isinstance(rule, str) and rule in ("reportArgumentType", "reportCallIssue", "reportAssignmentType", "reportReturnType", "reportAttributeAccessIssue", "reportGeneralTypeIssues", "reportInvalidTypeForm", "reportMissingImports"):
+                          observations.add(("basedpyright", rule))
+                  if finding.get("category") != "tool_error":
                       continue
                   message = finding.get("message")
                   if not isinstance(message, str) or len(message) > 65536:

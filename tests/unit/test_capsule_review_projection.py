@@ -40,13 +40,16 @@ def test_independent_reviewer_runs_in_fresh_job_without_candidate_host_code() ->
     assert independent["if"] == "github.event_name == 'pull_request'"
     assert not independent.get("needs"), "Candidate execution cannot suppress the independent review job"
     recipe = "\n".join(str(step.get("run", "")) for step in independent["steps"])
-    assert "specfact-cli==0.55.4" in recipe
-    assert "VERSION = '0.51.5'" in recipe
-    assert "COMMIT = 'a785ef4da8ea74f67f8ffa41f458c025cbfba4b1'" in recipe
-    assert "'--scope', 'user', '--version', VERSION, '--source', 'marketplace'" in recipe
-    assert "allow_unsigned=False, require_integrity=True" in recipe
-    assert "require_signature=True, public_key_pem=key.decode()" in recipe
-    assert "env -i" in recipe
+    for required in (
+        "specfact-cli==0.55.4",
+        "VERSION = '0.51.5'",
+        "COMMIT = 'a785ef4da8ea74f67f8ffa41f458c025cbfba4b1'",
+        "'--scope', 'user', '--version', VERSION, '--source', 'marketplace'",
+        "allow_unsigned=False, require_integrity=True",
+        "require_signature=True, public_key_pem=key.decode()",
+        "env -i",
+    ):
+        assert required in recipe, required
 
 
 @pytest.mark.parametrize(
@@ -628,14 +631,16 @@ def test_large_private_report_projects_contract_failure_classes_without_acceptan
 
 
 @pytest.mark.parametrize(
-    "case,expected_classes",
+    "case,expected_classes,code",
     [
-        ("contracts", ["value_error_observed", "wrong_parameter_order_observed"]),
-        ("other_tool", None),
-        ("diagnostic_bound", None),
+        ("contracts", ["value_error_observed", "wrong_parameter_order_observed"], "candidate_large_report_observed"),
+        ("other_tool", None, "candidate_large_report_observed"),
+        ("diagnostic_bound", None, "candidate_report_unavailable"),
     ],
 )
-def test_candidate_large_report_retains_unavailable_marker_and_fixed_failure_classes(tmp_path, case, expected_classes):
+def test_candidate_large_report_distinguishes_parsed_state_and_fixed_failure_classes(
+    tmp_path, case, expected_classes, code
+):
 
     workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())
     step = next(item for item in workflow["jobs"]["customer"]["steps"] if item.get("name") == STEP_NAME)
@@ -645,23 +650,22 @@ def test_candidate_large_report_retains_unavailable_marker_and_fixed_failure_cla
     root = tmp_path / ".specfact"
     root.mkdir()
     size = 32 if case == "diagnostic_bound" else 2
-    (root / "code-review.json").write_text(
-        json.dumps(
-            {
-                "private_inventory": "x" * (size * 1024 * 1024),
-                "analyzer_evidence": [],
-                "findings": [
-                    {
-                        "category": "tool_error",
-                        "tool": "ruff" if case == "other_tool" else "crosshair",
-                        "message": "CrossHair process error: ValueError: wrong parameter order: private-token",
-                    }
-                ],
-            }
-        )
+    payload = json.dumps(
+        {
+            "private_inventory": "x" * (size * 1024 * 1024),
+            "analyzer_evidence": [],
+            "findings": [
+                {
+                    "category": "tool_error",
+                    "tool": "ruff" if case == "other_tool" else "crosshair",
+                    "message": "CrossHair process error: ValueError: wrong parameter order: private-token",
+                }
+            ],
+        }
     )
+    (root / "code-review.json").write_text(payload)
     result = _run_projector(tmp_path, program)
-    expected = [{"analyzer": "contracts", "diagnostic_class": "candidate_report_unavailable"}]
+    expected = [{"analyzer": "contracts", "diagnostic_class": code}]
     if expected_classes is not None:
         expected.append(
             {
@@ -672,9 +676,25 @@ def test_candidate_large_report_retains_unavailable_marker_and_fixed_failure_cla
         )
     assert result.returncode == 0
     rows = [json.loads(line) for line in result.stdout.splitlines()]
-    assert rows[:-1] == expected
-    assert rows[-1] == {"snapshot_observations": [], "enforcement_observation": {}, "finding_observations": []}
+    assert rows == [*expected, {"snapshot_observations": [], "enforcement_observation": {}, "finding_observations": []}]
     assert "private-token" not in result.stdout + result.stderr
+
+
+def test_candidate_large_empty_object_is_observed_after_complete_parse(tmp_path):
+    workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())
+    step = next(item for item in workflow["jobs"]["customer"]["steps"] if item.get("name") == STEP_NAME)
+    program = (
+        step["run"].split("<<'PY_CANDIDATE_FAILURE'", 1)[1].split("\n", 1)[1].split("\nPY_CANDIDATE_FAILURE", 1)[0]
+    )
+    root = tmp_path / ".specfact"
+    root.mkdir()
+    (root / "code-review.json").write_text("{}" + " " * (2 * 1024 * 1024))
+    result = _run_projector(tmp_path, program)
+    assert result.returncode == 0 and not result.stderr
+    assert [json.loads(line) for line in result.stdout.splitlines()] == [
+        {"analyzer": "contracts", "diagnostic_class": "candidate_large_report_observed"},
+        {"snapshot_observations": [], "enforcement_observation": {}, "finding_observations": []},
+    ]
 
 
 def test_candidate_projection_ignores_retired_sample_frames(tmp_path):
@@ -1027,6 +1047,67 @@ def test_native_failure_excludes_unrecognized_or_successful_diagnostic_rows(tmp_
 
 _FAILURE_MARKERS = ("PY_CANDIDATE_FAILURE", "PY_REVIEW_FAILURE")
 _PRIVATE_CANARY = "PRIVATE_CLASSIFIER_PATH_TEST_ID"
+
+_PUBLIC_TYPE_RULES = (
+    "reportArgumentType",
+    "reportCallIssue",
+    "reportAssignmentType",
+    "reportReturnType",
+    "reportAttributeAccessIssue",
+    "reportGeneralTypeIssues",
+    "reportInvalidTypeForm",
+    "reportMissingImports",
+)
+
+
+@pytest.mark.parametrize("marker", _FAILURE_MARKERS)
+@pytest.mark.parametrize("rule", _PUBLIC_TYPE_RULES)
+def test_linux_failure_observers_emit_only_fixed_public_type_rules(tmp_path, monkeypatch, marker, rule):
+    findings = [
+        {
+            "category": "type_safety",
+            "tool": "basedpyright",
+            "severity": "error",
+            "rule": rule,
+            "file": _PRIVATE_CANARY,
+            "message": _PRIVATE_CANARY,
+        }
+    ]
+    data = {"findings": findings, "analyzer_evidence": []}
+    result = _actual_failure_observations(tmp_path, monkeypatch, marker, json.dumps(data))
+    assert result["finding_observations"] == [{"analyzer": "basedpyright", "diagnostic_class": rule}]
+    assert result["snapshot_observations"] == []
+
+
+@pytest.mark.parametrize("marker", _FAILURE_MARKERS)
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("rule", None),
+        ("rule", False),
+        ("rule", []),
+        ("rule", {}),
+        ("rule", _PRIVATE_CANARY),
+        ("rule", "reportArgumentType" + _PRIVATE_CANARY),
+        ("category", []),
+        ("tool", {}),
+        ("severity", False),
+    ],
+)
+def test_linux_failure_observers_omit_malformed_type_classifications(tmp_path, monkeypatch, marker, field, value):
+    finding = {
+        "category": "type_safety",
+        "tool": "basedpyright",
+        "severity": "error",
+        "rule": "reportArgumentType",
+        "file": _PRIVATE_CANARY,
+        "message": _PRIVATE_CANARY,
+    }
+    finding[field] = value
+    result = _actual_failure_observations(
+        tmp_path, monkeypatch, marker, json.dumps({"findings": [finding], "analyzer_evidence": []})
+    )
+    assert result["finding_observations"] == [] and result["snapshot_observations"] == []
 
 
 def _actual_failure_observations(tmp_path, monkeypatch, marker, payload):
