@@ -575,3 +575,21 @@ Current behavior:
 - targeted pytest failure -> `TEST_FAILURE`, `testing`, `error`
 - coverage below 80% -> `TEST_COVERAGE_LOW`, `testing`, `warning`
 - `no_tests=True` skips the TDD gate entirely
+
+## Supplementary host diagnostic preview
+
+The unreleased 0.51.6 preview supports an explicitly approved, fixed-source
+diagnostic experiment. Its actual installed review process verifies package
+payload and import origins before writing a private atomic host checkpoint.
+The latest stage and at most twenty base/head member cells describe host calls;
+they do not establish guest execution or an analyzer cause. Guest adapter
+identity and effective guest deadlines remain `UNAVAILABLE`.
+
+An outer supervisor owns a fresh process group and separate terminal record.
+It distinguishes child exit 124 from wrapper expiry and bounds TERM plus
+KILL/reap cleanup to ten seconds. A supported Linux signed smoke must show
+actual capsule presence and cleanup with a synthetic stalled test before the
+single full experiment. Smoke records are explicitly labeled `mode: smoke`;
+the fixed source identities identify the intended experiment, not the synthetic
+smoke fixture. Neither successful smoke nor diagnostic observations satisfy
+native producer acceptance or waive existing CI, signatures or reviews.

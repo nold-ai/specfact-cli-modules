@@ -332,7 +332,9 @@ def _run_project_snapshot(
 def run_project_scope_pair(resolution: Any, *, runtime: Any, options: Any, scope_evidence: dict[str, Any]) -> Any:
     """Resolve each immutable side separately; local provenance cannot authorize a PR."""
     from specfact_code_review.run.runner import _capsule_report, _classify_range_findings, _snapshot_python_files
+    from specfact_code_review.run.supplemental_diagnostics import host_checkpoint
 
+    host_checkpoint("scope_resolved")
     snapshots = (resolution.base_snapshot, resolution.head_snapshot)
     metadata_only = bool(resolution.selected_paths) and not any(
         Path(path).suffix in {".py", ".pyi"} for path in resolution.selected_paths
@@ -340,10 +342,12 @@ def run_project_scope_pair(resolution: Any, *, runtime: Any, options: Any, scope
     results = []
     bindings = {}
     for side, snapshot in zip(("base", "head"), snapshots, strict=True):
+        host_checkpoint("snapshot_prepare", side=side)
         side_options = replace(options, project_runtime=None) if side == "base" else options
         files = _snapshot_python_files(snapshot, resolution)
         if metadata_only:
             files = [snapshot.root / path for path in sorted(snapshot.contents) if Path(path).suffix in {".py", ".pyi"}]
+        host_checkpoint("snapshot_start", side=side)
         result, binding = run_project_snapshot(
             runtime,
             ProjectSnapshotRequest(
@@ -356,6 +360,7 @@ def run_project_scope_pair(resolution: Any, *, runtime: Any, options: Any, scope
         )
         results.append(result)
         bindings[side] = binding
+    host_checkpoint("classification")
     combined, findings = _classify_range_findings(resolution, results[0], results[1])
     native_versions = results[1].expected_versions
     native_platform = results[1].platform_id
@@ -382,5 +387,6 @@ def run_project_scope_pair(resolution: Any, *, runtime: Any, options: Any, scope
     )
     from specfact_code_review.run.supplemental_diagnostics import emit_sidecar
 
+    host_checkpoint("projection")
     emit_sidecar(report, resolution, results)
     return report

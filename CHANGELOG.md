@@ -9,6 +9,11 @@ and this project follows SemVer for bundle versions.
 
 ### Fixed
 
+- Extend the unreleased diagnostic preview to 0.51.6 with finite atomic host
+  checkpoints, verified installed entry identity and bounded owned supervision.
+  Guest adapter identity and effective guest deadlines remain unavailable;
+  required native acceptance is deferred and original failures remain held.
+
 - Prepare an unreleased diagnostic-only 0.51.5 preview from signed 0.51.2.
   Add opt-in bounded per-side observations for one immutable public source pair;
   preserve existing required assurance, privacy bounds and ordinary CI paths.

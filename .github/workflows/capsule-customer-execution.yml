@@ -13,6 +13,10 @@ on:
         description: Run the separately approved single supplemental diagnostic experiment
         type: boolean
         default: false
+      diagnostic_smoke:
+        description: Run only the approved signed Linux smoke prerequisite
+        type: boolean
+        default: false
       producer_commit:
         description: Independently reviewed signed preview commit
         type: string
@@ -688,6 +692,7 @@ jobs:
     env:
       EXPECTED_PRODUCER: ${{ inputs.producer_commit }}
       EXPECTED_PAYLOAD: ${{ inputs.producer_payload }}
+      DIAGNOSTIC_SMOKE: ${{ inputs.diagnostic_smoke }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
@@ -706,7 +711,7 @@ jobs:
           [[ "$EXPECTED_PAYLOAD" =~ ^[0-9a-f]{64}$ ]]
           test "$(id -u)" -ne 0
           TRUSTED_ROOT="$RUNNER_TEMP/supplemental-diagnostic"
-          mkdir -m 0700 "$TRUSTED_ROOT" "$TRUSTED_ROOT/home" "$TRUSTED_ROOT/tmp"
+          mkdir -m 0700 "$TRUSTED_ROOT" "$TRUSTED_ROOT/home" "$TRUSTED_ROOT/tmp" "$TRUSTED_ROOT/observations"
           echo "TRUSTED_ROOT=$TRUSTED_ROOT" >> "$GITHUB_ENV"
           git archive "$EXPECTED_PRODUCER:packages/specfact-code-review" | gzip -n > "$TRUSTED_ROOT/producer.tar.gz"
           python -I -m venv "$TRUSTED_ROOT/venv"
@@ -754,6 +759,30 @@ jobs:
           print(json.dumps({"purpose": "SUPPLEMENTARY_DIAGNOSTIC_ONLY", "producer_commit": os.environ["EXPECTED_PRODUCER"],
                             "payload_sha256": digest, "strict_signature": "VERIFIED"}))
           PY
+      - name: Bind separate workflow and supervisor identities
+        shell: bash
+        run: |
+          set -euo pipefail
+          install -m 0600 scripts/supplemental_review_supervisor.py "$TRUSTED_ROOT/supervisor.py"
+          python -I - <<'PY_BINDING'
+          import hashlib, json, os
+          from pathlib import Path
+          root = Path(os.environ["TRUSTED_ROOT"])
+          workspace = Path(os.environ["GITHUB_WORKSPACE"])
+          binding = {
+              "mode": "smoke" if os.environ["DIAGNOSTIC_SMOKE"] == "true" else "full",
+              "nonce": hashlib.sha256((os.environ["GITHUB_RUN_ID"] + ":" + os.environ["GITHUB_RUN_ATTEMPT"]).encode()).hexdigest(),
+              "producer_commit": os.environ["EXPECTED_PRODUCER"], "payload_sha256": os.environ["EXPECTED_PAYLOAD"],
+              "workflow_sha256": hashlib.sha256((workspace / ".github/workflows/capsule-customer-execution.yml").read_bytes()).hexdigest(),
+              "supervisor_sha256": hashlib.sha256((workspace / "scripts/supplemental_review_supervisor.py").read_bytes()).hexdigest(),
+              "base_commit": "593656f675eaf4954b609aca51aa6504367dc02e", "head_commit": "5b451ec066e0ea5cbd8a97ef3b59d915ae54fe5b",
+              "base_tree": "0ef24f43e4cf4fe13d7b3d95e62165a4d2bbafc6", "head_tree": "acea0127e0ed3472c3439a6aa87cc4353eaa18c5",
+          }
+          assert hashlib.sha256((root / "supervisor.py").read_bytes()).hexdigest() == binding["supervisor_sha256"]
+          fd = os.open(root / "observations/binding.json", os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+          with os.fdopen(fd, "w") as stream:
+              json.dump(binding, stream); stream.flush(); os.fsync(stream.fileno())
+          PY_BINDING
       - name: Capture the fixed public source pair and existing namespace policy
         shell: bash
         run: |
@@ -773,6 +802,7 @@ jobs:
           EOF_PROFILE
           sudo apparmor_parser -r "$TRUSTED_ROOT/capsule.apparmor"
       - name: Run one diagnostic review through the verified installed producer
+        timeout-minutes: ${{ inputs.diagnostic_smoke && 2 || 40 }}
         shell: bash
         run: |
           set -euo pipefail
@@ -789,8 +819,8 @@ jobs:
           package = Path.home() / ".specfact/modules/specfact-code-review"
           assert hashlib.sha256(_module_artifact_payload_stable(package)).hexdigest() == os.environ["EXPECTED_PAYLOAD"]
           CommandRegistry.get_module_typer("code")
-          from specfact_code_review.run import portable_snapshot, supplemental_diagnostics
-          for module in (portable_snapshot, supplemental_diagnostics):
+          from specfact_code_review.run import portable_snapshot, supplemental_diagnostics, runner
+          for module in (portable_snapshot, supplemental_diagnostics, runner):
               actual = Path(module.__file__).resolve()
               actual.relative_to(package.resolve())
               assert actual.read_bytes() == (package / "src/specfact_code_review/run" / actual.name).read_bytes()
@@ -802,6 +832,12 @@ jobs:
 
           os.chdir(sys.argv[1])
           if sys.argv[2] != "prepare-index":
+              directory = Path(os.environ["SPECFACT_SUPPLEMENTAL_PROGRESS_DIR"])
+              binding = supplemental_diagnostics.read_record(directory, "binding.json", 4096)
+              supplemental_diagnostics.verified_review_entry(package, binding)
+              if binding["mode"] == "smoke":
+                  assert sys.platform == "linux"
+                  supplemental_diagnostics.host_checkpoint("snapshot_start", side="base")
               app(args=sys.argv[2:])
               raise SystemExit(0)
           resolution = resolve_scope(ScopeRequest(repository=Path.cwd(), scope="index", portable_project_runtime=True))
@@ -823,27 +859,73 @@ jobs:
           trusted_env=(env -i HOME="$TRUSTED_ROOT/home" TMPDIR="$TRUSTED_ROOT/tmp"
             PATH="$TRUSTED_ROOT/venv/bin:/usr/bin:/bin" SPECFACT_MODULES_BRANCH=main
             EXPECTED_PAYLOAD="$EXPECTED_PAYLOAD" SPECFACT_CODE_REVIEW_CAPSULE_CACHE="$TRUSTED_ROOT/cache")
-          "${trusted_env[@]}" "$TRUSTED_ROOT/venv/bin/python" -I -c \
-            'import subprocess,sys; sys.exit(subprocess.run(sys.argv[1:],timeout=1800,check=False).returncode)' \
-            "$TRUSTED_ROOT/venv/bin/python" -I "$TRUSTED_ROOT/reviewer.py" \
-            "$TRUSTED_ROOT/subject" prepare-index "$TRUSTED_ROOT/project.toml" \
-            > "$TRUSTED_ROOT/preparation.private.log" 2>&1
+          if [ "$DIAGNOSTIC_SMOKE" != true ]; then
+            "${trusted_env[@]}" "$TRUSTED_ROOT/venv/bin/python" -I -c \
+              'import subprocess,sys; sys.exit(subprocess.run(sys.argv[1:],timeout=1800,check=False).returncode)' \
+              "$TRUSTED_ROOT/venv/bin/python" -I "$TRUSTED_ROOT/reviewer.py" \
+              "$TRUSTED_ROOT/subject" prepare-index "$TRUSTED_ROOT/project.toml" \
+              > "$TRUSTED_ROOT/preparation.private.log" 2>&1
+          fi
+          subject="$TRUSTED_ROOT/subject"
+          review_args=(--scope index --project-config "$TRUSTED_ROOT/project.toml")
+          deadline=600
+          if [ "$DIAGNOSTIC_SMOKE" = true ]; then
+            subject="$TRUSTED_ROOT/smoke-subject"
+            mkdir -m 0700 "$subject"
+            printf '%s\n' 'import time' 'def test_stalled_member():' '    time.sleep(600)' > "$subject/test_stall.py"
+            git -C "$subject" init -q
+            git -C "$subject" add test_stall.py
+            git -C "$subject" -c user.name=Diagnostic -c user.email=diagnostic@example.invalid -c core.hooksPath=/dev/null commit -qm fixture
+            review_args=(--scope full)
+            deadline=100
+          fi
           review_exit=0
           "${trusted_env[@]}" SPECFACT_SUPPLEMENTAL_DIAGNOSTIC_OUTPUT="$TRUSTED_ROOT/diagnostic.json" \
-            "$TRUSTED_ROOT/venv/bin/python" -I -c \
-            'import subprocess,sys
-          try:
-              sys.exit(subprocess.run(sys.argv[1:],timeout=600,check=False).returncode)
-          except subprocess.TimeoutExpired:
-              sys.exit(124)' \
+            SPECFACT_SUPPLEMENTAL_PROGRESS_DIR="$TRUSTED_ROOT/observations" \
+            "$TRUSTED_ROOT/venv/bin/python" -I "$TRUSTED_ROOT/supervisor.py" \
+            --directory "$TRUSTED_ROOT/observations" --timeout "$deadline" -- \
             "$TRUSTED_ROOT/venv/bin/python" -I "$TRUSTED_ROOT/reviewer.py" \
-            "$TRUSTED_ROOT/subject" code review run --scope index --enforcement changed --bug-hunt \
-            --project-config "$TRUSTED_ROOT/project.toml" --json --out "$TRUSTED_ROOT/review.private.json" \
+            "$subject" code review run "${review_args[@]}" --enforcement changed --bug-hunt \
+            --json --out "$TRUSTED_ROOT/review.private.json" \
             > "$TRUSTED_ROOT/review.private.log" 2>&1 || review_exit=$?
-          if [ -f "$TRUSTED_ROOT/diagnostic.json" ] && [ "$(wc -c < "$TRUSTED_ROOT/diagnostic.json")" -le 65536 ]; then
-            cat "$TRUSTED_ROOT/diagnostic.json"
+          if [ "$DIAGNOSTIC_SMOKE" = true ]; then
+            "${trusted_env[@]}" "$TRUSTED_ROOT/venv/bin/python" -I - "$TRUSTED_ROOT/observations/diagnostic-summary.json" <<'PY_SMOKE'
+          import json, sys
+          from pathlib import Path
+          value = json.loads(Path(sys.argv[1]).read_bytes())
+          assert value["progress_state"] == value["terminal_state"] == "observed"
+          progress, terminal = value["progress"], value["terminal"]
+          assert progress["binding"]["mode"] == "smoke" and progress["producer"]["modules"]
+          assert progress["stage"] == "member_dispatch" and progress["member"] == "targeted-pytest-coverage"
+          assert terminal["category"] == "wrapper_expired" and terminal["cleanup"] == "complete"
+          assert terminal["capsule_process_observed"] is True and terminal["elapsed_ms"] <= 120000
+          PY_SMOKE
           else
-            printf '%s\n' '{"purpose":"SUPPLEMENTARY_DIAGNOSTIC_ONLY","status":"UNAVAILABLE"}'
+            exit "$review_exit"
           fi
-          printf '\nSUPPLEMENTARY_DIAGNOSTIC_ONLY exit=%s\n' "$review_exit"
-          exit "$review_exit"
+      - name: Retain only validated bounded host observations
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$TRUSTED_ROOT"
+          env -i HOME="$TRUSTED_ROOT/home" PATH="$TRUSTED_ROOT/venv/bin:/usr/bin:/bin" \
+            "$TRUSTED_ROOT/venv/bin/python" -I - "$TRUSTED_ROOT/observations" <<'PY_COLLECT'
+          import json, sys
+          from pathlib import Path
+          from specfact_cli.registry import CommandRegistry
+          CommandRegistry.get_module_typer("code")
+          from specfact_code_review.run import supplemental_diagnostics as diagnostic
+          directory = Path(sys.argv[1])
+          binding = diagnostic.read_record(directory, "binding.json", 4096)
+          summary = diagnostic.collect_host_summary(directory, binding)
+          diagnostic.atomic_record(directory, "diagnostic-summary.json", summary, diagnostic.MAX_BYTES)
+          print(json.dumps(summary, sort_keys=True))
+          PY_COLLECT
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: supplemental-host-observations-${{ github.run_id }}
+          path: ${{ env.TRUSTED_ROOT }}/observations/diagnostic-summary.json
+          if-no-files-found: warn
+          retention-days: 7

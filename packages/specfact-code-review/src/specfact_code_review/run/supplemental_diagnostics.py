@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ast
+import contextlib
 import hashlib
 import json
 import os
@@ -302,3 +303,427 @@ def emit_sidecar(report: ReviewReport, resolution: Any, results: Any) -> str:
     except (OSError, ValueError, TypeError, AttributeError, RecursionError, yaml.YAMLError):
         return "UNAVAILABLE"
     return "WRITTEN"
+
+
+# This state exists only in the trusted full-review host, never in capsule requests.
+PROGRESS_ENV = "SPECFACT_SUPPLEMENTAL_PROGRESS_DIR"
+PROGRESS_LIMIT = 16384
+TERMINAL_LIMIT = 4096
+STAGES = {
+    "verified_review_entry",
+    "scope_resolved",
+    "snapshot_prepare",
+    "snapshot_start",
+    "member_dispatch",
+    "member_return",
+    "classification",
+    "projection",
+}
+BINDING_FIELDS = {
+    "nonce",
+    "producer_commit",
+    "payload_sha256",
+    "workflow_sha256",
+    "supervisor_sha256",
+    "base_commit",
+    "head_commit",
+    "base_tree",
+    "head_tree",
+    "mode",
+}
+PRODUCER_MODULES = ("portable_snapshot", "runner", "supplemental_diagnostics")
+_PROGRESS: dict[str, Any] | None = None
+_STARTED = 0.0
+
+
+def validate_binding(binding: Any) -> dict[str, str]:
+    """Accept only the immutable public experiment and finite cryptographic identities."""
+    if not isinstance(binding, dict) or set(binding) != BINDING_FIELDS:
+        raise ValueError("binding_schema")
+    if binding["mode"] not in {"full", "smoke"}:
+        raise ValueError("binding_mode")
+    for key, value in binding.items():
+        if key == "mode":
+            continue
+        length = 40 if key.endswith(("commit", "tree")) else 64
+        if not isinstance(value, str) or re.fullmatch(f"[0-9a-f]{{{length}}}", value) is None:
+            raise ValueError("binding_identity")
+    if (binding["base_commit"], binding["head_commit"]) != EXPECTED_COMMITS or (
+        binding["base_tree"],
+        binding["head_tree"],
+    ) != EXPECTED_TREES:
+        raise ValueError("binding_subject")
+    return dict(binding)
+
+
+def _directory_descriptor(directory: Path) -> int:
+    import stat
+
+    if not directory.is_absolute() or directory.resolve() != directory:
+        raise ValueError("directory_identity")
+    descriptor = os.open(directory, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+    info = os.fstat(descriptor)
+    if not stat.S_ISDIR(info.st_mode) or info.st_uid != os.getuid() or stat.S_IMODE(info.st_mode) != 0o700:
+        os.close(descriptor)
+        raise ValueError("directory_permissions")
+    return descriptor
+
+
+def atomic_record(directory: Path, name: str, value: dict[str, Any], limit: int) -> None:
+    """Replace one complete private record, preserving the old record on failure."""
+    if name not in {"binding.json", "progress.json", "terminal.json", "diagnostic-summary.json"}:
+        raise ValueError("record_name")
+    payload = json.dumps(value, sort_keys=True, allow_nan=False, separators=(",", ":")).encode()
+    if len(payload) > limit:
+        raise ValueError("record_oversized")
+    descriptor = _directory_descriptor(directory)
+    temporary = name + ".tmp"
+    created = False
+    try:
+        stream_descriptor = os.open(
+            temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600, dir_fd=descriptor
+        )
+        created = True
+        with os.fdopen(stream_descriptor, "wb") as stream:
+            stream.write(payload)
+            stream.flush()
+            os.fsync(stream.fileno())
+        # Refuse linked destinations rather than silently replacing them.
+        try:
+            import stat
+
+            if not stat.S_ISREG(os.stat(name, dir_fd=descriptor, follow_symlinks=False).st_mode):
+                raise ValueError("record_nonregular")
+        except FileNotFoundError:
+            pass
+        os.replace(temporary, name, src_dir_fd=descriptor, dst_dir_fd=descriptor)
+        os.fsync(descriptor)
+    finally:
+        if created:
+            with contextlib.suppress(FileNotFoundError):
+                os.unlink(temporary, dir_fd=descriptor)
+        os.close(descriptor)
+
+
+def _unique_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    result: dict[str, Any] = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("record_duplicate_key")
+        result[key] = value
+    return result
+
+
+def _reject_constant(_value: str) -> None:
+    raise ValueError("record_nonfinite")
+
+
+def read_record(directory: Path, name: str, limit: int) -> dict[str, Any]:
+    """Bound bytes before parsing, reject links and changed files, and admit objects only."""
+    import stat
+
+    if name not in {"binding.json", "progress.json", "terminal.json", "diagnostic-summary.json"}:
+        raise ValueError("record_name")
+    descriptor = _directory_descriptor(directory)
+    try:
+        stream_descriptor = os.open(name, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=descriptor)
+        with os.fdopen(stream_descriptor, "rb") as stream:
+            before = os.fstat(stream.fileno())
+            if before.st_size > limit:
+                raise ValueError("record_oversized")
+            if (
+                not stat.S_ISREG(before.st_mode)
+                or before.st_uid != os.getuid()
+                or stat.S_IMODE(before.st_mode) != 0o600
+            ):
+                raise ValueError("record_rejected")
+            data = stream.read(limit + 1)
+            after = os.fstat(stream.fileno())
+            if len(data) > limit or (before.st_size, before.st_mtime_ns, before.st_ino) != (
+                after.st_size,
+                after.st_mtime_ns,
+                after.st_ino,
+            ):
+                raise ValueError("record_changed")
+    finally:
+        os.close(descriptor)
+    result = json.loads(data, object_pairs_hook=_unique_object, parse_constant=_reject_constant)
+    if not isinstance(result, dict):
+        raise ValueError("record_schema")
+    return result
+
+
+def _bounded_integer(value: Any) -> bool:
+    return type(value) is int and 0 <= value <= 86400000
+
+
+def validate_progress(value: dict[str, Any], binding: dict[str, str]) -> None:
+    expected = {
+        "schema",
+        "purpose",
+        "binding",
+        "sequence",
+        "elapsed_ms",
+        "stage",
+        "side",
+        "member",
+        "members",
+        "producer",
+        "complete",
+        "actual_loaded_guest_adapter",
+        "effective_guest_deadline",
+    }
+    if (
+        set(value) != expected
+        or value["schema"] != "supplemental-host-progress-v1"
+        or value["purpose"] != "SUPPLEMENTARY_DIAGNOSTIC_ONLY"
+        or value["binding"] != validate_binding(binding)
+    ):
+        raise ValueError("progress_schema")
+    if not _bounded_integer(value["sequence"]) or value["sequence"] == 0 or not _bounded_integer(value["elapsed_ms"]):
+        raise ValueError("progress_sequence")
+    if (
+        value["stage"] not in STAGES
+        or value["side"] not in {"none", "base", "head"}
+        or value["member"] not in {"none", *MEMBERS}
+    ):
+        raise ValueError("progress_stage")
+    if (
+        value["complete"] is not False
+        or value["actual_loaded_guest_adapter"] != "UNAVAILABLE"
+        or value["effective_guest_deadline"] != "UNAVAILABLE"
+    ):
+        raise ValueError("progress_authority")
+    cells = value["members"]
+    if not isinstance(cells, dict) or len(cells) > 20:
+        raise ValueError("progress_members")
+    for key, cell in cells.items():
+        if (
+            key not in {f"{side}:{member}" for side in ("base", "head") for member in MEMBERS}
+            or not isinstance(cell, dict)
+            or set(cell) != {"stage", "elapsed_ms"}
+            or cell["stage"] not in {"member_dispatch", "member_return"}
+            or not _bounded_integer(cell["elapsed_ms"])
+            or cell["elapsed_ms"] > value["elapsed_ms"]
+        ):
+            raise ValueError("progress_cell")
+    producer = value["producer"]
+    if (
+        not isinstance(producer, dict)
+        or set(producer) != {"modules", "python", "platform", "environment"}
+        or producer["platform"] not in {"linux", "darwin"}
+        or producer["environment"] not in {"venv", "base"}
+        or not isinstance(producer["python"], str)
+        or re.fullmatch(r"3\.[0-9]{1,2}\.[0-9]{1,2}", producer["python"]) is None
+    ):
+        raise ValueError("producer_identity")
+    modules = producer["modules"]
+    if (
+        not isinstance(modules, dict)
+        or set(modules) != {f"src/specfact_code_review/run/{name}.py" for name in PRODUCER_MODULES}
+        or any(
+            not isinstance(digest, str) or re.fullmatch(r"[0-9a-f]{64}", digest) is None for digest in modules.values()
+        )
+    ):
+        raise ValueError("producer_modules")
+
+
+def _installed_producer_identity(package: Path, binding: dict[str, str]) -> dict[str, Any]:
+    import importlib
+    import sys
+
+    from specfact_cli.registry.module_installer import _module_artifact_payload_stable
+
+    expected_package = Path.home() / ".specfact/modules/specfact-code-review"
+    if package != expected_package or package.resolve() != package or package.is_symlink():
+        raise ValueError("producer_not_installed")
+    if hashlib.sha256(_module_artifact_payload_stable(package)).hexdigest() != binding["payload_sha256"]:
+        raise ValueError("producer_payload_mismatch")
+    modules = {}
+    for name in PRODUCER_MODULES:
+        module = importlib.import_module(f"specfact_code_review.run.{name}")
+        relative = f"src/specfact_code_review/run/{name}.py"
+        actual = Path(module.__file__ or "")
+        if actual != package / relative or actual.resolve() != actual:
+            raise ValueError("producer_origin_mismatch")
+        modules[relative] = hashlib.sha256(actual.read_bytes()).hexdigest()
+    return {
+        "modules": modules,
+        "python": ".".join(map(str, sys.version_info[:3])),
+        "platform": sys.platform,
+        "environment": "venv" if sys.prefix != sys.base_prefix else "base",
+    }
+
+
+def verified_review_entry(package: Path, binding: dict[str, str]) -> None:
+    """Verify actual loaded installed bytes before the full-review app is invoked."""
+    import time
+
+    global _PROGRESS, _STARTED
+    _PROGRESS = None
+    configured = os.environ.get(PROGRESS_ENV)
+    if configured is None:
+        return
+    binding = validate_binding(binding)
+    producer = _installed_producer_identity(package, binding)
+    _STARTED = time.monotonic()
+    value = {
+        "schema": "supplemental-host-progress-v1",
+        "purpose": "SUPPLEMENTARY_DIAGNOSTIC_ONLY",
+        "binding": binding,
+        "sequence": 1,
+        "elapsed_ms": 0,
+        "stage": "verified_review_entry",
+        "side": "none",
+        "member": "none",
+        "members": {},
+        "producer": producer,
+        "complete": False,
+        "actual_loaded_guest_adapter": "UNAVAILABLE",
+        "effective_guest_deadline": "UNAVAILABLE",
+    }
+    validate_progress(value, binding)
+    atomic_record(Path(configured), "progress.json", value, PROGRESS_LIMIT)
+    _PROGRESS = value
+
+
+def host_checkpoint(stage: str, *, side: str | None = None, member: str = "none") -> str:
+    """Persist finite host observations without changing review results on failure."""
+    import copy
+    import time
+
+    global _PROGRESS
+    configured = os.environ.get(PROGRESS_ENV)
+    if configured is None or _PROGRESS is None:
+        return "DISABLED" if configured is None else "UNAVAILABLE"
+    try:
+        previous = read_record(Path(configured), "progress.json", PROGRESS_LIMIT)
+        validate_progress(previous, _PROGRESS["binding"])
+        if previous != _PROGRESS:
+            raise ValueError("progress_sequence_mismatch")
+        value = copy.deepcopy(_PROGRESS)
+        value.update(
+            sequence=value["sequence"] + 1,
+            elapsed_ms=int((time.monotonic() - _STARTED) * 1000),
+            stage=stage,
+            side=side or value["side"],
+            member=member,
+        )
+        if member != "none":
+            value["members"][f"{value['side']}:{member}"] = {"stage": stage, "elapsed_ms": value["elapsed_ms"]}
+        validate_progress(value, value["binding"])
+        atomic_record(Path(configured), "progress.json", value, PROGRESS_LIMIT)
+        _PROGRESS = value
+    except (OSError, ValueError, TypeError, KeyError, RecursionError):
+        _PROGRESS = None
+        return "UNAVAILABLE"
+    return "WRITTEN"
+
+
+def validate_terminal(value: dict[str, Any], binding: dict[str, str]) -> None:
+    if (
+        set(value)
+        != {
+            "schema",
+            "purpose",
+            "binding",
+            "category",
+            "child_returncode",
+            "elapsed_ms",
+            "cleanup",
+            "capsule_process_observed",
+        }
+        or value["schema"] != "supplemental-host-terminal-v1"
+        or value["purpose"] != "SUPPLEMENTARY_DIAGNOSTIC_ONLY"
+        or value["binding"] != validate_binding(binding)
+    ):
+        raise ValueError("terminal_schema")
+    if (
+        value["category"] not in {"child_exit", "wrapper_expired", "signal_termination", "supervisor_error"}
+        or value["cleanup"] not in {"complete", "incomplete", "pending"}
+        or not _bounded_integer(value["elapsed_ms"])
+    ):
+        raise ValueError("terminal_category")
+    if type(value["capsule_process_observed"]) is not bool and value["capsule_process_observed"] != "UNAVAILABLE":
+        raise ValueError("terminal_capsule_observation")
+    code = value["child_returncode"]
+    if code is not None and (type(code) is not int or not -128 <= code <= 255):
+        raise ValueError("terminal_returncode")
+    category = value["category"]
+    if category == "child_exit" and (code is None or code < 0):
+        raise ValueError("terminal_exit_category")
+    if category == "signal_termination" and (code is None or code >= 0):
+        raise ValueError("terminal_signal_category")
+    if category in {"wrapper_expired", "supervisor_error"} and code is not None:
+        raise ValueError("terminal_nonexit_category")
+
+
+def _safe_record_inventory(descriptor: int) -> bool:
+    import stat
+
+    complete = {"binding.json", "progress.json", "terminal.json", "diagnostic-summary.json"}
+    temporary = {
+        "progress.json.tmp": PROGRESS_LIMIT,
+        "terminal.json.tmp": TERMINAL_LIMIT,
+        "diagnostic-summary.json.tmp": MAX_BYTES,
+    }
+    for name in os.listdir(descriptor):
+        if name in complete:
+            continue
+        if name not in temporary:
+            return False
+        try:
+            info = os.stat(name, dir_fd=descriptor, follow_symlinks=False)
+        except FileNotFoundError:
+            continue
+        if (
+            not stat.S_ISREG(info.st_mode)
+            or info.st_uid != os.getuid()
+            or stat.S_IMODE(info.st_mode) != 0o600
+            or info.st_size > temporary[name]
+        ):
+            return False
+    return True
+
+
+def collect_host_summary(directory: Path, binding: dict[str, str]) -> dict[str, Any]:
+    """Independently admit bounded owner records; missing observations are not zero findings."""
+    binding = validate_binding(binding)
+    summary: dict[str, Any] = {
+        "purpose": "SUPPLEMENTARY_DIAGNOSTIC_ONLY",
+        "binding": binding,
+        "complete": False,
+        "progress": "UNAVAILABLE",
+        "terminal": "UNAVAILABLE",
+        "progress_state": "missing",
+        "terminal_state": "missing",
+        "actual_loaded_guest_adapter": "UNAVAILABLE",
+        "effective_guest_deadline": "UNAVAILABLE",
+    }
+    descriptor = _directory_descriptor(directory)
+    try:
+        if not _safe_record_inventory(descriptor):
+            summary.update(progress_state="rejected", terminal_state="rejected")
+            return summary
+    finally:
+        os.close(descriptor)
+    for name, limit, validate in (
+        ("progress", PROGRESS_LIMIT, validate_progress),
+        ("terminal", TERMINAL_LIMIT, validate_terminal),
+    ):
+        try:
+            value = read_record(directory, name + ".json", limit)
+            validate(value, binding)
+            if name == "progress" and value["producer"] != _installed_producer_identity(
+                Path.home() / ".specfact/modules/specfact-code-review", binding
+            ):
+                raise ValueError("progress_producer_mismatch")
+            summary[name] = value
+            summary[name + "_state"] = "observed"
+        except FileNotFoundError:
+            pass
+        except json.JSONDecodeError:
+            summary[name + "_state"] = "malformed"
+        except (OSError, ValueError, TypeError, KeyError, RecursionError) as error:
+            summary[name + "_state"] = "oversized" if str(error) == "record_oversized" else "rejected"
+    return summary

@@ -36,8 +36,10 @@ def test_diagnostic_run_is_fixed_signed_and_single_attempt():
     assert "5b451ec066e0ea5cbd8a97ef3b59d915ae54fe5b" in scripts
     assert 'test "$GITHUB_RUN_ATTEMPT" = 1' in scripts
     assert "SUPPLEMENTARY_DIAGNOSTIC_ONLY" in scripts
-    assert "timeout=600" in scripts
-    assert "--scope index --enforcement changed --bug-hunt" in scripts
+    assert "deadline=600" in scripts
+    assert '--timeout "$deadline"' in scripts
+    assert "review_args=(--scope index" in scripts
+    assert '"${review_args[@]}" --enforcement changed --bug-hunt' in scripts
     assert "4e54ffb02307e1a85c166c40aba6d1bc40fbb9a8ef40bf756f8870e5bb08d1c8" in scripts
     assert "verify_signature" in scripts
     assert "actual_loaded_adapter" not in scripts or "UNAVAILABLE" in scripts
@@ -59,3 +61,20 @@ def test_event_mode_truth_table(event, diagnostic_input):
         outcomes[name] = eval(expression, {"__builtins__": {}}, context)
     diagnostic_requested = event == "workflow_dispatch" and diagnostic_input is True
     assert outcomes == {"customer": not diagnostic_requested, "supplemental-diagnostic": diagnostic_requested}
+
+
+def test_signed_smoke_requires_actual_entry_capsule_and_cleanup():
+    job = _workflow()["jobs"]["supplemental-diagnostic"]
+    assert job["timeout-minutes"] == 45
+    scripts = "\n".join(step.get("run", "") for step in job["steps"])
+    assert "verified_review_entry(package, binding)" in scripts
+    assert 'terminal["capsule_process_observed"] is True' in scripts
+    assert 'terminal["cleanup"] == "complete"' in scripts
+    assert 'progress["member"] == "targeted-pytest-coverage"' in scripts
+    assert 'binding["mode"] == "smoke"' in scripts
+    assert "deadline=100" in scripts
+    retention = next(
+        step for step in job["steps"] if step.get("name") == "Retain only validated bounded host observations"
+    )
+    assert retention["if"] == "always()"
+    assert "collect_host_summary" in retention["run"]

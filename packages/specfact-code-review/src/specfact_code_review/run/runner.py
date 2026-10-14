@@ -2068,6 +2068,8 @@ def _run_capsule_snapshot(
     options: ReviewOptions,
     settings: CapsuleSnapshotSettings | None = None,
 ) -> CapsuleSnapshotResult:
+    from specfact_code_review.run.supplemental_diagnostics import host_checkpoint
+
     settings = settings or CapsuleSnapshotSettings()
     evidence: dict[str, dict[str, object]] = {}
     findings_by_member: dict[str, list[ReviewFinding]] = {}
@@ -2080,6 +2082,7 @@ def _run_capsule_snapshot(
         sealed_bugs_policy = settings.member_argv is not None and "semgrep-bugs" in settings.member_argv
         raw = (settings.unavailable_members or {}).get(member)
         if raw is None:
+            host_checkpoint("member_dispatch", member=member)
             raw = _dispatch_capsule_member(
                 CapsuleMemberExecutionRequest(
                     runtime=runtime,
@@ -2099,6 +2102,7 @@ def _run_capsule_snapshot(
                 applicability=applicability,
                 sealed_bugs_policy=sealed_bugs_policy,
             )
+        host_checkpoint("member_return", member=member)
         raw_findings = raw.get("findings", [])
         findings = [ReviewFinding.model_validate(value) for value in cast(list[object], raw_findings)]
         findings_by_member[member] = findings

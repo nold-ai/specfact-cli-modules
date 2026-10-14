@@ -53,3 +53,51 @@ requirements:
       observable: An explicit diagnostic dispatch binds the signed producer and fixed
         source pair; execution and native acceptance remain pending. This mapping
         is planned maturity, not runtime or release acceptance.
+  openspec:code-review-bounded-diagnostic-sidecar:code-review-diagnostic-sidecar:durable-host-only-progress:
+    rationale: Bounded supplementary host observations preserve original failed assurance
+      and guest boundary.
+    touchpoints:
+    - id: host-diagnostic-spec
+      kind: config_file
+      locator: openspec/changes/code-review-bounded-diagnostic-sidecar/specs/code-review-diagnostic-sidecar/spec.md
+    verification_cases:
+    - case_id: blocking-first-member
+      scenario_id: durable-host-only-progress
+      method: inspection
+      intent: Inspect behavioral tests, frozen source and exact signed Linux smoke
+        evidence.
+      observable: Finite verified host observations and bounded owned cleanup; execution
+        remains pending until recorded. Native producer acceptance is deferred, not
+        waived.
+    - case_id: invalid-or-disabled-progress
+      scenario_id: durable-host-only-progress
+      method: inspection
+      intent: Inspect behavioral tests, frozen source and exact signed Linux smoke
+        evidence.
+      observable: Finite verified host observations and bounded owned cleanup; execution
+        remains pending until recorded. Native producer acceptance is deferred, not
+        waived.
+  openspec:code-review-bounded-diagnostic-sidecar:code-review-diagnostic-sidecar:owned-bounded-supervisor:
+    rationale: Bounded supplementary host observations preserve original failed assurance
+      and guest boundary.
+    touchpoints:
+    - id: host-diagnostic-spec
+      kind: config_file
+      locator: openspec/changes/code-review-bounded-diagnostic-sidecar/specs/code-review-diagnostic-sidecar/spec.md
+    verification_cases:
+    - case_id: expiry-with-inherited-pipes
+      scenario_id: owned-bounded-supervisor
+      method: inspection
+      intent: Inspect behavioral tests, frozen source and exact signed Linux smoke
+        evidence.
+      observable: Finite verified host observations and bounded owned cleanup; execution
+        remains pending until recorded. Native producer acceptance is deferred, not
+        waived.
+    - case_id: signed-smoke-prerequisite
+      scenario_id: owned-bounded-supervisor
+      method: inspection
+      intent: Inspect behavioral tests, frozen source and exact signed Linux smoke
+        evidence.
+      observable: Finite verified host observations and bounded owned cleanup; execution
+        remains pending until recorded. Native producer acceptance is deferred, not
+        waived.
