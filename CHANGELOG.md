@@ -9,6 +9,8 @@ and this project follows SemVer for bundle versions.
 
 ### Fixed
 
+- Skip impossible unchanged candidates before correspondence matrix evaluation, preserving full final evidence, finding multiplicity and fallback ordering.
+
 - Propagate explicit Linux pytest execution budgets through strictly admitted sealed requests to nonportable subprocesses, preserving legacy/default limits and operation-local isolation. Keep complete corresponding command-test selection and UNKNOWN authority for budget metadata.
 
 ### Added

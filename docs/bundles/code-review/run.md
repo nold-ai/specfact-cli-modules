@@ -27,6 +27,16 @@ module has no admitted capsule for that ABI. Reinstalling the same module cannot
 supply a missing catalog entry; a signed release with accepted runtime artifacts
 is required. The JSON report retains the cause in `analyzer_evidence[].diagnostic`.
 
+## Differential candidate search
+
+Range classification rejects impossible unchanged candidates using existing source
+bounds, unique current lines and exact neighboring byte lines before computing
+correspondence matrices. Final pairing still computes complete correspondence
+costs and evidence. Finding order, multiplicity, ambiguous dispositions, fallback
+pairing, suppression policy and bounds remain unchanged. The four-distinct-anchor
+synthetic regression reduces forbidden matrix builds from ten to four; this is a
+work-count result, not a latency guarantee or historical timeout diagnosis.
+
 ## Linux full-test execution budget
 
 `--linux-pytest-timeout-seconds` selects an operator-owned deadline from 1 to

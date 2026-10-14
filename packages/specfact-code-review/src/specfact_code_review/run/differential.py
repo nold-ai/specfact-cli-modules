@@ -741,6 +741,27 @@ def _classify_partition(
     state.introduced.extend(remaining_head)
 
 
+def _could_have_unchanged_anchor(
+    base: DifferentialFinding,
+    head: DifferentialFinding,
+    request: FindingClassificationRequest,
+) -> bool:
+    context, _ = _continuity_context(
+        base,
+        head,
+        base_source=_source_for(base.path, request.base_sources),
+        head_source=_source_for(head.path, request.head_sources),
+    )
+    if context is None:
+        return False
+    base_lines, head_lines = context.base_lines, context.head_lines
+    if base_lines.count(base_lines[context.base_index]) != 1:
+        return False
+    if head_lines.count(head_lines[context.head_index]) != 1:
+        return False
+    return _line_anchor(base_lines, context.base_index) == _line_anchor(head_lines, context.head_index)
+
+
 def _continuity_compatible_pairs(
     base_partition: list[DifferentialFinding],
     head_partition: list[DifferentialFinding],
@@ -758,7 +779,8 @@ def _continuity_compatible_pairs(
         candidates = [
             base_item
             for base_item in remaining_base
-            if _continuity(
+            if _could_have_unchanged_anchor(base_item, head_item, request)
+            and _continuity(
                 base_item,
                 head_item,
                 base_source=_source_for(base_item.path, request.base_sources),
