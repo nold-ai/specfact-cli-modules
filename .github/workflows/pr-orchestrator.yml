@@ -59,6 +59,8 @@ jobs:
               - "tests/host/proof_capsule_deferred_review_ci.py"
               - "tests/host/proof_capsule_review_projection_shell.py"
               - "tests/support/capsule_review_fixtures.py"
+              - "tests/support/reviewer_prerequisite/REVIEWER_INSTALL_OLD.txt"
+              - "tests/support/reviewer_prerequisite/REVIEWER_INSTALL_NEW.txt"
               - "scripts/pre-commit-quality-checks.sh"
               - "scripts/check_capsule_deferral.py"
               - "scripts/owner_commit_entry.py"

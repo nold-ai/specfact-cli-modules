@@ -1,0 +1,273 @@
+set -euo pipefail
+umask 077
+test "$(id -u)" -ne 0
+TRUSTED_ROOT="$RUNNER_TEMP/specfact-independent-review"
+TRUSTED_VENV="$RUNNER_TEMP/specfact-independent-core-venv"
+test ! -e "$TRUSTED_ROOT"
+test ! -e "$TRUSTED_VENV"
+cd "$RUNNER_TEMP"
+python -I -m venv "$TRUSTED_VENV"
+"$TRUSTED_VENV/bin/python" -I -m pip install --no-cache-dir specfact-cli==0.55.4
+BOOTSTRAP_SCRIPT="$RUNNER_TEMP/specfact-independent-bootstrap.py"
+(set -o noclobber; cat > "$BOOTSTRAP_SCRIPT" <<'SPECFACT_FIXED_BOOTSTRAP'
+"""Prepared private diagnostic prerequisite; independent admission is external."""
+import gzip
+import hashlib
+import importlib.metadata
+import io
+import json
+import os
+from pathlib import Path, PurePosixPath
+import select
+import subprocess
+import sys
+import tarfile
+import tempfile
+import time
+
+import yaml
+from specfact_cli.models.module_package import ModulePackageMetadata
+from specfact_cli.registry import module_installer
+
+COMMIT = 'a785ef4da8ea74f67f8ffa41f458c025cbfba4b1'
+TREE = '9cc469a6a4a0cc74bed564e315eadd58e0b57020'
+BASE = '209b4ed835187ea857d1fa847abdd351f6f6232a'
+MODULE_ID = 'nold-ai/specfact-code-review'
+VERSION = '0.51.5'
+PACKAGE = 'packages/specfact-code-review'
+PAYLOAD_SHA = '5c538655ddd1e24977b41a979d6b01fbbdac0b4f3bfe7ceb6fc3b5c1bfd9041f'
+MANIFEST_SHA = 'cbaafa7b78912bff42800b3bef174d24f474fff2952add17c88d41eebbedcf61'
+KEY_SHA = '4e54ffb02307e1a85c166c40aba6d1bc40fbb9a8ef40bf756f8870e5bb08d1c8'
+GIT = '/usr/bin/git'
+MAX_BYTES = 64 * 1024 * 1024
+GIT_TIMEOUT_SECONDS = 60
+
+
+def require(condition, message):
+    if not condition:
+        raise ValueError(message)
+
+
+def digest(data):
+    return hashlib.sha256(data).hexdigest()
+
+
+def clean_environment(root):
+    return {'HOME': str(root / 'home'), 'TMPDIR': str(root / 'tmp'),
+            'PATH': str(Path(sys.executable).parent) + ':/usr/bin:/bin',
+            'GIT_NO_REPLACE_OBJECTS': '1', 'GIT_CONFIG_NOSYSTEM': '1',
+            'GIT_CONFIG_GLOBAL': os.devnull, 'LANG': 'C.UTF-8',
+            'PYTHONDONTWRITEBYTECODE': '1'}
+
+
+def git(repo, *args):
+    deadline = time.monotonic() + GIT_TIMEOUT_SECONDS
+    with tempfile.TemporaryFile() as error:
+        process = subprocess.Popen([GIT, '--no-pager', '-C', str(repo), *args],
+                                   env=clean_environment(Path(tempfile.gettempdir())),
+                                   stdout=subprocess.PIPE, stderr=error)
+        try:
+            data = bytearray()
+            while True:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0 or not select.select([process.stdout], [], [], remaining)[0]:
+                    raise subprocess.TimeoutExpired(process.args, GIT_TIMEOUT_SECONDS)
+                chunk = os.read(process.stdout.fileno(), min(65536, MAX_BYTES + 1 - len(data)))
+                if not chunk:
+                    break
+                data.extend(chunk)
+                require(len(data) <= MAX_BYTES, 'Git output exceeds limit')
+            require(process.wait(timeout=max(0, deadline - time.monotonic())) == 0,
+                    'Git object lookup failed')
+            return bytes(data)
+        finally:
+            if process.poll() is None:
+                process.kill()
+            process.wait()
+            process.stdout.close()
+
+
+def relative_path(name):
+    path = PurePosixPath(name)
+    require(name and not path.is_absolute() and '..' not in path.parts and '\\' not in name,
+            'Unsafe archive path')
+    return Path(*path.parts)
+
+
+def check_source(repo):
+    require(git(repo, 'rev-parse', '--verify', COMMIT + '^{commit}').decode().strip() == COMMIT,
+            'Wrong commit')
+    require(git(repo, 'rev-parse', '--verify', COMMIT + ':' + PACKAGE).decode().strip() == TREE,
+            'Wrong package tree')
+    require(git(repo, 'rev-parse', '--verify', BASE + '^{commit}').decode().strip() == BASE,
+            'Wrong baseline commit')
+
+
+def verify(package, reviewer=False):
+    key = module_installer._bundled_public_key_path().read_bytes()
+    require(digest(key) == KEY_SHA, 'Wrong bundled key')
+    manifest = (package / 'module-package.yaml').read_bytes()
+    metadata = ModulePackageMetadata(**yaml.safe_load(manifest))
+    if reviewer:
+        require(digest(manifest) == MANIFEST_SHA, 'Wrong reviewer manifest')
+        require((metadata.name, metadata.version) == (MODULE_ID, VERSION), 'Wrong reviewer identity')
+        require(metadata.integrity.checksum == 'sha256:' + PAYLOAD_SHA, 'Wrong reviewer payload')
+    require(module_installer.verify_module_artifact(
+        package, metadata, allow_unsigned=False, require_integrity=True,
+        require_signature=True, public_key_pem=key.decode()), 'Strict signature verification failed')
+    return {'id': metadata.name, 'version': metadata.version,
+            'manifest_sha256': digest(manifest), 'payload_sha256': metadata.integrity.checksum}
+
+
+def extract(data, destination):
+    destination.mkdir()
+    seen = set()
+    total = 0
+    with tarfile.open(fileobj=io.BytesIO(data), mode='r:*') as archive:
+        for member in archive:
+            name = relative_path(member.name)
+            require(member.isfile() or member.isdir(), 'Archive links/special entries forbidden')
+            require(name not in seen, 'Duplicate archive entry')
+            seen.add(name)
+            require(len(seen) <= 10000, 'Too many archive entries')
+            target = destination / name
+            if member.isdir():
+                target.mkdir(parents=True, exist_ok=True)
+                continue
+            total += member.size
+            require(0 <= member.size <= MAX_BYTES and total <= MAX_BYTES, 'Expanded archive exceeds limit')
+            target.parent.mkdir(parents=True, exist_ok=True)
+            with archive.extractfile(member) as source:
+                target.write_bytes(source.read(member.size))
+    manifests = list(destination.glob('*/module-package.yaml'))
+    require(len(manifests) == 1, 'Expected one top-level package')
+    return manifests[0].parent
+
+
+def main(repo, output):
+    require(sys.flags.isolated, 'Launch trusted Python with -I')
+    require(importlib.metadata.version('specfact-cli') == '0.55.4', 'Wrong core version')
+    require(not output.is_relative_to(repo), 'Output must be outside candidate checkout')
+    require(not output.exists(), 'Fresh output directory required')
+    output.mkdir(mode=0o700)
+    for name in ['home', 'tmp', 'archives', 'verified']:
+        (output / name).mkdir(mode=0o700)
+    os.environ.clear()
+    os.environ.update(clean_environment(output))
+    os.chdir(output)
+    require(not any(p and Path(p).resolve().is_relative_to(repo) for p in sys.path), 'Candidate on Python path')
+    check_source(repo)
+    package = output / 'verified' / 'specfact-code-review'
+    package.mkdir()
+    entries = git(repo, 'ls-tree', '-rz', TREE).split(b'\0')
+    inventory = {}
+    total = 0
+    for entry in filter(None, entries):
+        header, rawname = entry.split(b'\t', 1)
+        mode, kind, oid = header.decode().split()
+        require(mode in {'100644', '100755'} and kind == 'blob', 'Package contains non-regular file')
+        name = relative_path(rawname.decode())
+        content = git(repo, 'cat-file', 'blob', oid)
+        total += len(content)
+        require(total <= MAX_BYTES, 'Package exceeds limit')
+        target = package / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(content)
+        target.chmod(0o755 if mode == '100755' else 0o644)
+        inventory[name.as_posix()] = {'sha256': digest(content), 'mode': target.stat().st_mode & 0o777}
+    require(len(inventory) == 117, 'Wrong package file count')
+    pre = [verify(package, reviewer=True)]
+    archive = output / 'archives' / 'specfact-code-review-0.51.5.tar.gz'
+    with archive.open('wb') as raw, gzip.GzipFile(fileobj=raw, mode='wb', filename='', mtime=0) as compressed:
+        with tarfile.open(fileobj=compressed, mode='w', format=tarfile.GNU_FORMAT) as tar:
+            for name in sorted(inventory):
+                content = (package / name).read_bytes()
+                info = tarfile.TarInfo('specfact-code-review/' + name)
+                info.size, info.mode, info.mtime = len(content), inventory[name]['mode'], 0
+                tar.addfile(info, io.BytesIO(content))
+    index_bytes = git(repo, 'show', BASE + ':registry/index.json')
+    index = json.loads(index_bytes)
+    provenance = []
+    required = {MODULE_ID, 'nold-ai/specfact-project', 'nold-ai/specfact-codebase',
+                'nold-ai/specfact-requirements'}
+    index['modules'] = [record for record in index['modules'] if record['id'] in required]
+    require({record['id'] for record in index['modules']} == required, 'Missing registry dependencies')
+    for record in index['modules']:
+        if record['id'] == MODULE_ID:
+            record.update(latest_version=VERSION, download_url=archive.as_uri(), checksum_sha256=digest(archive.read_bytes()))
+            continue
+        path = relative_path(record['download_url'])
+        require(path.parts[0] == 'modules' and len(path.parts) == 2, 'Unexpected dependency path')
+        data = git(repo, 'show', BASE + ':registry/' + path.as_posix())
+        require(digest(data) == record['checksum_sha256'], 'Dependency transport checksum mismatch')
+        local = output / 'archives' / path.name
+        local.write_bytes(data)
+        dep = extract(data, output / 'verified' / path.stem)
+        identity = verify(dep)
+        require((identity['id'], identity['version']) == (record['id'], record['latest_version']), 'Dependency identity mismatch')
+        pre.append(identity)
+        provenance.append({'id': record['id'], 'source_commit': BASE,
+                           'source_path': 'registry/' + path.as_posix(), 'archive_sha256': digest(data)})
+        record['download_url'] = local.as_uri()
+    local_index = output / 'index.json'
+    local_index.write_text(json.dumps(index, indent=2) + '\n')
+    install_env = clean_environment(output)
+    install_env['SPECFACT_REGISTRY_INDEX_URL'] = local_index.as_uri()
+    command = [sys.executable, '-I', '-m', 'specfact_cli.cli', 'module', 'install', MODULE_ID,
+               '--scope', 'user', '--version', VERSION, '--source', 'marketplace']
+    with (output / 'install.log').open('wb') as log:
+        subprocess.run(command, cwd=output, env=install_env, stdout=log, stderr=subprocess.STDOUT,
+                       check=True, timeout=300)
+    modules = output / 'home/.specfact/modules'
+    installed = modules / 'specfact-code-review'
+    post = []
+    expected = {item['id']: item for item in pre}
+    for manifest in sorted(modules.glob('*/module-package.yaml')):
+        item = verify(manifest.parent, reviewer=manifest.parent == installed)
+        require(item == expected.get(item['id']), 'Installed module differs from verified input')
+        post.append(item)
+    require({item['id'] for item in post} == {MODULE_ID, 'nold-ai/specfact-project',
+            'nold-ai/specfact-codebase', 'nold-ai/specfact-requirements'}, 'Unexpected installed dependency set')
+    for name, record in inventory.items():
+        require(digest((installed / name).read_bytes()) == record['sha256'], 'Installed inventory differs')
+        require((installed / name).stat().st_mode & 0o777 == record['mode'], 'Installed file mode differs')
+    probe = """import json, pathlib, runpy, sys
+b = runpy.run_path(sys.argv[1], run_name='prepared_bootstrap')
+root = pathlib.Path(sys.argv[2])
+for manifest in sorted((root / 'home/.specfact/modules').glob('*/module-package.yaml')):
+    b['verify'](manifest.parent, reviewer=manifest.parent.name == 'specfact-code-review')
+from specfact_cli.registry import CommandRegistry
+CommandRegistry.get_module_typer('code')
+from specfact_code_review.run import runner, runtime_builder
+origins = [str(pathlib.Path(module.__file__).resolve()) for module in [runner, runtime_builder]]
+if not all(pathlib.Path(origin).is_relative_to(root / 'home/.specfact/modules/specfact-code-review') for origin in origins):
+    raise ValueError('Wrong controller origin')
+print(json.dumps(origins))
+"""
+    with (output / 'origin.stderr').open('wb') as error:
+        origin_result = subprocess.run([sys.executable, '-I', '-c', probe, str(Path(__file__).resolve()), str(output)],
+                                       cwd=output, env=clean_environment(output), stdout=subprocess.PIPE,
+                                       stderr=error, check=True, timeout=60)
+    origins = json.loads(origin_result.stdout)
+    evidence = {'status': 'PREPARED_DIAGNOSTIC_VALIDATED_NOT_ADMITTED',
+                'core_version': '0.55.4', 'source_commit': COMMIT, 'package_tree': TREE,
+                'public_key_sha256': KEY_SHA, 'manifest_sha256': MANIFEST_SHA,
+                'signed_payload_sha256': PAYLOAD_SHA, 'inventory': inventory,
+                'local_transport_sha256': digest(archive.read_bytes()),
+                'baseline_index_sha256': digest(index_bytes), 'dependency_provenance': provenance,
+                'preinstall_verification': pre, 'postinstall_verification': post,
+                'install_command': command, 'controller_origins': origins}
+    (output / 'evidence.json').write_text(json.dumps(evidence, indent=2) + '\n')
+    print(json.dumps({key: evidence[key] for key in ['status', 'source_commit', 'controller_origins']}))
+
+
+if __name__ == '__main__':
+    require(len(sys.argv) == 3, 'Usage: python -I bootstrap.py REPOSITORY FRESH_OUTPUT')
+    main(Path(sys.argv[1]).resolve(), Path(sys.argv[2]).resolve())
+SPECFACT_FIXED_BOOTSTRAP
+)
+LAUNCH_HOME="$RUNNER_TEMP/specfact-independent-launch-home"
+mkdir -m 0700 "$LAUNCH_HOME"
+env -i HOME="$LAUNCH_HOME" TMPDIR="$RUNNER_TEMP" PATH="$TRUSTED_VENV/bin:/usr/bin:/bin"   "$TRUSTED_VENV/bin/python" -I "$BOOTSTRAP_SCRIPT" "$GITHUB_WORKSPACE" "$TRUSTED_ROOT"
+ln -s "$TRUSTED_VENV" "$TRUSTED_ROOT/venv"
+echo "TRUSTED_ROOT=$TRUSTED_ROOT" >> "$GITHUB_ENV"

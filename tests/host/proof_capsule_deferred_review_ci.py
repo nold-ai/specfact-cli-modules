@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import copy
+import hashlib
 import json
 import os
 import shlex
@@ -7,13 +9,14 @@ import subprocess
 import sys
 import venv
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 import yaml
 
+from scripts import check_capsule_deferral as admission_checker
 from tests.support.capsule_review_fixtures import (
     _BLOCK2_HATCH_FIXTURE,
-    _TRUSTED_BOOTSTRAP_LAUNCHER,
     REPO_ROOT,
     STEP_NAME,
     _git,
@@ -119,6 +122,7 @@ def test_deferred_gate_reviews_exact_staged_tree_and_propagates_failure(
         ("Darwin", "", "github-linux", "specfact-project", True, True, 1),
         ("Darwin", "", "github-linux", "tests/native/proof_macos_native_broker_wait.py", False, True, 0),
         ("Darwin", "", "github-linux", "tests/unit/test_native_broker_cleanup.py", False, True, 0),
+        ("Darwin", "", "github-linux", "tests/unit/test_capsule_customer_gate.py", False, True, 0),
         ("Darwin", "", "github-linux", "tests/native/proof_native_canonical_path.py", False, True, 0),
         (
             "Darwin",
@@ -188,35 +192,33 @@ def test_isolated_reviewer_preloads_trusted_code_and_never_accepts_incomplete_pr
 
 
 def test_trusted_bootstrap_cannot_import_candidate_venv_module(tmp_path: Path) -> None:
-    import textwrap
-
     workflow = yaml.safe_load(
         (REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text(encoding="utf-8")
     )
     step = workflow["jobs"]["independent-review"]["steps"][2]
+    venv_command = 'python -I -m venv "$TRUSTED_VENV"'
+    prefix, command, _ = step["run"].partition(venv_command + "\n")
+    assert command, "Trusted bootstrap venv command is missing"
     candidate = tmp_path / "candidate"
     candidate.mkdir()
     marker = tmp_path / "host-code-executed"
     (candidate / "venv.py").write_text(
         f"from pathlib import Path\nPath({str(marker)!r}).touch()\nraise SystemExit(9)\n", encoding="utf-8"
     )
-    launcher_dir = tmp_path / "launcher"
-    launcher_dir.mkdir()
-    launcher = launcher_dir / "python"
-    launcher.write_text(f"#!{sys.executable}\n" + textwrap.dedent(_TRUSTED_BOOTSTRAP_LAUNCHER), encoding="utf-8")
-    launcher.chmod(0o700)
     runner_temp = tmp_path / "runner"
     runner_temp.mkdir()
     environment = os.environ | {
         "RUNNER_TEMP": str(runner_temp),
         "GITHUB_ENV": str(tmp_path / "job.env"),
-        "PATH": str(launcher_dir) + os.pathsep + os.environ["PATH"],
+        "PATH": str(Path(sys.executable).parent) + os.pathsep + os.environ["PATH"],
+        "PYTHONPATH": str(candidate),
     }
     result = subprocess.run(
-        ["bash", "-c", step["run"]], cwd=candidate, env=environment, text=True, capture_output=True, check=False
+        ["bash", "-c", prefix + command], cwd=candidate, env=environment, text=True, capture_output=True, check=False
     )
     assert not marker.exists(), "Candidate code executed on the trusted bootstrap host"
     assert result.returncode == 0, result.stdout + result.stderr
+    assert (runner_temp / "specfact-independent-core-venv" / "pyvenv.cfg").is_file()
 
 
 def test_deferred_host_fixture_does_not_alias_managed_caller_python(tmp_path: Path, monkeypatch):
@@ -729,8 +731,8 @@ def test_indexed_deferral_admits_only_complete_approved_job_budget(
     _assert_local_deferral(worktree, tmp_path / "calls", expected)
 
 
-_PINNED_VALIDATOR_COMMIT = "612964a42594bde3037e01f0e161e09e36426ea7"
-_PINNED_VALIDATOR_BLOB = "99a094f88bd524114d939cbb17c4feff541efe40"
+_PINNED_VALIDATOR_COMMIT = "4de2662ae7967852007ba8839fff39083f13ff8d"
+_PINNED_VALIDATOR_BLOB = "bd395210239a536c5530061eae6bce5f9879f822"
 
 
 def _tampered_deferral_candidate(tmp_path, *, staged_checker, missing_caller, bootstrap=False):
@@ -1044,7 +1046,7 @@ def test_committed_ci_check_retains_actual_bootstrap_expiry(tmp_path: Path, case
         validator_present=False,
     )
     if case != "missing-bootstrap":
-        _git(worktree, "fetch", "--no-tags", str(REPO_ROOT), "612964a42594bde3037e01f0e161e09e36426ea7")
+        _git(worktree, "fetch", "--no-tags", str(REPO_ROOT), "4de2662ae7967852007ba8839fff39083f13ff8d")
     base = _git(worktree, "rev-parse", "origin/dev")
     if case == "squash-deleted":
         repository = tmp_path / "repository"
@@ -1233,3 +1235,176 @@ def test_actual_linux_observation_activation_matches_integrated_baseline(tmp_pat
     _git(repository, "add", ".")
     result = _check_observation_contract(repository, baseline)
     assert result.returncode == 0, result.stderr
+
+
+_REVIEWER_JOB = "independent-review"
+_REVIEWER_NAME = "Install trusted reviewer in its own ordinary-user environment"
+_REVIEWER_FIXTURES = REPO_ROOT / "tests/support/reviewer_prerequisite"
+_REVIEWER_CURRENT = admission_checker._yaml_mapping(
+    (REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text()
+)
+_REVIEWER_POSITION = next(
+    index
+    for index, step in enumerate(_REVIEWER_CURRENT["jobs"][_REVIEWER_JOB]["steps"])
+    if step.get("name") == _REVIEWER_NAME
+)
+
+
+def _reviewer_install(workflow: dict) -> dict:
+    return workflow["jobs"][_REVIEWER_JOB]["steps"][_REVIEWER_POSITION]
+
+
+def _reviewer_workflow_fixture(name: str) -> dict:
+    workflow = copy.deepcopy(_REVIEWER_CURRENT)
+    _reviewer_install(workflow)["run"] = (_REVIEWER_FIXTURES / name).read_text()
+    return workflow
+
+
+_REVIEWER_OLD = _reviewer_workflow_fixture("REVIEWER_INSTALL_OLD.txt")
+_REVIEWER_NEW = _reviewer_workflow_fixture("REVIEWER_INSTALL_NEW.txt")
+
+
+def _validate_reviewer_workflows(candidate: dict, baseline: dict) -> None:
+    def selected_workflow(path: str, revision: str = "") -> dict:
+        assert path == ".github/workflows/capsule-customer-execution.yml"
+        assert revision in ("", "immutable-baseline")
+        return copy.deepcopy(baseline if revision else candidate)
+
+    with patch.object(admission_checker, "_workflow_yaml", side_effect=selected_workflow):
+        admission_checker._validate_reusable_review("immutable-baseline")
+
+
+class TestReviewerPrerequisiteAdmission:
+    def test_fixture_identities(self) -> None:
+        assert (
+            hashlib.sha256(_reviewer_install(_REVIEWER_OLD)["run"].encode()).hexdigest()
+            == "fcdf9ce7746ec559c420f96205487508a16c0445576e06775bb2deca3f6f2b98"
+        )
+        assert (
+            hashlib.sha256(_reviewer_install(_REVIEWER_NEW)["run"].encode()).hexdigest()
+            == "ceab0c17724c56da6cb89f634eb94d39f66e54bc993fd3973e6a5aa74c08c434"
+        )
+        assert _reviewer_install(_REVIEWER_CURRENT)["run"] in (
+            _reviewer_install(_REVIEWER_OLD)["run"],
+            _reviewer_install(_REVIEWER_NEW)["run"],
+        )
+        restored = copy.deepcopy(_REVIEWER_NEW)
+        _reviewer_install(restored)["run"] = _reviewer_install(_REVIEWER_OLD)["run"]
+        assert restored == _REVIEWER_OLD
+
+    @pytest.mark.parametrize(
+        "candidate,baseline",
+        [
+            (_REVIEWER_OLD, _REVIEWER_OLD),
+            (_REVIEWER_NEW, _REVIEWER_OLD),
+            (_REVIEWER_OLD, _REVIEWER_NEW),
+            (_REVIEWER_NEW, _REVIEWER_NEW),
+        ],
+    )
+    def test_exact_transition_rollback_and_merged_baseline(self, candidate: dict, baseline: dict) -> None:
+        _validate_reviewer_workflows(candidate, baseline)
+
+    @pytest.mark.parametrize(
+        "before,after",
+        [
+            ("a785ef4da8ea74f67f8ffa41f458c025cbfba4b1", "b785ef4da8ea74f67f8ffa41f458c025cbfba4b1"),
+            (
+                "4e54ffb02307e1a85c166c40aba6d1bc40fbb9a8ef40bf756f8870e5bb08d1c8",
+                "0e54ffb02307e1a85c166c40aba6d1bc40fbb9a8ef40bf756f8870e5bb08d1c8",
+            ),
+            ("pip install", "pip download"),
+            ("GIT_TIMEOUT_SECONDS = 60", "GIT_TIMEOUT_SECONDS = 61"),
+        ],
+    )
+    @pytest.mark.parametrize("baseline", [_REVIEWER_OLD, _REVIEWER_NEW])
+    def test_unknown_install_bytes_rejected(self, before: str, after: str, baseline: dict) -> None:
+        mutated = copy.deepcopy(_REVIEWER_NEW)
+        assert before in _reviewer_install(mutated)["run"]
+        _reviewer_install(mutated)["run"] = _reviewer_install(mutated)["run"].replace(before, after, 1)
+        with pytest.raises(ValueError):
+            _validate_reviewer_workflows(mutated, baseline)
+        with pytest.raises(ValueError):
+            _validate_reviewer_workflows(_REVIEWER_NEW, mutated)
+        with pytest.raises(ValueError):
+            _validate_reviewer_workflows(mutated, mutated)
+
+    @pytest.mark.parametrize(
+        "change",
+        [
+            "position",
+            "name",
+            "job",
+            "duplicate",
+            "shell",
+            "env",
+            "if",
+            "timeout-minutes",
+            "continue-on-error",
+            "id",
+            "working-directory",
+        ],
+    )
+    @pytest.mark.parametrize("body", [_REVIEWER_OLD, _REVIEWER_NEW])
+    def test_install_identity_and_metadata_rejected(self, change: str, body: dict) -> None:
+        mutated = copy.deepcopy(body)
+        steps = mutated["jobs"][_REVIEWER_JOB]["steps"]
+        if change == "position":
+            steps[_REVIEWER_POSITION], steps[_REVIEWER_POSITION + 1] = (
+                steps[_REVIEWER_POSITION + 1],
+                steps[_REVIEWER_POSITION],
+            )
+        elif change == "job":
+            mutated["jobs"]["customer"]["steps"].append(steps.pop(_REVIEWER_POSITION))
+        elif change == "duplicate":
+            steps.append(copy.deepcopy(_reviewer_install(mutated)))
+        else:
+            _reviewer_install(mutated)[change] = {"BAD": "1"} if change == "env" else "changed"
+        with pytest.raises((ValueError, KeyError)):
+            _validate_reviewer_workflows(mutated, _REVIEWER_OLD)
+
+    @pytest.mark.parametrize(
+        "name",
+        [
+            "surrounding-step",
+            "job-env",
+            "workflow-env",
+            "runner",
+            "gate",
+            "deadline",
+            "permissions",
+            "extra-job",
+            "outside-observer",
+        ],
+    )
+    @pytest.mark.parametrize("baseline", [_REVIEWER_OLD, _REVIEWER_NEW])
+    def test_other_workflow_execution_rejected(self, name: str, baseline: dict) -> None:
+        changes = {
+            "surrounding-step": lambda w: w["jobs"][_REVIEWER_JOB]["steps"][_REVIEWER_POSITION + 1].update(
+                run="echo changed"
+            ),
+            "job-env": lambda w: w["jobs"][_REVIEWER_JOB].update(env={"BAD": "1"}),
+            "workflow-env": lambda w: w.update(env={"BAD": "1"}),
+            "runner": lambda w: w["jobs"][_REVIEWER_JOB].update({"runs-on": "self-hosted"}),
+            "gate": lambda w: w["jobs"][_REVIEWER_JOB].update({"continue-on-error": True}),
+            "deadline": lambda w: w["jobs"][_REVIEWER_JOB].update({"timeout-minutes": 999}),
+            "permissions": lambda w: w.update(permissions="write-all"),
+            "extra-job": lambda w: w["jobs"].update(
+                extra={"runs-on": "ubuntu-latest", "steps": [{"run": "echo added"}]}
+            ),
+            "outside-observer": lambda w: next(
+                s
+                for s in w["jobs"]["customer"]["steps"]
+                if s.get("name") == admission_checker._OBSERVATION_PROGRAMS[0][1]
+            ).update(
+                run="echo changed\n"
+                + next(
+                    s["run"]
+                    for s in w["jobs"]["customer"]["steps"]
+                    if s.get("name") == admission_checker._OBSERVATION_PROGRAMS[0][1]
+                )
+            ),
+        }
+        mutated = copy.deepcopy(_REVIEWER_NEW)
+        changes[name](mutated)
+        with pytest.raises(ValueError):
+            _validate_reviewer_workflows(mutated, baseline)

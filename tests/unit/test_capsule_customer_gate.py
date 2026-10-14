@@ -664,10 +664,8 @@ def test_customer_gate_always_adds_separate_targeted_regression(tmp_path, monkey
     assert calls == [(tmp_path, tmp_path / "cache")]
 
 
-def _published_reviewer_inputs():
-    """An isolated reviewer pin must be installable through the actual registry."""
-    import re
-    import tarfile
+def test_current_frozen_reviewer_installation_matches_approved_bootstrap():
+    import hashlib
 
     import yaml
 
@@ -676,7 +674,24 @@ def _published_reviewer_inputs():
         (root / ".github/workflows/capsule-customer-execution.yml").read_text(), Loader=yaml.BaseLoader
     )
     steps = {step["name"]: step for step in workflow["jobs"]["independent-review"]["steps"] if "name" in step}
-    installation = steps["Install trusted reviewer in its own ordinary-user environment"]["run"]
+    installation = steps["Install trusted reviewer in its own ordinary-user environment"]["run"].encode("utf-8")
+    approved = (root / "tests/support/reviewer_prerequisite/REVIEWER_INSTALL_NEW.txt").read_bytes()
+    assert hashlib.sha256(approved).hexdigest() == "ceab0c17724c56da6cb89f634eb94d39f66e54bc993fd3973e6a5aa74c08c434"
+    assert installation == approved
+
+
+def _published_rollback_reviewer_inputs():
+    """The historical 0.51.2 rollback must remain signed and registry-installable."""
+    import hashlib
+    import re
+    import tarfile
+
+    import yaml
+
+    root = Path(__file__).parents[2]
+    historical = (root / "tests/support/reviewer_prerequisite/REVIEWER_INSTALL_OLD.txt").read_bytes()
+    assert hashlib.sha256(historical).hexdigest() == "fcdf9ce7746ec559c420f96205487508a16c0445576e06775bb2deca3f6f2b98"
+    installation = historical.decode("utf-8")
     version = re.search(r"--version\s+([0-9]+\.[0-9]+\.[0-9]+)\s+--source marketplace", installation)
     core = re.search(r"specfact-cli==([0-9]+\.[0-9]+\.[0-9]+)", installation)
     assert version is not None and core is not None, "reviewer identities must be literal released pins"
@@ -697,10 +712,10 @@ def _published_reviewer_inputs():
     return root, installation, version.group(1), core.group(1), entry
 
 
-def test_independent_reviewer_pin_is_installable_signed_published_baseline():
+def test_published_rollback_reviewer_pin_is_installable_signed_baseline():
     from packaging.specifiers import SpecifierSet
 
-    _root, installation, version, core, entry = _published_reviewer_inputs()
+    _root, installation, version, core, entry = _published_rollback_reviewer_inputs()
     assert version == entry["latest_version"], "pinned reviewer is absent from the published registry"
     assert SpecifierSet(entry["core_compatibility"]).contains(core)
     assert "env -i" in installation and "SPECFACT_MODULES_BRANCH=main" in installation
@@ -708,13 +723,13 @@ def test_independent_reviewer_pin_is_installable_signed_published_baseline():
     assert "SPECFACT_ALLOW_UNSIGNED" not in installation
 
 
-def test_published_reviewer_archive_matches_registry_checksum_and_authenticated_manifest(tmp_path):
+def test_published_rollback_reviewer_archive_matches_registry_checksum_and_authenticated_manifest(tmp_path):
     import hashlib
     import tarfile
 
     import yaml
 
-    root, _installation, version, _core, entry = _published_reviewer_inputs()
+    root, _installation, version, _core, entry = _published_rollback_reviewer_inputs()
     archive = root / "registry" / entry["download_url"]
     assert hashlib.sha256(archive.read_bytes()).hexdigest() == entry["checksum_sha256"]
     with tarfile.open(archive) as stream:

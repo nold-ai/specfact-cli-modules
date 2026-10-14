@@ -1,0 +1,13 @@
+set -euo pipefail
+test "$(id -u)" -ne 0
+TRUSTED_ROOT="$RUNNER_TEMP/specfact-independent-review"
+mkdir -m 0700 "$TRUSTED_ROOT"
+mkdir -m 0700 "$TRUSTED_ROOT/home" "$TRUSTED_ROOT/tmp"
+echo "TRUSTED_ROOT=$TRUSTED_ROOT" >> "$GITHUB_ENV"
+cd "$TRUSTED_ROOT"
+python -I -m venv "$TRUSTED_ROOT/venv"
+"$TRUSTED_ROOT/venv/bin/python" -I -m pip install --no-cache-dir specfact-cli==0.55.4
+env -i HOME="$TRUSTED_ROOT/home" TMPDIR="$TRUSTED_ROOT/tmp" \
+  PATH="$TRUSTED_ROOT/venv/bin:/usr/bin:/bin" SPECFACT_MODULES_BRANCH=main \
+  "$TRUSTED_ROOT/venv/bin/python" -I -m specfact_cli.cli \
+  module install nold-ai/specfact-code-review --scope user --version 0.51.2 --source marketplace

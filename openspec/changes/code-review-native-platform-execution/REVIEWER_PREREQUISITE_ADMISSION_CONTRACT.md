@@ -91,3 +91,53 @@ The fixture ownership correction places the exact 0644 golden bodies at
 `tests/support/reviewer_prerequisite/REVIEWER_INSTALL_NEW.txt`. The proof reads
 these stable paths so archiving this OpenSpec change cannot remove its fixtures.
 The hashes and all acceptance behavior above remain the same.
+
+## Approved startup fixture migration (2026-10-14, Europe/Berlin)
+
+The existing candidate `venv.py` isolation proof shall execute the actual current
+trusted-install step prefix through its first exact `python -I -m venv
+"$TRUSTED_VENV"` command with the real trusted interpreter. Candidate cwd and an
+explicit candidate `PYTHONPATH` exercise startup isolation even after the workflow
+changes directory. Require zero exit, no candidate execution marker, and the real
+created environment's `pyvenv.cfg`. A private counterproof removes ` -I ` from the
+same extracted prefix and must execute the marker and exit 9 before the passing
+run. This proves isolated venv startup only, not full signed installation; the
+separate real installation evidence retains that responsibility.
+
+Delete the obsolete single-caller fake bootstrap launcher and its import/export.
+Reusing the exact workflow prefix avoids both an obsolete fake CLI compatibility
+layer and new bootstrap infrastructure. This intentional migration changes one
+of the 43 pre-existing proof definitions; the earlier preservation claim applies
+to the parameterization follow-up, not this migration. All 53 admission cases and
+68 validator calls remain unchanged. Workflow, checker and signed assets are
+outside this migration. Record RED/GREEN and public Radon/AST/AI-bloat, Ruff and
+type-check evidence under the private activation/bootstrap-fixture directory.
+
+Startup migration evidence: the original fixture fails on missing
+`GITHUB_WORKSPACE`; the private same-prefix counterproof exits 9 and creates its
+candidate marker. The current startup proof passes with a real `pyvenv.cfg`.
+Ruff check/format and basedpyright pass (zero typing errors/warnings). Public
+Radon and AST scans have no findings; AI-bloat retains only the two unchanged
+pre-existing informational findings outside the migrated helper. The support
+fixture file has no findings in all three scans. The 53 admission cases pass and
+the actual validator profile remains 68 calls. Evidence is recorded under
+`/private/tmp/specfact-pr506-510-repair/reviewer-prereq/activation/bootstrap-fixture/`.
+
+## Approved published rollback test migration (2026-10-14, Europe/Berlin)
+
+The two published archive tests shall read the exact hash-bound OLD installer
+fixture as the 0.51.2 rollback baseline. Preserve core compatibility, the clean
+environment and trusted main marketplace route, exclusion of candidate roots and
+unsigned flags, archive checksum, and strict authenticated manifest verification.
+Rename their helper and tests to make this historical purpose explicit. The
+current frozen signed 0.51.5 bootstrap is not a published registry release.
+
+A separate read-only assertion shall bind the actual current installation body
+to the exact approved NEW fixture and SHA-256 above. Existing projection tests
+retain literal identities, ordinary installer flags and strict signature checks;
+the full bootstrap installation proof remains separate. No workflow, checker,
+signature, manifest or release changes belong to this test migration. Record
+the original two failures, passing tests and no-new public quality findings under
+the private activation/published-expectations evidence directory.
+
+Customer-gate test scope correction. The migrated tests/unit/test_capsule_customer_gate.py is already an exact CI capsule trigger. Both local committed-delta caller inventories must include that exact path with the two golden fixture paths; no broad test directory is authorized. Existing unrelated reviewable-path rejection, whole-workflow checks and complete NUL-delimited second argument remain mandatory.

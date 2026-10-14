@@ -14,8 +14,8 @@ from icontract import ensure
 
 
 CHECKER = "scripts/check_capsule_deferral.py"
-BOOTSTRAP_COMMIT = "612964a42594bde3037e01f0e161e09e36426ea7"
-BOOTSTRAP_BLOB = "99a094f88bd524114d939cbb17c4feff541efe40"
+BOOTSTRAP_COMMIT = "4de2662ae7967852007ba8839fff39083f13ff8d"
+BOOTSTRAP_BLOB = "bd395210239a536c5530061eae6bce5f9879f822"
 CAPSULE_PATHS = (
     "packages/specfact-code-review",
     ".github/workflows/capsule-customer-execution.yml",
@@ -35,8 +35,11 @@ CAPSULE_PATHS = (
     "tests/host/proof_capsule_review_projection_shell.py",
     "tests/unit/test_pre_commit_quality_parity.py",
     "tests/unit/test_capsule_review_projection.py",
+    "tests/unit/test_capsule_customer_gate.py",
     "tests/unit/scripts/test_pre_commit_code_review.py",
     "tests/support/capsule_review_fixtures.py",
+    "tests/support/reviewer_prerequisite/REVIEWER_INSTALL_OLD.txt",
+    "tests/support/reviewer_prerequisite/REVIEWER_INSTALL_NEW.txt",
     "scripts/check_macos_boundary_ci_receipts.py",
     "scripts/macos_managed_boundary/control.py",
     "tests/unit/test_macos_boundary_ci_receipts.py",

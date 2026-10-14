@@ -21,7 +21,6 @@ __all__ = [
     "_DEFERRED_REVIEW_SCRIPT",
     "_ISOLATED_REVIEWER_TEMPLATES",
     "_PREPARATION_CLI_SCRIPT",
-    "_TRUSTED_BOOTSTRAP_LAUNCHER",
     "_git",
     "_isolated_reviewer_modules",
     "_write_deferred_fixture_sources",
@@ -96,28 +95,6 @@ _BLOCK2_HATCH_FIXTURE = (
     "  return 0\n"
     "}\n"
     "run_block2\n"
-)
-
-
-_TRUSTED_BOOTSTRAP_LAUNCHER = (
-    "            import subprocess,sys\n"
-    "            from pathlib import Path\n"
-    "            result=subprocess.run([sys.executable,*sys.argv[1:]],check=False)\n"
-    "            if result.returncode:\n"
-    "                raise SystemExit(result.returncode)\n"
-    "            target=Path(sys.argv[-1])\n"
-    "            site=next((target/'lib').glob('python*/site-packages'))\n"
-    "            (site/'pip/__main__.py').write_text(\n"
-    "                \"import sys\\nassert sys.argv[1:]==['install','--no-cache-dir','specfact-cli==0.55.4']\\n\"\n"
-    "            )\n"
-    "            core=site/'specfact_cli'\n"
-    "            core.mkdir()\n"
-    "            (core/'__init__.py').write_text('')\n"
-    "            (core/'cli.py').write_text(\n"
-    "                \"import sys\\nassert sys.argv[1:]==['module','install','nold-ai/specfact-code-review',\"\n"
-    "                \"'--scope','user','--version','0.51.2','--source','marketplace']\\n\"\n"
-    "            )\n"
-    "            "
 )
 
 

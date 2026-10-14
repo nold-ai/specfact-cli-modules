@@ -41,8 +41,11 @@ def test_independent_reviewer_runs_in_fresh_job_without_candidate_host_code() ->
     assert not independent.get("needs"), "Candidate execution cannot suppress the independent review job"
     recipe = "\n".join(str(step.get("run", "")) for step in independent["steps"])
     assert "specfact-cli==0.55.4" in recipe
-    assert "--version 0.51.2" in recipe
-    assert "--source marketplace" in recipe
+    assert "VERSION = '0.51.5'" in recipe
+    assert "COMMIT = 'a785ef4da8ea74f67f8ffa41f458c025cbfba4b1'" in recipe
+    assert "'--scope', 'user', '--version', VERSION, '--source', 'marketplace'" in recipe
+    assert "allow_unsigned=False, require_integrity=True" in recipe
+    assert "require_signature=True, public_key_pem=key.decode()" in recipe
     assert "env -i" in recipe
 
 

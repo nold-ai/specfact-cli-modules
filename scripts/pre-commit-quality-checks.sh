@@ -319,8 +319,8 @@ run_lint_if_staged_python() {
 # Resolve trusted bytes independently of the candidate index/worktree and replacement refs.
 run_trusted_capsule_deferral() (
   local validator_path="scripts/check_capsule_deferral.py"
-  local bootstrap_commit="612964a42594bde3037e01f0e161e09e36426ea7"
-  local bootstrap_blob="99a094f88bd524114d939cbb17c4feff541efe40"
+  local bootstrap_commit="4de2662ae7967852007ba8839fff39083f13ff8d"
+  local bootstrap_blob="bd395210239a536c5530061eae6bce5f9879f822"
   local integrated_dev validator_source resolved_blob ancestor_status trusted_validator integrated_history shallow_history
   local repository_root
   export GIT_NO_REPLACE_OBJECTS=1
@@ -415,8 +415,9 @@ run_code_review_gate() {
       tests/native tests/unit/specfact_code_review tests/unit/test_native_broker_cleanup.py pyproject.toml tools/smart_test_coverage.py \
       .github/workflows/code-review-macos-boundary.yml \
       tests/unit/test_capsule_proof_contexts.py tests/host/proof_capsule_deferred_review_ci.py tests/host/proof_capsule_review_projection_shell.py \
-      tests/unit/test_pre_commit_quality_parity.py tests/unit/test_capsule_review_projection.py tests/unit/scripts/test_pre_commit_code_review.py \
+      tests/unit/test_pre_commit_quality_parity.py tests/unit/test_capsule_review_projection.py tests/unit/test_capsule_customer_gate.py tests/unit/scripts/test_pre_commit_code_review.py \
       tests/support/capsule_review_fixtures.py \
+      tests/support/reviewer_prerequisite/REVIEWER_INSTALL_OLD.txt tests/support/reviewer_prerequisite/REVIEWER_INSTALL_NEW.txt \
       scripts/check_macos_boundary_ci_receipts.py scripts/macos_managed_boundary/control.py \
       tests/unit/test_macos_boundary_ci_receipts.py tests/unit/test_macos_managed_control.py)"; then
       error "Capsule review deferral cannot determine the staged candidate delta against origin/dev."
