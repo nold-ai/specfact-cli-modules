@@ -5634,3 +5634,7 @@ approved scheduling surface and fixture ownership.
 Actual Linux failure causes and current-head hosted acceptance remain unproven
 until the observation wave runs. Neither the new observations nor these local
 results permit merge, publication, waiver, or a timeout increase.
+
+## Prospective bounded observer follow-up, 14 October 2026 (Europe/Berlin)
+
+See [BOUNDED_OBSERVER_FOLLOWUP_TDD.md](BOUNDED_OBSERVER_FOLLOWUP_TDD.md). Spec-first changes precede genuine unchanged-workflow RED (116 failures, 28 passes), followed by private prospective GREEN (301 passes after boundary expansion). Fixture failures are recorded separately. Activation tests are preserved as a private patch and the actual test file is restored for the checker-first ordinary commit. The actual workflow, pins and reviewer remain unchanged; actual activation and authority validation belong to the subsequent root rollout.

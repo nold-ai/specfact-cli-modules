@@ -1942,3 +1942,27 @@ The scheduling checker SHALL admit only the exact owner-approved observation rev
 #### Scenario: execution or observation contract mutation is rejected
 - **WHEN** candidate workflow bytes alter a reviewer, command, deadline, condition, environment, prerequisite, early exit, heredoc boundary or any unapproved observation instruction
 - **THEN** trusted scheduling validation fails before a local deferral can be accepted
+
+
+### Requirement: Bounded terminal identity and retained-prefix observations
+
+The two Linux failure observers SHALL optionally emit `call_identity_count`, `unexecuted_collected_count`, `failed_setup_records_count`, and `coverage_files_count`. Call identities SHALL be unique nodeids of call records. Unexecuted collected identities SHALL equal the set of collected identities minus identities with any call or skipped record, matching signed reviewer 0.51.2. Failed setup records SHALL be counted without implying that those same identities are unexecuted. Coverage files count SHALL describe mapping structure only, without asserting numeric coverage validity.
+
+Derived fields SHALL require complete valid inputs. Each involved list or mapping SHALL contain at most 100000 entries. Identity and coverage-key strings SHALL be nonempty, at most 65536 characters each, and at most 8388608 characters in aggregate across the inputs of the derived observation before constructing identity sets. Invalid or absent inputs SHALL omit dependent fields, never become zero. Existing independently valid counters SHALL remain available.
+
+The fixed diagnostic classifier SHALL additionally recognize the exact tokens `project_pytest_request_invalid`, `project_pytest_collection_error`, `project_pytest_internal_error`, `project_pytest_configuration_or_collection_failed`, `project_pytest_execution_incomplete`, `project_pytest_unexecuted`, `project_pytest_failure_without_observed_test`, `project_pytest_installed_coverage`, and `project_pytest_installed_coverage_unavailable`, alone or followed by colon or semicolon. The literal `Coverage data missing for ` with a nonempty suffix SHALL produce only `coverage_source_entry_missing` in global pytest tool-error observations. No suffix SHALL be exposed.
+
+The full retained CrossHair payload `No staged review-relevant files under packages/, registry/, scripts/, tools/, tests/, or openspec/changes/; skipping code review gate.` SHALL produce `crosshair_rejected_known_skip_prefix` only on equality or when followed immediately by `; `. This classification SHALL establish only a retained-message prefix, not physical stdout-line boundaries, producer identity or snapshot attribution.
+
+#### Scenario: identity gaps survive duplicates and unrelated records
+- **WHEN** complete valid collected and record lists include duplicates, failed calls, skipped setup, failed setup without call, or records outside the collected set
+- **THEN** exact unique call and missing-terminal counts use identity sets, failed setup uses record count, and no raw identities are emitted
+
+#### Scenario: independent safe counters survive invalid derived inputs
+- **WHEN** a list or mapping exceeds its entry or character bounds, contains an empty identity, or contains malformed identity records
+- **THEN** dependent new fields are omitted and independently valid existing counts remain unchanged
+- **AND** empty valid collections produce exact integer zero while absent or malformed inputs never do
+
+#### Scenario: fixed producer and prefix classifications retain provenance
+- **WHEN** known tokens have a valid delimiter, installed coverage unavailable resembles its shorter token, or the known skip literal contains its internal semicolon
+- **THEN** only the exact approved classes are emitted, prefix lookalikes are excluded, and global findings acquire no side

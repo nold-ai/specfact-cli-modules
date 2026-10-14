@@ -1085,6 +1085,9 @@ def test_linux_failure_observations_preserve_side_and_required_unknown(tmp_path,
             "deselected_count": 0,
             "internal_errors_count": 1,
             "records_count": 1,
+            "call_identity_count": 1,
+            "failed_setup_records_count": 0,
+            "unexecuted_collected_count": 0,
             "collection_errors_count": 1,
             "coverage_diagnostic_classes": ["project_pytest_coverage_missing"],
         }
@@ -1234,3 +1237,290 @@ def test_linux_failure_global_pylint_and_coverage_classes_do_not_infer_side(tmp_
         {"analyzer": "pylint", "diagnostic_class": "pylint_timeout_observed"},
         {"analyzer": "targeted-pytest-coverage", "diagnostic_class": "project_pytest_coverage_missing"},
     ]
+
+
+_DERIVED_OBSERVATION_FIELDS = {
+    "call_identity_count",
+    "unexecuted_collected_count",
+    "failed_setup_records_count",
+    "coverage_files_count",
+}
+_KNOWN_SKIP_PAYLOAD = (
+    "No staged review-relevant files under packages/, registry/, scripts/, tools/, tests/, "
+    "or openspec/changes/; skipping code review gate."
+)
+_PYTEST_PRODUCER_CODES = (
+    "project_pytest_request_invalid",
+    "project_pytest_collection_error",
+    "project_pytest_internal_error",
+    "project_pytest_configuration_or_collection_failed",
+    "project_pytest_execution_incomplete",
+    "project_pytest_unexecuted",
+    "project_pytest_failure_without_observed_test",
+    "project_pytest_installed_coverage",
+    "project_pytest_installed_coverage_unavailable",
+)
+
+
+def _terminal_observation_target(case):
+    identity = _PRIVATE_CANARY
+    record: dict[str, object] = {"nodeid": identity, "phase": "call", "outcome": "passed"}
+    target = {"collected": [identity], "records": [record], "coverage": {"files": {identity: False}}}
+    expected = {
+        "call_identity_count": 1,
+        "coverage_files_count": 1,
+        "failed_setup_records_count": 0,
+        "unexecuted_collected_count": 0,
+    }
+    if case == "failed-setup":
+        target["collected"].append(identity + "_missing")
+        target["records"].append({"nodeid": identity + "_missing", "phase": "setup", "outcome": "failed"})
+        expected.update(unexecuted_collected_count=1, failed_setup_records_count=1)
+    elif case == "duplicates":
+        target["collected"] *= 3
+        target["records"] *= 4
+    elif case == "skipped-setup":
+        record.update(phase="setup", outcome="skipped")
+        expected["call_identity_count"] = 0
+    elif case == "failed-call":
+        record["outcome"] = "failed"
+    elif case == "unrelated-record":
+        record["nodeid"] = identity + "_other"
+        expected["unexecuted_collected_count"] = 1
+    elif case == "empty":
+        target.update(collected=[], records=[], coverage={"files": {}})
+        expected = dict.fromkeys(_DERIVED_OBSERVATION_FIELDS, 0)
+    elif case in (
+        "empty-identity",
+        "long-identity",
+        "record-budget",
+        "bad-record",
+        "record-bound",
+        "at-record-bound",
+        "missing-records",
+        "null-records",
+        "nonmapping-record",
+        "missing-nodeid",
+        "boolean-nodeid",
+        "bad-outcome",
+    ):
+        if case == "missing-records":
+            target.pop("records")
+        elif case == "null-records":
+            target["records"] = None
+        elif case == "nonmapping-record":
+            target["records"] = [False]
+        elif case == "missing-nodeid":
+            record.pop("nodeid")
+        elif case == "boolean-nodeid":
+            record["nodeid"] = True
+        elif case == "bad-outcome":
+            record["outcome"] = "PRIVATE_INVALID"
+        elif case == "empty-identity":
+            record["nodeid"] = ""
+        elif case == "long-identity":
+            record["nodeid"] = "x" * 65537
+        elif case == "record-budget":
+            record["nodeid"] = "x" * 65536
+            target["records"] *= 129
+        elif case == "bad-record":
+            target["records"].append({"nodeid": identity, "phase": "unknown", "outcome": "passed"})
+        else:
+            target["records"] *= 100000 if case == "at-record-bound" else 100001
+        if case != "at-record-bound":
+            expected = {"coverage_files_count": 1}
+    elif case in (
+        "empty-collected",
+        "long-collected",
+        "collection-budget",
+        "combined-budget",
+        "bad-collected",
+        "collection-bound",
+        "at-collection-bound",
+        "at-character-bound",
+    ):
+        if case == "empty-collected":
+            target["collected"] = [""]
+        elif case == "long-collected":
+            target["collected"] = ["x" * 65537]
+        elif case == "collection-budget":
+            target["collected"] = ["x" * 65536] * 129
+        elif case in ("combined-budget", "at-character-bound"):
+            target["collected"] = ["x" * 65536] * 64
+            record["nodeid"] = "x" * 65536
+            target["records"] *= 64 if case == "at-character-bound" else 65
+        elif case == "bad-collected":
+            target["collected"].append(False)
+        else:
+            target["collected"] *= 100000 if case == "at-collection-bound" else 100001
+        if case not in ("at-collection-bound", "at-character-bound"):
+            expected.pop("unexecuted_collected_count")
+    elif case.startswith("files-"):
+        variants = {
+            "files-null": None,
+            "files-list": [],
+            "files-empty-key": {"": {}},
+            "files-long-key": {"x" * 65537: {}},
+        }
+        if case == "files-missing":
+            target["coverage"] = {}
+        elif case == "files-bound":
+            target["coverage"]["files"] = {str(index): {} for index in range(100001)}
+        elif case == "files-budget":
+            target["coverage"]["files"] = {str(index) + "x" * 65530: {} for index in range(129)}
+        elif case == "files-at-bound":
+            target["coverage"]["files"] = {str(index): None for index in range(100000)}
+            expected["coverage_files_count"] = 100000
+        else:
+            target["coverage"]["files"] = variants[case]
+        if case != "files-at-bound":
+            expected.pop("coverage_files_count")
+    return target, expected
+
+
+@pytest.mark.parametrize("marker", _FAILURE_MARKERS)
+@pytest.mark.parametrize(
+    "case",
+    [
+        "ordinary",
+        "failed-setup",
+        "duplicates",
+        "skipped-setup",
+        "failed-call",
+        "unrelated-record",
+        "empty",
+        "empty-identity",
+        "long-identity",
+        "record-budget",
+        "bad-record",
+        "record-bound",
+        "at-record-bound",
+        "missing-records",
+        "null-records",
+        "nonmapping-record",
+        "missing-nodeid",
+        "boolean-nodeid",
+        "bad-outcome",
+        "at-character-bound",
+        "empty-collected",
+        "long-collected",
+        "collection-budget",
+        "combined-budget",
+        "bad-collected",
+        "collection-bound",
+        "at-collection-bound",
+        "files-null",
+        "files-list",
+        "files-empty-key",
+        "files-long-key",
+        "files-missing",
+        "files-bound",
+        "files-budget",
+        "files-at-bound",
+    ],
+)
+def test_linux_terminal_identity_counts_are_complete_bounded_observations(tmp_path, monkeypatch, marker, case):
+    target, expected = _terminal_observation_target(case)
+    data = {
+        "findings": [],
+        "analyzer_evidence": [
+            {"id": "targeted-pytest-coverage", "base": {"execution_state": "error", "target_execution": target}}
+        ],
+    }
+    result = _actual_failure_observations(tmp_path, monkeypatch, marker, json.dumps(data))
+    row = result["snapshot_observations"][0]
+    assert {key: value for key, value in row.items() if key in _DERIVED_OBSERVATION_FIELDS} == expected
+    assert all(type(row[key]) is int and 0 <= row[key] <= 100000 for key in expected)
+    assert row["side"] == "base" and result["finding_observations"] == []
+    if case in ("empty-identity", "long-identity", "record-budget"):
+        assert row["records_count"] == len(target["records"])
+    if case in ("empty-collected", "long-collected", "collection-budget", "combined-budget"):
+        assert row["collected_count"] == len(target["collected"])
+
+
+@pytest.mark.parametrize("marker", _FAILURE_MARKERS)
+@pytest.mark.parametrize("code", _PYTEST_PRODUCER_CODES)
+@pytest.mark.parametrize("delimiter", ["", ":", ";"], ids=["exact", "colon", "semicolon"])
+def test_linux_known_worker_classes_keep_side_and_global_provenance(tmp_path, monkeypatch, marker, code, delimiter):
+    message = code + (delimiter + _PRIVATE_CANARY if delimiter else "")
+    data = {
+        "analyzer_evidence": [
+            {"id": "targeted-pytest-coverage", "head": {"execution_state": "error", "diagnostic": message}}
+        ],
+        "findings": [{"tool": "pytest", "category": "tool_error", "message": message}],
+    }
+    result = _actual_failure_observations(tmp_path, monkeypatch, marker, json.dumps(data))
+    assert result["snapshot_observations"] == [
+        {
+            "analyzer": "targeted-pytest-coverage",
+            "side": "head",
+            "execution_state": "error",
+            "diagnostic_classes": [code],
+        }
+    ]
+    assert result["finding_observations"] == [{"analyzer": "targeted-pytest-coverage", "diagnostic_class": code}]
+
+
+@pytest.mark.parametrize("marker", _FAILURE_MARKERS)
+@pytest.mark.parametrize(
+    "case", ["directory", "module", "suffix", "space", "embedded", "missing-source", "empty-source", "wrong-tool"]
+)
+def test_linux_coverage_classes_require_exact_producer_boundaries(tmp_path, monkeypatch, marker, case):
+    messages = {
+        "directory": "project_pytest_installed_coverage_directory_invalid",
+        "module": "project_pytest_installed_coverage_module_invalid",
+        "suffix": "project_pytest_installed_coverage_evil",
+        "space": "project_pytest_installed_coverage " + _PRIVATE_CANARY,
+        "embedded": _PRIVATE_CANARY + "; project_pytest_installed_coverage",
+        "missing-source": "Coverage data missing for " + _PRIVATE_CANARY,
+        "empty-source": "Coverage data missing for ",
+        "wrong-tool": "Coverage data missing for " + _PRIVATE_CANARY,
+    }
+    data = {
+        "analyzer_evidence": [],
+        "findings": [
+            {"tool": "ruff" if case == "wrong-tool" else "pytest", "category": "tool_error", "message": messages[case]}
+        ],
+    }
+    result = _actual_failure_observations(tmp_path, monkeypatch, marker, json.dumps(data))
+    expected = (
+        [{"analyzer": "targeted-pytest-coverage", "diagnostic_class": "coverage_source_entry_missing"}]
+        if case == "missing-source"
+        else []
+    )
+    assert result["finding_observations"] == expected
+    assert result["snapshot_observations"] == []
+
+
+@pytest.mark.parametrize("marker", _FAILURE_MARKERS)
+@pytest.mark.parametrize(
+    "case", ["exact", "joined", "suffix", "newline", "leading", "ansi", "punctuation", "semicolon", "unrelated"]
+)
+def test_linux_crosshair_known_skip_class_means_retained_prefix_only(tmp_path, monkeypatch, marker, case):
+    payloads = {
+        "exact": _KNOWN_SKIP_PAYLOAD,
+        "joined": _KNOWN_SKIP_PAYLOAD + "; " + _PRIVATE_CANARY,
+        "suffix": _KNOWN_SKIP_PAYLOAD + _PRIVATE_CANARY,
+        "newline": _KNOWN_SKIP_PAYLOAD + "\n" + _PRIVATE_CANARY,
+        "leading": _PRIVATE_CANARY + _KNOWN_SKIP_PAYLOAD,
+        "ansi": "\x1b[0m" + _KNOWN_SKIP_PAYLOAD,
+        "punctuation": _KNOWN_SKIP_PAYLOAD[:-1],
+        "semicolon": _KNOWN_SKIP_PAYLOAD.replace(";", ","),
+        "unrelated": "skipping " + _PRIVATE_CANARY,
+    }
+    data = {
+        "analyzer_evidence": [],
+        "findings": [
+            {
+                "tool": "crosshair",
+                "category": "tool_error",
+                "message": "Unrecognized CrossHair output: " + payloads[case],
+            }
+        ],
+    }
+    result = _actual_failure_observations(tmp_path, monkeypatch, marker, json.dumps(data))
+    expected = (
+        "crosshair_rejected_known_skip_prefix" if case in ("exact", "joined") else "crosshair_rejected_other_stdout"
+    )
+    assert result["finding_observations"] == [{"analyzer": "contracts", "diagnostic_class": expected}]
+    assert result["snapshot_observations"] == []

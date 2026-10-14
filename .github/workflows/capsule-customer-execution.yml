@@ -454,19 +454,35 @@ jobs:
 
 
           def diagnostic_classes(value):
-              known = ("analyzer_reported_incomplete_execution", "namespace_unavailable", "capsule_materialization_failed", "snapshot_member_incomplete", "project_runtime_prepare_failed", "project_test_selection_ambiguous", "local_pytest_inventory_failed", "project_pytest_coverage_plugin_not_activated", "project_pytest_coverage_disabled", "project_pytest_coverage_instrumentation_unavailable", "project_pytest_coverage_evidence_unavailable", "project_pytest_coverage_controller_observation_missing", "project_pytest_coverage_worker_missing", "project_pytest_coverage_diagnostic_invalid", "project_pytest_coverage_missing", "project_pytest_coverage_policy_invalid", "project_pytest_coverage_threshold_invalid")
+              known = ("analyzer_reported_incomplete_execution", "namespace_unavailable", "capsule_materialization_failed", "snapshot_member_incomplete", "project_runtime_prepare_failed", "project_test_selection_ambiguous", "local_pytest_inventory_failed", "project_pytest_coverage_plugin_not_activated", "project_pytest_coverage_disabled", "project_pytest_coverage_instrumentation_unavailable", "project_pytest_coverage_evidence_unavailable", "project_pytest_coverage_controller_observation_missing", "project_pytest_coverage_worker_missing", "project_pytest_coverage_diagnostic_invalid", "project_pytest_coverage_missing", "project_pytest_coverage_policy_invalid", "project_pytest_coverage_threshold_invalid", "project_pytest_request_invalid", "project_pytest_collection_error", "project_pytest_internal_error", "project_pytest_configuration_or_collection_failed", "project_pytest_execution_incomplete", "project_pytest_unexecuted", "project_pytest_failure_without_observed_test", "project_pytest_installed_coverage", "project_pytest_installed_coverage_unavailable")
               if not isinstance(value, str):
                   return []
               return [code for code in known if value == code or value.startswith((code + ":", code + ";"))]
+
+
+          def bounded_identity_characters(values):
+              if not isinstance(values, (list, dict)) or len(values) > 100000:
+                  return None
+              total = 0
+              for value in values:
+                  if not isinstance(value, str) or not 0 < len(value) <= 65536:
+                      return None
+                  total += len(value)
+                  if total > 8388608:
+                      return None
+              return total
 
 
           def coverage_observation(node):
               target = node.get("target_execution")
               if not isinstance(target, dict):
                   return {}
-              observed = {"target_execution_observed": True}
+              observed: dict[str, bool | int | list[str]] = {"target_execution_observed": True}
               if isinstance(target.get("coverage"), dict):
                   observed["coverage_object_observed"] = True
+                  files = target["coverage"].get("files")
+                  if isinstance(files, dict) and bounded_identity_characters(files) is not None:
+                      observed["coverage_files_count"] = len(files)
               code = target.get("exit_code")
               if type(code) is int and 0 <= code <= 5:
                   observed["exit_code"] = code
@@ -477,6 +493,15 @@ jobs:
               records = target.get("records")
               if isinstance(records, list) and len(records) <= 100000 and all(isinstance(item, dict) and isinstance(item.get("nodeid"), str) and item.get("phase") in ("setup", "call", "teardown", "collection") and item.get("outcome") in ("passed", "failed", "skipped") for item in records):
                   observed["records_count"] = len(records)
+                  record_characters = bounded_identity_characters([item["nodeid"] for item in records])
+                  if record_characters is not None:
+                      observed["call_identity_count"] = len({item["nodeid"] for item in records if item["phase"] == "call"})
+                      observed["failed_setup_records_count"] = sum(item["phase"] == "setup" and item["outcome"] == "failed" for item in records)
+                      collected = target.get("collected")
+                      collected_characters = bounded_identity_characters(collected) if isinstance(collected, list) else None
+                      if isinstance(collected, list) and collected_characters is not None and record_characters + collected_characters <= 8388608:
+                          terminal = {item["nodeid"] for item in records if item["phase"] == "call" or item["outcome"] == "skipped"}
+                          observed["unexecuted_collected_count"] = len(set(collected) - terminal)
               errors = target.get("collection_errors")
               if isinstance(errors, list) and len(errors) <= 100000 and all(isinstance(item, dict) and isinstance(item.get("nodeid"), str) and isinstance(item.get("detail"), str) for item in errors):
                   observed["collection_errors_count"] = len(errors)
@@ -538,12 +563,17 @@ jobs:
                       observations.add(("pylint", "pylint_timeout_observed"))
                   if finding.get("tool") == "pytest":
                       observations.update(("targeted-pytest-coverage", code) for code in diagnostic_classes(message))
+                      if message.startswith("Coverage data missing for ") and len(message) > len("Coverage data missing for "):
+                          observations.add(("targeted-pytest-coverage", "coverage_source_entry_missing"))
                   prefix = "Unrecognized CrossHair output: "
                   if finding.get("tool") != "crosshair" or not message.startswith(prefix):
                       continue
                   payload = message[len(prefix):]
                   code = "crosshair_rejected_other_stdout"
-                  if payload.startswith(("smart-test status: ready (uses pytest tests/)", "smart-test check: configured (modules repo scoped)")):
+                  known_skip = "No staged review-relevant files under packages/, registry/, scripts/, tools/, tests/, or openspec/changes/; skipping code review gate."
+                  if payload == known_skip or payload.startswith(known_skip + "; "):
+                      code = "crosshair_rejected_known_skip_prefix"
+                  elif payload.startswith(("smart-test status: ready (uses pytest tests/)", "smart-test check: configured (modules repo scoped)")):
                       code = "crosshair_rejected_smart_test_status"
                   else:
                       first_line = payload.split("; ", 1)[0].split("\n", 1)[0].split("\r", 1)[0]
@@ -1142,19 +1172,35 @@ jobs:
 
 
           def diagnostic_classes(value):
-              known = ("analyzer_reported_incomplete_execution", "namespace_unavailable", "capsule_materialization_failed", "snapshot_member_incomplete", "project_runtime_prepare_failed", "project_test_selection_ambiguous", "local_pytest_inventory_failed", "project_pytest_coverage_plugin_not_activated", "project_pytest_coverage_disabled", "project_pytest_coverage_instrumentation_unavailable", "project_pytest_coverage_evidence_unavailable", "project_pytest_coverage_controller_observation_missing", "project_pytest_coverage_worker_missing", "project_pytest_coverage_diagnostic_invalid", "project_pytest_coverage_missing", "project_pytest_coverage_policy_invalid", "project_pytest_coverage_threshold_invalid")
+              known = ("analyzer_reported_incomplete_execution", "namespace_unavailable", "capsule_materialization_failed", "snapshot_member_incomplete", "project_runtime_prepare_failed", "project_test_selection_ambiguous", "local_pytest_inventory_failed", "project_pytest_coverage_plugin_not_activated", "project_pytest_coverage_disabled", "project_pytest_coverage_instrumentation_unavailable", "project_pytest_coverage_evidence_unavailable", "project_pytest_coverage_controller_observation_missing", "project_pytest_coverage_worker_missing", "project_pytest_coverage_diagnostic_invalid", "project_pytest_coverage_missing", "project_pytest_coverage_policy_invalid", "project_pytest_coverage_threshold_invalid", "project_pytest_request_invalid", "project_pytest_collection_error", "project_pytest_internal_error", "project_pytest_configuration_or_collection_failed", "project_pytest_execution_incomplete", "project_pytest_unexecuted", "project_pytest_failure_without_observed_test", "project_pytest_installed_coverage", "project_pytest_installed_coverage_unavailable")
               if not isinstance(value, str):
                   return []
               return [code for code in known if value == code or value.startswith((code + ":", code + ";"))]
+
+
+          def bounded_identity_characters(values):
+              if not isinstance(values, (list, dict)) or len(values) > 100000:
+                  return None
+              total = 0
+              for value in values:
+                  if not isinstance(value, str) or not 0 < len(value) <= 65536:
+                      return None
+                  total += len(value)
+                  if total > 8388608:
+                      return None
+              return total
 
 
           def coverage_observation(node):
               target = node.get("target_execution")
               if not isinstance(target, dict):
                   return {}
-              observed = {"target_execution_observed": True}
+              observed: dict[str, bool | int | list[str]] = {"target_execution_observed": True}
               if isinstance(target.get("coverage"), dict):
                   observed["coverage_object_observed"] = True
+                  files = target["coverage"].get("files")
+                  if isinstance(files, dict) and bounded_identity_characters(files) is not None:
+                      observed["coverage_files_count"] = len(files)
               code = target.get("exit_code")
               if type(code) is int and 0 <= code <= 5:
                   observed["exit_code"] = code
@@ -1165,6 +1211,15 @@ jobs:
               records = target.get("records")
               if isinstance(records, list) and len(records) <= 100000 and all(isinstance(item, dict) and isinstance(item.get("nodeid"), str) and item.get("phase") in ("setup", "call", "teardown", "collection") and item.get("outcome") in ("passed", "failed", "skipped") for item in records):
                   observed["records_count"] = len(records)
+                  record_characters = bounded_identity_characters([item["nodeid"] for item in records])
+                  if record_characters is not None:
+                      observed["call_identity_count"] = len({item["nodeid"] for item in records if item["phase"] == "call"})
+                      observed["failed_setup_records_count"] = sum(item["phase"] == "setup" and item["outcome"] == "failed" for item in records)
+                      collected = target.get("collected")
+                      collected_characters = bounded_identity_characters(collected) if isinstance(collected, list) else None
+                      if isinstance(collected, list) and collected_characters is not None and record_characters + collected_characters <= 8388608:
+                          terminal = {item["nodeid"] for item in records if item["phase"] == "call" or item["outcome"] == "skipped"}
+                          observed["unexecuted_collected_count"] = len(set(collected) - terminal)
               errors = target.get("collection_errors")
               if isinstance(errors, list) and len(errors) <= 100000 and all(isinstance(item, dict) and isinstance(item.get("nodeid"), str) and isinstance(item.get("detail"), str) for item in errors):
                   observed["collection_errors_count"] = len(errors)
@@ -1226,12 +1281,17 @@ jobs:
                       observations.add(("pylint", "pylint_timeout_observed"))
                   if finding.get("tool") == "pytest":
                       observations.update(("targeted-pytest-coverage", code) for code in diagnostic_classes(message))
+                      if message.startswith("Coverage data missing for ") and len(message) > len("Coverage data missing for "):
+                          observations.add(("targeted-pytest-coverage", "coverage_source_entry_missing"))
                   prefix = "Unrecognized CrossHair output: "
                   if finding.get("tool") != "crosshair" or not message.startswith(prefix):
                       continue
                   payload = message[len(prefix):]
                   code = "crosshair_rejected_other_stdout"
-                  if payload.startswith(("smart-test status: ready (uses pytest tests/)", "smart-test check: configured (modules repo scoped)")):
+                  known_skip = "No staged review-relevant files under packages/, registry/, scripts/, tools/, tests/, or openspec/changes/; skipping code review gate."
+                  if payload == known_skip or payload.startswith(known_skip + "; "):
+                      code = "crosshair_rejected_known_skip_prefix"
+                  elif payload.startswith(("smart-test status: ready (uses pytest tests/)", "smart-test check: configured (modules repo scoped)")):
                       code = "crosshair_rejected_smart_test_status"
                   else:
                       first_line = payload.split("; ", 1)[0].split("\n", 1)[0].split("\r", 1)[0]

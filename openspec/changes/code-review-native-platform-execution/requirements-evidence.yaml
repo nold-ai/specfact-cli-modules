@@ -1423,4 +1423,28 @@ requirements:
       scenario_id: exact-reviewed-linux-observation-contract-authority
       method: test
       intent: Retain rejection of body, shell, delimiter, step identity, metadata and ordering mutations.
-      observable: Historical unit 1 ran 187 host scheduling proofs. Unit 2 includes three permanent real-Git old/new activation controls in its 437 passing proofs, retains mutation rejection, and pins both consumers to immutable checker commit 8fb94dd5a00dbb244be1451a1aa9793311e25f66 and blob c1af0ecad38ab788a9b3934d00516377bf96d5ad. Normal-hook activation commit remains pending.
+      observable: Historical unit 1 ran 187 host scheduling proofs. Unit 2 includes three permanent real-Git old/new activation controls in its 437 passing proofs, retains mutation rejection, and pins both consumers to immutable checker commit 8fb94dd5a00dbb244be1451a1aa9793311e25f66 and blob c1af0ecad38ab788a9b3934d00516377bf96d5ad. Historical unit2activation committed and pushed as55882c25; the successor observation rollout is recorded under bounded-terminal-identity-and-retained-prefix-observations.
+  openspec:code-review-native-platform-execution:review-native-platform-execution:bounded-terminal-identity-and-retained-prefix-observations:
+    rationale: Distinguish incomplete terminal execution and known worker failures without publishing private identities or changing acceptance.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#460
+    touchpoints:
+    - id: terminal-identity-observation-spec
+      kind: config_file
+      locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
+    verification_cases:
+    - case_id: 460-62-1
+      scenario_id: bounded-terminal-identity-and-retained-prefix-observations
+      method: test
+      intent: Derive terminal gaps from complete identity sets and retain independent safe fields when derived inputs are invalid.
+      observable: Genuine initial 116 missing-observation cases fail before prospective implementation; 301 private projection checks pass after, with invalid fields omitted and no private identifiers emitted.
+    - case_id: 460-62-2
+      scenario_id: bounded-terminal-identity-and-retained-prefix-observations
+      method: test
+      intent: Distinguish exact worker token boundaries and the full retained skip prefix without inventing snapshot provenance.
+      observable: Both observer programs emit only fixed classes; lookalikes remain unclassified, global findings remain side-free, and signed reviewer 0.51.2 and all execution gates remain unchanged.
+    - case_id: 460-62-3
+      scenario_id: bounded-terminal-identity-and-retained-prefix-observations
+      method: test
+      intent: Activate reviewed observer bytes only after ordinary-hook immutable checker commit and keep all original execution authority.
+      observable: Checker56ac770d/blob0bfb44b9, both consumer pins and wrapperSHA423a0770match;595actual focused proofs pass; Full andSMART each pass304hostproofs plus6110supplier tests, while hosted exact-head acceptance remains pending.
