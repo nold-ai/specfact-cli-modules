@@ -372,7 +372,7 @@ def run_project_scope_pair(resolution: Any, *, runtime: Any, options: Any, scope
     evidence = {**scope_evidence, "project_runtime": bindings, "protected_pr_eligible": False}
     if evidence.get("assurance_kind") in {"range_candidate", "pr_range"}:
         evidence["assurance_kind"] = "range_preview"
-    return _capsule_report(
+    report = _capsule_report(
         combined,
         findings,
         options=options,
@@ -380,3 +380,7 @@ def run_project_scope_pair(resolution: Any, *, runtime: Any, options: Any, scope
         expected_versions=native_versions,
         platform_id=native_platform,
     )
+    from specfact_code_review.run.supplemental_diagnostics import emit_sidecar
+
+    emit_sidecar(report, resolution, results)
+    return report

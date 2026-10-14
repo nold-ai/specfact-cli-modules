@@ -1,0 +1,55 @@
+schema_version: '2'
+requirements:
+  openspec:code-review-bounded-diagnostic-sidecar:code-review-diagnostic-sidecar:bounded-supplemental-diagnostics:
+    rationale: Recover public source-checked observations while retaining privacy
+      gaps and original review authority.
+    touchpoints:
+    - id: diagnostic-spec
+      kind: config_file
+      locator: openspec/changes/code-review-bounded-diagnostic-sidecar/specs/code-review-diagnostic-sidecar/spec.md
+    verification_cases:
+    - case_id: source-checked-introduction
+      scenario_id: bounded-supplemental-diagnostics
+      method: inspection
+      intent: Inspect the declared scenario and its focused test coverage before preview
+        signing.
+      observable: An introduced catalog rule is bound to an immutable public source
+        digest, line and function; private text is absent. This mapping is planned
+        maturity, not runtime or release acceptance.
+    - case_id: incomplete-evidence
+      scenario_id: bounded-supplemental-diagnostics
+      method: inspection
+      intent: Inspect the declared scenario and its focused test coverage before preview
+        signing.
+      observable: Unclassified, missing or truncated evidence remains explicitly incomplete.
+        This mapping is planned maturity, not runtime or release acceptance.
+    - case_id: disabled-or-failed-sidecar
+      scenario_id: bounded-supplemental-diagnostics
+      method: inspection
+      intent: Inspect the declared scenario and its focused test coverage before preview
+        signing.
+      observable: Disabled or failed output leaves the original report and exit unchanged.
+        This mapping is planned maturity, not runtime or release acceptance.
+  openspec:code-review-bounded-diagnostic-sidecar:code-review-diagnostic-sidecar:isolated-single-diagnostic-execution:
+    rationale: Keep the one approved diagnostic preview separate from producer acceptance
+      and required native gates.
+    touchpoints:
+    - id: diagnostic-spec
+      kind: config_file
+      locator: openspec/changes/code-review-bounded-diagnostic-sidecar/specs/code-review-diagnostic-sidecar/spec.md
+    verification_cases:
+    - case_id: ordinary-event
+      scenario_id: isolated-single-diagnostic-execution
+      method: inspection
+      intent: Inspect the declared scenario and its focused test coverage before preview
+        signing.
+      observable: Ordinary event and default dispatch behavior is preserved. This
+        mapping is planned maturity, not runtime or release acceptance.
+    - case_id: explicit-diagnostic-dispatch
+      scenario_id: isolated-single-diagnostic-execution
+      method: inspection
+      intent: Inspect the declared scenario and its focused test coverage before preview
+        signing.
+      observable: An explicit diagnostic dispatch binds the signed producer and fixed
+        source pair; execution and native acceptance remain pending. This mapping
+        is planned maturity, not runtime or release acceptance.

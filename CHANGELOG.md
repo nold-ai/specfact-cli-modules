@@ -9,6 +9,10 @@ and this project follows SemVer for bundle versions.
 
 ### Fixed
 
+- Prepare an unreleased diagnostic-only 0.51.5 preview from signed 0.51.2.
+  Add opt-in bounded per-side observations for one immutable public source pair;
+  preserve existing required assurance, privacy bounds and ordinary CI paths.
+
 - Prepare Code Review 0.51.2 release follow-up: accept successful index
   no-governed-impact preparation for registry/workflow-only capsule jobs while
   preserving normal review, cleanup and failure exits. Keep malformed or failed

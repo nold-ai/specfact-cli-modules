@@ -8,6 +8,19 @@ on:
     paths:
       - registry/**
   workflow_dispatch:
+    inputs:
+      diagnostic_mode:
+        description: Run the separately approved single supplemental diagnostic experiment
+        type: boolean
+        default: false
+      producer_commit:
+        description: Independently reviewed signed preview commit
+        type: string
+        default: ""
+      producer_payload:
+        description: Strictly verified signed preview payload SHA256
+        type: string
+        default: ""
   release:
     types: [published]
 
@@ -20,6 +33,7 @@ concurrency:
 
 jobs:
   customer:
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.diagnostic_mode != true }}
     name: capsule-${{ github.event_name == 'pull_request' && 'candidate' || 'public' }} (${{ matrix.python }})
     runs-on: ubuntu-24.04
     timeout-minutes: 90
@@ -665,3 +679,171 @@ jobs:
               projected["crosshair_failure_observations"] = crosshair_failure_observations(header.get("findings", []))
           print(json.dumps(projected))
           PY_REVIEW_FAILURE
+
+  supplemental-diagnostic:
+    name: SUPPLEMENTARY_DIAGNOSTIC_ONLY
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.diagnostic_mode == true && github.ref == 'refs/heads/codex/signed-diagnostic-sidecar-18' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      EXPECTED_PRODUCER: ${{ inputs.producer_commit }}
+      EXPECTED_PAYLOAD: ${{ inputs.producer_payload }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.12"
+      - name: Bind the single reviewed diagnostic attempt
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_RUN_ATTEMPT" = 1
+          test "$GITHUB_SHA" = "$EXPECTED_PRODUCER"
+          [[ "$EXPECTED_PRODUCER" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$EXPECTED_PAYLOAD" =~ ^[0-9a-f]{64}$ ]]
+          test "$(id -u)" -ne 0
+          TRUSTED_ROOT="$RUNNER_TEMP/supplemental-diagnostic"
+          mkdir -m 0700 "$TRUSTED_ROOT" "$TRUSTED_ROOT/home" "$TRUSTED_ROOT/tmp"
+          echo "TRUSTED_ROOT=$TRUSTED_ROOT" >> "$GITHUB_ENV"
+          git archive "$EXPECTED_PRODUCER:packages/specfact-code-review" | gzip -n > "$TRUSTED_ROOT/producer.tar.gz"
+          python -I -m venv "$TRUSTED_ROOT/venv"
+          "$TRUSTED_ROOT/venv/bin/python" -I -m pip install --no-cache-dir specfact-cli==0.55.4
+          env -i HOME="$TRUSTED_ROOT/home" TMPDIR="$TRUSTED_ROOT/tmp" \
+            PATH="$TRUSTED_ROOT/venv/bin:/usr/bin:/bin" SPECFACT_MODULES_BRANCH=main \
+            "$TRUSTED_ROOT/venv/bin/python" -I -m specfact_cli.cli \
+            module install nold-ai/specfact-code-review --scope user --version 0.51.2 --source marketplace
+      - name: Strictly verify and install only the signed preview
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$TRUSTED_ROOT"
+          HOME="$TRUSTED_ROOT/home" "$TRUSTED_ROOT/venv/bin/python" -I - <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+          import yaml
+          from specfact_cli.registry.crypto_validator import verify_signature
+          from specfact_cli.registry import module_installer as installer
+
+          root = Path(os.environ["TRUSTED_ROOT"])
+          key = installer._bundled_public_key_path().read_bytes()
+          assert hashlib.sha256(key).hexdigest() == "4e54ffb02307e1a85c166c40aba6d1bc40fbb9a8ef40bf756f8870e5bb08d1c8"
+          package = root / "verified-producer"
+          package.mkdir(mode=0o700)
+          installer._extract_marketplace_archive(root / "producer.tar.gz", package)
+          paths = list(package.rglob("*"))
+          assert len(paths) <= 2048 and not any(path.is_symlink() for path in paths)
+          assert sum(path.stat().st_size for path in paths if path.is_file()) <= 64 * 1024 * 1024
+          payload = installer._module_artifact_payload_stable(package)
+          digest = hashlib.sha256(payload).hexdigest()
+          metadata = yaml.safe_load((package / "module-package.yaml").read_text())
+          assert digest == os.environ["EXPECTED_PAYLOAD"]
+          assert metadata["integrity"]["checksum"] == "sha256:" + digest
+          assert verify_signature(payload, metadata["integrity"]["signature"], key.decode())
+          meta = installer._metadata_obj_from_install_dict(metadata, "nold-ai/specfact-code-review")
+          assert installer.verify_module_artifact(package, meta, public_key_pem=key.decode(), require_signature=True, require_integrity=True)
+          destination = Path.home() / ".specfact/modules"
+          installer._atomic_place_verified_module(package, meta, "specfact-code-review", "nold-ai/specfact-code-review",
+                                                 destination, destination / "specfact-code-review")
+          installed = destination / "specfact-code-review"
+          assert installer._module_artifact_payload_stable(installed) == payload
+          print(json.dumps({"purpose": "SUPPLEMENTARY_DIAGNOSTIC_ONLY", "producer_commit": os.environ["EXPECTED_PRODUCER"],
+                            "payload_sha256": digest, "strict_signature": "VERIFIED"}))
+          PY
+      - name: Capture the fixed public source pair and existing namespace policy
+        shell: bash
+        run: |
+          set -euo pipefail
+          git -c core.hooksPath=/dev/null worktree add --detach "$TRUSTED_ROOT/subject" 5b451ec066e0ea5cbd8a97ef3b59d915ae54fe5b
+          git -C "$TRUSTED_ROOT/subject" -c core.hooksPath=/dev/null reset --soft 593656f675eaf4954b609aca51aa6504367dc02e
+          test "$(git -C "$TRUSTED_ROOT/subject" write-tree)" = acea0127e0ed3472c3439a6aa87cc4353eaa18c5
+          printf '%s\n' 'manager = "hatch"' 'environment = "default"' > "$TRUSTED_ROOT/project.toml"
+          sudo apt-get update
+          sudo apt-get install -y bubblewrap
+          cat > "$TRUSTED_ROOT/capsule.apparmor" <<EOF_PROFILE
+          abi <abi/4.0>,
+          include <tunables/global>
+          profile specfact-supplemental-capsule "$TRUSTED_ROOT/cache/**/opt/specfact/bin/bwrap-static" flags=(unconfined) {
+            userns,
+          }
+          EOF_PROFILE
+          sudo apparmor_parser -r "$TRUSTED_ROOT/capsule.apparmor"
+      - name: Run one diagnostic review through the verified installed producer
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$TRUSTED_ROOT"
+          cat > "$TRUSTED_ROOT/reviewer.py" <<'PY'
+          import hashlib
+          import os
+          import sys
+          from pathlib import Path
+          from specfact_cli.cli import app
+          from specfact_cli.registry import CommandRegistry
+          from specfact_cli.registry.module_installer import _module_artifact_payload_stable
+
+          package = Path.home() / ".specfact/modules/specfact-code-review"
+          assert hashlib.sha256(_module_artifact_payload_stable(package)).hexdigest() == os.environ["EXPECTED_PAYLOAD"]
+          CommandRegistry.get_module_typer("code")
+          from specfact_code_review.run import portable_snapshot, supplemental_diagnostics
+          for module in (portable_snapshot, supplemental_diagnostics):
+              actual = Path(module.__file__).resolve()
+              actual.relative_to(package.resolve())
+              assert actual.read_bytes() == (package / "src/specfact_code_review/run" / actual.name).read_bytes()
+          from specfact_code_review.run.portable_snapshot import discover_snapshot
+          from specfact_code_review.run.runtime_builder import prepare_runtime
+          from specfact_code_review.run.runtime_interpreter import select_environment
+          from specfact_code_review.run.runner import _capsule_environment_id, _prepare_capsule_runtime, _cleanup_capsule_runtime
+          from specfact_code_review.run.scope import ScopeRequest, resolve_scope, cleanup_scope_resolution
+
+          os.chdir(sys.argv[1])
+          if sys.argv[2] != "prepare-index":
+              app(args=sys.argv[2:])
+              raise SystemExit(0)
+          resolution = resolve_scope(ScopeRequest(repository=Path.cwd(), scope="index", portable_project_runtime=True))
+          try:
+              assert resolution.status == "PASS"
+              assert (resolution.base_snapshot.tree, resolution.head_snapshot.tree) == supplemental_diagnostics.EXPECTED_TREES
+              for snapshot in (resolution.base_snapshot, resolution.head_snapshot):
+                  plan = discover_snapshot(snapshot.root, config_path=Path(sys.argv[3]), source_snapshot=snapshot)
+                  selected = select_environment(plan, current=_capsule_environment_id())
+                  runtime, reason = _prepare_capsule_runtime(environment_id=selected)
+                  assert runtime is not None
+                  try:
+                      prepare_runtime(plan, runtime=runtime)
+                  finally:
+                      _cleanup_capsule_runtime(runtime)
+          finally:
+              cleanup_scope_resolution(resolution)
+          PY
+          trusted_env=(env -i HOME="$TRUSTED_ROOT/home" TMPDIR="$TRUSTED_ROOT/tmp"
+            PATH="$TRUSTED_ROOT/venv/bin:/usr/bin:/bin" SPECFACT_MODULES_BRANCH=main
+            EXPECTED_PAYLOAD="$EXPECTED_PAYLOAD" SPECFACT_CODE_REVIEW_CAPSULE_CACHE="$TRUSTED_ROOT/cache")
+          "${trusted_env[@]}" "$TRUSTED_ROOT/venv/bin/python" -I -c \
+            'import subprocess,sys; sys.exit(subprocess.run(sys.argv[1:],timeout=1800,check=False).returncode)' \
+            "$TRUSTED_ROOT/venv/bin/python" -I "$TRUSTED_ROOT/reviewer.py" \
+            "$TRUSTED_ROOT/subject" prepare-index "$TRUSTED_ROOT/project.toml" \
+            > "$TRUSTED_ROOT/preparation.private.log" 2>&1
+          review_exit=0
+          "${trusted_env[@]}" SPECFACT_SUPPLEMENTAL_DIAGNOSTIC_OUTPUT="$TRUSTED_ROOT/diagnostic.json" \
+            "$TRUSTED_ROOT/venv/bin/python" -I -c \
+            'import subprocess,sys
+          try:
+              sys.exit(subprocess.run(sys.argv[1:],timeout=600,check=False).returncode)
+          except subprocess.TimeoutExpired:
+              sys.exit(124)' \
+            "$TRUSTED_ROOT/venv/bin/python" -I "$TRUSTED_ROOT/reviewer.py" \
+            "$TRUSTED_ROOT/subject" code review run --scope index --enforcement changed --bug-hunt \
+            --project-config "$TRUSTED_ROOT/project.toml" --json --out "$TRUSTED_ROOT/review.private.json" \
+            > "$TRUSTED_ROOT/review.private.log" 2>&1 || review_exit=$?
+          if [ -f "$TRUSTED_ROOT/diagnostic.json" ] && [ "$(wc -c < "$TRUSTED_ROOT/diagnostic.json")" -le 65536 ]; then
+            cat "$TRUSTED_ROOT/diagnostic.json"
+          else
+            printf '%s\n' '{"purpose":"SUPPLEMENTARY_DIAGNOSTIC_ONLY","status":"UNAVAILABLE"}'
+          fi
+          printf '\nSUPPLEMENTARY_DIAGNOSTIC_ONLY exit=%s\n' "$review_exit"
+          exit "$review_exit"
