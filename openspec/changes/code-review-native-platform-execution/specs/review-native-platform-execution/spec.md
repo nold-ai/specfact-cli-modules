@@ -2014,3 +2014,9 @@ Native member import dispatch SHALL satisfy Python's meta-path finder protocol w
 - **WHEN** Full, SMART, canonical Linux or any native-boundary macOS job executes the existing host proof surface
 - **THEN** the original control helper class runs its unchanged isolated subprocess and inherited fixture
 - **AND** supplier discovery excludes that class, with all other control tests, deadlines, reviewer identities and acceptance gates retained
+
+#### Scenario: Exact native lifecycle cases have mandatory macOS ownership
+- **WHEN** each existing macOS ARM64 native-boundary matrix job executes the native control regression class with its original opt-in flag
+- **THEN** all five original cases and their helper retain their exact bodies, decorators and inherited fixture and execute without skips
+- **AND** the class resides on the existing registered native proof surface, outside Linux supplier discovery; Full andSMART retain their explicit proof phase and original opt-in behavior
+- **AND** all prior native commands, platform preflight, deadlines and required gates remain unchanged

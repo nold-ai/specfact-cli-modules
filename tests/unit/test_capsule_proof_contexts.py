@@ -708,6 +708,38 @@ def test_control_host_fixture_dependencies_schedule_existing_proofs(dependency):
     assert dependency in yaml.safe_load(step["with"]["filters"])["capsule"]
 
 
+def test_native_control_cases_retain_original_fixture_outside_supplier_discovery():
+    native = importlib.import_module("tests.native.proof_native_canonical_path")
+    portable = importlib.import_module("tests.unit.test_macos_managed_control")
+    proof = native.NativeControlTests
+    assert proof.__module__ == native.__name__ and proof.__name__ == "NativeControlTests"
+    assert proof.__bases__ == (portable._ControlTestCase,)
+    assert proof.setUp is portable._ControlTestCase.setUp
+    assert not hasattr(portable, "NativeControlTests")
+    assert {name for name in proof.__dict__ if name.startswith("test_")} == {
+        "test_withheld_eof_cannot_pass_via_worker_timeout",
+        "test_held_cancellation_is_independently_observed_lifecycle_case",
+        "test_held_initial_exception_can_be_cancelled",
+        "test_actual_runtime_trap_preserves_signal",
+        "test_actual_native_control_subset",
+    }
+    unit_path = ROOT / "tests/unit/test_macos_managed_control.py"
+    native_path = ROOT / "tests/native/proof_native_canonical_path.py"
+    plan = ProjectPlan(root=ROOT, manager="pip", pytest_config={"testpaths": ["tests"]})
+    assert select_test_paths(plan, [unit_path, native_path], full=False) == (unit_path.relative_to(ROOT).as_posix(),)
+
+
+def test_all_native_control_cases_have_required_enabled_macos_invocation():
+    workflow = yaml.safe_load((ROOT / ".github/workflows/code-review-macos-boundary.yml").read_text())
+    job = workflow["jobs"]["native-boundary"]
+    step = next(item for item in job["steps"] if item.get("name") == "Prove all five native control lifecycle cases")
+    assert step["env"] == {"SPECFACT_NATIVE_CONTROL": "1"}
+    assert step["run"] == "python -m pytest -n 0 tests/native/proof_native_canonical_path.py::NativeControlTests"
+    assert "if" not in step and "continue-on-error" not in step
+    assert "if" not in job and "continue-on-error" not in job
+    assert {row["runner"] for row in job["strategy"]["matrix"]["include"]} == {"macos-14", "macos-15", "macos-26"}
+
+
 def test_standalone_bootstrap_host_source_and_direct_dependencies_are_declared():
     workflow = yaml.safe_load((ROOT / ".github/workflows/code-review-macos-boundary.yml").read_text())
     for job in [workflow["jobs"]["canonical-linux"], workflow["jobs"]["native-boundary"]]:

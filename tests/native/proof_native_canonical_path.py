@@ -2,11 +2,16 @@
 
 from __future__ import annotations
 
+import os
 import re
 import subprocess
+import tempfile
+import unittest
 from pathlib import Path
 
 import pytest
+
+from tests.unit.test_macos_managed_control import _ControlTestCase
 
 
 NATIVE = Path(__file__).resolve().parents[2] / "packages/specfact-code-review/native/macos-arm64"
@@ -167,3 +172,89 @@ def test_allocated_canonical_predicate_preserves_real_filesystem_policy(tmp_path
         text=True,
         timeout=5,
     )
+
+
+class NativeControlTests(_ControlTestCase):
+    @unittest.skipUnless(os.environ.get("SPECFACT_NATIVE_CONTROL") == "1", "explicit native fixture run")
+    def test_withheld_eof_cannot_pass_via_worker_timeout(self):
+        with tempfile.TemporaryDirectory(dir="/private/tmp", prefix="sf-eof-negative-") as temporary:
+            root = Path(temporary).resolve()
+            broker, observer, _inventory = self.control.build(root)
+            with self.control.Invocation(broker, observer, root) as invocation:
+                self._reject_withheld_eof(invocation)
+
+    def _reject_withheld_eof(self, invocation):
+        client = invocation.connect()
+        launched = client.launch()
+        identity = invocation.capture_worker(launched)
+        held = client.stream.dup()
+        try:
+            client.stream.sendall(
+                self.control.frame(client.capability, 2, self.control.FrameFields(handle=launched["handle"]))
+            )
+            deadline = self.control.cleanup_deadline(launched)
+            started = self.control.time.monotonic()
+            client.close()
+            with self.assertRaisesRegex(RuntimeError, "survivor/job failure"):
+                self.control.observe_absence(invocation, identity, started, job=True, native_deadline_ns=deadline)
+            self.assertTrue(self.control.STARTUP.alive(invocation.observer, identity))
+            self.assertLess(
+                self.control.time.clock_gettime_ns(self.control.time.CLOCK_MONOTONIC), launched["deadline_ns"]
+            )
+        finally:
+            held.close()
+
+    @unittest.skipUnless(os.environ.get("SPECFACT_NATIVE_CONTROL") == "1", "explicit native fixture run")
+    def test_held_cancellation_is_independently_observed_lifecycle_case(self):
+        with tempfile.TemporaryDirectory(dir="/private/tmp", prefix="sf-control-held-case-") as temporary:
+            root = Path(temporary).resolve()
+            broker, observer, _inventory = self.control.build(root)
+            result = self.control.lifecycle_trial(broker, observer, root, "cancel-held-stop")
+            self.assertTrue(result["passed"])
+            self.assertEqual(result["status"]["signal"], 9)
+            self.assertEqual(result["status"]["reason"], "cancel")
+            self.assertLessEqual(result["observation_seconds"], 5)
+
+    @unittest.skipUnless(os.environ.get("SPECFACT_NATIVE_CONTROL") == "1", "explicit native fixture run")
+    def test_held_initial_exception_can_be_cancelled(self):
+        with tempfile.TemporaryDirectory(dir="/private/tmp", prefix="sf-control-held-") as temporary:
+            root = Path(temporary).resolve()
+            broker, observer, _inventory = self.control.build(root)
+            with self.control.Invocation(broker, observer, root) as invocation:
+                client = invocation.connect()
+                launched = client.launch(4)
+                invocation.capture_worker(launched, 4)
+                self.assertTrue(client.request(4, handle=launched["handle"])["ok"])
+                result = client.request(2, handle=launched["handle"])
+                self.assertEqual(result["signal"], 9)
+                self.assertEqual(result["reason"], "cancel")
+                self.assertEqual(result["exit"], -1)
+
+    @unittest.skipUnless(os.environ.get("SPECFACT_NATIVE_CONTROL") == "1", "explicit native fixture run")
+    def test_actual_runtime_trap_preserves_signal(self):
+        with tempfile.TemporaryDirectory(dir="/private/tmp", prefix="sf-control-trap-") as temporary:
+            root = Path(temporary).resolve()
+            broker, observer, _inventory = self.control.build(root)
+            with self.control.Invocation(broker, observer, root) as invocation:
+                client = invocation.connect()
+                launched = client.launch(5)
+                result = client.request(2, handle=launched["handle"])
+                self.assertEqual(result["signal"], 5)
+                self.assertEqual(result["exit"], -1)
+                self.assertNotIn("runtime-trap-was-suppressed", result["output"])
+
+    @unittest.skipUnless(os.environ.get("SPECFACT_NATIVE_CONTROL") == "1", "explicit native fixture run")
+    def test_actual_native_control_subset(self):
+        with tempfile.TemporaryDirectory(dir="/private/tmp", prefix="sf-control-test-") as temporary:
+            root = Path(temporary).resolve()
+            broker, observer, inventory = self.control.build(root)
+            trials = self.control.run_trials(broker, observer, root, 1)
+            broker_inputs = next(item for item in inventory if item["name"] == "broker")
+            self.assertEqual(broker_inputs["signal_transport"], "mach-exception-v1")
+            self.assertEqual(len(broker_inputs["build_inputs"]), 8)
+            self.assertIn("control_exec_policy.h", {item["name"] for item in broker_inputs["build_inputs"]})
+            self.assertTrue(all(item["passed"] for item in trials), trials)
+            self.assertEqual(
+                set(self.control.LIFECYCLE_CASES),
+                {item["case"] for item in trials if item["case"] in self.control.LIFECYCLE_CASES},
+            )

@@ -19,6 +19,11 @@ requirements:
       method: test
       intent: Run the unchanged isolated direct-script proof through the original fixture on the mandatory host surface.
       observable: The ownership regression fails before migration; exact whole-class text and AST survive the move, remaining unit classes are identical, and129focused cases pass with five unchanged native opt-in skips. Full andSMART each pass359host proofs and6196supplier tests. Linux acceptance remains pending.
+    - case_id: 460-65-3
+      scenario_id: preserve-native-import-and-standalone-host-proof-contracts
+      method: test
+      intent: Retain the exact native control class outside supplier discovery and execute all five cases on each required macOS runner.
+      observable: Two ownership and mandatory-step regressions fail before the whole-class relocation and pass after. Original helpers, decorators and fixture identity remain; required macOS14/15/26 jobs explicitly enable and execute the five exact cases. Native runtime and exact-head Linux outcomes require separate evidence.
   openspec:code-review-native-platform-execution:review-native-platform-execution:native-local-execution:
     rationale: Define macOS ARM64 acceptance without claiming unexecuted runtime proof.
     stakeholder_refs:

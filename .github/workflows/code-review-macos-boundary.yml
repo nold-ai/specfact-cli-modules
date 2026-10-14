@@ -158,6 +158,10 @@ jobs:
           python -m pytest -n 0 tests/native/proof_macos_managed_uv_child.py
           python -m pytest -n 0 tests/native/proof_native_canonical_path.py
           python -m pytest -n 0 tests/host/proof_capsule_review_projection_shell.py
+      - name: Prove all five native control lifecycle cases
+        env:
+          SPECFACT_NATIVE_CONTROL: "1"
+        run: python -m pytest -n 0 tests/native/proof_native_canonical_path.py::NativeControlTests
       - name: Prove release broker cleans up controller loss during WAIT
         env:
           SPECFACT_NATIVE_CONTROL: "1"
