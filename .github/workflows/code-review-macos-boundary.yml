@@ -14,7 +14,12 @@ on:
       - tests/unit/test_macos_boundary_ci_receipts.py
       - tests/native/**
       - tests/host/proof_capsule_review_projection_shell.py
+      - tests/host/proof_capsule_deferred_review_ci.py
       - .github/workflows/capsule-customer-execution.yml
+      - .github/workflows/pr-orchestrator.yml
+      - .github/workflows/sign-modules.yml
+      - scripts/owner_commit_entry.py
+      - scripts/check_capsule_deferral.py
       - tests/unit/test_capsule_review_projection.py
       - tests/support/**
       - tests/unit/test_macos_native_file_budget.py

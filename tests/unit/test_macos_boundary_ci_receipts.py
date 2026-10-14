@@ -892,6 +892,28 @@ def test_native_workflow_covers_runtime_integration_paths():
         assert any(fnmatch.fnmatch(path, pattern) for pattern in paths), path
 
 
+@pytest.mark.parametrize(
+    "path",
+    [
+        "tests/host/proof_capsule_review_projection_shell.py",
+        "tests/host/proof_capsule_deferred_review_ci.py",
+        "tests/unit/test_capsule_review_projection.py",
+        "tests/support/capsule_review_fixtures.py",
+        "scripts/owner_commit_entry.py",
+        "scripts/check_capsule_deferral.py",
+        ".github/workflows/sign-modules.yml",
+        ".github/workflows/pr-orchestrator.yml",
+        ".github/workflows/capsule-customer-execution.yml",
+    ],
+)
+def test_native_workflow_covers_controller_shell_input_closure(path):
+    import fnmatch
+
+    workflow = yaml.safe_load((ROOT / ".github/workflows/code-review-macos-boundary.yml").read_text())
+    paths = workflow.get("on", workflow.get(True))["pull_request"]["paths"]
+    assert any(fnmatch.fnmatch(path, pattern) for pattern in paths), path
+
+
 @pytest.mark.parametrize("kind", ["task", "thread"])
 def test_exception_receipt_accepts_explicit_kernel_policy_denial(boundary_ci, kind):
     trial = _control_trial(f"exec-exception-{kind}")

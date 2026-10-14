@@ -1516,8 +1516,8 @@ The required consumer remains blocking for failed/skipped customer review; no ho
 
 #### Scenario: Native controller-shell proofs are scheduled for direct input changes
 
-- **GIVEN** required controller-shell proofs read the customer capsule workflow and use preparation fixtures from the portable projection test module
-- **WHEN** either direct input changes without changing the shell proof itself
+- **GIVEN** required controller-shell proofs read the customer capsule workflow, owner entry and authenticated signing workflow, import the committed-subject helper, and use shared fixture builders reading the orchestrator and checker
+- **WHEN** any direct input or fixture dependency changes without changing the shell proof itself
 - **THEN** the native boundary workflow SHALL schedule the existing Linux canonical and all three macOS boundary jobs through its pull-request path filter
 - **AND** all existing jobs, matrices, commands, prerequisites, assertions, deadlines, failure propagation and capsule admission SHALL remain unchanged
 
