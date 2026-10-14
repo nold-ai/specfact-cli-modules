@@ -194,8 +194,26 @@ def _observation_step(workflow: dict, job: str, name: str) -> tuple[int, dict]:
     return matches[0]
 
 
+def _approved_reviewer_installation(workflow: dict, integrated: dict) -> None:
+    name = "Install trusted reviewer in its own ordinary-user environment"
+    position, step = _observation_step(workflow, "independent-review", name)
+    baseline_position, baseline_step = _observation_step(integrated, "independent-review", name)
+    if position != baseline_position or {k: v for k, v in step.items() if k != "run"} != {
+        k: v for k, v in baseline_step.items() if k != "run"
+    }:
+        raise ValueError("reviewer install step metadata differs from integrated contract")
+    install_hashes = {
+        "fcdf9ce7746ec559c420f96205487508a16c0445576e06775bb2deca3f6f2b98",
+        "ceab0c17724c56da6cb89f634eb94d39f66e54bc993fd3973e6a5aa74c08c434",
+    }
+    if any(hashlib.sha256(s["run"].encode("utf-8")).hexdigest() not in install_hashes for s in (step, baseline_step)):
+        raise ValueError("reviewer install program differs from approved bytes")
+    step["run"] = baseline_step["run"]
+
+
 def _approved_observation_contract(workflow: dict, integrated: dict) -> dict:
     normalized = copy.deepcopy(workflow)
+    _approved_reviewer_installation(normalized, integrated)
     for job, name, marker, approved_hashes in _OBSERVATION_PROGRAMS:
         position, step = _observation_step(normalized, job, name)
         baseline_position, baseline_step = _observation_step(integrated, job, name)

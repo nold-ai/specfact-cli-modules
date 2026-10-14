@@ -1482,3 +1482,23 @@ requirements:
       method: test
       intent: Activate only exact independently reviewed observer bytes under the committed successor and preserve original gates.
       observable: Checker612964a4/blob99a094f8 and wrapperSHA cf772194match. Whole workflow equality outside both bodies is verified. Full andSMART each pass304host proofs and6172supplier tests, with71conditional skips and95subtests. Fresh independent activation and security verification retain original trust boundaries; hosted acceptance remains separate.
+
+  openspec:code-review-native-platform-execution:review-native-platform-execution:independently-reviewed-signed-reviewer-prerequisite:
+    rationale: Activate only the explicitly authorized frozen signed reviewer while preserving complete workflow authority and acceptance.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#460
+    touchpoints:
+    - id: openspec-source-spec
+      kind: config_file
+      locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
+    verification_cases:
+    - case_id: 460-64-1
+      scenario_id: independently-reviewed-signed-reviewer-prerequisite
+      method: test
+      intent: Admit the exact install transition and rollback while rejecting other workflow execution changes.
+      observable: Durable regression exercises the actual whole-workflow validator with exact body hashes and unchanged metadata,68behavior calls and preserved observation guards; independent checker reviews and unchanged complexity threshold remain mandatory.
+    - case_id: 460-64-2
+      scenario_id: independently-reviewed-signed-reviewer-prerequisite
+      method: test
+      intent: Verify the frozen reviewer through the normal signed local-marketplace installation before authoritative execution.
+      observable: Private preparation records strict pre/post signatures for all4modules,117hash/mode entries, controller origins outside candidate source and16real rejection/deadline tests; exact-head hosted Linux acceptance is still required and no publication follows.

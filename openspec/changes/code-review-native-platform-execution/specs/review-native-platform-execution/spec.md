@@ -1917,7 +1917,7 @@ When a committed capsule delta requires scheduling validation, the existing CI w
 
 ### Requirement: Owner-approved bounded Linux review failure observations
 
-The existing candidate and independent Linux review failure projections SHALL expose bounded side-specific observations for incomplete contracts, Pylint and targeted pytest coverage using only fields emitted by the current reviewer. Public values SHALL be fixed allowlisted classifications, validated statuses, booleans or exact bounded integers; unavailable fields SHALL be omitted. Global findings SHALL NOT be assigned to a snapshot side without authoritative attribution. Recognized rejected CrossHair stdout and changed-enforcement preconditions SHALL be classified without publishing raw messages, paths, test identities or output. The signed independent reviewer 0.51.2, all commands, deadlines, acceptance criteria, credentials separation, cleanup and blocking gates SHALL remain unchanged.
+The existing candidate and independent Linux review failure projections SHALL expose bounded side-specific observations for incomplete contracts, Pylint and targeted pytest coverage using only fields emitted by the current reviewer. Public values SHALL be fixed allowlisted classifications, validated statuses, booleans or exact bounded integers; unavailable fields SHALL be omitted. Global findings SHALL NOT be assigned to a snapshot side without authoritative attribution. Recognized rejected CrossHair stdout and changed-enforcement preconditions SHALL be classified without publishing raw messages, paths, test identities or output. For this observation-only revision, signed independent reviewer 0.51.2, commands, deadlines, acceptance criteria, credentials separation, cleanup and blocking gates SHALL remain unchanged. A separately authorized signed reviewer prerequisite SHALL follow the signed reviewer prerequisite requirement below.
 
 #### Scenario: incomplete snapshot observations distinguish sides
 - **WHEN** a bounded private report contains incomplete base or head evidence, including a completely parsed report above the ordinary 2 MiB display threshold and within 32 MiB
@@ -1982,3 +1982,18 @@ The observer SHALL read native `process_exit` only when portable `exit_code` is 
 #### Scenario: Ambiguous producer representation remains unavailable
 - **WHEN** a complete record list mixes or duplicates representations, contains invalid native booleans or exceeds existing bounds
 - **THEN** dependent observations are omitted and independently valid portable counts retain their established behavior
+
+
+### Requirement: Independently reviewed signed reviewer prerequisite
+
+After the owner explicitly authorizes CI activation, independent Linux review SHALL install the frozen signed reviewer 0.51.5 from commit a785ef4da8ea74f67f8ffa41f458c025cbfba4b1 through the existing core 0.55.4 local-marketplace installer. The bootstrap SHALL bind the exact source commit/tree, signed payload, manifest and existing trusted public key, strictly verify signatures before and after ordinary installation, preserve all117frozen file hashes and regular-file modes, and verify the three normal signed dependencies from immutable main. Trusted controller origins SHALL remain outside candidate source. The exact complete install body SHALL be admitted by a separately committed checker before activation of its immutable commit/blob pins; unique step identity, position and all non-run metadata SHALL remain unchanged. Whole parsed workflow equality SHALL remain blocking outside the already reviewed observation bodies and exact old/new install bodies. The existing analysis commands, deadlines, acceptance gates, cleanup, credentials separation and ordinary hooks SHALL remain unchanged. This authorization SHALL NOT publish a release or registry artifact, merge a PR, admit a mutable overlay, or imply Linux success from local tests.
+
+#### Scenario: Exact reviewer installation transition and rollback
+- **WHEN** the independent install step contains either the exact reviewed published0.51.2 body or the exact reviewed frozen0.51.5 prerequisite body
+- **THEN** its checker preserves the complete workflow contract and allows the exact transition, already-updated baseline and exact rollback
+- **AND** changed source/key/command/deadline bytes, duplicate or moved steps, altered metadata and every surrounding execution change remain rejected
+
+#### Scenario: Frozen reviewer integrity before authoritative use
+- **WHEN** the normal installer consumes the frozen signed reviewer and its declared dependency closure
+- **THEN** source identity, key, strict signatures,117byte-and-mode records, dependency provenance and controller origins pass validation before independent review
+- **AND** any missing or mismatching identity fails closed; local installation does not substitute for exact-head Linux acceptance
