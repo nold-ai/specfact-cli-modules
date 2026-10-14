@@ -581,7 +581,7 @@ def activate_project_domain(project: Path, capsule: Path, tool: str) -> None:
         finder,
         importlib.machinery.BuiltinImporter,
         importlib.machinery.FrozenImporter,
-        ImportPathFinder,
+        ImportPathFinder(),
     ]
     finder.validate_loaded()
 

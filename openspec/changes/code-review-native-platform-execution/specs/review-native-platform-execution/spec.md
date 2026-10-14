@@ -2001,3 +2001,16 @@ After the owner explicitly authorizes CI activation, independent Linux review SH
 - **WHEN** the normal installer consumes the frozen signed reviewer and its declared dependency closure
 - **THEN** source identity, key, strict signatures,117byte-and-mode records, dependency provenance and controller origins pass validation before independent review
 - **AND** any missing or mismatching identity fails closed; local installation does not substitute for exact-head Linux acceptance
+
+### Requirement: Preserve native import and standalone host proof contracts
+
+Native member import dispatch SHALL satisfy Python's meta-path finder protocol while retaining project dependency selection and denying unrelated analyzer fallback. Standalone control-script isolation SHALL execute on the existing mandatory host proof surface with its original fixture, subprocess flags and assertions. Portable discovery SHALL retain the remaining control tests without collecting the standalone host proof.
+
+#### Scenario: Native finder protocol and dependency isolation
+- **WHEN** the public type analyzer checks the native worker and the native domain selects project dependencies
+- **THEN** its import dispatch satisfies the finder protocol and the existing dependency-origin and unrelated-fallback proofs pass without type suppression or broader import access
+
+#### Scenario: Isolated direct-script proof retains mandatory host ownership
+- **WHEN** Full, SMART, canonical Linux or any native-boundary macOS job executes the existing host proof surface
+- **THEN** the original control helper class runs its unchanged isolated subprocess and inherited fixture
+- **AND** supplier discovery excludes that class, with all other control tests, deadlines, reviewer identities and acceptance gates retained

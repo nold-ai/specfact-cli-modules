@@ -8,6 +8,7 @@ import shlex
 import shutil
 import subprocess
 import sys
+import tempfile
 import zipfile
 from pathlib import Path
 
@@ -19,6 +20,21 @@ from specfact_code_review.run.runtime_discovery import discover_project
 from tests.host.proof_capsule_deferred_review_ci import _git, _prepare_committed_ci_subject
 from tests.support.capsule_review_fixtures import REPO_ROOT, STEP_NAME, public_projector
 from tests.unit.test_capsule_review_projection import _write_preparation_fixture
+from tests.unit.test_macos_managed_control import SOURCE, _ControlTestCase
+
+
+class ControlHelperImportTests(_ControlTestCase):
+    def test_direct_script_loads_siblings_outside_repository_import_path(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            result = subprocess.run(
+                [sys.executable, "-I", str(SOURCE), "--help"],
+                cwd=temporary,
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+        self.assertIn("--repetitions", result.stdout)
+        self.assertEqual(result.stderr, "")
 
 
 def _write_preparation_interpreter(tmp_path):

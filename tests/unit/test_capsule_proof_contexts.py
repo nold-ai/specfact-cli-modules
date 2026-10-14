@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+from fnmatch import fnmatchcase
 from pathlib import Path
 
 import pytest
@@ -671,6 +672,40 @@ def test_standalone_bootstrap_probes_use_mandatory_host_registration():
     selection = select_test_paths(plan, [unit_path, host_path], full=False)
     assert unit_path.relative_to(ROOT).as_posix() in selection
     assert CONTROLLER_SHELL_PROOF not in selection
+
+
+def test_control_direct_script_proof_retains_original_fixture_on_host():
+    host = importlib.import_module("tests.host.proof_capsule_review_projection_shell")
+    portable = importlib.import_module("tests.unit.test_macos_managed_control")
+    proof = host.ControlHelperImportTests
+    method = proof.test_direct_script_loads_siblings_outside_repository_import_path
+    assert proof.__name__ == "ControlHelperImportTests" and proof.__module__ == host.__name__
+    assert method.__name__ == "test_direct_script_loads_siblings_outside_repository_import_path"
+    assert proof.__bases__ == (portable._ControlTestCase,)
+    assert proof.setUp is portable._ControlTestCase.setUp
+    assert host.SOURCE is portable.SOURCE
+    assert not hasattr(portable, "ControlHelperImportTests")
+    unit_path = ROOT / "tests/unit/test_macos_managed_control.py"
+    plan = ProjectPlan(root=ROOT, manager="pip", pytest_config={"testpaths": ["tests"]})
+    selection = select_test_paths(plan, [unit_path, ROOT / CONTROLLER_SHELL_PROOF], full=False)
+    assert unit_path.relative_to(ROOT).as_posix() in selection
+    assert CONTROLLER_SHELL_PROOF not in selection
+
+
+@pytest.mark.parametrize(
+    "dependency", ["tests/unit/test_macos_managed_control.py", "scripts/macos_managed_boundary/control.py"]
+)
+def test_control_host_fixture_dependencies_schedule_existing_proofs(dependency):
+    from scripts.owner_commit_entry import CAPSULE_PATHS
+
+    boundary = yaml.load(
+        (ROOT / ".github/workflows/code-review-macos-boundary.yml").read_text(), Loader=yaml.BaseLoader
+    )
+    assert any(fnmatchcase(dependency, pattern) for pattern in boundary["on"]["pull_request"]["paths"])
+    assert dependency in CAPSULE_PATHS
+    orchestrator = yaml.safe_load((ROOT / ".github/workflows/pr-orchestrator.yml").read_text())
+    step = next(item for item in orchestrator["jobs"]["changes"]["steps"] if item.get("id") == "filter")
+    assert dependency in yaml.safe_load(step["with"]["filters"])["capsule"]
 
 
 def test_standalone_bootstrap_host_source_and_direct_dependencies_are_declared():

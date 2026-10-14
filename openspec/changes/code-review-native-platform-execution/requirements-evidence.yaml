@@ -1,5 +1,24 @@
 schema_version: '2'
 requirements:
+  openspec:code-review-native-platform-execution:review-native-platform-execution:preserve-native-import-and-standalone-host-proof-contracts:
+    rationale: Repair import protocol typing and standalone proof ownership without changing runtime access or acceptance.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#460
+    touchpoints:
+    - id: native-import-host-proof-spec
+      kind: config_file
+      locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
+    verification_cases:
+    - case_id: 460-65-1
+      scenario_id: preserve-native-import-and-standalone-host-proof-contracts
+      method: test
+      intent: Satisfy the real meta-path finder protocol while preserving restricted dependency selection.
+      observable: The public type producer reproduces two native-worker errors before the instance repair and returns zero findings after; three existing domain proofs and all53worker/bootstrap tests pass. Hosted signed acceptance remains separate.
+    - case_id: 460-65-2
+      scenario_id: preserve-native-import-and-standalone-host-proof-contracts
+      method: test
+      intent: Run the unchanged isolated direct-script proof through the original fixture on the mandatory host surface.
+      observable: The ownership regression fails before migration; exact whole-class text and AST survive the move, remaining unit classes are identical, and129focused cases pass with five unchanged native opt-in skips. Full andSMART each pass359host proofs and6196supplier tests. Linux acceptance remains pending.
   openspec:code-review-native-platform-execution:review-native-platform-execution:native-local-execution:
     rationale: Define macOS ARM64 acceptance without claiming unexecuted runtime proof.
     stakeholder_refs:

@@ -10,7 +10,6 @@ import socket
 import stat
 import struct
 import subprocess
-import sys
 import tempfile
 import unittest
 from contextlib import ExitStack
@@ -420,20 +419,6 @@ class SocketReadinessTests(_ControlTestCase):
         self.assertIs(owner, invocation)
         self.assertEqual(phase, "bootstrap-socket")
         self.assertEqual(invocation.phase, "cleanup")
-
-
-class ControlHelperImportTests(_ControlTestCase):
-    def test_direct_script_loads_siblings_outside_repository_import_path(self):
-        with tempfile.TemporaryDirectory() as temporary:
-            result = subprocess.run(
-                [sys.executable, "-I", str(SOURCE), "--help"],
-                cwd=temporary,
-                check=True,
-                capture_output=True,
-                text=True,
-            )
-        self.assertIn("--repetitions", result.stdout)
-        self.assertEqual(result.stderr, "")
 
 
 class ControlFailureTests(_ControlTestCase):
