@@ -780,6 +780,56 @@ def test_discard_binary_surface_retains_standard_type_rejection(value, surface):
             writer.write(value)
 
 
+@pytest.mark.parametrize("state", ["detached", "closed"])
+@pytest.mark.parametrize(
+    "value,error",
+    [(b"", ValueError), (b"bytes", ValueError), (None, TypeError), (memoryview(b"abcd")[::2], BufferError)],
+)
+def test_saved_binary_buffer_preserves_native_state_write_error(state, value, error):
+    baseline = stdio.BufferedWriter(stdio.BytesIO())
+    sink = _stream_sink()
+    binary = sink.detach()
+    if state == "detached":
+        baseline.detach().close()
+        binary.detach().close()
+    else:
+        baseline.close()
+        binary.close()
+    with pytest.raises(error) as native:
+        baseline.write(value)
+    with pytest.raises(error) as adapted:
+        binary.write(value)
+    assert str(adapted.value) == str(native.value)
+
+
+@pytest.mark.parametrize("channel", ["stdout", "stderr"])
+@pytest.mark.parametrize("violated", [False, True])
+def test_pinned_dispatch_preserves_detached_buffer_contract_results(tmp_path: Path, channel: str, violated: bool):
+    source = tmp_path / "detached_buffer.py"
+    source.write_text(
+        "import sys\nfrom icontract import ensure\n"
+        "@ensure(lambda result: result == 1)\ndef observed() -> int:\n"
+        f"    buffer = sys.{channel}.buffer\n    buffer.detach()\n"
+        "    try:\n        buffer.write(b'x')\n    except ValueError:\n        return "
+        + ("2" if violated else "1")
+        + "\n    return 0\n"
+    )
+    dispatch = (
+        Path(__file__).parents[4] / "packages/specfact-code-review/src/specfact_code_review/run/target_crosshair.py"
+    )
+    result = subprocess.run(
+        [sys.executable, str(dispatch), "check", str(source), "--per_condition_timeout=3"],
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+    )
+    assert result.returncode == int(violated), result.stdout + result.stderr
+    assert "AttributeError" not in result.stdout + result.stderr
+    if violated:
+        assert "false when calling" in result.stdout
+
+
 def test_discard_raw_surface_rejects_noncontiguous_buffer_like_native_io():
     view = memoryview(b"abcd")[::2]
     with stdio.BytesIO() as baseline, pytest.raises(BufferError):

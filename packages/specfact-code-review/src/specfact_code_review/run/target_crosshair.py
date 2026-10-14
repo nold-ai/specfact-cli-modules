@@ -242,7 +242,10 @@ class _TargetBinary(io.BufferedWriter):
         :raises TypeError: input has no byte-buffer protocol.
         :raises BufferError: input is not C-contiguous.
         """
-        return cast(_TargetRaw, self.raw).write(data)
+        raw = self.raw
+        if raw is None or raw.closed:
+            return super().write(data)
+        return cast(_TargetRaw, raw).write(data)
 
 
 class _TargetOutput(io.TextIOWrapper):

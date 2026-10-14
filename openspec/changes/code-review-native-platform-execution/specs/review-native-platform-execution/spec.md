@@ -1808,6 +1808,10 @@ The physical counter SHALL include every actual text/binary/raw byte. The separa
 - **WHEN** Latin-1 and UTF-16 text together reach exactly four MiB of canonical UTF-8 while physical output remains below four MiB
 - **THEN** the valid writes succeed and the next text byte rejects at the unchanged canonical limit
 
+#### Scenario: saved binary buffer rejects writes after detachment
+- **WHEN** analyzed code detaches a standard stream's saved binary buffer and writes through that buffer
+- **THEN** valid bytes raise the native ValueError, invalid inputs retain native type/buffer validation precedence, and code that handles those errors retains its genuine contract result
+
 ### Requirement: No reporter descriptor capability from discard streams
 
 The target stdout/stderr discard adapters SHALL reject fileno access with standard UnsupportedOperation through text, binary and raw layers, without exposing the original reporter descriptor. Encoding/errors/private reconfiguration/non-capability metadata/binary writes and every existing output quota SHALL remain. Actual OS writes using a descriptor requested from an adapter SHALL fail before any original reporter write. Metadata proofs SHALL preserve every original assertion/identity/argument while comparing only the promised non-capability metadata. No arbitrary raw-descriptor or hostile-code containment claim is introduced.
