@@ -50,3 +50,8 @@ Confidence is High for the bounded local admission correction. The unchanged tru
 ## Configured hook recovery, 2026-10-14 Europe/Berlin
 
 The parent retained the absent-hook discovery, missing-core-path failure and requirements mapping failures before publication. The existing clean paired core path resolves its unchanged documentation gate. The sidecar now covers the eight actual requirements with all eleven existing cases and planned maturity preserved; its unchanged staged native requirements gate passes with no findings. Lifecycle scenario IDs follow the existing requirement-suffix contract. Complete configured hooks and exact-head Linux/native authority remain separate required gates. No runtime or gate policy changed.
+
+
+### Capture owner-result propagation follow-up
+
+The 2026-10-14 scoped repair retains the existing eleven verification cases across eight requirement IDs and planned maturity. The rejected-original case now covers actual owner rejection and scalar transport before file admission. Behavioral RED was 65 failed / 12 passed. Focused GREEN was 507 passed / 5 existing Linux-only skips; complete commands and intermediate fixture correction are recorded in TDD_EVIDENCE.md and parent evidence21-binding logs. Scoped formatting, lint, type checking and manifest validation passed. Both follow-up requests to admit missing-capture profiling or bypass workflow-blob context gating were rejected against the existing contract. No optional attempt, native retry, package/signature change or acceptance claim is introduced. Full normal gates and independent closure remain required.

@@ -25,6 +25,7 @@ def project(tmp_path, monkeypatch, capsys, rows):
 
 @pytest.mark.parametrize("damage", ["valid", "missing", "incomplete", "duplicate", "hash", "size"])
 def test_failure_projection_rejects_uncommitted_original(tmp_path, monkeypatch, capsys, damage):
+    monkeypatch.setenv("REVIEW_CAPTURE_ADMITTED", "true")
     steps = yaml.safe_load((ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())["jobs"][
         "independent-review"
     ]["steps"]

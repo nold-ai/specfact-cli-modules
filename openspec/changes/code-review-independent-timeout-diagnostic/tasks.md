@@ -11,3 +11,10 @@
 - [x] 2.3 Add workflow-owned bounded capture, exact loaded host admission, private paired receipts and strict complete-ledger projection; leave signed package and historical helper bytes unchanged.
 - [x] 2.4 Exercise inert code/exception/write-loss controls, authenticated mount constructors and actual descriptor noninheritance.
 - [ ] 2.5 Complete independent defect/security review, normal repository gates and exact-head Linux required CI. Local fixture checks do not satisfy this gate.
+
+## 3. Capture admission repair (2026-10-14)
+- [x] 3.1 Record owner-result admission for all four original readers and candidate replay before implementation.
+- [x] 3.2 Reproduce stale capture admission and missing result transport against actual emitted writer, reader and shell code.
+- [x] 3.3 Propagate exact capture success through cleared environments and later-step outputs; deny missing state before file opens.
+- [x] 3.4 Pass focused inert reader/shell controls and scoped formatting, lint, type and manifest checks.
+- [ ] 3.5 Complete fresh independent closure and normal repository gates; required native failures remain unresolved.

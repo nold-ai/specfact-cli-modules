@@ -238,7 +238,13 @@ def test_actual_projector_launch_excludes_untrusted_imports(
         review_exit,
     )
     assert captured["status"] == "COMPLETE"
-    shell = f"set -e\ntrusted_env=(env)\nreview_exit={review_exit}\n" + invocation + "\n" + public_projector(job_name)
+    shell = (
+        f"set -e\ntrusted_env=(env)\nreview_exit={review_exit}\n"
+        f"original_capture_admitted={str(captured['status'] == 'COMPLETE').lower()}\n"
+        + invocation
+        + "\n"
+        + public_projector(job_name)
+    )
     shell += '\nPY\nexit "$review_exit"\n'
     environment = dict(os.environ, CUSTOMER_ROOT=str(tmp_path), TRUSTED_ROOT=str(tmp_path), PYTHONPATH=str(ambient))
     environment["REVIEW_PUBLIC_REPORT"] = str(report)
@@ -668,6 +674,8 @@ def test_optional_context_preserves_required_review(tmp_path, case, review_exit)
 
     trusted, environment = create_isolated_reviewer(tmp_path, (review_exit, "NOT_APPLICABLE", "no_governed_impact"))
     head = _local_invocation_context(tmp_path, environment, case)
+    environment["GITHUB_OUTPUT"] = str(tmp_path / "capture-output")
+    environment["REVIEW_CAPTURE_ADMITTED"] = "true"
     workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())
     bootstrap = next(
         step["run"] for step in workflow["jobs"]["customer"]["steps"] if "PY_CAPTURE" in step.get("run", "")
@@ -693,6 +701,7 @@ def test_optional_context_preserves_required_review(tmp_path, case, review_exit)
         check=False,
     )
     assert result.returncode == review_exit, result.stdout + result.stderr
+    assert (tmp_path / "capture-output").read_text() == f"original_capture_admitted={str(case == 'valid').lower()}\n"
     assert_installed_review_arguments(trusted, prepared=False)
     calls = [line for line in result.stderr.splitlines() if line.startswith("+ env -i ")]
     assert sum(" prepare-index " in line for line in calls) == 1
@@ -772,3 +781,9 @@ def test_binding_failure_after_publication_leaves_no_usable_manifest(tmp_path, f
     assert result.returncode == 0, result.stderr
     assert result.stdout.strip() == "false"
     assert not (trusted / "observation-private/invocation.json").exists()
+
+
+@pytest.mark.parametrize("review_exit", [17, 124])
+@pytest.mark.parametrize("case", ["valid", "absent", "mismatch"])
+def test_capture_output_preserves_failed_required_call(tmp_path, case, review_exit):
+    test_optional_context_preserves_required_review(tmp_path, case, review_exit)

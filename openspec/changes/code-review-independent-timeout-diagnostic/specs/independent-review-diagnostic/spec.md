@@ -43,6 +43,14 @@ The workflow SHALL capture the original candidate and independent required repor
 - **WHEN** the existing optional candidate helper replaces its fixed report destination
 - **THEN** public projection remains bound to original A and failed capture prevents that replay
 
+#### Scenario: Capture owner result controls every original consumer
+- **WHEN** original capture is rejected, fails to publish, or is skipped for this required invocation
+- **THEN** all four original-report readers reject before opening either manifest or raw report, regardless of surviving COMPLETE artifacts
+- **AND** only the actual capture command success enables admission through an explicit exact true scalar; absent, false or unexpected values deny admission
+- **AND** independent cleared-environment transport and later-step outputs preserve that result without altering the required exit or call count
+- **AND** candidate replay requires the original required capture success before reading the preserved manifest; missing captures and unavailable observer context retain their existing prohibitions
+- **AND** legacy direct report paths retain their existing behavior
+
 #### Scenario: Rejected original capture in failure projection
 - **WHEN** any candidate or independent primary or failure projector receives original bytes with a missing, non-COMPLETE, duplicate-key, digest-mismatched, size-mismatched, oversized or unreadable manifest or capture
 - **THEN** it keeps the selected report path unchanged, rejects capture admission, and does not parse or project report bytes or any synthetic fallback file

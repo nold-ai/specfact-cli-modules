@@ -74,9 +74,10 @@ requirements:
     - case_id: independent-diagnostic-rejected-original
       scenario_id: preserve-immutable-original-reports
       method: test
-      intent: Reject uncommitted original bytes in all four actual workflow report readers.
-      observable: Rejected captures never parse original or synthetic fallback bytes; valid COMPLETE and legacy
-        reports remain observable, with timeout and genuinely missing legacy diagnostics preserved.
+      intent: Reject uncommitted or owner-rejected original bytes in all four actual workflow report readers.
+      observable: Rejected or skipped capture prevents manifest and raw opens; actual owner success travels through
+        cleared environments and step outputs before any original consumer or replay admission. Valid COMPLETE
+        and legacy reports retain diagnostics, with original exits, timeout and missing legacy behavior preserved.
   ? openspec:code-review-independent-timeout-diagnostic:independent-review-diagnostic:observe-only-authenticated-loaded-host-functions
   : rationale: Authenticate the exact five loaded host functions before observation.
     stakeholder_refs: *id001

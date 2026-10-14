@@ -434,12 +434,16 @@ jobs:
             SPECFACT_CODE_REVIEW_PROJECT_CONFIG="$PROJECT_CONFIG" \
             SPECFACT_CODE_REVIEW_ENFORCEMENT=changed \
             "$CUSTOMER_ROOT/venv/bin/python" "$GITHUB_WORKSPACE/scripts/pre_commit_code_review.py" "${review_paths[@]}" || review_exit=$?
-          "$CUSTOMER_ROOT/venv/bin/python" -I "$CUSTOMER_ROOT/capture-original.py" "$CUSTOMER_ROOT" \
+          original_capture_admitted=false
+          if "$CUSTOMER_ROOT/venv/bin/python" -I "$CUSTOMER_ROOT/capture-original.py" "$CUSTOMER_ROOT" \
             "$REVIEW_ROOT/.specfact/code-review.json" candidate "${CANDIDATE_HEAD:-${GITHUB_SHA:-}}" "${GITHUB_RUN_ID:-}:${GITHUB_RUN_ATTEMPT:-}" "$review_exit" \
-            2> "$CUSTOMER_ROOT/original-capture.private.log" || true
+            2> "$CUSTOMER_ROOT/original-capture.private.log"; then
+            original_capture_admitted=true
+          fi
+          printf 'original_capture_admitted=%s\n' "$original_capture_admitted" >> "${GITHUB_OUTPUT:-/dev/null}" || true
           if [ "$review_exit" -ne 0 ]; then
             # Print bounded codes/public locations; raw reports, receipts and logs stay private.
-            REVIEW_PUBLIC_REPORT="$CUSTOMER_ROOT/original-private/original.json" REVIEW_PUBLIC_EXIT="$review_exit" "$CUSTOMER_ROOT/venv/bin/python" -I - <<'PY' 2> "$CUSTOMER_ROOT/review-projection.private.log" || printf '%s\n' '{"status":"INCOMPLETE","phase":"review","diagnostic":"review_projection_failed"}' || true
+            REVIEW_CAPTURE_ADMITTED="$original_capture_admitted" REVIEW_PUBLIC_REPORT="$CUSTOMER_ROOT/original-private/original.json" REVIEW_PUBLIC_EXIT="$review_exit" "$CUSTOMER_ROOT/venv/bin/python" -I - <<'PY' 2> "$CUSTOMER_ROOT/review-projection.private.log" || printf '%s\n' '{"status":"INCOMPLETE","phase":"review","diagnostic":"review_projection_failed"}' || true
           import ast
           import re
           import json
@@ -452,6 +456,8 @@ jobs:
           if report.name == "original.json":
               import hashlib
               try:
+                  if os.environ.get("REVIEW_CAPTURE_ADMITTED") != "true":
+                      raise ValueError("original capture not admitted")
                   with (report.parent / "manifest.json").open("rb") as stream:
                       manifest_bytes = stream.read(4097)
                   def capture_object(pairs):
@@ -641,7 +647,7 @@ jobs:
                       if emitted == 200:
                           break
           PY
-            REVIEW_PUBLIC_REPORT="$CUSTOMER_ROOT/original-private/original.json" "$CUSTOMER_ROOT/venv/bin/python" -I - <<'PY_CANDIDATE_FAILURE' 2> "$CUSTOMER_ROOT/contract-projection.private.log" || printf '%s\n' '{"status":"INCOMPLETE","phase":"review","diagnostic":"review_projection_failed"}' || true
+            REVIEW_CAPTURE_ADMITTED="$original_capture_admitted" REVIEW_PUBLIC_REPORT="$CUSTOMER_ROOT/original-private/original.json" "$CUSTOMER_ROOT/venv/bin/python" -I - <<'PY_CANDIDATE_FAILURE' 2> "$CUSTOMER_ROOT/contract-projection.private.log" || printf '%s\n' '{"status":"INCOMPLETE","phase":"review","diagnostic":"review_projection_failed"}' || true
           import json
           from pathlib import Path
 
@@ -659,6 +665,8 @@ jobs:
           if report.name == "original.json":
               import hashlib
               try:
+                  if os.environ.get("REVIEW_CAPTURE_ADMITTED") != "true":
+                      raise ValueError("original capture not admitted")
                   with (report.parent / "manifest.json").open("rb") as stream:
                       manifest_bytes = stream.read(4097)
                   def capture_object(pairs):
@@ -738,6 +746,8 @@ jobs:
       - name: Profile failed candidate review privately
         if: failure() && steps.deferred_review.outcome == 'failure'
         shell: bash
+        env:
+          REVIEW_CAPTURE_ADMITTED: ${{ steps.deferred_review.outputs.original_capture_admitted || 'false' }}
         run: |
           set -euo pipefail
           test "$(id -u)" -ne 0
@@ -748,6 +758,7 @@ jobs:
             echo '{"status":"DIAGNOSTIC_UNAVAILABLE"}'
             exit 1
           fi
+          [ "${REVIEW_CAPTURE_ADMITTED:-false}" = true ] || exit 0
           "$CUSTOMER_ROOT/venv/bin/python" -I "$CUSTOMER_ROOT/capture-original.py" "$CUSTOMER_ROOT" \
             "$REVIEW_ROOT/.specfact/code-review.json" candidate "${CANDIDATE_HEAD:-${GITHUB_SHA:-}}" "${GITHUB_RUN_ID:-}:${GITHUB_RUN_ATTEMPT:-}" \
             "$("$CUSTOMER_ROOT/venv/bin/python" -I -c 'import json,sys; print(json.load(open(sys.argv[1]))["required_exit"])' "$CUSTOMER_ROOT/original-private/manifest.json")" \
@@ -1383,14 +1394,18 @@ jobs:
             "$TRUSTED_ROOT/subject" code review run --scope index --enforcement changed --bug-hunt \
             --project-config "$TRUSTED_ROOT/project.toml" --json --out "$TRUSTED_ROOT/review.private.json" \
             > "$TRUSTED_ROOT/review.private.log" 2>&1 || review_exit=$?
+          original_capture_admitted=false
           if [ "$observation_ready" = true ]; then
-            "$TRUSTED_ROOT/venv/bin/python" -I "$TRUSTED_ROOT/capture-original.py" "$TRUSTED_ROOT" \
+            if "$TRUSTED_ROOT/venv/bin/python" -I "$TRUSTED_ROOT/capture-original.py" "$TRUSTED_ROOT" \
               "$TRUSTED_ROOT/review.private.json" independent "$observation_head" "$observation_attempt" "$review_exit" \
-              2> "$TRUSTED_ROOT/original-capture.private.log" || true
+              2> "$TRUSTED_ROOT/original-capture.private.log"; then
+              original_capture_admitted=true
+            fi
           fi
+          printf 'original_capture_admitted=%s\n' "$original_capture_admitted" >> "${GITHUB_OUTPUT:-/dev/null}" || true
           if [ "$review_exit" -ne 0 ]; then
             cd "$TRUSTED_ROOT/subject"
-            "${trusted_env[@]}" REVIEW_PUBLIC_REPORT="$TRUSTED_ROOT/original-private/original.json" REVIEW_PUBLIC_EXIT="$review_exit" "$TRUSTED_ROOT/venv/bin/python" -I - <<'PY' 2> "$TRUSTED_ROOT/review-projection.private.log" || printf '%s\n' '{"status":"INCOMPLETE","phase":"review","diagnostic":"review_projection_failed"}' || true
+            "${trusted_env[@]}" REVIEW_CAPTURE_ADMITTED="$original_capture_admitted" REVIEW_PUBLIC_REPORT="$TRUSTED_ROOT/original-private/original.json" REVIEW_PUBLIC_EXIT="$review_exit" "$TRUSTED_ROOT/venv/bin/python" -I - <<'PY' 2> "$TRUSTED_ROOT/review-projection.private.log" || printf '%s\n' '{"status":"INCOMPLETE","phase":"review","diagnostic":"review_projection_failed"}' || true
           import ast
           import re
           import json
@@ -1403,6 +1418,8 @@ jobs:
           if report.name == "original.json":
               import hashlib
               try:
+                  if os.environ.get("REVIEW_CAPTURE_ADMITTED") != "true":
+                      raise ValueError("original capture not admitted")
                   with (report.parent / "manifest.json").open("rb") as stream:
                       manifest_bytes = stream.read(4097)
                   def capture_object(pairs):
@@ -1598,6 +1615,8 @@ jobs:
       - name: Project independent review failure privately
         if: failure() && steps.independent_review.outcome == 'failure'
         shell: bash
+        env:
+          REVIEW_CAPTURE_ADMITTED: ${{ steps.independent_review.outputs.original_capture_admitted || 'false' }}
         run: |
           set -euo pipefail
           test -f "$TRUSTED_ROOT/review-attempted" || exit 0
@@ -1700,6 +1719,8 @@ jobs:
           if report_path.name == "original.json":
               import hashlib
               try:
+                  if os.environ.get("REVIEW_CAPTURE_ADMITTED") != "true":
+                      raise ValueError("original capture not admitted")
                   with (report_path.parent / "manifest.json").open("rb") as stream:
                       manifest_bytes = stream.read(4097)
                   def capture_object(pairs):
