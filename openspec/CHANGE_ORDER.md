@@ -5,7 +5,7 @@ must be read together with the core repo change order in `nold-ai/specfact-cli`.
 
 ## Independent review timeout diagnostic (2026-10-13)
 
-`code-review-independent-timeout-diagnostic` adds the approved failure-only observation of the fixed signed supplier subject. It preserves the failed required review and all execution limits. Raw evidence stays private. It authorizes no acceptance, merge or release.
+`code-review-independent-timeout-diagnostic` adds the approved failure-only observation of the fixed signed supplier subject. The completed original observation preserves the failed required review and its 300-second limit. The subsequently approved bounded policy gives the required whole-CLI parent 600 seconds while preserving all member limits, full scope, failure-on-expiry and the 45-minute job cap. The consumed optional observation remains disabled on later heads. Raw evidence stays private. It authorizes no acceptance, merge or release.
 
 ## Bounded Linux pytest execution budget (2026-10-13)
 

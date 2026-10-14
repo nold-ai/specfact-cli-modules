@@ -27,3 +27,11 @@ The helper SHALL bind processes by start identity and ancestry, clean up owned d
 #### Scenario: Incomplete process evidence
 - **WHEN** a PID is reused, a request join is missing or a descendant is unsampled
 - **THEN** attribution stays unknown and the result is partial or unavailable
+
+#### Scenario: Host controller proofs
+- **WHEN** a regression proof requires a host shell, isolated host interpreter or process lifecycle primitives unavailable to sealed subject programs
+- **THEN** both mandatory ordinary-host test routes execute it with unchanged assertions and parametrized cases, while portable privacy controls remain in unit discovery
+
+#### Scenario: Existing-run metadata
+- **WHEN** the existing trusted preparation or failure projection observes authenticated prepared source or member evidence
+- **THEN** public metadata contains only authenticated source digests, fixed member/side/reason enums and bounded counts, while actual loaded-adapter and effective-deadline authority remain unavailable unless directly bound

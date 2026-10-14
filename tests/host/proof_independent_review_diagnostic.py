@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 import yaml
 
-from tests.support.capsule_review_fixtures import REPO_ROOT, STEP_NAME, public_projector
+from tests.support.capsule_review_fixtures import REPO_ROOT, STEP_NAME, _write_preparation_fixture, public_projector
 
 
 @pytest.mark.skipif(__import__("sys").platform != "linux", reason="Linux subreaper and pidfd proof")
@@ -243,3 +243,118 @@ def test_actual_projector_launch_excludes_untrusted_imports(
     assert (review_exit != 124) or rows[0]["diagnostic"] == "analysis_timeout"
     assert "PRIVATE_REPORT" not in result.stdout and "UNTRUSTED_IMPORT" not in result.stdout
     assert report.read_text() == "PRIVATE_REPORT invalid JSON"
+
+
+def _write_preparation_interpreter(tmp_path):
+    import sys
+
+    interpreter = tmp_path / "venv/bin/python"
+    interpreter.parent.mkdir(parents=True)
+    interpreter.write_text(
+        "#!" + sys.executable + "\n"
+        "import os,sys\nfrom pathlib import Path\n"
+        "if sys.argv[1:3] == ['-I','-c']:\n"
+        "    if os.environ['REPORT_CASE'] == 'missing':\n"
+        "        Path('commit-review-preparation.private.json').unlink()\n"
+        "    else: print(Path('controlled-report.json').read_text())\n"
+        "    raise SystemExit(int(os.environ['PREPARATION_EXIT']))\n"
+        "os.execv(sys.executable, [sys.executable, *sys.argv[1:]])\n"
+    )
+    interpreter.chmod(0o700)
+
+
+@pytest.fixture
+def preparation_shell(tmp_path, monkeypatch):
+    import subprocess
+
+    workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())
+    step = next(item for item in workflow["jobs"]["customer"]["steps"] if item.get("name") == STEP_NAME)
+    recipe = "# Provisioning" + step["run"].split("# Provisioning", 1)[1].split("review_exit=0", 1)[0]
+    _write_preparation_interpreter(tmp_path)
+
+    def invoke(preparation):
+        preparation_exit, report_case = preparation
+        report = _write_preparation_fixture(tmp_path, "prepared" if report_case == "missing" else report_case)
+        (tmp_path / "controlled-report.json").write_text(report.read_text())
+        for name, value in {
+            "CUSTOMER_ROOT": str(tmp_path),
+            "GITHUB_WORKSPACE": str(tmp_path),
+            "PROJECT_CONFIG": str(tmp_path / "project.toml"),
+            "PREPARATION_EXIT": str(preparation_exit),
+            "REPORT_CASE": report_case,
+        }.items():
+            monkeypatch.setenv(name, value)
+        return subprocess.run(
+            ["bash", "-c", "set -euo pipefail\n" + recipe + "printf 'REVIEW_STARTED\\n'"],
+            cwd=tmp_path,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+    return invoke
+
+
+@pytest.mark.parametrize(
+    "preparation,expected",
+    [
+        ((0, "prepared"), (0, "PREPARED", "prepared")),
+        ((0, "not_applicable"), (0, "NOT_APPLICABLE", "not_applicable")),
+        ((7, "not_applicable"), (7, "INCOMPLETE", "preparation_command_failed")),
+        ((0, "not_applicable_reason"), (1, "INCOMPLETE", "invalid_not_applicable")),
+        ((7, "prepared"), (7, "INCOMPLETE", "preparation_command_failed")),
+        ((0, "invalid"), (1, "INCOMPLETE", "invalid_json")),
+        ((7, "invalid"), (7, "INCOMPLETE", "invalid_json")),
+        ((0, "missing"), (1, "INCOMPLETE", "unreadable_report")),
+        ((7, "missing"), (7, "INCOMPLETE", "unreadable_report")),
+    ],
+)
+def test_preparation_shell_preserves_failure_and_projects_incomplete(preparation_shell, preparation, expected):
+    import json
+
+    expected_exit, expected_status, expected_outcome = expected
+    accepted = expected_status in {"PREPARED", "NOT_APPLICABLE"}
+    result = preparation_shell(preparation)
+    assert result.returncode == expected_exit
+    lines = result.stdout.splitlines()
+    assert lines, "every preparation exit must produce bounded diagnosis"
+    projection = json.loads(lines[0])
+    assert projection["status"] == expected_status
+    assert ("REVIEW_STARTED" in lines) is accepted
+    assert "private" not in result.stdout + result.stderr
+    assert projection["report_outcome"] == expected_outcome
+
+
+@pytest.mark.parametrize("prior_stage, expected_exit, report_expected", [(1.2, 0, True), (7, 124, False)])
+def test_required_parent_preserves_leaf_budget_and_expiry(tmp_path, prior_stage, expected_exit, report_expected):
+    import ast
+
+    steps = yaml.safe_load((REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())["jobs"][
+        "independent-review"
+    ]["steps"]
+    review = next(item for item in steps if item.get("id") == "independent_review")
+    source = "import subprocess,sys\n" + review["run"].split("'import subprocess,sys\n", 1)[1].split("' \\\n", 1)[0]
+    tree = ast.parse(source)
+    deadlines = [node for node in ast.walk(tree) if isinstance(node, ast.keyword) and node.arg == "timeout"]
+    assert len(deadlines) == 1
+    deadline = deadlines[0].value
+    assert isinstance(deadline, ast.Constant)
+    value = deadline.value
+    assert isinstance(value, int)
+    deadline.value = value / 100
+    program = ast.unparse(tree)
+    report = tmp_path / "report.json"
+    child = (
+        "import subprocess,sys,time;from pathlib import Path;"
+        f"time.sleep({prior_stage});"
+        "subprocess.run([sys.executable,'-c','import time;time.sleep(2.2)'],timeout=3,check=True);"
+        "Path(sys.argv[1]).write_text('complete')"
+    )
+    result = subprocess.run(
+        [sys.executable, "-I", "-c", program, sys.executable, "-I", "-c", child, str(report)],
+        capture_output=True,
+        timeout=10,
+        check=False,
+    )
+    assert result.returncode == expected_exit
+    assert report.exists() is report_expected

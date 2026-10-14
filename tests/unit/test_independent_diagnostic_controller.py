@@ -5,7 +5,6 @@ from __future__ import annotations
 import io
 import json
 import os
-import subprocess
 import sys
 from pathlib import Path
 
@@ -32,17 +31,7 @@ def test_controller_rejects_unverified_bytes_before_execution(tmp_path, monkeypa
     candidate = tmp_path / "candidate"
     (candidate / "scripts").mkdir(parents=True)
     (candidate / "scripts/independent_review_diagnostic.py").write_text("print('SECRET_CANDIDATE')\n")
-    if MARKER not in step["run"]:
-        result = subprocess.run(
-            ["bash", "-c", step["run"]],
-            env={**os.environ, "TRUSTED_ROOT": str(trusted), "GITHUB_WORKSPACE": str(candidate)},
-            capture_output=True,
-            text=True,
-            timeout=10,
-            check=False,
-        )
-        assert "SECRET" not in result.stdout
-        return
+    assert MARKER in step["run"]
 
     def fetch(*_args, **_kwargs):
         if isinstance(download, OSError):
@@ -120,36 +109,21 @@ def test_host_lifecycle_proofs_remain_required_in_both_test_routes():
     assert "run: hatch run test" in workflow
 
 
-@pytest.mark.parametrize("prior_stage, expected_exit, report_expected", [(0.12, 0, True), (0.7, 124, False)])
-def test_required_parent_preserves_leaf_budget_and_expiry(tmp_path, prior_stage, expected_exit, report_expected):
+def test_host_controller_cases_are_outside_sealed_subject_discovery():
     import ast
 
-    steps = yaml.safe_load((ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())["jobs"][
-        "independent-review"
-    ]["steps"]
-    review = next(item for item in steps if item.get("id") == "independent_review")
-    source = "import subprocess,sys\n" + review["run"].split("'import subprocess,sys\n", 1)[1].split("' \\\n", 1)[0]
-    tree = ast.parse(source)
-    deadlines = [node for node in ast.walk(tree) if isinstance(node, ast.keyword) and node.arg == "timeout"]
-    assert len(deadlines) == 1
-    deadline = deadlines[0].value
-    assert isinstance(deadline, ast.Constant)
-    value = deadline.value
-    assert isinstance(value, int)
-    deadline.value = value / 1000
-    program = ast.unparse(tree)
-    report = tmp_path / "report.json"
-    child = (
-        "import subprocess,sys,time;from pathlib import Path;"
-        f"time.sleep({prior_stage});"
-        "subprocess.run([sys.executable,'-c','import time;time.sleep(0.22)'],timeout=0.3,check=True);"
-        "Path(sys.argv[1]).write_text('complete')"
-    )
-    result = subprocess.run(
-        [sys.executable, "-I", "-c", program, sys.executable, "-I", "-c", child, str(report)],
-        capture_output=True,
-        timeout=2,
-        check=False,
-    )
-    assert result.returncode == expected_exit
-    assert report.exists() is report_expected
+    expected = {
+        "test_preparation_shell_preserves_failure_and_projects_incomplete": 9,
+        "test_required_parent_preserves_leaf_budget_and_expiry": 2,
+    }
+    host = ast.parse((ROOT / "tests/host/proof_independent_review_diagnostic.py").read_text())
+    functions = {node.name: node for node in host.body if isinstance(node, ast.FunctionDef)}
+    for name, count in expected.items():
+        function = functions[name]
+        parametrization = next(node for node in function.decorator_list if isinstance(node, ast.Call))
+        assert isinstance(parametrization.args[1], ast.List)
+        assert len(parametrization.args[1].elts) == count
+    for path in ("test_capsule_review_projection.py", "test_independent_diagnostic_controller.py"):
+        unit = ast.parse((ROOT / "tests/unit" / path).read_text())
+        names = {node.name for node in unit.body if isinstance(node, ast.FunctionDef)}
+        assert names.isdisjoint(expected)

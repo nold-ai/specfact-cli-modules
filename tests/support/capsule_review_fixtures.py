@@ -23,6 +23,7 @@ __all__ = [
     "_git",
     "_isolated_reviewer_modules",
     "_write_deferred_fixture_sources",
+    "_write_preparation_fixture",
     "_write_public_report",
     "assert_block2_trace",
     "assert_incomplete_preparation",
@@ -118,6 +119,11 @@ _TRUSTED_BOOTSTRAP_LAUNCHER = (
 
 
 _ISOLATED_REVIEWER_TEMPLATES = {
+    "yaml.py": "class YAMLError(Exception): pass\ndef safe_load(value):\n    raise ValueError('fixture metadata unavailable')\n",
+    "specfact_cli/registry/crypto_validator.py": "def verify_signature(*args):\n    return False\n",
+    "specfact_cli/registry/module_installer.py": "from pathlib import Path\n"
+    "def _bundled_public_key_path():\n    return Path('unavailable-fixture-key')\n"
+    "def _module_artifact_payload_stable(package):\n    raise ValueError('fixture metadata unavailable')\n",
     "specfact_cli/__init__.py": "",
     "specfact_cli/cli.py": "import os,json\n"
     "from pathlib import Path\n"
@@ -438,3 +444,27 @@ def write_public_phase_record_report(root, nodeid, detail):
     ]
     data["analyzer_evidence"] = [{"id": "targeted-pytest-coverage", "target_execution": {"records": records}}]
     report.write_text(json.dumps(data))
+
+
+def _write_preparation_fixture(tmp_path, case):
+    import json
+
+    descriptor = tmp_path / "descriptor.json"
+    descriptor.write_text("{}")
+    payload = {"runtimes": {side: {"descriptor": str(descriptor)} for side in ("base", "head")}}
+    if case.startswith("not_applicable"):
+        payload = {"scope": "index", "status": "NOT_APPLICABLE", "diagnostic": "no_governed_impact", "runtimes": {}}
+        overrides = {
+            "not_applicable_reason": {"diagnostic": "private-reason"},
+            "not_applicable_scope": {"scope": "full"},
+            "not_applicable_runtimes": {"runtimes": ["private"]},
+            "not_applicable_nonempty": {"runtimes": {"head": {"descriptor": str(descriptor)}}},
+        }
+        payload.update(overrides.get(case, {}))
+    elif case == "missing_base":
+        payload["runtimes"].pop("base")
+    elif case == "missing_files":
+        descriptor.unlink()
+    report = tmp_path / "preparation.private.json"
+    report.write_text("not-json/private" if case == "invalid" else json.dumps(payload))
+    return report

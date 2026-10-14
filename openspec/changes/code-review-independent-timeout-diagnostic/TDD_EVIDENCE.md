@@ -18,7 +18,7 @@ A synthetic actual sampling probe in the local amd64-emulated container cannot l
 
 ## Scope and publication
 
-The required independent review block is unchanged. The new failure-only step runs after its complete failed step and preserves its inline projection. No raw profile upload is added. Existing module payloads, manifests, registry rows and versions are unchanged. `llms.txt` is a generated command contract and does not change because this workflow helper adds no module command.
+The original diagnostic attachment preserved the required independent review block; the subsequent approved policy changes only its parent deadline to 600 seconds. The new failure-only step runs after its complete failed step and preserves its inline projection. No raw profile upload is added. The diagnostic work leaves module payloads, manifests, registry rows and versions unchanged relative to its signed supplier subject. The separate Linux pytest budget change in this PR updates the reviewer bundle from 0.51.4 to 0.52.0. `llms.txt` is a generated command contract and does not change because this workflow helper adds no module command.
 
 Strict OpenSpec validation and focused type/lint checks pass. Independent boundary review closed both lifecycle findings against the frozen source. Hosted native gates remain pending. The approved local ARM64 native-review deferral remains DEFERRED to exact-head Linux CI, never PASS. Rollback removes the optional step and helper.
 
@@ -40,3 +40,18 @@ The first hosted observation at 826948e7 completed with DIAGNOSTIC_PARTIAL: 31,4
 The corrected inline controller rejects tampered or unavailable downloads before executing any helper (three failing behavioral/order controls precede the fix), then executes only a private copy of authenticated immutable bytes. Both original failure projections precede it. The original whole-job workspace-helper ban is restored unchanged. Five ordinary-host Linux lifecycle cases move to an explicit host-proof file scheduled by both mandatory hatch test and smart-test routes; they are not executed as sealed target programs. Pure privacy, signature, race and budget unit controls remain in ordinary discovery.
 
 A scaled regression extracts the production parent wrapper: with its old300-second value scaled to0.3 seconds, a valid0.22-second leaf after0.12 seconds of prior work loses its report and exits124. The600-second policy scaled to0.6 preserves that report, while an over-budget control still exits124. This proves the deadline ownership mismatch, not hosted sufficiency. The original observation and immutable signed baseline are preserved.
+
+
+## Current host-controller placement correction
+
+The a32cd9ef required review completed with a failing report under the 600-second parent. It reported nine preparation-shell failures because bash is unavailable to the sealed subject, and two parent-wrapper failures because isolated Python `-I` is outside that subject protocol. A census of all changed test process routes distinguishes these ordinary-host controller proofs from supported portable Python projection children. Preserve all eleven cases in the mandatory host-proof lane; do not expand the subject process protocol. Fresh native completion remains required.
+
+The first Linux host proof after relocation passed 37 cases but the scaled 0.6-second parent control expired during emulated interpreter startup. Scaling all workload/deadline values by ten retains the old/new policy ratio and valid-leaf/over-budget behaviors without modifying production limits. That failed proof remains retained.
+
+## Bounded existing-run metadata checks
+
+The consumed 826948e7 observation remained partial after its original 300-second deadline. The a32cd9ef required review returned a failing report under the 600-second policy; this does not establish analyzer completeness. Existing-run metadata adds no analysis invocation. Ten behavioral projection assertions fail before member observations exist. Removing signed-payload admission or emitting raw diagnostic text separately makes the tamper/privacy negative controls fail. After restoration, the focused suite passes 273 cases with five non-Linux lifecycle skips. The ordinary Linux host lane passes all 38 cases, retaining the eleven relocated controller cases.
+
+The installed signed 0.51.2 source preflight verifies payload and adapter digests with the established key. This preflight does not bind the earlier hosted invocation. Types, lint, YAML and strict OpenSpec validation pass. Final full/smart, affected-boundary closure and fresh hosted assurance remain required.
+
+The first full gate stopped in the mandatory host lane: thirteen isolated-controller cases lacked the newly imported metadata dependencies in their deliberately minimal installed-core fixture. Fail-closed fixture APIs now provide only unavailable metadata; the existing preload, cleared environment, scope and original review exit assertions remain intact, with an explicit unavailable-observation assertion. This fixture correction does not change the production trust boundary or authenticate fixture bytes.

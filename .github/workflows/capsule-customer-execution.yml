@@ -696,6 +696,64 @@ jobs:
           from specfact_cli.cli import app
           from specfact_cli.registry import CommandRegistry
 
+          import hashlib
+          from itertools import islice
+          import yaml
+          from specfact_cli.registry.crypto_validator import verify_signature
+          from specfact_cli.registry.module_installer import _bundled_public_key_path, _module_artifact_payload_stable
+
+          TRUSTED_KEY_SHA256 = "4e54ffb02307e1a85c166c40aba6d1bc40fbb9a8ef40bf756f8870e5bb08d1c8"
+          ADAPTER_ENTRY = "src/specfact_code_review/tools/pylint_runner.py"
+
+
+          def authenticated_reviewer_source(package):
+              try:
+                  paths = list(islice(package.rglob("*"), 2049))
+                  if package.is_symlink() or len(paths) > 2048 or any(path.is_symlink() for path in paths):
+                      return None
+                  if sum(path.stat().st_size for path in paths if path.is_file()) > 32 * 1024 * 1024:
+                      return None
+                  manifest = package / "module-package.yaml"
+                  if manifest.stat().st_size > 256 * 1024:
+                      return None
+                  metadata = yaml.safe_load(manifest.read_bytes())
+                  key = _bundled_public_key_path().read_bytes()
+                  if hashlib.sha256(key).hexdigest() != TRUSTED_KEY_SHA256:
+                      return None
+                  payload = _module_artifact_payload_stable(package)
+                  integrity = metadata["integrity"]
+                  digest = hashlib.sha256(payload).hexdigest()
+                  if integrity["checksum"] != "sha256:" + digest or not verify_signature(payload, integrity["signature"], key.decode()):
+                      return None
+                  entries = dict(line.rsplit(":", 1) for line in payload.decode().splitlines())
+                  source = (package / ADAPTER_ENTRY).read_bytes()
+                  adapter = hashlib.sha256(source).hexdigest()
+                  if len(source) > 1024 * 1024 or entries.get(ADAPTER_ENTRY) != adapter:
+                      return None
+                  return {"payload_sha256": digest, "adapter_sha256": adapter}
+              except (OSError, ValueError, TypeError, KeyError, UnicodeError, yaml.YAMLError):
+                  return None
+
+
+          def prepared_source_observation(runtime, side, authenticated):
+              observation = {"kind": "PREPARED_BUILTIN_SOURCE", "side": side, "status": "UNAVAILABLE",
+                  "actual_loaded_adapter": "UNAVAILABLE", "effective_deadline": "UNAVAILABLE"}
+              if authenticated is None:
+                  return observation
+              try:
+                  source = runtime.root / "opt/specfact/builtin/specfact_code_review/tools/pylint_runner.py"
+                  if not source.resolve().is_relative_to(runtime.root.resolve()):
+                      return observation
+                  if any(path.is_symlink() for path in (source, *source.parents)):
+                      return observation
+                  with source.open("rb") as stream:
+                      data = stream.read(1024 * 1024 + 1)
+                  if len(data) > 1024 * 1024 or hashlib.sha256(data).hexdigest() != authenticated["adapter_sha256"]:
+                      return observation
+                  return {**observation, **authenticated, "status": "MATCH", "prepared_adapter_matches_signed_source": True}
+              except (OSError, ValueError):
+                  return observation
+
           # Register and load the installed reviewer before entering the subject.
           # This fresh job has never executed candidate-controlled host programs.
           CommandRegistry.get_module_typer("code")
@@ -709,6 +767,7 @@ jobs:
               ScopeRequest, resolve_scope, cleanup_scope_resolution,
           )
 
+          authenticated_source = authenticated_reviewer_source(Path.home() / ".specfact/modules/specfact-code-review") if sys.argv[2] == "prepare-index" else None
           os.chdir(sys.argv[1])
           if sys.argv[2] != "prepare-index":
               app(args=sys.argv[2:])
@@ -732,7 +791,8 @@ jobs:
                       "status": "INCOMPLETE", "phase": "trusted_index_preparation", "diagnostic": diagnostic,
                   }))
                   raise RuntimeError("trusted_index_preparation_incomplete")
-              for snapshot in (resolution.base_snapshot, resolution.head_snapshot):
+              observations = []
+              for side, snapshot in zip(("base", "head"), (resolution.base_snapshot, resolution.head_snapshot)):
                   plan = discover_snapshot(snapshot.root, config_path=Path(sys.argv[3]), source_snapshot=snapshot)
                   selected = select_environment(plan, current=_capsule_environment_id())
                   runtime, reason = _prepare_capsule_runtime(environment_id=selected)
@@ -740,8 +800,12 @@ jobs:
                       raise RuntimeError("trusted_runtime_preparation_incomplete:" + reason)
                   try:
                       prepare_runtime(plan, runtime=runtime)
+                      observations.append(prepared_source_observation(runtime, side, authenticated_source))
                   finally:
                       _cleanup_capsule_runtime(runtime)
+              observation_path = Path(sys.argv[3]).parent / "prepared-source.public.json"
+              observation_path.write_text(json.dumps(observations))
+              observation_path.chmod(0o600)
           finally:
               cleanup_scope_resolution(resolution)
           PY
@@ -777,6 +841,9 @@ jobs:
               cat "$TRUSTED_ROOT/status.public.json"
             fi
             exit 1
+          fi
+          if [ -f "$TRUSTED_ROOT/prepared-source.public.json" ]; then
+            cat "$TRUSTED_ROOT/prepared-source.public.json"
           fi
           review_exit=0
           touch "$TRUSTED_ROOT/review-attempted"
@@ -1064,6 +1131,47 @@ jobs:
                           observed.setdefault(name, set()).add(side)
               return {name: sorted(sides) for name, sides in sorted(observed.items())}
 
+          def member_observation(name, side, node):
+              states = ("ran", "error", "not_applicable", "skipped")
+              outcomes = ("PASS", "FAIL", "UNKNOWN", "NOT_APPLICABLE")
+              reasons = ("snapshot_member_incomplete", "differential_finding_mapping_failed",
+                  "baseline_analysis_error", "continuity_unavailable",
+                  "analyzer_reported_incomplete_execution", "capsule_request_failed", "timeout",
+                  "project_test_selection_ambiguous", "project_runtime_required",
+                  "project_pytest_coverage_missing", "analyzer_output_invalid",
+                  "capsule_acquisition_failed", "native_capsule_artifact_not_admitted")
+              state, outcome, reason = (node.get(key) for key in ("execution_state", "evidence_outcome", "diagnostic"))
+              counts = node.get("differential_counts", {})
+              counts = counts if isinstance(counts, dict) else {}
+              return {"member": name, "side": side,
+                  "execution_state": state if state in states else "UNAVAILABLE",
+                  "evidence_outcome": outcome if outcome in outcomes else "UNAVAILABLE",
+                  "diagnostic_class": reason if reason in reasons else "unclassified",
+                  "differential_counts": {key: value for key, value in counts.items()
+                      if key in ("fixed", "introduced", "unchanged", "unknown")
+                      and type(value) is int and 0 <= value <= 1000000}}
+
+
+          def member_observations(rows, allowed):
+              if not isinstance(rows, list) or len(rows) > 10:
+                  return []
+              names, observations = set(), []
+              for row in rows:
+                  if not isinstance(row, dict):
+                      return []
+                  name = row.get("id")
+                  if not isinstance(name, str) or name not in allowed or name in names:
+                      return []
+                  names.add(name)
+                  observations.append(member_observation(name, "combined", row))
+                  for side in ("base", "head"):
+                      if side not in row:
+                          continue
+                      if not isinstance(row[side], dict):
+                          return []
+                      observations.append(member_observation(name, side, row[side]))
+              return observations
+
           report, header = {}, {}
           outcome = "unreadable_report"
           diagnostic_bound = 32 * 1024 * 1024
@@ -1125,6 +1233,8 @@ jobs:
               projected["report_header_observed"] = bool(header)
               projected["error_analyzer_sides"] = incomplete_sides(members)
               projected["crosshair_failure_observations"] = crosshair_failure_observations(header.get("findings", []))
+          projected["member_observations"] = member_observations(evidence_source.get("analyzer_evidence", []), allowed)
+          projected["member_observation_source"] = "header" if header else "report" if report else "UNAVAILABLE"
           print(json.dumps(projected))
           PY_REVIEW_FAILURE
       - name: Observe failed independent review privately

@@ -15,6 +15,7 @@ from tests.support.capsule_review_fixtures import (
     REPO_ROOT,
     STEP_NAME,
     _git,
+    _write_preparation_fixture,
     _write_public_report,
     independent_review_job,
     public_projector,
@@ -87,30 +88,6 @@ def _run_projector(tmp_path, program):
     path = tmp_path / "projector.py"
     path.write_text(program)
     return subprocess.run([sys.executable, str(path)], capture_output=True, text=True, check=False, cwd=tmp_path)
-
-
-def _write_preparation_fixture(tmp_path, case):
-    import json
-
-    descriptor = tmp_path / "descriptor.json"
-    descriptor.write_text("{}")
-    payload = {"runtimes": {side: {"descriptor": str(descriptor)} for side in ("base", "head")}}
-    if case.startswith("not_applicable"):
-        payload = {"scope": "index", "status": "NOT_APPLICABLE", "diagnostic": "no_governed_impact", "runtimes": {}}
-        overrides = {
-            "not_applicable_reason": {"diagnostic": "private-reason"},
-            "not_applicable_scope": {"scope": "full"},
-            "not_applicable_runtimes": {"runtimes": ["private"]},
-            "not_applicable_nonempty": {"runtimes": {"head": {"descriptor": str(descriptor)}}},
-        }
-        payload.update(overrides.get(case, {}))
-    elif case == "missing_base":
-        payload["runtimes"].pop("base")
-    elif case == "missing_files":
-        descriptor.unlink()
-    report = tmp_path / "preparation.private.json"
-    report.write_text("not-json/private" if case == "invalid" else json.dumps(payload))
-    return report
 
 
 @pytest.mark.parametrize(
@@ -289,6 +266,8 @@ def _expected_review_projection(expected):
     keys = ("findings_present", "tool_error_present", "execution_error_present", "unknown_evidence_present")
     projection = {
         "phase": "independent_review",
+        "member_observations": [],
+        "member_observation_source": "report" if outcome == "structured_report" else "UNAVAILABLE",
         "report_outcome": outcome,
         "assurance_status": verdict,
         "overall_verdict": verdict,
@@ -733,86 +712,6 @@ def test_candidate_incomplete_snapshot_projection_is_finite(tmp_path, nested, ex
     rows = [json.loads(line) for line in result.stdout.splitlines()]
     assert rows == ([{"analyzer": "contracts", "incomplete_snapshot_sides": expected}] if expected else [])
     assert "PRIVATE_TOKEN" not in result.stdout + result.stderr
-
-
-def _write_preparation_interpreter(tmp_path):
-    import sys
-
-    interpreter = tmp_path / "venv/bin/python"
-    interpreter.parent.mkdir(parents=True)
-    interpreter.write_text(
-        "#!" + sys.executable + "\n"
-        "import os,sys\nfrom pathlib import Path\n"
-        "if sys.argv[1:3] == ['-I','-c']:\n"
-        "    if os.environ['REPORT_CASE'] == 'missing':\n"
-        "        Path('commit-review-preparation.private.json').unlink()\n"
-        "    else: print(Path('controlled-report.json').read_text())\n"
-        "    raise SystemExit(int(os.environ['PREPARATION_EXIT']))\n"
-        "os.execv(sys.executable, [sys.executable, *sys.argv[1:]])\n"
-    )
-    interpreter.chmod(0o700)
-
-
-@pytest.fixture
-def preparation_shell(tmp_path, monkeypatch):
-    import subprocess
-
-    workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())
-    step = next(item for item in workflow["jobs"]["customer"]["steps"] if item.get("name") == STEP_NAME)
-    recipe = "# Provisioning" + step["run"].split("# Provisioning", 1)[1].split("review_exit=0", 1)[0]
-    _write_preparation_interpreter(tmp_path)
-
-    def invoke(preparation):
-        preparation_exit, report_case = preparation
-        report = _write_preparation_fixture(tmp_path, "prepared" if report_case == "missing" else report_case)
-        (tmp_path / "controlled-report.json").write_text(report.read_text())
-        for name, value in {
-            "CUSTOMER_ROOT": str(tmp_path),
-            "GITHUB_WORKSPACE": str(tmp_path),
-            "PROJECT_CONFIG": str(tmp_path / "project.toml"),
-            "PREPARATION_EXIT": str(preparation_exit),
-            "REPORT_CASE": report_case,
-        }.items():
-            monkeypatch.setenv(name, value)
-        return subprocess.run(
-            ["bash", "-c", "set -euo pipefail\n" + recipe + "printf 'REVIEW_STARTED\\n'"],
-            cwd=tmp_path,
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-
-    return invoke
-
-
-@pytest.mark.parametrize(
-    "preparation,expected",
-    [
-        ((0, "prepared"), (0, "PREPARED", "prepared")),
-        ((0, "not_applicable"), (0, "NOT_APPLICABLE", "not_applicable")),
-        ((7, "not_applicable"), (7, "INCOMPLETE", "preparation_command_failed")),
-        ((0, "not_applicable_reason"), (1, "INCOMPLETE", "invalid_not_applicable")),
-        ((7, "prepared"), (7, "INCOMPLETE", "preparation_command_failed")),
-        ((0, "invalid"), (1, "INCOMPLETE", "invalid_json")),
-        ((7, "invalid"), (7, "INCOMPLETE", "invalid_json")),
-        ((0, "missing"), (1, "INCOMPLETE", "unreadable_report")),
-        ((7, "missing"), (7, "INCOMPLETE", "unreadable_report")),
-    ],
-)
-def test_preparation_shell_preserves_failure_and_projects_incomplete(preparation_shell, preparation, expected):
-    import json
-
-    expected_exit, expected_status, expected_outcome = expected
-    accepted = expected_status in {"PREPARED", "NOT_APPLICABLE"}
-    result = preparation_shell(preparation)
-    assert result.returncode == expected_exit
-    lines = result.stdout.splitlines()
-    assert lines, "every preparation exit must produce bounded diagnosis"
-    projection = json.loads(lines[0])
-    assert projection["status"] == expected_status
-    assert ("REVIEW_STARTED" in lines) is accepted
-    assert "private" not in result.stdout + result.stderr
-    assert projection["report_outcome"] == expected_outcome
 
 
 def test_failed_candidate_diagnostics_expose_only_bounded_tracked_locations(tmp_path: Path) -> None:

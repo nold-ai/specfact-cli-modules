@@ -17,3 +17,9 @@ The sole approved observation was consumed at 826948e7. The optional attachment 
 ## Subsequent parent deadline correction
 
 The original observation retains its 300-second contract. The required trusted CLI parent now receives 600 seconds because it contains both ten-member sides plus comparison/reporting, while a single member already permits 300 seconds. This is a bounded policy correction, not a guarantee all maximum member budgets fit or proof of the dominant CPU stage. The signed baseline, every member limit, full scope, failure-on-expiry and 45-minute job cap remain unchanged. A fresh hosted result is required; optional sampling stays disabled. The three shell projection host fixtures also run in the explicit host-proof lane, retaining their 22 parametrized cases.
+
+## Existing-run metadata after the consumed observation
+
+The next correction records bounded metadata during the existing trusted preparation and failed-report projection. The established key authenticates the installed reviewer payload and its exact Pylint source entry before entering the subject. Prepared builtin bytes must match that signed entry. Public digests describe prepared source only; actual loaded adapter and effective deadline remain unavailable. No adapter source is executed for observation and no additional analysis or profiler runs.
+
+The existing private report yields at most thirty member/side records with fixed execution, outcome and diagnostic enums and bounded differential counts. Unknown identities, duplicate rows and malformed inventories yield no member records; private messages never become public categories. The existing report-size cap and blocking review result remain unchanged.
