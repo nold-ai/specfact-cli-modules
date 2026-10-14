@@ -25,6 +25,7 @@ _OBSERVATION_PROGRAMS = (
                 "87af8abe30107160c5aa974624b5c377dc1563ce8e2d33f7ecaa8a5fa8bf3f3d",
                 "ead9d88db8dfd7e8aeb936135db7c9358cf6fb4dc861efce6a7497078508dfa1",
                 "cf4a6d94d511a2847beda3e577e2edcdcb4c929ed5c436976afe07c56fa47e10",
+                "7d37d1f8be82a8b98189c0f9408c171beba0dddf0e0fb6197ce0de48057d4aca",
             ]
         ),
     ),
@@ -37,6 +38,7 @@ _OBSERVATION_PROGRAMS = (
                 "9a549700f83464667bafc1235030afb277a6f0c41c02344b235007bda04d4060",
                 "8052e2ea961ba3109f78ea70f637827cc60f234692842acda0c5d72de61794b9",
                 "3611f90e4720f1efde80ab96906d8ac48e93cfdccfb7e966ca4dd66fc031a36a",
+                "f4694777c91156c94186fd27fd35d6b62f79e874392b72754a28172138158d01",
             ]
         ),
     ),
