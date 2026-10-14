@@ -5408,3 +5408,129 @@ fixes with the final wrapper pin. Narrow read-only verification also confirms Co
 alert 11's allocated `realpath(path, NULL)` destination and guarded/free callers in this
 branch. The alert remains open on main until integration; no hosted acceptance or
 production signature is inferred from those source assessments.
+
+## Bounded Linux diagnostics authority, unit 1, 2026-10-14 Europe/Berlin
+
+The owner approved the narrow diagnostics proposal before the two observation and
+checker-authority requirements were added. Unit 1 changes the checker and its
+permanent proofs only. The actual reusable workflow, reviewer version, consumer
+pins and authenticated wrapper remain unchanged. Root owns normal-hook commits,
+activation and remaining quality/review gates.
+
+Scenario mapping for `Exact reviewed Linux observation contract authority`:
+
+- `exact approved observation bytes are admitted` maps to permanent
+  `test_observation_contract_retains_entire_workflow[unchanged]` and the private
+  real-Git `test_approved_prospective_bodies`, covering candidate-only,
+  independent-only and both replacement bodies. The prospective test failed
+  all three cases against the original checker before implementation. All three
+  pass against the successor checker.
+- `execution or observation contract mutation is rejected` maps to permanent
+  `test_observation_contract_retains_entire_workflow`, covering both jobs' body,
+  shell, delimiter, duplicate-step, name, environment and position mutations.
+  The private prospective-body matrix also rejects byte edits, raw prints,
+  opener changes, reviewer changes, budgets and early success.
+
+The complete existing host proof file passes 187 tests in 37.27 seconds. The
+unchanged projection unit/shell proof files pass 203 tests in 9.02 seconds.
+The private proposed projection checks first failed both original programs for
+missing snapshot observations, then passed 18 checks after implementation.
+They cover side attribution, absent/invalid values, bool-as-int rejection,
+duplicate analyzers and JSON side keys, private sentinels, global fixed finding
+classes, exact enforcement summary, reports above 2 MiB and reports above 32 MiB.
+These private checks support review of the frozen proposed bodies; activation
+and permanent projection tests belong to unit 2.
+
+All private artifacts and logs are under
+`/private/tmp/specfact-pr506-510-repair/linux-diag-programs/`.
+`checker-red.log`, `checker-green.log`, `checker-prospective-green.log`,
+`projector-red.log`, `projector-green.log`, `host-proof.log` and
+`current-projection-proof.log` retain command output. The private real-Git
+fixtures use the actual index and current checker; permanent proofs do not
+import or depend on these temporary artifacts. A private fixture initially
+mishandled PyYAML's quoted `on` key during mutation setup; correcting that
+fixture did not change production bytes or assertions.
+
+The body hash is SHA-256 of the UTF-8 text after the heredoc opening line and
+before the newline preceding its exact closing delimiter. Candidate old/new
+hashes are `87af8abe30107160c5aa974624b5c377dc1563ce8e2d33f7ecaa8a5fa8bf3f3d`
+and `5b14939d987d6e95dc89917bbad4020e174d1c71858410463aa0b33e88b16862`.
+Independent old/new hashes are
+`9a549700f83464667bafc1235030afb277a6f0c41c02344b235007bda04d4060`
+and `8d3f04a274745e33605eff26134fe9b50695e1f67a814756809d3c1285dd2cc7`.
+Both old/new combinations are independently admitted only within their original
+unique step names, positions and metadata. Complete parsed-workflow equality
+still follows normalization and the original approved budget adaptation.
+
+Producer evidence was read from the verified 0.51.2 source under
+`/private/tmp/specfact-pr506-510-repair/reviewer-0512-source/specfact-code-review/`.
+`run/target_pytest.py` emits portable `exit_code` and typed observation arrays;
+`run/runner.py` retains `target_execution` and the exact required-UNKNOWN
+changed-enforcement summary. `tools/pylint_runner.py` emits the typed Pylint
+error prefix with its 30-second subprocess timeout. `tools/contract_runner.py`
+emits the rejected CrossHair stdout prefix. `run/target_coverage.py` and
+`run/portable_worker.py` establish fixed coverage diagnostic codes.
+The proposed bodies omit process-exit and numeric timeout fields; they do not
+invent installed-native observations or attach merged findings to base/head.
+The Linux failure cause remains unproven until the activated diagnostics run.
+Ruff format/check, diff whitespace checking and strict OpenSpec validation pass.
+
+### Prospective classifier review correction, 2026-10-14 Europe/Berlin
+
+The existing hostile/malformed private-data scenario also covers bounded
+classification. Independent review found that the proposed pre-commit status
+regex used overlapping repetitions and missed the signed 0.51.2 producer's
+`"; ".join(unrecognized[:3])` framing in `tools/contract_runner.py:330`.
+The classifier now examines the first producer segment and first line, matches
+one fixed status suffix, and strips/counts trailing dots after a nonblank hook
+label. This uses linear string operations without changing reader, finding,
+message, deadline or output budgets. No public schema or exit behavior changed.
+
+Private `test_classifier_regression.py` executes both complete prospective
+programs and the actual helper. It tests all three joined statuses, ordinary
+and CRLF status lines, malformed labels/statuses, private canaries, first-segment
+attribution, and 32 findings containing 20,000 dots each. Each subprocess has
+an unchanged four-second parent test timeout. This is a local bounded regression
+check, not a hosted performance measurement or speedup claim.
+
+The initial fixture wrote the candidate report to the wrong path. Its output is
+retained in `classifier-initial-fixture-red.log` and is not product RED evidence.
+After correcting the fixture to `.specfact/code-review.json`, before any parser
+edits, `classifier-red.log` records 21 failures and 18 passes. Nine joined-status
+cases classified incorrectly, all three long-dot cases exceeded the parent
+budget, and nine CRLF/blank-label/first-segment cases classified incorrectly.
+After the parser fix, `classifier-green.log` records 57 passing projector and
+regression cases. `classifier-authority-green.log` records 43 passing focused
+real-Git authority checks, including prospective body mutations.
+
+Final cleanup fixed repeated `startswith` lint findings in the new helper and
+import spacing introduced by helper insertion. These were present before this
+classifier correction, but were not deployed-old-body exceptions. The final
+combined command was `PROJECTION_SUFFIX=new .venv/bin/python -m pytest -q
+/private/tmp/specfact-pr506-510-repair/linux-diag-programs/test_classifier_regression.py
+/private/tmp/specfact-pr506-510-repair/linux-diag-programs/test_proposed.py
+/private/tmp/specfact-pr506-510-repair/linux-diag-programs/test_authority.py
+tests/host/proof_capsule_deferred_review_ci.py -k 'not test_deferred or prospective or observation_contract'`.
+`classifier-final-green.log` records 266 passes. Checker Ruff check/format and
+`git diff --check` pass. Ruff check of all prospective bodies and the helper
+passes with only W292 excluded, as recorded in `classifier-ruff-final.log`.
+W292 is excluded solely because each frozen heredoc body intentionally ends
+before the newline introducing its closing delimiter. No other lint exception
+is used. The initial whole-snippet lint output is retained for audit.
+
+The corrected final candidate SHA-256 is
+`ead9d88db8dfd7e8aeb936135db7c9358cf6fb4dc861efce6a7497078508dfa1`.
+The corrected final independent SHA-256 is
+`8052e2ea961ba3109f78ea70f637827cc60f234692842acda0c5d72de61794b9`.
+These supersede the earlier proposed-body hashes in this unit's evidence.
+`BODY_HASHES.json` and the checker's prospective approval literals match them.
+The deployed workflow, original accepted body hashes, consumer pins, wrapper,
+reviewer assets and signatures remain unchanged. Activation and independent
+review of these corrected final bytes remain with the root owner.
+
+The first normal-hook authority commit was rejected by requirements evidence.
+The five new sidecar cases used scenario-title slugs, while the existing adapter
+requires each scenario_id to equal its requirement suffix
+(`specfact_requirements/requirements/evidence.py:333`). Correcting those five
+references preserves all scenario intents, source requirements and acceptance;
+the hook was not bypassed. The rejected commit created no Git commit.

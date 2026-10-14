@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import hashlib
 import re
 import subprocess
 import sys
@@ -13,6 +14,31 @@ from icontract import ensure
 
 _PR_CONDITION = "github.event_name == 'pull_request'"
 _REVIEW_CONDITION = _PR_CONDITION + " && needs.changes.outputs.capsule_changed == 'true'"
+
+_OBSERVATION_PROGRAMS = (
+    (
+        "customer",
+        "Run deferred candidate commit review without weakening enforcement",
+        "PY_CANDIDATE_FAILURE",
+        frozenset(
+            [
+                "87af8abe30107160c5aa974624b5c377dc1563ce8e2d33f7ecaa8a5fa8bf3f3d",
+                "ead9d88db8dfd7e8aeb936135db7c9358cf6fb4dc861efce6a7497078508dfa1",
+            ]
+        ),
+    ),
+    (
+        "independent-review",
+        "Project independent review failure privately",
+        "PY_REVIEW_FAILURE",
+        frozenset(
+            [
+                "9a549700f83464667bafc1235030afb277a6f0c41c02344b235007bda04d4060",
+                "8052e2ea961ba3109f78ea70f637827cc60f234692842acda0c5d72de61794b9",
+            ]
+        ),
+    ),
+)
 
 
 class _WorkflowLoader(yaml.SafeLoader):
@@ -145,6 +171,46 @@ def _approved_review_budget(workflow: dict) -> dict:
     return integrated
 
 
+def _observation_body(recipe: str, marker: str) -> tuple[int, int, str]:
+    opener = "<<'" + marker + "'"
+    terminator = "\n" + marker + "\n"
+    if recipe.count(marker) != 2 or recipe.count(opener) != 1 or recipe.count(terminator) != 1:
+        raise ValueError("observation program boundaries are not unique")
+    start = recipe.index("\n", recipe.index(opener)) + 1
+    end = recipe.index(terminator)
+    if end < start:
+        raise ValueError("observation program boundaries are reversed")
+    return start, end, recipe[start:end]
+
+
+def _observation_step(workflow: dict, job: str, name: str) -> tuple[int, dict]:
+    matches = [(index, step) for index, step in enumerate(workflow["jobs"][job]["steps"]) if step.get("name") == name]
+    if len(matches) != 1:
+        raise ValueError("observation step is not uniquely defined")
+    return matches[0]
+
+
+def _approved_observation_contract(workflow: dict, integrated: dict) -> dict:
+    normalized = copy.deepcopy(workflow)
+    for job, name, marker, approved_hashes in _OBSERVATION_PROGRAMS:
+        position, step = _observation_step(normalized, job, name)
+        baseline_position, baseline_step = _observation_step(integrated, job, name)
+        metadata = {key: value for key, value in step.items() if key != "run"}
+        baseline_metadata = {key: value for key, value in baseline_step.items() if key != "run"}
+        if position != baseline_position or metadata != baseline_metadata:
+            raise ValueError("observation step metadata differs from integrated contract")
+        start, end, body = _observation_body(step["run"], marker)
+        _, _, baseline_body = _observation_body(baseline_step["run"], marker)
+        if body == baseline_body:
+            continue
+        if any(
+            hashlib.sha256(value.encode("utf-8")).hexdigest() not in approved_hashes for value in (body, baseline_body)
+        ):
+            raise ValueError("observation program differs from approved bytes")
+        step["run"] = step["run"][:start] + baseline_body + step["run"][end:]
+    return normalized
+
+
 def _validate_reusable_review(baseline: str) -> None:
     workflow = _workflow_yaml(".github/workflows/capsule-customer-execution.yml")
     if "workflow_call" not in workflow["on"]:
@@ -160,9 +226,8 @@ def _validate_reusable_review(baseline: str) -> None:
     # A local deferral cannot prove arbitrary changed shell/action execution.
     # Pin the entire already integrated contract, including runner/matrix,
     # commands, supporting steps, environment, inputs and deadlines.
-    if workflow != _approved_review_budget(
-        _workflow_yaml(".github/workflows/capsule-customer-execution.yml", baseline)
-    ):
+    integrated = _approved_review_budget(_workflow_yaml(".github/workflows/capsule-customer-execution.yml", baseline))
+    if _approved_observation_contract(workflow, integrated) != integrated:
         raise ValueError("reusable review execution differs from the integrated dev contract")
 
 

@@ -1381,3 +1381,46 @@ requirements:
       method: test
       intent: Real-Git local/committed admission fails for all four related paths before the trigger and selectors change.
       observable: Eight positive controls fail and two unrelated controls reject before correction; all ten pass after exact-path additions with the original checker and unchanged blocking review requirements.
+  openspec:code-review-native-platform-execution:review-native-platform-execution:owner-approved-bounded-linux-review-failure-observations:
+    rationale: Observe actual failed Linux analyzer evidence without changing reviewer authority or acceptance.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#460
+    touchpoints:
+    - id: bounded-linux-failure-observation-spec
+      kind: config_file
+      locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
+    verification_cases:
+    - case_id: 460-60-1
+      scenario_id: owner-approved-bounded-linux-review-failure-observations
+      method: test
+      intent: Reproduce missing side observations in both current projectors before creating exact replacement bodies.
+      observable: Two genuine missing-observation cases fail on old bodies; frozen replacement bodies pass 18 privacy, enum, bound, duplicate and side controls. Activation and hosted root diagnosis remain pending.
+    - case_id: 460-60-2
+      scenario_id: owner-approved-bounded-linux-review-failure-observations
+      method: test
+      intent: Keep arbitrary diagnostic text, test identities, invalid values and unbound numeric fields private.
+      observable: Frozen prospective projectors omit invalid or absent fields and never emit private sentinels; original report read limits are preserved.
+    - case_id: 460-60-3
+      scenario_id: owner-approved-bounded-linux-review-failure-observations
+      method: test
+      intent: Preserve the original failure and every review prerequisite through observation.
+      observable: Existing 203 projection and shell proofs pass with active old workflow; permanent activated-projector proofs remain required in unit 2.
+  openspec:code-review-native-platform-execution:review-native-platform-execution:exact-reviewed-linux-observation-contract-authority:
+    rationale: Admit only reviewed observation bytes under an immutable checker while retaining complete execution equality.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#460
+    touchpoints:
+    - id: linux-observation-checker-authority-spec
+      kind: config_file
+      locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
+    verification_cases:
+    - case_id: 460-61-1
+      scenario_id: exact-reviewed-linux-observation-contract-authority
+      method: test
+      intent: Real Git fixtures reject all three proposed old/new combinations before the exact checker update.
+      observable: Original checker rejects all three; successor checker passes 27 prospective acceptance and mutation cases while active workflow and consumer pins stay unchanged.
+    - case_id: 460-61-2
+      scenario_id: exact-reviewed-linux-observation-contract-authority
+      method: test
+      intent: Retain rejection of body, shell, delimiter, step identity, metadata and ordering mutations.
+      observable: All 187 permanent host scheduling proofs pass, including 16 new unchanged-workflow and mutation controls; pin activation requires a separate normal-hook commit.

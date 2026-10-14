@@ -1138,3 +1138,69 @@ def _prepare_committed_ci_subject(tmp_path: Path, case: str) -> tuple[Path, str,
     if case == "live-dev-ref":
         _git(worktree, "update-ref", "refs/remotes/origin/dev", head)
     return worktree, base, head, workflow
+
+
+def _observation_contract_repository(tmp_path: Path) -> tuple[Path, Path, str]:
+    repository = tmp_path / "observation-contract"
+    repository.mkdir()
+    _git(repository, "init", "-q")
+    _git(repository, "config", "user.email", "fixture@example.invalid")
+    _git(repository, "config", "user.name", "Fixture")
+    relative = ".github/workflows/capsule-customer-execution.yml"
+    workflow = repository / relative
+    workflow.parent.mkdir(parents=True)
+    workflow.write_bytes((REPO_ROOT / relative).read_bytes())
+    _git(repository, "add", ".")
+    _git(repository, "commit", "-qm", "integrated observation contract")
+    return repository, workflow, _git(repository, "rev-parse", "HEAD")
+
+
+def _check_observation_contract(repository: Path, baseline: str) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "import sys;sys.path.insert(0,sys.argv[1]);"
+            "from scripts.check_capsule_deferral import _validate_reusable_review;"
+            "_validate_reusable_review(sys.argv[2])",
+            str(REPO_ROOT),
+            baseline,
+        ],
+        cwd=repository,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+
+@pytest.mark.parametrize(
+    "mutation",
+    ["unchanged", "body", "shell", "delimiter", "duplicate_step", "step_name", "step_environment", "step_position"],
+)
+@pytest.mark.parametrize("job_name", ["customer", "independent-review"])
+def test_observation_contract_retains_entire_workflow(tmp_path: Path, job_name: str, mutation: str) -> None:
+    repository, path, baseline = _observation_contract_repository(tmp_path)
+    document = yaml.safe_load(path.read_text())
+    document["on"] = document.pop(True)
+    marker = "PY_CANDIDATE_FAILURE" if job_name == "customer" else "PY_REVIEW_FAILURE"
+    steps = document["jobs"][job_name]["steps"]
+    step = next(item for item in steps if marker in item.get("run", ""))
+    if mutation == "body":
+        step["run"] = step["run"].replace("import json\n", "import json\nprint('private')\n", 1)
+    elif mutation == "shell":
+        step["run"] += "\necho private\n"
+    elif mutation == "delimiter":
+        step["run"] = step["run"].replace("\n" + marker + "\n", "\n" + marker + " \n")
+    elif mutation == "duplicate_step":
+        steps.append(step.copy())
+    elif mutation == "step_name":
+        step["name"] = "Unapproved observation"
+    elif mutation == "step_environment":
+        step["env"] = {"PYTHONPATH": "candidate"}
+    elif mutation == "step_position":
+        index = steps.index(step)
+        steps[index - 1], steps[index] = steps[index], steps[index - 1]
+    path.write_text(yaml.safe_dump(document, sort_keys=False))
+    _git(repository, "add", ".")
+    result = _check_observation_contract(repository, baseline)
+    assert (result.returncode == 0) is (mutation == "unchanged"), result.stderr

@@ -1913,3 +1913,32 @@ When a committed capsule delta requires scheduling validation, the existing CI w
 - **WHEN** a qualifying capsule change accompanies an unrelated reviewable filename, including line delimiters or literal tab/quote/backslash
 - **THEN** the committed-tree validator rejects before success, using the complete committed path set
 - **AND** ordinary documentation alongside a qualifying capsule change still passes; HEAD, caller index and worktree remain unchanged
+
+
+### Requirement: Owner-approved bounded Linux review failure observations
+
+The existing candidate and independent Linux review failure projections SHALL expose bounded side-specific observations for incomplete contracts, Pylint and targeted pytest coverage using only fields emitted by the current reviewer. Public values SHALL be fixed allowlisted classifications, validated statuses, booleans or exact bounded integers; unavailable fields SHALL be omitted. Global findings SHALL NOT be assigned to a snapshot side without authoritative attribution. Recognized rejected CrossHair stdout and changed-enforcement preconditions SHALL be classified without publishing raw messages, paths, test identities or output. The signed independent reviewer 0.51.2, all commands, deadlines, acceptance criteria, credentials separation, cleanup and blocking gates SHALL remain unchanged.
+
+#### Scenario: incomplete snapshot observations distinguish sides
+- **WHEN** a bounded private report contains incomplete base or head evidence, including a completely parsed report above the ordinary 2 MiB display threshold and within 32 MiB
+- **THEN** the projection identifies the actual analyzer and side, omits unavailable numeric fields, emits only validated observations and preserves the failed review outcome
+
+#### Scenario: hostile or malformed private data stays private
+- **WHEN** private diagnostics contain arbitrary source-controlled text, unsupported enum values, duplicate JSON fields, malformed records or invalid numeric types
+- **THEN** the bounded projection omits invalid values and never prints private strings or infers successful execution from absent data
+
+#### Scenario: diagnostics cannot grant acceptance
+- **WHEN** a reviewer fails and its observation succeeds, fails or cannot read the report
+- **THEN** the original failed exit and every required review prerequisite remain blocking
+
+### Requirement: Exact reviewed Linux observation contract authority
+
+The scheduling checker SHALL admit only the exact owner-approved observation revision in the two existing failure projection programs. It SHALL preserve whole-workflow equality outside those reviewed bytes and the previously approved budget adaptation. A successor checker SHALL be committed through ordinary hooks before its immutable commit/blob pins are activated in both local and CI consumers. CI wrapper source authentication and all existing integrated-authority, history, object, ancestry, expiry and replacement-ref checks SHALL remain mandatory.
+
+#### Scenario: exact approved observation bytes are admitted
+- **WHEN** the candidate retains the unchanged workflow or exactly the reviewed observation programs under the approved immutable checker
+- **THEN** scheduling validation accepts the observation contract without replacing the independently installed signed reviewer
+
+#### Scenario: execution or observation contract mutation is rejected
+- **WHEN** candidate workflow bytes alter a reviewer, command, deadline, condition, environment, prerequisite, early exit, heredoc boundary or any unapproved observation instruction
+- **THEN** trusted scheduling validation fails before a local deferral can be accepted
