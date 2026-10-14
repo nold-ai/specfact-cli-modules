@@ -2,8 +2,7 @@ schema_version: '2'
 maturity: planned
 requirements:
   openspec:code-review-independent-timeout-diagnostic:independent-review-diagnostic:preserve-required-review-authority:
-    rationale: Preserve the required review failure independently of every observation
-      result.
+    rationale: Preserve the required review failure independently of every observation result.
     stakeholder_refs:
     - nold-ai/specfact-cli-modules#510
     touchpoints:
@@ -14,8 +13,7 @@ requirements:
     - case_id: independent-diagnostic-1
       scenario_id: preserve-required-review-authority
       method: test
-      intent: Preserve the required review failure independently of every observation
-        result.
+      intent: Preserve the required review failure independently of every observation result.
       observable: Original review failure remains blocking for every diagnostic outcome.
   openspec:code-review-independent-timeout-diagnostic:independent-review-diagnostic:authenticate-before-observation:
     rationale: Reject unverified installed identities before subject execution.
@@ -30,8 +28,7 @@ requirements:
       scenario_id: authenticate-before-observation
       method: test
       intent: Reject unverified installed identities before subject execution.
-      observable: The launch spy remains unused and public output contains only static
-        unavailable fields.
+      observable: The launch spy remains unused and public output contains only static unavailable fields.
   openspec:code-review-independent-timeout-diagnostic:independent-review-diagnostic:restrict-public-projection:
     rationale: Keep foreign frames and private markers out of public output.
     stakeholder_refs:
@@ -45,8 +42,7 @@ requirements:
       scenario_id: restrict-public-projection
       method: test
       intent: Keep foreign frames and private markers out of public output.
-      observable: Foreign same-suffix, changed-file, malformed and oversized profiles
-        emit no unverified text.
+      observable: Foreign same-suffix, changed-file, malformed and oversized profiles emit no unverified text.
   openspec:code-review-independent-timeout-diagnostic:independent-review-diagnostic:own-observation-processes:
     rationale: Preserve unknown attribution and reap owned descendants.
     stakeholder_refs:
@@ -60,49 +56,76 @@ requirements:
       scenario_id: own-observation-processes
       method: test
       intent: Preserve unknown attribution and reap owned descendants.
-      observable: PID reuse and absent joins stay unknown; timeout and cancellation
-        leave no owned descendants.
-  openspec:code-review-independent-timeout-diagnostic:independent-review-diagnostic:preserve-original-and-loaded-host-evidence:
-    rationale: Preserve original report identity and bounded non-authoritative loaded host observations.
-    stakeholder_refs:
+      observable: PID reuse and absent joins stay unknown; timeout and cancellation leave no owned descendants.
+  openspec:code-review-independent-timeout-diagnostic:independent-review-diagnostic:preserve-immutable-original-reports:
+    rationale: Preserve immutable original reports before optional processing.
+    stakeholder_refs: &id001
     - nold-ai/specfact-cli-modules#510
     touchpoints:
-    - id: preserve-original-and-loaded-host-evidence
+    - id: preserve-immutable-original-reports
       kind: config_file
       locator: .github/workflows/capsule-customer-execution.yml
     verification_cases:
     - case_id: independent-diagnostic-original
-      scenario_id: replay-b-follows-original-a
+      scenario_id: preserve-immutable-original-reports
       method: test
       intent: Freeze original bytes before an optional fixed-destination replay.
       observable: Original A remains byte-identical after replay B; failed capture cannot authorize replay.
     - case_id: independent-diagnostic-rejected-original
-      scenario_id: rejected-original-capture-in-failure-projection
+      scenario_id: preserve-immutable-original-reports
       method: test
       intent: Reject uncommitted original bytes in all four actual workflow report readers.
-      observable: Rejected captures never parse original or synthetic fallback bytes; valid COMPLETE and legacy reports remain observable, with timeout and genuinely missing legacy diagnostics preserved.
+      observable: Rejected captures never parse original or synthetic fallback bytes; valid COMPLETE and legacy
+        reports remain observable, with timeout and genuinely missing legacy diagnostics preserved.
+  ? openspec:code-review-independent-timeout-diagnostic:independent-review-diagnostic:observe-only-authenticated-loaded-host-functions
+  : rationale: Authenticate the exact five loaded host functions before observation.
+    stakeholder_refs: *id001
+    touchpoints:
+    - id: observe-only-authenticated-loaded-host-functions
+      kind: config_file
+      locator: .github/workflows/capsule-customer-execution.yml
+    verification_cases:
     - case_id: independent-diagnostic-loaded-host
-      scenario_id: unchanged-metadata-with-replaced-code
+      scenario_id: observe-only-authenticated-loaded-host-functions
       method: test
       intent: Admit only five exact loaded plain host code objects and preserve producer outcomes.
       observable: Changed code is refused; inert admitted calls preserve argument and return identity and BaseException.
+  openspec:code-review-independent-timeout-diagnostic:independent-review-diagnostic:bound-non-authoritative-host-receipts:
+    rationale: Keep bounded receipts non-authoritative and incomplete observations explicit.
+    stakeholder_refs: *id001
+    touchpoints:
+    - id: bound-non-authoritative-host-receipts
+      kind: config_file
+      locator: .github/workflows/capsule-customer-execution.yml
+    verification_cases:
     - case_id: independent-diagnostic-receipt
-      scenario_id: lost-final-record-or-malformed-ledger
+      scenario_id: bound-non-authoritative-host-receipts
       method: test
       intent: Reject incomplete, duplicate, mismatched and unpaired receipts.
       observable: Missing final completion and malformed records remain PARTIAL with later execution unknown.
+  openspec:code-review-independent-timeout-diagnostic:independent-review-diagnostic:publish-only-fixed-diagnostic-fields:
+    rationale: Publish fixed diagnostics without private text or invented attribution.
+    stakeholder_refs: *id001
+    touchpoints:
+    - id: publish-only-fixed-diagnostic-fields
+      kind: config_file
+      locator: .github/workflows/capsule-customer-execution.yml
+    verification_cases:
     - case_id: independent-diagnostic-privacy
-      scenario_id: private-test-name-in-original-report
+      scenario_id: publish-only-fixed-diagnostic-fields
       method: test
       intent: Exclude test names, text-progress attribution and receipt access from public/guest surfaces.
-      observable: Both projectors omit names; inert child cannot inherit receipt FD; actual authenticated mount constructors exclude receipt ancestors.
+      observable: Both projectors omit names; inert child cannot inherit receipt FD; actual authenticated mount
+        constructors exclude receipt ancestors.
     - case_id: independent-diagnostic-optional-context
-      scenario_id: optional-invocation-context-is-unavailable
+      scenario_id: publish-only-fixed-diagnostic-fields
       method: test
       intent: Disable optional binding and capture without replacing required preparation or review.
-      observable: Actual emitted shell preserves once-only calls and exits 0, 2 and 7; invalid context admits no binding or capture.
+      observable: Actual emitted shell preserves once-only calls and exits 0, 2 and 7; invalid context admits no
+        binding or capture.
     - case_id: independent-diagnostic-binding-failure
-      scenario_id: optional-binding-preparation-fails
+      scenario_id: publish-only-fixed-diagnostic-fields
       method: test
       intent: Keep Git, directory, hash and manifest IO failures observational only.
-      observable: Real local Git control binds verified bytes; failed writes including final write and close remove usable manifests.
+      observable: Real local Git control binds verified bytes; failed writes including final write and close remove
+        usable manifests.
