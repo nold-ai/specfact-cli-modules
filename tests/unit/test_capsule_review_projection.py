@@ -1052,7 +1052,7 @@ def test_public_pytest_failure_codes_withhold_private_payload(tmp_path: Path, jo
         ("Checking capsule analyzer pylint...\n" + "X" * 65537, None),
     ],
 )
-def test_independent_timeout_projects_only_bounded_exact_progress(tmp_path: Path, progress, analyzer):
+def test_independent_timeout_never_attributes_textual_progress(tmp_path: Path, progress, analyzer):
     log = tmp_path / "progress.private.log"
     log.write_text(progress)
     environment = dict(os.environ, REVIEW_PUBLIC_EXIT="124", REVIEW_PUBLIC_PROGRESS=str(log))
@@ -1067,7 +1067,7 @@ def test_independent_timeout_projects_only_bounded_exact_progress(tmp_path: Path
     assert result.returncode == 0, result.stderr
     row = json.loads(result.stdout)
     assert row["diagnostic"] == "analysis_timeout"
-    assert row.get("analyzer") == analyzer
+    assert "analyzer" not in row
     assert "PRIVATE" not in result.stdout
 
 
@@ -1106,7 +1106,7 @@ def test_public_testing_findings_survive_ordinary_location_cap(tmp_path: Path, j
 @pytest.mark.parametrize(
     "outcome,phase,xfail", [("failed", "call", False), ("skipped", "setup", False), ("passed", "call", True)]
 )
-def test_public_test_observations_identify_only_tracked_source_functions(tmp_path, job_name, outcome, phase, xfail):
+def test_public_test_observations_omit_even_tracked_source_functions(tmp_path, job_name, outcome, phase, xfail):
     suffix = " with an xfail marker." if xfail else "."
     finding = {
         "file": "public.py",
@@ -1131,7 +1131,8 @@ def test_public_test_observations_identify_only_tracked_source_functions(tmp_pat
     assert row.get("test_outcome") == outcome
     assert row.get("test_phase") == phase
     assert row.get("test_xfail") is xfail
-    assert row.get("test_function") == "test_public_case"
+    assert "test_function" not in row
+    assert "test_public_case" not in result.stdout
     assert "PRIVATE" not in result.stdout
 
 
@@ -1274,3 +1275,253 @@ def test_public_projector_bounds_and_rejects_unreadable_reports(tmp_path: Path, 
         "diagnostic": "review_report_unreadable",
     }
     assert "PRIVATE_SECRET" not in result.stdout
+
+
+@pytest.mark.parametrize("independent", [False, True])
+def test_projectors_never_disclose_tracked_test_function(tmp_path, monkeypatch, independent):
+    import ast
+    import re
+
+    job = "independent-review" if independent else "customer"
+    workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())
+    identifier = "independent_review" if independent else "deferred_review"
+    step = next(s for s in workflow["jobs"][job]["steps"] if s.get("id") == identifier)
+    source = step["run"].split("REVIEW_PUBLIC_REPORT=", 1)[1].split("<<'PY'", 1)[1].split("\nPY", 1)[0]
+    tree = ast.parse(source.split("\n", 1)[1])
+    function = next(
+        n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef) and n.name == "_public_test_observation"
+    )
+    marker = "test_PRIVATE_NODE_SECRET"
+    (tmp_path / "test_example.py").write_text(f"def {marker}():\n    pass\n")
+    monkeypatch.chdir(tmp_path)
+    namespace = {"re": re, "ast": ast, "Path": Path, "source_test_functions": {}, "_public_test_failure": lambda *_: {}}
+    exec(compile(ast.Module(body=[function], type_ignores=[]), "projector-control", "exec"), namespace)
+    result = namespace["_public_test_observation"](
+        {"message": f"Test test_example.py::{marker} passed during call."}, "test_example.py"
+    )
+    assert result == {"test_outcome": "passed", "test_phase": "call", "test_xfail": False}
+    assert marker not in json.dumps(result)
+
+
+@pytest.mark.parametrize("job_name", ["customer", "independent-review"])
+@pytest.mark.parametrize("damage", ["missing", "partial", "digest", "duplicate"])
+def test_uncommitted_original_bytes_are_never_projected(tmp_path, job_name, damage):
+    import hashlib
+
+    _write_public_report(tmp_path, [])
+    private = tmp_path / "original-private"
+    private.mkdir(mode=0o700)
+    report = private / "original.json"
+    raw = json.dumps({"findings": [{"file": "public.py", "line": 1, "severity": "error"}]}).encode()
+    report.write_bytes(raw)
+    manifest = {
+        "status": "COMPLETE",
+        "binding": {"role": "candidate", "head": "a" * 40, "attempt": "1"},
+        "required_exit": 1,
+        "sha256": hashlib.sha256(raw).hexdigest(),
+        "bytes": len(raw),
+    }
+    if damage == "partial":
+        manifest["status"] = "UNAVAILABLE"
+    elif damage == "digest":
+        manifest["sha256"] = "0" * 64
+    if damage != "missing":
+        text = json.dumps(manifest)
+        if damage == "duplicate":
+            text = text.replace('"status": "COMPLETE"', '"status": "UNAVAILABLE", "status": "COMPLETE"')
+        (private / "manifest.json").write_text(text)
+    result = subprocess.run(
+        [sys.executable, "-I", "-c", public_projector(job_name)],
+        cwd=tmp_path,
+        env=dict(os.environ, REVIEW_PUBLIC_REPORT=str(report), REVIEW_PUBLIC_EXIT="1"),
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=10,
+    )
+    assert result.returncode == 0
+    assert "finding_location" not in result.stdout
+    assert json.loads(result.stdout)["diagnostic"] == "original_capture_unavailable"
+
+
+@pytest.mark.parametrize("reader", ["customer", "independent-review", "candidate-failure", "independent-failure"])
+@pytest.mark.parametrize(
+    "capture",
+    [
+        "complete",
+        "legacy",
+        "legacy-missing",
+        "missing",
+        "partial",
+        "duplicate",
+        "digest",
+        "size",
+        "manifest-bound",
+        "manifest-invalid",
+        "original-missing",
+        "original-unreadable",
+        "original-bound",
+    ],
+)
+def test_all_original_readers_admit_only_complete_captures(tmp_path, monkeypatch, capsys, reader, capture):
+    import hashlib
+
+    primary = reader in {"customer", "independent-review"}
+    if primary:
+        program = public_projector(reader)
+    else:
+        workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())
+        if reader == "candidate-failure":
+            step = next(item for item in workflow["jobs"]["customer"]["steps"] if item.get("name") == STEP_NAME)
+            marker = "PY_CANDIDATE_FAILURE"
+        else:
+            step = next(
+                item
+                for item in workflow["jobs"]["independent-review"]["steps"]
+                if item.get("name") == "Project independent review failure privately"
+            )
+            marker = "PY_REVIEW_FAILURE"
+        program = step["run"].split(f"<<'{marker}'", 1)[1].split("\n", 1)[1].split(f"\n{marker}", 1)[0]
+    report = tmp_path / ("legacy.json" if capture.startswith("legacy") else "original.json")
+    raw = json.dumps(
+        {
+            "assurance_status": "PASS",
+            "overall_verdict": "PASS",
+            "findings": [
+                {
+                    "file": "public.py",
+                    "line": 1,
+                    "severity": "error",
+                    "category": "clean_code",
+                    "tool": "radon",
+                    "rule": "CC34",
+                },
+                {
+                    "category": "tool_error",
+                    "tool": "crosshair",
+                    "message": "CrossHair timed out before mandatory evidence completed.",
+                },
+            ],
+            "analyzer_evidence": [
+                {
+                    "id": "pylint",
+                    "execution_state": "error",
+                    "evidence_outcome": "UNKNOWN",
+                    "diagnostic": "analyzer_reported_incomplete_execution",
+                }
+            ],
+        }
+    ).encode()
+    (tmp_path / "original-unavailable").write_bytes(raw)
+    if capture == "original-unreadable":
+        report.mkdir()
+    elif capture not in {"legacy-missing", "original-missing"}:
+        report.write_bytes(raw + b" " * (32 * 1024 * 1024) if capture == "original-bound" else raw)
+    manifest = {
+        "status": "COMPLETE",
+        "binding": {},
+        "required_exit": 1,
+        "sha256": hashlib.sha256(raw).hexdigest(),
+        "bytes": len(raw),
+    }
+    if capture == "partial":
+        manifest["status"] = "UNAVAILABLE"
+    elif capture == "digest":
+        manifest["sha256"] = "0" * 64
+    elif capture == "size":
+        manifest["bytes"] = len(raw) + 1
+    elif capture == "original-bound":
+        oversized = report.read_bytes()
+        manifest["bytes"] = len(oversized)
+        manifest["sha256"] = hashlib.sha256(oversized).hexdigest()
+    manifest_text = json.dumps(manifest)
+    if capture == "duplicate":
+        manifest_text = manifest_text.replace('"status": "COMPLETE"', '"status": "UNAVAILABLE", "status": "COMPLETE"')
+    elif capture == "manifest-bound":
+        manifest_text += " " * 4096
+    elif capture == "manifest-invalid":
+        manifest_text = "{"
+    if capture != "missing":
+        (tmp_path / "manifest.json").write_text(manifest_text)
+    monkeypatch.setenv("REVIEW_PUBLIC_REPORT", str(report))
+    monkeypatch.setenv("REVIEW_PUBLIC_EXIT", "1")
+    monkeypatch.setenv("REVIEW_REPORT", str(report))
+    monkeypatch.setenv("REVIEW_LOG", str(tmp_path / "missing.log"))
+    monkeypatch.chdir(tmp_path)
+    git_calls = []
+
+    def tracked_files(args, **kwargs):
+        assert args == ["git", "ls-files", "-z"]
+        git_calls.append(args)
+        return "public.py\0"
+
+    monkeypatch.setattr(subprocess, "check_output", tracked_files)
+    exec(compile(program, "workflow-original-reader", "exec"), {})
+    rows = [json.loads(line) for line in capsys.readouterr().out.splitlines()]
+    admitted = capture in {"complete", "legacy"}
+    if primary:
+        if admitted:
+            assert rows == [
+                {"analyzer": "pylint", "diagnostic_codes": ["analyzer_reported_incomplete_execution"]},
+                {
+                    "finding_location": {
+                        "file": "public.py",
+                        "line": 1,
+                        "severity": "error",
+                        "category": "clean_code",
+                        "tool": "radon",
+                        "rule": "CC34",
+                    }
+                },
+            ]
+            assert len(git_calls) == 1
+        else:
+            code = "review_report_missing" if capture == "legacy-missing" else "original_capture_unavailable"
+            assert rows == [{"status": "INCOMPLETE", "phase": "review", "diagnostic": code}]
+            assert git_calls == []
+    elif reader == "candidate-failure":
+        if admitted:
+            assert rows == [
+                {"analyzer": "pylint", "diagnostic_codes": ["analyzer_reported_incomplete_execution"]},
+                {
+                    "analyzer": "contracts",
+                    "diagnostic_class": "crosshair_timeout_observed",
+                    "exception_observations": [],
+                },
+            ]
+        else:
+            assert rows == (
+                []
+                if capture == "legacy-missing"
+                else [{"analyzer": "contracts", "diagnostic_class": "candidate_report_unavailable"}]
+            )
+    else:
+        assert len(rows) == 1
+        row = rows[0]
+        if admitted:
+            assert row["report_outcome"] == "structured_report"
+            assert row["assurance_status"] == row["overall_verdict"] == "PASS"
+            assert row["error_analyzers"] == row["unknown_analyzers"] == ["pylint"]
+            assert row["findings_present"] is True
+            assert row["member_observations"][0]["evidence_outcome"] == "UNKNOWN"
+        else:
+            assert row["report_outcome"] == ("missing_report" if capture == "legacy-missing" else "unreadable_report")
+            assert row["assurance_status"] == row["overall_verdict"] == "UNAVAILABLE"
+            assert row["error_analyzers"] == row["unknown_analyzers"] == row["member_observations"] == []
+            assert row["member_observation_source"] == "UNAVAILABLE"
+            assert row["findings_present"] is False
+
+
+@pytest.mark.parametrize("job_name", ["customer", "independent-review"])
+def test_primary_timeout_preserved_when_original_capture_is_rejected(tmp_path, monkeypatch, capsys, job_name):
+    raw = json.dumps({"analyzer_evidence": [{"id": "pylint", "diagnostic": "timeout"}], "findings": []})
+    report = tmp_path / "original.json"
+    report.write_text(raw)
+    (tmp_path / "original-unavailable").write_text(raw)
+    monkeypatch.setenv("REVIEW_PUBLIC_REPORT", str(report))
+    monkeypatch.setenv("REVIEW_PUBLIC_EXIT", "124")
+    exec(compile(public_projector(job_name), "workflow-timeout-reader", "exec"), {})
+    assert [json.loads(line) for line in capsys.readouterr().out.splitlines()] == [
+        {"status": "INCOMPLETE", "phase": "review", "diagnostic": "analysis_timeout"},
+        {"status": "INCOMPLETE", "phase": "review", "diagnostic": "original_capture_unavailable"},
+    ]

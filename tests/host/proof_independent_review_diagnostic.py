@@ -229,6 +229,15 @@ def test_actual_projector_launch_excludes_untrusted_imports(
     report = candidate / ".specfact/code-review.json" if job_name == "customer" else tmp_path / "review.private.json"
     report.parent.mkdir(exist_ok=True)
     report.write_text("PRIVATE_REPORT invalid JSON")
+    from tests.unit.test_independent_diagnostic_controller import capture_functions
+
+    captured = capture_functions()["capture_original"](
+        report,
+        tmp_path / "original-private",
+        {"role": "candidate" if job_name == "customer" else "independent", "head": "a" * 40, "attempt": "1"},
+        review_exit,
+    )
+    assert captured["status"] == "COMPLETE"
     shell = f"set -e\ntrusted_env=(env)\nreview_exit={review_exit}\n" + invocation + "\n" + public_projector(job_name)
     shell += '\nPY\nexit "$review_exit"\n'
     environment = dict(os.environ, CUSTOMER_ROOT=str(tmp_path), TRUSTED_ROOT=str(tmp_path), PYTHONPATH=str(ambient))
@@ -358,3 +367,408 @@ def test_required_parent_preserves_leaf_budget_and_expiry(tmp_path, prior_stage,
     )
     assert result.returncode == expected_exit
     assert report.exists() is report_expected
+
+
+def test_private_observer_descriptor_is_not_inherited_even_without_close_fds(tmp_path):
+    from types import ModuleType
+
+    from tests.unit.test_independent_member_observation import controller_definitions
+
+    module = ModuleType("inert")
+    module._prepare_capsule_runtime = lambda: None
+    ns = controller_definitions()
+    private = tmp_path / "observation-private"
+    private.mkdir(mode=0o700)
+    observer = ns["HostObservation"](
+        module, {"_prepare_capsule_runtime": module._prepare_capsule_runtime}, private / "receipt", {}
+    )
+    try:
+        assert not os.get_inheritable(observer.descriptor)
+        assert (private / "receipt").stat().st_mode & 0o777 == 0o600
+        program = "import os,sys\ntry: os.fstat(int(sys.argv[1]))\nexcept OSError: sys.exit(0)\nelse: sys.exit(1)"
+        result = subprocess.run(
+            [sys.executable, "-I", "-c", program, str(observer.descriptor)], close_fds=False, timeout=10, check=False
+        )
+        assert result.returncode == 0
+    finally:
+        observer.finish()
+
+
+@pytest.mark.parametrize("conflict", [False, True])
+def test_actual_request_mount_sources_exclude_private_receipt(tmp_path, monkeypatch, conflict):
+    from types import ModuleType, SimpleNamespace
+
+    from tests.unit.test_independent_member_observation import controller_definitions
+
+    trusted = tmp_path / "trusted"
+    trusted.mkdir()
+    private = trusted / "observation-private"
+    private.mkdir(mode=0o700)
+    for name in ("tmp", "cache", "subject", "config", "project-runtime"):
+        (trusted / name).mkdir()
+    monkeypatch.setenv("TMPDIR", str(trusted / "tmp"))
+    request = SimpleNamespace(
+        member="pylint",
+        snapshot_root=trusted / "subject",
+        runtime=SimpleNamespace(root=trusted / "cache"),
+        config_roots=(trusted if conflict else trusted / "config",),
+        project_runtime_root=trusted / "project-runtime",
+    )
+    calls = []
+    module = ModuleType("inert")
+
+    def producer(value):
+        calls.append(value)
+        return "same"
+
+    module._execute_capsule_member = producer
+    ns = controller_definitions()
+    observer = ns["HostObservation"](module, {"_execute_capsule_member": producer}, private / "receipt", {})
+    observer.install()
+    assert module._execute_capsule_member(request) == "same"
+    observer.finish()
+    assert calls == [request]
+    assert observer.lost is conflict
+    assert (private / "receipt").exists() is not conflict
+
+
+def test_authenticated_old_mount_constructors_exclude_receipt_ancestors(tmp_path):
+    """Authenticate archive data, then exercise only equal inert current constructors."""
+    import ast
+    import hashlib
+    import tarfile
+    from dataclasses import dataclass
+    from types import SimpleNamespace
+
+    from specfact_cli.registry.crypto_validator import verify_signature
+    from specfact_cli.registry.module_installer import _bundled_public_key_path, _module_artifact_payload_stable
+
+    archive_path = REPO_ROOT / "registry/modules/specfact-code-review-0.51.2.tar.gz"
+    package = tmp_path / "archive-data"
+    package.mkdir()
+    with tarfile.open(archive_path) as archive:
+        members = archive.getmembers()
+        assert len(members) <= 2048 and sum(member.size for member in members) <= 32 * 1024 * 1024
+        for member in members:
+            assert member.isfile()
+            relative = Path(member.name).relative_to("specfact-code-review")
+            assert ".." not in relative.parts and not relative.is_absolute()
+            target = package / relative
+            target.parent.mkdir(parents=True, exist_ok=True)
+            stream = archive.extractfile(member)
+            assert stream is not None
+            with stream:
+                target.write_bytes(stream.read(member.size + 1))
+    metadata = yaml.safe_load((package / "module-package.yaml").read_bytes())
+    payload = _module_artifact_payload_stable(package)
+    assert metadata["version"] == "0.51.2"
+    assert hashlib.sha256(payload).hexdigest() == "d4bcfd8db105c60440b3bdefbe414f1dc148a75c21b8533801d43d888b3d0df4"
+    key = _bundled_public_key_path().read_bytes()
+    assert hashlib.sha256(key).hexdigest() == "4e54ffb02307e1a85c166c40aba6d1bc40fbb9a8ef40bf756f8870e5bb08d1c8"
+    assert verify_signature(payload, metadata["integrity"]["signature"], key.decode())
+    old = ast.parse((package / "src/specfact_code_review/run/sandbox.py").read_bytes())
+    current = ast.parse(
+        (REPO_ROOT / "packages/specfact-code-review/src/specfact_code_review/run/sandbox.py").read_bytes()
+    )
+    names = {"_mounts", "_bubblewrap_command"}
+    old_functions = {node.name: node for node in old.body if isinstance(node, ast.FunctionDef) and node.name in names}
+    current_functions = {
+        node.name: node for node in current.body if isinstance(node, ast.FunctionDef) and node.name in names
+    }
+    for name in names:
+        assert ast.dump(old_functions[name]) == ast.dump(current_functions[name])
+        assert not current_functions[name].decorator_list
+    mount_type = next(node for node in current.body if isinstance(node, ast.ClassDef) and node.name == "SandboxMount")
+    namespace = {
+        "Path": Path,
+        "dataclass": dataclass,
+        "SnapshotInvocationContext": SimpleNamespace,
+        "SandboxLaunchPlan": SimpleNamespace,
+        "_PROJECT_RUNTIME_MEMBERS": frozenset({"pylint"}),
+    }
+    exec(
+        compile(
+            ast.Module(body=[mount_type, *current_functions.values()], type_ignores=[]),
+            "inert-current-mount-constructors",
+            "exec",
+        ),
+        namespace,
+    )
+    trusted = tmp_path / "trusted"
+    private = trusted / "observation-private"
+    private.mkdir(parents=True, mode=0o700)
+    for member in ("pylint", "radon"):
+        control = trusted / "tmp/control"
+        control.mkdir(parents=True, exist_ok=True)
+        context = SimpleNamespace(
+            member=member,
+            config_roots=(trusted / "tmp/request", trusted / "subject/config"),
+            output_root=trusted / "tmp/output",
+            temporary_root=trusted / "tmp/scratch",
+            snapshot_root=trusted / "subject",
+            control_root=control,
+            project_runtime_root=trusted / "home/project-runtime",
+        )
+        mounts = namespace["_mounts"](context)
+        plan = SimpleNamespace(startup_sys_path=(trusted / "cache/capsule",), mounts=mounts, cwd="/", argv=("inert",))
+        command = namespace["_bubblewrap_command"](9, plan, extra_argv=())
+        sources = [Path(command[index + 1]) for index, value in enumerate(command) if value in ("--bind", "--ro-bind")]
+        assert sources == [trusted / "cache/capsule", *(mount.source for mount in mounts)]
+        assert sources and all(
+            not private.is_relative_to(source) and not source.is_relative_to(private) for source in sources
+        )
+        assert "--unshare-all" in command and "--clearenv" in command
+        assert str(private) not in command
+
+
+def test_inert_observation_timing_is_measured_without_neutrality_claim(tmp_path):
+    from time import perf_counter_ns
+    from types import ModuleType
+
+    from tests.unit.test_independent_member_observation import controller_definitions
+
+    module = ModuleType("inert")
+    argument = object()
+
+    def producer(value):
+        return value
+
+    module._prepare_capsule_runtime = producer
+    start = perf_counter_ns()
+    for _ in range(63):
+        assert producer(argument) is argument
+    stock_ns = perf_counter_ns() - start
+    observer = controller_definitions()["HostObservation"](
+        module, {"_prepare_capsule_runtime": producer}, tmp_path / "receipt", {}
+    )
+    observer.install()
+    start = perf_counter_ns()
+    for _ in range(63):
+        assert module._prepare_capsule_runtime(argument) is argument
+    observed_ns = perf_counter_ns() - start
+    observer.finish()
+    assert not observer.lost
+    print(
+        json.dumps(
+            {
+                "controlled_calls": 63,
+                "stock_elapsed_ns": stock_ns,
+                "observed_elapsed_ns": observed_ns,
+                "includes_authentication_or_compilation": False,
+                "timing_neutrality_claim": False,
+            }
+        )
+    )
+
+
+def _local_invocation_context(tmp_path, environment, case):
+    """Use real inert Git objects; never borrow the caller's event or repository."""
+    import shutil
+
+    for key in list(environment):
+        if key.startswith(("GITHUB_", "GIT_")) or key == "CANDIDATE_HEAD":
+            environment.pop(key)
+    if case == "absent":
+        return None
+    checkout = tmp_path / "checkout"
+    checkout.mkdir()
+    relative = ".github/workflows/capsule-customer-execution.yml"
+    workflow = checkout / relative
+    workflow.parent.mkdir(parents=True)
+    shutil.copyfile(REPO_ROOT / relative, workflow)
+
+    def git(*args):
+        return subprocess.check_output(
+            ["git", "-C", str(checkout), *args], env=environment, text=True, stderr=subprocess.PIPE
+        ).strip()
+
+    git("init", "-q")
+    git("add", ".")
+    git(
+        "-c",
+        "user.name=Inert proof",
+        "-c",
+        "user.email=proof@example.invalid",
+        "-c",
+        "commit.gpgsign=false",
+        "commit",
+        "-qm",
+        "inert workflow",
+    )
+    head = git("rev-parse", "HEAD")
+    environment.update(GITHUB_WORKSPACE=str(checkout), CANDIDATE_HEAD=head, GITHUB_RUN_ID="123", GITHUB_RUN_ATTEMPT="2")
+    invalid = {
+        "missing_head": ("CANDIDATE_HEAD", None),
+        "bad_head": ("CANDIDATE_HEAD", "A" * 40),
+        "missing_run": ("GITHUB_RUN_ID", None),
+        "missing_attempt": ("GITHUB_RUN_ATTEMPT", None),
+        "zero_run": ("GITHUB_RUN_ID", "0"),
+        "bad_attempt": ("GITHUB_RUN_ATTEMPT", "1:2"),
+        "long_attempt": ("GITHUB_RUN_ATTEMPT", "1" * 128),
+        "missing_checkout": ("GITHUB_WORKSPACE", str(tmp_path / "missing")),
+        "missing_commit": ("CANDIDATE_HEAD", "0" * 40),
+    }
+    if case in invalid:
+        key, value = invalid[case]
+        if value is None:
+            environment.pop(key)
+        else:
+            environment[key] = value
+    if case == "mismatch":
+        workflow.write_text(workflow.read_text() + "\n# changed checkout\n")
+    if case == "missing_blob":
+        git("rm", relative)
+        git(
+            "-c",
+            "user.name=Inert proof",
+            "-c",
+            "user.email=proof@example.invalid",
+            "-c",
+            "commit.gpgsign=false",
+            "commit",
+            "-qm",
+            "remove workflow",
+        )
+        environment["CANDIDATE_HEAD"] = git("rev-parse", "HEAD")
+        workflow.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(REPO_ROOT / relative, workflow)
+    return head
+
+
+@pytest.mark.parametrize("review_exit", [0, 2, 7])
+@pytest.mark.parametrize(
+    "case",
+    [
+        "absent",
+        "missing_head",
+        "bad_head",
+        "missing_run",
+        "missing_attempt",
+        "zero_run",
+        "bad_attempt",
+        "long_attempt",
+        "missing_checkout",
+        "missing_commit",
+        "missing_blob",
+        "mismatch",
+        "mkdir_failure",
+        "write_failure",
+        "hash_failure",
+        "valid",
+    ],
+)
+def test_optional_context_preserves_required_review(tmp_path, case, review_exit):
+    import hashlib
+
+    from tests.support.capsule_review_fixtures import (
+        assert_installed_review_arguments,
+        create_isolated_reviewer,
+        independent_review_job,
+    )
+
+    trusted, environment = create_isolated_reviewer(tmp_path, (review_exit, "NOT_APPLICABLE", "no_governed_impact"))
+    head = _local_invocation_context(tmp_path, environment, case)
+    workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())
+    bootstrap = next(
+        step["run"] for step in workflow["jobs"]["customer"]["steps"] if "PY_CAPTURE" in step.get("run", "")
+    )
+    capture = bootstrap.split("<<'PY_CAPTURE'", 1)[1].split("\n", 1)[1].split("\nPY_CAPTURE", 1)[0]
+    (trusted / "capture-original.py").write_text(capture)
+    (trusted / "review.private.json").write_text('{"findings": []}')
+    prefix = ""
+    if case == "mkdir_failure":
+        (trusted / "observation-private").mkdir(mode=0o700)
+    elif case == "write_failure":
+        prefix = (
+            'mkdir() { command mkdir "$@" && command mkdir "$TRUSTED_ROOT/observation-private/invocation.json"; }\n'
+        )
+    elif case == "hash_failure":
+        prefix = 'git() { if [ "$1" = hash-object ]; then return 1; else command git "$@"; fi; }\n'
+    step = next(item for item in independent_review_job()["steps"] if item.get("id") == "independent_review")
+    result = subprocess.run(
+        ["bash", "-x", "-c", prefix + step["run"]],
+        env=environment,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert result.returncode == review_exit, result.stdout + result.stderr
+    assert_installed_review_arguments(trusted, prepared=False)
+    calls = [line for line in result.stderr.splitlines() if line.startswith("+ env -i ")]
+    assert sum(" prepare-index " in line for line in calls) == 1
+    assert sum(" code review run " in line for line in calls) == 1
+    binding_path = trusted / "observation-private/invocation.json"
+    manifest = trusted / "original-private/manifest.json"
+    if case == "valid":
+        binding = json.loads(binding_path.read_text())
+        assert binding["head"] == head
+        assert binding["attempt"] == "123:2"
+        assert binding["controller_sha256"] == hashlib.sha256((trusted / "reviewer.py").read_bytes()).hexdigest()
+        expected_blob = subprocess.check_output(
+            [
+                "git",
+                "-C",
+                environment["GITHUB_WORKSPACE"],
+                "rev-parse",
+                f"{head}:.github/workflows/capsule-customer-execution.yml",
+            ],
+            text=True,
+        ).strip()
+        assert binding["workflow_blob"] == expected_blob
+        assert binding_path.stat().st_mode & 0o777 == 0o600
+        assert binding_path.parent.stat().st_mode & 0o777 == 0o700
+        assert json.loads(manifest.read_text())["status"] == "COMPLETE"
+    else:
+        assert not binding_path.is_file()
+        assert not manifest.exists()
+        assert not (trusted / "original-private/original.json").exists()
+        assert not (trusted / "observation-private/receipt.jsonl").exists()
+
+
+@pytest.mark.parametrize("failure", ["write", "close", "controller_read"])
+def test_binding_failure_after_publication_leaves_no_usable_manifest(tmp_path, failure):
+    """Run the emitted optional shell with failure in the actual manifest writer."""
+    from tests.support.capsule_review_fixtures import independent_review_job
+
+    trusted = tmp_path / "trusted"
+    (trusted / "venv/bin").mkdir(parents=True)
+    (trusted / "reviewer.py").write_text("# inert controller bytes\n")
+    environment = dict(os.environ, TRUSTED_ROOT=str(trusted), BINDING_FAILURE=failure)
+    _local_invocation_context(tmp_path, environment, "valid")
+    interpreter = trusted / "venv/bin/python"
+    interpreter.write_text(
+        f"#!{sys.executable}\n"
+        "import os,sys\nfrom pathlib import Path\n"
+        "source=sys.stdin.read(); sys.argv=sys.argv[2:]\n"
+        "original_fdopen=os.fdopen\n"
+        "class FailedStream:\n"
+        " def __init__(self, descriptor, mode): self.stream=original_fdopen(descriptor,mode)\n"
+        " def __enter__(self): return self\n"
+        " def write(self, text):\n"
+        "  result=self.stream.write(text)\n"
+        "  if os.environ['BINDING_FAILURE']=='write' and text=='}':\n"
+        "   self.stream.flush(); raise OSError('inert final write failure')\n"
+        "  return result\n"
+        " def __exit__(self, *args):\n"
+        "  self.stream.close()\n"
+        "  if os.environ['BINDING_FAILURE']=='close': raise OSError('inert close failure')\n"
+        "os.fdopen=FailedStream\n"
+        "if os.environ['BINDING_FAILURE']=='controller_read':\n"
+        " def failed_read(self): raise OSError('inert controller read failure')\n"
+        " Path.read_bytes=failed_read\n"
+        "exec(compile(source,'actual-binding-writer','exec'))\n"
+    )
+    interpreter.chmod(0o700)
+    recipe = next(item["run"] for item in independent_review_job()["steps"] if item.get("id") == "independent_review")
+    start = "observation_ready=false" if "observation_ready=false" in recipe else "if mkdir -m 0700"
+    optional = recipe[recipe.index(start) : recipe.index("trusted_env=(env -i")]
+    result = subprocess.run(
+        ["bash", "-c", "set -euo pipefail\n" + optional + '\nprintf "%s\\n" "${observation_ready:-false}"'],
+        env=environment,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.strip() == "false"
+    assert not (trusted / "observation-private/invocation.json").exists()

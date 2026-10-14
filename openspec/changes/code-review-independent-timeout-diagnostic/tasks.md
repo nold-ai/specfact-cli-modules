@@ -4,3 +4,10 @@
 - [x] 1.3 Implement the verified observation helper and failure-only workflow step.
 - [ ] 1.4 Pass scoped and mandatory gates with independent trust-boundary review.
 - [x] 1.5 Execute one hosted observation and classify the evidence without acceptance.
+
+## 2. Original report and loaded host evidence correction (2026-10-14)
+- [x] 2.1 Adopt the reviewed five-function scope, immutable original-report lifecycle and fixed public fields.
+- [x] 2.2 Capture behavioral RED for immutable original versus replay, plain host observations, source-name disclosure and textual timeout attribution. Preserve the candidate test-extraction correction chronology.
+- [x] 2.3 Add workflow-owned bounded capture, exact loaded host admission, private paired receipts and strict complete-ledger projection; leave signed package and historical helper bytes unchanged.
+- [x] 2.4 Exercise inert code/exception/write-loss controls, authenticated mount constructors and actual descriptor noninheritance.
+- [ ] 2.5 Complete independent defect/security review, normal repository gates and exact-head Linux required CI. Local fixture checks do not satisfy this gate.

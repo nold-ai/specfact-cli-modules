@@ -62,3 +62,47 @@ requirements:
       intent: Preserve unknown attribution and reap owned descendants.
       observable: PID reuse and absent joins stay unknown; timeout and cancellation
         leave no owned descendants.
+  openspec:code-review-independent-timeout-diagnostic:independent-review-diagnostic:preserve-original-and-loaded-host-evidence:
+    rationale: Preserve original report identity and bounded non-authoritative loaded host observations.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#510
+    touchpoints:
+    - id: preserve-original-and-loaded-host-evidence
+      kind: config_file
+      locator: .github/workflows/capsule-customer-execution.yml
+    verification_cases:
+    - case_id: independent-diagnostic-original
+      scenario_id: replay-b-follows-original-a
+      method: test
+      intent: Freeze original bytes before an optional fixed-destination replay.
+      observable: Original A remains byte-identical after replay B; failed capture cannot authorize replay.
+    - case_id: independent-diagnostic-rejected-original
+      scenario_id: rejected-original-capture-in-failure-projection
+      method: test
+      intent: Reject uncommitted original bytes in all four actual workflow report readers.
+      observable: Rejected captures never parse original or synthetic fallback bytes; valid COMPLETE and legacy reports remain observable, with timeout and genuinely missing legacy diagnostics preserved.
+    - case_id: independent-diagnostic-loaded-host
+      scenario_id: unchanged-metadata-with-replaced-code
+      method: test
+      intent: Admit only five exact loaded plain host code objects and preserve producer outcomes.
+      observable: Changed code is refused; inert admitted calls preserve argument and return identity and BaseException.
+    - case_id: independent-diagnostic-receipt
+      scenario_id: lost-final-record-or-malformed-ledger
+      method: test
+      intent: Reject incomplete, duplicate, mismatched and unpaired receipts.
+      observable: Missing final completion and malformed records remain PARTIAL with later execution unknown.
+    - case_id: independent-diagnostic-privacy
+      scenario_id: private-test-name-in-original-report
+      method: test
+      intent: Exclude test names, text-progress attribution and receipt access from public/guest surfaces.
+      observable: Both projectors omit names; inert child cannot inherit receipt FD; actual authenticated mount constructors exclude receipt ancestors.
+    - case_id: independent-diagnostic-optional-context
+      scenario_id: optional-invocation-context-is-unavailable
+      method: test
+      intent: Disable optional binding and capture without replacing required preparation or review.
+      observable: Actual emitted shell preserves once-only calls and exits 0, 2 and 7; invalid context admits no binding or capture.
+    - case_id: independent-diagnostic-binding-failure
+      scenario_id: optional-binding-preparation-fails
+      method: test
+      intent: Keep Git, directory, hash and manifest IO failures observational only.
+      observable: Real local Git control binds verified bytes; failed writes including final write and close remove usable manifests.
