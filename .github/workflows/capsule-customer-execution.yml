@@ -483,7 +483,9 @@ jobs:
                   files = target["coverage"].get("files")
                   if isinstance(files, dict) and bounded_identity_characters(files) is not None:
                       observed["coverage_files_count"] = len(files)
-              code = target.get("exit_code")
+              code = target.get("process_exit") if "exit_code" not in target else target.get("exit_code")
+              if "exit_code" in target and "process_exit" in target:
+                  code = None
               if type(code) is int and 0 <= code <= 5:
                   observed["exit_code"] = code
               for key in ("collected", "deselected", "internal_errors"):
@@ -491,6 +493,13 @@ jobs:
                   if isinstance(items, list) and len(items) <= 100000 and all(isinstance(item, str) for item in items):
                       observed[key + "_count"] = len(items)
               records = target.get("records")
+              if isinstance(records, list) and len(records) <= 100000:
+                  if all(isinstance(item, dict) and "passed" not in item and "skipped" not in item for item in records):
+                      pass
+                  elif all(isinstance(item, dict) and "outcome" not in item and type(item.get("passed")) is bool and type(item.get("skipped")) is bool and not (item["passed"] and item["skipped"]) for item in records):
+                      records = [{"nodeid": item.get("nodeid"), "phase": item.get("phase"), "outcome": "skipped" if item["skipped"] else "passed" if item["passed"] else "failed"} for item in records]
+                  else:
+                      records = None
               if isinstance(records, list) and len(records) <= 100000 and all(isinstance(item, dict) and isinstance(item.get("nodeid"), str) and item.get("phase") in ("setup", "call", "teardown", "collection") and item.get("outcome") in ("passed", "failed", "skipped") for item in records):
                   observed["records_count"] = len(records)
                   record_characters = bounded_identity_characters([item["nodeid"] for item in records])
@@ -1201,7 +1210,9 @@ jobs:
                   files = target["coverage"].get("files")
                   if isinstance(files, dict) and bounded_identity_characters(files) is not None:
                       observed["coverage_files_count"] = len(files)
-              code = target.get("exit_code")
+              code = target.get("process_exit") if "exit_code" not in target else target.get("exit_code")
+              if "exit_code" in target and "process_exit" in target:
+                  code = None
               if type(code) is int and 0 <= code <= 5:
                   observed["exit_code"] = code
               for key in ("collected", "deselected", "internal_errors"):
@@ -1209,6 +1220,13 @@ jobs:
                   if isinstance(items, list) and len(items) <= 100000 and all(isinstance(item, str) for item in items):
                       observed[key + "_count"] = len(items)
               records = target.get("records")
+              if isinstance(records, list) and len(records) <= 100000:
+                  if all(isinstance(item, dict) and "passed" not in item and "skipped" not in item for item in records):
+                      pass
+                  elif all(isinstance(item, dict) and "outcome" not in item and type(item.get("passed")) is bool and type(item.get("skipped")) is bool and not (item["passed"] and item["skipped"]) for item in records):
+                      records = [{"nodeid": item.get("nodeid"), "phase": item.get("phase"), "outcome": "skipped" if item["skipped"] else "passed" if item["passed"] else "failed"} for item in records]
+                  else:
+                      records = None
               if isinstance(records, list) and len(records) <= 100000 and all(isinstance(item, dict) and isinstance(item.get("nodeid"), str) and item.get("phase") in ("setup", "call", "teardown", "collection") and item.get("outcome") in ("passed", "failed", "skipped") for item in records):
                   observed["records_count"] = len(records)
                   record_characters = bounded_identity_characters([item["nodeid"] for item in records])

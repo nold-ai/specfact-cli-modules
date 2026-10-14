@@ -1453,3 +1453,32 @@ requirements:
       method: test
       intent: Preserve every observation and authority fixture while removing the concrete completed-evidence review regressions.
       observable: Public producer RED for CC38 and nesting errors becomes GREEN without suppressions; all35fixture payloads,16mutation payloads and32Git-state combinations match frozen originals. Full andSMART each pass304host proofs and6110supplier tests;26reproduced warning diagnostics are resolved and remaining exceptions are individually documented.
+    - case_id: 460-62-5
+      scenario_id: bounded-terminal-identity-and-retained-prefix-observations
+      method: test
+      intent: Retain all authority mutation cases while adapting the dispatcher to the pinned Semgrep parser.
+      observable: Both pinned Semgrep1.144.0 full40file passes reproduce the original syntax error and accept the seven independent conditions with no structured errors; public Radon is clean and all16 mutation payloads and outcomes match frozen originals.
+  openspec:code-review-native-platform-execution:review-native-platform-execution:native-and-portable-pytest-failure-observation-schemas:
+    rationale: Project actual native pytest producer records through the existing bounded diagnostic contract.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#460
+    touchpoints:
+    - id: native-pytest-observation-schema-spec
+      kind: config_file
+      locator: openspec/changes/code-review-native-platform-execution/specs/review-native-platform-execution/spec.md
+    verification_cases:
+    - case_id: 460-63-1
+      scenario_id: native-and-portable-pytest-failure-observation-schemas
+      method: test
+      intent: Consume exact native process_exit and passed/skipped records without exposing private identities.
+      observable: Current workflow fails34 and passes28 of62 cases; prospective whole-public-projector tests pass62. The actual generated producer and collector retain failed and skipped setup records.
+    - case_id: 460-63-2
+      scenario_id: native-and-portable-pytest-failure-observation-schemas
+      method: test
+      intent: Omit malformed, ambiguous and over-budget observations while retaining portable counts and unchanged authority.
+      observable: Original immutable checker rejects all3 prospective body combinations; reviewed successor passes27 acceptance and mutation controls. Three independent body reviews return no findings. Actual activation equality and immutable pins are recorded in TDD_EVIDENCE.
+    - case_id: 460-63-3
+      scenario_id: native-and-portable-pytest-failure-observation-schemas
+      method: test
+      intent: Activate only exact independently reviewed observer bytes under the committed successor and preserve original gates.
+      observable: Checker612964a4/blob99a094f8 and wrapperSHA cf772194match. Whole workflow equality outside both bodies is verified. Full andSMART each pass304host proofs and6172supplier tests, with71conditional skips and95subtests. Fresh independent activation and security verification retain original trust boundaries; hosted acceptance remains separate.

@@ -1966,3 +1966,19 @@ The full retained CrossHair payload `No staged review-relevant files under packa
 #### Scenario: fixed producer and prefix classifications retain provenance
 - **WHEN** known tokens have a valid delimiter, installed coverage unavailable resembles its shorter token, or the known skip literal contains its internal semicolon
 - **THEN** only the exact approved classes are emitted, prefix lookalikes are excluded, and global findings acquire no side
+
+
+### Requirement: Native and portable pytest failure observation schemas
+
+The existing bounded Linux observers SHALL consume exactly one complete record representation per record list. Portable records SHALL use the existing `outcome` field without native `passed` or `skipped` fields. Native records SHALL have exact boolean `passed` and `skipped` fields, no `outcome` field, and SHALL NOT have both booleans true. Native records SHALL map skipped, passed and failed phase observations to the existing bounded count semantics. Mixed, dual, missing or malformed representations SHALL omit dependent observations. Existing entry, identity and aggregate bounds SHALL remain unchanged.
+
+The observer SHALL read native `process_exit` only when portable `exit_code` is absent. Both exit fields present SHALL omit the exit observation regardless of agreement. Records SHALL remain independently observable when the exit is unavailable. No record representation SHALL change acceptance, xfail interpretation, reporter authenticity or gate enforcement.
+
+#### Scenario: Actual native failed and skipped setup records
+- **WHEN** the actual native observer and artifact collector retain failed setup and skipped setup records with `process_exit`
+- **THEN** the two bounded projections retain the exact exit, structural record, call identity, failed setup and missing-terminal counts without exposing private identities
+- **AND** all commands, deadlines, signed reviewer assets and acceptance gates remain unchanged
+
+#### Scenario: Ambiguous producer representation remains unavailable
+- **WHEN** a complete record list mixes or duplicates representations, contains invalid native booleans or exceeds existing bounds
+- **THEN** dependent observations are omitted and independently valid portable counts retain their established behavior

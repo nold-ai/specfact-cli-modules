@@ -729,8 +729,8 @@ def test_indexed_deferral_admits_only_complete_approved_job_budget(
     _assert_local_deferral(worktree, tmp_path / "calls", expected)
 
 
-_PINNED_VALIDATOR_COMMIT = "56ac770d024e48c1444e09640ca5c92a7a524ed1"
-_PINNED_VALIDATOR_BLOB = "0bfb44b9edfcb196b002b998e2d20ab29866dd2c"
+_PINNED_VALIDATOR_COMMIT = "612964a42594bde3037e01f0e161e09e36426ea7"
+_PINNED_VALIDATOR_BLOB = "99a094f88bd524114d939cbb17c4feff541efe40"
 
 
 def _tampered_deferral_candidate(tmp_path, *, staged_checker, missing_caller, bootstrap=False):
@@ -1044,7 +1044,7 @@ def test_committed_ci_check_retains_actual_bootstrap_expiry(tmp_path: Path, case
         validator_present=False,
     )
     if case != "missing-bootstrap":
-        _git(worktree, "fetch", "--no-tags", str(REPO_ROOT), "56ac770d024e48c1444e09640ca5c92a7a524ed1")
+        _git(worktree, "fetch", "--no-tags", str(REPO_ROOT), "612964a42594bde3037e01f0e161e09e36426ea7")
     base = _git(worktree, "rev-parse", "origin/dev")
     if case == "squash-deleted":
         repository = tmp_path / "repository"
@@ -1185,22 +1185,21 @@ def test_observation_contract_retains_entire_workflow(tmp_path: Path, job_name: 
     marker = "PY_CANDIDATE_FAILURE" if job_name == "customer" else "PY_REVIEW_FAILURE"
     steps = document["jobs"][job_name]["steps"]
     step = next(item for item in steps if marker in item.get("run", ""))
-    match mutation:
-        case "body":
-            step["run"] = step["run"].replace("import json\n", "import json\nprint('private')\n", 1)
-        case "shell":
-            step["run"] += "\necho private\n"
-        case "delimiter":
-            step["run"] = step["run"].replace("\n" + marker + "\n", "\n" + marker + " \n")
-        case "duplicate_step":
-            steps.append(step.copy())
-        case "step_name":
-            step["name"] = "Unapproved observation"
-        case "step_environment":
-            step["env"] = {"PYTHONPATH": "candidate"}
-        case "step_position":
-            index = steps.index(step)
-            steps[index - 1], steps[index] = steps[index], steps[index - 1]
+    if mutation == "body":
+        step["run"] = step["run"].replace("import json\n", "import json\nprint('private')\n", 1)
+    if mutation == "shell":
+        step["run"] += "\necho private\n"
+    if mutation == "delimiter":
+        step["run"] = step["run"].replace("\n" + marker + "\n", "\n" + marker + " \n")
+    if mutation == "duplicate_step":
+        steps.append(step.copy())
+    if mutation == "step_name":
+        step["name"] = "Unapproved observation"
+    if mutation == "step_environment":
+        step["env"] = {"PYTHONPATH": "candidate"}
+    if mutation == "step_position":
+        index = steps.index(step)
+        steps[index - 1], steps[index] = steps[index], steps[index - 1]
     path.write_text(yaml.safe_dump(document, sort_keys=False))
     _git(repository, "add", ".")
     result = _check_observation_contract(repository, baseline)

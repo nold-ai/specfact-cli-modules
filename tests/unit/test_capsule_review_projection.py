@@ -1,9 +1,14 @@
 from __future__ import annotations
 
+import ast
+import importlib.util
 import json
+import pathlib
 import subprocess
 import sys
 from pathlib import Path
+from types import SimpleNamespace
+from typing import Any
 
 import pytest
 import yaml
@@ -1523,3 +1528,201 @@ def test_linux_crosshair_known_skip_class_means_retained_prefix_only(tmp_path, m
     )
     assert result["finding_observations"] == [{"analyzer": "contracts", "diagnostic_class": expected}]
     assert result["snapshot_observations"] == []
+
+
+@pytest.fixture(params=_FAILURE_MARKERS)
+def observe_native_projection(request, tmp_path, monkeypatch):
+    def project(target):
+        payload = {
+            "findings": [],
+            "analyzer_evidence": [
+                {
+                    "id": "targeted-pytest-coverage",
+                    "base": {
+                        "execution_state": "error",
+                        "target_execution": target,
+                    },
+                }
+            ],
+        }
+        result = _actual_failure_observations(tmp_path, monkeypatch, request.param, json.dumps(payload))
+        row = result["snapshot_observations"][0]
+        return {key: value for key, value in row.items() if key not in {"analyzer", "side", "execution_state"}}
+
+    return project
+
+
+def _native_projection_record(node="private::test", phase="call", passed=True, skipped=False):
+    return {"nodeid": node, "phase": phase, "passed": passed, "skipped": skipped, "wasxfail": "PRIVATE"}
+
+
+@pytest.mark.parametrize(
+    "records,expected",
+    [
+        ([_native_projection_record(phase="setup", passed=False)], (1, 0, 1, 1)),
+        ([_native_projection_record(phase="setup", passed=False, skipped=True)], (1, 0, 0, 0)),
+        ([_native_projection_record(), _native_projection_record(phase="teardown")], (2, 1, 0, 0)),
+        ([_native_projection_record(passed=False)], (1, 1, 0, 0)),
+        ([_native_projection_record(phase="collection")], (1, 0, 0, 1)),
+        ([], (0, 0, 0, 1)),
+    ],
+)
+def test_native_observer_native_records(observe_native_projection, records, expected):
+    result = observe_native_projection({"process_exit": 1, "records": records, "collected": ["private::test"]})
+    assert result["exit_code"] == 1
+    assert (
+        tuple(
+            result[key]
+            for key in (
+                "records_count",
+                "call_identity_count",
+                "failed_setup_records_count",
+                "unexecuted_collected_count",
+            )
+        )
+        == expected
+    )
+    assert "PRIVATE" not in str(result) and "private::test" not in str(result)
+
+
+_INVALID_RECORD_CASES = {
+    "passed-int": [{**_native_projection_record(), "passed": 1}],
+    "skipped-str": [{**_native_projection_record(), "skipped": "false"}],
+    "missing": [{"nodeid": "private::test", "phase": "call", "passed": True, "wasxfail": "PRIVATE"}],
+    "contradiction": [{**_native_projection_record(), "skipped": True}],
+    "dual": [{**_native_projection_record(), "outcome": "passed"}],
+    "mixed": [_native_projection_record(), {"nodeid": "b", "phase": "call", "outcome": "passed"}],
+    "bad-phase": [{**_native_projection_record(), "phase": "unknown"}],
+    "late-bad": [_native_projection_record()] * 100
+    + [{"nodeid": "bad", "phase": "call", "passed": None, "skipped": False}],
+}
+
+
+@pytest.mark.parametrize("fault", _INVALID_RECORD_CASES)
+def test_native_observer_native_invalid_records_omit_all_record_counts(observe_native_projection, fault):
+    result = observe_native_projection({"records": _INVALID_RECORD_CASES[fault], "collected": ["private::test"]})
+    assert (
+        not {"records_count", "call_identity_count", "failed_setup_records_count", "unexecuted_collected_count"}
+        & result.keys()
+    )
+
+
+@pytest.mark.parametrize(
+    "fault", ["empty", "long", "record-budget", "combined-budget", "at-combined-budget", "entry-limit"]
+)
+def test_native_observer_native_identity_budgets(observe_native_projection, fault):
+    record = _native_projection_record(
+        node={"empty": "", "entry-limit": "x"}.get(fault, "x" * (65537 if fault == "long" else 65536))
+    )
+    records = [record] * (
+        129
+        if fault == "record-budget"
+        else 64
+        if fault in ("combined-budget", "at-combined-budget")
+        else 100001
+        if fault == "entry-limit"
+        else 1
+    )
+    collected = ["x" * 65536] * (65 if fault == "combined-budget" else 64 if fault == "at-combined-budget" else 1)
+    result = observe_native_projection({"records": records, "collected": collected})
+    if fault == "entry-limit":
+        assert "records_count" not in result
+        return
+    assert result["records_count"] == len(records)
+    assert ("call_identity_count" in result) == (fault in ("combined-budget", "at-combined-budget"))
+    assert ("unexecuted_collected_count" in result) == (fault == "at-combined-budget")
+
+
+@pytest.mark.parametrize(
+    "target,expected",
+    [
+        ({"process_exit": 0}, 0),
+        ({"process_exit": 5}, 5),
+        ({"process_exit": True}, None),
+        ({"process_exit": -1}, None),
+        ({"process_exit": 6}, None),
+        ({"process_exit": "1"}, None),
+        ({"exit_code": 2}, 2),
+        ({"exit_code": 2, "process_exit": 2}, None),
+        ({"exit_code": 2, "process_exit": 1}, None),
+    ],
+)
+def test_native_observer_exit_schema(observe_native_projection, target, expected):
+    assert observe_native_projection(target).get("exit_code") == expected
+
+
+def test_native_observer_portable_counts_remain_exact(observe_native_projection):
+    assert observe_native_projection(
+        {
+            "exit_code": 1,
+            "records": [{"nodeid": "a", "phase": "setup", "outcome": "failed"}],
+            "collected": ["a"],
+            "coverage": {"files": {"src.py": {}}},
+        }
+    ) == {
+        "target_execution_observed": True,
+        "coverage_object_observed": True,
+        "coverage_files_count": 1,
+        "exit_code": 1,
+        "collected_count": 1,
+        "records_count": 1,
+        "call_identity_count": 0,
+        "failed_setup_records_count": 1,
+        "unexecuted_collected_count": 1,
+    }
+
+
+def _actual_native_observer_class():
+    runner = REPO_ROOT / "packages/specfact-code-review/src/specfact_code_review/run/runner.py"
+    tree = ast.parse(runner.read_text())
+    producer = next(
+        node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == "_pytest_observer_script"
+    )
+    namespace: dict[str, Any] = {
+        "_SOURCE_ROOT": REPO_ROOT,
+        "Path": Path,
+        "sys": sys,
+        "_pytest_in_capsule": lambda: False,
+    }
+    exec(compile(ast.Module(body=[producer], type_ignores=[]), str(runner), "exec"), namespace)
+    generated = ast.parse(namespace["_pytest_observer_script"]())
+    observer_class = next(node for node in generated.body if isinstance(node, ast.ClassDef) and node.name == "Observer")
+    namespace = {"json": json, "pathlib": pathlib}
+    exec(
+        compile(ast.Module(body=[observer_class], type_ignores=[]), "<actual-native-observer>", "exec"),
+        namespace,
+    )
+    return namespace["Observer"]
+
+
+def test_native_observer_actual_native_producer_failed_setup_and_skip(observe_native_projection, tmp_path):
+    observer_path = tmp_path / "observer.json"
+    instance = _actual_native_observer_class()(observer_path)
+    for nodeid, skipped in [("private::failed", False), ("private::skipped", True)]:
+        instance.pytest_itemcollected(SimpleNamespace(nodeid=nodeid))
+        instance.pytest_runtest_logreport(SimpleNamespace(nodeid=nodeid, when="setup", passed=False, skipped=skipped))
+    instance.pytest_sessionfinish(None, 1)
+    coverage = tmp_path / "coverage.json"
+    coverage.write_text('{"files": {"private.py": {}}}')
+    junit = tmp_path / "junit.xml"
+    junit.write_text("<testsuite/>")
+    path = REPO_ROOT / "packages/specfact-code-review/src/specfact_code_review/run/native_worker_evidence.py"
+    spec = importlib.util.spec_from_file_location("native_evidence_proof", path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    target = module._capture_pytest_observation(
+        (SimpleNamespace(returncode=1), coverage, observer_path, junit), SimpleNamespace(temporary=tmp_path)
+    )
+    result = observe_native_projection(target)
+    assert result == {
+        "target_execution_observed": True,
+        "coverage_object_observed": True,
+        "coverage_files_count": 1,
+        "exit_code": 1,
+        "collected_count": 2,
+        "records_count": 4,
+        "call_identity_count": 0,
+        "failed_setup_records_count": 1,
+        "unexecuted_collected_count": 1,
+    }

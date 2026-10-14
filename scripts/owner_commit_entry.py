@@ -14,8 +14,8 @@ from icontract import ensure
 
 
 CHECKER = "scripts/check_capsule_deferral.py"
-BOOTSTRAP_COMMIT = "56ac770d024e48c1444e09640ca5c92a7a524ed1"
-BOOTSTRAP_BLOB = "0bfb44b9edfcb196b002b998e2d20ab29866dd2c"
+BOOTSTRAP_COMMIT = "612964a42594bde3037e01f0e161e09e36426ea7"
+BOOTSTRAP_BLOB = "99a094f88bd524114d939cbb17c4feff541efe40"
 CAPSULE_PATHS = (
     "packages/specfact-code-review",
     ".github/workflows/capsule-customer-execution.yml",
