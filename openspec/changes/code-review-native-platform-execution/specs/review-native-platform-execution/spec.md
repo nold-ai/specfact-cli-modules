@@ -1788,7 +1788,7 @@ The output sink SHALL read the same standard TextIOBase readonly closed descript
 
 ### Requirement: Faithful bounded standard output protocol
 
-The scoped target stdout/stderr discard adapter SHALL preserve each original standard TextIOWrapper stream's encoding, errors, line-buffering and write-through metadata, native reconfiguration and binary-buffer write protocol without mutating or writing target data to the original reporter streams. Text, binary-buffer and raw-buffer writes SHALL share the unchanged four-MiB per-stream physical budget, and text SHALL retain its canonical UTF-8 charge using the active error policy. Draining accepted writes synchronously SHALL reject overflow before analyzed contract acceptance. The adapter SHALL preserve real closed/type/encoding error semantics and contain no readable output collector. Default standalone UTF-8/strict behavior, original analyzer args/options/status/counterexamples/reporter identity and restoration SHALL remain. Direct OS descriptor writes and general file/seek emulation remain outside the existing scoped output-isolation claim.
+The scoped target stdout/stderr discard adapter SHALL preserve each original standard TextIOWrapper stream's encoding, errors, line-buffering and write-through metadata, native reconfiguration and binary-buffer write protocol without mutating or writing target data to the original reporter streams. Text, binary-buffer and raw-buffer writes SHALL share the unchanged four-MiB per-stream physical budget, and text SHALL retain an independent four-MiB logical UTF-8 charge derived from successfully written original text. Native encoding SHALL be the sole executor of the active codec error policy. Each lone surrogate SHALL count as three logical bytes without invoking a codec error handler. Draining accepted writes synchronously SHALL reject overflow before analyzed contract acceptance. The adapter SHALL preserve real closed/type/encoding error semantics and contain no readable output collector. Default standalone UTF-8/strict behavior, original analyzer args/options/status/counterexamples/reporter identity and restoration SHALL remain. Direct OS descriptor writes and general file/seek emulation remain outside the existing scoped output-isolation claim.
 
 #### Scenario: real CLI standard metadata and reconfiguration
 - **WHEN** analyzed code reads its standard codec/error/line/write metadata or reconfigures its private standard output before writing
@@ -1807,6 +1807,14 @@ The physical counter SHALL include every actual text/binary/raw byte. The separa
 #### Scenario: alternate codec near the exact text limit
 - **WHEN** Latin-1 and UTF-16 text together reach exactly four MiB of canonical UTF-8 while physical output remains below four MiB
 - **THEN** the valid writes succeed and the next text byte rejects at the unchanged canonical limit
+
+#### Scenario: native codec callbacks run only for physical encoding
+- **WHEN** analyzed code configures a stateful or encoding-specific error handler and writes text requiring native codec error handling
+- **THEN** the adapter invokes the handler exactly as the native TextIOWrapper does, logical accounting never dispatches an error handler, native accepted text remains accepted below both limits, and native errors retain their precedence
+
+#### Scenario: callback-free logical surrogate bound
+- **WHEN** native encoding accepts original text containing lone surrogates under ignore, replace, escape, or a custom error policy
+- **THEN** each original surrogate counts as three logical UTF-8 bytes, both four-MiB limits remain independent and cumulative across reconfiguration, and the next write above either limit rejects with the existing output-limit error
 
 #### Scenario: saved binary buffer rejects writes after detachment
 - **WHEN** analyzed code detaches a standard stream's saved binary buffer and writes through that buffer

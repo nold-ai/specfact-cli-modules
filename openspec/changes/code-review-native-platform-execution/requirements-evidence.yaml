@@ -1203,6 +1203,12 @@ requirements:
       intent: Real standard-stream CLI baselines and pinned CrossHair RED/GREEN cover metadata, reconfiguration and binary writes with unchanged reporter and quota controls.
       observable: Genuine false contract failures precede native bounded adapters; valid protocol succeeds, actual counterexamples and all bounds still reject.
 
+    - case_id: 460-46-2
+      scenario_id: faithful-bounded-standard-output-protocol
+      method: test
+      intent: Apply the owner-approved callback-free logical UTF-8 accounting while preserving native error behavior and both four-MiB ceilings.
+      observable: Six genuine failures and four controls precede the repair; all129 CrossHair cases pass afterward. Stateful callbacks run once, native UTF-7 accepts its surrogate, string and registry overrides cannot run during accounting, and exact logical and mixed physical bounds remain enforced.
+
   openspec:code-review-native-platform-execution:review-native-platform-execution:no-reporter-descriptor-capability-from-discard-streams:
     rationale: Preserve standard discard behavior without handing analyzed code the original reporter write capability.
     stakeholder_refs:
