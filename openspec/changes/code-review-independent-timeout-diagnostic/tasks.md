@@ -131,3 +131,25 @@ No native Linux proof or native readiness follows from local mocked controls. Pa
 - [x] Re-run the 28 portable controls and verify the new case skips with its Linux reason on Darwin.
 - [ ] Execute the original-body negative and all twelve unchanged real positives at the final exact Linux head/core before alias admission.
 - [ ] Complete root-owned full gates, strict signatures, fresh affected-source reviews and CodeRabbit before publication.
+
+
+## Linux40 authenticated experiment boundary, 2026-10-15
+
+- [x] Extend the approved existing specification before tests and implementation.
+- [x] Retain meaningful RED for lifecycle cleanup/smoke and missing/skipped mandatory negative accounting.
+- [x] Implement the dedicated public logger teardown and bounded failure-retained pre-scan smoke.
+- [x] Preserve original real bodies and frozen inputs, run focused local GREEN and hand off hashes.
+- [ ] Root completes all ordinary gates, fresh reviews, exact-source CodeRabbit and strict signatures.
+- [ ] Root obtains all seventeen exact-head/core Linux proofs before any new alias26 admission.
+- [ ] Actual signed oldSDK Linux smoke and original native gate remain required before acceptance.
+
+
+## Linux41 bounded consumption correction
+
+- [x] Specify deterministic portable recorder ownership and two additive fresh-child real signal consumption controls.
+- [x] Demonstrate no-op recorder and fake-PID counterfactual rejection without claiming reproduction of the unknown late-delivery failure.
+- [x] Shorten the fixed smoke invocation with a named argv, preserving limits and behavior without lint suppression.
+- [x] Require seventeen exact Linux cases and reject missing, skipped, failed, errored or duplicated consumption controls.
+- [x] Preserve original twelve real Linux bodies and production capture/cancellation/authentication/preparation; allow only the named portable body as an additional old-prefix exception.
+- [ ] Complete root-owned full ordinary gates, fresh independent reviews, normal hooks and seven strict existing-key signatures.
+- [ ] Require exact final-head/core seventeen-case Linux proof before alias26 creation, then authenticated oldSDK smoke inside the admitted job before any direct scan; original native acceptance remains blocking.

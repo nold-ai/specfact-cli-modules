@@ -158,7 +158,7 @@ The current host SHALL derive member diagnostics from canonical findings. Public
 
 
 ### Requirement: Run one admitted direct parser experiment
-The maintainer SHALL obtain parser coordinates through one dedicated diagnostic controller, independently of required native review acceptance. The sole scanner trigger SHALL be creation of `codex/pr510-semgrep-once-25`; before provisioning the controller SHALL require created true, deleted false, zero before, after equal to the checked-out tooling SHA, attempt one and a single tooling parent equal to frozen source `22c0f92f681aac7d9edbfde305963823866d0a7e`. Root SHALL separately record the reviewed tooling SHA and verify alias absence before its single creation. No PR-branch scanner trigger, dispatch, matrix or retry is admitted.
+The maintainer SHALL obtain parser coordinates through one dedicated diagnostic controller, independently of required native review acceptance. The sole scanner trigger SHALL be creation of `codex/pr510-semgrep-once-26`; before provisioning the controller SHALL require created true, deleted false, zero before, after equal to the checked-out tooling SHA, attempt one and a single tooling parent equal to TOOLING_PARENT `0974e482f546053470d3cc84086ef8a198951abb`. Root SHALL separately record the reviewed tooling SHA and verify alias absence before its single creation. No PR-branch scanner trigger, dispatch, matrix or retry is admitted.
 
 #### Scenario: Reject repeated or mismatched admission
 - **WHEN** ref, parent, before, after, created, deleted or attempt differs
@@ -265,7 +265,7 @@ The controller SHALL authenticate installed code before imports and retain same-
 
 #### Scenario: Tooling admission preserves frozen subject inputs
 - **WHEN** a normal follow-up tooling commit is admitted
-- **THEN** its sole parent SHALL be af8d70e63b137f852db586ec2207761d0f374dda through TOOLING_PARENT
+- **THEN** its sole parent SHALL be 0974e482f546053470d3cc84086ef8a198951abb through TOOLING_PARENT
 - **AND** SUBJECT_HEAD 22c0f92f681aac7d9edbfde305963823866d0a7e and all frozen subject/base inputs SHALL remain unchanged
 
 #### Scenario: Original Linux assertion failure reaches the controller
@@ -275,3 +275,26 @@ The controller SHALL authenticate installed code before imports and retain same-
 - **AND** only the copied decorated callable's live bootstrap global SHALL replace exactly one fixed proof-file operand with the literal private absolute path, preserving real repository, SDK/owner identities, thread checks, argument binding, one unwrapped dispatch, current Python -I and eight-second timeout
 - **AND** invoking that callable against a fresh private case directory SHALL raise AssertionError containing both Real-case controller failed and the unique mutation message; any other refusal or timeout SHALL fail the negative control
 - **AND** this negative and all twelve unchanged positives SHALL pass at the exact Linux head/core before alias admission; Darwin skips SHALL remain pending and SHALL NOT count as Linux evidence
+
+
+#### Scenario: Authenticated experiment releases owned logger resources
+- **WHEN** the dedicated experiment worker has authenticated and imported the exact signed old SDK 0.51.2
+- **THEN** only that experiment SHALL call public LoggerSetup.shutdown_listeners before materialization and retain actual main-thread and thread-count state before and after cleanup
+- **AND** surviving foreign threads or suppressed shutdown failures SHALL remain nonaccepting through actual state checks and the unchanged production capture guard
+- **AND** after materialization and before any scanner call a harmless real capture SHALL prove exact stdout, empty stderr, exit zero, no gap and completed cleanup, using the two-second cooperative execution budget, separate existing two-second reap budget and 1024-byte output cap without a hard total wall-clock guarantee
+- **AND** a separate bounded public runtime-smoke receipt SHALL retain authenticated runner/sandbox hashes, fixed status, actual thread state and capture result on success or failure without paths, raw output, environment or stacks; it SHALL never grant native acceptance
+- **AND** the original twelve Linux positives, linux37 real foreign-thread guard, linux38 original-body mutation, linux40 actual core logger lifecycle and both linux41 signal consumption cases SHALL each be mandatory with exact presence and no duplicate, skip, error or failure
+- **AND** ordinary tests SHALL use the pinned core and current candidate without network provisioning, explicitly distinct from the actual Linux experiment's exact signed old SDK authentication
+- **AND** alias25 and failed run38682534072 SHALL remain consumed permanently; only new alias26 with TOOLING_PARENT0974 may be admitted after independent root checks, preserving frozen subject22/base593 inputs and all existing scan, time and byte caps
+
+
+#### Scenario: Observe cancellation consumption without fake-PID success
+
+- **WHEN** the portable pending-cancellation fixture invokes its installed owned recorder
+- **THEN** its actual cancellation instance SHALL record the selected signal before capture returns, and an externally checked waitpid sentinel SHALL remain unused
+- **AND** both existing ambient mock-context variants SHALL remain covered
+- **WHEN** fresh single-thread controllers deliver actual SIGTERM or SIGINT during blocked PID handoff
+- **THEN** the real recorder SHALL consume that signal before restoration, reap the owned mock PID once, restore both handlers and mask, and close acquired descriptors without waitpid fallback
+- **AND** the original twelve Linux cases and three existing transport, mutation and logger cases plus two consumption cases SHALL be mandatory, totaling seventeen, without missing, duplicate, skipped, failed or errored cases
+- **AND** production capture, cancellation, authentication and preparation SHALL remain unchanged; the original late-delivery cause remains UNKNOWN
+- **AND** the old-prefix exception expands only to the portable `test_linux31_pending_cancellation_waits_for_mock_pid_ownership` body in addition to previously accepted exceptions; original twelve real-case bodies and decorators remain unchanged

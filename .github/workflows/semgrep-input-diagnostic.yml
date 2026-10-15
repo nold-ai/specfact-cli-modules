@@ -2,7 +2,7 @@ name: One-use direct Semgrep input diagnostic
 on:
   push:
     branches:
-      - codex/pr510-semgrep-once-25
+      - codex/pr510-semgrep-once-26
   pull_request:
     branches: [dev]
     paths:
@@ -30,7 +30,7 @@ jobs:
         run: |
           set -euo pipefail
           /usr/bin/python3 -I scripts/semgrep_input_diagnostic.py --phase admit \
-            --root "$RUNNER_TEMP/semgrep-once-25" --repository "$GITHUB_WORKSPACE"
+            --root "$RUNNER_TEMP/semgrep-once-26" --repository "$GITHUB_WORKSPACE"
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
         timeout-minutes: 3
         with:
@@ -40,20 +40,21 @@ jobs:
         run: |
           set -euo pipefail
           python -I scripts/semgrep_input_diagnostic.py --phase setup \
-            --root "$RUNNER_TEMP/semgrep-once-25" --repository "$GITHUB_WORKSPACE"
+            --root "$RUNNER_TEMP/semgrep-once-26" --repository "$GITHUB_WORKSPACE"
       - name: Retain only bounded public diagnostic evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: semgrep-once-25-public
+          name: semgrep-once-26-public
           path: |
-            ${{ runner.temp }}/semgrep-once-25/evidence/public.json
-            ${{ runner.temp }}/semgrep-once-25/evidence/*-failure.public.json
+            ${{ runner.temp }}/semgrep-once-26/evidence/public.json
+            ${{ runner.temp }}/semgrep-once-26/evidence/runtime-smoke.public.json
+            ${{ runner.temp }}/semgrep-once-26/evidence/*-failure.public.json
           if-no-files-found: ignore
           retention-days: 14
 
   linux-host-proof:
-    if: github.event_name == 'pull_request' && github.head_ref != 'codex/pr510-semgrep-once-25'
+    if: github.event_name == 'pull_request' && github.head_ref != 'codex/pr510-semgrep-once-26'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     env:
@@ -125,6 +126,10 @@ jobs:
               "test_linux30_pre_namespace_authentication_precedes_child_execution": 1,
               "test_linux30_descendant_holding_pipe_is_observed_and_reaped": 1,
               "test_linux31_outermost_handoff_reaps_real_child_and_descendant": 5,
+              "test_linux37_fresh_transport_and_real_guard": 1,
+              "test_linux38_original_assertion_mutation_is_nonaccepting": 1,
+              "test_linux40_authenticated_logger_lifecycle": 1,
+              "test_linux41_real_signal_consumed_before_capture_return": 2,
           }
           directory = Path(os.environ["PROOF_DIR"])
           cases = list(ET.parse(directory / "junit.xml").iter("testcase"))

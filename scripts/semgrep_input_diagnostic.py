@@ -15,10 +15,10 @@ from pathlib import Path, PurePosixPath
 from typing import Any
 
 
-TOOLING_PARENT = "af8d70e63b137f852db586ec2207761d0f374dda"
+TOOLING_PARENT = "0974e482f546053470d3cc84086ef8a198951abb"
 SUBJECT_HEAD = "22c0f92f681aac7d9edbfde305963823866d0a7e"
 SUBJECT_BASE = "593656f675eaf4954b609aca51aa6504367dc02e"
-ALIAS = "refs/heads/codex/pr510-semgrep-once-25"
+ALIAS = "refs/heads/codex/pr510-semgrep-once-26"
 RAW_LIMIT = 32 * 1024 * 1024
 PUBLIC_LIMIT = 256 * 1024
 KEY_SHA256 = "4e54ffb02307e1a85c166c40aba6d1bc40fbb9a8ef40bf756f8870e5bb08d1c8"
@@ -693,8 +693,65 @@ def prepare(root, directory):
         output.write(json.dumps(record, sort_keys=True).encode())
 
 
+def _experiment_inputs(runner, sandbox, repository, directory):
+    from specfact_cli.common.logger_setup import LoggerSetup
+
+    smoke = {
+        "status": "INCOMPLETE",
+        "acceptance": False,
+        "platform": sys.platform,
+        "before": {
+            "main_thread": threading.current_thread() is threading.main_thread(),
+            "thread_count": threading.active_count(),
+        },
+        "after": None,
+        "runner_sha256": None,
+        "sandbox_sha256": None,
+        "payload_sha256": PAYLOAD_SHA256,
+        "lock_sha256": LOCK_SHA256,
+        "capture": None,
+    }
+    try:
+        smoke["runner_sha256"] = hashlib.sha256(Path(runner.__file__).read_bytes()).hexdigest()
+        smoke["sandbox_sha256"] = hashlib.sha256(Path(sandbox.__file__).read_bytes()).hexdigest()
+        try:
+            LoggerSetup.shutdown_listeners()
+        finally:
+            smoke["after"] = {
+                "main_thread": threading.current_thread() is threading.main_thread(),
+                "thread_count": threading.active_count(),
+            }
+        if smoke["after"] != {"main_thread": True, "thread_count": 1}:
+            raise ValueError("single_thread_required")
+        sides = materialize(repository, directory)
+        smoke_command = [sys.executable, "-I", "-c", "print('specfact-runtime-smoke')"]
+        captured = capture(smoke_command, directory, "runtime-smoke", 2, 1024)
+        smoke["capture"] = captured
+        if (
+            captured["returncode"] != 0
+            or captured["gap"]
+            or not captured["cleaned"]
+            or (directory / "runtime-smoke.stdout").read_bytes() != b"specfact-runtime-smoke\n"
+            or (directory / "runtime-smoke.stderr").read_bytes() != b""
+        ):
+            raise ValueError("runtime_smoke")
+        smoke["status"] = "SMOKE_COMPLETE"
+        return sides, captured["bytes"]
+    finally:
+        primary = sys.exception()
+        try:
+            encoded = json.dumps(smoke, sort_keys=True).encode()
+            if len(encoded) > 2048:
+                encoded = b'{"status":"INCOMPLETE","acceptance":false}'
+            with private_file(directory / "runtime-smoke.public.json") as output:
+                output.write(encoded)
+        except BaseException:
+            if primary is None:
+                raise
+
+
 def experiment(root, directory, repository):
-    _runner, sandbox = authenticate(root)
+    runner, sandbox = authenticate(root)
     record = json.loads((directory / "runtime.private.json").read_bytes())
     runtime = Path(record["root"])
     if (
@@ -702,9 +759,9 @@ def experiment(root, directory, repository):
         or root_digest(runtime) != record["prepared_root_digest"]
     ):
         raise ValueError("runtime_changed")
-    sides = materialize(repository, directory)
+    sides, smoke_bytes = _experiment_inputs(runner, sandbox, repository, directory)
     public = {"status": "INCOMPLETE", "acceptance": False, "original_guest": "UNKNOWN", "calls": []}
-    remaining = RAW_LIMIT
+    remaining = RAW_LIMIT - smoke_bytes
     for side, member in CALLS:
         snapshot, configs, sources, rules = sides[side]
         name = f"{side}-{member}"
@@ -804,7 +861,7 @@ def experiment(root, directory, repository):
     if unchanged and len(public["calls"]) == 4 and all(c["status"] == "DIAGNOSTIC_COMPLETE" for c in public["calls"]):
         public["status"] = "DIAGNOSTIC_COMPLETE"
     encoded = json.dumps(public, sort_keys=True).encode()
-    if len(encoded) > PUBLIC_LIMIT - 1024:
+    if len(encoded) > PUBLIC_LIMIT - 4096:
         encoded = b'{"status":"INCOMPLETE","acceptance":false,"gap":"public_limit"}'
     with private_file(directory / "public.json") as output:
         output.write(encoded)

@@ -1309,7 +1309,7 @@ def test_linux30_projection_rejects_unbound_evidence(mutation):
 def test_linux30_admission_rejects_before_setup(field, value):
     owner = _linux30_owner()
     event = {
-        "ref": "refs/heads/codex/pr510-semgrep-once-25",
+        "ref": "refs/heads/codex/pr510-semgrep-once-26",
         "before": "0" * 40,
         "after": "a" * 40,
         "created": True,
@@ -1378,7 +1378,7 @@ def test_linux30_frozen_manifest_and_unique_workflow():
     assert sum(row["status"] == "present" for row in owner["INPUTS"]["base"].values()) == 23
     assert sum(row["status"] == "absent" for row in owner["INPUTS"]["base"].values()) == 7
     workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/semgrep-input-diagnostic.yml").read_text())
-    assert workflow[True]["push"] == {"branches": ["codex/pr510-semgrep-once-25"]}
+    assert workflow[True]["push"] == {"branches": ["codex/pr510-semgrep-once-26"]}
     assert workflow[True]["pull_request"] == {
         "branches": ["dev"],
         "paths": [
@@ -1608,15 +1608,38 @@ def test_linux31_pending_cancellation_waits_for_mock_pid_ownership(tmp_path, mon
     def cancel(*_args):
         raise InterruptedError("PRIMARY_CANCELLATION")
 
-    def spawn(*_args):
-        os.kill(os.getpid(), selected)
+    observations = []
+    wait_calls = []
+
+    def spawn(*args):
+        inherited = args[-1]
+        recorder = signal.getsignal(selected)
+        observations.append((getattr(recorder, "__self__", None) is inherited, inherited))
+        assert callable(recorder)
+        recorder(selected, None)
         return 123456789
+
+    def forbidden_wait(*args):
+        wait_calls.append(args)
+        raise ChildProcessError("LINUX41_FAKE_PID_WAIT")
 
     previous = signal.signal(selected, cancel)
     monkeypatch.setitem(capture.__globals__, "_spawn", spawn)
-    monkeypatch.setitem(capture.__globals__, "_reap_tree", lambda pid: reaped.append(pid) or True)
+    consumed_at_reap = []
+
+    def reap(pid):
+        reaped.append(pid)
+        consumed_at_reap.append(observations[0][1].first_signal)
+        return True
+
+    monkeypatch.setitem(capture.__globals__, "_reap_tree", reap)
+    monkeypatch.setattr(os, "waitpid", forbidden_wait)
     try:
         result = capture(["unused"], tmp_path, "pending", 0.1, 1024)
+        assert len(observations) == 1 and observations[0][0]
+        assert observations[0][1].first_signal == selected, "LINUX41_SIGNAL_NOT_CONSUMED"
+        assert wait_calls == [], "LINUX41_FAKE_PID_WAIT_USED"
+        assert consumed_at_reap == [selected]
         assert result["gap"] == "supervision_failed"
         assert result["cleaned"] is True
         assert reaped == [123456789]
@@ -1783,7 +1806,7 @@ def test_linux31_valid_admission_accepts_exact_single_parent():
 def test_linux31_host_workflow_is_exact_head_and_separate_from_scanner():
     workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/semgrep-input-diagnostic.yml").read_text())
     host = workflow["jobs"]["linux-host-proof"]
-    assert host["if"] == "github.event_name == 'pull_request' && github.head_ref != 'codex/pr510-semgrep-once-25'"
+    assert host["if"] == "github.event_name == 'pull_request' && github.head_ref != 'codex/pr510-semgrep-once-26'"
     assert host["runs-on"] == "ubuntu-24.04"
     assert host["timeout-minutes"] == 20
     steps = host["steps"]
@@ -1824,6 +1847,10 @@ def test_linux31_workflow_rejects_incomplete_linux_junit(tmp_path, mutation):
         ("test_linux30_pre_namespace_authentication_precedes_child_execution", 1),
         ("test_linux30_descendant_holding_pipe_is_observed_and_reaped", 1),
         ("test_linux31_outermost_handoff_reaps_real_child_and_descendant", 5),
+        ("test_linux37_fresh_transport_and_real_guard", 1),
+        ("test_linux38_original_assertion_mutation_is_nonaccepting", 1),
+        ("test_linux40_authenticated_logger_lifecycle", 1),
+        ("test_linux41_real_signal_consumed_before_capture_return", 2),
     ]:
         for index in range(count):
             ET.SubElement(suite, "testcase", name=f"{name}[{index}]")
@@ -2226,6 +2253,11 @@ def test_linux32_late_capture_cancellation_aborts_actual_experiment_loop(tmp_pat
     monkeypatch.setitem(
         namespace, "materialize", lambda *_: {side: (tmp_path, tmp_path, {}, {}) for side in ("head", "base")}
     )
+    monkeypatch.setitem(
+        namespace,
+        "_experiment_inputs",
+        lambda *_: ({side: (tmp_path, tmp_path, {}, {}) for side in ("head", "base")}, 0),
+    )
     owner["experiment"](tmp_path, tmp_path, tmp_path)
     report = json.loads((tmp_path / "public.json").read_text())
     assert events.count("spawn") == (1 if phase == "reap" else 0)
@@ -2538,13 +2570,13 @@ def test_linux37_actual_workflow_journal(tmp_path, shell):
 def test_linux37_admits_tooling_parent_without_retargeting_subject():
     owner = _linux30_owner()
     event = {
-        "ref": "refs/heads/codex/pr510-semgrep-once-25",
+        "ref": "refs/heads/codex/pr510-semgrep-once-26",
         "before": "0" * 40,
         "after": "a" * 40,
         "created": True,
         "deleted": False,
     }
-    assert owner["admit"](event, "a" * 40, "1", ["af8d70e63b137f852db586ec2207761d0f374dda"]) is None
+    assert owner["admit"](event, "a" * 40, "1", ["0974e482f546053470d3cc84086ef8a198951abb"]) is None
     with pytest.raises(ValueError, match="admission"):
         owner["admit"](event, "a" * 40, "1", [owner["SUBJECT_HEAD"]])
 
@@ -2720,3 +2752,331 @@ def test_linux38_original_assertion_mutation_is_nonaccepting(tmp_path):
     with pytest.raises(AssertionError, match="Real-case controller failed") as failure:
         copied_case(case_root)
     assert message in str(failure.value)
+
+
+@_linux30_controller
+def test_linux40_authenticated_logger_lifecycle(tmp_path):
+    import hashlib
+    import threading
+
+    import specfact_cli
+    from specfact_cli.common.logger_setup import LoggerSetup
+    from specfact_cli.registry import module_installer
+
+    from specfact_code_review.run import runner, sandbox
+
+    assert specfact_cli.__version__ == "0.55.4"
+    core = Path(os.environ["SPECFACT_CLI_REPO"])
+    assert (
+        hashlib.sha256(Path(module_installer.__file__).read_bytes()).digest()
+        == hashlib.sha256((core / "src/specfact_cli/registry/module_installer.py").read_bytes()).digest()
+    )
+    listeners = list(LoggerSetup._log_listeners.values())
+    assert listeners and all(listener._thread is not None and listener._thread.is_alive() for listener in listeners)
+    assert threading.current_thread() is threading.main_thread()
+    assert threading.active_count() == 2
+    owner = _linux30_owner()
+    runtime = tmp_path / "cache/invocations/runtime"
+    runtime.mkdir(parents=True)
+    release, ready = threading.Event(), threading.Event()
+
+    def foreign():
+        ready.set()
+        release.wait(5)
+
+    thread = threading.Thread(target=foreign)
+    thread.start()
+    try:
+        assert ready.wait(2)
+        with pytest.MonkeyPatch.context() as patch:
+            namespace = owner["experiment"].__globals__
+            patch.setitem(namespace, "authenticate", lambda *_: (runner, sandbox))
+            patch.setitem(namespace, "materialize", lambda *_: {})
+            patch.setitem(namespace, "CALLS", ())
+            blocked = tmp_path / "blocked"
+            blocked.mkdir()
+            (blocked / "runtime.private.json").write_text(
+                json.dumps({"root": str(runtime), "prepared_root_digest": owner["root_digest"](runtime)})
+            )
+            with pytest.raises(ValueError, match=r"^single_thread_required$"):
+                owner["experiment"](tmp_path, blocked, REPO_ROOT)
+            assert thread.is_alive() and threading.active_count() == 2
+            assert all(listener._thread is None for listener in listeners)
+            with pytest.raises(ValueError, match=r"^single_thread_required$"):
+                owner["capture"]([sys.executable, "-c", "raise SystemExit(99)"], blocked, "guard", 0.2, 1024)
+            assert not (blocked / "guard.stdout").exists()
+            receipt = json.loads((blocked / "runtime-smoke.public.json").read_text())
+            assert receipt["status"] == "INCOMPLETE" and receipt["acceptance"] is False
+            assert receipt["before"] == {"main_thread": True, "thread_count": 3}
+            assert receipt["after"] == {"main_thread": True, "thread_count": 2}
+            assert receipt["capture"] is None
+    finally:
+        release.set()
+        thread.join(2)
+    assert not thread.is_alive() and threading.active_count() == 1
+    if sys.platform == "linux":
+        complete = tmp_path / "complete"
+        complete.mkdir()
+        (complete / "runtime.private.json").write_text(
+            json.dumps({"root": str(runtime), "prepared_root_digest": owner["root_digest"](runtime)})
+        )
+        with pytest.MonkeyPatch.context() as patch:
+            namespace = owner["experiment"].__globals__
+            patch.setitem(namespace, "authenticate", lambda *_: (runner, sandbox))
+            patch.setitem(namespace, "materialize", lambda *_: {})
+            patch.setitem(namespace, "CALLS", ())
+            owner["experiment"](tmp_path, complete, REPO_ROOT)
+        receipt = json.loads((complete / "runtime-smoke.public.json").read_text())
+        assert receipt["status"] == "SMOKE_COMPLETE" and receipt["acceptance"] is False
+        assert receipt["capture"] == {"returncode": 0, "bytes": 23, "gap": None, "cleaned": True}
+        assert receipt["runner_sha256"] == hashlib.sha256(Path(runner.__file__).read_bytes()).hexdigest()
+        assert receipt["sandbox_sha256"] == hashlib.sha256(Path(sandbox.__file__).read_bytes()).hexdigest()
+        assert str(tmp_path) not in json.dumps(receipt)
+        assert not owner["_children"]()
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        "test_linux37_fresh_transport_and_real_guard",
+        "test_linux38_original_assertion_mutation_is_nonaccepting",
+        "test_linux40_authenticated_logger_lifecycle",
+        "test_linux41_real_signal_consumed_before_capture_return",
+    ],
+)
+@pytest.mark.parametrize("mutation", ["missing", "skipped", "failure", "error", "duplicate", "complete"])
+def test_linux40_workflow_requires_negative_and_logger_controls(tmp_path, name, mutation):
+    import xml.etree.ElementTree as ET
+
+    workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/semgrep-input-diagnostic.yml").read_text())
+    step = next(
+        item
+        for item in workflow["jobs"]["linux-host-proof"]["steps"]
+        if item.get("name") == "Require every real Linux lifecycle proof"
+    )
+    script = step["run"].split("python -I - <<'PYPROOF'\n", 1)[1].rsplit("PYPROOF", 1)[0]
+    counts = {
+        "test_linux30_bounded_capture_lifecycle": 4,
+        "test_linux30_preexec_hang_and_cleanup_failure_preserve_primary": 1,
+        "test_linux30_pre_namespace_authentication_precedes_child_execution": 1,
+        "test_linux30_descendant_holding_pipe_is_observed_and_reaped": 1,
+        "test_linux31_outermost_handoff_reaps_real_child_and_descendant": 5,
+        "test_linux37_fresh_transport_and_real_guard": 1,
+        "test_linux38_original_assertion_mutation_is_nonaccepting": 1,
+        "test_linux40_authenticated_logger_lifecycle": 1,
+        "test_linux41_real_signal_consumed_before_capture_return": 2,
+    }
+    suite = ET.Element("testsuite")
+    for case, count in counts.items():
+        for index in range(count):
+            if case == name and mutation == "missing":
+                continue
+            row = ET.SubElement(suite, "testcase", name=f"{case}[{index}]")
+            if case == name and mutation in {"skipped", "failure", "error"}:
+                ET.SubElement(row, mutation)
+            if case == name and mutation == "duplicate":
+                ET.SubElement(suite, "testcase", name=f"{case}[{index}]")
+    ET.ElementTree(suite).write(tmp_path / "junit.xml")
+    result = subprocess.run(
+        [sys.executable, "-I", "-"],
+        input=script,
+        text=True,
+        env=dict(os.environ, PROOF_DIR=str(tmp_path)),
+        capture_output=True,
+        timeout=5,
+        check=False,
+    )
+    assert (result.returncode == 0) is (mutation == "complete"), result.stderr
+    assert (tmp_path / "lifecycle-counts.json").exists() is (mutation == "complete")
+
+
+@_linux30_controller
+def _linux40_smoke_control(tmp_path, mode):
+    from specfact_cli.common.logger_setup import LoggerSetup
+    from specfact_cli.registry import module_installer
+
+    from specfact_code_review.run import runner, sandbox
+
+    assert module_installer.__file__
+    owner = _linux30_owner()
+    namespace = owner["experiment"].__globals__
+    runtime = tmp_path / "cache/invocations/runtime"
+    runtime.mkdir(parents=True)
+    (tmp_path / "runtime.private.json").write_text(
+        json.dumps({"root": str(runtime), "prepared_root_digest": owner["root_digest"](runtime)})
+    )
+    events = []
+    shutdown = LoggerSetup.shutdown_listeners
+
+    def cleanup():
+        events.append("cleanup")
+        if mode == "shutdown":
+            raise ValueError("PRIVATE_CANARY")
+        if mode != "suppressed":
+            shutdown()
+
+    def authenticate(*_):
+        events.append("authenticate")
+        return runner, sandbox
+
+    def materialize(*_):
+        events.append("materialize")
+        if mode in {"materialize", "write-primary"}:
+            raise ValueError("PRIVATE_CANARY")
+        return {}
+
+    def capture(command, directory, stem, timeout, limit):
+        events.append("capture")
+        assert command == [sys.executable, "-I", "-c", "print('specfact-runtime-smoke')"]
+        assert stem == "runtime-smoke" and timeout == 2 and limit == 1024
+        if mode == "capture":
+            raise ValueError("PRIVATE_CANARY")
+        stdout = b"PRIVATE_CANARY" if mode == "stdout" else b"specfact-runtime-smoke\n"
+        stderr = b"PRIVATE_CANARY" if mode == "stderr" else b""
+        (directory / (stem + ".stdout")).write_bytes(stdout)
+        (directory / (stem + ".stderr")).write_bytes(stderr)
+        return {
+            "returncode": 9 if mode == "exit" else 0,
+            "bytes": len(stdout) + len(stderr),
+            "gap": "supervision_failed" if mode == "gap" else None,
+            "cleaned": mode != "cleanup",
+        }
+
+    def unavailable_receipt(*_):
+        raise OSError("PRIVATE_WRITE_CANARY")
+
+    try:
+        with pytest.MonkeyPatch.context() as patch:
+            patch.setitem(namespace, "authenticate", authenticate)
+            patch.setattr(LoggerSetup, "shutdown_listeners", cleanup)
+            patch.setitem(namespace, "materialize", materialize)
+            patch.setitem(namespace, "capture", capture)
+            patch.setitem(namespace, "CALLS", ())
+            if mode in {"write-primary", "write-success"}:
+                patch.setitem(namespace, "private_file", unavailable_receipt)
+            if mode == "complete":
+                owner["experiment"](tmp_path, tmp_path, REPO_ROOT)
+            else:
+                error = OSError if mode == "write-success" else ValueError
+                with pytest.raises(error):
+                    owner["experiment"](tmp_path, tmp_path, REPO_ROOT)
+                assert not (tmp_path / "public.json").exists()
+        if mode in {"write-primary", "write-success"}:
+            assert events == ["authenticate", "cleanup", "materialize"] + (
+                ["capture"] if mode == "write-success" else []
+            )
+            assert not (tmp_path / "runtime-smoke.public.json").exists()
+            return
+        receipt_path = tmp_path / "runtime-smoke.public.json"
+        assert receipt_path.is_file(), "Pre-scan failure must retain its smoke receipt"
+        raw = receipt_path.read_bytes()
+        assert len(raw) <= 2048 and b"PRIVATE_CANARY" not in raw and str(tmp_path).encode() not in raw
+        receipt = json.loads(raw)
+        assert receipt["status"] == ("SMOKE_COMPLETE" if mode == "complete" else "INCOMPLETE")
+        assert receipt["acceptance"] is False
+        assert receipt["runner_sha256"] and receipt["sandbox_sha256"]
+        assert events[:2] == ["authenticate", "cleanup"]
+        assert ("materialize" in events) is (mode not in {"shutdown", "suppressed"})
+        assert ("capture" in events) is (mode not in {"shutdown", "suppressed", "materialize"})
+        assert receipt["after"]["thread_count"] == (2 if mode in {"shutdown", "suppressed"} else 1)
+    finally:
+        shutdown()
+
+
+@pytest.mark.parametrize(
+    "mode",
+    [
+        "complete",
+        "shutdown",
+        "suppressed",
+        "materialize",
+        "capture",
+        "exit",
+        "stdout",
+        "stderr",
+        "gap",
+        "cleanup",
+        "write-primary",
+        "write-success",
+    ],
+)
+def test_linux40_smoke_failure_receipts_precede_scans(tmp_path, mode):
+    _linux40_smoke_control(tmp_path, mode)
+
+
+@pytest.mark.skipif(not hasattr(os, "fork"), reason="POSIX signal ownership control")
+@pytest.mark.parametrize("mode", ["SIGTERM", "SIGINT"])
+@_linux30_controller
+def test_linux41_real_signal_consumed_before_capture_return(tmp_path, mode):
+    import signal
+    import threading
+
+    assert threading.current_thread() is threading.main_thread()
+    assert threading.active_count() == 1
+    owner = _linux30_owner()
+    capture = owner["capture"]
+    namespace = capture.__globals__
+    selected = getattr(signal, mode)
+    original = owner["_CaptureCancellation"]
+    mask = signal.pthread_sigmask(signal.SIG_BLOCK, set())
+    assert selected not in mask, "Selected signal must initially be unblocked"
+    handlers = {sig: signal.getsignal(sig) for sig in (signal.SIGTERM, signal.SIGINT)}
+    instances, invocations, reaped, consumed_at_reap = [], [], [], []
+    wait_calls, descriptors, ownership = [], [], []
+    real_pipe = os.pipe
+
+    class RecordingCancellation(original):
+        def record(self, signum, frame):
+            invocations.append(signum)
+            super().record(signum, frame)
+
+    def pipe():
+        pair = real_pipe()
+        descriptors.extend(pair)
+        return pair
+
+    def spawn(*args):
+        inherited = args[-1]
+        instances.append(inherited)
+        recorder = signal.getsignal(selected)
+        ownership.append(
+            (
+                getattr(recorder, "__self__", None) is inherited,
+                selected in signal.pthread_sigmask(signal.SIG_BLOCK, set()),
+            )
+        )
+        os.kill(os.getpid(), selected)
+        return 123456789
+
+    def reap(pid):
+        reaped.append(pid)
+        consumed_at_reap.append(instances[0].first_signal)
+        return True
+
+    def forbidden_wait(*args):
+        wait_calls.append(args)
+        raise ChildProcessError("LINUX41_FAKE_PID_WAIT")
+
+    with pytest.MonkeyPatch.context() as local:
+        local.setitem(namespace, "_CaptureCancellation", RecordingCancellation)
+        local.setitem(namespace, "_spawn", spawn)
+        local.setitem(namespace, "_reap_tree", reap)
+        local.setattr(os, "pipe", pipe)
+        local.setattr(os, "waitpid", forbidden_wait)
+        result = capture(["unused"], tmp_path, "signal-consumption", 0.1, 1024)
+    assert ownership == [(True, True)]
+    assert invocations == [selected]
+    assert len(instances) == 1
+    assert instances[0].first_signal == selected, "LINUX41_SIGNAL_NOT_CONSUMED"
+    assert wait_calls == [], "LINUX41_FAKE_PID_WAIT_USED"
+    assert consumed_at_reap == [selected]
+    assert reaped == [123456789]
+    assert result == {"returncode": None, "bytes": 0, "gap": "supervision_failed", "cleaned": True}
+    assert {sig: signal.getsignal(sig) for sig in handlers} == handlers
+    assert signal.pthread_sigmask(signal.SIG_BLOCK, set()) == mask
+    assert len(descriptors) == 4
+    for fd in descriptors:
+        with pytest.raises(OSError):
+            os.fstat(fd)
+    if sys.platform == "linux":
+        assert not owner["_children"]()

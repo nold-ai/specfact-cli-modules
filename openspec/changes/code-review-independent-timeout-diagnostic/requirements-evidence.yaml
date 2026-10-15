@@ -368,3 +368,23 @@ requirements:
       method: test
       intent: In a private proof copy invert only the original pre-namespace case's final marker assertion and invoke its existing decorated callable.
       observable: The actual wrapper must raise its controller-failure assertion with LINUX37_ORIGINAL_ASSERTION_MUTATION after the original result checks. Linux execution is pending; Darwin skip is not evidence of success.
+    - case_id: linux40-authenticated-logger-lifecycle
+      scenario_id: bound-direct-parser-evidence-and-preserve-failures
+      method: test
+      intent: Release only owned core loggers after authentication and prove actual thread state before materialization and smoke.
+      observable: Fresh-child pinned-core/current-candidate controls retain foreign-thread refusal; actual oldSDK Linux smoke retains bounded identity and result even on failure, without native acceptance.
+    - case_id: linux40-mandatory-negative-accounting
+      scenario_id: bound-direct-parser-evidence-and-preserve-failures
+      method: test
+      intent: Require original twelve positives, three lifecycle negative and logger controls, and both additive signal consumption controls, totaling seventeen.
+      observable: Missing, skipped, failed, errored or duplicated mandatory cases reject admission.
+    - case_id: linux41-owned-signal-consumption
+      scenario_id: bound-direct-parser-evidence-and-preserve-failures
+      method: test
+      intent: Observe actual first_signal in portable owned-recorder and fresh-child real SIGTERM and SIGINT cases before return and at cleanup.
+      observable: A no-op recorder fails consumption assertions despite callback invocation; an externally observed fake-PID wait rejects generic supervision_failed success. Both ambient mock contexts remain covered.
+    - case_id: linux41-mandatory-consumption-accounting
+      scenario_id: bound-direct-parser-evidence-and-preserve-failures
+      method: test
+      intent: Require both additive consumption cases with the original fifteen lifecycle cases.
+      observable: Missing, skipped, failed, errored and duplicated consumption controls reject admission; complete seventeen-case accounting passes.
