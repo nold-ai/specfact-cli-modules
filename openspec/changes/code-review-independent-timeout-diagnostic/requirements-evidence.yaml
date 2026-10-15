@@ -243,3 +243,108 @@ requirements:
       method: test
       intent: Exercise linux23_correction owner, side inventory and actual cleared-environment controls.
       observable: Canonical transport preserves failure; only capture-bound side paths publish and optional Git failure preserves the required exit.
+
+  openspec:code-review-independent-timeout-diagnostic:independent-review-diagnostic:run-one-admitted-direct-parser-experiment:
+    rationale: Obtain native evidence through a single root-admitted frozen-subject experiment.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#510
+    touchpoints:
+    - id: run-one-admitted-direct-parser-experiment
+      kind: config_file
+      locator: openspec/changes/code-review-independent-timeout-diagnostic/specs/independent-review-diagnostic/spec.md
+    verification_cases:
+    - case_id: linux30-admission
+      scenario_id: run-one-admitted-direct-parser-experiment
+      method: test
+      intent: Exercise linux30_admission_rejects_before_setup and linux30_frozen_manifest_and_unique_workflow.
+      observable: Invalid event metadata rejects before provisioning and only the one-use alias can trigger.
+    - case_id: linux30-frozen-inputs
+      scenario_id: run-one-admitted-direct-parser-experiment
+      method: test
+      intent: Exercise linux30_stale_git_input_stops_materialization and exact frozen manifest counts.
+      observable: Stale Git bytes stop before a scan; head/base counts remain 30/23 with seven absences.
+  openspec:code-review-independent-timeout-diagnostic:independent-review-diagnostic:bound-direct-parser-evidence-and-preserve-failures:
+    rationale: Preserve privacy, native coordinates and the primary failure under bounded supervision.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#510
+    touchpoints:
+    - id: bound-direct-parser-evidence-and-preserve-failures
+      kind: config_file
+      locator: openspec/changes/code-review-independent-timeout-diagnostic/specs/independent-review-diagnostic/spec.md
+    verification_cases:
+    - case_id: linux30-native-projection
+      scenario_id: bound-direct-parser-evidence-and-preserve-failures
+      method: test
+      intent: Exercise linux30_nonfirst_native_coordinate_and_private_message and hostile projection cases.
+      observable: Actual bound spans survive while raw text and foreign paths are withheld.
+    - case_id: linux30-lifecycle
+      scenario_id: bound-direct-parser-evidence-and-preserve-failures
+      method: test
+      intent: Exercise Linux-only bounded capture, pre-exec hang, cleanup failure and exec authentication proofs.
+      observable: Limits terminate the owned tree; no rejected program executes and primary failure survives cleanup.
+    - case_id: linux30-path-only
+      scenario_id: bound-direct-parser-evidence-and-preserve-failures
+      method: test
+      intent: Exercise linux30_path_only_error_keeps_input_without_synthetic_span.
+      observable: Exact native path survives with absent coordinates and no arbitrary message parsing.
+    - case_id: linux31-ownership-handoff
+      scenario_id: bound-direct-parser-evidence-and-preserve-failures
+      method: test
+      intent: Exercise both mocked registration failures, pending signals, pipe/fork failures and Linux real child/descendant controls.
+      observable: All endpoints close, primary supervision failure survives and Linux records both PIDs absent; Darwin skips remain incomplete.
+    - case_id: linux31-native-tag-accounting
+      scenario_id: bound-direct-parser-evidence-and-preserve-failures
+      method: test
+      intent: Exercise empty and malformed PartialParsing, unsupported tags and valid native locations.
+      observable: Errors remain represented without raw payloads; unsupported evidence is INCOMPLETE and valid spans retain identity.
+    - case_id: linux31-exact-head-host-route
+      scenario_id: bound-direct-parser-evidence-and-preserve-failures
+      method: test
+      intent: Exercise distinct event jobs, valid one-use admission, exact checkout identity shell guards and JUnit gate mutations.
+      observable: Only exact-head PR host proofs run before alias admission; missing or skipped Linux controls fail and scanner remains push-only.
+
+    - case_id: linux32-cancellation-ownership
+      scenario_id: bound-direct-parser-evidence-and-preserve-failures
+      method: test
+      intent: Exercise reached cleanup callbacks, repeated late signals, acquisition/install/restore failures and every finalizer.
+      observable: Owned resources close before restoration; first failure survives and cancellation is never replayed.
+    - case_id: linux32-child-signal-state
+      scenario_id: bound-direct-parser-evidence-and-preserve-failures
+      method: test
+      intent: Exercise the real private child branch with deterministic fork and signal call doubles.
+      observable: Saved callable and ignored dispositions restore before the saved mask; setup failures exit 125. This is not Linux runtime proof.
+    - case_id: linux32-actual-experiment-abort
+      scenario_id: bound-direct-parser-evidence-and-preserve-failures
+      method: test
+      intent: Run actual experiment orchestration against early and late capture cancellation controls.
+      observable: One incomplete call is recorded, later calls do not run, and absent streams have null hashes and byte counts.
+    - case_id: linux32-output-wrapper
+      scenario_id: bound-direct-parser-evidence-and-preserve-failures
+      method: test
+      intent: Fail fdopen after a real exclusive private descriptor acquisition.
+      observable: The acquired descriptor is closed before failure returns.
+    - case_id: linux32-workflow-step-context
+      scenario_id: bound-direct-parser-evidence-and-preserve-failures
+      method: test
+      intent: Check three step-local PROOF_DIR mappings and run actual actionlint 1.7.12 before and after correction.
+      observable: Workflow context validation passes while exact twelve-case Linux JUnit admission and all original boundaries remain unchanged.
+    - case_id: linux33-portable-thread-context
+      scenario_id: bound-direct-parser-evidence-and-preserve-failures
+      method: test
+      intent: Inject count-two and non-main ambient views before portable rig configuration and exercise actual capture.
+      observable: Capture returns the literal cancellation result, records acquisition and finalization, closes real descriptors and preserves shared and fresh-owner threading contexts.
+    - case_id: linux33-thread-admission
+      scenario_id: bound-direct-parser-evidence-and-preserve-failures
+      method: test
+      intent: Call separate fresh capture owners with each disqualifying controlled thread view outside the positive rig.
+      observable: Exact single_thread_required rejection precedes subreaper, cancellation, resource acquisition, spawn and reap. These stimuli do not identify the failed ordinary worker operand or actor.
+    - case_id: linux34-complete-mock-caller-context
+      scenario_id: bound-direct-parser-evidence-and-preserve-failures
+      method: test
+      intent: Inject both disqualifying ambient views before each of the six legacy mock caller cases and reuse their original assertions.
+      observable: All twelve controls reach original descriptor, reaped PID, mask and literal result assertions; fresh-owner and shared threading isolation hold.
+    - case_id: linux34-default-spawn-sentinel
+      scenario_id: bound-direct-parser-evidence-and-preserve-failures
+      method: test
+      intent: Exercise the common mock-owner helper without replacing its default spawn sentinel.
+      observable: One spawn attempt is recorded, capture returns supervision_failed with cleaned true, and guarded child operations remain unused. Assertions run outside capture.

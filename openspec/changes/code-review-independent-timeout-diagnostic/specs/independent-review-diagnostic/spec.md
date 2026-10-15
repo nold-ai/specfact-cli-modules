@@ -155,3 +155,93 @@ The current host SHALL derive member diagnostics from canonical findings. Public
 - **WHEN** canonical path admission succeeds or a pytest owner projects its failure
 - **THEN** the path postcondition SHALL preserve exact input identity and the failure projection SHALL return the strict PytestDiagnostic model
 - **AND** unsafe paths remain rejected and actual phase, exception subtype, child return code and secret exclusion remain covered by behavioral tests
+
+
+### Requirement: Run one admitted direct parser experiment
+The maintainer SHALL obtain parser coordinates through one dedicated diagnostic controller, independently of required native review acceptance. The sole scanner trigger SHALL be creation of `codex/pr510-semgrep-once-25`; before provisioning the controller SHALL require created true, deleted false, zero before, after equal to the checked-out tooling SHA, attempt one and a single tooling parent equal to frozen source `22c0f92f681aac7d9edbfde305963823866d0a7e`. Root SHALL separately record the reviewed tooling SHA and verify alias absence before its single creation. No PR-branch scanner trigger, dispatch, matrix or retry is admitted.
+
+#### Scenario: Reject repeated or mismatched admission
+- **WHEN** ref, parent, before, after, created, deleted or attempt differs
+- **THEN** provisioning and scans SHALL NOT start
+
+#### Scenario: Frozen side inputs and effective metrics setting
+- **WHEN** admission succeeds
+- **THEN** only 30 head regular Git blobs and 23 base counterparts with seven explicit absences, plus three registered rules per side, SHALL be materialized and hash-checked
+- **AND** source SHALL remain inert; no subject imports, tests, build or project preparation SHALL run
+- **AND** exactly head-clean, head-bugs, base-clean and base-bugs SHALL invoke locked Semgrep 1.144.0 through authenticated old 0.51.2 sandbox APIs with namespace-effective `--metrics off`, sealed imports and network denial
+
+### Requirement: Bound direct parser evidence and preserve failures
+The controller SHALL authenticate installed code before imports and retain same-descriptor launcher authentication and pre-namespace ptrace validation. Provisioning SHALL be bounded at 1200 seconds and the job at 30 minutes. Each scan SHALL use a 90-second cooperative monotonic deadline covering capture setup and pre-exec observation, followed by a separate two-second cooperative kill/reap attempt and resource finalization. These checkpoints SHALL NOT establish a hard overall wall-clock bound. A timeout or output overflow SHALL stop remaining calls. Raw stdout and stderr SHALL remain private mode 0600 with a combined 32 MiB experiment limit. Public evidence SHALL be at most 256 KiB and contain only fixed categories/codes and manifest-bound relative paths with validated positive native line/column spans. Hashes SHALL NOT substitute for authenticated provenance or assert original guest identity.
+
+#### Scenario: Native non-first input coordinates and privacy
+- **WHEN** native structured errors refer to a non-first target or a registered rule
+- **THEN** all valid coordinates SHALL retain their actual side and input identity without a synthetic first-file anchor
+- **AND** raw messages, source snippets, foreign paths and message-only path guesses SHALL NOT enter public output
+- **AND** omitted target disposition, malformed or truncated JSON or an unsupported native schema SHALL produce INCOMPLETE
+
+#### Scenario: Flood, hang and descendant-held pipes
+- **WHEN** a child floods either stream, stalls before exec observation, hangs or leaves a descendant holding a pipe
+- **THEN** bounded supervision SHALL terminate and reap the owned tree without unbounded capture or wait
+- **AND** unique precheck and postcheck outputs SHALL be exclusive and cleanup/finalization failures SHALL preserve the primary failure
+- **AND** a completed diagnostic error report SHALL never become required native PASS or a guest identity claim
+
+
+#### Scenario: Path-only native parser errors
+- **WHEN** the locked CliError contains an exact manifest-bound path but omits a structured span
+- **THEN** the diagnostic SHALL retain the input identity with absent coordinates and SHALL NOT infer a column, span or source location from arbitrary message text
+- **AND** this may account for that target without establishing a parser coordinate or original guest identity
+
+
+#### Scenario: Cancellation and registration during child ownership handoff
+- **WHEN** cancellation becomes pending immediately after fork, or either reader registration fails
+- **THEN** cleanup ownership SHALL already cover the child and all pipe endpoints before cancellation is delivered
+- **AND** the child SHALL restore its inherited signal mask before exec; the parent SHALL restore its mask only inside the owned cleanup boundary
+- **AND** the outermost capture SHALL preserve its primary failure, close every pipe endpoint, and attempt cooperative two-second kill/reap of the child and descendants
+- **AND** ordinary Linux host proofs SHALL assert recorded child and descendant PID absence after both registration failures and pending SIGTERM/SIGINT cancellation; Darwin skips SHALL NOT count as passing evidence
+
+#### Scenario: Empty and unsupported tagged native errors
+- **WHEN** PartialParsing supplies an empty location list
+- **THEN** one fixed partial_parsing error SHALL remain unbound and the diagnostic SHALL be INCOMPLETE
+- **WHEN** a tagged payload is malformed or its variant is unsupported
+- **THEN** the error SHALL remain represented without copying payload text and completeness SHALL be withheld
+
+
+#### Scenario: Exact-head supplemental Linux host proof before alias admission
+- **WHEN** a pull request to dev changes the diagnostic workflow, controller or its existing host owner
+- **THEN** a separate Ubuntu 24.04 / Python 3.12 host job SHALL checkout and assert the exact PR head SHA, excluding the diagnostic alias as a PR head
+- **AND** it SHALL checkout and assert paired core d579970565530c3fd7b98bad4de90cf874c2a99d, bootstrap Hatch and ensure_core_dependency serially under finite setup limits
+- **AND** it SHALL run exactly both mandatory ordinary host owner files with -n0 under a 600-second command and 20-minute job limit, retaining identities, pytest log and JUnit counts even on failure
+- **AND** absent, duplicated, skipped or failed linux30/linux31 real lifecycle proof cases SHALL fail the supplemental gate
+- **AND** the scanner job SHALL explicitly require push and every existing one-use guard; PR execution SHALL NOT call diagnostic admission/setup or native scans
+- **AND** original quality/customer prerequisites SHALL remain required; root SHALL obtain the exact reviewed head's actual Linux proof before creating the alias once
+
+
+#### Scenario: Cancellation remains recorded throughout capture ownership
+- **WHEN** TERM or INT arrives during capture acquisition, PID handoff, supervision or any finalizer
+- **THEN** a capture-local nonraising recorder SHALL retain the first cancellation from before the first resource until reaping and all raw descriptors, selectors and outputs are closed
+- **AND** installation SHALL roll back partial handler changes before any resource acquisition; restoration SHALL attempt the saved mask and both saved handlers even if one operation fails
+- **AND** the child SHALL restore saved dispositions before its saved mask through the private spawn handoff; recorded cancellation SHALL never be replayed to saved callbacks
+- **AND** the first failure SHALL remain primary; late cancellation SHALL fill an empty gap with supervision_failed so the existing experiment loop aborts; restoration failure SHALL remain nonaccepting
+- **AND** between-operation cancellation and deadline checks SHALL NOT establish a hard bound for synchronous filesystem, SDK observation or kernel calls; exact supported Linux lifecycle proof remains required
+
+- **AND** if early capture failure prevents stream creation, the experiment SHALL preserve its failure and stop later calls, with missing stream hashes and byte counts null rather than claiming observed empty output
+
+#### Scenario: Host proof environment resolves in step context
+- **WHEN** the host workflow is validated and its three evidence-consuming steps run
+- **THEN** PROOF_DIR SHALL use runner.temp only in those step environment mappings, with the existing bounded upload path and all twelve original Linux admission controls retained
+
+
+#### Scenario: Portable capture fixtures isolate simulated threading context
+- **WHEN** a portable capture fixture simulates signal handlers and child ownership
+- **THEN** it SHALL install a single-main-thread view only in that fresh capture namespace, even when an injected ambient view reports two threads or a non-main caller
+- **AND** the fixture SHALL reach literal capture results, recorded finalizers and real descriptor closure without changing the shared threading module or any other freshly loaded owner
+- **AND** separate fresh real capture guard controls SHALL reject each disqualifying view before subreaper setup, cancellation installation, resource acquisition, spawn or reap
+- **AND** production admission, all real Linux controls and ordinary parallel gates SHALL remain unchanged; controlled views SHALL NOT establish the observed worker thread count or actor
+
+
+#### Scenario: Every portable mock capture caller owns its context
+- **WHEN** registration failure, pending cancellation or pre-spawn failure tests simulate child ownership
+- **THEN** each SHALL use the same private mock-owner helper as the portable capture rig and output-wrapper test, with a fresh namespace and local single-main/count-one view
+- **AND** injected count-two and non-main ambient views SHALL still reach each original lifecycle assertion, including every legacy parameter case
+- **AND** the helper default spawn SHALL record attempts and never delegate to real spawn; an explicit control SHALL assert the attempt, nonaccepting capture result and absence of actual child operations outside capture
+- **AND** all twelve real Linux cases, their decorators and gate counts, the default owner and production threading admission SHALL remain unchanged

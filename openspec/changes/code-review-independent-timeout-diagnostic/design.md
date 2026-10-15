@@ -61,3 +61,57 @@ The optional diagnostic is absent by default on the wire. ReviewFinding delegate
 ## Linux26 host-test ownership correction, 2026-10-15
 
 The current project-Python attachment deliberately rejects isolated startup flags I/E/S. Original-capture proofs requiring actual isolated host Python or Bash/Git therefore belong in the existing mandatory diagnostic host owner. Move five unchanged functions and all 90 cases there. Share only workflow capture-program extraction with portable tests. Both existing ordinary-host entrypoints remain unchanged and blocking; a SMART host failure prevents subject tests. Keep all other unit privacy controls and an eight-case in-process rejected-capture counterpart. No runtime policy, shell capability, analyzer, oracle, deadline, package payload or signing key changes. Installation receipts do not establish actual loaded host or guest identity. The 22 projected missing-file causes remain unknown.
+
+
+## Linux 30 finite direct parser experiment (2026-10-15)
+
+The approved batch25 serves the maintainer investigating lost Semgrep coordinates before a source fix. Existing old adapters discard structured native spans, so reuse their authenticated sandbox builders but bypass adapters through four direct pysemgrep invocations. A generic framework and production adapter changes are out of scope. The new finite controller and one-use workflow plus the existing mandatory host proof owner are the only executable changes. Six existing OpenSpec files retain historical failures and acceptance gates.
+
+Data consists of frozen per-side regular Git blob records, explicit base absences, four fixed side/member invocations, bounded private captures and strict public projections. Source22 is independent of the later reviewed tooling commit. Root owns publication and exact tooling-SHA admission. The trusted-owner protocol forbids alias update, deletion/recreation and rerun. Existing required workflows remain unchanged.
+
+Reuse signed old 0.51.2 setup, core 0.55.4, existing key and Linux cp312 lock. Scan supervision must replace unbounded communicate/blocking waitpid while preserving verified descriptor, ptrace, mount, network and descendant guarantees. Do not import subject code or prepare project dependencies. Failure to retain these guarantees blocks the experiment rather than permitting fallback.
+
+Semgrep v1.144.0 primary source `https://raw.githubusercontent.com/semgrep/semgrep/v1.144.0/cli/src/semgrep/commands/scan.py`, accessed 2026-10-15, defines --metrics and maps literal off to MetricsState.OFF. The CLI option survives namespace --clearenv; an outer environment variable alone does not.
+
+The first milestone is spec-derived host RED/GREEN and independent concrete-code review. Runtime provisioning and all four real scans belong to root after review. Synthetic passes establish harness behavior only. Original guest and parser cause remain unknown. Rollback removes the isolated workflow/controller while retaining historical evidence and all existing acceptance requirements.
+
+
+## 2026-10-15 correction and Linux proof route
+
+Independent review found child creation outside cleanup ownership and two native tagged-error accounting gaps. The correction keeps one PID, an owned pipe-end list and the prior signal mask. SIGTERM/SIGINT are blocked before allocation/fork; the child restores its prior mask before exec and the parent restores only after assigning the PID inside the cleanup boundary. Registration, fork and pipe failures become supervision_failed; cleanup closes all endpoints and uses the existing two-second tree reap without replacing the primary gap. No signed package helper changes.
+
+PartialParsing remains the only supported tagged variant. Empty/malformed locations retain a fixed unbound partial_parsing row and INCOMPLETE. Other tagged variants retain sanitized error evidence but conservatively withhold completeness. This deliberately avoids a general native-schema framework. Valid native spans and path-only errors retain their existing behavior.
+
+The earlier assumption that a normal PR push alone reaches ordinary Linux proofs is superseded. Existing quality depends on customer-capsules success and cannot independently provide the prerequisite. The approved supplemental job in the same new workflow runs only for relevant dev pull requests, excludes the scanner alias, checks out/asserts the exact PR head and immutable paired core d579970565530c3fd7b98bad4de90cf874c2a99d, then bootstraps Hatch and ensure_core_dependency serially. It runs both mandatory ordinary host owners with -n0 and a 600-second command within a 20-minute job. Explicitly push-only scanner admission preserves every original one-use guard, source22 parent and four native calls. Existing workflows and gate prerequisites are untouched.
+
+The retained JUnit gate requires all 12 real linux30/linux31 lifecycle cases with no missing, duplicate, skipped or failed cases. Exact identities, pytest log and JUnit counts are retained even on failure. Host-only means no scanner invocation or diagnostic setup; the ordinary development environment can install scanner dependencies. Actual exact-head Linux success and fresh independent code closure remain prerequisites for root's single alias creation.
+
+
+## Linux 32 capture cancellation correction, 2026-10-15
+
+Batch27 follows the reviewed recorder synthesis. Kernel masking at cleanup entry did not prevent a deferred raising Python callback from escaping before reaping. One capture-local cancellation owner saves handlers and mask, installs a nonraising first-signal recorder before resources, and restores only after all finalizers. The private spawn handoff restores child dispositions before the mask. The first gap remains primary, including restoration failure; late cancellation fills supervision_failed without replay. Installation is transactional and both handler restoration attempts remain independent. The public four-field result and all budgets remain unchanged. Existing exclusive-output collisions continue to raise FileExistsError after ownership cleanup.
+
+The recorder is cooperative. File creation, buffered writes and close, procfs reads, fork, signal operations, SDK identity observation and ptrace calls have no independently enforced per-operation wall-clock bound. The two-second reaper checks between iterations, but its procfs traversal and synchronous calls are not hard bounded. Polling and outer workflow limits do not prove completion of these calls or descendant absence on a stalled kernel. Deadline adequacy remains To-Validate on the supported Linux host. No guardian or duplicate post-authentication thread check is added.
+
+
+The experiment persists an early capture gap even if stdout or stderr was never created. Missing streams have null private hashes and byte counts. Existing observed streams retain their actual digest and length. No missing stream becomes successful native evidence. A failed output wrapper closes the descriptor returned by os.open before propagation.
+
+The 90-second capture deadline starts before capture setup and is checked between operations. Nonblocking pipe reads, WNOHANG waits and select(0.01) avoid deliberate blocking waits, but do not impose a hard wall-clock limit on every kernel call. The outer setup process supervises the experiment worker at 390 seconds and can send SIGKILL through the existing identity-aware reaper independently of the worker's Python recorder. This is conditional on the outer supervisor itself progressing through procfs and kernel operations. Setup commands use the remaining 1200-second setup budget. The runner's 30-minute diagnostic job timeout is an external termination layer, not proof that local finalizers ran or a task in uninterruptible kernel I/O exited. The separate host job remains 20 minutes with a 600-second test command. These limits are unchanged.
+
+Synchronous stages needing supported-host adequacy review include exclusive output creation and fdopen, buffered write/close, selector allocation/registration/closure, pipe and fork, signal state changes, subreaper setup, SDK pre-namespace observation/validation and ptrace detach. Filesystem and process-tree enumeration in authentication, materialization, root_digest and final evidence writes run outside a scan's cooperative loop. They remain subject to the outer worker or job as applicable. The reaper's two-second loop contains descendant traversal, procfs reads, pidfd calls and waits without independent operation bounds. Its while-waitpid drain and descendant traversal have no fixed iteration cap. No test here proves those operations terminate under a stalled kernel or continuously changing descendant tree. Final reviewers must adjudicate this remaining adequacy question before alias admission.
+
+
+## Linux 33 portable fixture context, 2026-10-15
+
+The failed ordinary SMART host prerequisite records 15 admission failures, 274 passes and 17 skips. All failures stop at single_thread_required before their requested fake ownership behavior. The failed operand and thread actor are unknown. Count two and non-main caller are deterministic injected stimuli, not observations from that run.
+
+Use the existing SimpleNamespace fixture style for a local thread view in the portable linux32 rig and output-wrapper fault test. Each view has one stable main/current identity and active_count one. The production guard, shared threading module, _linux30_owner default and all real Linux cases remain untouched. This small adaptation completes an already simulated context; a new execution framework is unnecessary. Separate fresh guard negatives reject both disjuncts before all resources. The output-wrapper test also fails immediately on any spawn attempt.
+
+Behavioral RED must fail admission before concrete capture results and real descriptor closure. GREEN must reach those outcomes and prove namespace isolation. The original 190-case prefix and twelve real Linux cases remain unchanged. Existing linux31 portable calls are outside this correction absent concrete new failure evidence. Full ordinary gates, exact-source review and supported Linux proof remain pending.
+
+
+## Linux 34 complete portable caller correction, 2026-10-15
+
+Actual ordinary SMART after Linux33 failed registration case 1 with 292 passes and 17 skips. The failed guard operand and thread actor remain unknown. A complete frozen-source census identifies three older mock callers with six parameter cases. Correcting only the latest failing rig was insufficient. One private mock-owner helper loads the unchanged default owner and installs a local SimpleNamespace view plus a recorded, nondelegating spawn sentinel. Registration, pending cancellation, pre-spawn failure, the existing rig and output-wrapper setup reuse it. Real Linux tests remain verbatim and outside this helper. No shared threading module is patched.
+
+Before this correction, deterministic count-two and non-main views must fail admission while the original test bodies still expect their literal lifecycle outcomes. The final controls cover all six legacy cases under both views. A default-helper control asserts the recorded spawn attempt and nonaccepting result after capture because capture catches BaseException. Existing real descriptors, mask restoration, reaped PID and wrapper no-spawn assertions remain required. Full ordinary gates and supported Linux proof remain pending parent work.

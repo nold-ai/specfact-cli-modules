@@ -54,3 +54,59 @@ The independently reconciled 19-path scope captures bounded typed native diagnos
 - [x] Preserve five functions and all 90 host cases; retain portable matrices and add eight portable rejected-capture counterparts.
 - [x] Pass focused ordinary-host, portable privacy, route failure and unchanged isolation guards.
 - [ ] Complete ordinary/full gates, independent source closure, normal hooks and exact-head hosted acceptance.
+
+
+## Linux 30 direct parser evidence
+- [x] Specify one-use admission, immutable inputs, direct invocation, bounded lifecycle and privacy.
+- [x] Capture meaningful host RED before controller implementation and focused local GREEN afterward; Linux-only lifecycle proofs remain pending.
+- [ ] Independently review concrete controller/workflow before publication.
+- [ ] Root records exact tooling SHA, verifies absent alias and runs one admitted experiment.
+- [ ] Inspect actual native evidence; preserve required native gates and UNKNOWN original guest identity.
+
+
+## 2026-10-15 correction and preflight follow-up
+
+- [x] Extend the active spec before correction tests; preserve actual six-case behavioral RED.
+- [x] Cover fork-to-owner cancellation and registration inside bounded cleanup with all pipe ends owned.
+- [x] Preserve empty PartialParsing and fail closed for unsupported tagged payloads.
+- [x] Remove the two reviewed internal docstrings and obsolete original RED fallback.
+- [x] Add safe local ownership regressions and five Linux-only real child/descendant controls without changing the original 190 cases.
+- [x] Add approved exact-head supplemental PR host route in the same workflow, immutable paired-core checkout and explicit serial bootstrap, preserving push-only scanner admission and existing required gates.
+- [x] Record workflow-route RED and local synthetic GREEN, including valid admission, actual identity checks and missing/skipped/failed/duplicate JUnit rejection.
+- [ ] Root obtains final independent concrete-source closure, CodeRabbit and all required normal gates.
+- [ ] Root obtains retained successful exact-head Linux host proofs with all 12 real lifecycle cases before single alias creation.
+
+Local Darwin skips are incomplete evidence. No native call or publication is part of the source-writer correction.
+
+
+## Linux 32 ownership recorder correction, 2026-10-15
+
+- [x] Apply the reviewed nine-path recorder design and spec-first ownership contract.
+- [x] Preserve the invalid first RED receipt and replace fixture-topology failures with faithful predecessor RED.
+- [x] Prove deferred callback at actual cleanup entry, repeated and late cancellation, partial acquisition/installation, independent restorations, finalizer failures, child saved-state order and actual experiment abort with deterministic controls.
+- [x] Preserve early failure evidence with null hashes/counts for absent streams, first cancellation before cleanup failure, and descriptor closure after fdopen failure.
+- [x] Move PROOF_DIR to exactly three consuming step environments and execute installed actionlint 1.7.12 RED/GREEN.
+- [x] Run focused ordinary-Hatch tests, scoped Ruff formatting/checks and scoped basedpyright without altering the original 190-case prefix or twelve Linux admission controls.
+- [ ] Root completes all unchanged ordinary gates before freezing fresh independent review and exact-source CodeRabbit.
+- [ ] Independent reviewers adjudicate synchronous-operation bounds and all recorded findings on the final source.
+- [ ] Obtain actual exact-head supported Linux proof for all twelve retained lifecycle cases before any alias creation.
+
+No native Linux proof or native readiness follows from local mocked controls. Parent publication and acceptance gates remain unchanged.
+
+
+## Linux 33 portable fixture correction, 2026-10-15
+
+- [x] Record faithful fixture admission RED for injected ambient count-two and non-main views.
+- [x] Complete only the portable rig and output-wrapper thread context; prove literal results, real descriptor closure, separate guard negatives and namespace isolation.
+- [x] Run focused checks and freeze the nine paths with production/workflow hashes unchanged.
+- [ ] Root runs unchanged ordinary parallel SMART/FULL and required quality gates before fresh independent reviews and exact-source CodeRabbit.
+- [ ] Root obtains exact-head supported Linux lifecycle proof; simulated host controls do not satisfy this gate.
+
+
+## Linux 34 portable caller completion, 2026-10-15
+
+- [x] Preserve deterministic behavioral RED for both admission disjuncts across all three legacy callers.
+- [x] Reuse one fresh mock-owner helper across the five approved setup sites with a recorded nondelegating spawn default.
+- [x] Pass all six legacy parameter cases and the default-helper control with normal two-worker focused verification.
+- [x] Verify unchanged production/workflow bytes, original prefix, real Linux bodies/decorators and independent guard negatives.
+- [ ] Parent completes ordinary SMART/FULL, independent final-source reviews, CodeRabbit and supported Linux proof.
