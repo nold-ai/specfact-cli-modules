@@ -43,5 +43,4 @@ description: Official SpecFact code review bundle package.
 category: codebase
 bundle_group_command: code
 integrity:
-  checksum: sha256:8f3f7ba681291b294f4adb359acddb97c86de1f673ea69f957bdc82d1ae7ef1e
-  signature: CQo0kTbs3jiFpRcQlXfE9RmhBAQj4k2GgZllVbDDDqXO8mhKv5CgjS1X+a+hn30LdabVO5mt/Ky6/wagO/jLBg==
+  checksum: sha256:679f20a86d5dc8d9bdd0395c3c9f39a6ae85790b608bfc31233a1a809219bd5e

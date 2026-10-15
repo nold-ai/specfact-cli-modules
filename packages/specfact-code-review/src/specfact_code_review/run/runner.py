@@ -8095,10 +8095,13 @@ def run_capsule_review(
     scope_evidence: dict[str, object] = {"assurance_kind": assurance_kind, "capsule_execution": "required"}
     runtime, reason = _prepare_capsule_runtime()
     if runtime is None:
-        if _allows_development_host_compatibility(reason):
+        nondefault_linux_budget = review_options.linux_pytest_timeout_seconds != 300
+        if _allows_development_host_compatibility(reason) and not nondefault_linux_budget:
             if _cached_review_requested(review_options):
                 return _run_cached_development_host_review(files, review_options, scope_evidence)
             return _run_worktree_development_host_review(files, review_options, scope_evidence)
+        if nondefault_linux_budget and reason == "unsupported_controller_platform":
+            reason = "linux_pytest_execution_budget_unsupported_platform"
         return _with_capsule_enforcement(
             _unknown_capsule_report(reason, options=review_options, scope_evidence=scope_evidence),
             review_options,

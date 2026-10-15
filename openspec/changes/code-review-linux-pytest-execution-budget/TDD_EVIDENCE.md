@@ -35,3 +35,11 @@ Actual hosted3.12 and independent review reported project_test_selection_ambiguo
 The nondefault private Linux pytest control is exact-integer1..600, member-specific and operation-local through ContextVar token restoration. Absent/default300 preserves legacy120inner/300outer, portable inner1200 and every other member policy remain unchanged. Nested/concurrent and exception controls verify restoration. Renewed canonical checksum, trusted CI signature and exact-head hosted assurance remain required before adoption.
 
 Final collected focused tests after adding actual dispatch restoration and controller-to-private-request assertions:205passed (2.10seconds). The current local draft intentionally replaces the historical863 signature with a fresh canonical checksum; only existing trusted PR-CI may sign the corrected candidate before adoption.
+
+## Development-host fallback correction
+
+The final review found that a nondefault Linux pytest budget could enter the development-host compatibility path when the signed capsule runtime was unavailable. The host path does not implement the Linux-only budget. The focused regression produced four ordinary failures because both cached and worktree requests reached that path on an unsupported controller or after a verified-cache miss.
+
+`run_capsule_review` now allows the development-host compatibility path only for the default 300-second budget. A nondefault request without the required capsule returns `UNKNOWN` with a nonzero exit and preserves the requested budget in scope evidence. The focused budget file then passed 40 tests, including all four regression cases.
+
+The first hosted run of commit `82480c23` did not prove that the 600-second controller was sufficient. Its independent review compared the restored lean commit with an abandoned parent that changed 54 files and deleted 23,933 lines. The generated report exceeded the admitted size and contained incomplete analyzer evidence, so the job failed closed after 11 minutes and 35 seconds. The next candidate compares against the lean regression-test commit and must provide fresh exact-head evidence.
