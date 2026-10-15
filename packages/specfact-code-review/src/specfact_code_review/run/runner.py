@@ -1374,13 +1374,15 @@ def _capsule_process_request(request_path: Path) -> None:
                 ),
             )
         observation_path = Path("/opt/specfact/tmp/pytest-observation.json")
-        if (
-            member == "targeted-pytest-coverage"
-            and adapter_argv
-            and adapter_argv[0] == "portable-pytest-v2"
-            and observation_path.is_file()
-        ):
-            response["target_execution"] = json.loads(observation_path.read_text(encoding="utf-8"))
+        if member == "targeted-pytest-coverage" and adapter_argv and adapter_argv[0] == "portable-pytest-v2":
+            if observation_path.is_file():
+                response["target_execution"] = json.loads(observation_path.read_text(encoding="utf-8"))
+            else:
+                response.update(
+                    execution_state="error",
+                    evidence_outcome="UNKNOWN",
+                    diagnostic="capsule_request_failed:portable_pytest_observation_missing",
+                )
     except (KeyError, OSError, TypeError, ValueError, json.JSONDecodeError) as exc:
         response = {
             "member": "unknown",
