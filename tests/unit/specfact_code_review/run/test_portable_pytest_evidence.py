@@ -316,3 +316,39 @@ def test_native_usage_error_retains_capsule_member_and_target_execution(tmp_path
         and "target_execution" in finding["message"]
         for finding in response["findings"]
     )
+
+
+def test_missing_portable_observation_fails_closed(tmp_path, monkeypatch):
+    result_path = tmp_path / "result.json"
+    observed_path = tmp_path / "missing-observation.json"
+    files = [tmp_path / "src/app.py"]
+    monkeypatch.setattr(
+        runner,
+        "_load_capsule_request",
+        lambda _path: (
+            "targeted-pytest-coverage",
+            files,
+            False,
+            ("portable-pytest-v2", '{"selectors": ["."]}'),
+            False,
+            None,
+        ),
+    )
+    monkeypatch.setattr(runner, "_member_findings", lambda *_args, **_kwargs: [])
+    redirects = {
+        "/opt/specfact/tmp/pytest-observation.json": observed_path,
+        "/opt/specfact/output/result.json": result_path,
+    }
+    monkeypatch.setattr(
+        runner, "Path", Mock(wraps=Path, side_effect=lambda value: redirects.get(str(value), Path(value)))
+    )
+
+    runner._capsule_process_request(tmp_path / "request.json")
+
+    assert json.loads(result_path.read_text()) == {
+        "diagnostic": "capsule_request_failed:portable_pytest_observation_missing",
+        "evidence_outcome": "UNKNOWN",
+        "execution_state": "error",
+        "findings": [],
+        "member": "targeted-pytest-coverage",
+    }
