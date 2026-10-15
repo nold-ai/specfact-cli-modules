@@ -27,16 +27,6 @@ module has no admitted capsule for that ABI. Reinstalling the same module cannot
 supply a missing catalog entry; a signed release with accepted runtime artifacts
 is required. The JSON report retains the cause in `analyzer_evidence[].diagnostic`.
 
-## Differential candidate search
-
-Range classification rejects impossible unchanged candidates using existing source
-bounds, unique current lines and exact neighboring byte lines before computing
-correspondence matrices. Final pairing still computes complete correspondence
-costs and evidence. Finding order, multiplicity, ambiguous dispositions, fallback
-pairing, suppression policy and bounds remain unchanged. The four-distinct-anchor
-synthetic regression reduces forbidden matrix builds from ten to four; this is a
-work-count result, not a latency guarantee or historical timeout diagnosis.
-
 ## Linux full-test execution budget
 
 `--linux-pytest-timeout-seconds` selects an operator-owned deadline from 1 to
@@ -54,8 +44,6 @@ before execution; a nondefault budget on Darwin reports UNKNOWN. A timeout at
 any selected deadline still produces incomplete evidence and a failing exit.
 The report records requested/effective seconds, platform and operator-option
 provenance; these fields describe the selected deadline and never prove completion.
-
-A nondefault Linux pytest budget also reaches the sealed nonportable pytest subprocess. Omitting the option, or selecting the default 300 seconds, preserves its legacy 120-second inner limit and 300-second member launch limit. Portable pytest retains its existing inner policy; the selected outer limit still bounds the member. Requested/effective inner and outer budgets are diagnostic evidence and never make incomplete execution pass.
 
 ## Installed package layout
 
@@ -248,26 +236,6 @@ See [Review external Python projects](/guides/portable-project-runtime/) for pip
 - [Code review rules](/bundles/code-review/rules/)
 - [Code review module guide](/modules/code-review/)
 
-## Independent review timeout diagnostics
+A nondefault Linux pytest budget also reaches the sealed nonportable pytest subprocess. Omitting the option, or selecting the default300seconds, preserves its legacy120-second inner limit and300-second member launch limit. Portable pytest retains its existing inner policy; the selected outer limit still bounds the member. Requested/effective inner and outer budgets are diagnostic evidence and never make incomplete execution pass.
 
-The supplier PR workflow can observe a failed attempted independent review with a separate fixed-subject replay. The completed original observation retained a 300-second review deadline. The required whole-CLI parent now permits 600 seconds while preserving every member deadline and failure result; hosted completion is still required. The consumed observation is restricted to its original immutable head, so later heads do not sample again. The diagnostic verifies installed signed files, samples for at most 280 seconds, and keeps raw output private on the runner. Public sample counts describe observations, not CPU or elapsed time. Unknown member joins and native coverage remain explicit. A diagnostic result never grants acceptance.
-
-The original failed installation used a mutable registry reference. A later replay can verify its current installation against an immutable reference, but cannot establish the missing original binding. Warm caches and a changed workflow identity also limit equivalence.
-
-The workflow preserves the required report in a private immutable copy before optional processing. Capture is bounded to 32 MiB, records its complete digest and size, and publishes the manifest atomically. Failed capture prevents the candidate helper's fixed-path optional replay. The independent historical replay already writes to a separate attempt path. Original review exits remain authoritative.
-
-The current workflow can record five authenticated old reviewer host stages during the existing required invocation. Admission compares the actual loaded plain functions with compiled signed source and binds the controller to its parent-created workflow/event manifest. This observes only those host functions: guest identity and effective host timeout remain unavailable. Paired records require completion after alias restoration; missing, malformed or lost records yield partial evidence. A last observed stage never identifies what was active at timeout. Textual analyzer progress and test/node names are not public identity evidence.
-
-Only the explicit `original-report.public.json` allowlist artifact is added. Raw reports, receipt records and source bytes remain private on the runner. Controlled inert timing measurements are not a timing-neutrality claim; the required parent still has its existing 600-second limit. No new profiler invocation, changed analyzer budget or signed module change is part of this correction.
-
-### Candidate native failure observations
-
-New candidate findings can carry optional `native_diagnostic` metadata. Semgrep observations retain exact invocation input identity, finite native error type and code, and accepted, absent or rejected structured coordinates. Path-only native errors have no line. Config identities include the actual input digest and a finite invocation identifier. A config outside the repository does not become a repository coordinate. The diagnostic retains at most three observations, counts omitted observations, and fits within 4096 UTF-8 encoded JSON bytes. Paths are limited to 1024 UTF-8 bytes.
-
-Pytest diagnostics identify the operation that failed and a finite exception class. The child return code is absent until the child returns. Stable validation codes come from explicit validator outcomes; observation-supplied messages do not create codes. An optional observation transport failure retains the original member and findings and forces incomplete UNKNOWN evidence.
-
-Current hosts derive member diagnostics from canonical findings. The hosted public readers accept fixed fields from base/head member evidence only after original capture admission and within the existing 200-row budget. Diagnostics contain no native message, snippet or test function. They establish neither loaded guest identity nor signed acceptance. Old records remain readable without the optional field. The unchanged independently signed 0.51.2 producer cannot emit it, so its missing diagnostic remains unavailable and its required result remains blocking.
-
-Findings with an absent or null diagnostic omit only `native_diagnostic` when serialized. Existing nullable fields and complete historical output stay unchanged; populated diagnostics remain present through JSON and nested report round trips.
-
-Public path-bearing native diagnostics additionally require the original capture head and role to match the caller and the path to exist in that side’s immutable Git tree. Deleted base paths and renamed inputs retain their correct side. Invalid or unavailable inventories withhold those paths. Each Git lookup has a five-second timeout and a 1 MiB post-capture admission limit, which is not a hard memory quota. Optional lookup failure preserves the required review exit.
+The required independent signed workflow separately permits600seconds for the complete authenticated review subprocess. Its45-minute job cap,1800-second preparation bound, member and analyzer deadlines, checks and blocking exit124 remain unchanged.

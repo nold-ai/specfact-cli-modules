@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import ast
-import hashlib
 import json
 import os
 import subprocess
@@ -17,12 +16,7 @@ from beartype import beartype
 from icontract import ensure, require
 
 from specfact_code_review._review_utils import analyzer_command
-from specfact_code_review.run.findings import (
-    ReviewFinding,
-    SemgrepDiagnostic,
-    SemgrepObservation,
-    canonical_diagnostic_path,
-)
+from specfact_code_review.run.findings import ReviewFinding
 from specfact_code_review.tools.tool_availability import skip_if_tool_missing
 
 
@@ -214,7 +208,7 @@ def _allowed_paths(files: list[Path]) -> set[str]:
     return allowed
 
 
-def _tool_error(file_path: Path, message: str, diagnostic: SemgrepDiagnostic | None = None) -> list[ReviewFinding]:
+def _tool_error(file_path: Path, message: str) -> list[ReviewFinding]:
     return [
         ReviewFinding(
             category="tool_error",
@@ -224,7 +218,6 @@ def _tool_error(file_path: Path, message: str, diagnostic: SemgrepDiagnostic | N
             file=str(file_path),
             line=1,
             message=message,
-            native_diagnostic=diagnostic,
             fixable=False,
         )
     ]
@@ -442,123 +435,9 @@ def _validate_semgrep_completion(result: subprocess.CompletedProcess[str], paylo
         )
 
 
-class SemgrepCompletionError(ValueError):
-    def __init__(self, message: str, diagnostic: SemgrepDiagnostic) -> None:
-        super().__init__(message)
-        self.diagnostic = diagnostic
-
-
-def _diagnostic_input_path(path: Path) -> str | None:
-    try:
-        relative = path.relative_to(Path.cwd()) if path.is_absolute() else path
-        return canonical_diagnostic_path(relative.as_posix())
-    except ValueError:
-        return None
-
-
-def _semgrep_diagnostic_inputs(files: list[Path], configs: Path | list[Path]) -> dict[str, dict[str, object]]:
-    inputs: dict[str, dict[str, object]] = {}
-    for path in files:
-        canonical = _diagnostic_input_path(path)
-        if canonical is not None:
-            inputs[str(path)] = {"target": "subject", "input_path": canonical}
-    for index, path in enumerate((configs if isinstance(configs, list) else [configs])[:3], 1):
-        try:
-            digest = hashlib.sha256(path.read_bytes()).hexdigest()
-        except OSError:
-            continue
-        inputs[str(path)] = {
-            "target": "rule",
-            "input_path": _diagnostic_input_path(path),
-            "rule_input_id": f"config_{index}",
-            "rule_input_sha256": digest,
-        }
-    return inputs
-
-
-def _native_error_kind(value: object) -> str:
-    tags = {"Syntax error": "syntax_error", "Rule parse error": "rule_parse_error"}
-    if isinstance(value, str):
-        return tags.get(value, "other")
-    if isinstance(value, list) and len(value) == 2 and isinstance(value[1], list):
-        if value[0] == "PartialParsing":
-            return "partial_parsing"
-        if value[0] == "PatternParseError" and all(isinstance(item, str) for item in value[1]):
-            return "pattern_parse_error"
-    return "other"
-
-
-def _native_error_locations(error: dict[str, object]) -> list[object]:
-    kind = error.get("type")
-    if isinstance(kind, list) and len(kind) == 2 and kind[0] == "PartialParsing" and isinstance(kind[1], list):
-        return kind[1] or [error]
-    spans = error.get("spans")
-    return spans if isinstance(spans, list) and spans else [error]
-
-
-def _native_error_observation(
-    error: dict[str, object], location: object, inputs: dict[str, dict[str, object]]
-) -> SemgrepObservation:
-    row = location if isinstance(location, dict) else {}
-    path = row.get("file", row.get("path"))
-    identity = inputs.get(path, {}) if isinstance(path, str) else {}
-    fields: dict[str, object] = {
-        "error_kind": _native_error_kind(error.get("type")),
-        "target": "unknown",
-        "coordinate_status": "rejected" if path is not None else "absent",
-        **identity,
-    }
-    code = error.get("code")
-    if type(code) is int and code in {0, 1, 2, 3, 4, 5, 7, 8, 13, 14}:
-        fields["native_code"] = code
-    # CliError itself has no position fields in the locked schema.
-    if location is error:
-        if identity:
-            fields["coordinate_status"] = "absent"
-        return SemgrepObservation.model_validate(fields)
-    start, end = row.get("start"), row.get("end")
-    if identity and identity.get("input_path") and isinstance(start, dict) and isinstance(end, dict):
-        positions = {
-            "line": start.get("line"),
-            "column": start.get("col"),
-            "end_line": end.get("line"),
-            "end_column": end.get("col"),
-        }
-        if all(type(value) is int and 1 <= value <= 2147483647 for value in positions.values()) and (
-            positions["end_line"],
-            positions["end_column"],
-        ) >= (positions["line"], positions["column"]):
-            fields.update(positions, coordinate_status="accepted")
-    if fields["coordinate_status"] != "accepted":
-        fields["coordinate_status"] = "rejected"
-    return SemgrepObservation.model_validate(fields)
-
-
-def _semgrep_native_diagnostic(payload: dict[str, object], inputs: dict[str, dict[str, object]]) -> SemgrepDiagnostic:
-    errors = payload.get("errors", [])
-    errors = errors if isinstance(errors, list) else []
-    total = sum(len(_native_error_locations(error)) if isinstance(error, dict) else 1 for error in errors)
-    total = min(total, 2147483647)
-    retained: list[SemgrepObservation] = []
-    for error in errors[:3]:
-        source = error if isinstance(error, dict) else {}
-        for location in _native_error_locations(source)[: 3 - len(retained)]:
-            observation = _native_error_observation(source, location, inputs)
-            candidate = [*retained, observation]
-            try:
-                SemgrepDiagnostic(observations=candidate, total_count=total, omitted_count=total - len(candidate))
-            except ValueError:
-                break
-            retained = candidate
-        if len(retained) == 3:
-            break
-    return SemgrepDiagnostic(observations=retained, total_count=total, omitted_count=total - len(retained))
-
-
 def _load_semgrep_payload(
     files: list[Path], *, bundle_root: Path | None, config_file: Path | list[Path]
 ) -> dict[str, object]:
-    inputs = _semgrep_diagnostic_inputs(files, config_file)
     last_error: Exception | None = None
     for _attempt in range(SEMGREP_RETRY_ATTEMPTS):
         try:
@@ -568,13 +447,8 @@ def _load_semgrep_payload(
                 err_tail = _snip_stderr_tail(result.stderr or "")
                 raise ValueError(f"semgrep returned empty stdout (returncode={result.returncode}); stderr={err_tail!r}")
             payload = json.loads(raw_out)
-            try:
-                _parse_semgrep_results(payload)
-                _validate_semgrep_completion(result, payload)
-            except ValueError as exc:
-                if isinstance(payload, dict):
-                    raise SemgrepCompletionError(str(exc), _semgrep_native_diagnostic(payload, inputs)) from exc
-                raise
+            _parse_semgrep_results(payload)
+            _validate_semgrep_completion(result, payload)
             return payload
         except (FileNotFoundError, OSError, ValueError, json.JSONDecodeError, subprocess.TimeoutExpired) as exc:
             last_error = exc
@@ -773,11 +647,7 @@ def run_semgrep(files: list[Path], *, bundle_root: Path | None = None) -> list[R
             _validate_semgrep_output_paths(files, payload)
         raw_results = _parse_semgrep_results(payload)
     except (FileNotFoundError, OSError, ValueError, json.JSONDecodeError, subprocess.TimeoutExpired) as exc:
-        return _tool_error(
-            files[0],
-            f"Unable to parse Semgrep output: {exc}",
-            exc.diagnostic if isinstance(exc, SemgrepCompletionError) else None,
-        )
+        return _tool_error(files[0], f"Unable to parse Semgrep output: {exc}")
 
     allowed_paths = _allowed_paths(files)
     findings: list[ReviewFinding] = []
@@ -875,11 +745,7 @@ def run_semgrep_bugs(files: list[Path], *, bundle_root: Path | None = None) -> l
             _validate_semgrep_output_paths(files, payload)
         raw_results = _parse_semgrep_results(payload)
     except (FileNotFoundError, OSError, ValueError, json.JSONDecodeError, subprocess.TimeoutExpired) as exc:
-        return _tool_error(
-            files[0],
-            f"Unable to parse Semgrep bugs pass output: {exc}",
-            exc.diagnostic if isinstance(exc, SemgrepCompletionError) else None,
-        )
+        return _tool_error(files[0], f"Unable to parse Semgrep bugs pass output: {exc}")
 
     allowed_paths = _allowed_paths(files)
     findings: list[ReviewFinding] = []

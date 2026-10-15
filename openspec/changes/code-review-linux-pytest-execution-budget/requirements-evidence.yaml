@@ -36,3 +36,15 @@ requirements:
         method: inspection
         intent: Inspect strict private admission, actual subprocess limits and restoration across concurrent, nested and failing invocations.
         observable: Absent/default requests preserve legacy limits, explicit requests reach the subprocess and no operation inherits another budget.
+  openspec:code-review-linux-pytest-execution-budget:code-review-execution-budget:independent-signed-review-keeps-a-bounded-whole-review-controller:
+    rationale: The independent signed review needs a bounded controller that accommodates the observed complete-review runtime without changing narrower execution limits.
+    touchpoints:
+      - id: independent-review-workflow
+        kind: config_file
+        locator: .github/workflows/capsule-customer-execution.yml
+    verification_cases:
+      - case_id: BUDGET-004
+        scenario_id: independent-signed-review-keeps-a-bounded-whole-review-controller
+        method: test
+        intent: Execute the independent inline review wrapper with the600-second controller and preserve blocking exit124 on expiry.
+        observable: The workflow test records timeout=600 for the complete review, unchanged preparation and member/analyzer limits, and propagates exit124 without synthesizing success.

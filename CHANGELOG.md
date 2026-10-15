@@ -9,22 +9,11 @@ and this project follows SemVer for bundle versions.
 
 ### Fixed
 
-- Omit absent native diagnostics from serialized findings while preserving all legacy fields, nullable values and complete historical range output.
-- Preserve bounded native Semgrep input observations and operation-owned pytest failure metadata in current candidate findings and member evidence.
-- Keep existing member failures when optional pytest observation transport fails, and prevent an otherwise successful response from passing after that failure.
-- Normalize appended transport finding anchors and bind public native paths to caller-owned immutable base/head inventories, including deleted and renamed inputs.
-- Project fixed diagnostic fields from admitted original base/head evidence. The independently signed 0.51.2 reviewer and all required review gates remain unchanged.
-
-
-- Preserve immutable original review reports before optional replay, remove public test-function/text-progress attribution, and bind bounded host-stage receipts to authenticated loaded reviewer functions without changing required review results.
-
-- Skip impossible unchanged candidates before correspondence matrix evaluation, preserving full final evidence, finding multiplicity and fallback ordering.
+- Allow the complete required independent signed review up to600seconds while preserving its45-minute job cap,1800-second preparation bound, member/analyzer deadlines, checks and blocking timeout result.
 
 - Propagate explicit Linux pytest execution budgets through strictly admitted sealed requests to nonportable subprocesses, preserving legacy/default limits and operation-local isolation. Keep complete corresponding command-test selection and UNKNOWN authority for budget metadata.
 
 ### Added
-
-- Add a failure-only private diagnostic for the fixed independent signed review subject. It preserves the required failure, original deadlines and authenticated installation, and emits only verified symbols and explicit observation gaps.
 
 - Prepare Code Review 0.52.0: an explicit Linux pytest/coverage execution budget
   bounded to 1–600 seconds, with the existing 300-second default, selected-budget

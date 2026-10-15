@@ -2,11 +2,9 @@ from __future__ import annotations
 
 import json
 import os
-import runpy
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any
 
 import pytest
 import yaml
@@ -16,9 +14,7 @@ from tests.support.capsule_review_fixtures import (
     _FIXED_ANALYZER_FINDING_ROWS,
     REPO_ROOT,
     STEP_NAME,
-    _capture_program,
     _git,
-    _write_preparation_fixture,
     _write_public_report,
     independent_review_job,
     public_projector,
@@ -68,6 +64,7 @@ def test_independent_reviewer_excludes_each_candidate_host_route(forbidden: str)
 
 def test_independent_reviewer_preserves_scope_budgets_and_preload_order() -> None:
     independent = independent_review_job()
+    assert independent["timeout-minutes"] == 45
     recipe = "\n".join(str(step.get("run", "")) for step in independent["steps"])
     assert "timeout=600" in recipe and "timeout=1800" in recipe
     assert "--scope index --enforcement changed --bug-hunt" in recipe
@@ -91,6 +88,30 @@ def _run_projector(tmp_path, program):
     path = tmp_path / "projector.py"
     path.write_text(program)
     return subprocess.run([sys.executable, str(path)], capture_output=True, text=True, check=False, cwd=tmp_path)
+
+
+def _write_preparation_fixture(tmp_path, case):
+    import json
+
+    descriptor = tmp_path / "descriptor.json"
+    descriptor.write_text("{}")
+    payload = {"runtimes": {side: {"descriptor": str(descriptor)} for side in ("base", "head")}}
+    if case.startswith("not_applicable"):
+        payload = {"scope": "index", "status": "NOT_APPLICABLE", "diagnostic": "no_governed_impact", "runtimes": {}}
+        overrides = {
+            "not_applicable_reason": {"diagnostic": "private-reason"},
+            "not_applicable_scope": {"scope": "full"},
+            "not_applicable_runtimes": {"runtimes": ["private"]},
+            "not_applicable_nonempty": {"runtimes": {"head": {"descriptor": str(descriptor)}}},
+        }
+        payload.update(overrides.get(case, {}))
+    elif case == "missing_base":
+        payload["runtimes"].pop("base")
+    elif case == "missing_files":
+        descriptor.unlink()
+    report = tmp_path / "preparation.private.json"
+    report.write_text("not-json/private" if case == "invalid" else json.dumps(payload))
+    return report
 
 
 @pytest.mark.parametrize(
@@ -269,8 +290,6 @@ def _expected_review_projection(expected):
     keys = ("findings_present", "tool_error_present", "execution_error_present", "unknown_evidence_present")
     projection = {
         "phase": "independent_review",
-        "member_observations": [],
-        "member_observation_source": "report" if outcome == "structured_report" else "UNAVAILABLE",
         "report_outcome": outcome,
         "assurance_status": verdict,
         "overall_verdict": verdict,
@@ -717,6 +736,86 @@ def test_candidate_incomplete_snapshot_projection_is_finite(tmp_path, nested, ex
     assert "PRIVATE_TOKEN" not in result.stdout + result.stderr
 
 
+def _write_preparation_interpreter(tmp_path):
+    import sys
+
+    interpreter = tmp_path / "venv/bin/python"
+    interpreter.parent.mkdir(parents=True)
+    interpreter.write_text(
+        "#!" + sys.executable + "\n"
+        "import os,sys\nfrom pathlib import Path\n"
+        "if sys.argv[1:3] == ['-I','-c']:\n"
+        "    if os.environ['REPORT_CASE'] == 'missing':\n"
+        "        Path('commit-review-preparation.private.json').unlink()\n"
+        "    else: print(Path('controlled-report.json').read_text())\n"
+        "    raise SystemExit(int(os.environ['PREPARATION_EXIT']))\n"
+        "os.execv(sys.executable, [sys.executable, *sys.argv[1:]])\n"
+    )
+    interpreter.chmod(0o700)
+
+
+@pytest.fixture
+def preparation_shell(tmp_path, monkeypatch):
+    import subprocess
+
+    workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())
+    step = next(item for item in workflow["jobs"]["customer"]["steps"] if item.get("name") == STEP_NAME)
+    recipe = "# Provisioning" + step["run"].split("# Provisioning", 1)[1].split("review_exit=0", 1)[0]
+    _write_preparation_interpreter(tmp_path)
+
+    def invoke(preparation):
+        preparation_exit, report_case = preparation
+        report = _write_preparation_fixture(tmp_path, "prepared" if report_case == "missing" else report_case)
+        (tmp_path / "controlled-report.json").write_text(report.read_text())
+        for name, value in {
+            "CUSTOMER_ROOT": str(tmp_path),
+            "GITHUB_WORKSPACE": str(tmp_path),
+            "PROJECT_CONFIG": str(tmp_path / "project.toml"),
+            "PREPARATION_EXIT": str(preparation_exit),
+            "REPORT_CASE": report_case,
+        }.items():
+            monkeypatch.setenv(name, value)
+        return subprocess.run(
+            ["bash", "-c", "set -euo pipefail\n" + recipe + "printf 'REVIEW_STARTED\\n'"],
+            cwd=tmp_path,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+    return invoke
+
+
+@pytest.mark.parametrize(
+    "preparation,expected",
+    [
+        ((0, "prepared"), (0, "PREPARED", "prepared")),
+        ((0, "not_applicable"), (0, "NOT_APPLICABLE", "not_applicable")),
+        ((7, "not_applicable"), (7, "INCOMPLETE", "preparation_command_failed")),
+        ((0, "not_applicable_reason"), (1, "INCOMPLETE", "invalid_not_applicable")),
+        ((7, "prepared"), (7, "INCOMPLETE", "preparation_command_failed")),
+        ((0, "invalid"), (1, "INCOMPLETE", "invalid_json")),
+        ((7, "invalid"), (7, "INCOMPLETE", "invalid_json")),
+        ((0, "missing"), (1, "INCOMPLETE", "unreadable_report")),
+        ((7, "missing"), (7, "INCOMPLETE", "unreadable_report")),
+    ],
+)
+def test_preparation_shell_preserves_failure_and_projects_incomplete(preparation_shell, preparation, expected):
+    import json
+
+    expected_exit, expected_status, expected_outcome = expected
+    accepted = expected_status in {"PREPARED", "NOT_APPLICABLE"}
+    result = preparation_shell(preparation)
+    assert result.returncode == expected_exit
+    lines = result.stdout.splitlines()
+    assert lines, "every preparation exit must produce bounded diagnosis"
+    projection = json.loads(lines[0])
+    assert projection["status"] == expected_status
+    assert ("REVIEW_STARTED" in lines) is accepted
+    assert "private" not in result.stdout + result.stderr
+    assert projection["report_outcome"] == expected_outcome
+
+
 def test_failed_candidate_diagnostics_expose_only_bounded_tracked_locations(tmp_path: Path) -> None:
     code = public_projector("customer")
     _git(tmp_path, "init", "-q")
@@ -851,6 +950,7 @@ def test_public_execution_classification_never_prints_raw_messages(tmp_path: Pat
 
 def test_trusted_review_budget_timeout_retains_six_hundred_seconds_and_fixed_exit(monkeypatch, tmp_path):
     import re
+    import runpy
 
     recipe = next(
         step["run"]
@@ -1054,7 +1154,7 @@ def test_public_pytest_failure_codes_withhold_private_payload(tmp_path: Path, jo
         ("Checking capsule analyzer pylint...\n" + "X" * 65537, None),
     ],
 )
-def test_independent_timeout_never_attributes_textual_progress(tmp_path: Path, progress, analyzer):
+def test_independent_timeout_projects_only_bounded_exact_progress(tmp_path: Path, progress, analyzer):
     log = tmp_path / "progress.private.log"
     log.write_text(progress)
     environment = dict(os.environ, REVIEW_PUBLIC_EXIT="124", REVIEW_PUBLIC_PROGRESS=str(log))
@@ -1069,7 +1169,7 @@ def test_independent_timeout_never_attributes_textual_progress(tmp_path: Path, p
     assert result.returncode == 0, result.stderr
     row = json.loads(result.stdout)
     assert row["diagnostic"] == "analysis_timeout"
-    assert "analyzer" not in row
+    assert row.get("analyzer") == analyzer
     assert "PRIVATE" not in result.stdout
 
 
@@ -1108,7 +1208,7 @@ def test_public_testing_findings_survive_ordinary_location_cap(tmp_path: Path, j
 @pytest.mark.parametrize(
     "outcome,phase,xfail", [("failed", "call", False), ("skipped", "setup", False), ("passed", "call", True)]
 )
-def test_public_test_observations_omit_even_tracked_source_functions(tmp_path, job_name, outcome, phase, xfail):
+def test_public_test_observations_identify_only_tracked_source_functions(tmp_path, job_name, outcome, phase, xfail):
     suffix = " with an xfail marker." if xfail else "."
     finding = {
         "file": "public.py",
@@ -1133,8 +1233,7 @@ def test_public_test_observations_omit_even_tracked_source_functions(tmp_path, j
     assert row.get("test_outcome") == outcome
     assert row.get("test_phase") == phase
     assert row.get("test_xfail") is xfail
-    assert "test_function" not in row
-    assert "test_public_case" not in result.stdout
+    assert row.get("test_function") == "test_public_case"
     assert "PRIVATE" not in result.stdout
 
 
@@ -1279,565 +1378,113 @@ def test_public_projector_bounds_and_rejects_unreadable_reports(tmp_path: Path, 
     assert "PRIVATE_SECRET" not in result.stdout
 
 
-@pytest.mark.parametrize("independent", [False, True])
-def test_projectors_never_disclose_tracked_test_function(tmp_path, monkeypatch, independent):
-    import ast
-    import re
+@pytest.mark.parametrize("job_name", ["customer", "independent-review"])
+@pytest.mark.parametrize("review_exit", [17, 124])
+def test_projector_crash_preserves_original_review_exit(tmp_path: Path, job_name, review_exit):
+    import shlex
 
-    job = "independent-review" if independent else "customer"
     workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())
-    identifier = "independent_review" if independent else "deferred_review"
-    step = next(s for s in workflow["jobs"][job]["steps"] if s.get("id") == identifier)
-    source = step["run"].split("REVIEW_PUBLIC_REPORT=", 1)[1].split("<<'PY'", 1)[1].split("\nPY", 1)[0]
-    tree = ast.parse(source.split("\n", 1)[1])
-    function = next(
-        n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef) and n.name == "_public_test_observation"
+    name = STEP_NAME if job_name == "customer" else "Prepare and review through the authenticated installed controller"
+    recipe = next(step["run"] for step in workflow["jobs"][job_name]["steps"] if step.get("name") == name)
+    invocation = next(line for line in recipe.splitlines() if "REVIEW_PUBLIC_EXIT=" in line and "<<'PY'" in line)
+    guard = invocation.split("<<'PY'", 1)[1]
+    report = tmp_path / ".specfact/code-review.json"
+    report.parent.mkdir()
+    report.write_text('{"analyzer_evidence":42}')
+    program = public_projector(job_name)
+    shell = (
+        f"set -e\nreview_exit={review_exit}\nREVIEW_PUBLIC_EXIT=$review_exit {shlex.quote(sys.executable)} - <<'PY'{guard}\n"
+        + program
+        + '\nPY\nexit "$review_exit"\n'
     )
-    marker = "test_PRIVATE_NODE_SECRET"
-    (tmp_path / "test_example.py").write_text(f"def {marker}():\n    pass\n")
-    monkeypatch.chdir(tmp_path)
-    namespace = {"re": re, "ast": ast, "Path": Path, "source_test_functions": {}, "_public_test_failure": lambda *_: {}}
-    exec(compile(ast.Module(body=[function], type_ignores=[]), "projector-control", "exec"), namespace)
-    result = namespace["_public_test_observation"](
-        {"message": f"Test test_example.py::{marker} passed during call."}, "test_example.py"
+    result = subprocess.run(
+        ["bash", "-c", shell],
+        cwd=tmp_path,
+        env=dict(os.environ, CUSTOMER_ROOT=str(tmp_path), TRUSTED_ROOT=str(tmp_path)),
+        capture_output=True,
+        text=True,
+        check=False,
     )
-    assert result == {"test_outcome": "passed", "test_phase": "call", "test_xfail": False}
-    assert marker not in json.dumps(result)
-
-
-@pytest.mark.parametrize("job_name", ["customer", "independent-review"])
-@pytest.mark.parametrize("damage", ["missing", "partial", "digest", "duplicate"])
-def test_uncommitted_original_bytes_are_never_projected_portably(tmp_path, monkeypatch, capsys, job_name, damage):
-    import hashlib
-
-    _write_public_report(tmp_path, [])
-    private = tmp_path / "original-private"
-    private.mkdir(mode=0o700)
-    report = private / "original.json"
-    raw = json.dumps({"findings": [{"file": "public.py", "line": 1, "severity": "error"}]}).encode()
-    report.write_bytes(raw)
-    manifest = {
-        "status": "COMPLETE",
-        "binding": {"role": "candidate", "head": "a" * 40, "attempt": "1"},
-        "required_exit": 1,
-        "sha256": hashlib.sha256(raw).hexdigest(),
-        "bytes": len(raw),
+    assert result.returncode == review_exit, "Diagnostics must preserve the original failed review result"
+    assert result.stderr == "", "Projector tracebacks must remain private"
+    assert json.loads(result.stdout.splitlines()[-1]) == {
+        "status": "INCOMPLETE",
+        "phase": "review",
+        "diagnostic": "review_projection_failed",
     }
-    if damage == "partial":
-        manifest["status"] = "UNAVAILABLE"
-    elif damage == "digest":
-        manifest["sha256"] = "0" * 64
-    if damage != "missing":
-        text = json.dumps(manifest)
-        if damage == "duplicate":
-            text = text.replace('"status": "COMPLETE"', '"status": "UNAVAILABLE", "status": "COMPLETE"')
-        (private / "manifest.json").write_text(text)
-    monkeypatch.chdir(tmp_path)
-    monkeypatch.setenv("REVIEW_PUBLIC_REPORT", str(report))
-    monkeypatch.setenv("REVIEW_PUBLIC_EXIT", "1")
-    monkeypatch.setenv("REVIEW_CAPTURE_ADMITTED", "true")
-    exec(compile(public_projector(job_name), "portable-capture-projector", "exec"), {})
-    output = capsys.readouterr().out
-    assert "finding_location" not in output
-    assert json.loads(output)["diagnostic"] == "original_capture_unavailable"
+    assert "TypeError" in (tmp_path / "review-projection.private.log").read_text()
 
 
-@pytest.mark.parametrize("reader", ["customer", "independent-review", "candidate-failure", "independent-failure"])
-@pytest.mark.parametrize(
-    "capture",
-    [
-        "complete",
-        "legacy",
-        "legacy-missing",
-        "missing",
-        "partial",
-        "duplicate",
-        "digest",
-        "size",
-        "manifest-bound",
-        "manifest-invalid",
-        "original-missing",
-        "original-unreadable",
-        "original-bound",
-    ],
-)
-def test_all_original_readers_admit_only_complete_captures(tmp_path, monkeypatch, capsys, reader, capture):
-    import hashlib
+@pytest.mark.parametrize("review_exit", [17, 124])
+def test_candidate_secondary_projector_crash_preserves_review_exit(tmp_path: Path, review_exit):
+    import shlex
 
-    monkeypatch.setenv("REVIEW_CAPTURE_ADMITTED", "true")
-
-    primary = reader in {"customer", "independent-review"}
-    if primary:
-        program = public_projector(reader)
-    else:
-        workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())
-        if reader == "candidate-failure":
-            step = next(item for item in workflow["jobs"]["customer"]["steps"] if item.get("name") == STEP_NAME)
-            marker = "PY_CANDIDATE_FAILURE"
-        else:
-            step = next(
-                item
-                for item in workflow["jobs"]["independent-review"]["steps"]
-                if item.get("name") == "Project independent review failure privately"
-            )
-            marker = "PY_REVIEW_FAILURE"
-        program = step["run"].split(f"<<'{marker}'", 1)[1].split("\n", 1)[1].split(f"\n{marker}", 1)[0]
-    report = tmp_path / ("legacy.json" if capture.startswith("legacy") else "original.json")
-    raw = json.dumps(
-        {
-            "assurance_status": "PASS",
-            "overall_verdict": "PASS",
-            "findings": [
-                {
-                    "file": "public.py",
-                    "line": 1,
-                    "severity": "error",
-                    "category": "clean_code",
-                    "tool": "radon",
-                    "rule": "CC34",
-                },
-                {
-                    "category": "tool_error",
-                    "tool": "crosshair",
-                    "message": "CrossHair timed out before mandatory evidence completed.",
-                },
-            ],
-            "analyzer_evidence": [
-                {
-                    "id": "pylint",
-                    "execution_state": "error",
-                    "evidence_outcome": "UNKNOWN",
-                    "diagnostic": "analyzer_reported_incomplete_execution",
-                }
-            ],
-        }
-    ).encode()
-    (tmp_path / "original-unavailable").write_bytes(raw)
-    if capture == "original-unreadable":
-        report.mkdir()
-    elif capture not in {"legacy-missing", "original-missing"}:
-        report.write_bytes(raw + b" " * (32 * 1024 * 1024) if capture == "original-bound" else raw)
-    manifest = {
-        "status": "COMPLETE",
-        "binding": {},
-        "required_exit": 1,
-        "sha256": hashlib.sha256(raw).hexdigest(),
-        "bytes": len(raw),
-    }
-    if capture == "partial":
-        manifest["status"] = "UNAVAILABLE"
-    elif capture == "digest":
-        manifest["sha256"] = "0" * 64
-    elif capture == "size":
-        manifest["bytes"] = len(raw) + 1
-    elif capture == "original-bound":
-        oversized = report.read_bytes()
-        manifest["bytes"] = len(oversized)
-        manifest["sha256"] = hashlib.sha256(oversized).hexdigest()
-    manifest_text = json.dumps(manifest)
-    if capture == "duplicate":
-        manifest_text = manifest_text.replace('"status": "COMPLETE"', '"status": "UNAVAILABLE", "status": "COMPLETE"')
-    elif capture == "manifest-bound":
-        manifest_text += " " * 4096
-    elif capture == "manifest-invalid":
-        manifest_text = "{"
-    if capture != "missing":
-        (tmp_path / "manifest.json").write_text(manifest_text)
-    monkeypatch.setenv("REVIEW_PUBLIC_REPORT", str(report))
-    monkeypatch.setenv("REVIEW_PUBLIC_EXIT", "1")
-    monkeypatch.setenv("REVIEW_REPORT", str(report))
-    monkeypatch.setenv("REVIEW_LOG", str(tmp_path / "missing.log"))
-    monkeypatch.chdir(tmp_path)
-    git_calls = []
-
-    def tracked_files(args, **kwargs):
-        assert args == ["git", "ls-files", "-z"]
-        git_calls.append(args)
-        return "public.py\0"
-
-    monkeypatch.setattr(subprocess, "check_output", tracked_files)
-    exec(compile(program, "workflow-original-reader", "exec"), {})
-    rows = [json.loads(line) for line in capsys.readouterr().out.splitlines()]
-    admitted = capture in {"complete", "legacy"}
-    if primary:
-        if admitted:
-            assert rows == [
-                {"analyzer": "pylint", "diagnostic_codes": ["analyzer_reported_incomplete_execution"]},
-                {
-                    "finding_location": {
-                        "file": "public.py",
-                        "line": 1,
-                        "severity": "error",
-                        "category": "clean_code",
-                        "tool": "radon",
-                        "rule": "CC34",
-                    }
-                },
-            ]
-            assert len(git_calls) == 1
-        else:
-            code = "review_report_missing" if capture == "legacy-missing" else "original_capture_unavailable"
-            assert rows == [{"status": "INCOMPLETE", "phase": "review", "diagnostic": code}]
-            assert git_calls == []
-    elif reader == "candidate-failure":
-        if admitted:
-            assert rows == [
-                {"analyzer": "pylint", "diagnostic_codes": ["analyzer_reported_incomplete_execution"]},
-                {
-                    "analyzer": "contracts",
-                    "diagnostic_class": "crosshair_timeout_observed",
-                    "exception_observations": [],
-                },
-            ]
-        else:
-            assert rows == (
-                []
-                if capture == "legacy-missing"
-                else [{"analyzer": "contracts", "diagnostic_class": "candidate_report_unavailable"}]
-            )
-    else:
-        assert len(rows) == 1
-        row = rows[0]
-        if admitted:
-            assert row["report_outcome"] == "structured_report"
-            assert row["assurance_status"] == row["overall_verdict"] == "PASS"
-            assert row["error_analyzers"] == row["unknown_analyzers"] == ["pylint"]
-            assert row["findings_present"] is True
-            assert row["member_observations"][0]["evidence_outcome"] == "UNKNOWN"
-        else:
-            assert row["report_outcome"] == ("missing_report" if capture == "legacy-missing" else "unreadable_report")
-            assert row["assurance_status"] == row["overall_verdict"] == "UNAVAILABLE"
-            assert row["error_analyzers"] == row["unknown_analyzers"] == row["member_observations"] == []
-            assert row["member_observation_source"] == "UNAVAILABLE"
-            assert row["findings_present"] is False
-
-
-@pytest.mark.parametrize("job_name", ["customer", "independent-review"])
-def test_primary_timeout_preserved_when_original_capture_is_rejected(tmp_path, monkeypatch, capsys, job_name):
-    raw = json.dumps({"analyzer_evidence": [{"id": "pylint", "diagnostic": "timeout"}], "findings": []})
-    report = tmp_path / "original.json"
-    report.write_text(raw)
-    (tmp_path / "original-unavailable").write_text(raw)
-    monkeypatch.setenv("REVIEW_PUBLIC_REPORT", str(report))
-    monkeypatch.setenv("REVIEW_PUBLIC_EXIT", "124")
-    exec(compile(public_projector(job_name), "workflow-timeout-reader", "exec"), {})
-    assert [json.loads(line) for line in capsys.readouterr().out.splitlines()] == [
-        {"status": "INCOMPLETE", "phase": "review", "diagnostic": "analysis_timeout"},
-        {"status": "INCOMPLETE", "phase": "review", "diagnostic": "original_capture_unavailable"},
-    ]
-
-
-def test_later_capture_consumers_use_explicit_step_outputs():
     workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())
-    for job, name, owner in [
-        ("customer", "Profile failed candidate review privately", "deferred_review"),
-        ("independent-review", "Project independent review failure privately", "independent_review"),
-    ]:
-        step = next(s for s in workflow["jobs"][job]["steps"] if s.get("name") == name)
-        assert (
-            step.get("env", {}).get("REVIEW_CAPTURE_ADMITTED")
-            == "${{ steps." + owner + ".outputs.original_capture_admitted || 'false' }}"
-        )
-    replay = next(
-        s["run"]
-        for s in workflow["jobs"]["customer"]["steps"]
-        if s.get("name") == "Profile failed candidate review privately"
+    recipe = next(step["run"] for step in workflow["jobs"]["customer"]["steps"] if step.get("name") == STEP_NAME)
+    marker = "<<'PY_CANDIDATE_FAILURE'"
+    invocation = next(line for line in recipe.splitlines() if marker in line)
+    guard = invocation.split(marker, 1)[1]
+    program = recipe.split(marker, 1)[1].split("\n", 1)[1].split("\nPY_CANDIDATE_FAILURE", 1)[0]
+    shell = (
+        f"set -e\nreview_exit={review_exit}\n{shlex.quote(sys.executable)} - {marker}{guard}\n"
+        + "raise SystemExit(3)\n"
+        + program
+        + '\nPY_CANDIDATE_FAILURE\nexit "$review_exit"\n'
     )
-    assert replay.index('"${REVIEW_CAPTURE_ADMITTED:-false}" = true') < replay.index("manifest.json")
+    result = subprocess.run(
+        ["bash", "-c", shell],
+        cwd=tmp_path,
+        env=dict(os.environ, CUSTOMER_ROOT=str(tmp_path)),
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == review_exit, "Every diagnostic invocation must preserve the failed review result"
+    assert result.stderr == ""
+    assert json.loads(result.stdout) == {
+        "status": "INCOMPLETE",
+        "phase": "review",
+        "diagnostic": "review_projection_failed",
+    }
 
 
-def _linux23_captured_projection(
-    tmp_path, monkeypatch, job_name, evidence, *, admitted=True, refs=None, inventory=None, binding=None, findings=None
+@pytest.mark.parametrize("job_name", ["customer", "independent-review"])
+@pytest.mark.parametrize("module_name", ["ast", "json"])
+@pytest.mark.parametrize("import_origin", ["checkout", "pythonpath"])
+@pytest.mark.parametrize("review_exit", [17, 124])
+def test_actual_projector_launch_excludes_untrusted_imports(
+    tmp_path: Path, job_name, module_name, import_origin, review_exit
 ):
-    source = tmp_path / "source.json"
-    source.write_text(json.dumps({"findings": findings or [], "analyzer_evidence": evidence}))
-    namespace: dict[str, Any] = {"__name__": "fixture_capture"}
-    exec(compile(_capture_program(), "capture-fixture", "exec"), namespace)
-    manifest = namespace["capture_original"](
-        source,
-        tmp_path / "original-private",
-        binding
-        or {"role": "candidate" if job_name == "customer" else "independent", "head": "a" * 40, "attempt": "123:2"},
-        1,
+    workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())
+    name = STEP_NAME if job_name == "customer" else "Prepare and review through the authenticated installed controller"
+    recipe = next(step["run"] for step in workflow["jobs"][job_name]["steps"] if step.get("name") == name)
+    invocation = next(line for line in recipe.splitlines() if "REVIEW_PUBLIC_EXIT=" in line and "<<'PY'" in line)
+    interpreter = tmp_path / "venv/bin/python"
+    interpreter.parent.mkdir(parents=True)
+    interpreter.symlink_to(sys.executable)
+    candidate = tmp_path / "candidate"
+    candidate.mkdir()
+    ambient = tmp_path / "ambient"
+    ambient.mkdir()
+    marker = tmp_path / "untrusted-import-executed"
+    poison = candidate if import_origin == "checkout" else ambient
+    (poison / f"{module_name}.py").write_text(
+        f"from pathlib import Path\nPath({str(marker)!r}).write_text('executed')\nraise RuntimeError('UNTRUSTED_IMPORT')\n"
     )
-    assert manifest["status"] == "COMPLETE"
-    monkeypatch.setenv("REVIEW_PUBLIC_REPORT", str(tmp_path / "original-private/original.json"))
-    monkeypatch.setenv("REVIEW_CAPTURE_ADMITTED", "true" if admitted else "false")
-    monkeypatch.setenv("REVIEW_PUBLIC_EXIT", "1")
-    refs = {"base": "b" * 40, "head": "a" * 40} if refs is None else refs
-    for side in ("base", "head"):
-        monkeypatch.delenv("REVIEW_DIAGNOSTIC_" + side.upper(), raising=False)
-        if side in refs:
-            monkeypatch.setenv("REVIEW_DIAGNOSTIC_" + side.upper(), refs[side])
-
-    def git_output(argv, **kwargs):
-        if argv == ["git", "ls-files", "-z"]:
-            assert kwargs == {"text": True}
-            return "public.py\0new.py\0"
-        assert argv[:5] == ["git", "ls-tree", "-r", "--name-only", "-z"]
-        assert len(argv) == 6 and argv[5] in ("a" * 40, "b" * 40)
-        assert kwargs == {"timeout": 5}
-        if inventory is not None:
-            return inventory(argv[5])
-        return b"public.py\0"
-
-    monkeypatch.setattr(subprocess, "check_output", git_output)
-    exec(compile(public_projector(job_name), "public-projector", "exec"), {"__name__": "fixture_projector"})
-
-
-@pytest.mark.parametrize("job_name", ["customer", "independent-review"])
-def test_linux23_public_native_diagnostics_take_side_from_member_evidence(tmp_path, monkeypatch, capsys, job_name):
-    def diagnostic(line):
-        return {
-            "kind": "semgrep",
-            "observations": [
-                {
-                    "error_kind": "syntax_error",
-                    "native_code": 3,
-                    "target": "subject",
-                    "coordinate_status": "accepted",
-                    "input_path": "public.py",
-                    "line": line,
-                    "column": 2,
-                    "end_line": line,
-                    "end_column": 3,
-                }
-            ],
-            "total_count": 1,
-            "omitted_count": 0,
-        }
-
-    evidence = [
-        {
-            "id": "semgrep-clean",
-            "base": {"native_diagnostics": [diagnostic(7)]},
-            "head": {"native_diagnostics": [diagnostic(11)]},
-        }
-    ]
-    _linux23_captured_projection(tmp_path, monkeypatch, job_name, evidence)
-    rows = [json.loads(line)["native_diagnostic"] for line in capsys.readouterr().out.splitlines()]
-    assert [(row["member"], row["side"], row["diagnostic"]["observations"][0]["line"]) for row in rows] == [
-        ("semgrep-clean", "base", 7),
-        ("semgrep-clean", "head", 11),
-    ]
-
-
-@pytest.mark.parametrize("job_name", ["customer", "independent-review"])
-@pytest.mark.parametrize("damage", ["extra", "boolean", "traversal", "bytes", "count", "capture"])
-def test_linux23_public_native_diagnostics_reject_hostile_metadata(tmp_path, monkeypatch, capsys, job_name, damage):
-    observation = {
-        "error_kind": "syntax_error",
-        "target": "subject",
-        "coordinate_status": "accepted",
-        "input_path": "public.py",
-        "line": 7,
-        "column": 2,
-        "end_line": 7,
-        "end_column": 3,
-    }
-    diagnostic = {"kind": "semgrep", "observations": [observation], "total_count": 1, "omitted_count": 0}
-    if damage == "extra":
-        observation["message"] = "PRIVATE_SOURCE"
-    elif damage == "boolean":
-        observation["line"] = True
-    elif damage == "traversal":
-        observation["input_path"] = "../public.py"
-    elif damage == "bytes":
-        observation["input_path"] = "é" * 3000
-    elif damage == "count":
-        diagnostic["total_count"] = 2
-    _linux23_captured_projection(
-        tmp_path,
-        monkeypatch,
-        job_name,
-        [{"id": "semgrep-clean", "base": {"native_diagnostics": [diagnostic]}}],
-        admitted=damage != "capture",
+    report = candidate / ".specfact/code-review.json" if job_name == "customer" else tmp_path / "review.private.json"
+    report.parent.mkdir(exist_ok=True)
+    report.write_text("PRIVATE_REPORT invalid JSON")
+    shell = f"set -e\ntrusted_env=(env)\nreview_exit={review_exit}\n" + invocation + "\n" + public_projector(job_name)
+    shell += '\nPY\nexit "$review_exit"\n'
+    environment = dict(os.environ, CUSTOMER_ROOT=str(tmp_path), TRUSTED_ROOT=str(tmp_path), PYTHONPATH=str(ambient))
+    environment["REVIEW_PUBLIC_REPORT"] = str(report)
+    result = subprocess.run(
+        ["bash", "-c", shell], cwd=candidate, env=environment, capture_output=True, text=True, check=False
     )
-    output = capsys.readouterr().out
-    assert '"native_diagnostic"' not in output
-    assert "PRIVATE_SOURCE" not in output
-
-
-def _linux23_correction_diagnostic(path):
-    observation = {"error_kind": "syntax_error", "target": "subject", "coordinate_status": "absent"}
-    if path is not None:
-        observation["input_path"] = path
-    return {"kind": "semgrep", "observations": [observation], "total_count": 1, "omitted_count": 0}
-
-
-@pytest.mark.parametrize("job_name", ["customer", "independent-review"])
-def test_linux23_correction_deleted_renamed_and_wrong_side(tmp_path, monkeypatch, capsys, job_name):
-    def inventory(ref):
-        return b"deleted.py\0old.py\0" if ref == "b" * 40 else b"new.py\0"
-
-    diagnostic = _linux23_correction_diagnostic
-    evidence = [
-        {
-            "id": "semgrep-clean",
-            "base": {"native_diagnostics": [diagnostic(p) for p in ("deleted.py", "old.py", "new.py", None)]},
-            "head": {"native_diagnostics": [diagnostic(p) for p in ("new.py", "old.py", "deleted.py")]},
-        }
-    ]
-    _linux23_captured_projection(tmp_path, monkeypatch, job_name, evidence, inventory=inventory)
-    rows = [json.loads(line)["native_diagnostic"] for line in capsys.readouterr().out.splitlines()]
-    assert [(r["side"], r["diagnostic"]["observations"][0].get("input_path")) for r in rows] == [
-        ("base", "deleted.py"),
-        ("base", "old.py"),
-        ("base", None),
-        ("head", "new.py"),
-    ]
-
-
-@pytest.mark.parametrize("job_name", ["customer", "independent-review"])
-@pytest.mark.parametrize(
-    "damage",
-    [
-        "missing",
-        "malformed",
-        "swapped",
-        "head_mismatch",
-        "role",
-        "missing_object",
-        "nonzero",
-        "timeout",
-        "encoding",
-        "oversize",
-        "valid_large",
-        "capture",
-    ],
-)
-def test_linux23_correction_inventory_admission(tmp_path, monkeypatch, capsys, job_name, damage):
-    refs = {"base": "b" * 40, "head": "a" * 40}
-    binding = {"role": "candidate" if job_name == "customer" else "independent", "head": "a" * 40, "attempt": "123:2"}
-    if damage == "missing":
-        refs = {}
-    elif damage == "malformed":
-        refs = {"base": "B" * 40, "head": "HEAD"}
-    elif damage == "swapped":
-        refs = {"base": "a" * 40, "head": "b" * 40}
-    elif damage == "head_mismatch":
-        binding["head"] = "c" * 40
-    elif damage == "role":
-        binding["role"] = "independent" if job_name == "customer" else "candidate"
-
-    def inventory(ref):
-        if damage in ("missing_object", "nonzero"):
-            raise subprocess.CalledProcessError(128 if damage == "missing_object" else 1, ["git"])
-        if damage == "timeout":
-            raise subprocess.TimeoutExpired(["git"], 5)
-        if damage == "encoding":
-            return b"public.py\0\xff"
-        if damage == "oversize":
-            return b"public.py\0" + b"x" * (1024 * 1024)
-        if damage == "valid_large":
-            value = b"public.py\0" + b"unused.py\0" * 8000
-            assert 65536 < len(value) < 1024 * 1024
-            return value
-        return b"public.py\0"
-
-    evidence = [
-        {
-            "id": "semgrep-clean",
-            **{
-                side: {"native_diagnostics": [_linux23_correction_diagnostic("public.py")]} for side in ("base", "head")
-            },
-        }
-    ]
-    _linux23_captured_projection(
-        tmp_path,
-        monkeypatch,
-        job_name,
-        evidence,
-        refs=refs,
-        binding=binding,
-        inventory=inventory,
-        admitted=damage != "capture",
-    )
-    output = capsys.readouterr().out
-    assert ('"native_diagnostic"' in output) is (damage == "valid_large")
-    assert len(output.encode()) <= 65536
-
-
-@pytest.mark.parametrize("job_name", ["customer", "independent-review"])
-def test_linux23_correction_combined_limit_and_rule_identity(tmp_path, monkeypatch, capsys, job_name):
-    rule = {
-        "kind": "semgrep",
-        "observations": [
-            {
-                "error_kind": "rule_parse_error",
-                "target": "rule",
-                "coordinate_status": "absent",
-                "rule_input_id": "config_1",
-                "rule_input_sha256": "d" * 64,
-            }
-        ],
-        "total_count": 1,
-        "omitted_count": 0,
-    }
-    findings = [{"file": "public.py", "line": 1, "severity": "error"}] * 10
-    _linux23_captured_projection(
-        tmp_path,
-        monkeypatch,
-        job_name,
-        [{"id": "semgrep-clean", "base": {"native_diagnostics": [rule] * 199}}],
-        findings=findings,
-    )
-    output = capsys.readouterr().out
-    rows = [json.loads(line) for line in output.splitlines()]
-    assert len(rows) == 200
-    assert rows[0]["native_diagnostic"]["diagnostic"] == rule
-    assert rows[-1] == {"finding_location": {"file": "public.py", "line": 1, "severity": "error"}}
-
-
-@pytest.mark.parametrize("job_name", ["customer", "independent-review"])
-def test_linux23_correction_missing_base_keeps_head_and_mixed_observations(tmp_path, monkeypatch, capsys, job_name):
-    diagnostic = _linux23_correction_diagnostic("public.py")
-    diagnostic["observations"][0].update(coordinate_status="accepted", line=7, column=2, end_line=7, end_column=3)
-    diagnostic["observations"].append({"error_kind": "other", "target": "unknown", "coordinate_status": "absent"})
-    diagnostic["total_count"] = 2
-    _linux23_captured_projection(
-        tmp_path,
-        monkeypatch,
-        job_name,
-        [
-            {
-                "id": "semgrep-clean",
-                "base": {"native_diagnostics": [diagnostic]},
-                "head": {"native_diagnostics": [diagnostic]},
-            }
-        ],
-        refs={"head": "a" * 40},
-    )
-    rows = [json.loads(line) for line in capsys.readouterr().out.splitlines()]
-    assert rows == [{"native_diagnostic": {"member": "semgrep-clean", "side": "head", "diagnostic": diagnostic}}]
-
-
-@pytest.mark.parametrize("job_name", ["customer", "independent-review"])
-@pytest.mark.parametrize("damage", [None, "digest", "mapping"])
-def test_linux23_correction_rule_coordinates_require_digest_and_mapping(
-    tmp_path, monkeypatch, capsys, job_name, damage
-):
-    observation = {
-        "error_kind": "rule_parse_error",
-        "target": "rule",
-        "coordinate_status": "accepted",
-        "input_path": "public.py",
-        "rule_input_id": "config_1",
-        "rule_input_sha256": "d" * 64,
-        "line": 7,
-        "column": 2,
-        "end_line": 7,
-        "end_column": 3,
-    }
-    if damage == "digest":
-        observation["rule_input_sha256"] = "INVALID"
-    elif damage == "mapping":
-        observation["input_path"] = "unmapped.yaml"
-    diagnostic = {"kind": "semgrep", "observations": [observation], "total_count": 1, "omitted_count": 0}
-    _linux23_captured_projection(
-        tmp_path, monkeypatch, job_name, [{"id": "semgrep-clean", "base": {"native_diagnostics": [diagnostic]}}]
-    )
-    rows = [json.loads(line) for line in capsys.readouterr().out.splitlines()]
-    assert rows == (
-        [] if damage else [{"native_diagnostic": {"member": "semgrep-clean", "side": "base", "diagnostic": diagnostic}}]
-    )
+    assert not marker.exists(), "Candidate or ambient standard-library lookalikes executed on the host"
+    assert result.returncode == review_exit and result.stderr == ""
+    rows = [json.loads(line) for line in result.stdout.splitlines()]
+    assert rows[-1] == {"status": "INCOMPLETE", "phase": "review", "diagnostic": "review_report_unreadable"}
+    assert (review_exit != 124) or rows[0]["diagnostic"] == "analysis_timeout"
+    assert "PRIVATE_REPORT" not in result.stdout and "UNTRUSTED_IMPORT" not in result.stdout
+    assert report.read_text() == "PRIVATE_REPORT invalid JSON"

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import os
-import stat
 import subprocess
 import venv
 from pathlib import Path
@@ -21,14 +20,11 @@ __all__ = [
     "_ISOLATED_REVIEWER_TEMPLATES",
     "_PREPARATION_CLI_SCRIPT",
     "_TRUSTED_BOOTSTRAP_LAUNCHER",
-    "_capture_program",
     "_git",
     "_isolated_reviewer_modules",
     "_write_deferred_fixture_sources",
-    "_write_preparation_fixture",
     "_write_public_report",
     "assert_block2_trace",
-    "assert_fixture_invocations",
     "assert_incomplete_preparation",
     "assert_installed_review_arguments",
     "create_isolated_reviewer",
@@ -122,30 +118,14 @@ _TRUSTED_BOOTSTRAP_LAUNCHER = (
 
 
 _ISOLATED_REVIEWER_TEMPLATES = {
-    "yaml.py": "class YAMLError(Exception): pass\ndef safe_load(value):\n    raise ValueError('fixture metadata unavailable')\n",
-    "specfact_cli/registry/crypto_validator.py": "def verify_signature(*args):\n    return False\n",
-    "specfact_cli/registry/module_installer.py": "from pathlib import Path\n"
-    "def _bundled_public_key_path():\n    return Path('unavailable-fixture-key')\n"
-    "def _module_artifact_payload_stable(package):\n    raise ValueError('fixture metadata unavailable')\n",
     "specfact_cli/__init__.py": "",
-    "specfact_cli/cli.py": "import os,json,stat,sys\n"
+    "specfact_cli/cli.py": "import os,json\n"
     "from pathlib import Path\n"
     "root=Path(os.environ['HOME']).parent\n"
     "assert Path.cwd() == root, 'core discovery entered the candidate subject'\n"
     "assert not "
     "{'PYTHONPATH','GITHUB_TOKEN','GH_TOKEN','SPECFACT_MODULES_ROOTS','SPECFACT_ALLOW_UNSIGNED'} "
     "& os.environ.keys()\n"
-    "entry=(json.dumps({'argv':sys.argv,'cwd':str(Path.cwd())},separators=(',',':'))+'\\n').encode()\n"
-    "assert len(entry) <= 8192, 'fixture invocation row bound'\n"
-    "fd=os.open(root/'invocations.private.jsonl',os.O_WRONLY|os.O_APPEND|os.O_CREAT|os.O_NOFOLLOW|os.O_NONBLOCK,0o600)\n"
-    "try:\n"
-    "    info=os.fstat(fd)\n"
-    "    assert stat.S_ISREG(info.st_mode) and info.st_nlink == 1 and stat.S_IMODE(info.st_mode) == 0o600\n"
-    "    assert info.st_size + len(entry) <= 16384, 'fixture invocation journal bound'\n"
-    "    written=os.write(fd,entry)\n"
-    "    assert written == len(entry), 'incomplete fixture invocation write'\n"
-    "finally:\n"
-    "    os.close(fd)\n"
     "def app(*,args):\n"
     "    assert Path.cwd() == root/'subject'\n"
     "    (root/'argv.json').write_text(json.dumps(args))\n"
@@ -458,79 +438,3 @@ def write_public_phase_record_report(root, nodeid, detail):
     ]
     data["analyzer_evidence"] = [{"id": "targeted-pytest-coverage", "target_execution": {"records": records}}]
     report.write_text(json.dumps(data))
-
-
-def _write_preparation_fixture(tmp_path, case):
-    import json
-
-    descriptor = tmp_path / "descriptor.json"
-    descriptor.write_text("{}")
-    payload = {"runtimes": {side: {"descriptor": str(descriptor)} for side in ("base", "head")}}
-    if case.startswith("not_applicable"):
-        payload = {"scope": "index", "status": "NOT_APPLICABLE", "diagnostic": "no_governed_impact", "runtimes": {}}
-        overrides = {
-            "not_applicable_reason": {"diagnostic": "private-reason"},
-            "not_applicable_scope": {"scope": "full"},
-            "not_applicable_runtimes": {"runtimes": ["private"]},
-            "not_applicable_nonempty": {"runtimes": {"head": {"descriptor": str(descriptor)}}},
-        }
-        payload.update(overrides.get(case, {}))
-    elif case == "missing_base":
-        payload["runtimes"].pop("base")
-    elif case == "missing_files":
-        descriptor.unlink()
-    report = tmp_path / "preparation.private.json"
-    report.write_text("not-json/private" if case == "invalid" else json.dumps(payload))
-    return report
-
-
-def _capture_program():
-    workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())
-    step = next(s for s in workflow["jobs"]["customer"]["steps"] if "PY_CAPTURE" in s.get("run", ""))
-    return step["run"].split("<<'PY_CAPTURE'", 1)[1].split("\n", 1)[1].split("\nPY_CAPTURE", 1)[0]
-
-
-def assert_fixture_invocations(trusted: Path, *, reviewed: bool = True):
-    journal = trusted / "invocations.private.jsonl"
-    descriptor = os.open(journal, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
-    try:
-        info = os.fstat(descriptor)
-        assert stat.S_ISREG(info.st_mode) and info.st_nlink == 1, "Invalid fixture journal file"
-        assert stat.S_IMODE(info.st_mode) == 0o600, "Nonprivate fixture journal"
-        assert 0 < info.st_size <= 16384, "Invalid fixture journal size"
-        with os.fdopen(descriptor, "rb", closefd=False) as stream:
-            data = stream.read(16385)
-        assert len(data) == info.st_size and data.endswith(b"\n"), "Incomplete fixture journal"
-    finally:
-        os.close(descriptor)
-    lines = data.splitlines()
-    assert len(lines) == (2 if reviewed else 1), "Unexpected fixture invocation count"
-    try:
-        records = [json.loads(line) for line in lines]
-    except (ValueError, UnicodeError) as error:
-        raise AssertionError("Malformed fixture journal") from error
-    prefix = [str(trusted / "reviewer.py"), str(trusted / "subject")]
-    expected = [{"argv": [*prefix, "prepare-index", str(trusted / "project.toml")], "cwd": str(trusted)}]
-    if reviewed:
-        expected.append(
-            {
-                "argv": [
-                    *prefix,
-                    "code",
-                    "review",
-                    "run",
-                    "--scope",
-                    "index",
-                    "--enforcement",
-                    "changed",
-                    "--bug-hunt",
-                    "--project-config",
-                    str(trusted / "project.toml"),
-                    "--json",
-                    "--out",
-                    str(trusted / "review.private.json"),
-                ],
-                "cwd": str(trusted),
-            }
-        )
-    assert records == expected, "Unexpected fixture invocation arguments or cwd"

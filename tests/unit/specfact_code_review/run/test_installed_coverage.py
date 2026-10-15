@@ -320,14 +320,10 @@ def test_bad_native_coverage_is_an_actionable_tool_error(installed_project, bad)
     project = installed_project
     bridge = _bridge(project)
     findings = portable_worker._installed_coverage_findings(
-        [project.source], bridge, {"coverage": {"files": bad}}, evaluate_portable_pytest_coverage, child_returncode=0
+        [project.source], bridge, {"coverage": {"files": bad}}, evaluate_portable_pytest_coverage
     )
     assert findings[0].category == "tool_error"
     assert "project_pytest_installed_coverage_unavailable" in findings[0].message
-    assert findings[0].native_diagnostic is not None
-    diagnostic = findings[0].native_diagnostic.model_dump()
-    assert diagnostic["phase"] == "installed_coverage"
-    assert diagnostic["child_returncode"] == 0
 
 
 def test_native_worker_accepts_only_contained_coverage_directories(installed_project, monkeypatch):

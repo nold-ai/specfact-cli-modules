@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import os
 import subprocess
 import sys
@@ -128,17 +127,6 @@ def test_isolated_reviewer_preloads_trusted_code_and_never_accepts_incomplete_pr
         assert_incomplete_preparation(trusted, result, fixture_reason)
     else:
         assert_installed_review_arguments(trusted)
-        observations = json.loads((trusted / "prepared-source.public.json").read_text())
-        assert observations == [
-            {
-                "kind": "PREPARED_BUILTIN_SOURCE",
-                "side": side,
-                "status": "UNAVAILABLE",
-                "actual_loaded_adapter": "UNAVAILABLE",
-                "effective_deadline": "UNAVAILABLE",
-            }
-            for side in ("base", "head")
-        ]
 
 
 def test_trusted_bootstrap_cannot_import_candidate_venv_module(tmp_path: Path) -> None:

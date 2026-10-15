@@ -3,23 +3,15 @@
 This document is the modules-side source of truth for active OpenSpec work. It
 must be read together with the core repo change order in `nold-ai/specfact-cli`.
 
-## Correspondence candidate prefilter (2026-10-14)
-
-`code-review-correspondence-candidate-prefilter` is the approved independent source correction for redundant forbidden matrix work in candidate search. Complete differential semantics and all native/signature/review gates remain mandatory. Component tests do not establish historical timeout cause or native acceptance.
-
-## Independent review timeout diagnostic (2026-10-13)
-
-`code-review-independent-timeout-diagnostic` adds the approved failure-only observation of the fixed signed supplier subject. The completed original observation preserves the failed required review and its 300-second limit. The subsequently approved bounded policy gives the required whole-CLI parent 600 seconds while preserving all member limits, full scope, failure-on-expiry and the 45-minute job cap. The consumed optional observation remains disabled on later heads. Raw evidence stays private. It authorizes no acceptance, merge or release.
-
-The 2026-10-14 workflow-only correction preserves immutable original reports, admits five authenticated plain host functions, and emits bounded private receipts with fixed public projection. It does not edit the signed module, historical helper, required command or deadlines. Inert controls precede independent review and required exact-head CI; neither local host observations nor public diagnostics establish acceptance.
-
 ## Bounded Linux pytest execution budget (2026-10-13)
 
 `code-review-linux-pytest-execution-budget` is a separately authorized additive
-operator option: default 300 seconds, maximum 600 seconds for Linux pytest only. It preserves
+operator option: default300seconds, maximum600 for Linux pytest only. It preserves
 all analysis/coverage/signature gates and UNKNOWN timeout outcomes. It does not
 authorize registry publication or merge. Local tests and supplier verification
 precede a reviewed PR and the existing trusted CI signing route.
+
+The separately approved required independent whole-review controller permits600seconds while preserving all member and analyzer deadlines, full scope, blocking failure-on-expiry and the45-minute job cap. It adds no diagnostic execution, acceptance, merge or release authority.
 
 ## Agentic SDLC adjustments (2026-10-04)
 

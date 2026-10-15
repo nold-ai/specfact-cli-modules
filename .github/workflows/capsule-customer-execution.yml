@@ -28,7 +28,6 @@ jobs:
       matrix:
         python: ["3.11", "3.12", "3.13"]
     env:
-      CANDIDATE_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
       MATRIX_PYTHON: ${{ matrix.python }}
       RELEASE_TAG: ${{ github.event.release.tag_name || '' }}
       MODE: ${{ github.event_name == 'pull_request' && 'candidate' || 'public' }}
@@ -144,197 +143,6 @@ jobs:
           { sudo dmesg --color=never; } > "$CUSTOMER_ROOT/namespace-audit-baseline.private.log" \
             2> "$CUSTOMER_ROOT/namespace-audit-baseline.private.stderr" || audit_exit=$?
           echo "NAMESPACE_AUDIT_BASELINE_CAPTURED=$([ "$audit_exit" -eq 0 ] && echo 1 || echo 0)" >> "$GITHUB_ENV"
-      - name: Prepare private original-report capture
-        shell: bash
-        run: &original_capture_script |
-          set -euo pipefail
-          umask 077
-          root="${TRUSTED_ROOT:-$CUSTOMER_ROOT}"
-          cat > "$root/capture-original.py" <<'PY_CAPTURE' || true
-          import hashlib
-          import json
-          import os
-          import stat
-          import sys
-          from pathlib import Path
-
-          LIMIT = 32 * 1024 * 1024
-
-
-          def unique_object(pairs):
-              result = {}
-              for key, value in pairs:
-                  if key in result:
-                      raise ValueError("duplicate")
-                  result[key] = value
-              return result
-
-
-          def stable_bytes(path, limit):
-              descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
-              try:
-                  before = os.fstat(descriptor)
-                  if not stat.S_ISREG(before.st_mode) or before.st_nlink != 1:
-                      raise ValueError("UNAVAILABLE")
-                  if before.st_size > limit:
-                      raise ValueError("OVERSIZED")
-                  with os.fdopen(descriptor, "rb", closefd=False) as stream:
-                      value = stream.read(limit + 1)
-                  after = os.fstat(descriptor)
-                  if len(value) > limit:
-                      raise ValueError("OVERSIZED")
-                  identity = lambda item: (item.st_dev, item.st_ino, item.st_size, item.st_mtime_ns, item.st_ctime_ns, item.st_mode, item.st_nlink)
-                  if identity(before) != identity(after) or len(value) != after.st_size:
-                      raise ValueError("CHANGED")
-                  return value
-              finally:
-                  os.close(descriptor)
-
-
-          def exclusive_bytes(path, value):
-              descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
-              try:
-                  if os.write(descriptor, value) != len(value):
-                      raise OSError("short write")
-              finally:
-                  os.close(descriptor)
-
-
-          def capture_original(source, destination, binding, required_exit):
-              failure = {"status": "UNAVAILABLE", "binding": binding, "required_exit": required_exit, "sha256": None, "bytes": None}
-              try:
-                  if (set(binding) != {"role", "head", "attempt"} or binding["role"] not in ("candidate", "independent")
-                      or type(binding["head"]) is not str or len(binding["head"]) != 40
-                      or any(c not in "0123456789abcdef" for c in binding["head"])
-                      or type(binding["attempt"]) is not str or not 1 <= len(binding["attempt"]) <= 128
-                      or type(required_exit) is not int or not 0 <= required_exit <= 255):
-                      return failure
-                  if destination.is_symlink():
-                      return failure
-                  if destination.exists():
-                      if destination.stat().st_mode & 0o777 != 0o700:
-                          return failure
-                      manifest = json.loads(stable_bytes(destination / "manifest.json", 4096), object_pairs_hook=unique_object)
-                      if (set(manifest) != set(failure) or manifest["binding"] != binding
-                          or type(manifest["required_exit"]) is not int or manifest["required_exit"] != required_exit):
-                          return failure
-                      if manifest["status"] not in ("COMPLETE", "MISSING", "OVERSIZED", "CHANGED", "UNAVAILABLE"):
-                          return failure
-                      if manifest["status"] != "COMPLETE" and (manifest["sha256"] is not None or manifest["bytes"] is not None):
-                          return failure
-                      if manifest["status"] == "COMPLETE":
-                          if type(manifest["bytes"]) is not int:
-                              return failure
-                          data = stable_bytes(destination / "original.json", LIMIT)
-                          if manifest["sha256"] != hashlib.sha256(data).hexdigest() or manifest["bytes"] != len(data):
-                              return failure
-                      return manifest
-                  destination.mkdir(mode=0o700)
-                  try:
-                      data = stable_bytes(source, LIMIT)
-                      exclusive_bytes(destination / "original.pending", data)
-                      result = {**failure, "status": "COMPLETE", "sha256": hashlib.sha256(data).hexdigest(), "bytes": len(data)}
-                  except FileNotFoundError:
-                      result = {**failure, "status": "MISSING"}
-                  except (OSError, ValueError) as error:
-                      status = str(error) if str(error) in ("OVERSIZED", "CHANGED") else "UNAVAILABLE"
-                      result = {**failure, "status": status}
-                  exclusive_bytes(destination / "manifest.pending", json.dumps(result, sort_keys=True).encode())
-                  if result["status"] == "COMPLETE":
-                      os.replace(destination / "original.pending", destination / "original.json")
-                  os.replace(destination / "manifest.pending", destination / "manifest.json")
-                  return result
-              except (OSError, ValueError, TypeError, KeyError):
-                  return failure
-
-
-          def host_projection(root, original_binding):
-              unavailable = {"host_observation_status": "UNAVAILABLE", "last_observed_host_stage": "UNAVAILABLE", "member": "UNAVAILABLE",
-                  "side": "UNAVAILABLE", "event": "UNAVAILABLE", "later_execution_unknown": True, "loaded_host_identity": None}
-              partial = {**unavailable, "host_observation_status": "PARTIAL"}
-              try:
-                  directory = root / "observation-private"
-                  if not (directory / "receipt.jsonl").exists():
-                      return unavailable
-                  manifest = json.loads(stable_bytes(directory / "invocation.json", 4096), object_pairs_hook=unique_object)
-                  if set(manifest) != {"head", "workflow_blob", "controller_sha256", "role", "attempt"}:
-                      return partial
-                  if any(manifest[key] != original_binding[key] for key in ("role", "head", "attempt")):
-                      return partial
-                  data = stable_bytes(directory / "receipt.jsonl", 128 * 1024)
-                  lines = data.splitlines(keepends=True)
-                  if not lines or len(lines) > 128 or any(len(line) > 1024 or not line.endswith(b"\n") for line in lines):
-                      return partial
-                  stack, ordinal, last, identity, completed = [], 0, None, None, False
-                  stages = ("project_runtime", "capsule_prepare", "snapshot_pair", "member_dispatch", "member_execute")
-                  members = ("ai-bloat-ast", "ast-clean-code", "basedpyright", "contracts", "pylint", "radon", "ruff", "semgrep-clean", "semgrep-bugs", "targeted-pytest-coverage", "UNAVAILABLE")
-                  for sequence, line in enumerate(lines, 1):
-                      row = json.loads(line, object_pairs_hook=unique_object)
-                      if set(row) != {"sequence", "call", "event", "stage", "member", "side", "binding"} or completed:
-                          return partial
-                      binding = row["binding"]
-                      if not isinstance(binding, dict) or set(binding) != set(manifest) | {"payload_sha256", "runner_sha256"}:
-                          return partial
-                      if any(binding[key] != value for key, value in manifest.items()):
-                          return partial
-                      if binding["payload_sha256"] != "d4bcfd8db105c60440b3bdefbe414f1dc148a75c21b8533801d43d888b3d0df4":
-                          return partial
-                      if any(type(binding[key]) is not str or len(binding[key]) != length or any(c not in "0123456789abcdef" for c in binding[key])
-                          for key, length in (("head", 40), ("workflow_blob", 40), ("controller_sha256", 64), ("runner_sha256", 64))):
-                          return partial
-                      current = {key: binding[key] for key in ("payload_sha256", "runner_sha256")}
-                      if identity is not None and current != identity:
-                          return partial
-                      identity = current
-                      if type(row["sequence"]) is not int or row["sequence"] != sequence or type(row["call"]) is not int:
-                          return partial
-                      if row["event"] == "complete":
-                          if stack or row["call"] != 0 or any(row[key] != "UNAVAILABLE" for key in ("stage", "member", "side")):
-                              return partial
-                          completed = True
-                          continue
-                      if row["stage"] not in stages or row["member"] not in members or row["side"] not in ("base", "head", "UNAVAILABLE"):
-                          return partial
-                      transition = tuple(row[key] for key in ("call", "stage", "member", "side"))
-                      if row["event"] == "enter":
-                          ordinal += 1
-                          if row["call"] != ordinal or len(stack) >= 16:
-                              return partial
-                          stack.append(transition)
-                      elif row["event"] == "leave":
-                          if not stack or stack.pop() != transition:
-                              return partial
-                      else:
-                          return partial
-                      last = row
-                  if not completed or stack:
-                      return partial
-                  result = {**unavailable, "host_observation_status": "AVAILABLE", "later_execution_unknown": False, "loaded_host_identity": identity}
-                  if last is not None:
-                      result.update(last_observed_host_stage=last["stage"], member=last["member"], side=last["side"], event=last["event"])
-                  return result
-              except (OSError, ValueError, TypeError, KeyError):
-                  return partial
-
-
-          def original_projection(manifest):
-              return {"schema_version": 1, "role": manifest["binding"]["role"], "original_status": manifest["status"],
-                  "required_exit": manifest["required_exit"], "report_sha256": manifest["sha256"], "report_bytes": manifest["bytes"],
-                  "diagnostic": "original_captured" if manifest["status"] == "COMPLETE" else "original_unavailable",
-                  "host_observation_status": "UNAVAILABLE", "last_observed_host_stage": "UNAVAILABLE", "member": "UNAVAILABLE",
-                  "side": "UNAVAILABLE", "event": "UNAVAILABLE", "later_execution_unknown": True, "loaded_host_identity": None,
-                  "effective_host_timeout_seconds": None, "actual_loaded_guest_identity": "UNAVAILABLE"}
-
-
-          if __name__ == "__main__":
-              root, source, role, head, attempt, exit_text = sys.argv[1:]
-              manifest = capture_original(Path(source), Path(root) / "original-private", {"role": role, "head": head, "attempt": attempt}, int(exit_text))
-              public = original_projection(manifest)
-              if role == "independent":
-                  public.update(host_projection(Path(root), manifest["binding"]))
-              Path(root, "original-report.public.json").write_text(json.dumps(public, sort_keys=True) + "\n")
-              raise SystemExit(0 if manifest["status"] == "COMPLETE" else 1)
-          PY_CAPTURE
       - name: Run deferred candidate commit review without weakening enforcement
         id: deferred_review
         if: github.event_name == 'pull_request' && matrix.python == '3.12'
@@ -434,16 +242,9 @@ jobs:
             SPECFACT_CODE_REVIEW_PROJECT_CONFIG="$PROJECT_CONFIG" \
             SPECFACT_CODE_REVIEW_ENFORCEMENT=changed \
             "$CUSTOMER_ROOT/venv/bin/python" "$GITHUB_WORKSPACE/scripts/pre_commit_code_review.py" "${review_paths[@]}" || review_exit=$?
-          original_capture_admitted=false
-          if "$CUSTOMER_ROOT/venv/bin/python" -I "$CUSTOMER_ROOT/capture-original.py" "$CUSTOMER_ROOT" \
-            "$REVIEW_ROOT/.specfact/code-review.json" candidate "${CANDIDATE_HEAD:-${GITHUB_SHA:-}}" "${GITHUB_RUN_ID:-}:${GITHUB_RUN_ATTEMPT:-}" "$review_exit" \
-            2> "$CUSTOMER_ROOT/original-capture.private.log"; then
-            original_capture_admitted=true
-          fi
-          printf 'original_capture_admitted=%s\n' "$original_capture_admitted" >> "${GITHUB_OUTPUT:-/dev/null}" || true
           if [ "$review_exit" -ne 0 ]; then
             # Print bounded codes/public locations; raw reports, receipts and logs stay private.
-            REVIEW_DIAGNOSTIC_BASE="${REVIEW_BASE:-}" REVIEW_DIAGNOSTIC_HEAD="${CANDIDATE_HEAD:-}" REVIEW_CAPTURE_ADMITTED="$original_capture_admitted" REVIEW_PUBLIC_REPORT="$CUSTOMER_ROOT/original-private/original.json" REVIEW_PUBLIC_EXIT="$review_exit" "$CUSTOMER_ROOT/venv/bin/python" -I - <<'PY' 2> "$CUSTOMER_ROOT/review-projection.private.log" || printf '%s\n' '{"status":"INCOMPLETE","phase":"review","diagnostic":"review_projection_failed"}' || true
+            REVIEW_PUBLIC_EXIT="$review_exit" "$CUSTOMER_ROOT/venv/bin/python" -I - <<'PY' 2> "$CUSTOMER_ROOT/review-projection.private.log" || printf '%s\n' '{"status":"INCOMPLETE","phase":"review","diagnostic":"review_projection_failed"}' || true
           import ast
           import re
           import json
@@ -452,38 +253,12 @@ jobs:
           from pathlib import Path
 
           report = Path(os.environ.get("REVIEW_PUBLIC_REPORT", ".specfact/code-review.json"))
-          capture_admitted = True
-          if report.name == "original.json":
-              import hashlib
-              try:
-                  if os.environ.get("REVIEW_CAPTURE_ADMITTED") != "true":
-                      raise ValueError("original capture not admitted")
-                  with (report.parent / "manifest.json").open("rb") as stream:
-                      manifest_bytes = stream.read(4097)
-                  def capture_object(pairs):
-                      result = {}
-                      for key, value in pairs:
-                          if key in result:
-                              raise ValueError("duplicate capture key")
-                          result[key] = value
-                      return result
-                  manifest = json.loads(manifest_bytes, object_pairs_hook=capture_object)
-                  with report.open("rb") as stream:
-                      original_bytes = stream.read(32 * 1024 * 1024 + 1)
-                  if (len(manifest_bytes) > 4096 or set(manifest) != {"status", "binding", "required_exit", "sha256", "bytes"} or manifest["status"] != "COMPLETE"
-                      or type(manifest["bytes"]) is not int or manifest["bytes"] != len(original_bytes)
-                      or len(original_bytes) > 32 * 1024 * 1024 or manifest["sha256"] != hashlib.sha256(original_bytes).hexdigest()):
-                      raise ValueError("original capture incomplete")
-              except (OSError, ValueError, TypeError, KeyError):
-                  capture_admitted = False
           if os.environ.get("REVIEW_PUBLIC_EXIT") == "124":
               print(json.dumps({"status": "INCOMPLETE", "phase": "review", "diagnostic": "analysis_timeout"}))
-          if not capture_admitted:
-              print(json.dumps({"status": "INCOMPLETE", "phase": "review", "diagnostic": "original_capture_unavailable"}))
-          elif not report.is_file() and os.environ.get("REVIEW_PUBLIC_EXIT") != "124":
+          if not report.is_file() and os.environ.get("REVIEW_PUBLIC_EXIT") != "124":
               print(json.dumps({"status": "INCOMPLETE", "phase": "review", "diagnostic": "review_report_missing"}))
           data = None
-          if capture_admitted and report.is_file():
+          if report.is_file():
               try:
                   with report.open("rb") as stream:
                       payload = stream.read(32 * 1024 * 1024 + 1)
@@ -561,6 +336,7 @@ jobs:
                           break
                   return failure
 
+              source_test_functions = {}
               def _public_test_observation(finding, file):
                   message = finding.get("message")
                   if not isinstance(message, str) or len(message) > 4096:
@@ -571,124 +347,32 @@ jobs:
                   nodeid, outcome, phase, xfail = match.groups()
                   observation = {"test_outcome": outcome, "test_phase": phase, "test_xfail": bool(xfail)}
                   observation.update(_public_test_failure(nodeid, outcome, phase))
+                  if not nodeid.startswith(file + "::"):
+                      return observation
+                  if file not in source_test_functions:
+                      functions = set()
+                      source = Path(file)
+                      try:
+                          source.resolve().relative_to(Path.cwd().resolve())
+                          if source.suffix == ".py" and not source.is_symlink() and source.stat().st_size <= 2_097_152:
+                              tree = ast.parse(source.read_text(encoding="utf-8"))
+                              functions = {node.name for node in ast.walk(tree) if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name.startswith("test_")}
+                      except (OSError, ValueError, SyntaxError, UnicodeError, RecursionError):
+                          pass
+                      source_test_functions[file] = functions
+                  function = nodeid[len(file) + 2:].split("[", 1)[0].rsplit("::", 1)[-1]
+                  if function in source_test_functions[file]:
+                      observation["test_function"] = function
                   return observation
 
               tracked = set(subprocess.check_output(["git", "ls-files", "-z"], text=True).split("\0"))
               emitted = 0
-              def _native_path(value):
-                  return (isinstance(value, str) and 0 < len(value.encode("utf-8")) <= 1024
-                      and not value.startswith("/") and "\\" not in value and ":" not in value
-                      and all(ord(c) >= 32 and ord(c) != 127 for c in value)
-                      and all(part not in ("", ".", "..") for part in value.split("/")))
-
-              diagnostic_tracked_by_side = {"base": set(), "head": set()}
-              diagnostic_head = os.environ.get("REVIEW_DIAGNOSTIC_HEAD", "")
-              binding = manifest.get("binding") if report.name == "original.json" and capture_admitted else None
-              if (isinstance(binding, dict) and binding.get("head") == diagnostic_head
-                  and re.fullmatch(r"[0-9a-f]{40}", diagnostic_head) and binding.get("role") == "candidate"):
-                  for diagnostic_side in ("base", "head"):
-                      ref = os.environ.get("REVIEW_DIAGNOSTIC_" + diagnostic_side.upper(), "")
-                      if re.fullmatch(r"[0-9a-f]{40}", ref) is None:
-                          continue
-                      try:
-                          inventory = subprocess.check_output(["git", "ls-tree", "-r", "--name-only", "-z", ref], timeout=5)
-                          if len(inventory) <= 1024 * 1024:
-                              diagnostic_tracked_by_side[diagnostic_side] = {
-                                  path for path in inventory.decode("utf-8").split("\0") if _native_path(path)
-                              }
-                      except (OSError, subprocess.SubprocessError, UnicodeError):
-                          pass
-
-              def _native_semgrep_observation(row, side):
-                  keys = {"error_kind", "native_code", "target", "coordinate_status", "input_path", "rule_input_id", "rule_input_sha256", "line", "column", "end_line", "end_column"}
-                  if not isinstance(row, dict) or set(row) - keys:
-                      return False
-                  if row.get("error_kind") not in ("syntax_error", "rule_parse_error", "pattern_parse_error", "partial_parsing", "other"):
-                      return False
-                  if row.get("target") not in ("subject", "rule", "unknown") or row.get("coordinate_status") not in ("accepted", "absent", "rejected"):
-                      return False
-                  code = row.get("native_code")
-                  if code is not None and (type(code) is not int or code not in (0, 1, 2, 3, 4, 5, 7, 8, 13, 14)):
-                      return False
-                  path = row.get("input_path")
-                  if path is not None and (not _native_path(path) or path not in diagnostic_tracked_by_side[side]):
-                      return False
-                  digest, config = row.get("rule_input_sha256"), row.get("rule_input_id")
-                  if row["target"] == "rule":
-                      if config not in ("config_1", "config_2", "config_3") or not isinstance(digest, str) or re.fullmatch(r"[0-9a-f]{64}", digest) is None:
-                          return False
-                  elif config is not None or digest is not None:
-                      return False
-                  if row["target"] == "unknown" and path is not None:
-                      return False
-                  positions = [row.get(key) for key in ("line", "column", "end_line", "end_column")]
-                  if row["coordinate_status"] == "accepted":
-                      if path is None or row["target"] == "unknown" or any(type(value) is not int or not 1 <= value <= 2147483647 for value in positions):
-                          return False
-                      if positions[2:] < positions[:2]:
-                          return False
-                  elif any(value is not None for value in positions):
-                      return False
-                  return True
-
-              def _public_native_diagnostic(value, member, side):
-                  if not isinstance(value, dict):
-                      return None
-                  try:
-                      if len(json.dumps(value, ensure_ascii=False, separators=(",", ":")).encode("utf-8")) > 4096:
-                          return None
-                  except (ValueError, TypeError, RecursionError, UnicodeError):
-                      return None
-                  if value.get("kind") == "semgrep" and member in ("semgrep-clean", "semgrep-bugs"):
-                      if set(value) != {"kind", "observations", "total_count", "omitted_count"}:
-                          return None
-                      rows, total, omitted = value["observations"], value["total_count"], value["omitted_count"]
-                      if not isinstance(rows, list) or len(rows) > 3 or any(not _native_semgrep_observation(row, side) for row in rows):
-                          return None
-                      if any(type(count) is not int or not 0 <= count <= 2147483647 for count in (total, omitted)) or total != len(rows) + omitted:
-                          return None
-                      return value
-                  if value.get("kind") != "pytest" or member != "targeted-pytest-coverage":
-                      return None
-                  if set(value) - {"kind", "phase", "exception_kind", "stable_code", "child_returncode", "observation_state"}:
-                      return None
-                  if value.get("phase") not in ("request", "observation_cleanup", "coverage_plan", "target_command", "child_execution", "observation_read", "observation_decode", "observation_records", "policy", "validation", "root", "findings", "installed_coverage", "transport_read", "transport_decode"):
-                      return None
-                  if value.get("exception_kind") not in ("FileNotFoundError", "PermissionError", "OSError", "JSONDecodeError", "UnicodeDecodeError", "ValueError", "TypeError", "KeyError", "TimeoutExpired", "CalledProcessError", "SubprocessError", "ProjectRuntimeError", "other"):
-                      return None
-                  if value.get("observation_state") not in ("not_read", "read_failed", "decode_failed", "decoded"):
-                      return None
-                  if value.get("stable_code") not in (None, "project_pytest_request_invalid", "project_pytest_collection_error", "project_pytest_internal_error", "project_pytest_configuration_or_collection_failed", "project_pytest_execution_incomplete", "project_pytest_unexecuted", "project_pytest_coverage_missing", "project_pytest_coverage_diagnostic_invalid", "project_pytest_coverage_policy_invalid", "project_pytest_installed_coverage_unavailable", "project_pytest_failure_without_observed_test"):
-                      return None
-                  returncode = value.get("child_returncode")
-                  if returncode is not None and (type(returncode) is not int or not -2147483648 <= returncode <= 2147483647):
-                      return None
-                  return value
-
-              if report.name == "original.json" and capture_admitted:
-                  for analyzer in data.get("analyzer_evidence", []):
-                      if not isinstance(analyzer, dict) or analyzer.get("id") not in ("semgrep-clean", "semgrep-bugs", "targeted-pytest-coverage"):
-                          continue
-                      for side in ("base", "head"):
-                          evidence = analyzer.get(side)
-                          diagnostics = evidence.get("native_diagnostics") if isinstance(evidence, dict) else None
-                          if not isinstance(diagnostics, list):
-                              continue
-                          for diagnostic in diagnostics[:200]:
-                              if emitted >= 200:
-                                  break
-                              safe = _public_native_diagnostic(diagnostic, analyzer["id"], side)
-                              if safe is not None:
-                                  print(json.dumps({"native_diagnostic": {"member": analyzer["id"], "side": side, "diagnostic": safe}}, ensure_ascii=False))
-                                  emitted += 1
               def _finding_priority(row):
                   category = row.get("category") if isinstance(row, dict) else None
                   return {"tool_error": 0, "testing": 1}.get(category, 2) if isinstance(category, str) else 2
 
               findings = sorted(data.get("findings", []), key=_finding_priority)
               for finding in findings:
-                  if emitted >= 200:
-                      break
                   if not isinstance(finding, dict):
                       continue
                   file, line, severity = (finding.get(key) for key in ("file", "line", "severity"))
@@ -755,7 +439,7 @@ jobs:
                       if emitted == 200:
                           break
           PY
-            REVIEW_CAPTURE_ADMITTED="$original_capture_admitted" REVIEW_PUBLIC_REPORT="$CUSTOMER_ROOT/original-private/original.json" "$CUSTOMER_ROOT/venv/bin/python" -I - <<'PY_CANDIDATE_FAILURE' 2> "$CUSTOMER_ROOT/contract-projection.private.log" || printf '%s\n' '{"status":"INCOMPLETE","phase":"review","diagnostic":"review_projection_failed"}' || true
+            "$CUSTOMER_ROOT/venv/bin/python" -I - <<'PY_CANDIDATE_FAILURE' 2> "$CUSTOMER_ROOT/contract-projection.private.log" || printf '%s\n' '{"status":"INCOMPLETE","phase":"review","diagnostic":"review_projection_failed"}' || true
           import json
           from pathlib import Path
 
@@ -767,35 +451,8 @@ jobs:
                   value[key] = item
               return value
 
-          import os
-          report = Path(os.environ.get("REVIEW_PUBLIC_REPORT", ".specfact/code-review.json"))
-          capture_admitted = True
-          if report.name == "original.json":
-              import hashlib
-              try:
-                  if os.environ.get("REVIEW_CAPTURE_ADMITTED") != "true":
-                      raise ValueError("original capture not admitted")
-                  with (report.parent / "manifest.json").open("rb") as stream:
-                      manifest_bytes = stream.read(4097)
-                  def capture_object(pairs):
-                      result = {}
-                      for key, value in pairs:
-                          if key in result:
-                              raise ValueError("duplicate capture key")
-                          result[key] = value
-                      return result
-                  manifest = json.loads(manifest_bytes, object_pairs_hook=capture_object)
-                  with report.open("rb") as stream:
-                      original_bytes = stream.read(32 * 1024 * 1024 + 1)
-                  if (len(manifest_bytes) > 4096 or set(manifest) != {"status", "binding", "required_exit", "sha256", "bytes"} or manifest["status"] != "COMPLETE"
-                      or type(manifest["bytes"]) is not int or manifest["bytes"] != len(original_bytes)
-                      or len(original_bytes) > 32 * 1024 * 1024 or manifest["sha256"] != hashlib.sha256(original_bytes).hexdigest()):
-                      raise ValueError("original capture incomplete")
-              except (OSError, ValueError, TypeError, KeyError):
-                  capture_admitted = False
-          if not capture_admitted:
-              print(json.dumps({"analyzer": "contracts", "diagnostic_class": "candidate_report_unavailable"}))
-          if capture_admitted and report.is_file():
+          report = Path(".specfact/code-review.json")
+          if report.is_file():
               data = {}
               try:
                   with report.open("rb") as stream:
@@ -854,8 +511,6 @@ jobs:
       - name: Profile failed candidate review privately
         if: failure() && steps.deferred_review.outcome == 'failure'
         shell: bash
-        env:
-          REVIEW_CAPTURE_ADMITTED: ${{ steps.deferred_review.outputs.original_capture_admitted || 'false' }}
         run: |
           set -euo pipefail
           test "$(id -u)" -ne 0
@@ -866,11 +521,6 @@ jobs:
             echo '{"status":"DIAGNOSTIC_UNAVAILABLE"}'
             exit 1
           fi
-          [ "${REVIEW_CAPTURE_ADMITTED:-false}" = true ] || exit 0
-          "$CUSTOMER_ROOT/venv/bin/python" -I "$CUSTOMER_ROOT/capture-original.py" "$CUSTOMER_ROOT" \
-            "$REVIEW_ROOT/.specfact/code-review.json" candidate "${CANDIDATE_HEAD:-${GITHUB_SHA:-}}" "${GITHUB_RUN_ID:-}:${GITHUB_RUN_ATTEMPT:-}" \
-            "$("$CUSTOMER_ROOT/venv/bin/python" -I -c 'import json,sys; print(json.load(open(sys.argv[1]))["required_exit"])' "$CUSTOMER_ROOT/original-private/manifest.json")" \
-            2> "$CUSTOMER_ROOT/replay-capture-check.private.log" || exit 0
           # Separate pinned profiler; authenticated reviewer and its deadline stay unchanged.
           "$CUSTOMER_ROOT/venv/bin/python" -m venv "$CUSTOMER_ROOT/profile-venv"
           printf '%s\n' 'py-spy==0.4.2 --hash=sha256:aeb0323409199c785f730645e9f4bb7a7b9ca2c481f2c331a55642b5d13fa52f' \
@@ -972,7 +622,6 @@ jobs:
             ${{ env.CUSTOMER_ROOT }}/evidence/
             ${{ env.CUSTOMER_ROOT }}/external/evidence/
             ${{ env.CUSTOMER_ROOT }}/denied-evidence/
-            ${{ env.CUSTOMER_ROOT }}/original-report.public.json
             ${{ env.CUSTOMER_ROOT }}/installation-evidence/
             ${{ env.CUSTOMER_ROOT }}/installed-*.txt
             ${{ env.CUSTOMER_ROOT }}/capsule-userns.apparmor
@@ -1033,9 +682,6 @@ jobs:
           }
           EOF
           sudo apparmor_parser -r "$TRUSTED_ROOT/capsule.apparmor"
-      - name: Prepare private original-report capture
-        shell: bash
-        run: *original_capture_script
       - name: Prepare and review through the authenticated installed controller
         id: independent_review
         shell: bash
@@ -1050,309 +696,6 @@ jobs:
           from specfact_cli.cli import app
           from specfact_cli.registry import CommandRegistry
 
-          import hashlib
-          import ast
-          import stat
-          import struct
-          import types
-          from itertools import islice
-          import yaml
-          from specfact_cli.registry.crypto_validator import verify_signature
-          from specfact_cli.registry.module_installer import _bundled_public_key_path, _module_artifact_payload_stable
-
-          TRUSTED_KEY_SHA256 = "4e54ffb02307e1a85c166c40aba6d1bc40fbb9a8ef40bf756f8870e5bb08d1c8"
-          ADAPTER_ENTRY = "src/specfact_code_review/tools/pylint_runner.py"
-
-
-          EXPECTED_REVIEWER_VERSION = "0.51.2"
-          EXPECTED_REVIEWER_PAYLOAD = "d4bcfd8db105c60440b3bdefbe414f1dc148a75c21b8533801d43d888b3d0df4"
-          RUNNER_ENTRY = "src/specfact_code_review/run/runner.py"
-          HOST_STAGES = {"_materialize_claimed_project_runtime": "project_runtime", "_prepare_capsule_runtime": "capsule_prepare",
-              "_run_bound_snapshot_pair": "snapshot_pair", "_dispatch_capsule_member": "member_dispatch", "_execute_capsule_member": "member_execute"}
-          HOST_MEMBERS = ("ai-bloat-ast", "ast-clean-code", "basedpyright", "contracts", "pylint", "radon", "ruff", "semgrep-clean", "semgrep-bugs", "targeted-pytest-coverage")
-
-
-          def bounded_source(path, limit):
-              descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
-              try:
-                  before = os.fstat(descriptor)
-                  if not stat.S_ISREG(before.st_mode) or before.st_nlink != 1 or before.st_size > limit:
-                      raise ValueError("source bound")
-                  with os.fdopen(descriptor, "rb", closefd=False) as stream:
-                      data = stream.read(limit + 1)
-                  after = os.fstat(descriptor)
-                  identity = lambda value: (value.st_dev, value.st_ino, value.st_size, value.st_mtime_ns, value.st_ctime_ns, value.st_mode, value.st_nlink)
-                  if len(data) > limit or len(data) != before.st_size or identity(before) != identity(after):
-                      raise ValueError("source changed")
-                  return data
-              finally:
-                  os.close(descriptor)
-
-
-          def same_code(left, right, budget=None, depth=0):
-              if budget is None:
-                  budget = [100000]
-              budget[0] -= 1
-              if budget[0] < 0 or depth > 64 or type(left) is not type(right):
-                  return False
-              if isinstance(left, types.CodeType):
-                  fields = ("co_argcount", "co_posonlyargcount", "co_kwonlyargcount", "co_nlocals", "co_stacksize", "co_flags",
-                      "co_code", "co_consts", "co_names", "co_varnames", "co_filename", "co_name", "co_qualname", "co_firstlineno",
-                      "co_linetable", "co_exceptiontable", "co_freevars", "co_cellvars")
-                  return all(same_code(getattr(left, field), getattr(right, field), budget, depth + 1) for field in fields)
-              if isinstance(left, tuple):
-                  return len(left) == len(right) and all(same_code(a, b, budget, depth + 1) for a, b in zip(left, right))
-              if isinstance(left, frozenset):
-                  return len(left) == len(right) and all(any(same_code(a, b, budget, depth + 1) for b in right) for a in left)
-              if isinstance(left, float):
-                  return struct.pack("!d", left) == struct.pack("!d", right)
-              if isinstance(left, complex):
-                  return struct.pack("!dd", left.real, left.imag) == struct.pack("!dd", right.real, right.imag)
-              return type(left) in (str, bytes, int, bool, type(None), type(Ellipsis)) and left == right
-
-
-          def admitted_functions(module, authenticated, package):
-              try:
-                  if authenticated is None or type(module) is not types.ModuleType:
-                      return None
-                  filename = str((package / RUNNER_ENTRY).resolve())
-                  if module.__name__ != "specfact_code_review.run.runner" or module.__file__ != filename or module.__spec__.origin != filename:
-                      return None
-                  source = authenticated["runner_source"]
-                  compiled = compile(source, filename, "exec", dont_inherit=True, optimize=sys.flags.optimize)
-                  parsed = ast.parse(source, filename)
-                  originals = {}
-                  for name in HOST_STAGES:
-                      codes = [item for item in compiled.co_consts if type(item) is types.CodeType and item.co_name == name]
-                      nodes = [item for item in parsed.body if isinstance(item, ast.FunctionDef) and item.name == name]
-                      function = module.__dict__.get(name)
-                      if len(codes) != 1 or len(nodes) != 1 or type(function) is not types.FunctionType:
-                          return None
-                      node = nodes[0]
-                      defaults = tuple(ast.literal_eval(value) for value in node.args.defaults) or None
-                      keywords = {arg.arg: ast.literal_eval(value) for arg, value in zip(node.args.kwonlyargs, node.args.kw_defaults) if value is not None} or None
-                      if (node.decorator_list or function.__closure__ is not None or function.__globals__ is not module.__dict__
-                          or function.__module__ != module.__name__ or function.__name__ != name or function.__qualname__ != name
-                          or not same_code(function.__code__, codes[0]) or not same_code(function.__defaults__, defaults)
-                          or (function.__kwdefaults__ is None) != (keywords is None)
-                          or not same_code(tuple(sorted((function.__kwdefaults__ or {}).items())), tuple(sorted((keywords or {}).items())))):
-
-                          return None
-                      originals[name] = function
-                  return originals
-              except (OSError, ValueError, TypeError, KeyError, AttributeError, SyntaxError, RecursionError):
-                  return None
-
-
-          def unique_record(pairs):
-              result = {}
-              for key, value in pairs:
-                  if key in result:
-                      raise ValueError("duplicate key")
-                  result[key] = value
-              return result
-
-
-          class HostObservation:
-              def __init__(self, module, originals, receipt, binding):
-                  self.module, self.originals, self.receipt, self.binding = module, originals, receipt, binding
-                  self.wrappers, self.stack, self.sides = {}, [], {}
-                  self.identities = {name: (function.__code__, function.__defaults__, tuple(sorted((function.__kwdefaults__ or {}).items())))
-                      for name, function in originals.items()}
-                  self.lost, self.sequence, self.ordinal = False, 0, 0
-                  self.descriptor = os.open(receipt, os.O_CREAT | os.O_EXCL | os.O_WRONLY | os.O_NOFOLLOW, 0o600)
-                  os.set_inheritable(self.descriptor, False)
-                  value = os.fstat(self.descriptor)
-                  if not stat.S_ISREG(value.st_mode) or value.st_nlink != 1:
-                      os.close(self.descriptor)
-                      raise ValueError("receipt identity")
-
-              def emit(self, event, call, stage="UNAVAILABLE", member="UNAVAILABLE", side="UNAVAILABLE"):
-                  if self.lost:
-                      return
-                  try:
-                      row = {"sequence": self.sequence + 1, "call": call, "event": event, "stage": stage,
-                          "member": member, "side": side, "binding": self.binding}
-                      data = (json.dumps(row, sort_keys=True, separators=(",", ":")) + "\n").encode()
-                      if self.sequence >= 128 or len(data) > 1024 or os.write(self.descriptor, data) != len(data):
-                          self.lost = True
-                          return
-                      self.sequence += 1
-                  except BaseException:
-                      self.lost = True
-
-              def fields(self, name, args, kwargs):
-                  member, side = "UNAVAILABLE", "UNAVAILABLE"
-                  if name in ("_dispatch_capsule_member", "_execute_capsule_member"):
-                      request = args[0] if args else kwargs["request"]
-                      if type(request.member) is str and request.member in HOST_MEMBERS:
-                          member = request.member
-                      side = self.sides.get(request.snapshot_root.resolve(), "UNAVAILABLE")
-                      if name == "_execute_capsule_member":
-                          sources = [request.runtime.root, request.snapshot_root, *request.config_roots]
-                          if request.project_runtime_root is not None:
-                              sources.append(request.project_runtime_root)
-                          sources.append(Path(os.environ["TMPDIR"]))
-                          private = self.receipt.parent.resolve()
-                          if any(private.is_relative_to(Path(source).resolve()) or Path(source).resolve().is_relative_to(private) for source in sources):
-                              self.lost = True
-                              self.receipt.unlink()
-                  return member, side
-
-              def wrapper(self, name, original):
-                  def observed(*args, **kwargs):
-                      entered, call, member, side = False, 0, "UNAVAILABLE", "UNAVAILABLE"
-                      previous_sides = self.sides
-                      try:
-                          for alias, function in self.originals.items():
-                              code, defaults, keywords = self.identities[alias]
-                              if (getattr(self.module, alias) is not self.wrappers.get(alias)
-                                  or function.__code__ is not code or function.__defaults__ is not defaults
-                                  or not same_code(tuple(sorted((function.__kwdefaults__ or {}).items())), keywords)):
-                                  self.lost = True
-                          if not self.lost:
-                              if len(self.stack) >= 16:
-                                  self.lost = True
-                              else:
-                                  if name == "_run_bound_snapshot_pair":
-                                      base = args[3] if len(args) > 3 else kwargs["base"]
-                                      head = args[4] if len(args) > 4 else kwargs["head"]
-                                      self.sides = {base.root.resolve(): "base", head.root.resolve(): "head"}
-                                  member, side = self.fields(name, args, kwargs)
-                                  self.ordinal += 1
-                                  call = self.ordinal
-                                  self.stack.append(call)
-                                  entered = True
-                                  self.emit("enter", call, HOST_STAGES[name], member, side)
-                      except BaseException:
-                          self.lost = True
-                      try:
-                          return original(*args, **kwargs)
-                      finally:
-                          try:
-                              if entered:
-                                  if not self.stack or self.stack.pop() != call:
-                                      self.lost = True
-                                  self.emit("leave", call, HOST_STAGES[name], member, side)
-                              self.sides = previous_sides
-                          except BaseException:
-                              self.lost = True
-                  return observed
-
-              def install(self):
-                  try:
-                      for name, original in self.originals.items():
-                          if getattr(self.module, name) is not original:
-                              raise ValueError("alias changed")
-                          wrapper = self.wrapper(name, original)
-                          self.wrappers[name] = wrapper
-                          setattr(self.module, name, wrapper)
-                  except BaseException:
-                      self.lost = True
-                      self.restore()
-
-              def restore(self):
-                  for name, wrapper in self.wrappers.items():
-                      try:
-                          if getattr(self.module, name) is wrapper:
-                              setattr(self.module, name, self.originals[name])
-                          else:
-                              self.lost = True
-                      except BaseException:
-                          self.lost = True
-
-              def finish(self):
-                  self.restore()
-                  if self.stack:
-                      self.lost = True
-                  self.emit("complete", 0)
-                  try:
-                      os.close(self.descriptor)
-                  except BaseException:
-                      self.lost = True
-
-
-          def start_observation(module, authenticated, package, controller):
-              try:
-                  root = controller.parent
-                  manifest = json.loads(bounded_source(root / "observation-private/invocation.json", 4096), object_pairs_hook=unique_record)
-                  if set(manifest) != {"head", "workflow_blob", "controller_sha256", "role", "attempt"}:
-                      return None
-                  if (manifest["role"] != "independent" or type(manifest["attempt"]) is not str
-                      or not 1 <= len(manifest["attempt"]) <= 128 or any(c not in "0123456789:" for c in manifest["attempt"])):
-                      return None
-                  if any(type(manifest[key]) is not str or len(manifest[key]) != length or any(c not in "0123456789abcdef" for c in manifest[key])
-                      for key, length in (("head", 40), ("workflow_blob", 40), ("controller_sha256", 64))):
-                      return None
-                  if hashlib.sha256(bounded_source(controller, 2 * 1024 * 1024)).hexdigest() != manifest["controller_sha256"]:
-                      return None
-                  originals = admitted_functions(module, authenticated, package)
-                  if originals is None:
-                      return None
-                  private = root / "observation-private"
-                  if private.is_symlink() or private.stat().st_mode & 0o777 != 0o700:
-                      return None
-                  binding = {**manifest, "payload_sha256": authenticated["payload_sha256"], "runner_sha256": authenticated["runner_sha256"]}
-                  observer = HostObservation(module, originals, private / "receipt.jsonl", binding)
-                  observer.install()
-                  return observer
-              except BaseException:
-                  return None
-
-          def authenticated_reviewer_source(package):
-              try:
-                  paths = list(islice(package.rglob("*"), 2049))
-                  if package.is_symlink() or len(paths) > 2048 or any(path.is_symlink() for path in paths):
-                      return None
-                  if sum(path.stat().st_size for path in paths if path.is_file()) > 32 * 1024 * 1024:
-                      return None
-                  manifest = package / "module-package.yaml"
-                  if manifest.stat().st_size > 256 * 1024:
-                      return None
-                  metadata = yaml.safe_load(bounded_source(manifest, 256 * 1024))
-                  key = bounded_source(_bundled_public_key_path(), 16384)
-                  if hashlib.sha256(key).hexdigest() != TRUSTED_KEY_SHA256:
-                      return None
-                  payload = _module_artifact_payload_stable(package)
-                  integrity = metadata["integrity"]
-                  digest = hashlib.sha256(payload).hexdigest()
-                  if metadata["version"] != EXPECTED_REVIEWER_VERSION or digest != EXPECTED_REVIEWER_PAYLOAD:
-                      return None
-                  if integrity["checksum"] != "sha256:" + digest or not verify_signature(payload, integrity["signature"], key.decode()):
-                      return None
-                  entries = dict(line.rsplit(":", 1) for line in payload.decode().splitlines())
-                  source = bounded_source(package / ADAPTER_ENTRY, 1024 * 1024)
-                  adapter = hashlib.sha256(source).hexdigest()
-                  if len(source) > 1024 * 1024 or entries.get(ADAPTER_ENTRY) != adapter:
-                      return None
-                  runner_source = bounded_source(package / RUNNER_ENTRY, 2 * 1024 * 1024)
-                  runner_digest = hashlib.sha256(runner_source).hexdigest()
-                  if entries.get(RUNNER_ENTRY) != runner_digest:
-                      return None
-                  return {"payload_sha256": digest, "adapter_sha256": adapter, "runner_source": runner_source, "runner_sha256": runner_digest}
-              except (OSError, ValueError, TypeError, KeyError, UnicodeError, yaml.YAMLError):
-                  return None
-
-
-          def prepared_source_observation(runtime, side, authenticated):
-              observation = {"kind": "PREPARED_BUILTIN_SOURCE", "side": side, "status": "UNAVAILABLE",
-                  "actual_loaded_adapter": "UNAVAILABLE", "effective_deadline": "UNAVAILABLE"}
-              if authenticated is None:
-                  return observation
-              try:
-                  source = runtime.root / "opt/specfact/builtin/specfact_code_review/tools/pylint_runner.py"
-                  if not source.resolve().is_relative_to(runtime.root.resolve()):
-                      return observation
-                  if any(path.is_symlink() for path in (source, *source.parents)):
-                      return observation
-                  with source.open("rb") as stream:
-                      data = stream.read(1024 * 1024 + 1)
-                  if len(data) > 1024 * 1024 or hashlib.sha256(data).hexdigest() != authenticated["adapter_sha256"]:
-                      return observation
-                  return {**observation, "payload_sha256": authenticated["payload_sha256"], "adapter_sha256": authenticated["adapter_sha256"], "status": "MATCH", "prepared_adapter_matches_signed_source": True}
-              except (OSError, ValueError):
-                  return observation
-
           # Register and load the installed reviewer before entering the subject.
           # This fresh job has never executed candidate-controlled host programs.
           CommandRegistry.get_module_typer("code")
@@ -1366,20 +709,9 @@ jobs:
               ScopeRequest, resolve_scope, cleanup_scope_resolution,
           )
 
-          import specfact_code_review.run.runner as loaded_runner
-          authenticated_source = authenticated_reviewer_source(Path.home() / ".specfact/modules/specfact-code-review")
-          observation = start_observation(loaded_runner, authenticated_source,
-              Path.home() / ".specfact/modules/specfact-code-review", Path(__file__)) if sys.argv[2] != "prepare-index" else None
           os.chdir(sys.argv[1])
           if sys.argv[2] != "prepare-index":
-              try:
-                  app(args=sys.argv[2:])
-              finally:
-                  if observation is not None:
-                      try:
-                          observation.finish()
-                      except BaseException:
-                          pass
+              app(args=sys.argv[2:])
               raise SystemExit(0)
           resolution = resolve_scope(ScopeRequest(
               repository=Path.cwd(), scope="index", portable_project_runtime=True,
@@ -1400,8 +732,7 @@ jobs:
                       "status": "INCOMPLETE", "phase": "trusted_index_preparation", "diagnostic": diagnostic,
                   }))
                   raise RuntimeError("trusted_index_preparation_incomplete")
-              observations = []
-              for side, snapshot in zip(("base", "head"), (resolution.base_snapshot, resolution.head_snapshot)):
+              for snapshot in (resolution.base_snapshot, resolution.head_snapshot):
                   plan = discover_snapshot(snapshot.root, config_path=Path(sys.argv[3]), source_snapshot=snapshot)
                   selected = select_environment(plan, current=_capsule_environment_id())
                   runtime, reason = _prepare_capsule_runtime(environment_id=selected)
@@ -1409,51 +740,11 @@ jobs:
                       raise RuntimeError("trusted_runtime_preparation_incomplete:" + reason)
                   try:
                       prepare_runtime(plan, runtime=runtime)
-                      observations.append(prepared_source_observation(runtime, side, authenticated_source))
                   finally:
                       _cleanup_capsule_runtime(runtime)
-              observation_path = Path(sys.argv[3]).parent / "prepared-source.public.json"
-              observation_path.write_text(json.dumps(observations))
-              observation_path.chmod(0o600)
           finally:
               cleanup_scope_resolution(resolution)
           PY
-          observation_ready=false
-          observation_checkout=${GITHUB_WORKSPACE:-}
-          observation_head=${CANDIDATE_HEAD:-}
-          observation_run=${GITHUB_RUN_ID:-}
-          observation_run_attempt=${GITHUB_RUN_ATTEMPT:-}
-          observation_attempt="$observation_run:$observation_run_attempt"
-          if [[ -d "$observation_checkout" && "$observation_head" =~ ^[0-9a-f]{40}$
-            && "$observation_run" =~ ^[1-9][0-9]*$ && "$observation_run_attempt" =~ ^[1-9][0-9]*$
-            && ${#observation_attempt} -le 128 ]]; then
-            if mkdir -m 0700 "$TRUSTED_ROOT/observation-private" \
-              && workflow_blob="$(git -C "$observation_checkout" rev-parse --verify "$observation_head:.github/workflows/capsule-customer-execution.yml")" \
-              && [[ "$workflow_blob" =~ ^[0-9a-f]{40}$ ]] \
-              && checked_blob="$(git hash-object "$observation_checkout/.github/workflows/capsule-customer-execution.yml")" \
-              && [ "$workflow_blob" = "$checked_blob" ]; then
-              if "$TRUSTED_ROOT/venv/bin/python" -I - "$TRUSTED_ROOT" "$observation_head" "$workflow_blob" "$observation_attempt" <<'PY_BINDING'
-          import hashlib
-          import json
-          import os
-          import sys
-          from pathlib import Path
-          root = Path(sys.argv[1])
-          binding = {"head": sys.argv[2], "workflow_blob": sys.argv[3], "controller_sha256": hashlib.sha256((root / "reviewer.py").read_bytes()).hexdigest(), "role": "independent", "attempt": sys.argv[4]}
-          path = root / "observation-private/invocation.json"
-          descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
-          try:
-              with os.fdopen(descriptor, "w") as stream:
-                  json.dump(binding, stream, sort_keys=True)
-          except BaseException:
-              path.unlink(missing_ok=True)
-              raise
-          PY_BINDING
-              then
-                observation_ready=true
-              fi
-            fi
-          fi 2> /dev/null
           trusted_env=(env -i HOME="$TRUSTED_ROOT/home" TMPDIR="$TRUSTED_ROOT/tmp"
             PATH="$TRUSTED_ROOT/venv/bin:/usr/bin:/bin" SPECFACT_MODULES_BRANCH=main
             SPECFACT_CODE_REVIEW_CAPSULE_CACHE="$TRUSTED_ROOT/cache")
@@ -1487,9 +778,6 @@ jobs:
             fi
             exit 1
           fi
-          if [ -f "$TRUSTED_ROOT/prepared-source.public.json" ]; then
-            cat "$TRUSTED_ROOT/prepared-source.public.json"
-          fi
           review_exit=0
           touch "$TRUSTED_ROOT/review-attempted"
           "${trusted_env[@]}" "$TRUSTED_ROOT/venv/bin/python" -I -c \
@@ -1502,30 +790,9 @@ jobs:
             "$TRUSTED_ROOT/subject" code review run --scope index --enforcement changed --bug-hunt \
             --project-config "$TRUSTED_ROOT/project.toml" --json --out "$TRUSTED_ROOT/review.private.json" \
             > "$TRUSTED_ROOT/review.private.log" 2>&1 || review_exit=$?
-          original_capture_admitted=false
-          if [ "$observation_ready" = true ]; then
-            if "$TRUSTED_ROOT/venv/bin/python" -I "$TRUSTED_ROOT/capture-original.py" "$TRUSTED_ROOT" \
-              "$TRUSTED_ROOT/review.private.json" independent "$observation_head" "$observation_attempt" "$review_exit" \
-              2> "$TRUSTED_ROOT/original-capture.private.log"; then
-              original_capture_admitted=true
-            fi
-          fi
-          printf 'original_capture_admitted=%s\n' "$original_capture_admitted" >> "${GITHUB_OUTPUT:-/dev/null}" || true
           if [ "$review_exit" -ne 0 ]; then
             cd "$TRUSTED_ROOT/subject"
-            diagnostic_base=""
-            diagnostic_base=$("${trusted_env[@]}" "$TRUSTED_ROOT/venv/bin/python" -I -c '
-          import re, subprocess, sys
-          head, base = sys.argv[1:]
-          if re.fullmatch(r"[0-9a-f]{40}", head) and re.fullmatch(r"[0-9a-f]{40}", base):
-              try:
-                  value = subprocess.check_output(["git", "merge-base", head, base], timeout=5).decode("ascii").strip()
-                  if re.fullmatch(r"[0-9a-f]{40}", value):
-                      print(value)
-              except (OSError, subprocess.SubprocessError, UnicodeError):
-                  pass
-          ' "${CANDIDATE_HEAD:-}" "${CANDIDATE_BASE:-}" 2>/dev/null) || diagnostic_base=""
-            "${trusted_env[@]}" REVIEW_DIAGNOSTIC_BASE="$diagnostic_base" REVIEW_DIAGNOSTIC_HEAD="${CANDIDATE_HEAD:-}" REVIEW_CAPTURE_ADMITTED="$original_capture_admitted" REVIEW_PUBLIC_REPORT="$TRUSTED_ROOT/original-private/original.json" REVIEW_PUBLIC_EXIT="$review_exit" "$TRUSTED_ROOT/venv/bin/python" -I - <<'PY' 2> "$TRUSTED_ROOT/review-projection.private.log" || printf '%s\n' '{"status":"INCOMPLETE","phase":"review","diagnostic":"review_projection_failed"}' || true
+            "${trusted_env[@]}" REVIEW_PUBLIC_REPORT="$TRUSTED_ROOT/review.private.json" REVIEW_PUBLIC_EXIT="$review_exit" REVIEW_PUBLIC_PROGRESS="$TRUSTED_ROOT/review.private.log" "$TRUSTED_ROOT/venv/bin/python" -I - <<'PY' 2> "$TRUSTED_ROOT/review-projection.private.log" || printf '%s\n' '{"status":"INCOMPLETE","phase":"review","diagnostic":"review_projection_failed"}' || true
           import ast
           import re
           import json
@@ -1534,39 +801,28 @@ jobs:
           from pathlib import Path
 
           report = Path(os.environ.get("REVIEW_PUBLIC_REPORT", ".specfact/code-review.json"))
-          capture_admitted = True
-          if report.name == "original.json":
-              import hashlib
-              try:
-                  if os.environ.get("REVIEW_CAPTURE_ADMITTED") != "true":
-                      raise ValueError("original capture not admitted")
-                  with (report.parent / "manifest.json").open("rb") as stream:
-                      manifest_bytes = stream.read(4097)
-                  def capture_object(pairs):
-                      result = {}
-                      for key, value in pairs:
-                          if key in result:
-                              raise ValueError("duplicate capture key")
-                          result[key] = value
-                      return result
-                  manifest = json.loads(manifest_bytes, object_pairs_hook=capture_object)
-                  with report.open("rb") as stream:
-                      original_bytes = stream.read(32 * 1024 * 1024 + 1)
-                  if (len(manifest_bytes) > 4096 or set(manifest) != {"status", "binding", "required_exit", "sha256", "bytes"} or manifest["status"] != "COMPLETE"
-                      or type(manifest["bytes"]) is not int or manifest["bytes"] != len(original_bytes)
-                      or len(original_bytes) > 32 * 1024 * 1024 or manifest["sha256"] != hashlib.sha256(original_bytes).hexdigest()):
-                      raise ValueError("original capture incomplete")
-              except (OSError, ValueError, TypeError, KeyError):
-                  capture_admitted = False
           if os.environ.get("REVIEW_PUBLIC_EXIT") == "124":
               timeout_status = {"status": "INCOMPLETE", "phase": "review", "diagnostic": "analysis_timeout"}
+              progress_path = os.environ.get("REVIEW_PUBLIC_PROGRESS")
+              if progress_path:
+                  try:
+                      with Path(progress_path).open("rb") as progress:
+                          progress.seek(0, 2)
+                          progress.seek(max(0, progress.tell() - 65_536))
+                          tail = progress.read(65_536).decode("utf-8", errors="replace")
+                  except OSError:
+                      tail = ""
+                  progress_analyzers = {"ruff", "radon", "semgrep-clean", "ai-bloat-ast", "ast-clean-code", "basedpyright", "pylint", "contracts", "semgrep-bugs", "targeted-pytest-coverage"}
+                  markers = {f"Checking capsule analyzer {name}...": name for name in progress_analyzers}
+                  for line in reversed(tail.splitlines()):
+                      if line.strip() in markers:
+                          timeout_status["analyzer"] = markers[line.strip()]
+                          break
               print(json.dumps(timeout_status))
-          if not capture_admitted:
-              print(json.dumps({"status": "INCOMPLETE", "phase": "review", "diagnostic": "original_capture_unavailable"}))
-          elif not report.is_file() and os.environ.get("REVIEW_PUBLIC_EXIT") != "124":
+          if not report.is_file() and os.environ.get("REVIEW_PUBLIC_EXIT") != "124":
               print(json.dumps({"status": "INCOMPLETE", "phase": "review", "diagnostic": "review_report_missing"}))
           data = None
-          if capture_admitted and report.is_file():
+          if report.is_file():
               try:
                   with report.open("rb") as stream:
                       payload = stream.read(32 * 1024 * 1024 + 1)
@@ -1644,6 +900,7 @@ jobs:
                           break
                   return failure
 
+              source_test_functions = {}
               def _public_test_observation(finding, file):
                   message = finding.get("message")
                   if not isinstance(message, str) or len(message) > 4096:
@@ -1654,124 +911,32 @@ jobs:
                   nodeid, outcome, phase, xfail = match.groups()
                   observation = {"test_outcome": outcome, "test_phase": phase, "test_xfail": bool(xfail)}
                   observation.update(_public_test_failure(nodeid, outcome, phase))
+                  if not nodeid.startswith(file + "::"):
+                      return observation
+                  if file not in source_test_functions:
+                      functions = set()
+                      source = Path(file)
+                      try:
+                          source.resolve().relative_to(Path.cwd().resolve())
+                          if source.suffix == ".py" and not source.is_symlink() and source.stat().st_size <= 2_097_152:
+                              tree = ast.parse(source.read_text(encoding="utf-8"))
+                              functions = {node.name for node in ast.walk(tree) if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name.startswith("test_")}
+                      except (OSError, ValueError, SyntaxError, UnicodeError, RecursionError):
+                          pass
+                      source_test_functions[file] = functions
+                  function = nodeid[len(file) + 2:].split("[", 1)[0].rsplit("::", 1)[-1]
+                  if function in source_test_functions[file]:
+                      observation["test_function"] = function
                   return observation
 
               tracked = set(subprocess.check_output(["git", "ls-files", "-z"], text=True).split("\0"))
               emitted = 0
-              def _native_path(value):
-                  return (isinstance(value, str) and 0 < len(value.encode("utf-8")) <= 1024
-                      and not value.startswith("/") and "\\" not in value and ":" not in value
-                      and all(ord(c) >= 32 and ord(c) != 127 for c in value)
-                      and all(part not in ("", ".", "..") for part in value.split("/")))
-
-              diagnostic_tracked_by_side = {"base": set(), "head": set()}
-              diagnostic_head = os.environ.get("REVIEW_DIAGNOSTIC_HEAD", "")
-              binding = manifest.get("binding") if report.name == "original.json" and capture_admitted else None
-              if (isinstance(binding, dict) and binding.get("head") == diagnostic_head
-                  and re.fullmatch(r"[0-9a-f]{40}", diagnostic_head) and binding.get("role") == "independent"):
-                  for diagnostic_side in ("base", "head"):
-                      ref = os.environ.get("REVIEW_DIAGNOSTIC_" + diagnostic_side.upper(), "")
-                      if re.fullmatch(r"[0-9a-f]{40}", ref) is None:
-                          continue
-                      try:
-                          inventory = subprocess.check_output(["git", "ls-tree", "-r", "--name-only", "-z", ref], timeout=5)
-                          if len(inventory) <= 1024 * 1024:
-                              diagnostic_tracked_by_side[diagnostic_side] = {
-                                  path for path in inventory.decode("utf-8").split("\0") if _native_path(path)
-                              }
-                      except (OSError, subprocess.SubprocessError, UnicodeError):
-                          pass
-
-              def _native_semgrep_observation(row, side):
-                  keys = {"error_kind", "native_code", "target", "coordinate_status", "input_path", "rule_input_id", "rule_input_sha256", "line", "column", "end_line", "end_column"}
-                  if not isinstance(row, dict) or set(row) - keys:
-                      return False
-                  if row.get("error_kind") not in ("syntax_error", "rule_parse_error", "pattern_parse_error", "partial_parsing", "other"):
-                      return False
-                  if row.get("target") not in ("subject", "rule", "unknown") or row.get("coordinate_status") not in ("accepted", "absent", "rejected"):
-                      return False
-                  code = row.get("native_code")
-                  if code is not None and (type(code) is not int or code not in (0, 1, 2, 3, 4, 5, 7, 8, 13, 14)):
-                      return False
-                  path = row.get("input_path")
-                  if path is not None and (not _native_path(path) or path not in diagnostic_tracked_by_side[side]):
-                      return False
-                  digest, config = row.get("rule_input_sha256"), row.get("rule_input_id")
-                  if row["target"] == "rule":
-                      if config not in ("config_1", "config_2", "config_3") or not isinstance(digest, str) or re.fullmatch(r"[0-9a-f]{64}", digest) is None:
-                          return False
-                  elif config is not None or digest is not None:
-                      return False
-                  if row["target"] == "unknown" and path is not None:
-                      return False
-                  positions = [row.get(key) for key in ("line", "column", "end_line", "end_column")]
-                  if row["coordinate_status"] == "accepted":
-                      if path is None or row["target"] == "unknown" or any(type(value) is not int or not 1 <= value <= 2147483647 for value in positions):
-                          return False
-                      if positions[2:] < positions[:2]:
-                          return False
-                  elif any(value is not None for value in positions):
-                      return False
-                  return True
-
-              def _public_native_diagnostic(value, member, side):
-                  if not isinstance(value, dict):
-                      return None
-                  try:
-                      if len(json.dumps(value, ensure_ascii=False, separators=(",", ":")).encode("utf-8")) > 4096:
-                          return None
-                  except (ValueError, TypeError, RecursionError, UnicodeError):
-                      return None
-                  if value.get("kind") == "semgrep" and member in ("semgrep-clean", "semgrep-bugs"):
-                      if set(value) != {"kind", "observations", "total_count", "omitted_count"}:
-                          return None
-                      rows, total, omitted = value["observations"], value["total_count"], value["omitted_count"]
-                      if not isinstance(rows, list) or len(rows) > 3 or any(not _native_semgrep_observation(row, side) for row in rows):
-                          return None
-                      if any(type(count) is not int or not 0 <= count <= 2147483647 for count in (total, omitted)) or total != len(rows) + omitted:
-                          return None
-                      return value
-                  if value.get("kind") != "pytest" or member != "targeted-pytest-coverage":
-                      return None
-                  if set(value) - {"kind", "phase", "exception_kind", "stable_code", "child_returncode", "observation_state"}:
-                      return None
-                  if value.get("phase") not in ("request", "observation_cleanup", "coverage_plan", "target_command", "child_execution", "observation_read", "observation_decode", "observation_records", "policy", "validation", "root", "findings", "installed_coverage", "transport_read", "transport_decode"):
-                      return None
-                  if value.get("exception_kind") not in ("FileNotFoundError", "PermissionError", "OSError", "JSONDecodeError", "UnicodeDecodeError", "ValueError", "TypeError", "KeyError", "TimeoutExpired", "CalledProcessError", "SubprocessError", "ProjectRuntimeError", "other"):
-                      return None
-                  if value.get("observation_state") not in ("not_read", "read_failed", "decode_failed", "decoded"):
-                      return None
-                  if value.get("stable_code") not in (None, "project_pytest_request_invalid", "project_pytest_collection_error", "project_pytest_internal_error", "project_pytest_configuration_or_collection_failed", "project_pytest_execution_incomplete", "project_pytest_unexecuted", "project_pytest_coverage_missing", "project_pytest_coverage_diagnostic_invalid", "project_pytest_coverage_policy_invalid", "project_pytest_installed_coverage_unavailable", "project_pytest_failure_without_observed_test"):
-                      return None
-                  returncode = value.get("child_returncode")
-                  if returncode is not None and (type(returncode) is not int or not -2147483648 <= returncode <= 2147483647):
-                      return None
-                  return value
-
-              if report.name == "original.json" and capture_admitted:
-                  for analyzer in data.get("analyzer_evidence", []):
-                      if not isinstance(analyzer, dict) or analyzer.get("id") not in ("semgrep-clean", "semgrep-bugs", "targeted-pytest-coverage"):
-                          continue
-                      for side in ("base", "head"):
-                          evidence = analyzer.get(side)
-                          diagnostics = evidence.get("native_diagnostics") if isinstance(evidence, dict) else None
-                          if not isinstance(diagnostics, list):
-                              continue
-                          for diagnostic in diagnostics[:200]:
-                              if emitted >= 200:
-                                  break
-                              safe = _public_native_diagnostic(diagnostic, analyzer["id"], side)
-                              if safe is not None:
-                                  print(json.dumps({"native_diagnostic": {"member": analyzer["id"], "side": side, "diagnostic": safe}}, ensure_ascii=False))
-                                  emitted += 1
               def _finding_priority(row):
                   category = row.get("category") if isinstance(row, dict) else None
                   return {"tool_error": 0, "testing": 1}.get(category, 2) if isinstance(category, str) else 2
 
               findings = sorted(data.get("findings", []), key=_finding_priority)
               for finding in findings:
-                  if emitted >= 200:
-                      break
                   if not isinstance(finding, dict):
                       continue
                   file, line, severity = (finding.get(key) for key in ("file", "line", "severity"))
@@ -1843,12 +1008,10 @@ jobs:
       - name: Project independent review failure privately
         if: failure() && steps.independent_review.outcome == 'failure'
         shell: bash
-        env:
-          REVIEW_CAPTURE_ADMITTED: ${{ steps.independent_review.outputs.original_capture_admitted || 'false' }}
         run: |
           set -euo pipefail
           test -f "$TRUSTED_ROOT/review-attempted" || exit 0
-          REVIEW_REPORT="$TRUSTED_ROOT/original-private/original.json" REVIEW_LOG="$TRUSTED_ROOT/review.private.log" \
+          REVIEW_REPORT="$TRUSTED_ROOT/review.private.json" REVIEW_LOG="$TRUSTED_ROOT/review.private.log" \
             "$TRUSTED_ROOT/venv/bin/python" -I - <<'PY_REVIEW_FAILURE'
           import json
           import os
@@ -1901,79 +1064,11 @@ jobs:
                           observed.setdefault(name, set()).add(side)
               return {name: sorted(sides) for name, sides in sorted(observed.items())}
 
-          def member_observation(name, side, node):
-              states = ("ran", "error", "not_applicable", "skipped")
-              outcomes = ("PASS", "FAIL", "UNKNOWN", "NOT_APPLICABLE")
-              reasons = ("snapshot_member_incomplete", "differential_finding_mapping_failed",
-                  "baseline_analysis_error", "continuity_unavailable",
-                  "analyzer_reported_incomplete_execution", "capsule_request_failed", "timeout",
-                  "project_test_selection_ambiguous", "project_runtime_required",
-                  "project_pytest_coverage_missing", "analyzer_output_invalid",
-                  "capsule_acquisition_failed", "native_capsule_artifact_not_admitted")
-              state, outcome, reason = (node.get(key) for key in ("execution_state", "evidence_outcome", "diagnostic"))
-              counts = node.get("differential_counts", {})
-              counts = counts if isinstance(counts, dict) else {}
-              return {"member": name, "side": side,
-                  "execution_state": state if state in states else "UNAVAILABLE",
-                  "evidence_outcome": outcome if outcome in outcomes else "UNAVAILABLE",
-                  "diagnostic_class": reason if reason in reasons else "unclassified",
-                  "differential_counts": {key: value for key, value in counts.items()
-                      if key in ("fixed", "introduced", "unchanged", "unknown")
-                      and type(value) is int and 0 <= value <= 1000000}}
-
-
-          def member_observations(rows, allowed):
-              if not isinstance(rows, list) or len(rows) > 10:
-                  return []
-              names, observations = set(), []
-              for row in rows:
-                  if not isinstance(row, dict):
-                      return []
-                  name = row.get("id")
-                  if not isinstance(name, str) or name not in allowed or name in names:
-                      return []
-                  names.add(name)
-                  observations.append(member_observation(name, "combined", row))
-                  for side in ("base", "head"):
-                      if side not in row:
-                          continue
-                      if not isinstance(row[side], dict):
-                          return []
-                      observations.append(member_observation(name, side, row[side]))
-              return observations
-
-          report_path = Path(os.environ["REVIEW_REPORT"])
-          capture_admitted = True
-          if report_path.name == "original.json":
-              import hashlib
-              try:
-                  if os.environ.get("REVIEW_CAPTURE_ADMITTED") != "true":
-                      raise ValueError("original capture not admitted")
-                  with (report_path.parent / "manifest.json").open("rb") as stream:
-                      manifest_bytes = stream.read(4097)
-                  def capture_object(pairs):
-                      result = {}
-                      for key, value in pairs:
-                          if key in result:
-                              raise ValueError("duplicate capture key")
-                          result[key] = value
-                      return result
-                  manifest = json.loads(manifest_bytes, object_pairs_hook=capture_object)
-                  with report_path.open("rb") as stream:
-                      original_bytes = stream.read(32 * 1024 * 1024 + 1)
-                  if (len(manifest_bytes) > 4096 or set(manifest) != {"status", "binding", "required_exit", "sha256", "bytes"} or manifest["status"] != "COMPLETE"
-                      or type(manifest["bytes"]) is not int or manifest["bytes"] != len(original_bytes)
-                      or len(original_bytes) > 32 * 1024 * 1024 or manifest["sha256"] != hashlib.sha256(original_bytes).hexdigest()):
-                      raise ValueError("original capture incomplete")
-              except (OSError, ValueError, TypeError, KeyError):
-                  capture_admitted = False
           report, header = {}, {}
           outcome = "unreadable_report"
           diagnostic_bound = 32 * 1024 * 1024
           try:
-              if not capture_admitted:
-                  raise ValueError("original capture unavailable")
-              with report_path.open("rb") as stream:
+              with Path(os.environ["REVIEW_REPORT"]).open("rb") as stream:
                   data = stream.read(diagnostic_bound + 1)
               if len(data) > 2 * 1024 * 1024:
                   outcome = "oversized_report"
@@ -2030,55 +1125,5 @@ jobs:
               projected["report_header_observed"] = bool(header)
               projected["error_analyzer_sides"] = incomplete_sides(members)
               projected["crosshair_failure_observations"] = crosshair_failure_observations(header.get("findings", []))
-          projected["member_observations"] = member_observations(evidence_source.get("analyzer_evidence", []), allowed)
-          projected["member_observation_source"] = "header" if header else "report" if report else "UNAVAILABLE"
           print(json.dumps(projected))
           PY_REVIEW_FAILURE
-      - name: Observe failed independent review privately
-        if: failure() && steps.independent_review.outcome == 'failure' && github.event.pull_request.head.sha == '826948e710112a80b61c31c46ec8e57da5a25f22'
-        timeout-minutes: 15
-        shell: bash
-        run: |
-          set -euo pipefail
-          umask 077
-          test -f "$TRUSTED_ROOT/review-attempted" || exit 0
-          env -i HOME="$TRUSTED_ROOT/home" TMPDIR="$TRUSTED_ROOT/tmp" \
-            PATH="$TRUSTED_ROOT/venv/bin:/usr/bin:/bin" SPECFACT_MODULES_BRANCH=main \
-            SPECFACT_CODE_REVIEW_CAPSULE_CACHE="$TRUSTED_ROOT/cache" \
-            "$TRUSTED_ROOT/venv/bin/python" -I - "$TRUSTED_ROOT" "$GITHUB_WORKSPACE" \
-            2> "$TRUSTED_ROOT/diagnostic-bootstrap.private.log" <<'PY_DIAGNOSTIC_BOOTSTRAP'
-          import hashlib
-          import json
-          import os
-          import sys
-          import tempfile
-          import urllib.request
-
-          url = "https://raw.githubusercontent.com/nold-ai/specfact-cli-modules/decb25a7b25536f127f7e7ecb89d6ea92264f7b8/scripts/independent_review_diagnostic.py"
-          digest = "fc357f81c8b8c60bd52cd975dcd292a23654626ad3e77656a084dfbdc8b7c8cd"
-          try:
-              with urllib.request.urlopen(url, timeout=30) as response:
-                  source = response.read(1024 * 1024 + 1)
-              if len(source) > 1024 * 1024 or hashlib.sha256(source).hexdigest() != digest:
-                  raise ValueError("helper_authentication_failed")
-              descriptor, name = tempfile.mkstemp(prefix="verified-diagnostic-", suffix=".py", dir=sys.argv[1])
-              with os.fdopen(descriptor, "wb") as stream:
-                  stream.write(source)
-              os.execve(sys.executable, [sys.executable, "-I", name,
-                  "--trusted-root", sys.argv[1], "--repository", sys.argv[2]], dict(os.environ))
-          except (OSError, ValueError):
-              print(json.dumps({"status": "DIAGNOSTIC_UNAVAILABLE", "acceptance": False,
-                  "baseline_result": "FAIL", "member": "member_unknown", "samples": 0,
-                  "owned_processes": 0, "processes_without_proved_sample_join": 0,
-                  "observation_seconds": 0, "sample_count_is_cpu_or_elapsed_time": False,
-                  "symbols": [], "gaps": ["helper_authentication_failed"]}))
-              raise SystemExit(0)
-          PY_DIAGNOSTIC_BOOTSTRAP
-      - name: Upload original independent diagnostic projection
-        if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        with:
-          name: independent-original-${{ github.run_attempt }}
-          path: ${{ env.TRUSTED_ROOT }}/original-report.public.json
-          if-no-files-found: ignore
-          retention-days: 14

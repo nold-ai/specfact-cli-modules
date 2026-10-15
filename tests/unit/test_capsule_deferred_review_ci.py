@@ -248,7 +248,7 @@ def test_independent_reviewer_runs_in_fresh_job_without_candidate_host_code() ->
     steps = independent["steps"]
     recipe = "\n".join(str(step.get("run", "")) for step in steps)
     assert "specfact-cli==0.55.4" in recipe
-    assert "--version 0.50.1" in recipe
+    assert "--version 0.51.2" in recipe
     assert "--source marketplace" in recipe
     assert "env -i" in recipe
     assert "pre_commit_code_review.py" not in recipe
@@ -256,7 +256,7 @@ def test_independent_reviewer_runs_in_fresh_job_without_candidate_host_code() ->
     assert "SPECFACT_MODULES_ROOTS" not in recipe
     assert "SPECFACT_ALLOW_UNSIGNED" not in recipe
     assert "$GITHUB_WORKSPACE/scripts" not in recipe
-    assert "timeout=300" in recipe and "timeout=1800" in recipe
+    assert "timeout=600" in recipe and "timeout=1800" in recipe
     assert "--scope index --enforcement changed --bug-hunt" in recipe
     assert "discover_snapshot" in recipe and "prepare_runtime" in recipe
     assert "runtime prepare --project-config" not in recipe, (
@@ -428,7 +428,7 @@ def test_trusted_bootstrap_cannot_import_candidate_venv_module(tmp_path: Path) -
             (core/'__init__.py').write_text('')
             (core/'cli.py').write_text(
                 "import sys\\nassert sys.argv[1:]==['module','install','nold-ai/specfact-code-review',"
-                "'--scope','user','--version','0.50.1','--source','marketplace']\\n"
+                "'--scope','user','--version','0.51.2','--source','marketplace']\\n"
             )
             """)
     )

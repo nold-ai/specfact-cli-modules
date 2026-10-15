@@ -2,7 +2,7 @@
 
 ### Requirement: Bounded operator Linux pytest execution budget
 
-The reviewer SHALL accept an operator-selected integer Linux pytest member launch budget from1 through600seconds, defaulting to300seconds. It SHALL reject booleans, nonintegers and out-of-range values before launch. Only the targeted-pytest-coverage member SHALL receive the selected budget; all other existing deadlines, scope, tests, coverage, sandbox and signature requirements SHALL remain unchanged.
+The reviewer SHALL accept an operator-selected integer Linux pytest member launch budget from1 through600seconds, defaulting to300seconds. It SHALL reject booleans, nonintegers and out-of-range values before launch. Only the targeted-pytest-coverage member SHALL receive the selected budget; all other member and analyzer deadlines, scope, tests, coverage, sandbox and signature requirements SHALL remain unchanged.
 
 #### Scenario: Legacy invocation
 
@@ -51,3 +51,14 @@ A nondefault explicitly admitted Linux pytest budget SHALL be carried in the imm
 
 - **WHEN** nested or concurrent invocations finish or raise
 - **THEN** each invocation retains its own budget and later default calls retain the legacy deadline
+
+### Requirement: Independent signed review keeps a bounded whole-review controller
+
+The required independent signed review SHALL allow its complete authenticated review subprocess up to600seconds. Timeout SHALL remain a blocking exit124. The45-minute job cap,1800-second preparation bound, member and analyzer deadlines, changed-line enforcement, bug-hunt activation, signatures and incomplete-evidence policy SHALL remain unchanged.
+
+#### Scenario: Fresh independent review exceeds the former controller bound
+
+- **GIVEN** authenticated installation and sealed preparation complete before the whole-review controller starts
+- **WHEN** the complete required review alone needs more than300seconds but no more than600seconds
+- **THEN** the whole-review controller permits completion without changing any member or analyzer deadline
+- **AND** exceeding600seconds exits124 and remains blocking

@@ -5,19 +5,11 @@ from __future__ import annotations
 import hashlib
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Annotated, Literal
+from typing import Literal
 
 from beartype import beartype
 from icontract import ensure
-from pydantic import (
-    BaseModel,
-    ConfigDict,
-    Field,
-    SerializerFunctionWrapHandler,
-    field_validator,
-    model_serializer,
-    model_validator,
-)
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 PR_RANGE_REQUIRED_ANALYZERS = (
@@ -254,151 +246,6 @@ class CleanupForecast(BaseModel):
     mutation_evidence_count: int = Field(default=0, ge=0)
 
 
-class NativeDiagnosticModel(BaseModel):
-    """Closed metadata with a whole encoded byte budget."""
-
-    model_config = ConfigDict(extra="forbid")
-
-    @model_validator(mode="after")
-    def _bounded_encoding(self) -> NativeDiagnosticModel:
-        if len(self.model_dump_json().encode("utf-8")) > 4096:
-            raise ValueError("native diagnostic exceeds 4096 bytes")
-        return self
-
-
-@ensure(lambda result, value: result == value)
-def canonical_diagnostic_path(value: str) -> str:
-    """Admit lexical repository paths without normalizing untrusted input."""
-    if (
-        not value
-        or len(value.encode("utf-8")) > 1024
-        or value.startswith("/")
-        or "\\" in value
-        or ":" in value
-        or any(ord(char) < 32 or ord(char) == 127 for char in value)
-        or any(part in {"", ".", ".."} for part in value.split("/"))
-    ):
-        raise ValueError("native diagnostic path is not canonical")
-    return value
-
-
-NativePosition = Annotated[int, Field(strict=True, ge=1, le=2147483647)]
-PytestPhase = Literal[
-    "request",
-    "observation_cleanup",
-    "coverage_plan",
-    "target_command",
-    "child_execution",
-    "observation_read",
-    "observation_decode",
-    "observation_records",
-    "policy",
-    "validation",
-    "root",
-    "findings",
-    "installed_coverage",
-    "transport_read",
-    "transport_decode",
-]
-PytestExceptionKind = Literal[
-    "FileNotFoundError",
-    "PermissionError",
-    "OSError",
-    "JSONDecodeError",
-    "UnicodeDecodeError",
-    "ValueError",
-    "TypeError",
-    "KeyError",
-    "TimeoutExpired",
-    "CalledProcessError",
-    "SubprocessError",
-    "ProjectRuntimeError",
-    "other",
-]
-PytestStableCode = Literal[
-    "project_pytest_request_invalid",
-    "project_pytest_collection_error",
-    "project_pytest_internal_error",
-    "project_pytest_configuration_or_collection_failed",
-    "project_pytest_execution_incomplete",
-    "project_pytest_unexecuted",
-    "project_pytest_coverage_missing",
-    "project_pytest_coverage_diagnostic_invalid",
-    "project_pytest_coverage_policy_invalid",
-    "project_pytest_installed_coverage_unavailable",
-    "project_pytest_failure_without_observed_test",
-]
-
-
-class SemgrepObservation(NativeDiagnosticModel):
-    """One native error location or path-only identity."""
-
-    error_kind: Literal["syntax_error", "rule_parse_error", "pattern_parse_error", "partial_parsing", "other"]
-    native_code: Literal[0, 1, 2, 3, 4, 5, 7, 8, 13, 14] | None = None
-    target: Literal["subject", "rule", "unknown"]
-    coordinate_status: Literal["accepted", "absent", "rejected"]
-    input_path: str | None = None
-    rule_input_id: Literal["config_1", "config_2", "config_3"] | None = None
-    rule_input_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
-    line: NativePosition | None = None
-    column: NativePosition | None = None
-    end_line: NativePosition | None = None
-    end_column: NativePosition | None = None
-
-    @field_validator("input_path")
-    @classmethod
-    def _canonical_path(cls, value: str | None) -> str | None:
-        return canonical_diagnostic_path(value) if value is not None else None
-
-    @field_validator("native_code", mode="before")
-    @classmethod
-    def _strict_code(cls, value: object) -> object:
-        if value is not None and type(value) is not int:
-            raise ValueError("native code must be an integer")
-        return value
-
-    @model_validator(mode="after")
-    def _coordinate_identity(self) -> SemgrepObservation:
-        positions = (self.line, self.column, self.end_line, self.end_column)
-        if self.coordinate_status == "accepted":
-            if self.input_path is None or any(value is None for value in positions) or self.target == "unknown":
-                raise ValueError("accepted coordinate requires input and complete positions")
-            if (self.end_line, self.end_column) < (self.line, self.column):
-                raise ValueError("native end precedes start")
-        elif any(value is not None for value in positions):
-            raise ValueError("unaccepted coordinate cannot contain positions")
-        if self.target == "rule":
-            if self.rule_input_id is None or self.rule_input_sha256 is None:
-                raise ValueError("rule identity requires actual config digest")
-        elif self.rule_input_id is not None or self.rule_input_sha256 is not None:
-            raise ValueError("non-rule identity cannot contain config fields")
-        if self.target == "unknown" and self.input_path is not None:
-            raise ValueError("unknown input cannot claim path")
-        return self
-
-
-class SemgrepDiagnostic(NativeDiagnosticModel):
-    kind: Literal["semgrep"] = "semgrep"
-    observations: list[SemgrepObservation] = Field(max_length=3)
-    total_count: int = Field(strict=True, ge=0, le=2147483647)
-    omitted_count: int = Field(strict=True, ge=0, le=2147483647)
-
-    @model_validator(mode="after")
-    def _counts(self) -> SemgrepDiagnostic:
-        if self.total_count != len(self.observations) + self.omitted_count:
-            raise ValueError("native diagnostic counts disagree")
-        return self
-
-
-class PytestDiagnostic(NativeDiagnosticModel):
-    kind: Literal["pytest"] = "pytest"
-    phase: PytestPhase
-    exception_kind: PytestExceptionKind
-    stable_code: PytestStableCode | None = None
-    child_returncode: int | None = Field(default=None, strict=True, ge=-2147483648, le=2147483647)
-    observation_state: Literal["not_read", "read_failed", "decode_failed", "decoded"] = "not_read"
-
-
 class ReviewFinding(BaseModel):
     """Structured representation of a code-review finding."""
 
@@ -424,7 +271,6 @@ class ReviewFinding(BaseModel):
     file: str = Field(..., description="Repository-relative file path.")
     line: int = Field(..., ge=1, description="1-based source line number.")
     message: str = Field(..., description="User-facing finding message.")
-    native_diagnostic: Annotated[SemgrepDiagnostic | PytestDiagnostic, Field(discriminator="kind")] | None = None
     fixable: bool = Field(default=False, description="Whether the finding can be automatically fixed.")
     status: Literal["open", "fixed", "waived-by-reference"] = Field(
         default="open",
@@ -529,13 +375,6 @@ class ReviewFinding(BaseModel):
         default=None,
         description="Optional portable cleanup handoff packet for AI IDEs.",
     )
-
-    @model_serializer(mode="wrap")
-    def _serialize_finding(self, handler: SerializerFunctionWrapHandler) -> dict[str, object]:
-        serialized = handler(self)
-        if self.native_diagnostic is None:
-            serialized.pop("native_diagnostic", None)
-        return serialized
 
     @field_validator(
         "tool",

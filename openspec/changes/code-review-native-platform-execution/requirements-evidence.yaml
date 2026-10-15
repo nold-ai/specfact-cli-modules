@@ -598,12 +598,12 @@ requirements:
       scenario_id: prepare-unfamiliar-projects-from-discovered-or-caller-supplied-setup
       method: test
       intent: "Capsule execution reports safe progress through the existing CLI callback."
-      observable: "Real snapshot orchestration invokes the callback before each dispatched member without altering evidence. The subprocess timeout path projects only the last exact recognized analyzer from a bounded stderr tail, including bytes returned by TimeoutExpired; unknown/payload-bearing lines and raw private output are withheld. Exit124 and the300-second deadline remain unchanged."
+      observable: "Real snapshot orchestration invokes the callback before each dispatched member without altering evidence. The subprocess timeout path projects only the last exact recognized analyzer from a bounded stderr tail, including bytes returned by TimeoutExpired; unknown/payload-bearing lines and raw private output are withheld. Exit124 remains unchanged; the staged helper's whole-review controller is bounded at300seconds while member/analyzer deadlines remain unchanged."
     - case_id: 460-15-22
       scenario_id: prepare-unfamiliar-projects-from-discovered-or-caller-supplied-setup
       method: test
       intent: "Staged review timeout retains a distinct blocking result."
-      observable: "A real helper-path TimeoutExpired regression requires exit124 at the unchanged300-second budget; candidate public projection reports analysis_timeout and cannot assign review_report_missing. No report or successful evidence is synthesized."
+      observable: "A real helper-path TimeoutExpired regression requires exit124 at the staged helper's bounded300-second whole-review budget; candidate public projection reports analysis_timeout and cannot assign review_report_missing. No report or successful evidence is synthesized."
     - case_id: 460-15-20
       scenario_id: prepare-unfamiliar-projects-from-discovered-or-caller-supplied-setup
       method: test

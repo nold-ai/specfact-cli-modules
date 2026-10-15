@@ -21,9 +21,6 @@ from icontract import ensure, require
 _SUPPRESSION_CATALOG_RESOURCE = "resources/contracts/pr-range-v1-suppression-catalog.json"
 _FROZEN_SUPPRESSION_CATALOG_DIGEST = "sha256:3cc769700bc97d6a13b1a9c3554b66453aa319cf229795e7cede4d917ff13f3b"
 _PR_RANGE_V1_SUPPRESSION_CATALOG_DIGEST = _FROZEN_SUPPRESSION_CATALOG_DIGEST
-# Semgrep 1.144's tree-sitter fallback rejects empty-string literals while
-# parsing this module, which also uses structural pattern matching.
-_EMPTY_STRING = str()  # noqa: UP018 - literal form breaks the frozen parser
 
 
 @dataclass(frozen=True)
@@ -50,7 +47,7 @@ class LocatedFinding:
 @dataclass(frozen=True)
 class ContinuityResult:
     status: Literal["PASS", "UNKNOWN"]
-    reason: str = _EMPTY_STRING
+    reason: str = ""
 
 
 @dataclass(frozen=True)
@@ -79,7 +76,7 @@ class DifferentialClassification:
     unchanged: tuple[DifferentialFinding, ...]
     unknown: tuple[DifferentialFinding, ...]
     evidence_digest: str
-    reason: str = _EMPTY_STRING
+    reason: str = ""
     correspondence_evidence: tuple[dict[str, object], ...] = ()
 
 
@@ -194,24 +191,24 @@ class _SuppressionSources:
 
 @dataclass(frozen=True)
 class SuppressionTransitionEvidence:
-    base_path: str = _EMPTY_STRING
+    base_path: str = ""
     base_line: int = 0
-    base_occurrence_digest: str = _EMPTY_STRING
-    correspondence_status: str = _EMPTY_STRING
-    correspondence_digest: str = _EMPTY_STRING
+    base_occurrence_digest: str = ""
+    correspondence_status: str = ""
+    correspondence_digest: str = ""
     correspondence_evidence: dict[str, object] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
 class SuppressionEvidence:
-    changed_hunk_digest: str = _EMPTY_STRING
+    changed_hunk_digest: str = ""
     analyzers: tuple[str, ...] = ()
-    family: str = _EMPTY_STRING
-    base_blob_digest: str = _EMPTY_STRING
-    head_blob_digest: str = _EMPTY_STRING
-    occurrence_digest: str = _EMPTY_STRING
-    base_manifest_digest: str = _EMPTY_STRING
-    head_manifest_digest: str = _EMPTY_STRING
+    family: str = ""
+    base_blob_digest: str = ""
+    head_blob_digest: str = ""
+    occurrence_digest: str = ""
+    base_manifest_digest: str = ""
+    head_manifest_digest: str = ""
     transition: SuppressionTransitionEvidence = field(default_factory=SuppressionTransitionEvidence)
 
 
@@ -231,7 +228,7 @@ class SuppressionClassification:
     introduced: tuple[SuppressionOccurrence, ...] = ()
     unchanged: tuple[SuppressionOccurrence, ...] = ()
     missing_base_disposition: str = "ordinary"
-    reason: str = _EMPTY_STRING
+    reason: str = ""
 
 
 @dataclass(frozen=True)
@@ -256,7 +253,7 @@ class CatalogActivation:
     status: Literal["PASS", "UNKNOWN"]
     profile_activated: bool
     digest: str | None = None
-    reason: str = _EMPTY_STRING
+    reason: str = ""
 
 
 class UnsupportedWaiverInput(ValueError):  # noqa: N818 - frozen public C14 contract name
@@ -300,7 +297,7 @@ def _utf16_prefix_to_utf8_column(line: str, units: int) -> int:
             break
     if consumed != units:
         raise ValueError("coordinate splits a UTF-16 surrogate pair or exceeds the line")
-    return len(_EMPTY_STRING.join(characters).encode())
+    return len("".join(characters).encode())
 
 
 @ensure(lambda result: result.precision == "exact")
@@ -380,12 +377,12 @@ def select_differential_snapshots(*, merge_base: str, base_tip: str, head: str) 
 
 def _finding(value: dict[str, Any]) -> DifferentialFinding:
     return DifferentialFinding(
-        analyzer=str(value.get("analyzer", _EMPTY_STRING)),
-        rule=str(value.get("rule", _EMPTY_STRING)),
-        severity=str(value.get("severity", _EMPTY_STRING)),
-        path=str(value.get("path", _EMPTY_STRING)),
+        analyzer=str(value.get("analyzer", "")),
+        rule=str(value.get("rule", "")),
+        severity=str(value.get("severity", "")),
+        path=str(value.get("path", "")),
         line=int(value.get("line", 1)),
-        message=" ".join(str(value.get("message", _EMPTY_STRING)).split()),
+        message=" ".join(str(value.get("message", "")).split()),
         blocking=bool(value.get("blocking", False)),
     )
 
@@ -744,27 +741,6 @@ def _classify_partition(
     state.introduced.extend(remaining_head)
 
 
-def _could_have_unchanged_anchor(
-    base: DifferentialFinding,
-    head: DifferentialFinding,
-    request: FindingClassificationRequest,
-) -> bool:
-    context, _ = _continuity_context(
-        base,
-        head,
-        base_source=_source_for(base.path, request.base_sources),
-        head_source=_source_for(head.path, request.head_sources),
-    )
-    if context is None:
-        return False
-    base_lines, head_lines = context.base_lines, context.head_lines
-    if base_lines.count(base_lines[context.base_index]) != 1:
-        return False
-    if head_lines.count(head_lines[context.head_index]) != 1:
-        return False
-    return _line_anchor(base_lines, context.base_index) == _line_anchor(head_lines, context.head_index)
-
-
 def _continuity_compatible_pairs(
     base_partition: list[DifferentialFinding],
     head_partition: list[DifferentialFinding],
@@ -782,8 +758,7 @@ def _continuity_compatible_pairs(
         candidates = [
             base_item
             for base_item in remaining_base
-            if _could_have_unchanged_anchor(base_item, head_item, request)
-            and _continuity(
+            if _continuity(
                 base_item,
                 head_item,
                 base_source=_source_for(base_item.path, request.base_sources),
@@ -995,7 +970,7 @@ def _suppression_evidence(
     base_occurrence_digest = (
         "sha256:" + hashlib.sha256(_canonical_bytes(_suppression_occurrence_projection(base_occurrence))).hexdigest()
         if base_occurrence is not None
-        else _EMPTY_STRING
+        else ""
     )
     correspondence = correspondence_evidence or {}
     changed_hunk = (base_source or b"") + b"\0" + (head_source or b"")
@@ -1003,24 +978,18 @@ def _suppression_evidence(
         changed_hunk_digest="sha256:" + hashlib.sha256(changed_hunk).hexdigest(),
         analyzers=_SUPPRESSION_ANALYZERS[occurrence.family],
         family=occurrence.family,
-        base_blob_digest=(
-            "sha256:" + hashlib.sha256(base_source).hexdigest() if base_source is not None else _EMPTY_STRING
-        ),
-        head_blob_digest=(
-            "sha256:" + hashlib.sha256(head_source).hexdigest() if head_source is not None else _EMPTY_STRING
-        ),
+        base_blob_digest="sha256:" + hashlib.sha256(base_source).hexdigest() if base_source is not None else "",
+        head_blob_digest="sha256:" + hashlib.sha256(head_source).hexdigest() if head_source is not None else "",
         occurrence_digest="sha256:" + hashlib.sha256(_canonical_bytes(occurrence_projection)).hexdigest(),
         base_manifest_digest=base_manifest_digest,
         head_manifest_digest=head_manifest_digest,
         transition=SuppressionTransitionEvidence(
-            base_path=base_occurrence.path if base_occurrence is not None else _EMPTY_STRING,
+            base_path=base_occurrence.path if base_occurrence is not None else "",
             base_line=base_occurrence.line if base_occurrence is not None else 0,
             base_occurrence_digest=base_occurrence_digest,
-            correspondence_status=str(correspondence.get("status", _EMPTY_STRING)),
+            correspondence_status=str(correspondence.get("status", "")),
             correspondence_digest=(
-                "sha256:" + hashlib.sha256(_canonical_bytes(correspondence)).hexdigest()
-                if correspondence
-                else _EMPTY_STRING
+                "sha256:" + hashlib.sha256(_canonical_bytes(correspondence)).hexdigest() if correspondence else ""
             ),
             correspondence_evidence=correspondence,
         ),
@@ -1091,7 +1060,7 @@ def classify_suppression_delta(
         introduced,
         unchanged,
         missing_disposition,
-        reason="suppression_correspondence_unknown" if correspondence_unknown else _EMPTY_STRING,
+        reason="suppression_correspondence_unknown" if correspondence_unknown else "",
     )
 
 

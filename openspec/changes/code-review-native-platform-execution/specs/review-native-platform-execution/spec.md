@@ -855,7 +855,7 @@ The native backend SHALL reuse portable project discovery and prepare dependenci
 - **WHEN** the hosted job replaces an approved local capsule-only deferral
 - **THEN** a separate blocking review runs on a fresh VM that has never executed candidate host code, and uses the installed authenticated published module through the trusted core interpreter in isolated Python mode, with the immutable candidate index as its subject
 - **AND** isolated bootstrap and installed command loading occur outside the candidate checkout before entering the subject; candidate import paths, module roots, unsigned overrides and ambient credentials are absent from that review process
-- **AND** the review retains changed-line enforcement, all required analyzers, bug-hunt activation and the existing 300-second bound
+- **AND** the review retains changed-line enforcement, all required analyzers and bug-hunt activation; its bounded whole-review controller permits600seconds while member and analyzer deadlines remain unchanged
 - **AND** unsupported published-reviewer policy or required incomplete evidence fails the job explicitly; a candidate helper returning success cannot approve it
 - **AND** candidate runtime/corpus validation remains separately required and never establishes independent reviewer authority
 
@@ -881,9 +881,9 @@ The native backend SHALL reuse portable project discovery and prepare dependenci
 - **AND** raw findings, messages, private absolute paths, receipts and tool logs SHALL remain private
 - **AND** the diagnostic step SHALL preserve the review failure exit code
 - **AND** incomplete execution findings SHALL precede ordinary findings within the same 200-location limit
-- **AND** a trusted independent analysis timeout or missing report SHALL expose only a fixed public status while retaining the original 300-second analysis budget
+- **AND** a trusted independent analysis timeout or missing report SHALL expose only a fixed public status while retaining the bounded600-second independent whole-review controller and unchanged member/analyzer budgets
 - **AND** structured Semgrep failures MAY expose at most three recognized public error variant tags from bounded JSON details; unknown tags, variant payloads, raw messages and source excerpts SHALL remain private
-- **AND** the staged helper preserves the distinct analysis-timeout exit124 after the unchanged300-second deadline, so missing-report diagnostics cannot conceal the timeout; every timeout remains a blocking failure
+- **AND** the staged helper preserves the distinct analysis-timeout exit124 after its300-second whole-review deadline, so missing-report diagnostics cannot conceal the timeout; every timeout remains a blocking failure
 - **AND** capsule review SHALL reuse the existing progress callback before each analyzer check; timeout diagnostics MAY identify only the last recognized fixed analyzer from a bounded stderr tail, without copying raw tool output or claiming successful execution
 
 #### Scenario: Staged review activates bug-hunt
@@ -913,7 +913,7 @@ The native backend SHALL reuse portable project discovery and prepare dependenci
 - **THEN** preparation captures the same immutable base and staged snapshots used by review and seals each independently bound environment
 - **AND** preparation cleans snapshots and exposes only local-build provenance without granting protected PR authority
 - **AND** a captured index without governed Python impact returns explicit NOT_APPLICABLE with no prepared runtimes or capsule acquisition
-- **AND** hosted cold acquisition and preparation have a separate bounded provisioning phase while the review helper retains its existing 300-second analysis timeout
+- **AND** hosted cold acquisition and preparation have a separate bounded provisioning phase while the review helper retains its bounded300-second whole-review timeout and unchanged member/analyzer deadlines
 
 
 #### Scenario: Pinned BasedPyright primary configuration precedence

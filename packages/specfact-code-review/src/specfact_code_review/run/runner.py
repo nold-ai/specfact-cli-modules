@@ -38,7 +38,6 @@ from specfact_code_review.run.findings import (
     CleanupForecast,
     EvidenceRef,
     PreserveReasonEvidence,
-    PytestPhase,
     RemediationPacket,
     ReviewFinding,
     ReviewReport,
@@ -1375,35 +1374,13 @@ def _capsule_process_request(request_path: Path) -> None:
                 ),
             )
         observation_path = Path("/opt/specfact/tmp/pytest-observation.json")
-        if member == "targeted-pytest-coverage" and adapter_argv and adapter_argv[0] == "portable-pytest-v2":
-            from specfact_code_review.run.portable_worker import pytest_failure_diagnostic
-
-            transport_phase: PytestPhase = "transport_read"
-            try:
-                if observation_path.is_file():
-                    observation_raw = observation_path.read_text(encoding="utf-8")
-                    transport_phase = "transport_decode"
-                    observation = json.loads(observation_raw)
-                    if not isinstance(observation, dict):
-                        raise ValueError("project_pytest_observation_invalid")
-                    response["target_execution"] = observation
-            except (OSError, ValueError, TypeError) as exc:
-                transport_finding = tool_error(
-                    tool="pytest", file_path=files[0] if files else Path("."), message=str(exc)
-                )
-                transport_finding.native_diagnostic = pytest_failure_diagnostic(
-                    exc,
-                    phase=transport_phase,
-                    observation_state="read_failed" if transport_phase == "transport_read" else "decode_failed",
-                )
-                cast(list[object], response["findings"]).extend(
-                    cast(list[object], _capsule_member_response(member, [transport_finding])["findings"])
-                )
-                response.update(
-                    execution_state="error",
-                    evidence_outcome="UNKNOWN",
-                    diagnostic="analyzer_reported_incomplete_execution",
-                )
+        if (
+            member == "targeted-pytest-coverage"
+            and adapter_argv
+            and adapter_argv[0] == "portable-pytest-v2"
+            and observation_path.is_file()
+        ):
+            response["target_execution"] = json.loads(observation_path.read_text(encoding="utf-8"))
     except (KeyError, OSError, TypeError, ValueError, json.JSONDecodeError) as exc:
         response = {
             "member": "unknown",
@@ -2217,11 +2194,6 @@ def _run_capsule_snapshot(
             "capsule_identity": runtime.identity,
             "environment_id": getattr(runtime, "environment_id", ""),
             **({"target_execution": raw["target_execution"]} if "target_execution" in raw else {}),
-            "native_diagnostics": [
-                finding.native_diagnostic.model_dump(mode="json")
-                for finding in findings
-                if finding.native_diagnostic is not None
-            ],
         }
     return CapsuleSnapshotResult(
         evidence,

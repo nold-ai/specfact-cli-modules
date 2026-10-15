@@ -5,6 +5,7 @@ A complete configured pytest workload may exceed the legacy Linux capsule launch
 ## What Changes
 
 - Add an operator-only Linux pytest member launch-budget option with legacy300-second default and maximum600seconds.
+- Correct the independent signed workflow's whole-review controller to600seconds while preserving its blocking exit124 and every member/analyzer deadline.
 - Preserve all other member budgets, selected files, test/coverage policy, sandboxing and signatures.
 - Report the requested/effective member budget. Reject invalid budgets before launch and preserve UNKNOWN/nonzero on timeout.
 
