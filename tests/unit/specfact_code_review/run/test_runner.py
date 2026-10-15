@@ -3510,7 +3510,18 @@ def test_source_checkout_legacy_scope_uses_bounded_host_compatibility(monkeypatc
     report = runner_api.run_capsule_review([Path("src/app.py")], no_tests=True)
 
     assert report.run_id == expected.run_id
-    assert report.scope_evidence == {"assurance_kind": "explicit_files", "capsule_execution": "required"}
+    assert report.scope_evidence == {
+        "assurance_kind": "explicit_files",
+        "capsule_execution": "required",
+        "linux_pytest_execution_budget": {
+            "requested_seconds": 300,
+            "effective_seconds": None,
+            "platform": "development-host",
+            "nonportable_inner_seconds": 120,
+            "portable_inner_seconds": None,
+            "authority": "operator-option",
+        },
+    }
 
 
 def test_source_checkout_cached_scope_analyzes_and_enforces_the_staged_tree(
@@ -3554,6 +3565,18 @@ def test_source_checkout_cached_scope_analyzes_and_enforces_the_staged_tree(
     assert observed == [(b"BLOCKED\n", True)]
     assert (report.overall_verdict, report.ci_exit_code) == ("FAIL", 1)
     assert [finding.file for finding in report.findings] == ["app.py"]
+    assert report.scope_evidence == {
+        "assurance_kind": "explicit_files",
+        "capsule_execution": "required",
+        "linux_pytest_execution_budget": {
+            "requested_seconds": 300,
+            "effective_seconds": None,
+            "platform": "development-host",
+            "nonportable_inner_seconds": 120,
+            "portable_inner_seconds": None,
+            "authority": "operator-option",
+        },
+    }
 
 
 def test_source_checkout_cached_scope_rejects_host_analyzer_snapshot_mutation(
@@ -3763,7 +3786,18 @@ def test_source_checkout_legacy_scope_explicitly_opts_into_linux_cache_miss_comp
     report = runner_api.run_capsule_review([Path("src/app.py")], no_tests=True)
 
     assert report.run_id == expected.run_id
-    assert report.scope_evidence == {"assurance_kind": "explicit_files", "capsule_execution": "required"}
+    assert report.scope_evidence == {
+        "assurance_kind": "explicit_files",
+        "capsule_execution": "required",
+        "linux_pytest_execution_budget": {
+            "requested_seconds": 300,
+            "effective_seconds": None,
+            "platform": "development-host",
+            "nonportable_inner_seconds": 120,
+            "portable_inner_seconds": None,
+            "authority": "operator-option",
+        },
+    }
 
 
 def test_source_checkout_linux_cache_miss_without_opt_in_fails_closed(monkeypatch: MonkeyPatch) -> None:
