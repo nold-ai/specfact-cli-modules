@@ -96,6 +96,63 @@ def test_darwin_override_fails_closed_without_changing_default(tmp_path, monkeyp
     assert response["diagnostic"] == "linux_pytest_execution_budget_unsupported_platform"
 
 
+@pytest.mark.parametrize("cached", [False, True])
+@pytest.mark.parametrize(
+    "reason, backend, expected",
+    [
+        (
+            "unsupported_controller_platform",
+            "unsupported",
+            "linux_pytest_execution_budget_unsupported_platform",
+        ),
+        (
+            "oci_acquisition_failed:verified cache entry is missing",
+            "linux-x86_64",
+            "oci_acquisition_failed:verified cache entry is missing",
+        ),
+    ],
+)
+def test_nondefault_budget_never_enters_development_host_fallback(
+    tmp_path, monkeypatch, cached, reason, backend, expected
+):
+    source = tmp_path / "app.py"
+    source.write_text("value = 1\n")
+    monkeypatch.setattr(runner, "_prepare_capsule_runtime", lambda: (None, reason))
+    monkeypatch.setattr(runner, "_is_development_source_checkout", lambda: True)
+    monkeypatch.setattr(
+        runner.native_backend,
+        "select_runtime_backend",
+        lambda: SimpleNamespace(kind=backend, environment_id=None),
+    )
+    monkeypatch.setenv("SPECFACT_CODE_REVIEW_DEV_HOST_COMPAT", "1")
+    if cached:
+        monkeypatch.setenv("SPECFACT_CODE_REVIEW_CHANGED_DIFF", "cached")
+    monkeypatch.setattr(
+        runner,
+        "_run_cached_development_host_review",
+        lambda *_args, **_kwargs: pytest.fail("nondefault Linux-only budget reached cached host fallback"),
+    )
+    monkeypatch.setattr(
+        runner,
+        "_run_worktree_development_host_review",
+        lambda *_args, **_kwargs: pytest.fail("nondefault Linux-only budget reached worktree host fallback"),
+    )
+
+    report = runner.run_capsule_review(
+        [source],
+        runner.ReviewOptions(linux_pytest_timeout_seconds=600),
+    )
+
+    assert report.assurance_status == "UNKNOWN"
+    assert report.ci_exit_code == 1
+    assert report.analyzer_evidence is not None
+    assert {item["diagnostic"] for item in report.analyzer_evidence} == {expected}
+    assert report.scope_evidence is not None
+    budget_evidence = report.scope_evidence["linux_pytest_execution_budget"]
+    assert isinstance(budget_evidence, dict)
+    assert budget_evidence["requested_seconds"] == 600
+
+
 def test_budget_provenance_does_not_promote_unknown(monkeypatch):
     monkeypatch.setattr(
         runner.native_backend,
