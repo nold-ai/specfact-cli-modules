@@ -7649,6 +7649,22 @@ def _allows_development_host_compatibility(reason: str) -> bool:
     )
 
 
+def _development_host_budget_scope_evidence(
+    scope_evidence: dict[str, object], options: ReviewOptions
+) -> dict[str, object]:
+    return {
+        **scope_evidence,
+        "linux_pytest_execution_budget": {
+            "requested_seconds": options.linux_pytest_timeout_seconds,
+            "effective_seconds": None,
+            "platform": "development-host",
+            "nonportable_inner_seconds": _TARGETED_TEST_TIMEOUT,
+            "portable_inner_seconds": None,
+            "authority": "operator-option",
+        },
+    }
+
+
 def _with_capsule_enforcement(
     report: ReviewReport,
     options: ReviewOptions,
@@ -8099,6 +8115,7 @@ def run_capsule_review(
     if runtime is None:
         nondefault_linux_budget = review_options.linux_pytest_timeout_seconds != 300
         if _allows_development_host_compatibility(reason) and not nondefault_linux_budget:
+            scope_evidence = _development_host_budget_scope_evidence(scope_evidence, review_options)
             if _cached_review_requested(review_options):
                 return _run_cached_development_host_review(files, review_options, scope_evidence)
             return _run_worktree_development_host_review(files, review_options, scope_evidence)

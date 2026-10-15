@@ -44,6 +44,9 @@ before execution; a nondefault budget on Darwin reports UNKNOWN. A timeout at
 any selected deadline still produces incomplete evidence and a failing exit.
 The report records requested/effective seconds, platform and operator-option
 provenance; these fields describe the selected deadline and never prove completion.
+A development-host compatibility report records the requested default while
+leaving the Linux member budget ineffective and retaining the legacy 120-second
+nonportable test deadline.
 
 ## Installed package layout
 
