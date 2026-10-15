@@ -177,3 +177,7 @@ exception and actual unsupported native capsule result are in TDD_EVIDENCE.md.
 The original source-derived startup counterexample now has a passing fixed-
 bootstrap physical-host mechanism; complete matrix/startup/escape/resource and
 default-protection independent installation remain mandatory future gates. Neither active change is ready to archive.
+
+## Linux26 host-context correction, 2026-10-15
+
+Ninety host-dependent cases move to the existing required owner with assertions and parameters retained. Eight portable counterparts and existing privacy matrices remain unit-discovered. A failing host route prevents later subject tests. The local focused checks pass; full ordinary gates, fresh independent source review and exact-head hosted acceptance remain pending. No platform or assurance gate is waived.

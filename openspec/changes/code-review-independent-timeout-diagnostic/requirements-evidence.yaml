@@ -56,7 +56,9 @@ requirements:
       scenario_id: own-observation-processes
       method: test
       intent: Preserve unknown attribution and reap owned descendants.
-      observable: PID reuse and absent joins stay unknown; timeout and cancellation leave no owned descendants.
+      observable: PID reuse and absent joins stay unknown; timeout and cancellation leave no owned descendants. Host-only capture proofs retain
+        all 90 cases in mandatory ordinary routes; rejected-capture privacy remains portable and host failure stops
+        later subject tests.
   openspec:code-review-independent-timeout-diagnostic:independent-review-diagnostic:preserve-immutable-original-reports:
     rationale: Preserve immutable original reports before optional processing.
     stakeholder_refs: &id001

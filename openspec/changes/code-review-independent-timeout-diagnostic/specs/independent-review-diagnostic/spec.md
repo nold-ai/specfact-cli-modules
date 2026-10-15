@@ -31,6 +31,8 @@ The helper SHALL bind processes by start identity and ancestry, clean up owned d
 #### Scenario: Host controller proofs
 - **WHEN** a regression proof requires a host shell, isolated host interpreter or process lifecycle primitives unavailable to sealed subject programs
 - **THEN** both mandatory ordinary-host test routes execute it with unchanged assertions and parametrized cases, while portable privacy controls remain in unit discovery
+- **AND** the five original-capture host proofs retain all 90 cases outside portable discovery, with an eight-case rejected-capture privacy counterpart inside it
+- **AND** a host-proof failure stops the SMART route before subject tests run
 
 #### Scenario: Existing-run metadata
 - **WHEN** the existing trusted preparation or failure projection observes authenticated prepared source or member evidence

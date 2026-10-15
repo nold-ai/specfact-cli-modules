@@ -16,6 +16,7 @@ from tests.support.capsule_review_fixtures import (
     _FIXED_ANALYZER_FINDING_ROWS,
     REPO_ROOT,
     STEP_NAME,
+    _capture_program,
     _git,
     _write_preparation_fixture,
     _write_public_report,
@@ -1306,7 +1307,7 @@ def test_projectors_never_disclose_tracked_test_function(tmp_path, monkeypatch, 
 
 @pytest.mark.parametrize("job_name", ["customer", "independent-review"])
 @pytest.mark.parametrize("damage", ["missing", "partial", "digest", "duplicate"])
-def test_uncommitted_original_bytes_are_never_projected(tmp_path, job_name, damage):
+def test_uncommitted_original_bytes_are_never_projected_portably(tmp_path, monkeypatch, capsys, job_name, damage):
     import hashlib
 
     _write_public_report(tmp_path, [])
@@ -1331,18 +1332,14 @@ def test_uncommitted_original_bytes_are_never_projected(tmp_path, job_name, dama
         if damage == "duplicate":
             text = text.replace('"status": "COMPLETE"', '"status": "UNAVAILABLE", "status": "COMPLETE"')
         (private / "manifest.json").write_text(text)
-    result = subprocess.run(
-        [sys.executable, "-I", "-c", public_projector(job_name)],
-        cwd=tmp_path,
-        env=dict(os.environ, REVIEW_PUBLIC_REPORT=str(report), REVIEW_PUBLIC_EXIT="1", REVIEW_CAPTURE_ADMITTED="true"),
-        capture_output=True,
-        text=True,
-        check=False,
-        timeout=10,
-    )
-    assert result.returncode == 0
-    assert "finding_location" not in result.stdout
-    assert json.loads(result.stdout)["diagnostic"] == "original_capture_unavailable"
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("REVIEW_PUBLIC_REPORT", str(report))
+    monkeypatch.setenv("REVIEW_PUBLIC_EXIT", "1")
+    monkeypatch.setenv("REVIEW_CAPTURE_ADMITTED", "true")
+    exec(compile(public_projector(job_name), "portable-capture-projector", "exec"), {})
+    output = capsys.readouterr().out
+    assert "finding_location" not in output
+    assert json.loads(output)["diagnostic"] == "original_capture_unavailable"
 
 
 @pytest.mark.parametrize("reader", ["customer", "independent-review", "candidate-failure", "independent-failure"])
@@ -1530,228 +1527,6 @@ def test_primary_timeout_preserved_when_original_capture_is_rejected(tmp_path, m
     ]
 
 
-def _capture_program():
-    workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())
-    step = next(s for s in workflow["jobs"]["customer"]["steps"] if "PY_CAPTURE" in s.get("run", ""))
-    return step["run"].split("<<'PY_CAPTURE'", 1)[1].split("\n", 1)[1].split("\nPY_CAPTURE", 1)[0]
-
-
-def _original_reader(reader):
-    if reader in ("customer", "independent-review"):
-        return public_projector(reader)
-    workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())
-    candidate = reader == "candidate-failure"
-    job = "customer" if candidate else "independent-review"
-    marker = "PY_CANDIDATE_FAILURE" if candidate else "PY_REVIEW_FAILURE"
-    recipe = next(s["run"] for s in workflow["jobs"][job]["steps"] if f"<<'{marker}'" in s.get("run", ""))
-    return recipe.split(f"<<'{marker}'", 1)[1].split("\n", 1)[1].split(f"\n{marker}", 1)[0]
-
-
-def _successful_original_capture(tmp_path, reader):
-    writer = tmp_path / "capture.py"
-    writer.write_text(_capture_program())
-    raw = json.dumps(
-        {
-            "findings": [],
-            "analyzer_evidence": [{"id": "pylint", "diagnostic": "timeout"}],
-            "assurance_status": "PASS",
-            "overall_verdict": "PASS",
-        }
-    ).encode()
-    source = tmp_path / "source.json"
-    source.write_bytes(raw)
-    role = "candidate" if reader in ("customer", "candidate-failure") else "independent"
-    args = [sys.executable, "-I", str(writer), str(tmp_path), str(source), role, "a" * 40, "123:2", "17"]
-    first = subprocess.run(args, capture_output=True, timeout=5, check=False)
-    assert first.returncode == 0
-    report = tmp_path / "original-private/original.json"
-    return args, raw, report
-
-
-@pytest.mark.parametrize("reader", ["customer", "independent-review", "candidate-failure", "independent-failure"])
-@pytest.mark.parametrize(
-    "case",
-    [
-        "valid",
-        "role",
-        "head",
-        "attempt",
-        "exit",
-        "permissions",
-        "skipped",
-        "command-failure",
-        "publication-failure",
-        "missing",
-        "false",
-        "unexpected",
-        "digest",
-        "duplicate",
-    ],
-)
-def test_original_readers_require_actual_owner_success(tmp_path, monkeypatch, capsys, reader, case):
-    args, raw, report = _successful_original_capture(tmp_path, reader)
-    manifest = report.parent / "manifest.json"
-    if case == "role":
-        args[-4] = "independent" if args[-4] == "candidate" else "candidate"
-    elif case == "head":
-        args[-3] = "b" * 40
-    elif case == "attempt":
-        args[-2] = "123:3"
-    elif case == "exit":
-        args[-1] = "124"
-    if case == "permissions":
-        report.parent.chmod(0o755)
-    if case == "publication-failure":
-        (tmp_path / "original-report.public.json").unlink()
-        (tmp_path / "original-report.public.json").mkdir()
-    before = (report.read_bytes(), manifest.read_bytes())
-    if case in {"skipped", "missing", "false", "unexpected"}:
-        admission = {"skipped": "false", "missing": None, "false": "false", "unexpected": "TRUE"}[case]
-    else:
-        if case == "command-failure":
-            args[2] = str(tmp_path / "absent-writer.py")
-        outcome = subprocess.run(args, capture_output=True, timeout=5, check=False)
-        admission = "true" if outcome.returncode == 0 else "false"
-    assert (report.read_bytes(), manifest.read_bytes()) == before
-    if case == "digest":
-        manifest.write_text(manifest.read_text().replace('"sha256": "', '"sha256": "0'))
-    elif case == "duplicate":
-        manifest.write_text(manifest.read_text().replace('"status":', '"status": "COMPLETE", "status":'))
-    if admission is None:
-        monkeypatch.delenv("REVIEW_CAPTURE_ADMITTED", raising=False)
-    else:
-        monkeypatch.setenv("REVIEW_CAPTURE_ADMITTED", admission)
-    monkeypatch.setenv("REVIEW_PUBLIC_REPORT", str(report))
-    monkeypatch.setenv("REVIEW_REPORT", str(report))
-    monkeypatch.setenv("REVIEW_PUBLIC_EXIT", "17")
-    monkeypatch.setenv("REVIEW_LOG", str(tmp_path / "missing.log"))
-    monkeypatch.chdir(tmp_path)
-    _git(tmp_path, "init", "-q")
-    program = tmp_path / "reader.py"
-    program.write_text(_original_reader(reader))
-    opened, parsed = [], []
-    original_open, original_loads = Path.open, json.loads
-
-    def observed_open(path, *args, **kwargs):
-        if path in (report, manifest):
-            opened.append(path)
-        return original_open(path, *args, **kwargs)
-
-    def observed_loads(value, *args, **kwargs):
-        if value == raw:
-            parsed.append(value)
-        return original_loads(value, *args, **kwargs)
-
-    monkeypatch.setattr(Path, "open", observed_open)
-    monkeypatch.setattr(json, "loads", observed_loads)
-    runpy.run_path(str(program))
-    output = capsys.readouterr().out
-    if admission != "true":
-        assert not opened, "Rejected or skipped owner must prevent manifest and raw opens"
-    assert len(parsed) == (1 if case == "valid" else 0)
-    if case != "valid":
-        assert '"PASS"' not in output and '"analyzer": "pylint"' not in output
-
-
-@pytest.mark.parametrize("role", ["candidate", "independent"])
-@pytest.mark.parametrize("review_exit", [17, 124])
-@pytest.mark.parametrize("case", ["valid", "stale", "missing", "skipped", "command-failure"])
-def test_capture_shell_transports_owner_result_before_required_exit(tmp_path, role, review_exit, case):
-    workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())
-    job = "customer" if role == "candidate" else "independent-review"
-    step = next(
-        s
-        for s in workflow["jobs"][job]["steps"]
-        if s.get("id") == ("deferred_review" if role == "candidate" else "independent_review")
-    )
-    recipe = step["run"]
-    start = (
-        recipe.index("original_capture_admitted=false")
-        if "original_capture_admitted=false" in recipe
-        else recipe.index('"$CUSTOMER_ROOT/venv/bin/python" -I "$CUSTOMER_ROOT/capture-original.py"')
-        if role == "candidate"
-        else recipe.index('if [ "$observation_ready" = true ]; then')
-    )
-    root = tmp_path / "root"
-    (root / "venv/bin").mkdir(parents=True)
-    (root / "venv/bin/python").symlink_to(sys.executable)
-    (root / "subject").mkdir()
-    _git(root / "subject", "init", "-q")
-    (root / "capture-original.py").write_text(_capture_program())
-    review = root / "subject"
-    (review / ".specfact").mkdir()
-    source = review / ".specfact/code-review.json" if role == "candidate" else root / "review.private.json"
-    source.write_text('{"findings":[],"analyzer_evidence":[]}')
-    if case == "stale":
-        result = subprocess.run(
-            [
-                sys.executable,
-                "-I",
-                str(root / "capture-original.py"),
-                str(root),
-                str(source),
-                role,
-                "b" * 40,
-                "123:2",
-                str(review_exit),
-            ],
-            capture_output=True,
-            timeout=5,
-            check=False,
-        )
-        assert result.returncode == 0
-    if case == "missing":
-        source.unlink()
-    if case == "command-failure":
-        (root / "capture-original.py").unlink()
-    output = tmp_path / "outputs"
-    env = dict(
-        os.environ,
-        CUSTOMER_ROOT=str(root),
-        TRUSTED_ROOT=str(root),
-        REVIEW_ROOT=str(review),
-        CANDIDATE_HEAD="a" * 40,
-        GITHUB_RUN_ID="123",
-        GITHUB_RUN_ATTEMPT="2",
-        GITHUB_OUTPUT=str(output),
-        REVIEW_CAPTURE_ADMITTED="true",
-    )
-    prefix = (
-        f"set -euo pipefail\nreview_exit={review_exit}\nobservation_head={'a' * 40}\n"
-        f"observation_attempt=123:2\nobservation_ready={'false' if case == 'skipped' else 'true'}\n"
-        'trusted_env=(env -i PATH="$PATH")\n'
-    )
-    result = subprocess.run(
-        ["bash", "-c", prefix + recipe[start:]],
-        cwd=review,
-        env=env,
-        capture_output=True,
-        text=True,
-        timeout=10,
-        check=False,
-    )
-    assert result.returncode == review_exit, result.stderr
-    admitted = case == "valid" or (role == "candidate" and case == "skipped")
-    assert output.read_text() == f"original_capture_admitted={str(admitted).lower()}\n"
-    if not admitted:
-        assert "original_capture_unavailable" in result.stdout
-    if review_exit == 124:
-        assert "analysis_timeout" in result.stdout
-    if role == "independent":
-        (root / "review-attempted").touch()
-        later = next(
-            s for s in workflow["jobs"][job]["steps"] if s.get("name") == "Project independent review failure privately"
-        )
-        later_env = {**env, "REVIEW_CAPTURE_ADMITTED": output.read_text().strip().split("=", 1)[1]}
-        projected = subprocess.run(
-            ["bash", "-c", later["run"]], env=later_env, capture_output=True, text=True, timeout=5, check=False
-        )
-        assert projected.returncode == 0, projected.stderr
-        assert json.loads(projected.stdout)["report_outcome"] == (
-            "structured_report" if admitted else "unreadable_report"
-        )
-
-
 def test_later_capture_consumers_use_explicit_step_outputs():
     workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())
     for job, name, owner in [
@@ -1769,27 +1544,6 @@ def test_later_capture_consumers_use_explicit_step_outputs():
         if s.get("name") == "Profile failed candidate review privately"
     )
     assert replay.index('"${REVIEW_CAPTURE_ADMITTED:-false}" = true') < replay.index("manifest.json")
-
-
-@pytest.mark.parametrize("admission", [None, "", "false", "TRUE"])
-def test_replay_rejects_absent_capture_before_any_manifest_read(tmp_path, admission):
-    workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())
-    recipe = next(
-        s["run"]
-        for s in workflow["jobs"]["customer"]["steps"]
-        if s.get("name") == "Profile failed candidate review privately"
-    )
-    guard = '[ "${REVIEW_CAPTURE_ADMITTED:-false}" = true ] || exit 0'
-    assert guard in recipe
-    prefix = recipe[recipe.index(guard) : recipe.index("# Separate pinned profiler")]
-    env = {**os.environ, "CUSTOMER_ROOT": str(tmp_path), "REVIEW_ROOT": str(tmp_path)}
-    env.pop("REVIEW_CAPTURE_ADMITTED", None)
-    if admission is not None:
-        env["REVIEW_CAPTURE_ADMITTED"] = admission
-    result = subprocess.run(
-        ["bash", "-c", "set -euo pipefail\n" + prefix + "exit 91"], env=env, capture_output=True, timeout=5, check=False
-    )
-    assert result.returncode == 0 and not result.stderr
 
 
 def _linux23_captured_projection(
@@ -2033,74 +1787,6 @@ def test_linux23_correction_combined_limit_and_rule_identity(tmp_path, monkeypat
     assert len(rows) == 200
     assert rows[0]["native_diagnostic"]["diagnostic"] == rule
     assert rows[-1] == {"finding_location": {"file": "public.py", "line": 1, "severity": "error"}}
-
-
-@pytest.mark.parametrize("merge_failure", [False, True])
-def test_linux23_correction_independent_actual_step_environment(tmp_path, merge_failure):
-    workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())
-    recipe = next(
-        s["run"]
-        for s in workflow["jobs"]["independent-review"]["steps"]
-        if s.get("name") == "Prepare and review through the authenticated installed controller"
-    )
-    prefix = recipe[recipe.index("trusted_env=(") :]
-    (tmp_path / "subject").mkdir()
-    executable = tmp_path / "venv/bin/python"
-    executable.parent.mkdir(parents=True)
-    records = tmp_path / "calls.jsonl"
-    executable.write_text(
-        f"#!{sys.executable}\n"
-        + f"""
-import json, os, sys
-from pathlib import Path
-record = {{"argv": sys.argv[1:], "base": os.environ.get("REVIEW_DIAGNOSTIC_BASE"), "head": os.environ.get("REVIEW_DIAGNOSTIC_HEAD")}}
-with Path({str(records)!r}).open("a") as stream:
-    stream.write(json.dumps(record) + "\\n")
-if "-c" in sys.argv:
-    code = sys.argv[sys.argv.index("-c") + 1]
-    if "merge-base" in code:
-        assert sys.argv[-2:] == [{("a" * 40)!r}, {("c" * 40)!r}]
-        import subprocess
-        def merge_output(argv, **kwargs):
-            assert argv == ["git", "merge-base", {("a" * 40)!r}, {("c" * 40)!r}]
-            assert kwargs == {{"timeout": 5}}
-            if {merge_failure!r}:
-                raise subprocess.CalledProcessError(128, argv)
-            return {("b" * 40 + chr(10)).encode()!r}
-        subprocess.check_output = merge_output
-        sys.argv = ["-c", {("a" * 40)!r}, {("c" * 40)!r}]
-        exec(compile(code, "actual-merge-base", "exec"))
-    elif "timeout=600" in code:
-        sys.exit(7)
-    elif "timeout=1800" not in code:
-        sys.exit(99)
-else:
-    assert sys.argv[1:] == ["-I", "-"]
-    sys.stdin.read()
-"""
-    )
-    executable.chmod(0o700)
-    env = {
-        **os.environ,
-        "TRUSTED_ROOT": str(tmp_path),
-        "CANDIDATE_HEAD": "a" * 40,
-        "CANDIDATE_BASE": "c" * 40,
-        "observation_ready": "false",
-    }
-    env.pop("REVIEW_BASE", None)
-    result = subprocess.run(
-        ["bash", "-c", "set -euo pipefail\n" + prefix], env=env, capture_output=True, timeout=5, check=False
-    )
-    assert result.returncode == 7, result.stderr.decode()
-    assert len(result.stdout) <= 65536
-    calls = [json.loads(line) for line in records.read_text().splitlines()]
-    required = [index for index, call in enumerate(calls) if any("timeout=600" in arg for arg in call["argv"])]
-    merge = [index for index, call in enumerate(calls) if any("merge-base" in arg for arg in call["argv"])]
-    assert len(required) == len(merge) == 1
-    assert required[0] < merge[0]
-    assert calls[-1]["argv"] == ["-I", "-"]
-    assert calls[-1]["head"] == "a" * 40
-    assert calls[-1]["base"] == ("" if merge_failure else "b" * 40)
 
 
 @pytest.mark.parametrize("job_name", ["customer", "independent-review"])

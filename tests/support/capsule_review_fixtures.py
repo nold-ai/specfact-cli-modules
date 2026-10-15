@@ -20,6 +20,7 @@ __all__ = [
     "_ISOLATED_REVIEWER_TEMPLATES",
     "_PREPARATION_CLI_SCRIPT",
     "_TRUSTED_BOOTSTRAP_LAUNCHER",
+    "_capture_program",
     "_git",
     "_isolated_reviewer_modules",
     "_write_deferred_fixture_sources",
@@ -468,3 +469,9 @@ def _write_preparation_fixture(tmp_path, case):
     report = tmp_path / "preparation.private.json"
     report.write_text("not-json/private" if case == "invalid" else json.dumps(payload))
     return report
+
+
+def _capture_program():
+    workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())
+    step = next(s for s in workflow["jobs"]["customer"]["steps"] if "PY_CAPTURE" in s.get("run", ""))
+    return step["run"].split("<<'PY_CAPTURE'", 1)[1].split("\n", 1)[1].split("\nPY_CAPTURE", 1)[0]

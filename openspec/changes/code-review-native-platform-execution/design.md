@@ -245,3 +245,7 @@ execute the current host module. Every current portable function moves into norm
 labels and the minimal CPython proof with all three existing hash-pinned inputs.
 The minimal CPython proof reuses the existing secret-free preparer; its additional
 CI cost is three input preparations, without adding a new acquisition mechanism.
+
+## Linux26 original-capture host context, 2026-10-15
+
+Five original-capture proofs use host-only isolated Python or Bash/Git. Reuse the existing required diagnostic host owner without modifying either ordinary-host entrypoint. Preserve all 90 parameter cases and original function bodies. Portable rejected-capture privacy keeps an eight-case in-process counterpart plus all other existing unit controls. The sealed project-Python I/E/S rejection stays unchanged. This corrects test ownership rather than adding subject privileges or weakening analyzer scope.

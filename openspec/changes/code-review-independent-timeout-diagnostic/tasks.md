@@ -47,3 +47,10 @@ The independently reconciled 19-path scope captures bounded typed native diagnos
 
 - [x] Complete Linux24 ordinary gates, real staged requirements, SMART/full suites and exact-source defect/comment closure; independently triage the completed corrected-scope CodeRabbit result.
 - [ ] Complete normal configured hooks, existing-key signing and strict exact-head native/provider acceptance before supplier or consumer adoption.
+
+## Linux26 host ownership correction
+
+- [x] Independently review the four-file scope and strengthen the existing host-context spec before meaningful routing RED.
+- [x] Preserve five functions and all 90 host cases; retain portable matrices and add eight portable rejected-capture counterparts.
+- [x] Pass focused ordinary-host, portable privacy, route failure and unchanged isolation guards.
+- [ ] Complete ordinary/full gates, independent source closure, normal hooks and exact-head hosted acceptance.

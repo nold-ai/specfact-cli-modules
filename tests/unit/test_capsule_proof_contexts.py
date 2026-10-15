@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ast
 import importlib.util
 from pathlib import Path
 
@@ -14,6 +15,7 @@ from specfact_code_review.run.runtime_models import ProjectPlan
 
 ROOT = Path(__file__).resolve().parents[2]
 HOST_PROOF = "tests/host/proof_capsule_deferred_review_ci.py"
+DIAGNOSTIC_HOST_PROOF = "tests/host/proof_independent_review_diagnostic.py"
 NATIVE_PARSER = "tests/native/proof_macos_managed_uv_child.py"
 NATIVE_BROKER = "tests/native/proof_macos_native_broker_wait.py"
 
@@ -55,6 +57,14 @@ def test_full_and_smart_host_runs_require_the_retained_host_proof(monkeypatch):
         "--ignore=tests/unit/test_macos_native_broker_wait.py",
         "--ignore=tests/unit/test_macos_python_candidate.py",
     }
+    calls.clear()
+    monkeypatch.setattr(
+        module.subprocess,
+        "run",
+        lambda command, **_kwargs: calls.append(command) or type("Result", (), {"returncode": 9})(),
+    )
+    assert module._run_pytest(["-n", "0"]) == 9
+    assert calls == [[module.sys.executable, "-m", "pytest", HOST_PROOF, DIAGNOSTIC_HOST_PROOF]]
 
 
 def test_native_parser_and_broker_proofs_remain_required_on_every_os():
@@ -71,7 +81,7 @@ def test_native_parser_and_broker_proofs_remain_required_on_every_os():
 
 
 def test_explicit_proof_modules_do_not_enter_default_capsule_selection():
-    proofs = [ROOT / name for name in (HOST_PROOF, NATIVE_PARSER, NATIVE_BROKER)]
+    proofs = [ROOT / name for name in (HOST_PROOF, DIAGNOSTIC_HOST_PROOF, NATIVE_PARSER, NATIVE_BROKER)]
     assert all(path.is_file() for path in proofs)
     assert all(not (ROOT / "tests" / context / "__init__.py").exists() for context in ("host", "native", "support"))
     portable = ROOT / "tests/unit/test_native_analyzer_inputs.py"
@@ -216,3 +226,33 @@ def test_native_output_class_projection_rejects_unknown_payloads():
         assert STATE.project_worker_result({**classified, "raw": "/private/value"}) == classified
     for payload in ("/private/value", [], False):
         assert STATE.project_worker_result({**fields, "output_class": payload}) == {}
+
+
+def test_capture_host_cases_preserve_context_and_parameters():
+    host = ast.parse((ROOT / DIAGNOSTIC_HOST_PROOF).read_text())
+    unit = ast.parse((ROOT / "tests/unit/test_capsule_review_projection.py").read_text())
+    expected = {
+        "test_uncommitted_original_bytes_are_never_projected": {"job_name": 2, "damage": 4},
+        "test_original_readers_require_actual_owner_success": {"reader": 4, "case": 14},
+        "test_capture_shell_transports_owner_result_before_required_exit": {"role": 2, "review_exit": 2, "case": 5},
+        "test_replay_rejects_absent_capture_before_any_manifest_read": {"admission": 4},
+        "test_linux23_correction_independent_actual_step_environment": {"merge_failure": 2},
+    }
+    host_functions = {node.name: node for node in host.body if isinstance(node, ast.FunctionDef)}
+    unit_functions = {node.name: node for node in unit.body if isinstance(node, ast.FunctionDef)}
+    for name, axes in expected.items():
+        assert name in host_functions and name not in unit_functions
+        actual = {}
+        for decorator in host_functions[name].decorator_list:
+            if (
+                isinstance(decorator, ast.Call)
+                and isinstance(decorator.func, ast.Attribute)
+                and decorator.func.attr == "parametrize"
+            ):
+                actual[ast.literal_eval(decorator.args[0])] = len(ast.literal_eval(decorator.args[1]))
+        assert actual == axes
+    portable = unit_functions["test_uncommitted_original_bytes_are_never_projected_portably"]
+    assert {
+        ast.literal_eval(decorator.args[0]): len(ast.literal_eval(decorator.args[1]))
+        for decorator in portable.decorator_list
+    } == {"job_name": 2, "damage": 4}
