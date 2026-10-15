@@ -110,3 +110,24 @@ No native Linux proof or native readiness follows from local mocked controls. Pa
 - [x] Pass all six legacy parameter cases and the default-helper control with normal two-worker focused verification.
 - [x] Verify unchanged production/workflow bytes, original prefix, real Linux bodies/decorators and independent guard negatives.
 - [ ] Parent completes ordinary SMART/FULL, independent final-source reviews, CodeRabbit and supported Linux proof.
+
+## Linux37 bounded proof correction, 2026-10-15
+
+- [x] Record approved ten-path scope, limited old190 exception and fresh transport design before implementation.
+- [x] Observe meaningful RED for same-process control, missing actual invocation journals on canonical Bash 3.2 and 5.3, and old tooling-parent admission.
+- [x] Prove actual imports, source hashes, main/count-one state, real extra-thread production refusal and body failure propagation through the intended bootstrap.
+- [x] Prove canonical shell journal equality and rejection of an actual duplicate review before expanding all four Linux30 decorators.
+- [x] Preserve four original bodies and marks, five Linux31 cases and all other old190 prefix bytes in a preservation manifest.
+- [x] Exercise malformed, missing, duplicate, reversed, truncated, wrong-argument, wrong-cwd, nonprivate, oversized and unauthorized actual follow-on journal controls.
+- [x] Preserve frozen subject inputs while admitting the normal af8 tooling parent.
+- [ ] Complete full ordinary gates, signatures, local CodeRabbit and fresh independent reviews on the final source.
+- [ ] Prove all twelve original real Linux cases without skips at exact new head and frozen core through unchanged JUnit admission.
+- [ ] Complete the original Linux-body assertion mutation negative where supported Linux execution is required.
+- [ ] Resolve the separate native parser failure before acceptance. No alias is created by this correction.
+
+## Linux38 original-body negative, 2026-10-15
+
+- [x] Specify and append the single Linux-only private-copy assertion mutation without changing existing proof bytes or the controller.
+- [x] Re-run the 28 portable controls and verify the new case skips with its Linux reason on Darwin.
+- [ ] Execute the original-body negative and all twelve unchanged real positives at the final exact Linux head/core before alias admission.
+- [ ] Complete root-owned full gates, strict signatures, fresh affected-source reviews and CodeRabbit before publication.

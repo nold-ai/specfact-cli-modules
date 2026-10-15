@@ -245,3 +245,33 @@ The controller SHALL authenticate installed code before imports and retain same-
 - **AND** injected count-two and non-main ambient views SHALL still reach each original lifecycle assertion, including every legacy parameter case
 - **AND** the helper default spawn SHALL record attempts and never delegate to real spawn; an explicit control SHALL assert the attempt, nonaccepting capture result and absence of actual child operations outside capture
 - **AND** all twelve real Linux cases, their decorators and gate counts, the default owner and production threading admission SHALL remain unchanged
+
+#### Scenario: Fresh real-case dispatch preserves capture authority
+- **WHEN** the four Linux30 real-capture functions run their seven existing cases
+- **THEN** a test-local decorator SHALL dispatch each unchanged body once through the current Python interpreter with -I, explicit resolved repository and candidate code-review source roots, and an eight-second controller timeout
+- **AND** actual candidate sandbox path and hash, diagnostic owner path and hash, case identity, and real main-thread/count-one state SHALL be checked after imports and before dispatch
+- **AND** optimized execution, body assertions, crashes, timeout and missing, malformed or wrong completion receipts SHALL remain nonaccepting
+- **AND** a portable first milestone SHALL start an actual additional thread inside dispatched control code and prove production single_thread_required refusal before capture logs or child execution, joining that thread in finally
+- **AND** portable transport and guard controls SHALL NOT establish Linux success; all twelve original exact-head Linux cases and unchanged JUnit admission remain mandatory
+- **AND** outer timeout cleanup SHALL retain the existing best-effort direct-controller subprocess behavior without claiming escaped-descendant containment
+
+#### Scenario: Actual fixture invocation cardinality survives shell formatting
+- **WHEN** the installed fixture CLI is imported after its trusted cwd and environment assertions
+- **THEN** it SHALL append actual argv and cwd only to a per-fixture mode-0600 bounded complete JSONL journal with checked writes and close
+- **AND** a single assertion helper SHALL require the exact ordered full prepare and review arguments and trusted entry cwd, rejecting missing, duplicate, reversed, malformed, truncated, wrong-argv, wrong-cwd and unauthorized follow-on records
+- **AND** the existing subject cwd, latest argv.json and review exit assertions SHALL remain authoritative for application outcome
+- **AND** canonical Bash 3.2 and Bash 5.3 workflow controls plus an actual extra review call SHALL precede expansion to the four real functions
+- **AND** the old190 prefix exception SHALL cover only the three trace-counter lines and the necessary fixture helper import; every other prefix byte and original real-case body SHALL remain preserved
+
+#### Scenario: Tooling admission preserves frozen subject inputs
+- **WHEN** a normal follow-up tooling commit is admitted
+- **THEN** its sole parent SHALL be af8d70e63b137f852db586ec2207761d0f374dda through TOOLING_PARENT
+- **AND** SUBJECT_HEAD 22c0f92f681aac7d9edbfde305963823866d0a7e and all frozen subject/base inputs SHALL remain unchanged
+
+#### Scenario: Original Linux assertion failure reaches the controller
+- **WHEN** the Linux-only negative companion copies the trusted proof into a private mode-0600 file
+- **THEN** it SHALL locate only test_linux30_pre_namespace_authentication_precedes_child_execution by AST and replace exactly its final assert not marker.exists() with assert marker.exists() carrying LINUX37_ORIGINAL_ASSERTION_MUTATION
+- **AND** the earlier exec_identity and cleaned assertions and all other copied source SHALL remain unchanged
+- **AND** only the copied decorated callable's live bootstrap global SHALL replace exactly one fixed proof-file operand with the literal private absolute path, preserving real repository, SDK/owner identities, thread checks, argument binding, one unwrapped dispatch, current Python -I and eight-second timeout
+- **AND** invoking that callable against a fresh private case directory SHALL raise AssertionError containing both Real-case controller failed and the unique mutation message; any other refusal or timeout SHALL fail the negative control
+- **AND** this negative and all twelve unchanged positives SHALL pass at the exact Linux head/core before alias admission; Darwin skips SHALL remain pending and SHALL NOT count as Linux evidence

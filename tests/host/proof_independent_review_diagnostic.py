@@ -17,6 +17,7 @@ from tests.support.capsule_review_fixtures import (
     _git,
     _write_preparation_fixture,
     _write_public_report,
+    assert_fixture_invocations,
     public_projector,
 )
 
@@ -712,9 +713,7 @@ def test_optional_context_preserves_required_review(tmp_path, case, review_exit)
     assert result.returncode == review_exit, result.stdout + result.stderr
     assert (tmp_path / "capture-output").read_text() == f"original_capture_admitted={str(case == 'valid').lower()}\n"
     assert_installed_review_arguments(trusted, prepared=False)
-    calls = [line for line in result.stderr.splitlines() if line.startswith("+ env -i ")]
-    assert sum(" prepare-index " in line for line in calls) == 1
-    assert sum(" code review run " in line for line in calls) == 1
+    assert_fixture_invocations(trusted)
     binding_path = trusted / "observation-private/invocation.json"
     manifest = trusted / "original-private/manifest.json"
     if case == "valid":
@@ -1144,6 +1143,76 @@ else:
     assert calls[-1]["base"] == ("" if merge_failure else "b" * 40)
 
 
+def _linux30_controller(body):
+    import functools
+    import hashlib
+    import inspect
+
+    @functools.wraps(body)
+    def controlled(*args, **kwargs):
+        if sys.flags.optimize or os.environ.get("PYTHONOPTIMIZE", "0") not in ("", "0"):
+            raise AssertionError("Optimized real-case execution is forbidden")
+        arguments = dict(inspect.signature(body).bind(*args, **kwargs).arguments)
+        assert set(arguments) <= {"tmp_path", "program", "expected", "mode"}
+        root = Path(arguments.pop("tmp_path")).resolve()
+        assert all(isinstance(value, str) for value in arguments.values())
+        repository = REPO_ROOT.resolve()
+        sandbox = repository / "packages/specfact-code-review/src/specfact_code_review/run/sandbox.py"
+        owner = repository / "scripts/semgrep_input_diagnostic.py"
+        expected = {
+            "case": body.__name__,
+            "arguments": arguments,
+            "root": str(root),
+            "sandbox": str(sandbox),
+            "sandbox_sha256": hashlib.sha256(sandbox.read_bytes()).hexdigest(),
+            "owner": str(owner),
+            "owner_sha256": hashlib.sha256(owner.read_bytes()).hexdigest(),
+            "main_thread": True,
+            "thread_count": 1,
+        }
+        completed = subprocess.run(
+            [sys.executable, "-I", "-c", _LINUX30_BOOTSTRAP, str(repository), json.dumps(expected)],
+            cwd=repository,
+            capture_output=True,
+            text=True,
+            timeout=8,
+            check=False,
+        )
+        assert completed.returncode == 0, "Real-case controller failed: " + completed.stderr[-8192:]
+        assert len(completed.stdout) <= 8192, "Oversized controller receipt"
+        assert completed.stdout == json.dumps(expected, sort_keys=True) + "\n", "Invalid controller receipt"
+
+    controlled._linux30_controller = True
+    return controlled
+
+
+_LINUX30_BOOTSTRAP = r"""import hashlib, json, runpy, sys, threading
+from pathlib import Path
+if sys.flags.optimize:
+    raise RuntimeError("optimized controller")
+repository = Path(sys.argv[1]).resolve(strict=True)
+expected = json.loads(sys.argv[2])
+sys.path[:0] = [str(repository), str(repository / "packages/specfact-code-review/src")]
+proof = runpy.run_path(str(repository / "tests/host/proof_independent_review_diagnostic.py"))
+from specfact_code_review.run import sandbox
+sandbox_path = Path(sandbox.__file__).resolve(strict=True)
+owner = proof["_linux30_owner"]()
+owner_path = Path(owner["capture"].__code__.co_filename).resolve(strict=True)
+actual = {
+    "case": expected["case"], "arguments": expected["arguments"], "root": expected["root"],
+    "sandbox": str(sandbox_path), "sandbox_sha256": hashlib.sha256(sandbox_path.read_bytes()).hexdigest(),
+    "owner": str(owner_path), "owner_sha256": hashlib.sha256(owner_path.read_bytes()).hexdigest(),
+    "main_thread": threading.current_thread() is threading.main_thread(),
+    "thread_count": threading.active_count(),
+}
+assert actual == expected, "Controller import/source/thread mismatch"
+case = proof[expected["case"]]
+assert getattr(case, "_linux30_controller", False) is True, "Undecorated case"
+case.__wrapped__(Path(expected["root"]), **expected["arguments"])
+print(json.dumps(actual, sort_keys=True))
+"""
+
+
 def _linux30_owner():
     path = REPO_ROOT / "scripts/semgrep_input_diagnostic.py"
     assert path.is_file(), "Dedicated bounded direct parser owner is missing"
@@ -1246,7 +1315,7 @@ def test_linux30_admission_rejects_before_setup(field, value):
         "created": True,
         "deleted": False,
     }
-    attempt, parents = "1", [owner["SUBJECT_HEAD"]]
+    attempt, parents = "1", [owner["TOOLING_PARENT"]]
     if field == "attempt":
         attempt = value
     elif field == "parents":
@@ -1267,6 +1336,7 @@ def test_linux30_admission_rejects_before_setup(field, value):
     ],
 )
 @pytest.mark.skipif(sys.platform != "linux", reason="Linux owned-tree and subreaper proof")
+@_linux30_controller
 def test_linux30_bounded_capture_lifecycle(tmp_path, program, expected):
     owner = _linux30_owner()
     result = owner["capture"](
@@ -1338,6 +1408,7 @@ def test_linux30_stale_git_input_stops_materialization(tmp_path):
 
 
 @pytest.mark.skipif(sys.platform != "linux", reason="Linux pre-exec bounded supervision")
+@_linux30_controller
 def test_linux30_preexec_hang_and_cleanup_failure_preserve_primary(tmp_path):
     import time
     from types import SimpleNamespace
@@ -1362,6 +1433,7 @@ def test_linux30_preexec_hang_and_cleanup_failure_preserve_primary(tmp_path):
 
 
 @pytest.mark.skipif(sys.platform != "linux", reason="Linux real exec-stop and rejected dynamic launcher")
+@_linux30_controller
 def test_linux30_pre_namespace_authentication_precedes_child_execution(tmp_path):
     from specfact_code_review.run import sandbox
 
@@ -1437,6 +1509,7 @@ def test_linux30_failure_stage_is_useful_without_raw_details():
 
 
 @pytest.mark.skipif(sys.platform != "linux", reason="Linux adopted descendant identity and pipe proof")
+@_linux30_controller
 def test_linux30_descendant_holding_pipe_is_observed_and_reaped(tmp_path):
     owner = _linux30_owner()
     pid_file = tmp_path / "descendant.pid"
@@ -1704,7 +1777,7 @@ def test_linux31_valid_admission_accepts_exact_single_parent():
     owner = _linux30_owner()
     sha = "a" * 40
     event = {"ref": owner["ALIAS"], "before": "0" * 40, "after": sha, "created": True, "deleted": False}
-    assert owner["admit"](event, sha, "1", [owner["SUBJECT_HEAD"]]) is None
+    assert owner["admit"](event, sha, "1", [owner["TOOLING_PARENT"]]) is None
 
 
 def test_linux31_host_workflow_is_exact_head_and_separate_from_scanner():
@@ -2380,3 +2453,270 @@ def test_linux34_default_mock_owner_never_spawns_real_child(tmp_path, monkeypatc
     assert spawn_attempts == ["spawn"]
     assert child_operations == []
     assert result == {"returncode": None, "bytes": 0, "gap": "supervision_failed", "cleaned": True}
+
+
+@_linux30_controller
+def _linux37_transport_control(tmp_path, mode):
+    import threading
+
+    (tmp_path / "body.pid").write_text(str(os.getpid()))
+    if mode == "assertion":
+        assert mode != "assertion", "DISPATCHED_BODY_ASSERTION"
+    if mode in {"crash", "exit"}:
+        os._exit(19 if mode == "crash" else 0)
+    if mode == "timeout":
+        import time
+
+        time.sleep(60)
+    if mode == "guard":
+        release = threading.Event()
+        ready = threading.Event()
+
+        def wait():
+            ready.set()
+            release.wait(5)
+
+        thread = threading.Thread(target=wait)
+        thread.start()
+        try:
+            assert ready.wait(2)
+            marker = tmp_path / "must-not-execute"
+            with pytest.raises(ValueError, match=r"^single_thread_required$"):
+                _linux30_owner()["capture"](
+                    [sys.executable, "-c", f"from pathlib import Path;Path({str(marker)!r}).touch()"],
+                    tmp_path,
+                    "guard",
+                    0.2,
+                    1024,
+                )
+            assert not marker.exists()
+            assert not (tmp_path / "guard.stdout").exists()
+            assert not (tmp_path / "guard.stderr").exists()
+        finally:
+            release.set()
+            thread.join(2)
+        assert not thread.is_alive()
+
+
+def test_linux37_fresh_transport_and_real_guard(tmp_path):
+    _linux37_transport_control(tmp_path, "guard")
+    assert int((tmp_path / "body.pid").read_text()) != os.getpid()
+
+
+@pytest.mark.parametrize("shell", ["/bin/bash", "/opt/homebrew/bin/bash"])
+def test_linux37_actual_workflow_journal(tmp_path, shell):
+    if not Path(shell).is_file():
+        pytest.skip("Canonical local Bash is unavailable")
+    from tests.support.capsule_review_fixtures import create_isolated_reviewer, independent_review_job
+
+    trusted, environment = create_isolated_reviewer(tmp_path, (0, "NOT_APPLICABLE", "no_governed_impact"))
+    step = next(item for item in independent_review_job()["steps"] if item.get("id") == "independent_review")
+    result = subprocess.run([shell, "-c", step["run"]], env=environment, capture_output=True, text=True, timeout=30)
+    assert result.returncode == 0, result.stdout + result.stderr
+    journal = trusted / "invocations.private.jsonl"
+    assert journal.is_file(), "Actual prepare/review imports must record their invocations"
+    assert len(journal.read_text().splitlines()) == 2
+    assert_fixture_invocations(trusted)
+    from tests.support.capsule_review_fixtures import assert_installed_review_arguments
+
+    assert_installed_review_arguments(trusted, prepared=False)
+    review_args = json.loads(journal.read_text().splitlines()[1])["argv"]
+    result = subprocess.run(
+        [str(trusted / "venv/bin/python"), "-I", *review_args],
+        cwd=trusted,
+        env=_linux37_fixture_environment(trusted),
+        capture_output=True,
+        text=True,
+        timeout=8,
+    )
+    assert result.returncode == 0, result.stderr
+    assert_installed_review_arguments(trusted, prepared=False)
+    with pytest.raises(AssertionError, match="invocation count"):
+        assert_fixture_invocations(trusted)
+
+
+def test_linux37_admits_tooling_parent_without_retargeting_subject():
+    owner = _linux30_owner()
+    event = {
+        "ref": "refs/heads/codex/pr510-semgrep-once-25",
+        "before": "0" * 40,
+        "after": "a" * 40,
+        "created": True,
+        "deleted": False,
+    }
+    assert owner["admit"](event, "a" * 40, "1", ["af8d70e63b137f852db586ec2207761d0f374dda"]) is None
+    with pytest.raises(ValueError, match="admission"):
+        owner["admit"](event, "a" * 40, "1", [owner["SUBJECT_HEAD"]])
+
+
+def _linux37_fixture_environment(trusted):
+    return {
+        "HOME": str(trusted / "home"),
+        "TMPDIR": str(trusted / "tmp"),
+        "PATH": str(trusted / "venv/bin") + ":/usr/bin:/bin",
+        "SPECFACT_MODULES_BRANCH": "main",
+        "SPECFACT_CODE_REVIEW_CAPSULE_CACHE": str(trusted / "cache"),
+    }
+
+
+@pytest.mark.parametrize("mode", ["assertion", "crash", "exit", "timeout"])
+def test_linux37_dispatched_body_failure_is_nonaccepting(tmp_path, mode):
+    failure = subprocess.TimeoutExpired if mode == "timeout" else AssertionError
+    with pytest.raises(failure) as caught:
+        _linux37_transport_control(tmp_path, mode)
+    assert int((tmp_path / "body.pid").read_text()) != os.getpid()
+    if mode == "assertion":
+        assert "DISPATCHED_BODY_ASSERTION" in str(caught.value)
+
+
+@pytest.mark.parametrize("receipt", ["", "{}\n", "not-json\n", '{"case":"wrong"}\n'])
+def test_linux37_missing_or_wrong_receipt_is_nonaccepting(tmp_path, monkeypatch, receipt):
+    monkeypatch.setattr(subprocess, "run", lambda *_args, **_kwargs: subprocess.CompletedProcess([], 0, receipt, ""))
+    with pytest.raises(AssertionError, match="Invalid controller receipt"):
+        _linux37_transport_control(tmp_path, "guard")
+    assert not (tmp_path / "body.pid").exists()
+
+
+def test_linux37_optimized_parent_is_nonaccepting(tmp_path, monkeypatch):
+    monkeypatch.setenv("PYTHONOPTIMIZE", "1")
+    with pytest.raises(AssertionError, match="Optimized"):
+        _linux37_transport_control(tmp_path, "guard")
+    assert not (tmp_path / "body.pid").exists()
+
+
+@pytest.mark.parametrize(
+    "mutation", ["missing", "duplicate", "reversed", "malformed", "truncated", "argv", "cwd", "mode", "oversized"]
+)
+def test_linux37_journal_rejects_invalid_actual_records(tmp_path, mutation):
+    from tests.support.capsule_review_fixtures import create_isolated_reviewer, independent_review_job
+
+    trusted, environment = create_isolated_reviewer(tmp_path, (7, "NOT_APPLICABLE", "no_governed_impact"))
+    step = next(item for item in independent_review_job()["steps"] if item.get("id") == "independent_review")
+    result = subprocess.run(["bash", "-c", step["run"]], env=environment, capture_output=True, text=True, timeout=30)
+    assert result.returncode == 7, result.stdout + result.stderr
+    assert_fixture_invocations(trusted)
+    journal = trusted / "invocations.private.jsonl"
+    data = journal.read_text()
+    rows = [json.loads(line) for line in data.splitlines()]
+    if mutation == "missing":
+        rows.pop()
+    elif mutation == "duplicate":
+        rows.append(rows[-1])
+    elif mutation == "reversed":
+        rows.reverse()
+    elif mutation in {"argv", "cwd"}:
+        rows[1][mutation] = ["wrong"] if mutation == "argv" else str(trusted / "subject")
+    journal.write_text("".join(json.dumps(row) + "\n" for row in rows))
+    if mutation == "malformed":
+        journal.write_text("{}\n{broken}\n")
+    elif mutation == "truncated":
+        journal.write_text(data[:-1])
+    elif mutation == "mode":
+        journal.chmod(0o644)
+    elif mutation == "oversized":
+        journal.write_bytes(b"x" * 16385)
+    with pytest.raises(AssertionError):
+        assert_fixture_invocations(trusted)
+
+
+def test_linux37_preparation_refusal_rejects_actual_followon(tmp_path):
+    from tests.support.capsule_review_fixtures import (
+        assert_incomplete_preparation,
+        assert_installed_review_arguments,
+        create_isolated_reviewer,
+        independent_review_job,
+    )
+
+    trusted, environment = create_isolated_reviewer(tmp_path, (0, "UNKNOWN", "policy_parse_failure"))
+    step = next(item for item in independent_review_job()["steps"] if item.get("id") == "independent_review")
+    result = subprocess.run(["bash", "-c", step["run"]], env=environment, capture_output=True, text=True, timeout=30)
+    assert result.returncode == 1, result.stdout + result.stderr
+    assert_incomplete_preparation(trusted, result, "policy_parse_failure")
+    assert_fixture_invocations(trusted, reviewed=False)
+    args = [
+        str(trusted / "reviewer.py"),
+        str(trusted / "subject"),
+        "code",
+        "review",
+        "run",
+        "--scope",
+        "index",
+        "--enforcement",
+        "changed",
+        "--bug-hunt",
+        "--project-config",
+        str(trusted / "project.toml"),
+        "--json",
+        "--out",
+        str(trusted / "review.private.json"),
+    ]
+    followon = subprocess.run(
+        [str(trusted / "venv/bin/python"), "-I", *args],
+        cwd=trusted,
+        env=_linux37_fixture_environment(trusted),
+        capture_output=True,
+        text=True,
+        timeout=8,
+    )
+    assert followon.returncode == 0, followon.stderr
+    assert_installed_review_arguments(trusted, prepared=False)
+    with pytest.raises(AssertionError, match="invocation count"):
+        assert_fixture_invocations(trusted, reviewed=False)
+
+
+@pytest.mark.parametrize("mutation", ["sandbox", "sandbox_sha256", "owner", "owner_sha256", "optimized"])
+def test_linux37_real_bootstrap_rejects_wrong_origin_or_optimization(tmp_path, monkeypatch, mutation):
+    real_run = subprocess.run
+
+    def changed_launch(command, **kwargs):
+        command = list(command)
+        if mutation == "optimized":
+            command.insert(1, "-O")
+        else:
+            expected = json.loads(command[-1])
+            expected[mutation] = "wrong-origin"
+            command[-1] = json.dumps(expected)
+        return real_run(command, **kwargs)
+
+    monkeypatch.setattr(subprocess, "run", changed_launch)
+    with pytest.raises(AssertionError, match="Real-case controller failed"):
+        _linux37_transport_control(tmp_path, "guard")
+    assert not (tmp_path / "body.pid").exists()
+
+
+@pytest.mark.skipif(sys.platform != "linux", reason="Linux original-body assertion mutation requires real capture")
+def test_linux38_original_assertion_mutation_is_nonaccepting(tmp_path):
+    import ast
+
+    source = (REPO_ROOT / "tests/host/proof_independent_review_diagnostic.py").read_text()
+    name = "test_linux30_pre_namespace_authentication_precedes_child_execution"
+    functions = [node for node in ast.parse(source).body if isinstance(node, ast.FunctionDef) and node.name == name]
+    assert len(functions) == 1
+    assertion = functions[0].body[-1]
+    original = "assert not marker.exists()"
+    assert isinstance(assertion, ast.Assert)
+    assert ast.get_source_segment(source, assertion) == original
+    lines = source.splitlines(keepends=True)
+    span = "".join(lines[assertion.lineno - 1 : assertion.end_lineno])
+    assert span.count(original) == 1
+    message = "LINUX37_ORIGINAL_ASSERTION_MUTATION"
+    replacement = f'assert marker.exists(), "{message}"'
+    mutated = "".join(
+        [*lines[: assertion.lineno - 1], span.replace(original, replacement, 1), *lines[assertion.end_lineno :]]
+    )
+    assert mutated.count(replacement) == 1
+    private = tmp_path / "private-proof"
+    private.mkdir(mode=0o700)
+    proof_path = (private / "proof.py").resolve()
+    descriptor = os.open(proof_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    with os.fdopen(descriptor, "w") as stream:
+        stream.write(mutated)
+    copied_case = runpy.run_path(str(proof_path))[name]
+    operand = 'str(repository / "tests/host/proof_independent_review_diagnostic.py")'
+    assert _LINUX30_BOOTSTRAP.count(operand) == 1
+    copied_case.__globals__["_LINUX30_BOOTSTRAP"] = _LINUX30_BOOTSTRAP.replace(operand, repr(str(proof_path)), 1)
+    case_root = private / "case"
+    case_root.mkdir(mode=0o700)
+    with pytest.raises(AssertionError, match="Real-case controller failed") as failure:
+        copied_case(case_root)
+    assert message in str(failure.value)

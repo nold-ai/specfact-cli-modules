@@ -15,6 +15,7 @@ from pathlib import Path, PurePosixPath
 from typing import Any
 
 
+TOOLING_PARENT = "af8d70e63b137f852db586ec2207761d0f374dda"
 SUBJECT_HEAD = "22c0f92f681aac7d9edbfde305963823866d0a7e"
 SUBJECT_BASE = "593656f675eaf4954b609aca51aa6504367dc02e"
 ALIAS = "refs/heads/codex/pr510-semgrep-once-25"
@@ -37,7 +38,7 @@ def admit(event, sha, attempt, parents):
         and attempt == "1"
         and len(sha) == 40
         and all(c in "0123456789abcdef" for c in sha)
-        and parents == [SUBJECT_HEAD]
+        and parents == [TOOLING_PARENT]
     ):
         raise ValueError("admission")
 

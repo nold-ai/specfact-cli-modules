@@ -348,3 +348,23 @@ requirements:
       method: test
       intent: Exercise the common mock-owner helper without replacing its default spawn sentinel.
       observable: One spawn attempt is recorded, capture returns supervision_failed with cleaned true, and guarded child operations remain unused. Assertions run outside capture.
+    - case_id: linux37-fresh-controller-transport
+      scenario_id: bound-direct-parser-evidence-and-preserve-failures
+      method: test
+      intent: Execute a portable body through the same isolated bootstrap used by four unchanged real Linux functions.
+      observable: Actual candidate source identities and real thread state match; an actual additional thread triggers production refusal before resources, and assertion, crash, zero-exit, timeout, wrong receipt, wrong origin and optimization remain nonaccepting.
+    - case_id: linux37-actual-fixture-journal
+      scenario_id: bound-direct-parser-evidence-and-preserve-failures
+      method: test
+      intent: Run canonical Bash workflow calls and retain their ordered full argv and cwd in a bounded private journal.
+      observable: One prepare and review pass; an actual extra review fails cardinality despite valid latest argv. Corrupt records and unauthorized actual follow-on after preparation refusal fail.
+    - case_id: linux37-tooling-parent
+      scenario_id: bound-direct-parser-evidence-and-preserve-failures
+      method: test
+      intent: Admit the normal af8 tooling parent independently of immutable subject22 inputs.
+      observable: Exact tooling parent passes and subject-head-as-parent fails without retargeting the source manifest.
+    - case_id: linux38-original-assertion-mutation
+      scenario_id: bound-direct-parser-evidence-and-preserve-failures
+      method: test
+      intent: In a private proof copy invert only the original pre-namespace case's final marker assertion and invoke its existing decorated callable.
+      observable: The actual wrapper must raise its controller-failure assertion with LINUX37_ORIGINAL_ASSERTION_MUTATION after the original result checks. Linux execution is pending; Darwin skip is not evidence of success.
