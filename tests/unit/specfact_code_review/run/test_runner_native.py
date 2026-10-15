@@ -1119,3 +1119,186 @@ def test_native_pytest_starts_managed_analyzer_with_project_origin_results(
     response = runner._execute_native_capsule_member(request)
     assert response["diagnostic"].startswith("native_analyzer_execution_failed:")
     assert Session.launches == 2
+
+
+@pytest.mark.parametrize("prior_failure", [False, True])
+def test_linux23_capsule_optional_reread_preserves_member_and_findings(tmp_path, monkeypatch, prior_failure):
+    from specfact_code_review.run.findings import ReviewFinding
+
+    request = tmp_path / "request.json"
+    observation = tmp_path / "observation.json"
+    observation.write_text("{")
+    output = tmp_path / "result.json"
+    monkeypatch.setattr(
+        runner,
+        "Path",
+        lambda value: {
+            "/opt/specfact/tmp/pytest-observation.json": observation,
+            "/opt/specfact/output/result.json": output,
+        }.get(str(value), Path(value)),
+    )
+    monkeypatch.setattr(
+        runner,
+        "_load_capsule_request",
+        lambda _: ("targeted-pytest-coverage", [Path("app.py")], False, ("portable-pytest-v2", "{}"), False, None),
+    )
+    prior = ReviewFinding(
+        category="testing",
+        severity="error",
+        tool="pytest",
+        rule="TEST_OUTCOME_NOT_PASS",
+        file="app.py",
+        line=1,
+        message="existing failure",
+    )
+    monkeypatch.setattr(runner, "_member_findings", lambda *_, **__: [prior] if prior_failure else [])
+    runner._capsule_process_request(request)
+    response = json.loads(output.read_text())
+    assert response["member"] == "targeted-pytest-coverage"
+    assert response["execution_state"] == "error"
+    assert response["evidence_outcome"] == "UNKNOWN"
+    assert len(response["findings"]) == 1 + int(prior_failure)
+    if prior_failure:
+        assert response["findings"][0]["message"] == "existing failure"
+    assert response["findings"][-1]["native_diagnostic"]["phase"] == "transport_decode"
+
+
+def test_linux23_current_host_derives_member_diagnostics_from_canonical_findings(tmp_path, monkeypatch):
+    from specfact_code_review.run.findings import PytestDiagnostic, ReviewFinding
+
+    finding = ReviewFinding(
+        category="tool_error",
+        severity="error",
+        tool="pytest",
+        rule="tool_error",
+        file="a.py",
+        line=1,
+        message="legacy",
+        native_diagnostic=PytestDiagnostic(
+            phase="observation_read", exception_kind="FileNotFoundError", observation_state="read_failed"
+        ),
+    )
+    raw = runner._capsule_member_response("targeted-pytest-coverage", [finding])
+    raw["native_diagnostics"] = [{"PRIVATE": "forged producer aggregate"}]
+    monkeypatch.setattr(
+        runner,
+        "_dispatch_capsule_member",
+        lambda request, **_: (
+            raw
+            if request.member == "targeted-pytest-coverage"
+            else {"findings": [], "execution_state": "ran", "evidence_outcome": "PASS"}
+        ),
+    )
+    runtime = SimpleNamespace(identity="fixture", environment_id="fixture", backend="linux-x86_64")
+    result = runner._run_capsule_snapshot(
+        cast(Any, runtime), snapshot_root=tmp_path, files=[tmp_path / "a.py"], options=runner.ReviewOptions()
+    )
+    assert finding.native_diagnostic is not None
+    expected = finding.native_diagnostic.model_dump(mode="json")
+    assert result.evidence["targeted-pytest-coverage"]["native_diagnostics"] == [expected]
+    nested = runner._unknown_range_member(
+        "targeted-pytest-coverage",
+        reason="fixture",
+        base=result.evidence["targeted-pytest-coverage"],
+        head=result.evidence["targeted-pytest-coverage"],
+    )
+    assert json.loads(json.dumps(nested))["base"]["native_diagnostics"] == [expected]
+    assert nested["evidence_outcome"] == "UNKNOWN"
+
+
+@pytest.mark.parametrize("failure", ["stat", "read", "shape"])
+def test_linux23_capsule_optional_transport_owners_preserve_response(tmp_path, monkeypatch, failure):
+    from specfact_code_review.run.findings import ReviewFinding
+
+    observation = tmp_path / "observation.json"
+    observation.write_text("[]" if failure == "shape" else "{}")
+    output = tmp_path / "result.json"
+    monkeypatch.setattr(
+        runner,
+        "Path",
+        lambda value: {
+            "/opt/specfact/tmp/pytest-observation.json": observation,
+            "/opt/specfact/output/result.json": output,
+        }.get(str(value), Path(value)),
+    )
+    monkeypatch.setattr(
+        runner,
+        "_load_capsule_request",
+        lambda _: ("targeted-pytest-coverage", [Path("app.py")], False, ("portable-pytest-v2", "{}"), False, None),
+    )
+    prior = ReviewFinding(
+        category="tool_error",
+        severity="error",
+        tool="pytest",
+        rule="tool_error",
+        file="app.py",
+        line=1,
+        message="prior failure",
+    )
+    monkeypatch.setattr(runner, "_member_findings", lambda *_, **__: [prior])
+    original = Path.is_file if failure == "stat" else Path.read_text
+
+    def fail(path, *args, **kwargs):
+        if path == observation:
+            raise PermissionError("PRIVATE_READ")
+        return original(path, *args, **kwargs)
+
+    if failure != "shape":
+        monkeypatch.setattr(Path, "is_file" if failure == "stat" else "read_text", fail)
+    runner._capsule_process_request(tmp_path / "request.json")
+    response = json.loads(output.read_text())
+    assert response["member"] == "targeted-pytest-coverage"
+    assert response["findings"][0]["message"] == "prior failure"
+    assert response["evidence_outcome"] == "UNKNOWN"
+    assert response["findings"][-1]["native_diagnostic"]["phase"] == (
+        "transport_decode" if failure == "shape" else "transport_read"
+    )
+
+
+@pytest.mark.parametrize("prior_failure", [False, True])
+def test_linux23_correction_real_request_transport_anchor(tmp_path, monkeypatch, prior_failure):
+    from specfact_code_review.run.findings import ReviewFinding
+
+    request = tmp_path / "request.json"
+    request.write_text(
+        json.dumps(
+            {"member": "targeted-pytest-coverage", "paths": ["public.py"], "adapter_argv": ["portable-pytest-v2", "{}"]}
+        )
+    )
+    observation = tmp_path / "observation.json"
+    observation.write_text("{")
+    output = tmp_path / "result.json"
+    monkeypatch.setattr(
+        runner,
+        "Path",
+        lambda value: {
+            "/opt/specfact/tmp/pytest-observation.json": observation,
+            "/opt/specfact/output/result.json": output,
+        }.get(str(value), Path(value)),
+    )
+    prior = ReviewFinding(
+        category="testing",
+        severity="error",
+        tool="pytest",
+        rule="TEST_OUTCOME_NOT_PASS",
+        file="/opt/specfact/snapshot/public.py",
+        line=1,
+        message="existing failure",
+    )
+
+    def execute(member, files, **kwargs):
+        assert member == "targeted-pytest-coverage"
+        assert files == [Path("/opt/specfact/snapshot/public.py")]
+        return [prior] if prior_failure else []
+
+    monkeypatch.setattr(runner, "_member_findings", execute)
+    runner._capsule_process_request(request)
+    response = json.loads(output.read_text())
+    assert response["member"] == "targeted-pytest-coverage"
+    assert (response["execution_state"], response["evidence_outcome"]) == ("error", "UNKNOWN")
+    assert len(response["findings"]) == 1 + int(prior_failure)
+    if prior_failure:
+        assert response["findings"][0]["message"] == "existing failure"
+        assert response["findings"][0]["file"] == "public.py"
+    assert response["findings"][-1]["file"] == "public.py"
+    assert response["findings"][-1]["native_diagnostic"]["phase"] == "transport_decode"

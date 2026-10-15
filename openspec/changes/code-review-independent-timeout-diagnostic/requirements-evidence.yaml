@@ -130,3 +130,114 @@ requirements:
       intent: Keep Git, directory, hash and manifest IO failures observational only.
       observable: Real local Git control binds verified bytes; failed writes including final write and close remove
         usable manifests.
+  openspec:code-review-independent-timeout-diagnostic:independent-review-diagnostic:capture-bounded-candidate-native-diagnostics:
+    rationale: Verify candidate-only bounded observations without changing review authority.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#510
+    touchpoints:
+    - id: capture-bounded-candidate-native-diagnostics
+      kind: config_file
+      locator: openspec/changes/code-review-independent-timeout-diagnostic/specs/independent-review-diagnostic/spec.md
+    verification_cases:
+    - case_id: linux23-semgrep-owner
+      scenario_id: capture-bounded-candidate-native-diagnostics
+      method: test
+      intent: Exercise test_linux23_semgrep_native_identity_survives_loss_boundary.
+      observable: Named owner test asserts finite metadata, preserved failure and no invented authority.
+    - case_id: linux23-semgrep-bounds
+      scenario_id: capture-bounded-candidate-native-diagnostics
+      method: test
+      intent: Exercise test_linux23_semgrep_nested_observation_bounds.
+      observable: Named owner test asserts finite metadata, preserved failure and no invented authority.
+    - case_id: linux23-semgrep-paths
+      scenario_id: capture-bounded-candidate-native-diagnostics
+      method: test
+      intent: Exercise test_linux23_semgrep_rejects_unmatched_native_paths.
+      observable: Named owner test asserts finite metadata, preserved failure and no invented authority.
+    - case_id: linux23-semgrep-bytes
+      scenario_id: capture-bounded-candidate-native-diagnostics
+      method: test
+      intent: Exercise test_linux23_semgrep_whole_utf8_budget_omits_observations.
+      observable: Named owner test asserts finite metadata, preserved failure and no invented authority.
+    - case_id: linux23-model-compatibility
+      scenario_id: capture-bounded-candidate-native-diagnostics
+      method: test
+      intent: Exercise test_linux23_diagnostic_old_absent_and_strict_roundtrip.
+      observable: Named owner test asserts finite metadata, preserved failure and no invented authority.
+    - case_id: linux24-complete-output-compatibility
+      scenario_id: capture-bounded-candidate-native-diagnostics
+      method: test
+      intent: Exercise literal complete legacy output, real nested reports and populated diagnostic round trips.
+      observable: Only absent native_diagnostic is omitted; all legacy nullable fields and serializer selections survive unchanged.
+  openspec:code-review-independent-timeout-diagnostic:independent-review-diagnostic:capture-pytest-failures-at-operation-owners:
+    rationale: Verify candidate-only bounded observations without changing review authority.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#510
+    touchpoints:
+    - id: capture-pytest-failures-at-operation-owners
+      kind: config_file
+      locator: openspec/changes/code-review-independent-timeout-diagnostic/specs/independent-review-diagnostic/spec.md
+    verification_cases:
+    - case_id: linux23-pytest-early
+      scenario_id: capture-pytest-failures-at-operation-owners
+      method: test
+      intent: Exercise test_linux23_pytest_pre_read_owners_are_distinct.
+      observable: Named owner test asserts finite metadata, preserved failure and no invented authority.
+    - case_id: linux23-pytest-late
+      scenario_id: capture-pytest-failures-at-operation-owners
+      method: test
+      intent: Exercise test_linux23_pytest_later_owners_are_distinct.
+      observable: Named owner test asserts finite metadata, preserved failure and no invented authority.
+    - case_id: linux23-pytest-validation
+      scenario_id: capture-pytest-failures-at-operation-owners
+      method: test
+      intent: Exercise test_linux23_pytest_validation_owner.
+      observable: Named owner test asserts finite metadata, preserved failure and no invented authority.
+    - case_id: linux23-pytest-policy
+      scenario_id: capture-pytest-failures-at-operation-owners
+      method: test
+      intent: Exercise test_linux23_pytest_policy_and_untrusted_validation_codes.
+      observable: Named owner test asserts finite metadata, preserved failure and no invented authority.
+  openspec:code-review-independent-timeout-diagnostic:independent-review-diagnostic:preserve-failure-through-optional-observation-transport:
+    rationale: Verify candidate-only bounded observations without changing review authority.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#510
+    touchpoints:
+    - id: preserve-failure-through-optional-observation-transport
+      kind: config_file
+      locator: openspec/changes/code-review-independent-timeout-diagnostic/specs/independent-review-diagnostic/spec.md
+    verification_cases:
+    - case_id: linux23-transport
+      scenario_id: preserve-failure-through-optional-observation-transport
+      method: test
+      intent: Exercise test_linux23_capsule_optional_reread_preserves_member_and_findings.
+      observable: Named owner test asserts finite metadata, preserved failure and no invented authority.
+  openspec:code-review-independent-timeout-diagnostic:independent-review-diagnostic:bind-public-native-diagnostics-to-admitted-side-evidence:
+    rationale: Verify candidate-only bounded observations without changing review authority.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#510
+    touchpoints:
+    - id: bind-public-native-diagnostics-to-admitted-side-evidence
+      kind: config_file
+      locator: openspec/changes/code-review-independent-timeout-diagnostic/specs/independent-review-diagnostic/spec.md
+    verification_cases:
+    - case_id: linux23-canonical-host
+      scenario_id: bind-public-native-diagnostics-to-admitted-side-evidence
+      method: test
+      intent: Exercise test_linux23_current_host_derives_member_diagnostics_from_canonical_findings.
+      observable: Named owner test asserts finite metadata, preserved failure and no invented authority.
+    - case_id: linux23-public-sides
+      scenario_id: bind-public-native-diagnostics-to-admitted-side-evidence
+      method: test
+      intent: Exercise test_linux23_public_native_diagnostics_take_side_from_member_evidence.
+      observable: Named owner test asserts finite metadata, preserved failure and no invented authority.
+    - case_id: linux23-public-rejection
+      scenario_id: bind-public-native-diagnostics-to-admitted-side-evidence
+      method: test
+      intent: Exercise test_linux23_public_native_diagnostics_reject_hostile_metadata.
+      observable: Named owner test asserts finite metadata, preserved failure and no invented authority.
+    - case_id: linux23-correction-immutable-side
+      scenario_id: bind-public-native-diagnostics-to-admitted-side-evidence
+      method: test
+      intent: Exercise linux23_correction owner, side inventory and actual cleared-environment controls.
+      observable: Canonical transport preserves failure; only capture-bound side paths publish and optional Git failure preserves the required exit.

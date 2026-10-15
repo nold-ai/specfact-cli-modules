@@ -6,6 +6,7 @@ import runpy
 import subprocess
 import sys
 from pathlib import Path
+from typing import Any
 
 import pytest
 import yaml
@@ -1789,3 +1790,368 @@ def test_replay_rejects_absent_capture_before_any_manifest_read(tmp_path, admiss
         ["bash", "-c", "set -euo pipefail\n" + prefix + "exit 91"], env=env, capture_output=True, timeout=5, check=False
     )
     assert result.returncode == 0 and not result.stderr
+
+
+def _linux23_captured_projection(
+    tmp_path, monkeypatch, job_name, evidence, *, admitted=True, refs=None, inventory=None, binding=None, findings=None
+):
+    source = tmp_path / "source.json"
+    source.write_text(json.dumps({"findings": findings or [], "analyzer_evidence": evidence}))
+    namespace: dict[str, Any] = {"__name__": "fixture_capture"}
+    exec(compile(_capture_program(), "capture-fixture", "exec"), namespace)
+    manifest = namespace["capture_original"](
+        source,
+        tmp_path / "original-private",
+        binding
+        or {"role": "candidate" if job_name == "customer" else "independent", "head": "a" * 40, "attempt": "123:2"},
+        1,
+    )
+    assert manifest["status"] == "COMPLETE"
+    monkeypatch.setenv("REVIEW_PUBLIC_REPORT", str(tmp_path / "original-private/original.json"))
+    monkeypatch.setenv("REVIEW_CAPTURE_ADMITTED", "true" if admitted else "false")
+    monkeypatch.setenv("REVIEW_PUBLIC_EXIT", "1")
+    refs = {"base": "b" * 40, "head": "a" * 40} if refs is None else refs
+    for side in ("base", "head"):
+        monkeypatch.delenv("REVIEW_DIAGNOSTIC_" + side.upper(), raising=False)
+        if side in refs:
+            monkeypatch.setenv("REVIEW_DIAGNOSTIC_" + side.upper(), refs[side])
+
+    def git_output(argv, **kwargs):
+        if argv == ["git", "ls-files", "-z"]:
+            assert kwargs == {"text": True}
+            return "public.py\0new.py\0"
+        assert argv[:5] == ["git", "ls-tree", "-r", "--name-only", "-z"]
+        assert len(argv) == 6 and argv[5] in ("a" * 40, "b" * 40)
+        assert kwargs == {"timeout": 5}
+        if inventory is not None:
+            return inventory(argv[5])
+        return b"public.py\0"
+
+    monkeypatch.setattr(subprocess, "check_output", git_output)
+    exec(compile(public_projector(job_name), "public-projector", "exec"), {"__name__": "fixture_projector"})
+
+
+@pytest.mark.parametrize("job_name", ["customer", "independent-review"])
+def test_linux23_public_native_diagnostics_take_side_from_member_evidence(tmp_path, monkeypatch, capsys, job_name):
+    def diagnostic(line):
+        return {
+            "kind": "semgrep",
+            "observations": [
+                {
+                    "error_kind": "syntax_error",
+                    "native_code": 3,
+                    "target": "subject",
+                    "coordinate_status": "accepted",
+                    "input_path": "public.py",
+                    "line": line,
+                    "column": 2,
+                    "end_line": line,
+                    "end_column": 3,
+                }
+            ],
+            "total_count": 1,
+            "omitted_count": 0,
+        }
+
+    evidence = [
+        {
+            "id": "semgrep-clean",
+            "base": {"native_diagnostics": [diagnostic(7)]},
+            "head": {"native_diagnostics": [diagnostic(11)]},
+        }
+    ]
+    _linux23_captured_projection(tmp_path, monkeypatch, job_name, evidence)
+    rows = [json.loads(line)["native_diagnostic"] for line in capsys.readouterr().out.splitlines()]
+    assert [(row["member"], row["side"], row["diagnostic"]["observations"][0]["line"]) for row in rows] == [
+        ("semgrep-clean", "base", 7),
+        ("semgrep-clean", "head", 11),
+    ]
+
+
+@pytest.mark.parametrize("job_name", ["customer", "independent-review"])
+@pytest.mark.parametrize("damage", ["extra", "boolean", "traversal", "bytes", "count", "capture"])
+def test_linux23_public_native_diagnostics_reject_hostile_metadata(tmp_path, monkeypatch, capsys, job_name, damage):
+    observation = {
+        "error_kind": "syntax_error",
+        "target": "subject",
+        "coordinate_status": "accepted",
+        "input_path": "public.py",
+        "line": 7,
+        "column": 2,
+        "end_line": 7,
+        "end_column": 3,
+    }
+    diagnostic = {"kind": "semgrep", "observations": [observation], "total_count": 1, "omitted_count": 0}
+    if damage == "extra":
+        observation["message"] = "PRIVATE_SOURCE"
+    elif damage == "boolean":
+        observation["line"] = True
+    elif damage == "traversal":
+        observation["input_path"] = "../public.py"
+    elif damage == "bytes":
+        observation["input_path"] = "é" * 3000
+    elif damage == "count":
+        diagnostic["total_count"] = 2
+    _linux23_captured_projection(
+        tmp_path,
+        monkeypatch,
+        job_name,
+        [{"id": "semgrep-clean", "base": {"native_diagnostics": [diagnostic]}}],
+        admitted=damage != "capture",
+    )
+    output = capsys.readouterr().out
+    assert '"native_diagnostic"' not in output
+    assert "PRIVATE_SOURCE" not in output
+
+
+def _linux23_correction_diagnostic(path):
+    observation = {"error_kind": "syntax_error", "target": "subject", "coordinate_status": "absent"}
+    if path is not None:
+        observation["input_path"] = path
+    return {"kind": "semgrep", "observations": [observation], "total_count": 1, "omitted_count": 0}
+
+
+@pytest.mark.parametrize("job_name", ["customer", "independent-review"])
+def test_linux23_correction_deleted_renamed_and_wrong_side(tmp_path, monkeypatch, capsys, job_name):
+    def inventory(ref):
+        return b"deleted.py\0old.py\0" if ref == "b" * 40 else b"new.py\0"
+
+    diagnostic = _linux23_correction_diagnostic
+    evidence = [
+        {
+            "id": "semgrep-clean",
+            "base": {"native_diagnostics": [diagnostic(p) for p in ("deleted.py", "old.py", "new.py", None)]},
+            "head": {"native_diagnostics": [diagnostic(p) for p in ("new.py", "old.py", "deleted.py")]},
+        }
+    ]
+    _linux23_captured_projection(tmp_path, monkeypatch, job_name, evidence, inventory=inventory)
+    rows = [json.loads(line)["native_diagnostic"] for line in capsys.readouterr().out.splitlines()]
+    assert [(r["side"], r["diagnostic"]["observations"][0].get("input_path")) for r in rows] == [
+        ("base", "deleted.py"),
+        ("base", "old.py"),
+        ("base", None),
+        ("head", "new.py"),
+    ]
+
+
+@pytest.mark.parametrize("job_name", ["customer", "independent-review"])
+@pytest.mark.parametrize(
+    "damage",
+    [
+        "missing",
+        "malformed",
+        "swapped",
+        "head_mismatch",
+        "role",
+        "missing_object",
+        "nonzero",
+        "timeout",
+        "encoding",
+        "oversize",
+        "valid_large",
+        "capture",
+    ],
+)
+def test_linux23_correction_inventory_admission(tmp_path, monkeypatch, capsys, job_name, damage):
+    refs = {"base": "b" * 40, "head": "a" * 40}
+    binding = {"role": "candidate" if job_name == "customer" else "independent", "head": "a" * 40, "attempt": "123:2"}
+    if damage == "missing":
+        refs = {}
+    elif damage == "malformed":
+        refs = {"base": "B" * 40, "head": "HEAD"}
+    elif damage == "swapped":
+        refs = {"base": "a" * 40, "head": "b" * 40}
+    elif damage == "head_mismatch":
+        binding["head"] = "c" * 40
+    elif damage == "role":
+        binding["role"] = "independent" if job_name == "customer" else "candidate"
+
+    def inventory(ref):
+        if damage in ("missing_object", "nonzero"):
+            raise subprocess.CalledProcessError(128 if damage == "missing_object" else 1, ["git"])
+        if damage == "timeout":
+            raise subprocess.TimeoutExpired(["git"], 5)
+        if damage == "encoding":
+            return b"public.py\0\xff"
+        if damage == "oversize":
+            return b"public.py\0" + b"x" * (1024 * 1024)
+        if damage == "valid_large":
+            value = b"public.py\0" + b"unused.py\0" * 8000
+            assert 65536 < len(value) < 1024 * 1024
+            return value
+        return b"public.py\0"
+
+    evidence = [
+        {
+            "id": "semgrep-clean",
+            **{
+                side: {"native_diagnostics": [_linux23_correction_diagnostic("public.py")]} for side in ("base", "head")
+            },
+        }
+    ]
+    _linux23_captured_projection(
+        tmp_path,
+        monkeypatch,
+        job_name,
+        evidence,
+        refs=refs,
+        binding=binding,
+        inventory=inventory,
+        admitted=damage != "capture",
+    )
+    output = capsys.readouterr().out
+    assert ('"native_diagnostic"' in output) is (damage == "valid_large")
+    assert len(output.encode()) <= 65536
+
+
+@pytest.mark.parametrize("job_name", ["customer", "independent-review"])
+def test_linux23_correction_combined_limit_and_rule_identity(tmp_path, monkeypatch, capsys, job_name):
+    rule = {
+        "kind": "semgrep",
+        "observations": [
+            {
+                "error_kind": "rule_parse_error",
+                "target": "rule",
+                "coordinate_status": "absent",
+                "rule_input_id": "config_1",
+                "rule_input_sha256": "d" * 64,
+            }
+        ],
+        "total_count": 1,
+        "omitted_count": 0,
+    }
+    findings = [{"file": "public.py", "line": 1, "severity": "error"}] * 10
+    _linux23_captured_projection(
+        tmp_path,
+        monkeypatch,
+        job_name,
+        [{"id": "semgrep-clean", "base": {"native_diagnostics": [rule] * 199}}],
+        findings=findings,
+    )
+    output = capsys.readouterr().out
+    rows = [json.loads(line) for line in output.splitlines()]
+    assert len(rows) == 200
+    assert rows[0]["native_diagnostic"]["diagnostic"] == rule
+    assert rows[-1] == {"finding_location": {"file": "public.py", "line": 1, "severity": "error"}}
+
+
+@pytest.mark.parametrize("merge_failure", [False, True])
+def test_linux23_correction_independent_actual_step_environment(tmp_path, merge_failure):
+    workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())
+    recipe = next(
+        s["run"]
+        for s in workflow["jobs"]["independent-review"]["steps"]
+        if s.get("name") == "Prepare and review through the authenticated installed controller"
+    )
+    prefix = recipe[recipe.index("trusted_env=(") :]
+    (tmp_path / "subject").mkdir()
+    executable = tmp_path / "venv/bin/python"
+    executable.parent.mkdir(parents=True)
+    records = tmp_path / "calls.jsonl"
+    executable.write_text(
+        f"#!{sys.executable}\n"
+        + f"""
+import json, os, sys
+from pathlib import Path
+record = {{"argv": sys.argv[1:], "base": os.environ.get("REVIEW_DIAGNOSTIC_BASE"), "head": os.environ.get("REVIEW_DIAGNOSTIC_HEAD")}}
+with Path({str(records)!r}).open("a") as stream:
+    stream.write(json.dumps(record) + "\\n")
+if "-c" in sys.argv:
+    code = sys.argv[sys.argv.index("-c") + 1]
+    if "merge-base" in code:
+        assert sys.argv[-2:] == [{("a" * 40)!r}, {("c" * 40)!r}]
+        import subprocess
+        def merge_output(argv, **kwargs):
+            assert argv == ["git", "merge-base", {("a" * 40)!r}, {("c" * 40)!r}]
+            assert kwargs == {{"timeout": 5}}
+            if {merge_failure!r}:
+                raise subprocess.CalledProcessError(128, argv)
+            return {("b" * 40 + chr(10)).encode()!r}
+        subprocess.check_output = merge_output
+        sys.argv = ["-c", {("a" * 40)!r}, {("c" * 40)!r}]
+        exec(compile(code, "actual-merge-base", "exec"))
+    elif "timeout=600" in code:
+        sys.exit(7)
+    elif "timeout=1800" not in code:
+        sys.exit(99)
+else:
+    assert sys.argv[1:] == ["-I", "-"]
+    sys.stdin.read()
+"""
+    )
+    executable.chmod(0o700)
+    env = {
+        **os.environ,
+        "TRUSTED_ROOT": str(tmp_path),
+        "CANDIDATE_HEAD": "a" * 40,
+        "CANDIDATE_BASE": "c" * 40,
+        "observation_ready": "false",
+    }
+    env.pop("REVIEW_BASE", None)
+    result = subprocess.run(
+        ["bash", "-c", "set -euo pipefail\n" + prefix], env=env, capture_output=True, timeout=5, check=False
+    )
+    assert result.returncode == 7, result.stderr.decode()
+    assert len(result.stdout) <= 65536
+    calls = [json.loads(line) for line in records.read_text().splitlines()]
+    required = [index for index, call in enumerate(calls) if any("timeout=600" in arg for arg in call["argv"])]
+    merge = [index for index, call in enumerate(calls) if any("merge-base" in arg for arg in call["argv"])]
+    assert len(required) == len(merge) == 1
+    assert required[0] < merge[0]
+    assert calls[-1]["argv"] == ["-I", "-"]
+    assert calls[-1]["head"] == "a" * 40
+    assert calls[-1]["base"] == ("" if merge_failure else "b" * 40)
+
+
+@pytest.mark.parametrize("job_name", ["customer", "independent-review"])
+def test_linux23_correction_missing_base_keeps_head_and_mixed_observations(tmp_path, monkeypatch, capsys, job_name):
+    diagnostic = _linux23_correction_diagnostic("public.py")
+    diagnostic["observations"][0].update(coordinate_status="accepted", line=7, column=2, end_line=7, end_column=3)
+    diagnostic["observations"].append({"error_kind": "other", "target": "unknown", "coordinate_status": "absent"})
+    diagnostic["total_count"] = 2
+    _linux23_captured_projection(
+        tmp_path,
+        monkeypatch,
+        job_name,
+        [
+            {
+                "id": "semgrep-clean",
+                "base": {"native_diagnostics": [diagnostic]},
+                "head": {"native_diagnostics": [diagnostic]},
+            }
+        ],
+        refs={"head": "a" * 40},
+    )
+    rows = [json.loads(line) for line in capsys.readouterr().out.splitlines()]
+    assert rows == [{"native_diagnostic": {"member": "semgrep-clean", "side": "head", "diagnostic": diagnostic}}]
+
+
+@pytest.mark.parametrize("job_name", ["customer", "independent-review"])
+@pytest.mark.parametrize("damage", [None, "digest", "mapping"])
+def test_linux23_correction_rule_coordinates_require_digest_and_mapping(
+    tmp_path, monkeypatch, capsys, job_name, damage
+):
+    observation = {
+        "error_kind": "rule_parse_error",
+        "target": "rule",
+        "coordinate_status": "accepted",
+        "input_path": "public.py",
+        "rule_input_id": "config_1",
+        "rule_input_sha256": "d" * 64,
+        "line": 7,
+        "column": 2,
+        "end_line": 7,
+        "end_column": 3,
+    }
+    if damage == "digest":
+        observation["rule_input_sha256"] = "INVALID"
+    elif damage == "mapping":
+        observation["input_path"] = "unmapped.yaml"
+    diagnostic = {"kind": "semgrep", "observations": [observation], "total_count": 1, "omitted_count": 0}
+    _linux23_captured_projection(
+        tmp_path, monkeypatch, job_name, [{"id": "semgrep-clean", "base": {"native_diagnostics": [diagnostic]}}]
+    )
+    rows = [json.loads(line) for line in capsys.readouterr().out.splitlines()]
+    assert rows == (
+        [] if damage else [{"native_diagnostic": {"member": "semgrep-clean", "side": "base", "diagnostic": diagnostic}}]
+    )

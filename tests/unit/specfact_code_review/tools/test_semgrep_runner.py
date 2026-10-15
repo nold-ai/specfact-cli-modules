@@ -789,3 +789,338 @@ def test_customer_semgrep_child_uses_sealed_python_startup(tmp_path: Path, monke
         "/opt/specfact/bootstrap/sealed_bootstrap.py",
         "semgrep.console_scripts.pysemgrep",
     ]
+
+
+@pytest.mark.parametrize("shape", ["path", "span", "partial"])
+def test_linux23_semgrep_native_identity_survives_loss_boundary(tmp_path, monkeypatch, shape):
+    from specfact_code_review.tools import semgrep_runner
+
+    monkeypatch.chdir(tmp_path)
+    config = tmp_path / "rules.yaml"
+    config.write_text("rules: []\n")
+    monkeypatch.setattr(semgrep_runner, "find_semgrep_config", lambda **_: config)
+    monkeypatch.setattr(semgrep_runner, "find_semgrep_ai_bloat_config", lambda **_: None)
+    monkeypatch.setattr(semgrep_runner, "skip_if_tool_missing", lambda *_: [])
+    location = {"path": "src/b.py", "start": {"line": 7, "col": 3}, "end": {"line": 8, "col": 4}}
+    error = {"type": "Syntax error", "code": 3, "path": "src/b.py", "message": "PRIVATE_SOURCE"}
+    if shape == "span":
+        error["spans"] = [{"file": location["path"], "start": location["start"], "end": location["end"]}]
+    elif shape == "partial":
+        error["type"] = ["PartialParsing", [location]]
+    monkeypatch.setattr(
+        semgrep_runner,
+        "_run_semgrep_command",
+        lambda *_, **__: completed_process("semgrep", stdout=json.dumps({"results": [], "errors": [error]})),
+    )
+    finding = run_semgrep([Path("src/a.py"), Path("src/b.py")])[0]
+    assert finding.category == "tool_error"
+    assert (finding.file, finding.line) == ("src/a.py", 1)
+    diagnostic = finding.model_dump(mode="json")["native_diagnostic"]
+    assert diagnostic["kind"] == "semgrep"
+    observed = diagnostic["observations"][0]
+    assert observed["input_path"] == "src/b.py"
+    assert observed["target"] == "subject"
+    assert observed["coordinate_status"] == ("absent" if shape == "path" else "accepted")
+    if shape != "path":
+        assert observed["line"] == 7 and observed["column"] == 3
+    assert "PRIVATE_SOURCE" not in json.dumps(diagnostic)
+
+
+@pytest.fixture
+def linux23_semgrep_observe(tmp_path, monkeypatch):
+    from specfact_code_review.tools import semgrep_runner
+
+    monkeypatch.chdir(tmp_path)
+    config = tmp_path / "rules.yaml"
+    config.write_text("rules: []\n")
+    monkeypatch.setattr(semgrep_runner, "find_semgrep_config", lambda **_: config)
+    monkeypatch.setattr(semgrep_runner, "find_semgrep_ai_bloat_config", lambda **_: None)
+    monkeypatch.setattr(semgrep_runner, "skip_if_tool_missing", lambda *_: [])
+
+    def observe(errors, files=None, returncode=0):
+        monkeypatch.setattr(
+            semgrep_runner,
+            "_run_semgrep_command",
+            lambda *_, **__: subprocess.CompletedProcess(
+                [], returncode, json.dumps({"results": [], "errors": errors}), "PRIVATE_STDERR"
+            ),
+        )
+        return run_semgrep(files or [Path("src/a.py")])[0].model_dump(mode="json")["native_diagnostic"]
+
+    return observe, config
+
+
+@pytest.mark.parametrize("value", [True, -1, 0, 2147483648, "7", None])
+def test_linux23_semgrep_rejects_invalid_native_positions(linux23_semgrep_observe, value):
+    observe, _ = linux23_semgrep_observe
+    diagnostic = observe(
+        [
+            {
+                "type": "Syntax error",
+                "spans": [{"file": "src/a.py", "start": {"line": value, "col": 1}, "end": {"line": 7, "col": 2}}],
+            }
+        ]
+    )
+    row = diagnostic["observations"][0]
+    assert row["coordinate_status"] == "rejected"
+    assert row["input_path"] == "src/a.py" and row["line"] is None
+
+
+@pytest.mark.parametrize(
+    "path", ["a.py", "./src/a.py", "src/../src/a.py", "/foreign/src/a.py", "src\\a.py", "src/a.py\n"]
+)
+def test_linux23_semgrep_rejects_unmatched_native_paths(linux23_semgrep_observe, path):
+    observe, _ = linux23_semgrep_observe
+    row = observe([{"type": "Syntax error", "path": path, "start": {"line": 99}}])["observations"][0]
+    assert (row["target"], row["coordinate_status"], row["input_path"], row["line"]) == (
+        "unknown",
+        "rejected",
+        None,
+        None,
+    )
+
+
+def test_linux23_semgrep_exact_absolute_input_is_canonical(linux23_semgrep_observe):
+    observe, _ = linux23_semgrep_observe
+    source = Path.cwd() / "src/a.py"
+    row = observe([{"type": "Syntax error", "path": str(source)}], files=[source])["observations"][0]
+    assert (row["input_path"], row["coordinate_status"]) == ("src/a.py", "absent")
+
+
+def test_linux23_semgrep_actual_rule_digest_and_coordinate(linux23_semgrep_observe):
+    import hashlib
+
+    observe, config = linux23_semgrep_observe
+    row = observe(
+        [
+            {
+                "type": ["PatternParseError", ["PRIVATE_PATTERN"]],
+                "spans": [{"file": str(config), "start": {"line": 2, "col": 3}, "end": {"line": 2, "col": 4}}],
+            }
+        ],
+        returncode=2,
+    )["observations"][0]
+    assert row["error_kind"] == "pattern_parse_error"
+    assert row["target"] == "rule" and row["coordinate_status"] == "accepted"
+    assert row["rule_input_id"] == "config_1"
+    assert row["rule_input_sha256"] == hashlib.sha256(config.read_bytes()).hexdigest()
+    assert row["input_path"] == "rules.yaml"
+    assert "PRIVATE" not in json.dumps(row)
+
+
+def test_linux23_semgrep_external_config_does_not_claim_subject_coordinates(tmp_path, linux23_semgrep_observe):
+    from specfact_code_review.tools import semgrep_runner
+
+    _, _config = linux23_semgrep_observe
+    external = tmp_path.parent / (tmp_path.name + "-config.yaml")
+    external.write_text("rules: []\n")
+    inputs = semgrep_runner._semgrep_diagnostic_inputs([Path("src/a.py")], external)
+    diagnostic = semgrep_runner._semgrep_native_diagnostic(
+        {
+            "errors": [
+                {
+                    "type": "Rule parse error",
+                    "spans": [{"file": str(external), "start": {"line": 2, "col": 1}, "end": {"line": 2, "col": 2}}],
+                }
+            ]
+        },
+        inputs,
+    )
+    row = diagnostic.observations[0]
+    assert row.target == "rule" and row.rule_input_sha256 is not None
+    assert row.coordinate_status == "rejected" and row.input_path is None and row.line is None
+
+
+@pytest.mark.parametrize("shape", ["errors", "spans", "partial"])
+def test_linux23_semgrep_nested_observation_bounds(linux23_semgrep_observe, shape):
+    observe, _ = linux23_semgrep_observe
+    location = {"file": "src/a.py", "start": {"line": 7, "col": 1}, "end": {"line": 7, "col": 2}}
+    if shape == "errors":
+        errors = [{"type": "Syntax error", "path": "src/a.py"}] * 4
+    elif shape == "spans":
+        errors = [{"type": "Syntax error", "spans": [location] * 4}]
+    else:
+        errors = [{"type": ["PartialParsing", [{**location, "path": location["file"]}] * 4]}]
+    diagnostic = observe(errors)
+    assert (len(diagnostic["observations"]), diagnostic["total_count"], diagnostic["omitted_count"]) == (3, 4, 1)
+
+
+def test_linux23_semgrep_whole_utf8_budget_omits_observations(linux23_semgrep_observe):
+    observe, _ = linux23_semgrep_observe
+    paths = [Path("é" * 400 + '"' * 200 + str(index) + ".py") for index in range(3)]
+    errors = [{"type": "Syntax error", "path": str(path)} for path in paths]
+    diagnostic = observe(errors, paths)
+    assert len(json.dumps(diagnostic, ensure_ascii=False, separators=(",", ":")).encode()) <= 4096
+    assert diagnostic["total_count"] == 3
+    assert diagnostic["omitted_count"] > 0
+
+
+@pytest.mark.parametrize(
+    "kind", [["Unknown", ["PRIVATE"]], ["PatternParseError", {"secret": "PRIVATE"}], {"secret": "PRIVATE"}, "PRIVATE"]
+)
+def test_linux23_semgrep_unknown_shape_is_finite(linux23_semgrep_observe, kind):
+    observe, _ = linux23_semgrep_observe
+    diagnostic = observe([{"type": kind, "code": True, "path": "src/a.py"}])
+    assert diagnostic["observations"][0]["error_kind"] == "other"
+    assert diagnostic["observations"][0]["native_code"] is None
+    assert "PRIVATE" not in json.dumps(diagnostic)
+
+
+def test_linux23_diagnostic_old_absent_and_strict_roundtrip():
+    from specfact_code_review.run.findings import ReviewFinding
+
+    old = {
+        "category": "tool_error",
+        "severity": "error",
+        "tool": "pytest",
+        "rule": "tool_error",
+        "file": "a.py",
+        "line": 1,
+        "message": "legacy",
+    }
+    assert ReviewFinding.model_validate(old).native_diagnostic is None
+    diagnostic = {
+        "kind": "pytest",
+        "phase": "observation_read",
+        "exception_kind": "FileNotFoundError",
+        "observation_state": "read_failed",
+    }
+    finding = ReviewFinding.model_validate({**old, "native_diagnostic": diagnostic})
+    assert ReviewFinding.model_validate_json(finding.model_dump_json()).native_diagnostic == finding.native_diagnostic
+    with pytest.raises(ValueError):
+        ReviewFinding.model_validate({**old, "native_diagnostic": {**diagnostic, "message": "PRIVATE"}})
+    with pytest.raises(ValueError):
+        ReviewFinding.model_validate({**old, "native_diagnostic": {**diagnostic, "child_returncode": True}})
+
+
+@pytest.fixture
+def linux24_legacy_finding():
+    return {
+        "category": "tool_error",
+        "severity": "error",
+        "tool": "pytest",
+        "rule": "tool_error",
+        "file": "a.py",
+        "line": 1,
+        "message": "legacy",
+        "fixable": False,
+        "status": "open",
+        "differential_state": None,
+        "autofix_available": False,
+        "blocking": True,
+        "waiver_reference": None,
+        "execution_state": None,
+        "evidence_outcome": None,
+        "evidence_refs": None,
+        "confidence": None,
+        "rewrite_hint": None,
+        "canonical_pattern": None,
+        "intent_key": None,
+        "estimated_deletion_lines": None,
+        "related_locations": None,
+        "guidance_kind": None,
+        "recommended_action": None,
+        "clean_code_principle": None,
+        "rationale": None,
+        "safety_checks": None,
+        "preserve_reason": None,
+        "action_status": None,
+        "before_ref": None,
+        "after_ref": None,
+        "improvement": None,
+        "signal_trace": None,
+        "preserve_reasons": None,
+        "remediation_packet": None,
+    }
+
+
+@pytest.mark.parametrize("explicit_none", [False, True])
+@pytest.mark.parametrize("round_trip", [False, True])
+def test_linux24_absent_diagnostic_preserves_complete_wire(linux24_legacy_finding, explicit_none, round_trip):
+    from specfact_code_review.run.findings import ReviewFinding, ReviewReport
+
+    payload = dict(linux24_legacy_finding)
+    if explicit_none:
+        payload["native_diagnostic"] = None
+    finding = ReviewFinding.model_validate(payload)
+    assert finding.model_dump(round_trip=round_trip) == linux24_legacy_finding
+    assert finding.model_dump(mode="json", round_trip=round_trip) == linux24_legacy_finding
+    assert json.loads(finding.model_dump_json(round_trip=round_trip)) == linux24_legacy_finding
+    assert ReviewFinding.model_validate_json(json.dumps(payload)).model_dump() == linux24_legacy_finding
+    assert ReviewFinding.model_validate(finding.model_dump()).model_dump() == linux24_legacy_finding
+    report = ReviewReport(run_id="legacy", score=0, summary="legacy", findings=[finding])
+    python_report = report.model_dump(round_trip=round_trip)
+    json_report = json.loads(report.model_dump_json(round_trip=round_trip))
+    assert python_report["findings"] == [linux24_legacy_finding]
+    assert json_report["findings"] == [linux24_legacy_finding]
+    assert report.model_dump(mode="json", round_trip=round_trip) == json_report
+    assert json_report["run_id"] == "legacy"
+    assert json_report["score"] == 0
+    assert json_report["summary"] == "legacy"
+    assert ReviewReport.model_validate_json(report.model_dump_json()).findings[0].model_dump() == linux24_legacy_finding
+
+
+def test_linux24_absent_diagnostic_preserves_field_selection(linux24_legacy_finding):
+    from specfact_code_review.run.findings import ReviewFinding
+
+    finding = ReviewFinding.model_validate(linux24_legacy_finding)
+    assert finding.model_dump(include={"native_diagnostic", "waiver_reference"}) == {"waiver_reference": None}
+    expected = dict(linux24_legacy_finding)
+    expected.pop("message")
+    assert finding.model_dump(exclude={"message"}) == expected
+
+
+@pytest.mark.parametrize(
+    "diagnostic",
+    [
+        {"kind": "semgrep", "observations": [], "total_count": 0, "omitted_count": 0},
+        {
+            "kind": "pytest",
+            "phase": "observation_read",
+            "exception_kind": "FileNotFoundError",
+            "stable_code": None,
+            "child_returncode": None,
+            "observation_state": "read_failed",
+        },
+    ],
+)
+def test_linux24_populated_diagnostic_preserves_complete_wire(linux24_legacy_finding, diagnostic):
+    from specfact_code_review.run.findings import ReviewFinding, ReviewReport
+
+    expected = {**linux24_legacy_finding, "native_diagnostic": diagnostic}
+    finding = ReviewFinding.model_validate(expected)
+    assert finding.model_dump() == expected
+    assert finding.model_dump(mode="json", round_trip=True) == expected
+    assert json.loads(finding.model_dump_json()) == expected
+    assert ReviewFinding.model_validate_json(finding.model_dump_json()).model_dump() == expected
+    report = ReviewReport(run_id="diagnostic", score=0, summary="diagnostic", findings=[finding])
+    assert report.model_dump()["findings"] == [expected]
+    assert report.model_dump(mode="json")["findings"] == [expected]
+    assert json.loads(report.model_dump_json())["findings"] == [expected]
+    assert finding.model_dump(include={"native_diagnostic", "waiver_reference"}) == {
+        "native_diagnostic": diagnostic,
+        "waiver_reference": None,
+    }
+    assert finding.model_dump(exclude={"native_diagnostic"}) == linux24_legacy_finding
+
+
+def test_linux23_semgrep_usable_error_json_retains_native_data_when_results_invalid(tmp_path, monkeypatch):
+    from specfact_code_review.tools import semgrep_runner
+
+    monkeypatch.chdir(tmp_path)
+    config = tmp_path / "rules.yaml"
+    config.write_text("rules: []\n")
+    monkeypatch.setattr(semgrep_runner, "skip_if_tool_missing", lambda *_: [])
+    monkeypatch.setattr(semgrep_runner, "find_semgrep_config", lambda **_: config)
+    monkeypatch.setattr(semgrep_runner, "find_semgrep_ai_bloat_config", lambda **_: None)
+    monkeypatch.setattr(
+        semgrep_runner,
+        "_run_semgrep_command",
+        lambda *_, **__: subprocess.CompletedProcess(
+            [], 2, json.dumps({"errors": [{"type": "Syntax error", "path": "src/a.py"}]}), "PRIVATE"
+        ),
+    )
+    finding = run_semgrep([Path("src/a.py")])[0]
+    assert "semgrep output missing results key" in finding.message
+    assert finding.native_diagnostic is not None
+    assert finding.native_diagnostic.model_dump()["observations"][0]["input_path"] == "src/a.py"

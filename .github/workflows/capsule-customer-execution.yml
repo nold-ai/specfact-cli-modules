@@ -443,7 +443,7 @@ jobs:
           printf 'original_capture_admitted=%s\n' "$original_capture_admitted" >> "${GITHUB_OUTPUT:-/dev/null}" || true
           if [ "$review_exit" -ne 0 ]; then
             # Print bounded codes/public locations; raw reports, receipts and logs stay private.
-            REVIEW_CAPTURE_ADMITTED="$original_capture_admitted" REVIEW_PUBLIC_REPORT="$CUSTOMER_ROOT/original-private/original.json" REVIEW_PUBLIC_EXIT="$review_exit" "$CUSTOMER_ROOT/venv/bin/python" -I - <<'PY' 2> "$CUSTOMER_ROOT/review-projection.private.log" || printf '%s\n' '{"status":"INCOMPLETE","phase":"review","diagnostic":"review_projection_failed"}' || true
+            REVIEW_DIAGNOSTIC_BASE="${REVIEW_BASE:-}" REVIEW_DIAGNOSTIC_HEAD="${CANDIDATE_HEAD:-}" REVIEW_CAPTURE_ADMITTED="$original_capture_admitted" REVIEW_PUBLIC_REPORT="$CUSTOMER_ROOT/original-private/original.json" REVIEW_PUBLIC_EXIT="$review_exit" "$CUSTOMER_ROOT/venv/bin/python" -I - <<'PY' 2> "$CUSTOMER_ROOT/review-projection.private.log" || printf '%s\n' '{"status":"INCOMPLETE","phase":"review","diagnostic":"review_projection_failed"}' || true
           import ast
           import re
           import json
@@ -575,12 +575,120 @@ jobs:
 
               tracked = set(subprocess.check_output(["git", "ls-files", "-z"], text=True).split("\0"))
               emitted = 0
+              def _native_path(value):
+                  return (isinstance(value, str) and 0 < len(value.encode("utf-8")) <= 1024
+                      and not value.startswith("/") and "\\" not in value and ":" not in value
+                      and all(ord(c) >= 32 and ord(c) != 127 for c in value)
+                      and all(part not in ("", ".", "..") for part in value.split("/")))
+
+              diagnostic_tracked_by_side = {"base": set(), "head": set()}
+              diagnostic_head = os.environ.get("REVIEW_DIAGNOSTIC_HEAD", "")
+              binding = manifest.get("binding") if report.name == "original.json" and capture_admitted else None
+              if (isinstance(binding, dict) and binding.get("head") == diagnostic_head
+                  and re.fullmatch(r"[0-9a-f]{40}", diagnostic_head) and binding.get("role") == "candidate"):
+                  for diagnostic_side in ("base", "head"):
+                      ref = os.environ.get("REVIEW_DIAGNOSTIC_" + diagnostic_side.upper(), "")
+                      if re.fullmatch(r"[0-9a-f]{40}", ref) is None:
+                          continue
+                      try:
+                          inventory = subprocess.check_output(["git", "ls-tree", "-r", "--name-only", "-z", ref], timeout=5)
+                          if len(inventory) <= 1024 * 1024:
+                              diagnostic_tracked_by_side[diagnostic_side] = {
+                                  path for path in inventory.decode("utf-8").split("\0") if _native_path(path)
+                              }
+                      except (OSError, subprocess.SubprocessError, UnicodeError):
+                          pass
+
+              def _native_semgrep_observation(row, side):
+                  keys = {"error_kind", "native_code", "target", "coordinate_status", "input_path", "rule_input_id", "rule_input_sha256", "line", "column", "end_line", "end_column"}
+                  if not isinstance(row, dict) or set(row) - keys:
+                      return False
+                  if row.get("error_kind") not in ("syntax_error", "rule_parse_error", "pattern_parse_error", "partial_parsing", "other"):
+                      return False
+                  if row.get("target") not in ("subject", "rule", "unknown") or row.get("coordinate_status") not in ("accepted", "absent", "rejected"):
+                      return False
+                  code = row.get("native_code")
+                  if code is not None and (type(code) is not int or code not in (0, 1, 2, 3, 4, 5, 7, 8, 13, 14)):
+                      return False
+                  path = row.get("input_path")
+                  if path is not None and (not _native_path(path) or path not in diagnostic_tracked_by_side[side]):
+                      return False
+                  digest, config = row.get("rule_input_sha256"), row.get("rule_input_id")
+                  if row["target"] == "rule":
+                      if config not in ("config_1", "config_2", "config_3") or not isinstance(digest, str) or re.fullmatch(r"[0-9a-f]{64}", digest) is None:
+                          return False
+                  elif config is not None or digest is not None:
+                      return False
+                  if row["target"] == "unknown" and path is not None:
+                      return False
+                  positions = [row.get(key) for key in ("line", "column", "end_line", "end_column")]
+                  if row["coordinate_status"] == "accepted":
+                      if path is None or row["target"] == "unknown" or any(type(value) is not int or not 1 <= value <= 2147483647 for value in positions):
+                          return False
+                      if positions[2:] < positions[:2]:
+                          return False
+                  elif any(value is not None for value in positions):
+                      return False
+                  return True
+
+              def _public_native_diagnostic(value, member, side):
+                  if not isinstance(value, dict):
+                      return None
+                  try:
+                      if len(json.dumps(value, ensure_ascii=False, separators=(",", ":")).encode("utf-8")) > 4096:
+                          return None
+                  except (ValueError, TypeError, RecursionError, UnicodeError):
+                      return None
+                  if value.get("kind") == "semgrep" and member in ("semgrep-clean", "semgrep-bugs"):
+                      if set(value) != {"kind", "observations", "total_count", "omitted_count"}:
+                          return None
+                      rows, total, omitted = value["observations"], value["total_count"], value["omitted_count"]
+                      if not isinstance(rows, list) or len(rows) > 3 or any(not _native_semgrep_observation(row, side) for row in rows):
+                          return None
+                      if any(type(count) is not int or not 0 <= count <= 2147483647 for count in (total, omitted)) or total != len(rows) + omitted:
+                          return None
+                      return value
+                  if value.get("kind") != "pytest" or member != "targeted-pytest-coverage":
+                      return None
+                  if set(value) - {"kind", "phase", "exception_kind", "stable_code", "child_returncode", "observation_state"}:
+                      return None
+                  if value.get("phase") not in ("request", "observation_cleanup", "coverage_plan", "target_command", "child_execution", "observation_read", "observation_decode", "observation_records", "policy", "validation", "root", "findings", "installed_coverage", "transport_read", "transport_decode"):
+                      return None
+                  if value.get("exception_kind") not in ("FileNotFoundError", "PermissionError", "OSError", "JSONDecodeError", "UnicodeDecodeError", "ValueError", "TypeError", "KeyError", "TimeoutExpired", "CalledProcessError", "SubprocessError", "ProjectRuntimeError", "other"):
+                      return None
+                  if value.get("observation_state") not in ("not_read", "read_failed", "decode_failed", "decoded"):
+                      return None
+                  if value.get("stable_code") not in (None, "project_pytest_request_invalid", "project_pytest_collection_error", "project_pytest_internal_error", "project_pytest_configuration_or_collection_failed", "project_pytest_execution_incomplete", "project_pytest_unexecuted", "project_pytest_coverage_missing", "project_pytest_coverage_diagnostic_invalid", "project_pytest_coverage_policy_invalid", "project_pytest_installed_coverage_unavailable", "project_pytest_failure_without_observed_test"):
+                      return None
+                  returncode = value.get("child_returncode")
+                  if returncode is not None and (type(returncode) is not int or not -2147483648 <= returncode <= 2147483647):
+                      return None
+                  return value
+
+              if report.name == "original.json" and capture_admitted:
+                  for analyzer in data.get("analyzer_evidence", []):
+                      if not isinstance(analyzer, dict) or analyzer.get("id") not in ("semgrep-clean", "semgrep-bugs", "targeted-pytest-coverage"):
+                          continue
+                      for side in ("base", "head"):
+                          evidence = analyzer.get(side)
+                          diagnostics = evidence.get("native_diagnostics") if isinstance(evidence, dict) else None
+                          if not isinstance(diagnostics, list):
+                              continue
+                          for diagnostic in diagnostics[:200]:
+                              if emitted >= 200:
+                                  break
+                              safe = _public_native_diagnostic(diagnostic, analyzer["id"], side)
+                              if safe is not None:
+                                  print(json.dumps({"native_diagnostic": {"member": analyzer["id"], "side": side, "diagnostic": safe}}, ensure_ascii=False))
+                                  emitted += 1
               def _finding_priority(row):
                   category = row.get("category") if isinstance(row, dict) else None
                   return {"tool_error": 0, "testing": 1}.get(category, 2) if isinstance(category, str) else 2
 
               findings = sorted(data.get("findings", []), key=_finding_priority)
               for finding in findings:
+                  if emitted >= 200:
+                      break
                   if not isinstance(finding, dict):
                       continue
                   file, line, severity = (finding.get(key) for key in ("file", "line", "severity"))
@@ -1405,7 +1513,19 @@ jobs:
           printf 'original_capture_admitted=%s\n' "$original_capture_admitted" >> "${GITHUB_OUTPUT:-/dev/null}" || true
           if [ "$review_exit" -ne 0 ]; then
             cd "$TRUSTED_ROOT/subject"
-            "${trusted_env[@]}" REVIEW_CAPTURE_ADMITTED="$original_capture_admitted" REVIEW_PUBLIC_REPORT="$TRUSTED_ROOT/original-private/original.json" REVIEW_PUBLIC_EXIT="$review_exit" "$TRUSTED_ROOT/venv/bin/python" -I - <<'PY' 2> "$TRUSTED_ROOT/review-projection.private.log" || printf '%s\n' '{"status":"INCOMPLETE","phase":"review","diagnostic":"review_projection_failed"}' || true
+            diagnostic_base=""
+            diagnostic_base=$("${trusted_env[@]}" "$TRUSTED_ROOT/venv/bin/python" -I -c '
+          import re, subprocess, sys
+          head, base = sys.argv[1:]
+          if re.fullmatch(r"[0-9a-f]{40}", head) and re.fullmatch(r"[0-9a-f]{40}", base):
+              try:
+                  value = subprocess.check_output(["git", "merge-base", head, base], timeout=5).decode("ascii").strip()
+                  if re.fullmatch(r"[0-9a-f]{40}", value):
+                      print(value)
+              except (OSError, subprocess.SubprocessError, UnicodeError):
+                  pass
+          ' "${CANDIDATE_HEAD:-}" "${CANDIDATE_BASE:-}" 2>/dev/null) || diagnostic_base=""
+            "${trusted_env[@]}" REVIEW_DIAGNOSTIC_BASE="$diagnostic_base" REVIEW_DIAGNOSTIC_HEAD="${CANDIDATE_HEAD:-}" REVIEW_CAPTURE_ADMITTED="$original_capture_admitted" REVIEW_PUBLIC_REPORT="$TRUSTED_ROOT/original-private/original.json" REVIEW_PUBLIC_EXIT="$review_exit" "$TRUSTED_ROOT/venv/bin/python" -I - <<'PY' 2> "$TRUSTED_ROOT/review-projection.private.log" || printf '%s\n' '{"status":"INCOMPLETE","phase":"review","diagnostic":"review_projection_failed"}' || true
           import ast
           import re
           import json
@@ -1538,12 +1658,120 @@ jobs:
 
               tracked = set(subprocess.check_output(["git", "ls-files", "-z"], text=True).split("\0"))
               emitted = 0
+              def _native_path(value):
+                  return (isinstance(value, str) and 0 < len(value.encode("utf-8")) <= 1024
+                      and not value.startswith("/") and "\\" not in value and ":" not in value
+                      and all(ord(c) >= 32 and ord(c) != 127 for c in value)
+                      and all(part not in ("", ".", "..") for part in value.split("/")))
+
+              diagnostic_tracked_by_side = {"base": set(), "head": set()}
+              diagnostic_head = os.environ.get("REVIEW_DIAGNOSTIC_HEAD", "")
+              binding = manifest.get("binding") if report.name == "original.json" and capture_admitted else None
+              if (isinstance(binding, dict) and binding.get("head") == diagnostic_head
+                  and re.fullmatch(r"[0-9a-f]{40}", diagnostic_head) and binding.get("role") == "independent"):
+                  for diagnostic_side in ("base", "head"):
+                      ref = os.environ.get("REVIEW_DIAGNOSTIC_" + diagnostic_side.upper(), "")
+                      if re.fullmatch(r"[0-9a-f]{40}", ref) is None:
+                          continue
+                      try:
+                          inventory = subprocess.check_output(["git", "ls-tree", "-r", "--name-only", "-z", ref], timeout=5)
+                          if len(inventory) <= 1024 * 1024:
+                              diagnostic_tracked_by_side[diagnostic_side] = {
+                                  path for path in inventory.decode("utf-8").split("\0") if _native_path(path)
+                              }
+                      except (OSError, subprocess.SubprocessError, UnicodeError):
+                          pass
+
+              def _native_semgrep_observation(row, side):
+                  keys = {"error_kind", "native_code", "target", "coordinate_status", "input_path", "rule_input_id", "rule_input_sha256", "line", "column", "end_line", "end_column"}
+                  if not isinstance(row, dict) or set(row) - keys:
+                      return False
+                  if row.get("error_kind") not in ("syntax_error", "rule_parse_error", "pattern_parse_error", "partial_parsing", "other"):
+                      return False
+                  if row.get("target") not in ("subject", "rule", "unknown") or row.get("coordinate_status") not in ("accepted", "absent", "rejected"):
+                      return False
+                  code = row.get("native_code")
+                  if code is not None and (type(code) is not int or code not in (0, 1, 2, 3, 4, 5, 7, 8, 13, 14)):
+                      return False
+                  path = row.get("input_path")
+                  if path is not None and (not _native_path(path) or path not in diagnostic_tracked_by_side[side]):
+                      return False
+                  digest, config = row.get("rule_input_sha256"), row.get("rule_input_id")
+                  if row["target"] == "rule":
+                      if config not in ("config_1", "config_2", "config_3") or not isinstance(digest, str) or re.fullmatch(r"[0-9a-f]{64}", digest) is None:
+                          return False
+                  elif config is not None or digest is not None:
+                      return False
+                  if row["target"] == "unknown" and path is not None:
+                      return False
+                  positions = [row.get(key) for key in ("line", "column", "end_line", "end_column")]
+                  if row["coordinate_status"] == "accepted":
+                      if path is None or row["target"] == "unknown" or any(type(value) is not int or not 1 <= value <= 2147483647 for value in positions):
+                          return False
+                      if positions[2:] < positions[:2]:
+                          return False
+                  elif any(value is not None for value in positions):
+                      return False
+                  return True
+
+              def _public_native_diagnostic(value, member, side):
+                  if not isinstance(value, dict):
+                      return None
+                  try:
+                      if len(json.dumps(value, ensure_ascii=False, separators=(",", ":")).encode("utf-8")) > 4096:
+                          return None
+                  except (ValueError, TypeError, RecursionError, UnicodeError):
+                      return None
+                  if value.get("kind") == "semgrep" and member in ("semgrep-clean", "semgrep-bugs"):
+                      if set(value) != {"kind", "observations", "total_count", "omitted_count"}:
+                          return None
+                      rows, total, omitted = value["observations"], value["total_count"], value["omitted_count"]
+                      if not isinstance(rows, list) or len(rows) > 3 or any(not _native_semgrep_observation(row, side) for row in rows):
+                          return None
+                      if any(type(count) is not int or not 0 <= count <= 2147483647 for count in (total, omitted)) or total != len(rows) + omitted:
+                          return None
+                      return value
+                  if value.get("kind") != "pytest" or member != "targeted-pytest-coverage":
+                      return None
+                  if set(value) - {"kind", "phase", "exception_kind", "stable_code", "child_returncode", "observation_state"}:
+                      return None
+                  if value.get("phase") not in ("request", "observation_cleanup", "coverage_plan", "target_command", "child_execution", "observation_read", "observation_decode", "observation_records", "policy", "validation", "root", "findings", "installed_coverage", "transport_read", "transport_decode"):
+                      return None
+                  if value.get("exception_kind") not in ("FileNotFoundError", "PermissionError", "OSError", "JSONDecodeError", "UnicodeDecodeError", "ValueError", "TypeError", "KeyError", "TimeoutExpired", "CalledProcessError", "SubprocessError", "ProjectRuntimeError", "other"):
+                      return None
+                  if value.get("observation_state") not in ("not_read", "read_failed", "decode_failed", "decoded"):
+                      return None
+                  if value.get("stable_code") not in (None, "project_pytest_request_invalid", "project_pytest_collection_error", "project_pytest_internal_error", "project_pytest_configuration_or_collection_failed", "project_pytest_execution_incomplete", "project_pytest_unexecuted", "project_pytest_coverage_missing", "project_pytest_coverage_diagnostic_invalid", "project_pytest_coverage_policy_invalid", "project_pytest_installed_coverage_unavailable", "project_pytest_failure_without_observed_test"):
+                      return None
+                  returncode = value.get("child_returncode")
+                  if returncode is not None and (type(returncode) is not int or not -2147483648 <= returncode <= 2147483647):
+                      return None
+                  return value
+
+              if report.name == "original.json" and capture_admitted:
+                  for analyzer in data.get("analyzer_evidence", []):
+                      if not isinstance(analyzer, dict) or analyzer.get("id") not in ("semgrep-clean", "semgrep-bugs", "targeted-pytest-coverage"):
+                          continue
+                      for side in ("base", "head"):
+                          evidence = analyzer.get(side)
+                          diagnostics = evidence.get("native_diagnostics") if isinstance(evidence, dict) else None
+                          if not isinstance(diagnostics, list):
+                              continue
+                          for diagnostic in diagnostics[:200]:
+                              if emitted >= 200:
+                                  break
+                              safe = _public_native_diagnostic(diagnostic, analyzer["id"], side)
+                              if safe is not None:
+                                  print(json.dumps({"native_diagnostic": {"member": analyzer["id"], "side": side, "diagnostic": safe}}, ensure_ascii=False))
+                                  emitted += 1
               def _finding_priority(row):
                   category = row.get("category") if isinstance(row, dict) else None
                   return {"tool_error": 0, "testing": 1}.get(category, 2) if isinstance(category, str) else 2
 
               findings = sorted(data.get("findings", []), key=_finding_priority)
               for finding in findings:
+                  if emitted >= 200:
+                      break
                   if not isinstance(finding, dict):
                       continue
                   file, line, severity = (finding.get(key) for key in ("file", "line", "severity"))

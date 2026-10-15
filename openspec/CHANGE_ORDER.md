@@ -16,7 +16,7 @@ The 2026-10-14 workflow-only correction preserves immutable original reports, ad
 ## Bounded Linux pytest execution budget (2026-10-13)
 
 `code-review-linux-pytest-execution-budget` is a separately authorized additive
-operator option: default300seconds, maximum600 for Linux pytest only. It preserves
+operator option: default 300 seconds, maximum 600 seconds for Linux pytest only. It preserves
 all analysis/coverage/signature gates and UNKNOWN timeout outcomes. It does not
 authorize registry publication or merge. Local tests and supplier verification
 precede a reviewed PR and the existing trusted CI signing route.

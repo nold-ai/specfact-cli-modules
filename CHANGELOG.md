@@ -9,6 +9,13 @@ and this project follows SemVer for bundle versions.
 
 ### Fixed
 
+- Omit absent native diagnostics from serialized findings while preserving all legacy fields, nullable values and complete historical range output.
+- Preserve bounded native Semgrep input observations and operation-owned pytest failure metadata in current candidate findings and member evidence.
+- Keep existing member failures when optional pytest observation transport fails, and prevent an otherwise successful response from passing after that failure.
+- Normalize appended transport finding anchors and bind public native paths to caller-owned immutable base/head inventories, including deleted and renamed inputs.
+- Project fixed diagnostic fields from admitted original base/head evidence. The independently signed 0.51.2 reviewer and all required review gates remain unchanged.
+
+
 - Preserve immutable original review reports before optional replay, remove public test-function/text-progress attribution, and bind bounded host-stage receipts to authenticated loaded reviewer functions without changing required review results.
 
 - Skip impossible unchanged candidates before correspondence matrix evaluation, preserving full final evidence, finding multiplicity and fallback ordering.

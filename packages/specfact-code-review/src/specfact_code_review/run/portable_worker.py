@@ -11,12 +11,18 @@ import subprocess
 from collections import Counter
 from collections.abc import Callable, Iterator
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from icontract import ensure, require
 
 from specfact_code_review._review_utils import tool_error
-from specfact_code_review.run.findings import ReviewFinding
+from specfact_code_review.run.findings import (
+    PytestDiagnostic,
+    PytestExceptionKind,
+    PytestPhase,
+    PytestStableCode,
+    ReviewFinding,
+)
 from specfact_code_review.run.installed_coverage import (
     CoverageBridge,
     attribute_installed_coverage,
@@ -186,16 +192,96 @@ def preparation_failure_snapshot(reason: str) -> dict[str, dict[str, Any]]:
     }
 
 
+class _PytestValidationError(ProjectRuntimeError):
+    def __init__(self, message: str, code: PytestStableCode | None) -> None:
+        super().__init__(message)
+        self.code: PytestStableCode | None = code
+
+
+class _PytestOperationError(ValueError):
+    def __init__(self, error: Exception, phase: PytestPhase, message: str | None = None) -> None:
+        super().__init__(str(error) if message is None else message)
+        self.error = error
+        self.phase: PytestPhase = phase
+
+
+@ensure(lambda result: isinstance(result, PytestDiagnostic))
+def pytest_failure_diagnostic(
+    error: Exception,
+    *,
+    phase: PytestPhase,
+    child_returncode: int | None = None,
+    observation_state: Literal["not_read", "read_failed", "decode_failed", "decoded"] = "not_read",
+    stable_code: PytestStableCode | None = None,
+) -> PytestDiagnostic:
+    """Map actual exceptions in subtype order without reading private messages."""
+    if isinstance(error, _PytestOperationError):
+        phase, error = error.phase, error.error
+        if phase == "request":
+            stable_code = "project_pytest_request_invalid"
+    classes: tuple[tuple[type[Exception], PytestExceptionKind], ...] = (
+        (FileNotFoundError, "FileNotFoundError"),
+        (PermissionError, "PermissionError"),
+        (json.JSONDecodeError, "JSONDecodeError"),
+        (UnicodeDecodeError, "UnicodeDecodeError"),
+        (ProjectRuntimeError, "ProjectRuntimeError"),
+        (subprocess.TimeoutExpired, "TimeoutExpired"),
+        (subprocess.CalledProcessError, "CalledProcessError"),
+        (subprocess.SubprocessError, "SubprocessError"),
+        (OSError, "OSError"),
+        (ValueError, "ValueError"),
+        (TypeError, "TypeError"),
+        (KeyError, "KeyError"),
+    )
+    kind: PytestExceptionKind = "other"
+    for cls, name in classes:
+        if isinstance(error, cls):
+            kind = name
+            break
+    if isinstance(error, _PytestValidationError):
+        stable_code = error.code
+    return PytestDiagnostic(
+        phase=phase,
+        exception_kind=kind,
+        stable_code=stable_code,
+        child_returncode=child_returncode,
+        observation_state=observation_state,
+    )
+
+
+def _pytest_tool_error(
+    anchor: Path,
+    error: Exception,
+    *,
+    phase: PytestPhase,
+    child_returncode: int | None = None,
+    observation_state: Literal["not_read", "read_failed", "decode_failed", "decoded"] = "not_read",
+    stable_code: PytestStableCode | None = None,
+    message: str | None = None,
+) -> ReviewFinding:
+    finding = tool_error(tool="pytest", file_path=anchor, message=str(error) if message is None else message)
+    finding.native_diagnostic = pytest_failure_diagnostic(
+        error,
+        phase=phase,
+        child_returncode=child_returncode,
+        observation_state=observation_state,
+        stable_code=stable_code,
+    )
+    return finding
+
+
 def _validate_collection_errors(observation: dict[str, Any]) -> None:
     """Keep collection/plugin errors visible even when other tests fail."""
     if observation.get("collection_errors"):
-        raise ProjectRuntimeError(
+        raise _PytestValidationError(
             "project_pytest_collection_error; --continue-on-collection-errors cannot complete collection; "
-            "inspect target_execution"
+            "inspect target_execution",
+            "project_pytest_collection_error",
         )
     if observation.get("internal_errors"):
-        raise ProjectRuntimeError(
-            "project_pytest_internal_error; inspect target_execution and required plugin configuration"
+        raise _PytestValidationError(
+            "project_pytest_internal_error; inspect target_execution and required plugin configuration",
+            "project_pytest_internal_error",
         )
 
 
@@ -212,25 +298,36 @@ def validate_observation(observation: dict[str, Any], exit_code: int) -> None:
     """Reject incomplete execution without discarding native pytest selection policy."""
     _validate_collection_errors(observation)
     if exit_code == 4:
-        raise ProjectRuntimeError(
-            "project_pytest_configuration_or_collection_failed:exit=4; inspect target_execution and pytest options"
+        raise _PytestValidationError(
+            "project_pytest_configuration_or_collection_failed:exit=4; inspect target_execution and pytest options",
+            "project_pytest_configuration_or_collection_failed",
         )
     records = observation["records"]
     collected = set(observation["collected"])
     executed = {row["nodeid"] for row in records if row["phase"] == "call"}
     terminal = executed | {row["nodeid"] for row in records if row["outcome"] == "skipped"}
     if observation["exit_code"] != exit_code or not collected or not executed:
-        raise ProjectRuntimeError(
-            f"project_pytest_execution_incomplete:exit={exit_code}; check collection/selection options"
+        raise _PytestValidationError(
+            f"project_pytest_execution_incomplete:exit={exit_code}; check collection/selection options",
+            "project_pytest_execution_incomplete",
         )
     if missing := collected - terminal:
-        raise ProjectRuntimeError(
-            f"project_pytest_unexecuted:{','.join(sorted(missing))}; check fixture setup and -x/--maxfail options"
+        raise _PytestValidationError(
+            f"project_pytest_unexecuted:{','.join(sorted(missing))}; check fixture setup and -x/--maxfail options",
+            "project_pytest_unexecuted",
         )
     if exit_code not in {0, 1}:
-        raise ProjectRuntimeError(f"project_pytest_configuration_or_collection_failed:exit={exit_code}")
+        raise _PytestValidationError(
+            f"project_pytest_configuration_or_collection_failed:exit={exit_code}",
+            "project_pytest_configuration_or_collection_failed",
+        )
     if not observation.get("coverage", {}).get("files"):
-        raise ProjectRuntimeError(_missing_coverage_diagnostic(observation))
+        code: PytestStableCode | None = None
+        if not isinstance(observation.get("coverage_diagnostic", ""), str):
+            code = "project_pytest_coverage_diagnostic_invalid"
+        elif not observation.get("coverage_diagnostic"):
+            code = "project_pytest_coverage_missing"
+        raise _PytestValidationError(_missing_coverage_diagnostic(observation), code)
 
 
 def _nonpassing_observation_findings(records: list[dict[str, Any]], pytest_root: Path) -> list[ReviewFinding]:
@@ -298,9 +395,13 @@ def _coverage_policy_findings(observation: dict[str, Any], exit_code: int, ancho
         policy = _validate_coverage_policy(observation["coverage_policy"], exit_code)
     except ValueError as exc:
         return [
-            tool_error(
-                tool="pytest",
-                file_path=anchor,
+            _pytest_tool_error(
+                anchor,
+                exc,
+                phase="policy",
+                child_returncode=exit_code,
+                observation_state="decoded",
+                stable_code="project_pytest_coverage_policy_invalid",
                 message=f"project_pytest_coverage_policy_invalid:{exc}; inspect target_execution coverage_policy",
             )
         ]
@@ -329,6 +430,8 @@ def _installed_coverage_findings(
     bridge: CoverageBridge,
     observation: dict[str, Any],
     evaluate: Callable[[list[Path], dict[str, Any]], list[ReviewFinding]],
+    *,
+    child_returncode: int,
 ) -> list[ReviewFinding]:
     """Retain native evidence and turn unavailable attribution into a named diagnostic."""
     try:
@@ -355,9 +458,13 @@ def _installed_coverage_findings(
         return evaluate(files, {**observation, "coverage": coverage, "coverage_attribution_errors": attribution_errors})
     except (OSError, ValueError, TypeError, KeyError) as exc:
         return [
-            tool_error(
-                tool="pytest",
-                file_path=files[0] if files else Path("."),
+            _pytest_tool_error(
+                files[0] if files else Path("."),
+                exc,
+                phase="installed_coverage",
+                child_returncode=child_returncode,
+                observation_state="decoded",
+                stable_code="project_pytest_installed_coverage_unavailable",
                 message=f"project_pytest_installed_coverage_unavailable:{exc}",
             )
         ]
@@ -368,21 +475,27 @@ def _portable_pytest_command(files: list[Path], encoded: str) -> tuple[CoverageB
     try:
         request = json.loads(encoded)
     except ValueError as exc:
-        raise ValueError("project_pytest_request_invalid") from exc
+        raise _PytestOperationError(exc, "request", "project_pytest_request_invalid") from exc
     if not isinstance(request, dict):
-        raise ValueError("project_pytest_request_invalid")
+        raise _PytestOperationError(ValueError("project_pytest_request_invalid"), "request")
     selectors = request.get("selectors")
     if not isinstance(selectors, list) or any(not isinstance(value, str) or not value for value in selectors):
-        raise ValueError("project_pytest_request_invalid")
-    bridge = plan_installed_coverage(
-        files, snapshot=Path(".").resolve(), site_packages=Path("/opt/specfact/project-runtime/site-packages")
-    )
+        raise _PytestOperationError(ValueError("project_pytest_request_invalid"), "request")
+    try:
+        bridge = plan_installed_coverage(
+            files, snapshot=Path(".").resolve(), site_packages=Path("/opt/specfact/project-runtime/site-packages")
+        )
+    except (OSError, ValueError, KeyError, TypeError) as exc:
+        raise _PytestOperationError(exc, "coverage_plan") from exc
     request["coverage_directories"] = [str(path) for path in bridge.directories]
     request["coverage_modules"] = list(bridge.modules)
     request["coverage_candidates"] = sorted(
         {path for paths in bridge.candidates.values() for path in paths} | set(bridge.measured_origins)
     )
-    command = target_command("pytest-observe", [json.dumps(request)])
+    try:
+        command = target_command("pytest-observe", [json.dumps(request)])
+    except (OSError, ValueError, KeyError, TypeError) as exc:
+        raise _PytestOperationError(exc, "target_command") from exc
     return bridge, command
 
 
@@ -391,32 +504,71 @@ def run_portable_pytest(files: list[Path], adapter_argv: tuple[str, ...]) -> lis
     """Parse actual child observations while leaving project plugins out of this process."""
     anchor = files[0] if files else Path(".")
     if len(adapter_argv) != 2 or adapter_argv[0] != "portable-pytest-v2":
-        return [tool_error(tool="pytest", file_path=anchor, message="project_pytest_request_invalid")]
-
+        return [
+            _pytest_tool_error(
+                anchor,
+                ValueError("project_pytest_request_invalid"),
+                phase="request",
+                stable_code="project_pytest_request_invalid",
+            )
+        ]
+    phase: PytestPhase = "observation_cleanup"
+    returncode: int | None = None
+    observation_state: Literal["not_read", "read_failed", "decode_failed", "decoded"] = "not_read"
     try:
         Path("/opt/specfact/tmp/pytest-observation.json").unlink(missing_ok=True)
+        phase = "request"
         bridge, command = _portable_pytest_command(files, adapter_argv[1])
+        phase = "child_execution"
         completed = subprocess.run(command, text=True, capture_output=True, check=False, timeout=1200)
-        observation = json.loads(Path("/opt/specfact/tmp/pytest-observation.json").read_text(encoding="utf-8"))
+        returncode = completed.returncode
+        phase, observation_state = "observation_read", "read_failed"
+        raw = Path("/opt/specfact/tmp/pytest-observation.json").read_text(encoding="utf-8")
+        phase, observation_state = "observation_decode", "decode_failed"
+        observation = json.loads(raw)
+        phase, observation_state = "observation_records", "decoded"
         records = observation["records"]
+        phase = "policy"
         policy_findings = _coverage_policy_findings(observation, completed.returncode, anchor)
-        validation_error = ""
+        validation_finding = None
+        phase = "validation"
         try:
             validate_observation(observation, completed.returncode)
         except ProjectRuntimeError as exc:
-            validation_error = str(exc)
-        if validation_error and not records:
-            return [*policy_findings, tool_error(tool="pytest", file_path=anchor, message=validation_error)]
+            validation_finding = _pytest_tool_error(
+                anchor, exc, phase=phase, child_returncode=returncode, observation_state=observation_state
+            )
+        if validation_finding is not None and not records:
+            return [*policy_findings, validation_finding]
         from specfact_code_review.run.runner import evaluate_portable_pytest_coverage, resolve_portable_pytest_root
 
+        phase = "root"
         pytest_root = resolve_portable_pytest_root(observation)
+        phase = "findings"
         findings = [*policy_findings, *_nonpassing_observation_findings(records, pytest_root)]
-    except (OSError, ValueError, KeyError, subprocess.SubprocessError) as exc:
-        return [tool_error(tool="pytest", file_path=anchor, message=str(exc))]
-    if validation_error:
-        findings.append(tool_error(tool="pytest", file_path=anchor, message=validation_error))
+    except (OSError, ValueError, KeyError, TypeError, subprocess.SubprocessError) as exc:
+        return [
+            _pytest_tool_error(
+                anchor, exc, phase=phase, child_returncode=returncode, observation_state=observation_state
+            )
+        ]
+    if validation_finding is not None:
+        findings.append(validation_finding)
     else:
-        findings.extend(_installed_coverage_findings(files, bridge, observation, evaluate_portable_pytest_coverage))
+        findings.extend(
+            _installed_coverage_findings(
+                files, bridge, observation, evaluate_portable_pytest_coverage, child_returncode=completed.returncode
+            )
+        )
     if completed.returncode == 1 and not findings:
-        return [tool_error(tool="pytest", file_path=anchor, message="project_pytest_failure_without_observed_test")]
+        return [
+            _pytest_tool_error(
+                anchor,
+                ValueError("project_pytest_failure_without_observed_test"),
+                phase="findings",
+                child_returncode=returncode,
+                observation_state="decoded",
+                stable_code="project_pytest_failure_without_observed_test",
+            )
+        ]
     return findings

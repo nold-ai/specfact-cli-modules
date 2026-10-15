@@ -36,3 +36,24 @@ The private invocation binding includes role and bounded run/attempt identity al
 
 
 The required capture command's process result controls original-report admission. Each required invocation starts with a false scalar and sets it true only after capture exits successfully. Both inline candidate readers and the independent cleared-environment reader receive that value explicitly. The later independent reader and candidate replay receive the required step output, defaulting to false. Original readers deny before opening manifest or raw bytes unless the scalar is exactly true, then retain existing integrity checks. Candidate replay checks the prior result before reading its manifest. Preserved files never authorize themselves after rejected or skipped capture. Legacy direct-report paths, optional observer-context restrictions, failed-capture replay prohibition and original required exits remain unchanged.
+
+## Linux23 candidate-only extension, 2026-10-15
+
+The independently reconciled 19-path scope captures bounded typed native diagnostics at the current producer owners and derives member evidence from canonical findings. It fixes failure-erasing optional pytest rereads. Exact invocation mapping admits paths; config inputs retain a digest without invented repository coordinates. The existing nested base/head evidence supplies attribution after original capture admission. Reuse of canonical findings is the smallest transport; a second telemetry channel adds no coverage. The unchanged independent signed 0.51.2 host and guest cannot emit this new field. Its gate remains blocking. No native execution, signing-key change, new platform, lock, deadline or registry change is authorized by this unit.
+
+- [x] Record meaningful stubbed RED before production edits.
+- [x] Implement strict bounded models, producer capture, failure-preserving transport and fixed projection.
+- [x] Verify current and absent-field transport, privacy, bounds and original admission with inert fixtures.
+- [x] Run scoped GREEN, formatting, typing and strict OpenSpec validation.
+- [ ] Root completes ordinary gates, independent review, normal hooks and exact signed CI acceptance.
+
+
+## Linux23 correction19, 2026-10-15
+
+Normalize only the appended optional transport finding through the existing capsule response owner, preserving prior findings and member data and error/UNKNOWN. Public native subject paths use separate immutable base/head Git inventories from the original workflow caller. Capture binding head and expected role must match before path admission. The independent review step recomputes merge-base after capturing the required review exit, since REVIEW_BASE is not exported by the earlier step. Optional lookup failure preserves that exit. Both callers pass refs explicitly after any environment clearing.
+
+Inventories require lowercase 40-hex refs and `git ls-tree -r --name-only -z` with a five-second timeout. Missing objects, nonzero exit, invalid UTF-8 and output above 1 MiB withhold that side's path-bearing diagnostics. The 1 MiB post-capture admission bound is not a hard memory quota. Ordinary findings retain their existing index filter. No fallback, new report manifest, pin or deadline change is permitted. Canonical path success preserves its input exactly; pytest failure projection returns the strict diagnostic model through genuine existing icontract postconditions.
+
+## Linux24 output compatibility, 2026-10-15
+
+The optional diagnostic is absent by default on the wire. ReviewFinding delegates to Pydantic's wrap serializer and removes only native_diagnostic when it is None. All existing nullable fields, include/exclude selections, populated diagnostics and nested report serialization retain their normal behavior. The seven complete historical range outputs and provenance remain immutable; reducing their finding fields or recapturing fixtures would hide the regression. Literal complete legacy dictionaries and both diagnostic kinds cover Python/JSON validation, round trips and the real report envelope.
