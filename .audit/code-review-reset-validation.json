@@ -181,7 +181,7 @@
         "source": "code-review-20-external-installation-acceptance",
         "requirements": 4,
         "scenarios": 9,
-        "unchecked_tasks": 17
+        "unchecked_tasks": 18
       },
       {
         "source": "code-review-local-report-adoption",
@@ -2095,5 +2095,12 @@
   "review_round_8_after": {
     "result": "pass",
     "failures": []
+  },
+  "current_checklist_inspection": {
+    "core_markdown_max_columns": 119,
+    "core_unchecked_tasks": 18,
+    "release_candidate_before_installed_acceptance_before_canonical_publication": true,
+    "release_publication_requires_paired_compatibility_and_installed_acceptance": true,
+    "release_publication_withheld_on_required_failure_or_timeout": true
   }
 }
