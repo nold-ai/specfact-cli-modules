@@ -8,7 +8,7 @@
 
 Introduce local schema 2.0 with explicit consumers and source-bound execution. Preserve useful scope/differential behavior and perform the single public cutover that deletes capsule execution and the legacy host orchestrator.
 
-Create an explicit local report schema 2.0. Carry source/dependency/configuration/tool identities and per-check completion with findings independently. Update modules-side pre-commit/report helpers and compatibility fixtures together. The paired core change updates ordinary core consumers. Current `major > 1 or ... >= 1.6` helpers must not choose the legacy handler for 2.0. Reject unknown major versions and malformed required evidence.
+Create an explicit local report schema 2.0. Carry source/dependency/configuration/tool identities and per-check completion with findings independently. Update modules-side pre-commit/report helpers and compatibility fixtures together. The paired core change updates ordinary core consumers. Current `major > 1 or ... >= 1.6` helpers must not choose the legacy handler for 2.0. Reject unrecognized report versions, including unsupported minor versions within a known major, and malformed required evidence.
 
 Keep worktree/index/range/full/explicit selection, source spans, identity/multiset/differential logic and suppression comparison where compatible. Match check/policy identities for comparisons. A worktree source change invalidates the result. Index/range preparations bind each source snapshot; a live editable import, generated file or native artifact from another checkout cannot supply snapshot execution evidence.
 

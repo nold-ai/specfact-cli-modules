@@ -151,7 +151,7 @@
         "delivery_status": "proposal-only",
         "implementation_evidence": "not-yet-available",
         "findings": [],
-        "mapping_digest": "sha256:a1f6bb4083159fbab31acb70a7d9d6ce5b7e634ee1aa287b36103f96b08d0973",
+        "mapping_digest": "sha256:66610fa8fc0ff216d7a72ca994c7368644feb39a3c3c077b6e43f1e74129cd42",
         "source": "nold-ai/specfact-cli/openspec/changes/code-review-local-report-adoption"
       }
     ]
@@ -186,8 +186,8 @@
       {
         "source": "code-review-local-report-adoption",
         "requirements": 4,
-        "scenarios": 11,
-        "unchecked_tasks": 13
+        "scenarios": 12,
+        "unchecked_tasks": 15
       }
     ],
     "runtime_implementation": false,
@@ -2000,6 +2000,24 @@
     ]
   },
   "planning_review_probe_after": {
+    "result": "pass",
+    "failures": []
+  },
+  "review_round_2_before": {
+    "result": "fail",
+    "failures": [
+      "First implementation task does not establish the dedicated worktree and branch.",
+      "Installation tests, RED, implementation, preflight and GREEN are not ordered explicitly.",
+      "Reviewed signed commit/push/PR delivery is unspecified.",
+      "Documentation surface omitted: docs/",
+      "Documentation surface omitted: README.md",
+      "Documentation surface omitted: docs/index.md",
+      "Documentation surface omitted: navigation",
+      "No ordinary-consumer scenario rejects unsupported same-major schemas.",
+      "Apple preflight is still presented as active guidance."
+    ]
+  },
+  "review_round_2_after": {
     "result": "pass",
     "failures": []
   }

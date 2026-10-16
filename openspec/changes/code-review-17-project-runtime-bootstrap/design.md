@@ -132,7 +132,7 @@ Keep stable scope selection, source identities, differential matching, multiplic
 
 Report schema 2.0 records local execution facts, actual tools/configuration, source/dependency identity and completion. A failed assertion is a completed check with a finding. Missing required evidence, preparation failure, malformed output and timeout remain incomplete. Shadow may exit zero while preserving adverse truth. Scores and autofix availability cannot turn incomplete execution into acceptance. C15 calibration and exception authority stay separately owned.
 
-Version dispatch is explicit. Existing module and pre-commit helpers classify any major greater than one as at least 1.6. The cutover updates these consumers and the paired core consumer instead of changing only the version label. Historical 1.6 evidence retains its original interpretation. Unknown major versions are nonaccepting. Do not fill capsule fields with dummy values.
+Version dispatch is explicit. Existing module and pre-commit helpers classify any major greater than one as at least 1.6. The cutover updates these consumers and the paired core consumer instead of changing only the version label. Historical 1.6 evidence retains its original interpretation. Any report version without an explicitly supported contract is nonaccepting, including unknown minor versions within a known major. Do not fill capsule fields with dummy values.
 
 A signed module, immutable source range or caller PR context does not grant protected `pr_range`. Core #680 keeps its separate protected contract. Schema 2.0 local reports cannot satisfy that old capsule contract without a separately reviewed protected workflow. C15 #417/core #679 retain active owners and status; this planning delivery adds a coordination note only.
 
@@ -170,7 +170,7 @@ During follow-up implementation, update this design for an accepted contract dev
 | Four native manager adapters | Selected groups/extras, pins, markers, local/VCS packages, generated sources and manager entrypoints retain native behavior. |
 | Customer standard fixtures | Rules/exclusions/versions/coverage differ deliberately from SpecFact defaults and remain effective. |
 | Analyzer and contract fixtures | Actual defect and icontract violation, no-contract applicability, tool conflict, malformed output and timeout remain distinct. |
-| Immutable scopes and reports | Source-bound base/head execution, explicit 1.6/2.0/unknown-major dispatch, no protected local authority. |
+| Immutable scopes and reports | Source-bound base/head execution, explicit supported-contract dispatch with unsupported same-major/major rejection, no protected local authority. |
 | Exact installed distribution | pipx, uv tool and repeated uvx, user-scoped module discovery, Linux/macOS/Windows and supported CLI Python cells. |
 | No-pollution evidence | Project declarations/locks and existing environment package inventory match before/after; ordinary trusted hook outputs are identified separately. |
 

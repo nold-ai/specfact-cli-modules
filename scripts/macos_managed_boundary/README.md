@@ -1,10 +1,12 @@
 # Managed macOS boundary experiments and prerequisites
 
 This directory contains prerequisite checks, fixed-fixture startup and control
-brokers, a sealed Semgrep bootstrap and an independent observer. These are not a production backend. Production selection remains disabled. The current acceptance
+brokers, a sealed Semgrep bootstrap and an independent observer. These are not a production backend. Production selection remains disabled. The historical acceptance
 contract is [native delivery](../../openspec/changes/code-review-native-platform-execution/design.md).
 
-## Initial distribution (default)
+Capsule delivery #460 was superseded on 2026-10-16 by the [local review plan](../../openspec/changes/code-review-17-project-runtime-bootstrap/proposal.md). The commands and proof limits below retain historical maintainer context; they authorize no remaining capsule publication. Existing CI, signature and security gates remain in force until their reviewed replacements land.
+
+## Historical initial-distribution preflight
 
 ```sh
 python scripts/macos_managed_boundary/preflight.py
@@ -28,11 +30,11 @@ publication. The actual independent-Mac CLI/GHCR route must pass with default
 protections; do not strip quarantine, disable Gatekeeper or require security
 overrides to satisfy acceptance.
 
-## Optional Apple follow-up
+## Abandoned Apple distribution history
 
 [#488](https://github.com/nold-ai/specfact-cli-modules/issues/488) /
 [`code-review-macos-developer-id-distribution`](../../openspec/history/abandoned/2026-10-16-code-review-macos-developer-id-distribution/proposal.md)
-is blocked by #460 and remains optional and unscheduled. Its explicit check is:
+was closed as Not Planned with capsule delivery #460. The proposal is abandoned history, not an active or scheduled follow-up. Its historical preflight is retained for reference:
 
 ```sh
 python scripts/macos_managed_boundary/preflight.py \

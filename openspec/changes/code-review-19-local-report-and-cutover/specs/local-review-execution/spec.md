@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: Versioned local evidence has explicit consumers
-The producer SHALL emit schema 2.0 with local execution provenance, actual tool versions, effective configuration references, source and dependency identity, and per-check completion. Consumers SHALL dispatch explicitly by supported schema version. Historical schema 1.6 SHALL retain its original meaning without synthesized capsule fields.
+The producer SHALL emit schema 2.0 with local execution provenance, actual tool versions, effective configuration references, source and dependency identity, and per-check completion. Consumers SHALL dispatch explicitly by supported schema contract/version and SHALL reject unrecognized same-major versions rather than select a numerically earlier handler. Historical schema 1.6 SHALL retain its original meaning without synthesized capsule fields.
 
 #### Scenario: New major version is not legacy evidence
 - **GIVEN** a schema 2.0 report reaches a helper that historically used a schema-at-least-1.6 test
@@ -9,7 +9,7 @@ The producer SHALL emit schema 2.0 with local execution provenance, actual tool 
 - **THEN** it selects the explicit local schema handler and does not invoke capsule-profile validation
 
 #### Scenario: Unknown major or malformed required evidence
-- **GIVEN** a report has an unsupported major version or malformed completion facts
+- **GIVEN** a report has an unsupported major version, an unrecognized same-major version or malformed completion facts
 - **WHEN** a consumer evaluates the report
 - **THEN** it rejects or reports incomplete evidence and never falls back to score-based or fabricated legacy acceptance
 
