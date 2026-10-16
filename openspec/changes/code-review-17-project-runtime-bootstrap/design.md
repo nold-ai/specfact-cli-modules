@@ -8,7 +8,7 @@ This artifact records future architecture. No local-runtime capability, supporte
 
 ## Usage from the caller's view
 
-The persistent installation routes are `pipx install specfact-cli` and `uv tool install specfact-cli`. The ephemeral route uses `uvx --from specfact-cli specfact`. Signed modules remain installed through the existing module commands in user scope, outside customer dependencies. Exact installation behavior is an acceptance obligation in change 20, including repeated fresh uvx invocations.
+The persistent installation routes are `pipx install specfact-cli` and `uv tool install specfact-cli`. The ephemeral route uses `uvx --from specfact-cli specfact`. Signed modules remain installed through the existing module commands in user scope, outside customer dependencies. Exact installation behavior is an acceptance obligation in change 20, including repeated fresh uvx invocations. After provisioning valid locally verified signed modules, the project environment and selected tools, local review must run without network access using the locally available invocation route/cache. Missing prerequisites remain preparation failures; cold offline bootstrap is not promised.
 
 ```console
 specfact code review runtime inspect --json
@@ -154,7 +154,7 @@ Laziness Protocol determines the single runner and small service. Subtract Befor
 
 ## Delivery sequence and reconciliation
 
-Changes 17, 18, 19, paired core adoption, then 20 form the runtime delivery sequence. All current implementation tasks remain unchecked. Change 17 proves one complete existing/cold Hatch workflow before expanding managers. Change 18 establishes project standards and analyzer fidelity. Change 19 emits local evidence and performs one public cutover, deleting both obsolete execution routes. Core adopts ordinary consumption. Change 20 proves installations, replaces capsule-only CI and prepares the coordinated breaking release.
+Changes 17, 18, 19, paired core adoption, then 20 form the runtime delivery sequence. All current implementation tasks remain unchecked. During implementation, bind scenario-derived tests into the requirement mappings with executable selectors before RED and require the Requirements evidence gate to verify actual results at implementation maturity before GREEN; planning inspection is insufficient. Change 17 proves one complete existing/cold Hatch workflow before expanding managers. Change 18 establishes project standards and analyzer fidelity. Change 19 emits local evidence and performs one public cutover, deleting both obsolete execution routes. Core adopts ordinary consumption. Change 20 proves installations, replaces capsule-only CI and prepares the coordinated breaking release.
 
 At cutover, delete native macOS broker/worker and Linux OCI/Bubblewrap acquisition, capsule admission/descriptors/catalogs, sealed import policing, dependency/native-library copying and the parallel legacy host orchestrator after useful helpers move. No permanent runtime backend switch remains. Distribution cleanup removes residual native builds and capsule-only release/support configuration. Preserve cryptographic module verification and independent security work.
 

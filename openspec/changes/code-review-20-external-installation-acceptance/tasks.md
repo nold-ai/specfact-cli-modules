@@ -18,7 +18,7 @@ All boxes are future implementation. This artifact delivery completes no runtime
 
 ## Bounded implementation
 
-- [ ] Run actual pipx/uv tool/repeated-uvx installation acceptance with user-scoped module discovery on supported platforms/Pythons.
+- [ ] Run actual pipx/uv tool/repeated-uvx installation acceptance with user-scoped module discovery on supported platforms/Pythons, including provisioned offline execution with networking disabled and the selected tools/cache present locally.
 - [ ] Replace capsule-only customer/build/release CI with local installed acceptance while preserving independent gates.
 - [ ] Prepare migration docs and coordinated breaking-major release/signing/compatibility changes after paired core acceptance.
 - [ ] Run scenario and regression checks after each bounded unit; record actual passing commands, timestamps, results and exact source/environment identities in TDD_EVIDENCE.md.

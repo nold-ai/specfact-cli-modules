@@ -139,7 +139,7 @@
         "delivery_status": "proposal-only",
         "implementation_evidence": "not-yet-available",
         "findings": [],
-        "mapping_digest": "sha256:a8554281e69d3cacbdfcf15ae8464efe4ce610be5171f81af532a945db4920ee",
+        "mapping_digest": "sha256:4a0ef4e85ac599d65fcbac469fcdfc196b7575e5645b2e4440639246b0fbc40a",
         "source": "nold-ai/specfact-cli-modules/openspec/changes/code-review-20-external-installation-acceptance"
       },
       {
@@ -151,7 +151,7 @@
         "delivery_status": "proposal-only",
         "implementation_evidence": "not-yet-available",
         "findings": [],
-        "mapping_digest": "sha256:66610fa8fc0ff216d7a72ca994c7368644feb39a3c3c077b6e43f1e74129cd42",
+        "mapping_digest": "sha256:85bbd3b391f00b5e283514dd76701152359b7a925b6c05af89a41557602de659",
         "source": "nold-ai/specfact-cli/openspec/changes/code-review-local-report-adoption"
       }
     ]
@@ -180,13 +180,13 @@
       {
         "source": "code-review-20-external-installation-acceptance",
         "requirements": 4,
-        "scenarios": 8,
+        "scenarios": 9,
         "unchecked_tasks": 17
       },
       {
         "source": "code-review-local-report-adoption",
         "requirements": 4,
-        "scenarios": 12,
+        "scenarios": 13,
         "unchecked_tasks": 15
       }
     ],
@@ -2018,6 +2018,19 @@
     ]
   },
   "review_round_2_after": {
+    "result": "pass",
+    "failures": []
+  },
+  "review_round_3_before": {
+    "result": "fail",
+    "failures": [
+      "Future tests lack explicit scenario-to-selector binding before RED.",
+      "Future GREEN lacks an implementation-maturity Requirements evidence prerequisite.",
+      "core lacks a mapped provisioned offline execution scenario.",
+      "modules lacks a mapped provisioned offline execution scenario."
+    ]
+  },
+  "review_round_3_after": {
     "result": "pass",
     "failures": []
   }

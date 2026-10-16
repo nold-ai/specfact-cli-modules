@@ -13,6 +13,12 @@ Acceptance SHALL exercise clean pipx, uv tool and repeated uvx invocations with 
 - **WHEN** the disposable controller environment differs
 - **THEN** module loading and declared dependencies work through supported installation paths without relying on a previously mutated uvx environment
 
+#### Scenario: Run from verified local artifacts offline
+- **GIVEN** a supported external CLI installation, valid locally verified signed modules, a prepared project environment and all selected tools are available locally, including any cache required by the invocation route
+- **WHEN** networking is disabled and the installed local review workflow runs
+- **THEN** module loading and selected checks succeed without requiring registry or package-index access
+- **AND** unavailable local prerequisites produce actionable preparation failures without claiming cold offline bootstrap support
+
 ### Requirement: Published compatibility follows installed evidence
 The release SHALL validate Linux, macOS and Windows against the supported CLI Python matrix and record project-interpreter and analyzer capabilities separately. Manager support SHALL require faithful existing and cold project execution. Missing optional capability SHALL not become an unsupported blanket runtime claim.
 

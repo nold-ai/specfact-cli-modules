@@ -24,6 +24,13 @@ requirements:
       observable: module loading and declared dependencies work through supported installation paths without relying
         on a previously mutated uvx environment. Planning inspection only; runtime tests, RED/GREEN, installed acceptance
         and publication remain pending.
+    - case_id: LOCAL-ARTIFACTS-OFFLINE
+      scenario_id: external-installation-survives-fresh-invocations
+      method: inspection
+      intent: 'Inspect planned scenario: Run from verified local artifacts offline. Once a supported invocation
+        route, signed modules, project environment and tools are available locally, disabled networking does
+        not prevent installed review; missing prerequisites stay nonaccepting.'
+      observable: The planned spec retains provisioned offline execution; no runtime or test maturity is claimed.
   ? openspec:code-review-20-external-installation-acceptance:external-review-acceptance:published-compatibility-follows-installed-evidence
   : rationale: Review the owner-approved replacement contract at planned maturity without claiming implementation
       evidence.
