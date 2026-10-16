@@ -16,6 +16,8 @@ Completed failing tests remain findings. Missing required checks, failed prepara
 
 Perform the public runner switch and production deletions in one cutover. Adapt useful pure helpers rather than redirecting to the existing SpecFact-specific host runner. Delete callable native macOS and Linux OCI/Bubblewrap paths, capsule acquisition, brokers, import policing, sealed dependency/native-library copying, catalogs and permanent fallback toggles. Later distribution cleanup may remove residue but cannot leave a callable old runtime. Preserve module signatures, source integrity, process timeouts and independent security gates.
 
+Change 19 completes the reviewed single-runner candidate and supplies its immutable signed identity and compatibility fixtures to core #769. It does not canonically publish the breaking cutover. Core compatibility preflight consumes that exact candidate; change 20 owns stable canonical publication after paired acceptance and the installed release matrix. This is a publication hold, not a new implementation dependency or a permanent alternate backend.
+
 The implementation delta must explicitly remove/replace applicable capsule requirements before archival. Neither local immutable scope nor caller PR context creates protected `pr_range`; existing core #680 remains a separate incompatible protected contract. Historical artifacts and report readers retain original semantics.
 
 ## Implementation reconciliation and first step

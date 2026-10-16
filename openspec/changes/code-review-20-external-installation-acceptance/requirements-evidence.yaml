@@ -76,8 +76,8 @@ requirements:
       scenario_id: ci-replacement-preserves-independent-gates
       method: inspection
       intent: 'Inspect planned scenario: Required installed cell fails.'
-      observable: the release is not declared accepted and a passing component suite cannot substitute for that
-        workflow. Planning inspection only; runtime tests, RED/GREEN, installed acceptance and publication remain
+      observable: the release is not declared accepted, canonical stable publication remains withheld and a passing
+        component suite cannot substitute for that workflow. Planning inspection only; runtime tests, RED/GREEN, installed acceptance and publication remain
         pending.
   ? openspec:code-review-20-external-installation-acceptance:external-review-acceptance:coordinated-release-and-rollback-are-explicit
   : rationale: Review the owner-approved replacement contract at planned maturity without claiming implementation
@@ -93,8 +93,8 @@ requirements:
       scenario_id: coordinated-release-and-rollback-are-explicit
       method: inspection
       intent: 'Inspect planned scenario: Release artifacts are immutable.'
-      observable: old signed capsules, modules and historical reports remain unchanged and do not inherit new local
-        support claims. Planning inspection only; runtime tests, RED/GREEN, installed acceptance and publication
+      observable: stable publication follows exact signed candidate paired compatibility and installed acceptance;
+        accepted identities are published while old signed capsules, modules and historical reports stay unchanged. Planning inspection only; runtime tests, RED/GREEN, installed acceptance and publication
         remain pending.
     - case_id: coordinated-release-and-rollback-are-explicit-rollback-after-consumer-incompatibility-inspection
       scenario_id: coordinated-release-and-rollback-are-explicit

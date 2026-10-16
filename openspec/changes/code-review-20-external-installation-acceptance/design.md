@@ -8,6 +8,8 @@
 
 Exercise exact signed installed distributions through pipx, uv tool and repeated uvx. Replace capsule-only CI, document the compatibility/trust migration and prepare a coordinated breaking release with rollback.
 
+Change 19 and core #769 supply reviewed immutable signed candidates. Their ordinary implementation/readiness does not require this change to publish first. This change withholds stable canonical publication until the exact candidate pair passes paired compatibility preflight and required installed acceptance, then publishes the accepted identities through normal reviewed tooling. Candidate availability is not stable release authority.
+
 The acceptance subject is the exact installed compatible CLI/module pair, not a source checkout or candidate self-report. Test pipx and uv tool with user-scoped modules, then test a fresh repeated uvx invocation. Current module installation may assume `sys.executable -m pip`; a disposable tool environment may lack pip or must not be mutated unmanaged. Resolve this with the paired core ordinary-installation contract and supported declared/tool installation mechanisms, without installing anything into customer environments.
 
 After provisioning valid locally verified signed modules, the project environment and selected tools, run each supported installed route with networking disabled and any required local invocation cache present. Do not require fresh registry or package-index access. Missing local prerequisites stay nonaccepting; cold offline bootstrap is not promised. Core #769 supplies compatibility preflight and this change owns release-level offline acceptance.

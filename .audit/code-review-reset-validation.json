@@ -139,7 +139,7 @@
         "delivery_status": "proposal-only",
         "implementation_evidence": "not-yet-available",
         "findings": [],
-        "mapping_digest": "sha256:4a0ef4e85ac599d65fcbac469fcdfc196b7575e5645b2e4440639246b0fbc40a",
+        "mapping_digest": "sha256:5b727b1a145551f341938e8b65a22c4db5949612e73deba5d8d068f090a821bc",
         "source": "nold-ai/specfact-cli-modules/openspec/changes/code-review-20-external-installation-acceptance"
       },
       {
@@ -2071,6 +2071,28 @@
     ]
   },
   "review_round_6_after": {
+    "result": "pass",
+    "failures": []
+  },
+  "review_round_7_before": {
+    "result": "fail",
+    "failures": [
+      "Change19 still allows canonical publication before paired acceptance.",
+      "Core readiness still assumes stable publication before its own preflight.",
+      "Change20 lacks explicit positive/negative canonical publication gates."
+    ]
+  },
+  "review_round_7_after": {
+    "result": "pass",
+    "failures": []
+  },
+  "review_round_8_before": {
+    "result": "fail",
+    "failures": [
+      "Post-PR repair checkpoint does not explicitly refresh final full review artifact after the last substantive repair."
+    ]
+  },
+  "review_round_8_after": {
     "result": "pass",
     "failures": []
   }

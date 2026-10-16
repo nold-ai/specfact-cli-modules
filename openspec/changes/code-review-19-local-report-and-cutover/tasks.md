@@ -28,6 +28,6 @@ All boxes are future implementation. This artifact delivery completes no runtime
 
 - [ ] Run applicable formatting, type, lint, import, contract, test, security and SpecFact review gates; resolve findings including warnings or record an explicitly approved exception.
 - [ ] Revalidate OpenSpec and requirement mappings and update affected help/reference/installation documentation.
-- [ ] Apply required semver, CHANGELOG.md, compatibility, module payload/signature and canonical publication steps only when runtime assets change.
-- [ ] Demonstrate the exact installed user workflow and rollback for the owning scope; keep unavailable cells and required failures nonaccepting.
+- [ ] Prepare required semver, CHANGELOG.md, compatibility and signed immutable module candidate assets when runtime assets change; defer canonical stable publication to change 20 after paired core compatibility and installed acceptance.
+- [ ] Demonstrate the candidate module workflow and rollback for this scope; hand its exact immutable signed identity and compatibility fixtures to core #769. Full paired installed release acceptance belongs to change 20; unavailable checks remain nonaccepting.
 - [ ] Submit implementation for normal review to dev, reconcile issue/project state and archive only after actual completion using openspec archive.

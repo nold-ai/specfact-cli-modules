@@ -43,15 +43,15 @@ Capsule-only CI, native build and release requirements SHALL be replaced with in
 #### Scenario: Required installed cell fails
 - **GIVEN** a required clean-install or customer-workflow cell fails or times out
 - **WHEN** release readiness is assessed
-- **THEN** the release is not declared accepted and a passing component suite cannot substitute for that workflow
+- **THEN** the release is not declared accepted, canonical stable publication remains withheld and a passing component suite cannot substitute for that workflow
 
 ### Requirement: Coordinated release and rollback are explicit
-The release SHALL use a breaking major for Code Review and appropriate Codebase/core compatibility updates, normal module signing and canonical publication. Migration documentation SHALL state trusted-local execution, removed containment claims, report compatibility, installation routes, supported cells and rollback to an immutable compatible CLI/module pair.
+Stable canonical publication SHALL wait for the exact signed candidate pair to pass paired core consumer compatibility and required installed acceptance. Candidate artifacts SHALL NOT establish stable release acceptance. The release SHALL use a breaking major for Code Review and appropriate Codebase/core compatibility updates, normal module signing and canonical publication. Migration documentation SHALL state trusted-local execution, removed containment claims, report compatibility, installation routes, supported cells and rollback to an immutable compatible CLI/module pair.
 
 #### Scenario: Release artifacts are immutable
-- **GIVEN** new local-runtime artifacts are signed and published by normal reviewed tooling
-- **WHEN** customers migrate
-- **THEN** old signed capsules, modules and historical reports remain unchanged and do not inherit new local support claims
+- **GIVEN** the exact immutable signed local-runtime candidate pair has passed paired core compatibility and required installed acceptance
+- **WHEN** stable canonical publication is authorized through normal reviewed tooling
+- **THEN** the accepted candidate identities are published and old signed capsules, modules and historical reports remain unchanged and do not inherit new local support claims
 
 #### Scenario: Rollback after consumer incompatibility
 - **GIVEN** installed acceptance finds an incompatible ordinary consumer
