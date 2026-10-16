@@ -196,42 +196,28 @@ Security records under the repository security policy.
 
 ## Superseded native capsule history
 
-Physical-host startup, private-control and two sealed-analyzer fixture checkpoints
-are implemented under the same change; they are partial native evidence, not
-production delivery or supported-matrix approval. See its managed boundary status.
+Historical record, retired on 2026-10-16 (Europe/Berlin). Revisions dated
+2026-09-30, 2026-10-02 and 2026-10-04 formerly proposed macOS ARM64 first,
+project-driven preparation, optional Apple distribution trust and a deferred
+Windows capsule backend. Those proposals no longer authorize implementation or
+capsule publication.
 
-Owner-approved revisions on 2026-09-30 and 2026-10-02 (Europe/Berlin): #460 delivers macOS ARM64
-first, with managed processes, automatic first-use native runtime acquisition and Linux x86-64 regression coverage. Windows, Intel macOS and Linux
-ARM64 are deferred, not implicitly supported or required for this delivery.
+Physical-host startup, private-control and sealed-analyzer fixture checkpoints
+were partial native evidence rather than production delivery or supported-matrix
+approval. Their receipts remain in the owning proposal. Published releases and
+delivered fixes retain their historical evidence.
 
-The 2026-10-04 revision restores automatic/caller-configured project discovery and
-on-demand preparation without publisher project catalogs. Matching-architecture
-full VMs qualify for acceptance; CPU emulation is supplemental. Windows remains
-a follow-up, and Developer ID remains optional #488.
-
-| Change | Issue | Implementation dependencies |
+| Historical change | Issue | Disposition on 2026-10-16 |
 |---|---|---|
-| `code-review-native-platform-execution` | [#460](https://github.com/nold-ai/specfact-cli-modules/issues/460) | Verified layout #459 and released #473 / Code Review 0.50.1 baseline; native isolation/dependency feasibility and bounded design approval; no blanket C15 or optional #434 prerequisite |
-| `code-review-macos-developer-id-distribution` | [#488](https://github.com/nold-ai/specfact-cli-modules/issues/488) | Optional, unscheduled Apple distribution trust; blocked by #460; never blocks native shipment or publication |
-| `code-review-windows-native-platform-execution` | [#495](https://github.com/nold-ai/specfact-cli-modules/issues/495) | Deferred Windows x86-64 backend using #460's project-driven contract; blocked by #460; never blocks Linux/macOS delivery; matching-architecture full VM acceptance permitted |
+| `code-review-native-platform-execution` | [#460](https://github.com/nold-ai/specfact-cli-modules/issues/460) | Remaining capsule delivery scope closed Not Planned; partially delivered lineage and evidence preserved. |
+| `code-review-macos-developer-id-distribution` | [#488](https://github.com/nold-ai/specfact-cli-modules/issues/488) | Never delivered; closed Not Planned and retained in non-canonical abandoned history. |
+| `code-review-windows-native-platform-execution` | [#495](https://github.com/nold-ai/specfact-cli-modules/issues/495) | Never delivered; closed Not Planned and retained in non-canonical abandoned history. |
 
-Preserve the selected released review semantics and signed identities. Core #679/modules #417 are separately scheduled; an actual native consumer
-incompatibility requires explicit paired scope and compatibility evidence.
-The existing C15 dependency chain is unchanged by removing its blanket edge
-into #460. Optional preflight, seals and historical RED ledgers do not block
-native delivery. Paid Developer ID and notarization are deferred to optional #488;
-initial delivery uses build-time ad-hoc native signatures, verified upstream
-signatures where applicable and SpecFact-signed manifests. Exact distribution
-boundary and independent default-protection installation acceptance still gate
-publication. Apple credential preflight is not a required initial-release step.
-
-Planning defines the contract in the change's FEASIBILITY.md and scenario
-specification; it does not prove native runtime support. Production remains
-gated on measured isolation, dependency admission, signing and platform
-feasibility. Customer acceptance includes native project preparation,
-Mach-O/dyld dependencies, all required analyzers, fresh signed installation,
-cold/offline reuse and Linux regression coverage. Close/archive only after
-production publication and acceptance.
+The trusted local reset at the start of this document owns replacement sequencing.
+Windows local acceptance belongs to #516. Core #679/modules #417 retain their
+separate C15 ownership, prerequisites and acceptance. Current independent security,
+quality and signing gates remain in force until explicitly replaced through
+reviewed implementation; this historical section grants no release authority.
 
 ## C15 lineage and active-owner coordination
 

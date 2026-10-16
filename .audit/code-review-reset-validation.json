@@ -2033,5 +2033,20 @@
   "review_round_3_after": {
     "result": "pass",
     "failures": []
+  },
+  "review_round_4_before": {
+    "result": "fail",
+    "failures": [
+      "Historical capsule section retains active instruction: #460 delivers",
+      "Historical capsule section retains active instruction: Windows remains",
+      "Historical capsule section retains active instruction: Developer ID remains",
+      "Historical capsule section retains active instruction: still gate\npublication",
+      "Historical capsule section retains active instruction: Production remains\ngated",
+      "Final PR delivery does not require fresh full review after version edits."
+    ]
+  },
+  "review_round_4_after": {
+    "result": "pass",
+    "failures": []
   }
 }
