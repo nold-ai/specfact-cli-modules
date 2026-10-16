@@ -1,5 +1,9 @@
 # Change: Optional Developer ID signing and notarization for macOS capsules
 
+## Abandoned remaining proposal (2026-10-16)
+
+The owner approved replacing capsules with trusted local project-aware review. Issue #488 is superseded by modules #513-#516 and core #769. This never-delivered capability is retained as non-canonical abandoned history. No implementation, completed archive or specification promotion is claimed. Original task states and planning records below are historical, not remaining implementation authority. The replacement architecture is in `openspec/changes/code-review-17-project-runtime-bootstrap/design.md`.
+
 ## Why
 
 Apple-recognized publisher identity and notarization can improve distribution trust. Paid membership is deferred while initial native delivery proves its actual install route with default host protections.
@@ -29,5 +33,5 @@ Optional and unscheduled. #460 / `code-review-native-platform-execution` blocks 
 
 <!-- source_repo: nold-ai/specfact-cli-modules -->
 - **GitHub Issue**: [#488](https://github.com/nold-ai/specfact-cli-modules/issues/488)
-- **Prerequisite**: [#460](https://github.com/nold-ai/specfact-cli-modules/issues/460), [native proposal](../code-review-native-platform-execution/proposal.md)
+- **Prerequisite**: [#460](https://github.com/nold-ai/specfact-cli-modules/issues/460), [native proposal](../../../changes/code-review-native-platform-execution/proposal.md)
 - **Last Synced Status**: open / Todo, optional and unscheduled, 2026-10-02 Europe/Berlin

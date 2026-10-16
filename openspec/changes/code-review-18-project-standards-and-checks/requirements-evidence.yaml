@@ -1,0 +1,125 @@
+schema_version: '2'
+requirements:
+  openspec:code-review-18-project-standards-and-checks:project-standards-review:customer-standards-remain-authoritative:
+    rationale: Review the owner-approved replacement contract at planned maturity without claiming implementation
+      evidence.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#514
+    touchpoints:
+    - id: project-standards-review-spec
+      kind: config_file
+      locator: openspec/changes/code-review-18-project-standards-and-checks/specs/project-standards-review/spec.md
+    verification_cases:
+    - case_id: customer-standards-remain-authoritative-project-standards-disagree-with-specfact-development-defaults-inspection
+      scenario_id: customer-standards-remain-authoritative
+      method: inspection
+      intent: 'Inspect planned scenario: Project standards disagree with SpecFact development defaults.'
+      observable: their effective configuration follows the customer project and no universal SpecFact coverage
+        floor or style requirement is injected. Planning inspection only; runtime tests, RED/GREEN, installed acceptance
+        and publication remain pending.
+    - case_id: customer-standards-remain-authoritative-all-selected-diagnostic-identifiers-survive-inspection
+      scenario_id: customer-standards-remain-authoritative
+      method: inspection
+      intent: 'Inspect planned scenario: All selected diagnostic identifiers survive.'
+      observable: the report retains the rule identifier and diagnostic instead of dropping it. Planning inspection
+        only; runtime tests, RED/GREEN, installed acceptance and publication remain pending.
+    - case_id: customer-standards-remain-authoritative-unknown-custom-check-output-inspection
+      scenario_id: customer-standards-remain-authoritative
+      method: inspection
+      intent: 'Inspect planned scenario: Unknown custom check output.'
+      observable: the report retains command completion, exit status and bounded output without inventing source
+        positions or discarding a nonzero result. Planning inspection only; runtime tests, RED/GREEN, installed
+        acceptance and publication remain pending.
+  openspec:code-review-18-project-standards-and-checks:project-standards-review:explicit-declarative-profile-contribution:
+    rationale: Review the owner-approved replacement contract at planned maturity without claiming implementation
+      evidence.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#514
+    touchpoints:
+    - id: project-standards-review-spec
+      kind: config_file
+      locator: openspec/changes/code-review-18-project-standards-and-checks/specs/project-standards-review/spec.md
+    verification_cases:
+    - case_id: explicit-declarative-profile-contribution-explicit-organizational-profile-inspection
+      scenario_id: explicit-declarative-profile-contribution
+      method: inspection
+      intent: 'Inspect planned scenario: Explicit organizational profile.'
+      observable: the contribution is validated once and native project tools retain their own plugin and configuration
+        semantics. Planning inspection only; runtime tests, RED/GREEN, installed acceptance and publication remain
+        pending.
+    - case_id: explicit-declarative-profile-contribution-unavailable-or-incompatible-provider-inspection
+      scenario_id: explicit-declarative-profile-contribution
+      method: inspection
+      intent: 'Inspect planned scenario: Unavailable or incompatible provider.'
+      observable: it reports an actionable profile failure without importing arbitrary project providers into the
+        controller or silently choosing another profile. Planning inspection only; runtime tests, RED/GREEN, installed
+        acceptance and publication remain pending.
+  ? openspec:code-review-18-project-standards-and-checks:project-standards-review:analyzer-dependencies-do-not-alter-customer-environments
+  : rationale: Review the owner-approved replacement contract at planned maturity without claiming implementation
+      evidence.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#514
+    touchpoints:
+    - id: project-standards-review-spec
+      kind: config_file
+      locator: openspec/changes/code-review-18-project-standards-and-checks/specs/project-standards-review/spec.md
+    verification_cases:
+    - case_id: analyzer-dependencies-do-not-alter-customer-environments-compatible-project-installed-tool-inspection
+      scenario_id: analyzer-dependencies-do-not-alter-customer-environments
+      method: inspection
+      intent: 'Inspect planned scenario: Compatible project-installed tool.'
+      observable: it uses that installation and records its version without installing or upgrading packages. Planning
+        inspection only; runtime tests, RED/GREEN, installed acceptance and publication remain pending.
+    - case_id: analyzer-dependencies-do-not-alter-customer-environments-conflicting-supplemental-analyzer-inspection
+      scenario_id: analyzer-dependencies-do-not-alter-customer-environments
+      method: inspection
+      intent: 'Inspect planned scenario: Conflicting supplemental analyzer.'
+      observable: the affected check is unavailable with a remedy, other checks continue, and customer dependencies
+        are neither replaced nor added to the controller import path. Planning inspection only; runtime tests, RED/GREEN,
+        installed acceptance and publication remain pending.
+  ? openspec:code-review-18-project-standards-and-checks:project-standards-review:existing-contracts-are-checked-without-mandatory-decoration
+  : rationale: Review the owner-approved replacement contract at planned maturity without claiming implementation
+      evidence.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#514
+    touchpoints:
+    - id: project-standards-review-spec
+      kind: config_file
+      locator: openspec/changes/code-review-18-project-standards-and-checks/specs/project-standards-review/spec.md
+    verification_cases:
+    - case_id: existing-contracts-are-checked-without-mandatory-decoration-actual-contract-violation-inspection
+      scenario_id: existing-contracts-are-checked-without-mandatory-decoration
+      method: inspection
+      intent: 'Inspect planned scenario: Actual contract violation.'
+      observable: the violation becomes an attributed finding with actual analyzer provenance. Planning inspection
+        only; runtime tests, RED/GREEN, installed acceptance and publication remain pending.
+    - case_id: existing-contracts-are-checked-without-mandatory-decoration-no-contracts-or-unsupported-contract-mechanism-inspection
+      scenario_id: existing-contracts-are-checked-without-mandatory-decoration
+      method: inspection
+      intent: 'Inspect planned scenario: No contracts or unsupported contract mechanism.'
+      observable: absence is not applicable and unsupported requested analysis is incomplete rather than a missing-icontract
+        finding or clean pass. Planning inspection only; runtime tests, RED/GREEN, installed acceptance and publication
+        remain pending.
+  ? openspec:code-review-18-project-standards-and-checks:project-standards-review:explicit-pytest-targets-retain-native-semantics
+  : rationale: Review the owner-approved replacement contract at planned maturity without claiming implementation
+      evidence.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#514
+    touchpoints:
+    - id: project-standards-review-spec
+      kind: config_file
+      locator: openspec/changes/code-review-18-project-standards-and-checks/specs/project-standards-review/spec.md
+    verification_cases:
+    - case_id: explicit-pytest-targets-retain-native-semantics-nonstandard-failing-test-filename-inspection
+      scenario_id: explicit-pytest-targets-retain-native-semantics
+      method: inspection
+      intent: 'Inspect planned scenario: Nonstandard failing test filename.'
+      observable: that file is collected and executed and its failure appears in the review result. Planning inspection
+        only; runtime tests, RED/GREEN, installed acceptance and publication remain pending.
+    - case_id: explicit-pytest-targets-retain-native-semantics-custom-patterns-and-mixed-sources-inspection
+      scenario_id: explicit-pytest-targets-retain-native-semantics
+      method: inspection
+      intent: 'Inspect planned scenario: Custom patterns and mixed sources.'
+      observable: the explicit test target is preserved and production-source mapping does not indiscriminately
+        execute source files as tests. Planning inspection only; runtime tests, RED/GREEN, installed acceptance
+        and publication remain pending.

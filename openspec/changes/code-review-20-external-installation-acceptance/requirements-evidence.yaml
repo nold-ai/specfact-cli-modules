@@ -1,0 +1,98 @@
+schema_version: '2'
+requirements:
+  ? openspec:code-review-20-external-installation-acceptance:external-review-acceptance:external-installation-survives-fresh-invocations
+  : rationale: Review the owner-approved replacement contract at planned maturity without claiming implementation
+      evidence.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#516
+    touchpoints:
+    - id: external-review-acceptance-spec
+      kind: config_file
+      locator: openspec/changes/code-review-20-external-installation-acceptance/specs/external-review-acceptance/spec.md
+    verification_cases:
+    - case_id: external-installation-survives-fresh-invocations-fresh-pipx-and-uv-tool-installations-inspection
+      scenario_id: external-installation-survives-fresh-invocations
+      method: inspection
+      intent: 'Inspect planned scenario: Fresh pipx and uv tool installations.'
+      observable: the command loads its modules, uses project Python, detects a seeded defect and leaves project
+        declarations and existing environment package inventory unchanged. Planning inspection only; runtime tests,
+        RED/GREEN, installed acceptance and publication remain pending.
+    - case_id: external-installation-survives-fresh-invocations-repeated-uvx-invocation-inspection
+      scenario_id: external-installation-survives-fresh-invocations
+      method: inspection
+      intent: 'Inspect planned scenario: Repeated uvx invocation.'
+      observable: module loading and declared dependencies work through supported installation paths without relying
+        on a previously mutated uvx environment. Planning inspection only; runtime tests, RED/GREEN, installed acceptance
+        and publication remain pending.
+  ? openspec:code-review-20-external-installation-acceptance:external-review-acceptance:published-compatibility-follows-installed-evidence
+  : rationale: Review the owner-approved replacement contract at planned maturity without claiming implementation
+      evidence.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#516
+    touchpoints:
+    - id: external-review-acceptance-spec
+      kind: config_file
+      locator: openspec/changes/code-review-20-external-installation-acceptance/specs/external-review-acceptance/spec.md
+    verification_cases:
+    - case_id: published-compatibility-follows-installed-evidence-manager-and-platform-corpus-inspection
+      scenario_id: published-compatibility-follows-installed-evidence
+      method: inspection
+      intent: 'Inspect planned scenario: Manager and platform corpus.'
+      observable: each advertised cell demonstrates imports, entrypoints, native dependencies, plugins, configured
+        checks and seeded defect detection or remains explicitly unadvertised. Planning inspection only; runtime
+        tests, RED/GREEN, installed acceptance and publication remain pending.
+    - case_id: published-compatibility-follows-installed-evidence-independent-python-support-inspection
+      scenario_id: published-compatibility-follows-installed-evidence
+      method: inspection
+      intent: 'Inspect planned scenario: Independent Python support.'
+      observable: their actual compatibility is recorded independently of the controller version and no capsule
+        ABI allowlist rejects the whole project. Planning inspection only; runtime tests, RED/GREEN, installed acceptance
+        and publication remain pending.
+  ? openspec:code-review-20-external-installation-acceptance:external-review-acceptance:ci-replacement-preserves-independent-gates
+  : rationale: Review the owner-approved replacement contract at planned maturity without claiming implementation
+      evidence.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#516
+    touchpoints:
+    - id: external-review-acceptance-spec
+      kind: config_file
+      locator: openspec/changes/code-review-20-external-installation-acceptance/specs/external-review-acceptance/spec.md
+    verification_cases:
+    - case_id: ci-replacement-preserves-independent-gates-capsule-specific-job-is-retired-inspection
+      scenario_id: ci-replacement-preserves-independent-gates
+      method: inspection
+      intent: 'Inspect planned scenario: Capsule-specific job is retired.'
+      observable: replacement customer acceptance remains required and unrelated signing/security obligations including
+        module symlink rejection are preserved. Planning inspection only; runtime tests, RED/GREEN, installed acceptance
+        and publication remain pending.
+    - case_id: ci-replacement-preserves-independent-gates-required-installed-cell-fails-inspection
+      scenario_id: ci-replacement-preserves-independent-gates
+      method: inspection
+      intent: 'Inspect planned scenario: Required installed cell fails.'
+      observable: the release is not declared accepted and a passing component suite cannot substitute for that
+        workflow. Planning inspection only; runtime tests, RED/GREEN, installed acceptance and publication remain
+        pending.
+  ? openspec:code-review-20-external-installation-acceptance:external-review-acceptance:coordinated-release-and-rollback-are-explicit
+  : rationale: Review the owner-approved replacement contract at planned maturity without claiming implementation
+      evidence.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#516
+    touchpoints:
+    - id: external-review-acceptance-spec
+      kind: config_file
+      locator: openspec/changes/code-review-20-external-installation-acceptance/specs/external-review-acceptance/spec.md
+    verification_cases:
+    - case_id: coordinated-release-and-rollback-are-explicit-release-artifacts-are-immutable-inspection
+      scenario_id: coordinated-release-and-rollback-are-explicit
+      method: inspection
+      intent: 'Inspect planned scenario: Release artifacts are immutable.'
+      observable: old signed capsules, modules and historical reports remain unchanged and do not inherit new local
+        support claims. Planning inspection only; runtime tests, RED/GREEN, installed acceptance and publication
+        remain pending.
+    - case_id: coordinated-release-and-rollback-are-explicit-rollback-after-consumer-incompatibility-inspection
+      scenario_id: coordinated-release-and-rollback-are-explicit
+      method: inspection
+      intent: 'Inspect planned scenario: Rollback after consumer incompatibility.'
+      observable: the previous compatible released CLI/module pair can be pinned without restoring a permanent alternate
+        capsule backend in the new production runner. Planning inspection only; runtime tests, RED/GREEN, installed
+        acceptance and publication remain pending.

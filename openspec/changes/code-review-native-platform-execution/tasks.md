@@ -1,5 +1,11 @@
 # Tasks: Dedicated macOS ARM64 Code Review Capsule
 
+## Remaining capsule scope superseded (2026-10-16)
+
+The owner explicitly replaced the capsule/sandbox approach with trusted local project-aware review. Modules #513-#516 and core #769 now own the replacement sequence. This partially delivered lineage remains in place to preserve shipped fixes, experiments, original task states and evidence. Its remaining capsule preparation, isolation, native publication and installed-capsule acceptance tasks are retired, not completed. Historical unchecked tasks below are not current implementation authority. No runtime code is removed and no unimplemented delta is promoted by this planning delivery.
+
+See [the replacement design](../code-review-17-project-runtime-bootstrap/design.md) and [issue dispositions](../code-review-17-project-runtime-bootstrap/GITHUB_ALIGNMENT.md). Native release/repair PRs #506/#509/#510 and capsule prerequisite #512 are superseded. Reuse customer-observable correctness cases as replacement tests; preserve independent signing/security obligations.
+
 ## 1. Planning revision
 
 - [x] Narrow #460 to macOS ARM64, preserve Linux regressions, and defer other platforms.

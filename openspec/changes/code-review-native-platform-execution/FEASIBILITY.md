@@ -32,7 +32,7 @@ individual measured checkpoints and remaining corpus failures.
 
 This owner-approved revision supersedes the earlier Developer-ID-first milestone.
 Optional [#488](https://github.com/nold-ai/specfact-cli-modules/issues/488) /
-[`code-review-macos-developer-id-distribution`](../code-review-macos-developer-id-distribution/proposal.md)
+[`code-review-macos-developer-id-distribution`](../../history/abandoned/2026-10-16-code-review-macos-developer-id-distribution/proposal.md)
 is blocked by #460; it does not block this change, shipment or publication.
 "Signed runtime" in this change means native signatures plus an authenticated
 SpecFact payload manifest, not a mandatory Apple publisher identity. Preserve
