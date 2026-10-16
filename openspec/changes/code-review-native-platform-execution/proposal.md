@@ -1,5 +1,11 @@
 # Change: Dedicated macOS ARM64 Code Review Capsule
 
+## Remaining capsule scope superseded (2026-10-16)
+
+The owner explicitly replaced the capsule/sandbox approach with trusted local project-aware review. Modules #513-#516 and core #769 now own the replacement sequence. This partially delivered lineage remains in place to preserve shipped fixes, experiments, original task states and evidence. Its remaining capsule preparation, isolation, native publication and installed-capsule acceptance tasks are retired, not completed. Historical unchecked tasks below are not current implementation authority. No runtime code is removed and no unimplemented delta is promoted by this planning delivery.
+
+See [the replacement design](../code-review-17-project-runtime-bootstrap/design.md) and [issue dispositions](../code-review-17-project-runtime-bootstrap/GITHUB_ALIGNMENT.md). Native release/repair PRs #506/#509/#510 and capsule prerequisite #512 are superseded. Reuse customer-observable correctness cases as replacement tests; preserve independent signing/security obligations.
+
 ## Delivery correction — 2026-10-06 (Europe/Berlin)
 
 Code Review 0.51.0 and core 0.55.4 are released, but the authenticated native
@@ -33,7 +39,7 @@ for final Linux/Windows acceptance. Record CPU emulation separately. This change
 still delivers macOS ARM64 and Linux x86-64; Windows and Linux ARM64 follow later.
 Developer ID remains optional #488, and module signing keys are used only in CI.
 Deferred Windows delivery is [#495](https://github.com/nold-ai/specfact-cli-modules/issues/495) /
-[`code-review-windows-native-platform-execution`](../code-review-windows-native-platform-execution/proposal.md).
+[`code-review-windows-native-platform-execution`](../../history/abandoned/2026-10-16-code-review-windows-native-platform-execution/proposal.md).
 #460 blocks that follow-up; it does not block this change.
 
 Earlier signed per-project acquisition bundles remain historical experiments or
@@ -43,7 +49,7 @@ explicit fixture imports; they must never be required to review an unknown repo.
 
 This owner-approved revision supersedes the earlier Developer-ID-first milestone.
 Optional [#488](https://github.com/nold-ai/specfact-cli-modules/issues/488) /
-[`code-review-macos-developer-id-distribution`](../code-review-macos-developer-id-distribution/proposal.md)
+[`code-review-macos-developer-id-distribution`](../../history/abandoned/2026-10-16-code-review-macos-developer-id-distribution/proposal.md)
 is blocked by #460; it does not block this change, shipment or publication.
 "Signed runtime" in this change means native signatures plus an authenticated
 SpecFact payload manifest, not a mandatory Apple publisher identity. Preserve

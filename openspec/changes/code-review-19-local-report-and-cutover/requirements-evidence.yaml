@@ -1,0 +1,119 @@
+schema_version: '2'
+requirements:
+  openspec:code-review-19-local-report-and-cutover:local-review-execution:versioned-local-evidence-has-explicit-consumers:
+    rationale: Review the owner-approved replacement contract at planned maturity without claiming implementation
+      evidence.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#515
+    touchpoints:
+    - id: local-review-execution-spec
+      kind: config_file
+      locator: openspec/changes/code-review-19-local-report-and-cutover/specs/local-review-execution/spec.md
+    verification_cases:
+    - case_id: versioned-local-evidence-has-explicit-consumers-new-major-version-is-not-legacy-evidence-inspection
+      scenario_id: versioned-local-evidence-has-explicit-consumers
+      method: inspection
+      intent: 'Inspect planned scenario: New major version is not legacy evidence.'
+      observable: it selects the explicit local schema handler and does not invoke capsule-profile validation. Planning
+        inspection only; runtime tests, RED/GREEN, installed acceptance and publication remain pending.
+    - case_id: versioned-local-evidence-has-explicit-consumers-unknown-major-or-malformed-required-evidence-inspection
+      scenario_id: versioned-local-evidence-has-explicit-consumers
+      method: inspection
+      intent: 'Inspect planned scenario: Unknown major or malformed required evidence.'
+      observable: it rejects or reports incomplete evidence and never falls back to score-based or fabricated legacy
+        acceptance. Planning inspection only; runtime tests, RED/GREEN, installed acceptance and publication remain
+        pending.
+  openspec:code-review-19-local-report-and-cutover:local-review-execution:findings-and-execution-completeness-are-separate:
+    rationale: Review the owner-approved replacement contract at planned maturity without claiming implementation
+      evidence.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#515
+    touchpoints:
+    - id: local-review-execution-spec
+      kind: config_file
+      locator: openspec/changes/code-review-19-local-report-and-cutover/specs/local-review-execution/spec.md
+    verification_cases:
+    - case_id: findings-and-execution-completeness-are-separate-completed-failing-test-inspection
+      scenario_id: findings-and-execution-completeness-are-separate
+      method: inspection
+      intent: 'Inspect planned scenario: Completed failing test.'
+      observable: the test failure remains observed evidence and is not relabeled as infrastructure uncertainty.
+        Planning inspection only; runtime tests, RED/GREEN, installed acceptance and publication remain pending.
+    - case_id: findings-and-execution-completeness-are-separate-incomplete-required-analysis-in-shadow-inspection
+      scenario_id: findings-and-execution-completeness-are-separate
+      method: inspection
+      intent: 'Inspect planned scenario: Incomplete required analysis in shadow.'
+      observable: both reports retain adverse truth and incomplete status while shadow may exit zero and non-shadow
+        enforcement remains nonaccepting. Planning inspection only; runtime tests, RED/GREEN, installed acceptance
+        and publication remain pending.
+  openspec:code-review-19-local-report-and-cutover:local-review-execution:execution-binds-the-reviewed-source:
+    rationale: Review the owner-approved replacement contract at planned maturity without claiming implementation
+      evidence.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#515
+    touchpoints:
+    - id: local-review-execution-spec
+      kind: config_file
+      locator: openspec/changes/code-review-19-local-report-and-cutover/specs/local-review-execution/spec.md
+    verification_cases:
+    - case_id: execution-binds-the-reviewed-source-live-editable-import-points-outside-snapshot-inspection
+      scenario_id: execution-binds-the-reviewed-source
+      method: inspection
+      intent: 'Inspect planned scenario: Live editable import points outside snapshot.'
+      observable: review prepares faithful snapshot context or marks that check incomplete instead of reporting
+        live-checkout execution as snapshot evidence. Planning inspection only; runtime tests, RED/GREEN, installed
+        acceptance and publication remain pending.
+    - case_id: execution-binds-the-reviewed-source-source-changes-during-worktree-review-inspection
+      scenario_id: execution-binds-the-reviewed-source
+      method: inspection
+      intent: 'Inspect planned scenario: Source changes during worktree review.'
+      observable: it reports stale or incomplete evidence rather than attributing all results to one unchanged source.
+        Planning inspection only; runtime tests, RED/GREEN, installed acceptance and publication remain pending.
+  openspec:code-review-19-local-report-and-cutover:local-review-execution:local-evidence-cannot-grant-protected-authority:
+    rationale: Review the owner-approved replacement contract at planned maturity without claiming implementation
+      evidence.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#515
+    touchpoints:
+    - id: local-review-execution-spec
+      kind: config_file
+      locator: openspec/changes/code-review-19-local-report-and-cutover/specs/local-review-execution/spec.md
+    verification_cases:
+    - case_id: local-evidence-cannot-grant-protected-authority-caller-supplies-pr-context-inspection
+      scenario_id: local-evidence-cannot-grant-protected-authority
+      method: inspection
+      intent: 'Inspect planned scenario: Caller supplies PR context.'
+      observable: the report remains local evidence and a protected consumer cannot promote it using the old capsule
+        contract. Planning inspection only; runtime tests, RED/GREEN, installed acceptance and publication remain
+        pending.
+    - case_id: local-evidence-cannot-grant-protected-authority-historical-differential-behavior-inspection
+      scenario_id: local-evidence-cannot-grant-protected-authority
+      method: inspection
+      intent: 'Inspect planned scenario: Historical differential behavior.'
+      observable: existing identity, multiplicity, differential and suppression semantics are preserved, and incompatible
+        identities remain unknown. Planning inspection only; runtime tests, RED/GREEN, installed acceptance and
+        publication remain pending.
+  openspec:code-review-19-local-report-and-cutover:local-review-execution:public-cutover-removes-capsule-execution:
+    rationale: Review the owner-approved replacement contract at planned maturity without claiming implementation
+      evidence.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#515
+    touchpoints:
+    - id: local-review-execution-spec
+      kind: config_file
+      locator: openspec/changes/code-review-19-local-report-and-cutover/specs/local-review-execution/spec.md
+    verification_cases:
+    - case_id: public-cutover-removes-capsule-execution-no-capsule-prerequisite-or-fallback-inspection
+      scenario_id: public-cutover-removes-capsule-execution
+      method: inspection
+      intent: 'Inspect planned scenario: No capsule prerequisite or fallback.'
+      observable: it uses the selected project and analyzer contexts without acquiring or launching any capsule
+        backend. Planning inspection only; runtime tests, RED/GREEN, installed acceptance and publication remain
+        pending.
+    - case_id: public-cutover-removes-capsule-execution-capsule-capability-is-removed-without-false-completion-inspection
+      scenario_id: public-cutover-removes-capsule-execution
+      method: inspection
+      intent: 'Inspect planned scenario: Capsule capability is removed without false completion.'
+      observable: obsolete guarantees are removed by the owning implementation deltas and historical signed artifacts
+        remain immutable. Planning inspection only; runtime tests, RED/GREEN, installed acceptance and publication
+        remain pending.

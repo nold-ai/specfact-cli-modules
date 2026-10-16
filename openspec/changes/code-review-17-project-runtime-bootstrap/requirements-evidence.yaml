@@ -1,0 +1,127 @@
+schema_version: '2'
+requirements:
+  openspec:code-review-17-project-runtime-bootstrap:project-runtime-bootstrap:independent-customer-interpreter-selection:
+    rationale: Review the owner-approved replacement contract at planned maturity without claiming implementation
+      evidence.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#513
+    touchpoints:
+    - id: project-runtime-bootstrap-spec
+      kind: config_file
+      locator: openspec/changes/code-review-17-project-runtime-bootstrap/specs/project-runtime-bootstrap/spec.md
+    verification_cases:
+    - case_id: independent-customer-interpreter-selection-different-controller-and-project-versions-inspection
+      scenario_id: independent-customer-interpreter-selection
+      method: inspection
+      intent: 'Inspect planned scenario: Different controller and project versions.'
+      observable: project imports and commands use the selected interpreter and the report records both identities.
+        Planning inspection only; runtime tests, RED/GREEN, installed acceptance and publication remain pending.
+    - case_id: independent-customer-interpreter-selection-ambiguous-or-missing-interpreter-inspection
+      scenario_id: independent-customer-interpreter-selection
+      method: inspection
+      intent: 'Inspect planned scenario: Ambiguous or missing interpreter.'
+      observable: it names the candidates or missing version and performs no installation or controller-Python fallback.
+        Planning inspection only; runtime tests, RED/GREEN, installed acceptance and publication remain pending.
+  openspec:code-review-17-project-runtime-bootstrap:project-runtime-bootstrap:faithful-external-sidecar-preparation:
+    rationale: Review the owner-approved replacement contract at planned maturity without claiming implementation
+      evidence.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#513
+    touchpoints:
+    - id: project-runtime-bootstrap-spec
+      kind: config_file
+      locator: openspec/changes/code-review-17-project-runtime-bootstrap/specs/project-runtime-bootstrap/spec.md
+    verification_cases:
+    - case_id: faithful-external-sidecar-preparation-first-detached-hatch-workflow-inspection
+      scenario_id: faithful-external-sidecar-preparation
+      method: inspection
+      intent: 'Inspect planned scenario: First detached Hatch workflow.'
+      observable: both execute the selected project command, native pytest plugin, entrypoint and dependency imports
+        with unchanged project declarations and customer environment inventory. Planning inspection only; runtime
+        tests, RED/GREEN, installed acceptance and publication remain pending.
+    - case_id: faithful-external-sidecar-preparation-locked-manager-preparation-inspection
+      scenario_id: faithful-external-sidecar-preparation
+      method: inspection
+      intent: 'Inspect planned scenario: Locked manager preparation.'
+      observable: the native manager consumes the selected inputs without rewriting locks, weakening constraints,
+        or replacing manager semantics with a generic pip install. Planning inspection only; runtime tests, RED/GREEN,
+        installed acceptance and publication remain pending.
+    - case_id: faithful-external-sidecar-preparation-unlocked-project-resolution-inspection
+      scenario_id: faithful-external-sidecar-preparation
+      method: inspection
+      intent: 'Inspect planned scenario: Unlocked project resolution.'
+      observable: the resulting dependency and origin identities are recorded externally and no lock or constraints
+        are written into the customer project. Planning inspection only; runtime tests, RED/GREEN, installed acceptance
+        and publication remain pending.
+  openspec:code-review-17-project-runtime-bootstrap:project-runtime-bootstrap:single-project-execution-owner:
+    rationale: Review the owner-approved replacement contract at planned maturity without claiming implementation
+      evidence.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#513
+    touchpoints:
+    - id: project-runtime-bootstrap-spec
+      kind: config_file
+      locator: openspec/changes/code-review-17-project-runtime-bootstrap/specs/project-runtime-bootstrap/spec.md
+    verification_cases:
+    - case_id: single-project-execution-owner-existing-sidecar-consumes-project-context-inspection
+      scenario_id: single-project-execution-owner
+      method: inspection
+      intent: 'Inspect planned scenario: Existing sidecar consumes project context.'
+      observable: it uses the shared service without separately installing unpinned analyzer or framework packages
+        into the customer environment. Planning inspection only; runtime tests, RED/GREEN, installed acceptance
+        and publication remain pending.
+    - case_id: single-project-execution-owner-manager-scripts-and-workspace-roots-inspection
+      scenario_id: single-project-execution-owner
+      method: inspection
+      intent: 'Inspect planned scenario: Manager scripts and workspace roots.'
+      observable: the chosen working directory, manager environment, script expansion and import roots match the
+        project context rather than a controller heuristic. Planning inspection only; runtime tests, RED/GREEN,
+        installed acceptance and publication remain pending.
+  openspec:code-review-17-project-runtime-bootstrap:project-runtime-bootstrap:preparation-failure-and-reuse-are-explicit:
+    rationale: Review the owner-approved replacement contract at planned maturity without claiming implementation
+      evidence.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#513
+    touchpoints:
+    - id: project-runtime-bootstrap-spec
+      kind: config_file
+      locator: openspec/changes/code-review-17-project-runtime-bootstrap/specs/project-runtime-bootstrap/spec.md
+    verification_cases:
+    - case_id: preparation-failure-and-reuse-are-explicit-missing-native-library-or-credentials-inspection
+      scenario_id: preparation-failure-and-reuse-are-explicit
+      method: inspection
+      intent: 'Inspect planned scenario: Missing native library or credentials.'
+      observable: the failure names the affected capability and remedy, preserves independent static findings, and
+        leaves required dynamic checks incomplete. Planning inspection only; runtime tests, RED/GREEN, installed
+        acceptance and publication remain pending.
+    - case_id: preparation-failure-and-reuse-are-explicit-interrupted-or-stale-preparation-inspection
+      scenario_id: preparation-failure-and-reuse-are-explicit
+      method: inspection
+      intent: 'Inspect planned scenario: Interrupted or stale preparation.'
+      observable: the partial or stale context is not treated as ready and a fresh owned preparation can proceed
+        without modifying customer inputs. Planning inspection only; runtime tests, RED/GREEN, installed acceptance
+        and publication remain pending.
+  openspec:code-review-17-project-runtime-bootstrap:project-runtime-bootstrap:portable-inspection-and-bootstrap-commands:
+    rationale: Review the owner-approved replacement contract at planned maturity without claiming implementation
+      evidence.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#513
+    touchpoints:
+    - id: project-runtime-bootstrap-spec
+      kind: config_file
+      locator: openspec/changes/code-review-17-project-runtime-bootstrap/specs/project-runtime-bootstrap/spec.md
+    verification_cases:
+    - case_id: portable-inspection-and-bootstrap-commands-inspection-has-no-project-side-effects-inspection
+      scenario_id: portable-inspection-and-bootstrap-commands
+      method: inspection
+      intent: 'Inspect planned scenario: Inspection has no project side effects.'
+      observable: it reports selected inputs and ambiguities without creating environments or importing project
+        setup code. Planning inspection only; runtime tests, RED/GREEN, installed acceptance and publication remain
+        pending.
+    - case_id: portable-inspection-and-bootstrap-commands-existing-descriptor-option-is-not-reinterpreted-inspection
+      scenario_id: portable-inspection-and-bootstrap-commands
+      method: inspection
+      intent: 'Inspect planned scenario: Existing descriptor option is not reinterpreted.'
+      observable: it either reads an explicitly supported versioned local descriptor or returns a migration diagnostic,
+        and never silently treats the descriptor path as an interpreter executable. Planning inspection only; runtime
+        tests, RED/GREEN, installed acceptance and publication remain pending.

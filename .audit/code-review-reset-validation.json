@@ -1,0 +1,2106 @@
+{
+  "artifact_kind": "planning-validation-receipt",
+  "observed_date": "2026-10-16",
+  "scope": "Historical initial mapping failure and public disposition snapshots plus repeated current planning inspection. Not runtime, TDD, release acceptance or protected authority.",
+  "projection": "Lifecycle results retain verdicts, source identities, mapping digests and findings; public GitHub snapshots retain hierarchy, labels, assignees, project state, blockers and immutable PR heads. Full scenario prose and unrelated transport fields are omitted.",
+  "initial_requirements_failure": {
+    "schema_version": "2",
+    "verdict": "failed",
+    "gate_decision": "fail",
+    "required_maturity": "planned",
+    "observed_maturity": "incomplete",
+    "delivery_status": "incomplete",
+    "implementation_evidence": "not-available",
+    "sources": [
+      {
+        "schema_version": "2",
+        "verdict": "passed",
+        "gate_decision": "pass",
+        "required_maturity": "planned",
+        "observed_maturity": "planned",
+        "delivery_status": "proposal-only",
+        "implementation_evidence": "not-yet-available",
+        "findings": [],
+        "mapping_digest": "sha256:983c859ed454eac500e467a63ee040da26b59a450b02542fde2ed79df82aa84f",
+        "source": "nold-ai/specfact-cli-modules/openspec/changes/code-review-17-project-runtime-bootstrap"
+      },
+      {
+        "schema_version": "2",
+        "verdict": "passed",
+        "gate_decision": "pass",
+        "required_maturity": "planned",
+        "observed_maturity": "planned",
+        "delivery_status": "proposal-only",
+        "implementation_evidence": "not-yet-available",
+        "findings": [],
+        "mapping_digest": "sha256:349d6a815f7960171fc557e80e4acc28633f85d0e4c1b78bbd19b7ad1fa52bab",
+        "source": "nold-ai/specfact-cli-modules/openspec/changes/code-review-18-project-standards-and-checks"
+      },
+      {
+        "schema_version": "2",
+        "verdict": "passed",
+        "gate_decision": "pass",
+        "required_maturity": "planned",
+        "observed_maturity": "planned",
+        "delivery_status": "proposal-only",
+        "implementation_evidence": "not-yet-available",
+        "findings": [],
+        "mapping_digest": "sha256:af00eb3ef32bfccad98f0348def986229fbf3d9940ccc493df3c087acc333d0a",
+        "source": "nold-ai/specfact-cli-modules/openspec/changes/code-review-19-local-report-and-cutover"
+      },
+      {
+        "schema_version": "2",
+        "verdict": "passed",
+        "gate_decision": "pass",
+        "required_maturity": "planned",
+        "observed_maturity": "planned",
+        "delivery_status": "proposal-only",
+        "implementation_evidence": "not-yet-available",
+        "findings": [],
+        "mapping_digest": "sha256:a8554281e69d3cacbdfcf15ae8464efe4ce610be5171f81af532a945db4920ee",
+        "source": "nold-ai/specfact-cli-modules/openspec/changes/code-review-20-external-installation-acceptance"
+      },
+      {
+        "schema_version": "2",
+        "verdict": "failed",
+        "gate_decision": "fail",
+        "required_maturity": "planned",
+        "observed_maturity": "incomplete",
+        "delivery_status": "incomplete",
+        "implementation_evidence": "not-available",
+        "findings": [
+          "unknown-source-scenario:openspec:code-review-local-report-adoption:local-review-consumer:explicit-report-schema-dispatch:bound-historical-support",
+          "unknown-source-scenario:openspec:code-review-local-report-adoption:local-review-consumer:explicit-report-schema-dispatch:reject-unsupported-evidence",
+          "unknown-source-scenario:openspec:code-review-local-report-adoption:local-review-consumer:explicit-report-schema-dispatch:select-the-schema-2.0-consumer",
+          "unknown-source-scenario:openspec:code-review-local-report-adoption:local-review-consumer:keep-protected-contracts-and-independent-gates-separate:retain-independent-security-and-signatures",
+          "unknown-source-scenario:openspec:code-review-local-report-adoption:local-review-consumer:keep-protected-contracts-and-independent-gates-separate:retain-separate-protected-acceptance",
+          "unknown-source-scenario:openspec:code-review-local-report-adoption:local-review-consumer:preserve-authoritative-local-truth:preserve-incomplete-shadow-results",
+          "unknown-source-scenario:openspec:code-review-local-report-adoption:local-review-consumer:preserve-authoritative-local-truth:reject-score-based-success",
+          "unknown-source-scenario:openspec:code-review-local-report-adoption:local-review-consumer:separate-installed-cli-and-project-runtime:handle-uvx-without-pip",
+          "unknown-source-scenario:openspec:code-review-local-report-adoption:local-review-consumer:separate-installed-cli-and-project-runtime:preserve-the-runtime-descriptor",
+          "unknown-source-scenario:openspec:code-review-local-report-adoption:local-review-consumer:separate-installed-cli-and-project-runtime:run-an-externally-installed-cli"
+        ],
+        "mapping_digest": "sha256:d9ba7c61314e1f37ebbaf4259c43cf3d073272964760f554eb34e02f0b5b1d06",
+        "source": "nold-ai/specfact-cli/openspec/changes/code-review-local-report-adoption"
+      }
+    ]
+  },
+  "current_requirements": {
+    "schema_version": "2",
+    "verdict": "passed",
+    "gate_decision": "pass",
+    "required_maturity": "planned",
+    "observed_maturity": "planned",
+    "delivery_status": "proposal-only",
+    "implementation_evidence": "not-yet-available",
+    "sources": [
+      {
+        "schema_version": "2",
+        "verdict": "passed",
+        "gate_decision": "pass",
+        "required_maturity": "planned",
+        "observed_maturity": "planned",
+        "delivery_status": "proposal-only",
+        "implementation_evidence": "not-yet-available",
+        "findings": [],
+        "mapping_digest": "sha256:983c859ed454eac500e467a63ee040da26b59a450b02542fde2ed79df82aa84f",
+        "source": "nold-ai/specfact-cli-modules/openspec/changes/code-review-17-project-runtime-bootstrap"
+      },
+      {
+        "schema_version": "2",
+        "verdict": "passed",
+        "gate_decision": "pass",
+        "required_maturity": "planned",
+        "observed_maturity": "planned",
+        "delivery_status": "proposal-only",
+        "implementation_evidence": "not-yet-available",
+        "findings": [],
+        "mapping_digest": "sha256:349d6a815f7960171fc557e80e4acc28633f85d0e4c1b78bbd19b7ad1fa52bab",
+        "source": "nold-ai/specfact-cli-modules/openspec/changes/code-review-18-project-standards-and-checks"
+      },
+      {
+        "schema_version": "2",
+        "verdict": "passed",
+        "gate_decision": "pass",
+        "required_maturity": "planned",
+        "observed_maturity": "planned",
+        "delivery_status": "proposal-only",
+        "implementation_evidence": "not-yet-available",
+        "findings": [],
+        "mapping_digest": "sha256:af00eb3ef32bfccad98f0348def986229fbf3d9940ccc493df3c087acc333d0a",
+        "source": "nold-ai/specfact-cli-modules/openspec/changes/code-review-19-local-report-and-cutover"
+      },
+      {
+        "schema_version": "2",
+        "verdict": "passed",
+        "gate_decision": "pass",
+        "required_maturity": "planned",
+        "observed_maturity": "planned",
+        "delivery_status": "proposal-only",
+        "implementation_evidence": "not-yet-available",
+        "findings": [],
+        "mapping_digest": "sha256:5b727b1a145551f341938e8b65a22c4db5949612e73deba5d8d068f090a821bc",
+        "source": "nold-ai/specfact-cli-modules/openspec/changes/code-review-20-external-installation-acceptance"
+      },
+      {
+        "schema_version": "2",
+        "verdict": "passed",
+        "gate_decision": "pass",
+        "required_maturity": "planned",
+        "observed_maturity": "planned",
+        "delivery_status": "proposal-only",
+        "implementation_evidence": "not-yet-available",
+        "findings": [],
+        "mapping_digest": "sha256:13376e544f2dde53dcc28b11f79d79982509ea8456f77583b1e359b9ea445301",
+        "source": "nold-ai/specfact-cli/openspec/changes/code-review-local-report-adoption"
+      }
+    ]
+  },
+  "current_structure": {
+    "result": "pass",
+    "sources": [
+      {
+        "source": "code-review-17-project-runtime-bootstrap",
+        "requirements": 5,
+        "scenarios": 11,
+        "unchecked_tasks": 18
+      },
+      {
+        "source": "code-review-18-project-standards-and-checks",
+        "requirements": 5,
+        "scenarios": 11,
+        "unchecked_tasks": 18
+      },
+      {
+        "source": "code-review-19-local-report-and-cutover",
+        "requirements": 5,
+        "scenarios": 10,
+        "unchecked_tasks": 18
+      },
+      {
+        "source": "code-review-20-external-installation-acceptance",
+        "requirements": 4,
+        "scenarios": 9,
+        "unchecked_tasks": 18
+      },
+      {
+        "source": "code-review-local-report-adoption",
+        "requirements": 4,
+        "scenarios": 14,
+        "unchecked_tasks": 18
+      }
+    ],
+    "runtime_implementation": false,
+    "canonical_spec_promotion": false,
+    "production_files_changed": false
+  },
+  "historical_github_before_disposition": {
+    "specfact-cli-modules": {
+      "i163": {
+        "number": 163,
+        "title": "Validation Evidence And Governance Runtime Follow-Ups",
+        "state": "OPEN",
+        "stateReason": null,
+        "issueType": {
+          "name": "Feature"
+        },
+        "assignees": {
+          "nodes": []
+        },
+        "labels": {
+          "nodes": [
+            {
+              "name": "enhancement"
+            },
+            {
+              "name": "codebase"
+            },
+            {
+              "name": "openspec"
+            },
+            {
+              "name": "change-proposal"
+            },
+            {
+              "name": "Feature"
+            }
+          ]
+        },
+        "parent": {
+          "number": 162
+        },
+        "blockedBy": {
+          "nodes": []
+        },
+        "projects": [
+          {
+            "title": "SpecFact CLI",
+            "status": "In Progress"
+          }
+        ]
+      },
+      "i417": {
+        "number": 417,
+        "title": "[Change] Calibrate Code Review into a truthful blocking gate",
+        "state": "OPEN",
+        "stateReason": null,
+        "issueType": {
+          "name": "User Story"
+        },
+        "assignees": {
+          "nodes": [
+            {
+              "login": "djm81"
+            }
+          ]
+        },
+        "labels": {
+          "nodes": [
+            {
+              "name": "enhancement"
+            },
+            {
+              "name": "codebase"
+            },
+            {
+              "name": "openspec"
+            },
+            {
+              "name": "change-proposal"
+            }
+          ]
+        },
+        "parent": {
+          "number": 163
+        },
+        "blockedBy": {
+          "nodes": [
+            {
+              "number": 680,
+              "repository": {
+                "nameWithOwner": "nold-ai/specfact-cli"
+              }
+            },
+            {
+              "number": 248,
+              "repository": {
+                "nameWithOwner": "nold-ai/specfact-cli"
+              }
+            },
+            {
+              "number": 237,
+              "repository": {
+                "nameWithOwner": "nold-ai/specfact-cli"
+              }
+            },
+            {
+              "number": 167,
+              "repository": {
+                "nameWithOwner": "nold-ai/specfact-cli-modules"
+              }
+            },
+            {
+              "number": 158,
+              "repository": {
+                "nameWithOwner": "nold-ai/specfact-cli-modules"
+              }
+            },
+            {
+              "number": 416,
+              "repository": {
+                "nameWithOwner": "nold-ai/specfact-cli-modules"
+              }
+            }
+          ]
+        },
+        "projects": [
+          {
+            "title": "SpecFact CLI",
+            "status": "In Progress"
+          }
+        ]
+      },
+      "i460": {
+        "number": 460,
+        "title": "[Change] Dedicated macOS ARM64 Code Review capsule",
+        "state": "OPEN",
+        "stateReason": "REOPENED",
+        "issueType": {
+          "name": "User Story"
+        },
+        "assignees": {
+          "nodes": [
+            {
+              "login": "djm81"
+            }
+          ]
+        },
+        "labels": {
+          "nodes": [
+            {
+              "name": "enhancement"
+            },
+            {
+              "name": "codebase"
+            },
+            {
+              "name": "openspec"
+            },
+            {
+              "name": "change-proposal"
+            },
+            {
+              "name": "architecture"
+            }
+          ]
+        },
+        "parent": {
+          "number": 163
+        },
+        "blockedBy": {
+          "nodes": [
+            {
+              "number": 512,
+              "repository": {
+                "nameWithOwner": "nold-ai/specfact-cli-modules"
+              }
+            },
+            {
+              "number": 459,
+              "repository": {
+                "nameWithOwner": "nold-ai/specfact-cli-modules"
+              }
+            }
+          ]
+        },
+        "projects": [
+          {
+            "title": "SpecFact CLI",
+            "status": "Todo"
+          }
+        ]
+      },
+      "i480": {
+        "number": 480,
+        "title": "[P2][Bug] Post-0.50.1: preserve explicit pytest file selection in portable reviews",
+        "state": "OPEN",
+        "stateReason": null,
+        "issueType": {
+          "name": "Bug"
+        },
+        "assignees": {
+          "nodes": [
+            {
+              "login": "djm81"
+            }
+          ]
+        },
+        "labels": {
+          "nodes": [
+            {
+              "name": "bug"
+            },
+            {
+              "name": "module"
+            },
+            {
+              "name": "codebase"
+            }
+          ]
+        },
+        "parent": {
+          "number": 163
+        },
+        "blockedBy": {
+          "nodes": []
+        },
+        "projects": [
+          {
+            "title": "SpecFact CLI",
+            "status": "Todo"
+          }
+        ]
+      },
+      "i488": {
+        "number": 488,
+        "title": "Optional Developer ID signing and notarization for macOS capsules",
+        "state": "OPEN",
+        "stateReason": null,
+        "issueType": null,
+        "assignees": {
+          "nodes": []
+        },
+        "labels": {
+          "nodes": [
+            {
+              "name": "enhancement"
+            },
+            {
+              "name": "codebase"
+            },
+            {
+              "name": "openspec"
+            },
+            {
+              "name": "change-proposal"
+            },
+            {
+              "name": "architecture"
+            }
+          ]
+        },
+        "parent": {
+          "number": 163
+        },
+        "blockedBy": {
+          "nodes": [
+            {
+              "number": 460,
+              "repository": {
+                "nameWithOwner": "nold-ai/specfact-cli-modules"
+              }
+            }
+          ]
+        },
+        "projects": [
+          {
+            "title": "SpecFact CLI",
+            "status": "Todo"
+          }
+        ]
+      },
+      "i495": {
+        "number": 495,
+        "title": "[Change] Native Windows x86-64 Code Review capsule with project-driven preparation",
+        "state": "OPEN",
+        "stateReason": null,
+        "issueType": null,
+        "assignees": {
+          "nodes": [
+            {
+              "login": "djm81"
+            }
+          ]
+        },
+        "labels": {
+          "nodes": [
+            {
+              "name": "enhancement"
+            },
+            {
+              "name": "codebase"
+            },
+            {
+              "name": "openspec"
+            },
+            {
+              "name": "change-proposal"
+            },
+            {
+              "name": "architecture"
+            }
+          ]
+        },
+        "parent": {
+          "number": 163
+        },
+        "blockedBy": {
+          "nodes": [
+            {
+              "number": 460,
+              "repository": {
+                "nameWithOwner": "nold-ai/specfact-cli-modules"
+              }
+            }
+          ]
+        },
+        "projects": [
+          {
+            "title": "SpecFact CLI",
+            "status": "Todo"
+          }
+        ]
+      },
+      "i511": {
+        "number": 511,
+        "title": "[Bug] Reject symlink bundle payloads before signing and verification",
+        "state": "OPEN",
+        "stateReason": null,
+        "issueType": null,
+        "assignees": {
+          "nodes": [
+            {
+              "login": "djm81"
+            }
+          ]
+        },
+        "labels": {
+          "nodes": [
+            {
+              "name": "bug"
+            },
+            {
+              "name": "openspec"
+            },
+            {
+              "name": "change-proposal"
+            },
+            {
+              "name": "architecture"
+            },
+            {
+              "name": "security"
+            }
+          ]
+        },
+        "parent": {
+          "number": 187
+        },
+        "blockedBy": {
+          "nodes": []
+        },
+        "projects": [
+          {
+            "title": "SpecFact CLI",
+            "status": "Todo"
+          }
+        ]
+      },
+      "i512": {
+        "number": 512,
+        "title": "Correct baseline capsule review prerequisites",
+        "state": "OPEN",
+        "stateReason": null,
+        "issueType": null,
+        "assignees": {
+          "nodes": [
+            {
+              "login": "djm81"
+            }
+          ]
+        },
+        "labels": {
+          "nodes": [
+            {
+              "name": "bug"
+            },
+            {
+              "name": "codebase"
+            },
+            {
+              "name": "openspec"
+            },
+            {
+              "name": "change-proposal"
+            }
+          ]
+        },
+        "parent": {
+          "number": 163
+        },
+        "blockedBy": {
+          "nodes": []
+        },
+        "projects": [
+          {
+            "title": "SpecFact CLI",
+            "status": "Todo"
+          }
+        ]
+      },
+      "i513": {
+        "number": 513,
+        "title": "[User Story] Project-aware runtime and lightweight sidecar bootstrap",
+        "state": "OPEN",
+        "stateReason": null,
+        "issueType": {
+          "name": "User Story"
+        },
+        "assignees": {
+          "nodes": [
+            {
+              "login": "djm81"
+            }
+          ]
+        },
+        "labels": {
+          "nodes": [
+            {
+              "name": "enhancement"
+            },
+            {
+              "name": "codebase"
+            },
+            {
+              "name": "openspec"
+            },
+            {
+              "name": "change-proposal"
+            },
+            {
+              "name": "architecture"
+            }
+          ]
+        },
+        "parent": {
+          "number": 163
+        },
+        "blockedBy": {
+          "nodes": []
+        },
+        "projects": [
+          {
+            "title": "SpecFact CLI",
+            "status": "Todo"
+          }
+        ]
+      },
+      "i514": {
+        "number": 514,
+        "title": "[User Story] Customer-owned standards and compatible review checks",
+        "state": "OPEN",
+        "stateReason": null,
+        "issueType": {
+          "name": "User Story"
+        },
+        "assignees": {
+          "nodes": [
+            {
+              "login": "djm81"
+            }
+          ]
+        },
+        "labels": {
+          "nodes": [
+            {
+              "name": "enhancement"
+            },
+            {
+              "name": "codebase"
+            },
+            {
+              "name": "openspec"
+            },
+            {
+              "name": "change-proposal"
+            },
+            {
+              "name": "architecture"
+            }
+          ]
+        },
+        "parent": {
+          "number": 163
+        },
+        "blockedBy": {
+          "nodes": [
+            {
+              "number": 513,
+              "repository": {
+                "nameWithOwner": "nold-ai/specfact-cli-modules"
+              }
+            }
+          ]
+        },
+        "projects": [
+          {
+            "title": "SpecFact CLI",
+            "status": "Todo"
+          }
+        ]
+      },
+      "i515": {
+        "number": 515,
+        "title": "[User Story] Local review evidence and capsule removal",
+        "state": "OPEN",
+        "stateReason": null,
+        "issueType": {
+          "name": "User Story"
+        },
+        "assignees": {
+          "nodes": [
+            {
+              "login": "djm81"
+            }
+          ]
+        },
+        "labels": {
+          "nodes": [
+            {
+              "name": "enhancement"
+            },
+            {
+              "name": "codebase"
+            },
+            {
+              "name": "openspec"
+            },
+            {
+              "name": "change-proposal"
+            },
+            {
+              "name": "architecture"
+            }
+          ]
+        },
+        "parent": {
+          "number": 163
+        },
+        "blockedBy": {
+          "nodes": [
+            {
+              "number": 514,
+              "repository": {
+                "nameWithOwner": "nold-ai/specfact-cli-modules"
+              }
+            },
+            {
+              "number": 513,
+              "repository": {
+                "nameWithOwner": "nold-ai/specfact-cli-modules"
+              }
+            }
+          ]
+        },
+        "projects": [
+          {
+            "title": "SpecFact CLI",
+            "status": "Todo"
+          }
+        ]
+      },
+      "i516": {
+        "number": 516,
+        "title": "[User Story] Portable external installation and customer acceptance",
+        "state": "OPEN",
+        "stateReason": null,
+        "issueType": {
+          "name": "User Story"
+        },
+        "assignees": {
+          "nodes": [
+            {
+              "login": "djm81"
+            }
+          ]
+        },
+        "labels": {
+          "nodes": [
+            {
+              "name": "enhancement"
+            },
+            {
+              "name": "codebase"
+            },
+            {
+              "name": "openspec"
+            },
+            {
+              "name": "change-proposal"
+            },
+            {
+              "name": "architecture"
+            }
+          ]
+        },
+        "parent": {
+          "number": 163
+        },
+        "blockedBy": {
+          "nodes": [
+            {
+              "number": 769,
+              "repository": {
+                "nameWithOwner": "nold-ai/specfact-cli"
+              }
+            },
+            {
+              "number": 515,
+              "repository": {
+                "nameWithOwner": "nold-ai/specfact-cli-modules"
+              }
+            }
+          ]
+        },
+        "projects": [
+          {
+            "title": "SpecFact CLI",
+            "status": "Todo"
+          }
+        ]
+      }
+    },
+    "specfact-cli": {
+      "i679": {
+        "number": 679,
+        "title": "[Change] Adopt the signal-calibrated Code Review gate",
+        "state": "OPEN",
+        "stateReason": null,
+        "issueType": {
+          "name": "User Story"
+        },
+        "assignees": {
+          "nodes": [
+            {
+              "login": "djm81"
+            }
+          ]
+        },
+        "labels": {
+          "nodes": [
+            {
+              "name": "enhancement"
+            },
+            {
+              "name": "openspec"
+            },
+            {
+              "name": "change-proposal"
+            },
+            {
+              "name": "QA"
+            },
+            {
+              "name": "code-review"
+            }
+          ]
+        },
+        "parent": {
+          "number": 375
+        },
+        "blockedBy": {
+          "nodes": [
+            {
+              "number": 680,
+              "repository": {
+                "nameWithOwner": "nold-ai/specfact-cli"
+              }
+            },
+            {
+              "number": 417,
+              "repository": {
+                "nameWithOwner": "nold-ai/specfact-cli-modules"
+              }
+            },
+            {
+              "number": 167,
+              "repository": {
+                "nameWithOwner": "nold-ai/specfact-cli-modules"
+              }
+            },
+            {
+              "number": 248,
+              "repository": {
+                "nameWithOwner": "nold-ai/specfact-cli"
+              }
+            },
+            {
+              "number": 158,
+              "repository": {
+                "nameWithOwner": "nold-ai/specfact-cli-modules"
+              }
+            },
+            {
+              "number": 237,
+              "repository": {
+                "nameWithOwner": "nold-ai/specfact-cli"
+              }
+            },
+            {
+              "number": 416,
+              "repository": {
+                "nameWithOwner": "nold-ai/specfact-cli-modules"
+              }
+            }
+          ]
+        },
+        "projects": [
+          {
+            "title": "SpecFact CLI",
+            "status": "Todo"
+          }
+        ]
+      },
+      "i680": {
+        "number": 680,
+        "title": "[Change] Adopt C14 protected PR-range assurance",
+        "state": "OPEN",
+        "stateReason": null,
+        "issueType": {
+          "name": "User Story"
+        },
+        "assignees": {
+          "nodes": [
+            {
+              "login": "djm81"
+            }
+          ]
+        },
+        "labels": {
+          "nodes": [
+            {
+              "name": "enhancement"
+            },
+            {
+              "name": "openspec"
+            },
+            {
+              "name": "change-proposal"
+            },
+            {
+              "name": "QA"
+            },
+            {
+              "name": "code-review"
+            },
+            {
+              "name": "codebase"
+            }
+          ]
+        },
+        "parent": {
+          "number": 375
+        },
+        "blockedBy": {
+          "nodes": [
+            {
+              "number": 466,
+              "repository": {
+                "nameWithOwner": "nold-ai/specfact-cli-modules"
+              }
+            },
+            {
+              "number": 459,
+              "repository": {
+                "nameWithOwner": "nold-ai/specfact-cli-modules"
+              }
+            }
+          ]
+        },
+        "projects": [
+          {
+            "title": "SpecFact CLI",
+            "status": "Todo"
+          }
+        ]
+      },
+      "i769": {
+        "number": 769,
+        "title": "[User Story] Adopt local Code Review reports in ordinary core workflows",
+        "state": "OPEN",
+        "stateReason": null,
+        "issueType": {
+          "name": "User Story"
+        },
+        "assignees": {
+          "nodes": [
+            {
+              "login": "djm81"
+            }
+          ]
+        },
+        "labels": {
+          "nodes": [
+            {
+              "name": "enhancement"
+            },
+            {
+              "name": "openspec"
+            },
+            {
+              "name": "change-proposal"
+            },
+            {
+              "name": "architecture"
+            },
+            {
+              "name": "codebase"
+            }
+          ]
+        },
+        "parent": {
+          "number": 375
+        },
+        "blockedBy": {
+          "nodes": [
+            {
+              "number": 515,
+              "repository": {
+                "nameWithOwner": "nold-ai/specfact-cli-modules"
+              }
+            }
+          ]
+        },
+        "projects": [
+          {
+            "title": "SpecFact CLI",
+            "status": "Todo"
+          }
+        ]
+      }
+    },
+    "pull_requests": {
+      "506": {
+        "url": "https://github.com/nold-ai/specfact-cli-modules/pull/506",
+        "state": "open",
+        "merged_at": null,
+        "head": {
+          "ref": "dev",
+          "sha": "593656f675eaf4954b609aca51aa6504367dc02e"
+        },
+        "base": {
+          "ref": "main",
+          "sha": "209b4ed835187ea857d1fa847abdd351f6f6232a"
+        }
+      },
+      "509": {
+        "url": "https://github.com/nold-ai/specfact-cli-modules/pull/509",
+        "state": "open",
+        "merged_at": null,
+        "head": {
+          "ref": "bugfix/release-506-ci-evidence",
+          "sha": "38283b2d14306f5243fcde5f5b58b7a6ca91f18b"
+        },
+        "base": {
+          "ref": "dev",
+          "sha": "593656f675eaf4954b609aca51aa6504367dc02e"
+        }
+      },
+      "510": {
+        "url": "https://github.com/nold-ai/specfact-cli-modules/pull/510",
+        "state": "open",
+        "merged_at": null,
+        "head": {
+          "ref": "codex/native-pylint-execution-budget",
+          "sha": "15bb109faeb1f51d7949e82db2bc30bc59b35b08"
+        },
+        "base": {
+          "ref": "dev",
+          "sha": "593656f675eaf4954b609aca51aa6504367dc02e"
+        }
+      }
+    }
+  },
+  "historical_github_after_disposition": {
+    "specfact-cli-modules": {
+      "i163": {
+        "number": 163,
+        "title": "Validation Evidence And Governance Runtime Follow-Ups",
+        "state": "OPEN",
+        "stateReason": null,
+        "issueType": {
+          "name": "Feature"
+        },
+        "assignees": {
+          "nodes": []
+        },
+        "labels": {
+          "nodes": [
+            {
+              "name": "enhancement"
+            },
+            {
+              "name": "codebase"
+            },
+            {
+              "name": "openspec"
+            },
+            {
+              "name": "change-proposal"
+            },
+            {
+              "name": "Feature"
+            }
+          ]
+        },
+        "parent": {
+          "number": 162
+        },
+        "blockedBy": {
+          "nodes": []
+        },
+        "projects": [
+          {
+            "title": "SpecFact CLI",
+            "status": "In Progress"
+          }
+        ]
+      },
+      "i417": {
+        "number": 417,
+        "title": "[Change] Calibrate Code Review into a truthful blocking gate",
+        "state": "OPEN",
+        "stateReason": null,
+        "issueType": {
+          "name": "User Story"
+        },
+        "assignees": {
+          "nodes": [
+            {
+              "login": "djm81"
+            }
+          ]
+        },
+        "labels": {
+          "nodes": [
+            {
+              "name": "enhancement"
+            },
+            {
+              "name": "codebase"
+            },
+            {
+              "name": "openspec"
+            },
+            {
+              "name": "change-proposal"
+            }
+          ]
+        },
+        "parent": {
+          "number": 163
+        },
+        "blockedBy": {
+          "nodes": [
+            {
+              "number": 680,
+              "repository": {
+                "nameWithOwner": "nold-ai/specfact-cli"
+              }
+            },
+            {
+              "number": 248,
+              "repository": {
+                "nameWithOwner": "nold-ai/specfact-cli"
+              }
+            },
+            {
+              "number": 237,
+              "repository": {
+                "nameWithOwner": "nold-ai/specfact-cli"
+              }
+            },
+            {
+              "number": 167,
+              "repository": {
+                "nameWithOwner": "nold-ai/specfact-cli-modules"
+              }
+            },
+            {
+              "number": 158,
+              "repository": {
+                "nameWithOwner": "nold-ai/specfact-cli-modules"
+              }
+            },
+            {
+              "number": 416,
+              "repository": {
+                "nameWithOwner": "nold-ai/specfact-cli-modules"
+              }
+            }
+          ]
+        },
+        "projects": [
+          {
+            "title": "SpecFact CLI",
+            "status": "In Progress"
+          }
+        ]
+      },
+      "i460": {
+        "number": 460,
+        "title": "[Change] Dedicated macOS ARM64 Code Review capsule",
+        "state": "CLOSED",
+        "stateReason": "NOT_PLANNED",
+        "issueType": {
+          "name": "User Story"
+        },
+        "assignees": {
+          "nodes": [
+            {
+              "login": "djm81"
+            }
+          ]
+        },
+        "labels": {
+          "nodes": [
+            {
+              "name": "enhancement"
+            },
+            {
+              "name": "codebase"
+            },
+            {
+              "name": "openspec"
+            },
+            {
+              "name": "change-proposal"
+            },
+            {
+              "name": "architecture"
+            }
+          ]
+        },
+        "parent": {
+          "number": 163
+        },
+        "blockedBy": {
+          "nodes": [
+            {
+              "number": 512,
+              "repository": {
+                "nameWithOwner": "nold-ai/specfact-cli-modules"
+              }
+            },
+            {
+              "number": 459,
+              "repository": {
+                "nameWithOwner": "nold-ai/specfact-cli-modules"
+              }
+            }
+          ]
+        },
+        "projects": [
+          {
+            "title": "SpecFact CLI",
+            "status": "Rejected"
+          }
+        ]
+      },
+      "i480": {
+        "number": 480,
+        "title": "[P2][Bug] Post-0.50.1: preserve explicit pytest file selection in portable reviews",
+        "state": "OPEN",
+        "stateReason": null,
+        "issueType": {
+          "name": "Bug"
+        },
+        "assignees": {
+          "nodes": [
+            {
+              "login": "djm81"
+            }
+          ]
+        },
+        "labels": {
+          "nodes": [
+            {
+              "name": "bug"
+            },
+            {
+              "name": "module"
+            },
+            {
+              "name": "codebase"
+            }
+          ]
+        },
+        "parent": {
+          "number": 163
+        },
+        "blockedBy": {
+          "nodes": [
+            {
+              "number": 514,
+              "repository": {
+                "nameWithOwner": "nold-ai/specfact-cli-modules"
+              }
+            }
+          ]
+        },
+        "projects": [
+          {
+            "title": "SpecFact CLI",
+            "status": "Todo"
+          }
+        ]
+      },
+      "i488": {
+        "number": 488,
+        "title": "Optional Developer ID signing and notarization for macOS capsules",
+        "state": "CLOSED",
+        "stateReason": "NOT_PLANNED",
+        "issueType": null,
+        "assignees": {
+          "nodes": []
+        },
+        "labels": {
+          "nodes": [
+            {
+              "name": "enhancement"
+            },
+            {
+              "name": "codebase"
+            },
+            {
+              "name": "openspec"
+            },
+            {
+              "name": "change-proposal"
+            },
+            {
+              "name": "architecture"
+            }
+          ]
+        },
+        "parent": {
+          "number": 163
+        },
+        "blockedBy": {
+          "nodes": [
+            {
+              "number": 460,
+              "repository": {
+                "nameWithOwner": "nold-ai/specfact-cli-modules"
+              }
+            }
+          ]
+        },
+        "projects": [
+          {
+            "title": "SpecFact CLI",
+            "status": "Rejected"
+          }
+        ]
+      },
+      "i495": {
+        "number": 495,
+        "title": "[Change] Native Windows x86-64 Code Review capsule with project-driven preparation",
+        "state": "CLOSED",
+        "stateReason": "NOT_PLANNED",
+        "issueType": null,
+        "assignees": {
+          "nodes": [
+            {
+              "login": "djm81"
+            }
+          ]
+        },
+        "labels": {
+          "nodes": [
+            {
+              "name": "enhancement"
+            },
+            {
+              "name": "codebase"
+            },
+            {
+              "name": "openspec"
+            },
+            {
+              "name": "change-proposal"
+            },
+            {
+              "name": "architecture"
+            }
+          ]
+        },
+        "parent": {
+          "number": 163
+        },
+        "blockedBy": {
+          "nodes": [
+            {
+              "number": 460,
+              "repository": {
+                "nameWithOwner": "nold-ai/specfact-cli-modules"
+              }
+            }
+          ]
+        },
+        "projects": [
+          {
+            "title": "SpecFact CLI",
+            "status": "Rejected"
+          }
+        ]
+      },
+      "i511": {
+        "number": 511,
+        "title": "[Bug] Reject symlink bundle payloads before signing and verification",
+        "state": "OPEN",
+        "stateReason": null,
+        "issueType": null,
+        "assignees": {
+          "nodes": [
+            {
+              "login": "djm81"
+            }
+          ]
+        },
+        "labels": {
+          "nodes": [
+            {
+              "name": "bug"
+            },
+            {
+              "name": "openspec"
+            },
+            {
+              "name": "change-proposal"
+            },
+            {
+              "name": "architecture"
+            },
+            {
+              "name": "security"
+            }
+          ]
+        },
+        "parent": {
+          "number": 187
+        },
+        "blockedBy": {
+          "nodes": []
+        },
+        "projects": [
+          {
+            "title": "SpecFact CLI",
+            "status": "Todo"
+          }
+        ]
+      },
+      "i512": {
+        "number": 512,
+        "title": "Correct baseline capsule review prerequisites",
+        "state": "CLOSED",
+        "stateReason": "NOT_PLANNED",
+        "issueType": null,
+        "assignees": {
+          "nodes": [
+            {
+              "login": "djm81"
+            }
+          ]
+        },
+        "labels": {
+          "nodes": [
+            {
+              "name": "bug"
+            },
+            {
+              "name": "codebase"
+            },
+            {
+              "name": "openspec"
+            },
+            {
+              "name": "change-proposal"
+            }
+          ]
+        },
+        "parent": {
+          "number": 163
+        },
+        "blockedBy": {
+          "nodes": []
+        },
+        "projects": [
+          {
+            "title": "SpecFact CLI",
+            "status": "Rejected"
+          }
+        ]
+      },
+      "i513": {
+        "number": 513,
+        "title": "[User Story] Project-aware runtime and lightweight sidecar bootstrap",
+        "state": "OPEN",
+        "stateReason": null,
+        "issueType": {
+          "name": "User Story"
+        },
+        "assignees": {
+          "nodes": [
+            {
+              "login": "djm81"
+            }
+          ]
+        },
+        "labels": {
+          "nodes": [
+            {
+              "name": "enhancement"
+            },
+            {
+              "name": "codebase"
+            },
+            {
+              "name": "openspec"
+            },
+            {
+              "name": "change-proposal"
+            },
+            {
+              "name": "architecture"
+            }
+          ]
+        },
+        "parent": {
+          "number": 163
+        },
+        "blockedBy": {
+          "nodes": []
+        },
+        "projects": [
+          {
+            "title": "SpecFact CLI",
+            "status": "Todo"
+          }
+        ]
+      },
+      "i514": {
+        "number": 514,
+        "title": "[User Story] Customer-owned standards and compatible review checks",
+        "state": "OPEN",
+        "stateReason": null,
+        "issueType": {
+          "name": "User Story"
+        },
+        "assignees": {
+          "nodes": [
+            {
+              "login": "djm81"
+            }
+          ]
+        },
+        "labels": {
+          "nodes": [
+            {
+              "name": "enhancement"
+            },
+            {
+              "name": "codebase"
+            },
+            {
+              "name": "openspec"
+            },
+            {
+              "name": "change-proposal"
+            },
+            {
+              "name": "architecture"
+            }
+          ]
+        },
+        "parent": {
+          "number": 163
+        },
+        "blockedBy": {
+          "nodes": [
+            {
+              "number": 513,
+              "repository": {
+                "nameWithOwner": "nold-ai/specfact-cli-modules"
+              }
+            }
+          ]
+        },
+        "projects": [
+          {
+            "title": "SpecFact CLI",
+            "status": "Todo"
+          }
+        ]
+      },
+      "i515": {
+        "number": 515,
+        "title": "[User Story] Local review evidence and capsule removal",
+        "state": "OPEN",
+        "stateReason": null,
+        "issueType": {
+          "name": "User Story"
+        },
+        "assignees": {
+          "nodes": [
+            {
+              "login": "djm81"
+            }
+          ]
+        },
+        "labels": {
+          "nodes": [
+            {
+              "name": "enhancement"
+            },
+            {
+              "name": "codebase"
+            },
+            {
+              "name": "openspec"
+            },
+            {
+              "name": "change-proposal"
+            },
+            {
+              "name": "architecture"
+            }
+          ]
+        },
+        "parent": {
+          "number": 163
+        },
+        "blockedBy": {
+          "nodes": [
+            {
+              "number": 514,
+              "repository": {
+                "nameWithOwner": "nold-ai/specfact-cli-modules"
+              }
+            },
+            {
+              "number": 513,
+              "repository": {
+                "nameWithOwner": "nold-ai/specfact-cli-modules"
+              }
+            }
+          ]
+        },
+        "projects": [
+          {
+            "title": "SpecFact CLI",
+            "status": "Todo"
+          }
+        ]
+      },
+      "i516": {
+        "number": 516,
+        "title": "[User Story] Portable external installation and customer acceptance",
+        "state": "OPEN",
+        "stateReason": null,
+        "issueType": {
+          "name": "User Story"
+        },
+        "assignees": {
+          "nodes": [
+            {
+              "login": "djm81"
+            }
+          ]
+        },
+        "labels": {
+          "nodes": [
+            {
+              "name": "enhancement"
+            },
+            {
+              "name": "codebase"
+            },
+            {
+              "name": "openspec"
+            },
+            {
+              "name": "change-proposal"
+            },
+            {
+              "name": "architecture"
+            }
+          ]
+        },
+        "parent": {
+          "number": 163
+        },
+        "blockedBy": {
+          "nodes": [
+            {
+              "number": 769,
+              "repository": {
+                "nameWithOwner": "nold-ai/specfact-cli"
+              }
+            },
+            {
+              "number": 515,
+              "repository": {
+                "nameWithOwner": "nold-ai/specfact-cli-modules"
+              }
+            }
+          ]
+        },
+        "projects": [
+          {
+            "title": "SpecFact CLI",
+            "status": "Todo"
+          }
+        ]
+      }
+    },
+    "specfact-cli": {
+      "i679": {
+        "number": 679,
+        "title": "[Change] Adopt the signal-calibrated Code Review gate",
+        "state": "OPEN",
+        "stateReason": null,
+        "issueType": {
+          "name": "User Story"
+        },
+        "assignees": {
+          "nodes": [
+            {
+              "login": "djm81"
+            }
+          ]
+        },
+        "labels": {
+          "nodes": [
+            {
+              "name": "enhancement"
+            },
+            {
+              "name": "openspec"
+            },
+            {
+              "name": "change-proposal"
+            },
+            {
+              "name": "QA"
+            },
+            {
+              "name": "code-review"
+            }
+          ]
+        },
+        "parent": {
+          "number": 375
+        },
+        "blockedBy": {
+          "nodes": [
+            {
+              "number": 680,
+              "repository": {
+                "nameWithOwner": "nold-ai/specfact-cli"
+              }
+            },
+            {
+              "number": 417,
+              "repository": {
+                "nameWithOwner": "nold-ai/specfact-cli-modules"
+              }
+            },
+            {
+              "number": 167,
+              "repository": {
+                "nameWithOwner": "nold-ai/specfact-cli-modules"
+              }
+            },
+            {
+              "number": 248,
+              "repository": {
+                "nameWithOwner": "nold-ai/specfact-cli"
+              }
+            },
+            {
+              "number": 158,
+              "repository": {
+                "nameWithOwner": "nold-ai/specfact-cli-modules"
+              }
+            },
+            {
+              "number": 237,
+              "repository": {
+                "nameWithOwner": "nold-ai/specfact-cli"
+              }
+            },
+            {
+              "number": 416,
+              "repository": {
+                "nameWithOwner": "nold-ai/specfact-cli-modules"
+              }
+            }
+          ]
+        },
+        "projects": [
+          {
+            "title": "SpecFact CLI",
+            "status": "Todo"
+          }
+        ]
+      },
+      "i680": {
+        "number": 680,
+        "title": "[Change] Adopt C14 protected PR-range assurance",
+        "state": "OPEN",
+        "stateReason": null,
+        "issueType": {
+          "name": "User Story"
+        },
+        "assignees": {
+          "nodes": [
+            {
+              "login": "djm81"
+            }
+          ]
+        },
+        "labels": {
+          "nodes": [
+            {
+              "name": "enhancement"
+            },
+            {
+              "name": "openspec"
+            },
+            {
+              "name": "change-proposal"
+            },
+            {
+              "name": "QA"
+            },
+            {
+              "name": "code-review"
+            },
+            {
+              "name": "codebase"
+            }
+          ]
+        },
+        "parent": {
+          "number": 375
+        },
+        "blockedBy": {
+          "nodes": [
+            {
+              "number": 466,
+              "repository": {
+                "nameWithOwner": "nold-ai/specfact-cli-modules"
+              }
+            },
+            {
+              "number": 459,
+              "repository": {
+                "nameWithOwner": "nold-ai/specfact-cli-modules"
+              }
+            }
+          ]
+        },
+        "projects": [
+          {
+            "title": "SpecFact CLI",
+            "status": "Todo"
+          }
+        ]
+      },
+      "i769": {
+        "number": 769,
+        "title": "[User Story] Adopt local Code Review reports in ordinary core workflows",
+        "state": "OPEN",
+        "stateReason": null,
+        "issueType": {
+          "name": "User Story"
+        },
+        "assignees": {
+          "nodes": [
+            {
+              "login": "djm81"
+            }
+          ]
+        },
+        "labels": {
+          "nodes": [
+            {
+              "name": "enhancement"
+            },
+            {
+              "name": "openspec"
+            },
+            {
+              "name": "change-proposal"
+            },
+            {
+              "name": "architecture"
+            },
+            {
+              "name": "codebase"
+            }
+          ]
+        },
+        "parent": {
+          "number": 375
+        },
+        "blockedBy": {
+          "nodes": [
+            {
+              "number": 515,
+              "repository": {
+                "nameWithOwner": "nold-ai/specfact-cli-modules"
+              }
+            }
+          ]
+        },
+        "projects": [
+          {
+            "title": "SpecFact CLI",
+            "status": "Todo"
+          }
+        ]
+      }
+    },
+    "pull_requests": {
+      "506": {
+        "url": "https://github.com/nold-ai/specfact-cli-modules/pull/506",
+        "state": "closed",
+        "merged_at": null,
+        "head": {
+          "ref": "dev",
+          "sha": "593656f675eaf4954b609aca51aa6504367dc02e"
+        },
+        "base": {
+          "ref": "main",
+          "sha": "209b4ed835187ea857d1fa847abdd351f6f6232a"
+        }
+      },
+      "509": {
+        "url": "https://github.com/nold-ai/specfact-cli-modules/pull/509",
+        "state": "closed",
+        "merged_at": null,
+        "head": {
+          "ref": "bugfix/release-506-ci-evidence",
+          "sha": "38283b2d14306f5243fcde5f5b58b7a6ca91f18b"
+        },
+        "base": {
+          "ref": "dev",
+          "sha": "593656f675eaf4954b609aca51aa6504367dc02e"
+        }
+      },
+      "510": {
+        "url": "https://github.com/nold-ai/specfact-cli-modules/pull/510",
+        "state": "closed",
+        "merged_at": null,
+        "head": {
+          "ref": "codex/native-pylint-execution-budget",
+          "sha": "15bb109faeb1f51d7949e82db2bc30bc59b35b08"
+        },
+        "base": {
+          "ref": "dev",
+          "sha": "593656f675eaf4954b609aca51aa6504367dc02e"
+        }
+      }
+    }
+  },
+  "planning_review_probe_before": {
+    "result": "fail",
+    "failures": [
+      "code-review-17-project-runtime-bootstrap: native proposal parser misses description or impact",
+      "code-review-17-project-runtime-bootstrap: native source tracking misses #513",
+      "code-review-18-project-standards-and-checks: native proposal parser misses description or impact",
+      "code-review-18-project-standards-and-checks: native source tracking misses #514",
+      "code-review-19-local-report-and-cutover: native proposal parser misses description or impact",
+      "code-review-19-local-report-and-cutover: native source tracking misses #515",
+      "code-review-20-external-installation-acceptance: native proposal parser misses description or impact",
+      "code-review-20-external-installation-acceptance: native source tracking misses #516",
+      "code-review-local-report-adoption: native proposal parser misses description or impact",
+      "code-review-local-report-adoption: native source tracking misses #769",
+      "2026-10-16-code-review-windows-native-platform-execution: missing locator openspec/changes/code-review-windows-native-platform-execution/specs/review-windows-native-execution/spec.md",
+      "2026-10-16-code-review-windows-native-platform-execution: missing locator openspec/changes/code-review-windows-native-platform-execution/specs/review-windows-native-execution/spec.md",
+      "2026-10-16-code-review-windows-native-platform-execution: missing locator openspec/changes/code-review-windows-native-platform-execution/specs/review-windows-native-execution/spec.md",
+      "2026-10-16-code-review-macos-developer-id-distribution: missing locator openspec/changes/code-review-macos-developer-id-distribution/specs/review-macos-apple-distribution/spec.md",
+      "2026-10-16-code-review-macos-developer-id-distribution: missing locator openspec/changes/code-review-macos-developer-id-distribution/specs/review-macos-apple-distribution/spec.md",
+      "managed boundary README: missing abandoned proposal link",
+      "core tasks: RED evidence file unspecified",
+      "core tasks: GREEN evidence file unspecified",
+      "core tasks: synchronized version and changelog step unspecified"
+    ]
+  },
+  "planning_review_probe_after": {
+    "result": "pass",
+    "failures": []
+  },
+  "review_round_2_before": {
+    "result": "fail",
+    "failures": [
+      "First implementation task does not establish the dedicated worktree and branch.",
+      "Installation tests, RED, implementation, preflight and GREEN are not ordered explicitly.",
+      "Reviewed signed commit/push/PR delivery is unspecified.",
+      "Documentation surface omitted: docs/",
+      "Documentation surface omitted: README.md",
+      "Documentation surface omitted: docs/index.md",
+      "Documentation surface omitted: navigation",
+      "No ordinary-consumer scenario rejects unsupported same-major schemas.",
+      "Apple preflight is still presented as active guidance."
+    ]
+  },
+  "review_round_2_after": {
+    "result": "pass",
+    "failures": []
+  },
+  "review_round_3_before": {
+    "result": "fail",
+    "failures": [
+      "Future tests lack explicit scenario-to-selector binding before RED.",
+      "Future GREEN lacks an implementation-maturity Requirements evidence prerequisite.",
+      "core lacks a mapped provisioned offline execution scenario.",
+      "modules lacks a mapped provisioned offline execution scenario."
+    ]
+  },
+  "review_round_3_after": {
+    "result": "pass",
+    "failures": []
+  },
+  "review_round_4_before": {
+    "result": "fail",
+    "failures": [
+      "Historical capsule section retains active instruction: #460 delivers",
+      "Historical capsule section retains active instruction: Windows remains",
+      "Historical capsule section retains active instruction: Developer ID remains",
+      "Historical capsule section retains active instruction: still gate\npublication",
+      "Historical capsule section retains active instruction: Production remains\ngated",
+      "Final PR delivery does not require fresh full review after version edits."
+    ]
+  },
+  "review_round_4_after": {
+    "result": "pass",
+    "failures": []
+  },
+  "review_round_5_before": {
+    "result": "fail",
+    "failures": [
+      "FEASIBILITY.md direct-entry guidance lacks explicit supersession before historical obligations.",
+      "MANAGED_BOUNDARY_STATUS.md direct-entry guidance lacks explicit supersession before historical obligations."
+    ]
+  },
+  "review_round_5_after": {
+    "result": "pass",
+    "failures": []
+  },
+  "review_round_6_before": {
+    "result": "fail",
+    "failures": [
+      "Ordinary capsule-free execution lacks a mapped scenario.",
+      "Missing independent delivery checkpoint: publish the implementation PR",
+      "Missing independent delivery checkpoint: Complete required CI and review feedback",
+      "Missing independent delivery checkpoint: Seek owner-authorized integration",
+      "Delivery stages are not distinct ordered checkboxes."
+    ]
+  },
+  "review_round_6_after": {
+    "result": "pass",
+    "failures": []
+  },
+  "review_round_7_before": {
+    "result": "fail",
+    "failures": [
+      "Change19 still allows canonical publication before paired acceptance.",
+      "Core readiness still assumes stable publication before its own preflight.",
+      "Change20 lacks explicit positive/negative canonical publication gates."
+    ]
+  },
+  "review_round_7_after": {
+    "result": "pass",
+    "failures": []
+  },
+  "review_round_8_before": {
+    "result": "fail",
+    "failures": [
+      "Post-PR repair checkpoint does not explicitly refresh final full review artifact after the last substantive repair."
+    ]
+  },
+  "review_round_8_after": {
+    "result": "pass",
+    "failures": []
+  },
+  "current_checklist_inspection": {
+    "core_markdown_max_columns": 119,
+    "core_unchecked_tasks": 18,
+    "release_candidate_before_installed_acceptance_before_canonical_publication": true,
+    "release_publication_requires_paired_compatibility_and_installed_acceptance": true,
+    "release_publication_withheld_on_required_failure_or_timeout": true
+  }
+}

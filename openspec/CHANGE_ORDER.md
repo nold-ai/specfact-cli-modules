@@ -1,5 +1,25 @@
 # OpenSpec Change Order
 
+## Trusted local review reset (2026-10-16)
+
+The owner approved a hard cut from capsule/sandbox review to trusted local project-aware execution. This delivery creates planning artifacts and aligns GitHub work only. No runtime, workflow, signature or published-support change is established here. This section supersedes older capsule implementation ordering below.
+
+| Order | Change | Issue | Direct implementation blockers |
+| --- | --- | --- | --- |
+| 1 | [code-review-17-project-runtime-bootstrap](changes/code-review-17-project-runtime-bootstrap/proposal.md) | [modules #513](https://github.com/nold-ai/specfact-cli-modules/issues/513) | None. |
+| 2 | [code-review-18-project-standards-and-checks](changes/code-review-18-project-standards-and-checks/proposal.md) | [modules #514](https://github.com/nold-ai/specfact-cli-modules/issues/514) | #513. |
+| 3 | [code-review-19-local-report-and-cutover](changes/code-review-19-local-report-and-cutover/proposal.md) | [modules #515](https://github.com/nold-ai/specfact-cli-modules/issues/515) | #513 and #514. |
+| 4 | code-review-local-report-adoption | [core #769](https://github.com/nold-ai/specfact-cli/issues/769) | modules #515. |
+| 5 | [code-review-20-external-installation-acceptance](changes/code-review-20-external-installation-acceptance/proposal.md) | [modules #516](https://github.com/nold-ai/specfact-cli-modules/issues/516) | #515 and core #769. |
+
+[The canonical design](changes/code-review-17-project-runtime-bootstrap/design.md) records the confirmed trust model, interface sketch, alternatives, independent architecture judgment and installed acceptance matrix. [GitHub alignment](changes/code-review-17-project-runtime-bootstrap/GITHUB_ALIGNMENT.md) records predecessor dispositions. All implementation tasks in the five new changes remain unchecked.
+
+Capsule delivery #460, optional Apple signing #488, Windows capsule #495 and baseline capsule prerequisite #512 are superseded, together with the #509 -> #510 -> #506 repair/release queue. Historical signed releases and delivered fixes are preserved. The native/portable-reviewer proposals retain evidence but authorize no remaining capsule implementation. Never-delivered #488/#495 proposals move to non-canonical abandoned history without spec promotion. Closed #416/#459/#466/#472/#473 remain historical and are not reopened or archived by this planning delivery.
+
+Keep #480 open until native explicit-test selection is proved in #514. Preserve independent module signing/security #511. C15 modules #417 is In Progress and retains its owner, status, acceptance and current blockers; this reset adds only a compatibility coordination note. Protected core #680 and C15 core #679 remain separate contracts. Local schema 2.0 evidence cannot satisfy their existing capsule/protected assumptions automatically.
+
+Optional preflight #431/#432/#434, requirement context #491 and architecture #164/#230 may later consume the shared project context and local reports. They do not block the local review release or acquire its runtime ownership. Preserve their separate prerequisite graphs. Recheck ownership, current releases and dependency metadata at implementation start.
+
 This document is the modules-side source of truth for active OpenSpec work. It
 must be read together with the core repo change order in `nold-ai/specfact-cli`.
 
@@ -55,12 +75,12 @@ Core #680/#679 and modules #417 were recovered from uncommitted planning-only fe
 
 | Bucket | Count | Location |
 |---|---:|---|
-| **Active-tree entries** | 33 | [`openspec/changes/`](changes/) |
+| **Active-tree entries** | 36 | [`openspec/changes/`](changes/) |
 | **Parking-lot entries** | 16 | [`openspec/parking-lot/`](parking-lot/) |
 | **Archived** | 50 | [`openspec/changes/archive/`](changes/archive/) |
-| **Abandoned history** | 1 | [`openspec/history/abandoned/`](history/abandoned/) |
+| **Abandoned history** | 3 | [`openspec/history/abandoned/`](history/abandoned/) |
 
-`openspec list` reflects all 33 direct active-tree entries (verified 2026-10-08). The closed R08
+`openspec list` reflects all 36 direct active-tree entries (verified 2026-10-16). The closed R08
 proposal is retained under non-canonical abandoned history, outside
 `openspec/changes/` and its completed-change archive; no unimplemented delta
 entered canonical specifications. Completed changes still use native OpenSpec
@@ -72,6 +92,8 @@ implementation-ready.
 | Change | GitHub issue | Historical status |
 |---|---|---|
 | [`requirements-08-bounded-red-green-proof`](history/abandoned/2026-08-30-requirements-08-bounded-red-green-proof/) | [#414](https://github.com/nold-ai/specfact-cli-modules/issues/414) | Closed Not Planned on 2026-08-27; never implemented; retained outside the completed-change archive; canonical specs unchanged |
+| [`code-review-macos-developer-id-distribution`](history/abandoned/2026-10-16-code-review-macos-developer-id-distribution/) | [#488](https://github.com/nold-ai/specfact-cli-modules/issues/488) | Superseded on 2026-10-16; optional Apple capsule distribution was never delivered; no specification promotion |
+| [`code-review-windows-native-platform-execution`](history/abandoned/2026-10-16-code-review-windows-native-platform-execution/) | [#495](https://github.com/nold-ai/specfact-cli-modules/issues/495) | Superseded on 2026-10-16; Windows capsule capability was never delivered; local Windows acceptance belongs to #516 |
 
 This non-canonical history is not an OpenSpec archive and is not implementation
 authority. Completed work must use `openspec archive` so implemented deltas are
@@ -113,7 +135,7 @@ These archived specs are now the shipped basis for the flagship demo: run review
 produce JSON evidence, identify AI-bloat findings, hand remediation packets to an
 AI IDE, rerun, and compare improved evidence.
 
-## Portable External Project Runtime
+## Historical portable capsule runtime
 
 | Change | Issue | Status | Dependencies |
 |---|---|---|---|
@@ -172,48 +194,34 @@ Security records under the repository security policy.
 |---:|---|---|---|---|
 | 1 | `archive/2026-08-23-ci-01-workflow-dispatch-core-ref-trust` | [#422](https://github.com/nold-ai/specfact-cli-modules/pull/422) | Shipped and archived: preserve paired feature-branch validation for non-manual events while restricting manual paired-core execution to literal `main` or `dev` refs | ancestry sync PR [#421](https://github.com/nold-ai/specfact-cli-modules/pull/421) |
 
-## Native macOS ARM64 Capsule — managed-process revision
+## Superseded native capsule history
 
-Physical-host startup, private-control and two sealed-analyzer fixture checkpoints
-are implemented under the same change; they are partial native evidence, not
-production delivery or supported-matrix approval. See its managed boundary status.
+Historical record, retired on 2026-10-16 (Europe/Berlin). Revisions dated
+2026-09-30, 2026-10-02 and 2026-10-04 formerly proposed macOS ARM64 first,
+project-driven preparation, optional Apple distribution trust and a deferred
+Windows capsule backend. Those proposals no longer authorize implementation or
+capsule publication.
 
-Owner-approved revisions on 2026-09-30 and 2026-10-02 (Europe/Berlin): #460 delivers macOS ARM64
-first, with managed processes, automatic first-use native runtime acquisition and Linux x86-64 regression coverage. Windows, Intel macOS and Linux
-ARM64 are deferred, not implicitly supported or required for this delivery.
+Physical-host startup, private-control and sealed-analyzer fixture checkpoints
+were partial native evidence rather than production delivery or supported-matrix
+approval. Their receipts remain in the owning proposal. Published releases and
+delivered fixes retain their historical evidence.
 
-The 2026-10-04 revision restores automatic/caller-configured project discovery and
-on-demand preparation without publisher project catalogs. Matching-architecture
-full VMs qualify for acceptance; CPU emulation is supplemental. Windows remains
-a follow-up, and Developer ID remains optional #488.
-
-| Change | Issue | Implementation dependencies |
+| Historical change | Issue | Disposition on 2026-10-16 |
 |---|---|---|
-| `code-review-native-platform-execution` | [#460](https://github.com/nold-ai/specfact-cli-modules/issues/460) | Verified layout #459 and released #473 / Code Review 0.50.1 baseline; native isolation/dependency feasibility and bounded design approval; no blanket C15 or optional #434 prerequisite |
-| `code-review-macos-developer-id-distribution` | [#488](https://github.com/nold-ai/specfact-cli-modules/issues/488) | Optional, unscheduled Apple distribution trust; blocked by #460; never blocks native shipment or publication |
-| `code-review-windows-native-platform-execution` | [#495](https://github.com/nold-ai/specfact-cli-modules/issues/495) | Deferred Windows x86-64 backend using #460's project-driven contract; blocked by #460; never blocks Linux/macOS delivery; matching-architecture full VM acceptance permitted |
+| `code-review-native-platform-execution` | [#460](https://github.com/nold-ai/specfact-cli-modules/issues/460) | Remaining capsule delivery scope closed Not Planned; partially delivered lineage and evidence preserved. |
+| `code-review-macos-developer-id-distribution` | [#488](https://github.com/nold-ai/specfact-cli-modules/issues/488) | Never delivered; closed Not Planned and retained in non-canonical abandoned history. |
+| `code-review-windows-native-platform-execution` | [#495](https://github.com/nold-ai/specfact-cli-modules/issues/495) | Never delivered; closed Not Planned and retained in non-canonical abandoned history. |
 
-Preserve the selected released review semantics and signed identities. Core #679/modules #417 are separately scheduled; an actual native consumer
-incompatibility requires explicit paired scope and compatibility evidence.
-The existing C15 dependency chain is unchanged by removing its blanket edge
-into #460. Optional preflight, seals and historical RED ledgers do not block
-native delivery. Paid Developer ID and notarization are deferred to optional #488;
-initial delivery uses build-time ad-hoc native signatures, verified upstream
-signatures where applicable and SpecFact-signed manifests. Exact distribution
-boundary and independent default-protection installation acceptance still gate
-publication. Apple credential preflight is not a required initial-release step.
+The trusted local reset at the start of this document owns replacement sequencing.
+Windows local acceptance belongs to #516. Core #679/modules #417 retain their
+separate C15 ownership, prerequisites and acceptance. Current independent security,
+quality and signing gates remain in force until explicitly replaced through
+reviewed implementation; this historical section grants no release authority.
 
-Planning defines the contract in the change's FEASIBILITY.md and scenario
-specification; it does not prove native runtime support. Production remains
-gated on measured isolation, dependency admission, signing and platform
-feasibility. Customer acceptance includes native project preparation,
-Mach-O/dyld dependencies, all required analyzers, fresh signed installation,
-cold/offline reuse and Linux regression coverage. Close/archive only after
-production publication and acceptance.
+## C15 lineage and active-owner coordination
 
-## Recovered C15 planning
-
-`code-review-15-signal-calibrated-blocking-gate` / #417 was recovered into local dev from its proposal-only feature worktree; it remains planned and retains the real C14/profile/policy/exception prerequisites. Remote integration remains pending. Modules C14 #416 shipped but its existing proposal remains unarchived.
+The 2026-10-16 live project status for #417 is In Progress; preserve its active owner. The following dated record is historical. `code-review-15-signal-calibrated-blocking-gate` / #417 was recovered into local dev from its proposal-only feature worktree; it remains planned and retains the real C14/profile/policy/exception prerequisites. Remote integration remains pending. Modules C14 #416 shipped but its existing proposal remains unarchived.
 
 ## Lean current-run delivery
 

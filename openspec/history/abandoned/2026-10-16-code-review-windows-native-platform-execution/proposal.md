@@ -1,5 +1,9 @@
 # Change: Native Windows x86-64 project-driven Code Review
 
+## Abandoned remaining proposal (2026-10-16)
+
+The owner approved replacing capsules with trusted local project-aware review. Issue #495 is superseded by modules #513-#516 and core #769. This never-delivered capability is retained as non-canonical abandoned history. No implementation, completed archive or specification promotion is claimed. Original task states and planning records below are historical, not remaining implementation authority. The replacement architecture is in `openspec/changes/code-review-17-project-runtime-bootstrap/design.md`.
+
 ## Why
 
 Windows developers need the same separation between sealed reviewers and their
@@ -40,6 +44,6 @@ Actual download protections still require proof. No automatic merge or publicati
 
 <!-- source_repo: nold-ai/specfact-cli-modules -->
 - **GitHub Issue**: [#495](https://github.com/nold-ai/specfact-cli-modules/issues/495)
-- **Prerequisite**: [#460](https://github.com/nold-ai/specfact-cli-modules/issues/460), [native proposal](../code-review-native-platform-execution/proposal.md)
+- **Prerequisite**: [#460](https://github.com/nold-ai/specfact-cli-modules/issues/460), [native proposal](../../../changes/code-review-native-platform-execution/proposal.md)
 - **Parent Feature**: [#163](https://github.com/nold-ai/specfact-cli-modules/issues/163)
 - **Last Synced Status**: open / Todo, deferred, 2026-10-05 Europe/Berlin
