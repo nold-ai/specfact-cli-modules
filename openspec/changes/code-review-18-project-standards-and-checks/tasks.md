@@ -22,12 +22,12 @@ All boxes are future implementation. This artifact delivery completes no runtime
 - [ ] Implement native standards selection and full diagnostic preservation, including custom command completion.
 - [ ] Add one explicitly selected declarative ProjectProfileProvider route and preserve native tool/plugin loading.
 - [ ] Implement separate analyzer contexts, truthful compatibility failures and actual icontract checks; preserve explicit test targets from #480.
-- [ ] Run scenario and regression checks after each bounded unit; record actual passing evidence and exact source/environment identities.
+- [ ] Run scenario and regression checks after each bounded unit; record actual passing commands, timestamps, results and exact source/environment identities in TDD_EVIDENCE.md.
 
 ## Review, release and finalization
 
 - [ ] Run applicable formatting, type, lint, import, contract, test, security and SpecFact review gates; resolve findings including warnings or record an explicitly approved exception.
 - [ ] Revalidate OpenSpec and requirement mappings and update affected help/reference/installation documentation.
-- [ ] Apply required semver, compatibility, module payload/signature and canonical publication steps only when runtime assets change.
+- [ ] Apply required semver, CHANGELOG.md, compatibility, module payload/signature and canonical publication steps only when runtime assets change.
 - [ ] Demonstrate the exact installed user workflow and rollback for the owning scope; keep unavailable cells and required failures nonaccepting.
 - [ ] Submit implementation for normal review to dev, reconcile issue/project state and archive only after actual completion using openspec archive.

@@ -28,7 +28,7 @@ Direct implementation blockers: [515](https://github.com/nold-ai/specfact-cli-mo
 
 Parent Feature [#163](https://github.com/nold-ai/specfact-cli-modules/issues/163), within Epic [#162](https://github.com/nold-ai/specfact-cli-modules/issues/162). Optional preflight, architecture and requirement-context work are future consumers, not prerequisites. C15 #417/core #679 and protected core #680 retain their separate ownership and acceptance.
 
-## Impact and non-goals
+## Impact
 
 This delivery changes planning artifacts and GitHub alignment only. It changes no production package, test, workflow, module manifest, registry, signature, version or published capability. All implementation boxes remain unchecked and requirement mappings use inspection at planned maturity.
 
@@ -38,10 +38,12 @@ Future implementation affects the owning Codebase/Code Review modules and ordina
 
 Every requirement and scenario in [the delta spec](specs/external-review-acceptance/spec.md) has a planning inspection mapping. Runtime acceptance requires actual failing-first tests, passing execution, source/environment integrity and the applicable installed workflow in follow-up sessions. Strict artifact validation is not runtime verification.
 
-## Source tracking
+## Source Tracking
 
 <!-- source_repo: nold-ai/specfact-cli-modules -->
-- GitHub issue: [516](https://github.com/nold-ai/specfact-cli-modules/issues/516).
+- **GitHub Issue**: #516
+- **Issue URL**: <https://github.com/nold-ai/specfact-cli-modules/issues/516>
+- **Last Synced Status**: open
 - OpenSpec change: `code-review-20-external-installation-acceptance`.
 - Status: open / Todo / planned, verified 2026-10-16.
 - Assignee: djm81. Project: SpecFact CLI. Issue type: User Story.

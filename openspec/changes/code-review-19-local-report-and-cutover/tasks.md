@@ -22,12 +22,12 @@ All boxes are future implementation. This artifact delivery completes no runtime
 - [ ] Implement explicit schema 2.0 production and version dispatch in modules-side consumers, with compatibility fixtures for paired core adoption.
 - [ ] Bind worktree stability and index/range execution to their actual reviewed sources, including editable/generated artifacts.
 - [ ] Switch every public review scope to one local runner and delete native/OCI capsule execution, fallback switches and the old host orchestrator in that cutover.
-- [ ] Run scenario and regression checks after each bounded unit; record actual passing evidence and exact source/environment identities.
+- [ ] Run scenario and regression checks after each bounded unit; record actual passing commands, timestamps, results and exact source/environment identities in TDD_EVIDENCE.md.
 
 ## Review, release and finalization
 
 - [ ] Run applicable formatting, type, lint, import, contract, test, security and SpecFact review gates; resolve findings including warnings or record an explicitly approved exception.
 - [ ] Revalidate OpenSpec and requirement mappings and update affected help/reference/installation documentation.
-- [ ] Apply required semver, compatibility, module payload/signature and canonical publication steps only when runtime assets change.
+- [ ] Apply required semver, CHANGELOG.md, compatibility, module payload/signature and canonical publication steps only when runtime assets change.
 - [ ] Demonstrate the exact installed user workflow and rollback for the owning scope; keep unavailable cells and required failures nonaccepting.
 - [ ] Submit implementation for normal review to dev, reconcile issue/project state and archive only after actual completion using openspec archive.

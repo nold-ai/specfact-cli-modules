@@ -9,7 +9,7 @@ requirements:
     touchpoints:
     - id: openspec-source-spec
       kind: config_file
-      locator: openspec/changes/code-review-macos-developer-id-distribution/specs/review-macos-apple-distribution/spec.md
+      locator: openspec/history/abandoned/2026-10-16-code-review-macos-developer-id-distribution/specs/review-macos-apple-distribution/spec.md
     verification_cases:
     - case_id: 488-1-1
       scenario_id: optional-apple-distribution-dependency
@@ -42,7 +42,7 @@ requirements:
     touchpoints:
     - id: openspec-source-spec
       kind: config_file
-      locator: openspec/changes/code-review-macos-developer-id-distribution/specs/review-macos-apple-distribution/spec.md
+      locator: openspec/history/abandoned/2026-10-16-code-review-macos-developer-id-distribution/specs/review-macos-apple-distribution/spec.md
     verification_cases:
     - case_id: 488-2-1
       scenario_id: exact-apple-signed-distribution-acceptance

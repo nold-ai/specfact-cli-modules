@@ -31,7 +31,7 @@ overrides to satisfy acceptance.
 ## Optional Apple follow-up
 
 [#488](https://github.com/nold-ai/specfact-cli-modules/issues/488) /
-[`code-review-macos-developer-id-distribution`](../../openspec/changes/code-review-macos-developer-id-distribution/proposal.md)
+[`code-review-macos-developer-id-distribution`](../../openspec/history/abandoned/2026-10-16-code-review-macos-developer-id-distribution/proposal.md)
 is blocked by #460 and remains optional and unscheduled. Its explicit check is:
 
 ```sh
