@@ -1,5 +1,11 @@
 # macOS ARM64 feasibility gate
 
+> Superseded on 2026-10-16 (Europe/Berlin): #460 and #488 are closed Not Planned.
+> All capsule instructions, milestones and publication gates below are historical;
+> they grant no remaining implementation or release authority. Delivered results
+> retain their recorded scope. [The replacement design](../code-review-17-project-runtime-bootstrap/design.md)
+> and [issue dispositions](../code-review-17-project-runtime-bootstrap/GITHUB_ALIGNMENT.md) govern follow-up work.
+
 ## Project-driven and full-VM revision — 2026-10-04 (Europe/Berlin)
 
 Shared ProjectPlan discovery or explicit caller configuration now determines

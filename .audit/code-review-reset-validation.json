@@ -151,7 +151,7 @@
         "delivery_status": "proposal-only",
         "implementation_evidence": "not-yet-available",
         "findings": [],
-        "mapping_digest": "sha256:85bbd3b391f00b5e283514dd76701152359b7a925b6c05af89a41557602de659",
+        "mapping_digest": "sha256:13376e544f2dde53dcc28b11f79d79982509ea8456f77583b1e359b9ea445301",
         "source": "nold-ai/specfact-cli/openspec/changes/code-review-local-report-adoption"
       }
     ]
@@ -186,8 +186,8 @@
       {
         "source": "code-review-local-report-adoption",
         "requirements": 4,
-        "scenarios": 13,
-        "unchecked_tasks": 15
+        "scenarios": 14,
+        "unchecked_tasks": 18
       }
     ],
     "runtime_implementation": false,
@@ -2046,6 +2046,31 @@
     ]
   },
   "review_round_4_after": {
+    "result": "pass",
+    "failures": []
+  },
+  "review_round_5_before": {
+    "result": "fail",
+    "failures": [
+      "FEASIBILITY.md direct-entry guidance lacks explicit supersession before historical obligations.",
+      "MANAGED_BOUNDARY_STATUS.md direct-entry guidance lacks explicit supersession before historical obligations."
+    ]
+  },
+  "review_round_5_after": {
+    "result": "pass",
+    "failures": []
+  },
+  "review_round_6_before": {
+    "result": "fail",
+    "failures": [
+      "Ordinary capsule-free execution lacks a mapped scenario.",
+      "Missing independent delivery checkpoint: publish the implementation PR",
+      "Missing independent delivery checkpoint: Complete required CI and review feedback",
+      "Missing independent delivery checkpoint: Seek owner-authorized integration",
+      "Delivery stages are not distinct ordered checkboxes."
+    ]
+  },
+  "review_round_6_after": {
     "result": "pass",
     "failures": []
   }
