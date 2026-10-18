@@ -3,6 +3,10 @@
 This document is the modules-side source of truth for active OpenSpec work. It
 must be read together with the core repo change order in `nold-ai/specfact-cli`.
 
+## Quality fixture maintenance (2026-10-16)
+
+`ci-03-quality-fixture-identities` tracks [modules #518](https://github.com/nold-ai/specfact-cli-modules/issues/518), under Feature #163. It separates paired integration core, immutable declared core 0.55.4 for the existing full suite, and the paired core's reviewed modules smoke fixture. The 2026-10-18 approved local deferral addition aligns orchestrator path eligibility with the existing blocking Linux workflow while retaining all guards and mandatory exact-head review. No runtime, module release, dependency declaration, security or policy change is included. Planning PR #517 and core #770 remain independent. Hosted acceptance and post-merge archival remain pending.
+
 ## Agentic SDLC adjustments (2026-10-04)
 
 The owner-approved [delivery roadmap](AGENTIC_SDLC_ROADMAP.md) adds bounded compatibility, optional decision-context, ecosystem and calibration stories. It preserves the lean release chain and keeps context-bound assurance opt-in. This section supersedes stale status/dependency wording below. Modules #481 is **In Progress**, with takeover authorized; follow-up fetched issues are Todo. Runtime work is not completed by this planning update. Core #742 tracking is live, but its proposal is not on the fetched core dev base.

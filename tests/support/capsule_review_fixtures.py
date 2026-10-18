@@ -266,7 +266,7 @@ def deferred_review_repository(tmp_path: Path, advanced_dev: bool):
 
 
 def deferral_worktree(tmp_path: Path, scenario):
-    _platform, _ci, _deferral, bundle, advanced_dev, independent_review, _expected = scenario
+    _platform, _ci, _deferral, candidate_path, advanced_dev, independent_review, _expected = scenario
     repository = tmp_path / "repository"
     repository.mkdir()
     _git(repository, "init", "-q")
@@ -282,8 +282,9 @@ def deferral_worktree(tmp_path: Path, scenario):
         "llms.txt",
         "docs/reference/commands.generated.json",
         "docs/reference/commands.generated.md",
-        f"packages/{bundle}/resources/example.py",
+        candidate_path,
         "openspec/changes/example/spec.md",
+        "tests/unit/test_check_prompt_commands_script.py",
     ]
     for relative in files:
         path = repository / relative
@@ -302,7 +303,7 @@ def deferral_worktree(tmp_path: Path, scenario):
         _git(repository, "add", ".")
         _git(repository, "-c", "core.hooksPath=/dev/null", "commit", "-qm", "fixture advanced dev")
         _git(repository, "update-ref", "refs/remotes/origin/dev", "HEAD")
-    for relative in files[-2:]:
+    for relative in files[-3:]:
         (worktree / relative).write_text("candidate\n")
     if independent_review == "unstaged_restore":
         (worktree / ".github/workflows/capsule-customer-execution.yml").write_text(
@@ -328,6 +329,7 @@ def assert_block2_trace(invoked, expected, stderr):
     assert "pre_commit_code_review.py" not in invoked
     if expected == 0:
         assert "DEFERRED" in stderr
+        assert "mandatory exact-head GitHub Linux CI; this is not a PASS" in stderr
         assert "contract-test-contracts" in invoked
     else:
         assert "Capsule review deferral" in stderr

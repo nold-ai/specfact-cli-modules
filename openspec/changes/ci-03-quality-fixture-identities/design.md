@@ -1,0 +1,17 @@
+# Quality workflow input selection
+
+The user is the maintainer running candidate modules quality gates. Three identities have different purposes. The dynamically selected paired core owns integration checks. Immutable core 0.55.4 owns the declared-baseline full suite. The modules commit and tree in the paired core's `ci/runtime-smoke-fixture.lock.json` own installed discovery smoke.
+
+Reuse the existing checkout action and the paired core composite action's validation pattern. Calling that composite directly assumes repository-root paths that do not fit the nested paired checkout. A small inline adaptation preserves the same clean Git identity check without a new helper or runtime interface. Custom fixture infrastructure would add maintenance without improving this bounded repair.
+
+The baseline is commit `d579970565530c3fd7b98bad4de90cf874c2a99d`, tree `f49667f21e4a20a432ad80032a01a5c6894b0c91`, from v0.55.4. `ensure_core_dependency` reinstalls its selected checkout, so the full suite needs a step-scoped `SPECFACT_CLI_REPO` override. The paired export remains the job default. Baseline checkout occurs after all candidate formatting and lint gates, immediately before the full suite.
+
+The smoke lock is trusted only after repository and full SHA validation. Checkout is credential-free in `runtime-smoke-modules`, beside `specfact-cli`. Verify commit, tree and clean status before passing the absolute path to the unchanged smoke verifier. The current reviewed lock is commit `046d366c190af7a188d6f48953a96edb65e766db`, tree `c5b44db3477d1c9ea8dae1dceab2af276d265353`. The verifier retains authority to reject other snapshots. After verification, move the smoke fixture to `$RUNNER_TEMP/runtime-smoke-modules` before exporting its absolute path. This keeps historical fixture code outside candidate formatting and lint traversal without changing lint scope.
+
+This is one workflow repair with no paid service or new runtime. Additional checkout cost is bounded to one baseline checkout per matrix job and one smoke fixture checkout on Python 3.12; elapsed CI cost has not been measured. A missing or malformed lock fails before checkout, a changed fixture fails identity verification, and a drifting baseline fails its pinned commit/tree check. Revert this change to roll back the workflow wiring; that also restores the diagnosed failures. Hosted Linux acceptance remains required.
+
+## Approved local eligibility alignment
+
+The maintainer approved this bounded addition on 2026-10-18 (Europe/Berlin). Reuse the existing deferral mechanism with one extra path, `.github/workflows/pr-orchestrator.yml`. Leaving the mechanism unchanged rejects the already-scheduled orchestrator-only candidate; custom review infrastructure would exceed the approved scope. The eligibility input remains a staged candidate delta against the merge-base with origin/dev. Preserve local ARM64 Darwin, explicit opt-in, feature worktree, indexed blocking candidate review and independent signed-review checks. Preserve the DEFERRED warning and every other Block 2 check.
+
+A disposable Git worktree containing an orchestrator-only candidate must pass eligibility and retain all other Block 2 checks. CI, Linux, invalid opt-in, missing or only unstaged-restored independent review, and unrelated workflow changes must remain rejected. This is local eligibility evidence; it does not prove hosted review success. Revert the single added path to roll back this extension. No dependency, signature, runtime, workflow trigger or enforcement changes are part of this addition.

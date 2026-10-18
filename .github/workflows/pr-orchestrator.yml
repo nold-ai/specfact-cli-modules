@@ -206,11 +206,53 @@ jobs:
       - name: Install specfact-cli dependency
         if: needs.changes.outputs.skip_tests_dev_to_main != 'true'
         run: hatch run pip install -e ./specfact-cli
+      - name: Read runtime smoke fixture identity
+        id: smoke-fixture
+        if: needs.changes.outputs.skip_tests_dev_to_main != 'true' && matrix.python-version == '3.12'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PYCODE'
+          import json
+          import os
+          import re
+          from pathlib import Path
+
+          lock = json.loads(Path("specfact-cli/ci/runtime-smoke-fixture.lock.json").read_text(encoding="utf-8"))
+          if not isinstance(lock, dict) or lock.get("repository") != "nold-ai/specfact-cli-modules":
+              raise SystemExit("Invalid runtime smoke fixture repository")
+          if any(not isinstance(lock.get(key), str) or re.fullmatch(r"[0-9a-f]{40}", lock[key]) is None for key in ("commit", "tree")):
+              raise SystemExit("Runtime smoke fixture requires full commit and tree identities")
+          with Path(os.environ["GITHUB_OUTPUT"]).open("a", encoding="utf-8") as output:
+              output.write(f"commit={lock['commit']}\ntree={lock['tree']}\n")
+          PYCODE
+      - name: Checkout runtime smoke modules
+        if: needs.changes.outputs.skip_tests_dev_to_main != 'true' && matrix.python-version == '3.12'
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          repository: nold-ai/specfact-cli-modules
+          path: runtime-smoke-modules
+          ref: ${{ steps.smoke-fixture.outputs.commit }}
+          persist-credentials: false
+      - name: Verify runtime smoke fixture
+        if: needs.changes.outputs.skip_tests_dev_to_main != 'true' && matrix.python-version == '3.12'
+        shell: bash
+        env:
+          FIXTURE_COMMIT: ${{ steps.smoke-fixture.outputs.commit }}
+          FIXTURE_TREE: ${{ steps.smoke-fixture.outputs.tree }}
+        run: |
+          set -euo pipefail
+          test "$(git -C runtime-smoke-modules rev-parse HEAD)" = "$FIXTURE_COMMIT"
+          test "$(git -C runtime-smoke-modules rev-parse 'HEAD^{tree}')" = "$FIXTURE_TREE"
+          test -z "$(git -C runtime-smoke-modules status --porcelain)"
+          test ! -e "${RUNNER_TEMP}/runtime-smoke-modules"
+          mv runtime-smoke-modules "${RUNNER_TEMP}/runtime-smoke-modules"
+          printf 'SPECFACT_SMOKE_MODULES_REPO=%s/runtime-smoke-modules\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
       - name: Runtime discovery smoke across package managers
         if: needs.changes.outputs.skip_tests_dev_to_main != 'true' && matrix.python-version == '3.12'
         run: |
           python -m pip install pipx uv "virtualenv<21"
-          hatch run python specfact-cli/scripts/runtime_discovery_smoke.py --modules-repo "${GITHUB_WORKSPACE}" --launcher direct --launcher hatch-source --launcher pip-editable --launcher pipx --launcher uv-run --launcher uvx
+          hatch run python specfact-cli/scripts/runtime_discovery_smoke.py --modules-repo "${SPECFACT_SMOKE_MODULES_REPO}" --launcher direct --launcher hatch-source --launcher pip-editable --launcher pipx --launcher uv-run --launcher uvx
       - name: Validate generated command overview
         if: needs.changes.outputs.skip_tests_dev_to_main != 'true'
         run: |
@@ -237,8 +279,28 @@ jobs:
       - name: Smart Test Configuration
         if: needs.changes.outputs.skip_tests_dev_to_main != 'true'
         run: hatch run smart-test-check
+      - name: Checkout declared core baseline
+        if: needs.changes.outputs.skip_tests_dev_to_main != 'true'
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          repository: nold-ai/specfact-cli
+          path: baseline-core
+          ref: d579970565530c3fd7b98bad4de90cf874c2a99d
+          persist-credentials: false
+
+      - name: Verify declared core baseline
+        if: needs.changes.outputs.skip_tests_dev_to_main != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C baseline-core rev-parse HEAD)" = "d579970565530c3fd7b98bad4de90cf874c2a99d"
+          test "$(git -C baseline-core rev-parse 'HEAD^{tree}')" = "f49667f21e4a20a432ad80032a01a5c6894b0c91"
+          test -z "$(git -C baseline-core status --porcelain)"
+
       - name: Full Test Suite
         if: needs.changes.outputs.skip_tests_dev_to_main != 'true'
+        env:
+          SPECFACT_CLI_REPO: ${{ github.workspace }}/baseline-core
         run: hatch run test
 
   minimum-core-schema-compatibility:

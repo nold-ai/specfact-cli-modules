@@ -1,0 +1,250 @@
+schema_version: '2'
+requirements:
+  openspec:ci-03-quality-fixture-identities:quality-fixture-identities:full-suite-selects-the-declared-core-baseline:
+    rationale: Select the input identity required by the existing quality check without changing runtime or policy.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#518
+    touchpoints:
+    - id: quality-workflow
+      kind: workflow
+      locator: .github/workflows/pr-orchestrator.yml
+    verification_cases:
+    - case_id: CI-03-1-1
+      scenario_id: full-suite-selects-the-declared-core-baseline
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/workflows/test_paired_core_ref_trust.py::test_quality_full_suite_selects_only_declared_baseline
+      intent: Full suite overrides the paired default.
+      observable: The full suite retains hatch run test with a baseline-only environment override after candidate
+        gates.
+      implementation_task: '2.1'
+  openspec:ci-03-quality-fixture-identities:quality-fixture-identities:installed-smoke-selects-the-reviewed-modules-fixture:
+    rationale: Select the input identity required by the existing quality check without changing runtime or policy.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#518
+    touchpoints:
+    - id: quality-workflow
+      kind: workflow
+      locator: .github/workflows/pr-orchestrator.yml
+    verification_cases:
+    - case_id: CI-03-2-1
+      scenario_id: installed-smoke-selects-the-reviewed-modules-fixture
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/workflows/test_paired_core_ref_trust.py::test_quality_smoke_preserves_all_launchers_with_separate_checkout
+      intent: Valid lock supplies the smoke checkout.
+      observable: The credential-free checkout uses the lock output and all six launchers receive the exported fixture
+        path.
+      implementation_task: '2.2'
+    - case_id: CI-03-2-2
+      scenario_id: installed-smoke-selects-the-reviewed-modules-fixture
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/workflows/test_paired_core_ref_trust.py::test_quality_smoke_lock_is_validated_before_outputs[None]
+      intent: Valid lock supplies the smoke checkout.
+      observable: The workflow shell reader emits only valid full identities and rejects malformed input without
+        outputs.
+      implementation_task: '2.2'
+    - case_id: CI-03-2-3
+      scenario_id: installed-smoke-selects-the-reviewed-modules-fixture
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/workflows/test_paired_core_ref_trust.py::test_quality_smoke_lock_is_validated_before_outputs[json]
+      intent: Invalid lock is rejected.
+      observable: The workflow shell reader emits only valid full identities and rejects malformed input without
+        outputs.
+      implementation_task: '2.2'
+    - case_id: CI-03-2-4
+      scenario_id: installed-smoke-selects-the-reviewed-modules-fixture
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/workflows/test_paired_core_ref_trust.py::test_quality_smoke_lock_is_validated_before_outputs[repository]
+      intent: Invalid lock is rejected.
+      observable: The workflow shell reader emits only valid full identities and rejects malformed input without
+        outputs.
+      implementation_task: '2.2'
+    - case_id: CI-03-2-5
+      scenario_id: installed-smoke-selects-the-reviewed-modules-fixture
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/workflows/test_paired_core_ref_trust.py::test_quality_smoke_lock_is_validated_before_outputs[commit]
+      intent: Invalid lock is rejected.
+      observable: The workflow shell reader emits only valid full identities and rejects malformed input without
+        outputs.
+      implementation_task: '2.2'
+    - case_id: CI-03-2-6
+      scenario_id: installed-smoke-selects-the-reviewed-modules-fixture
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/workflows/test_paired_core_ref_trust.py::test_quality_smoke_lock_is_validated_before_outputs[tree]
+      intent: Invalid lock is rejected.
+      observable: The workflow shell reader emits only valid full identities and rejects malformed input without
+        outputs.
+      implementation_task: '2.2'
+    - case_id: CI-03-2-7
+      scenario_id: installed-smoke-selects-the-reviewed-modules-fixture
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/workflows/test_paired_core_ref_trust.py::test_quality_smoke_lock_is_validated_before_outputs[missing]
+      intent: Invalid lock is rejected.
+      observable: The workflow shell reader emits only valid full identities and rejects malformed input without
+        outputs.
+      implementation_task: '2.2'
+    - case_id: CI-03-2-8
+      scenario_id: installed-smoke-selects-the-reviewed-modules-fixture
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/workflows/test_paired_core_ref_trust.py::test_quality_smoke_lock_is_validated_before_outputs[shape]
+      intent: Invalid lock is rejected.
+      observable: The workflow shell reader emits only valid full identities and rejects malformed input without
+        outputs.
+      implementation_task: '2.2'
+    - case_id: CI-03-2-9
+      scenario_id: installed-smoke-selects-the-reviewed-modules-fixture
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/workflows/test_paired_core_ref_trust.py::test_quality_smoke_verifies_git_checkout_before_export[None]
+      intent: Valid lock supplies the smoke checkout.
+      observable: Real disposable Git fixtures verify commit, tree and cleanliness before export; successful relocation
+        preserves commit and clean status outside the candidate path.
+      implementation_task: '2.2'
+    - case_id: CI-03-2-10
+      scenario_id: installed-smoke-selects-the-reviewed-modules-fixture
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/workflows/test_paired_core_ref_trust.py::test_quality_smoke_verifies_git_checkout_before_export[commit]
+      intent: Unauthenticated fixture is rejected.
+      observable: Real disposable Git fixtures verify commit, tree and cleanliness before export; successful relocation
+        preserves commit and clean status outside the candidate path.
+      implementation_task: '2.2'
+    - case_id: CI-03-2-11
+      scenario_id: installed-smoke-selects-the-reviewed-modules-fixture
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/workflows/test_paired_core_ref_trust.py::test_quality_smoke_verifies_git_checkout_before_export[tree]
+      intent: Unauthenticated fixture is rejected.
+      observable: Real disposable Git fixtures verify commit, tree and cleanliness before export; successful relocation
+        preserves commit and clean status outside the candidate path.
+      implementation_task: '2.2'
+    - case_id: CI-03-2-12
+      scenario_id: installed-smoke-selects-the-reviewed-modules-fixture
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/workflows/test_paired_core_ref_trust.py::test_quality_smoke_verifies_git_checkout_before_export[tracked]
+      intent: Unauthenticated fixture is rejected.
+      observable: Real disposable Git fixtures verify commit, tree and cleanliness before export; successful relocation
+        preserves commit and clean status outside the candidate path.
+      implementation_task: '2.2'
+    - case_id: CI-03-2-13
+      scenario_id: installed-smoke-selects-the-reviewed-modules-fixture
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/workflows/test_paired_core_ref_trust.py::test_quality_smoke_verifies_git_checkout_before_export[untracked]
+      intent: Unauthenticated fixture is rejected.
+      observable: Real disposable Git fixtures verify commit, tree and cleanliness before export; successful relocation
+        preserves commit and clean status outside the candidate path.
+      implementation_task: '2.2'
+  openspec:ci-03-quality-fixture-identities:quality-fixture-identities:approved-orchestrator-candidates-retain-guarded-local-deferral:
+    rationale: Align approved local eligibility with the existing blocking workflow trigger without weakening review.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#518
+    touchpoints:
+    - id: local-review-deferral
+      kind: code
+      locator: scripts/pre-commit-quality-checks.sh
+    verification_cases:
+    - case_id: CI-03-3-1
+      scenario_id: approved-orchestrator-candidates-retain-guarded-local-deferral
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/host/proof_capsule_deferred_review_ci.py::test_narrow_local_deferral_retains_block2_and_cannot_run_in_ci[orchestrator-only]
+      intent: Eligible candidate defers only local review and retains Block 2 checks.
+      observable: The real shell hook checks the staged Git candidate and returns the required status and diagnostic.
+      implementation_task: '4.3'
+    - case_id: CI-03-3-2
+      scenario_id: approved-orchestrator-candidates-retain-guarded-local-deferral
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/host/proof_capsule_deferred_review_ci.py::test_narrow_local_deferral_retains_block2_and_cannot_run_in_ci[orchestrator-advanced-dev]
+      intent: Eligible candidate defers only local review and retains Block 2 checks.
+      observable: The real shell hook checks the staged Git candidate and returns the required status and diagnostic.
+      implementation_task: '4.3'
+    - case_id: CI-03-3-3
+      scenario_id: approved-orchestrator-candidates-retain-guarded-local-deferral
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/host/proof_capsule_deferred_review_ci.py::test_narrow_local_deferral_retains_block2_and_cannot_run_in_ci[orchestrator-ci-rejected]
+      intent: Ineligible candidate fails the local deferral guard.
+      observable: The real shell hook checks the staged Git candidate and returns the required status and diagnostic.
+      implementation_task: '4.3'
+    - case_id: CI-03-3-4
+      scenario_id: approved-orchestrator-candidates-retain-guarded-local-deferral
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/host/proof_capsule_deferred_review_ci.py::test_narrow_local_deferral_retains_block2_and_cannot_run_in_ci[orchestrator-linux-rejected]
+      intent: Ineligible candidate fails the local deferral guard.
+      observable: The real shell hook checks the staged Git candidate and returns the required status and diagnostic.
+      implementation_task: '4.3'
+    - case_id: CI-03-3-5
+      scenario_id: approved-orchestrator-candidates-retain-guarded-local-deferral
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/host/proof_capsule_deferred_review_ci.py::test_narrow_local_deferral_retains_block2_and_cannot_run_in_ci[orchestrator-invalid-opt-in]
+      intent: Ineligible candidate fails the local deferral guard.
+      observable: The real shell hook checks the staged Git candidate and returns the required status and diagnostic.
+      implementation_task: '4.3'
+    - case_id: CI-03-3-6
+      scenario_id: approved-orchestrator-candidates-retain-guarded-local-deferral
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/host/proof_capsule_deferred_review_ci.py::test_narrow_local_deferral_retains_block2_and_cannot_run_in_ci[orchestrator-no-independent-review]
+      intent: Ineligible candidate fails the local deferral guard.
+      observable: The real shell hook checks the staged Git candidate and returns the required status and diagnostic.
+      implementation_task: '4.3'
+    - case_id: CI-03-3-7
+      scenario_id: approved-orchestrator-candidates-retain-guarded-local-deferral
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/host/proof_capsule_deferred_review_ci.py::test_narrow_local_deferral_retains_block2_and_cannot_run_in_ci[orchestrator-unstaged-review-restoration]
+      intent: Ineligible candidate fails the local deferral guard.
+      observable: The real shell hook checks the staged Git candidate and returns the required status and diagnostic.
+      implementation_task: '4.3'
+    - case_id: CI-03-3-8
+      scenario_id: approved-orchestrator-candidates-retain-guarded-local-deferral
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/host/proof_capsule_deferred_review_ci.py::test_narrow_local_deferral_retains_block2_and_cannot_run_in_ci[unrelated-workflow-rejected]
+      intent: Ineligible candidate fails the local deferral guard.
+      observable: The real shell hook checks the staged Git candidate and returns the required status and diagnostic.
+      implementation_task: '4.3'
+    - case_id: CI-03-3-9
+      scenario_id: approved-orchestrator-candidates-retain-guarded-local-deferral
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/host/proof_capsule_deferred_review_ci.py::test_narrow_local_deferral_retains_block2_and_cannot_run_in_ci[unrelated-workflow-advanced-dev-rejected]
+      intent: Ineligible candidate fails the local deferral guard.
+      observable: The real shell hook checks the staged Git candidate and returns the required status and diagnostic.
+      implementation_task: '4.3'

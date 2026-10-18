@@ -67,18 +67,62 @@ def test_deferred_gate_reviews_exact_staged_tree_and_propagates_failure(
 @pytest.mark.parametrize(
     "scenario",
     [
-        ("Darwin", "", "github-linux", "specfact-code-review", False, True, 0),
-        ("Darwin", "", "github-linux", "specfact-code-review", False, False, 1),
-        ("Darwin", "", "github-linux", "specfact-code-review", False, "unstaged_restore", 1),
-        ("Darwin", "true", "github-linux", "specfact-code-review", False, True, 1),
-        ("Linux", "", "github-linux", "specfact-code-review", False, True, 1),
-        ("Darwin", "", "invalid", "specfact-code-review", False, True, 1),
-        ("Darwin", "", "github-linux", "specfact-project", False, True, 1),
-        ("Darwin", "", "github-linux", "specfact-project", True, True, 1),
+        ("Darwin", "", "github-linux", "packages/specfact-code-review/resources/example.py", False, True, 0),
+        ("Darwin", "", "github-linux", "packages/specfact-code-review/resources/example.py", False, False, 1),
+        (
+            "Darwin",
+            "",
+            "github-linux",
+            "packages/specfact-code-review/resources/example.py",
+            False,
+            "unstaged_restore",
+            1,
+        ),
+        ("Darwin", "true", "github-linux", "packages/specfact-code-review/resources/example.py", False, True, 1),
+        ("Linux", "", "github-linux", "packages/specfact-code-review/resources/example.py", False, True, 1),
+        ("Darwin", "", "invalid", "packages/specfact-code-review/resources/example.py", False, True, 1),
+        ("Darwin", "", "github-linux", "packages/specfact-project/resources/example.py", False, True, 1),
+        ("Darwin", "", "github-linux", "packages/specfact-project/resources/example.py", True, True, 1),
+        pytest.param(
+            ("Darwin", "", "github-linux", ".github/workflows/pr-orchestrator.yml", False, True, 0),
+            id="orchestrator-only",
+        ),
+        pytest.param(
+            ("Darwin", "", "github-linux", ".github/workflows/pr-orchestrator.yml", True, True, 0),
+            id="orchestrator-advanced-dev",
+        ),
+        pytest.param(
+            ("Darwin", "true", "github-linux", ".github/workflows/pr-orchestrator.yml", False, True, 1),
+            id="orchestrator-ci-rejected",
+        ),
+        pytest.param(
+            ("Linux", "", "github-linux", ".github/workflows/pr-orchestrator.yml", False, True, 1),
+            id="orchestrator-linux-rejected",
+        ),
+        pytest.param(
+            ("Darwin", "", "invalid", ".github/workflows/pr-orchestrator.yml", False, True, 1),
+            id="orchestrator-invalid-opt-in",
+        ),
+        pytest.param(
+            ("Darwin", "", "github-linux", ".github/workflows/pr-orchestrator.yml", False, False, 1),
+            id="orchestrator-no-independent-review",
+        ),
+        pytest.param(
+            ("Darwin", "", "github-linux", ".github/workflows/pr-orchestrator.yml", False, "unstaged_restore", 1),
+            id="orchestrator-unstaged-review-restoration",
+        ),
+        pytest.param(
+            ("Darwin", "", "github-linux", ".github/workflows/unrelated.yml", False, True, 1),
+            id="unrelated-workflow-rejected",
+        ),
+        pytest.param(
+            ("Darwin", "", "github-linux", ".github/workflows/unrelated.yml", True, True, 1),
+            id="unrelated-workflow-advanced-dev-rejected",
+        ),
     ],
 )
 def test_narrow_local_deferral_retains_block2_and_cannot_run_in_ci(tmp_path: Path, scenario) -> None:
-    platform, ci, deferral, _bundle, _advanced_dev, _independent_review, expected = scenario
+    platform, ci, deferral, _candidate_path, _advanced_dev, _independent_review, expected = scenario
     worktree = deferral_worktree(tmp_path, scenario)
     calls = tmp_path / "calls"
     script = (REPO_ROOT / "scripts/pre-commit-quality-checks.sh").read_text().rsplit('main "$@"', 1)[0]
