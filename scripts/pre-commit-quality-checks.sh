@@ -353,6 +353,10 @@ run_code_review_gate() {
       error "Capsule review deferral requires a candidate change that schedules the blocking capsule workflow."
       exit 1
     fi
+    if ! hatch run python scripts/validate_capsule_ci_schedule.py; then
+      error "Capsule review deferral requires indexed orchestration that schedules and blocks on exact-head review."
+      exit 1
+    fi
     warn "DEFERRED: only the local capsule review requires mandatory exact-head GitHub Linux CI; this is not a PASS."
     return 0
   fi

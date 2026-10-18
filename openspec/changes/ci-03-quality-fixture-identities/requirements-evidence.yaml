@@ -43,7 +43,7 @@ requirements:
       method: test
       selector:
         runner: pytest
-        node_id: tests/unit/workflows/test_paired_core_ref_trust.py::test_quality_smoke_lock_is_validated_before_outputs[None]
+        node_id: tests/host/proof_quality_fixture_identities.py::test_quality_smoke_lock_is_validated_before_outputs[None]
       intent: Valid lock supplies the smoke checkout.
       observable: The workflow shell reader emits only valid full identities and rejects malformed input without
         outputs.
@@ -53,7 +53,7 @@ requirements:
       method: test
       selector:
         runner: pytest
-        node_id: tests/unit/workflows/test_paired_core_ref_trust.py::test_quality_smoke_lock_is_validated_before_outputs[json]
+        node_id: tests/host/proof_quality_fixture_identities.py::test_quality_smoke_lock_is_validated_before_outputs[json]
       intent: Invalid lock is rejected.
       observable: The workflow shell reader emits only valid full identities and rejects malformed input without
         outputs.
@@ -63,7 +63,7 @@ requirements:
       method: test
       selector:
         runner: pytest
-        node_id: tests/unit/workflows/test_paired_core_ref_trust.py::test_quality_smoke_lock_is_validated_before_outputs[repository]
+        node_id: tests/host/proof_quality_fixture_identities.py::test_quality_smoke_lock_is_validated_before_outputs[repository]
       intent: Invalid lock is rejected.
       observable: The workflow shell reader emits only valid full identities and rejects malformed input without
         outputs.
@@ -73,7 +73,7 @@ requirements:
       method: test
       selector:
         runner: pytest
-        node_id: tests/unit/workflows/test_paired_core_ref_trust.py::test_quality_smoke_lock_is_validated_before_outputs[commit]
+        node_id: tests/host/proof_quality_fixture_identities.py::test_quality_smoke_lock_is_validated_before_outputs[commit]
       intent: Invalid lock is rejected.
       observable: The workflow shell reader emits only valid full identities and rejects malformed input without
         outputs.
@@ -83,7 +83,7 @@ requirements:
       method: test
       selector:
         runner: pytest
-        node_id: tests/unit/workflows/test_paired_core_ref_trust.py::test_quality_smoke_lock_is_validated_before_outputs[tree]
+        node_id: tests/host/proof_quality_fixture_identities.py::test_quality_smoke_lock_is_validated_before_outputs[tree]
       intent: Invalid lock is rejected.
       observable: The workflow shell reader emits only valid full identities and rejects malformed input without
         outputs.
@@ -93,7 +93,7 @@ requirements:
       method: test
       selector:
         runner: pytest
-        node_id: tests/unit/workflows/test_paired_core_ref_trust.py::test_quality_smoke_lock_is_validated_before_outputs[missing]
+        node_id: tests/host/proof_quality_fixture_identities.py::test_quality_smoke_lock_is_validated_before_outputs[missing]
       intent: Invalid lock is rejected.
       observable: The workflow shell reader emits only valid full identities and rejects malformed input without
         outputs.
@@ -103,7 +103,7 @@ requirements:
       method: test
       selector:
         runner: pytest
-        node_id: tests/unit/workflows/test_paired_core_ref_trust.py::test_quality_smoke_lock_is_validated_before_outputs[shape]
+        node_id: tests/host/proof_quality_fixture_identities.py::test_quality_smoke_lock_is_validated_before_outputs[shape]
       intent: Invalid lock is rejected.
       observable: The workflow shell reader emits only valid full identities and rejects malformed input without
         outputs.
@@ -113,7 +113,7 @@ requirements:
       method: test
       selector:
         runner: pytest
-        node_id: tests/unit/workflows/test_paired_core_ref_trust.py::test_quality_smoke_verifies_git_checkout_before_export[None]
+        node_id: tests/host/proof_quality_fixture_identities.py::test_quality_smoke_verifies_git_checkout_before_export[None]
       intent: Valid lock supplies the smoke checkout.
       observable: Real disposable Git fixtures verify commit, tree and cleanliness before export; successful relocation
         preserves commit and clean status outside the candidate path.
@@ -123,7 +123,7 @@ requirements:
       method: test
       selector:
         runner: pytest
-        node_id: tests/unit/workflows/test_paired_core_ref_trust.py::test_quality_smoke_verifies_git_checkout_before_export[commit]
+        node_id: tests/host/proof_quality_fixture_identities.py::test_quality_smoke_verifies_git_checkout_before_export[commit]
       intent: Unauthenticated fixture is rejected.
       observable: Real disposable Git fixtures verify commit, tree and cleanliness before export; successful relocation
         preserves commit and clean status outside the candidate path.
@@ -133,7 +133,7 @@ requirements:
       method: test
       selector:
         runner: pytest
-        node_id: tests/unit/workflows/test_paired_core_ref_trust.py::test_quality_smoke_verifies_git_checkout_before_export[tree]
+        node_id: tests/host/proof_quality_fixture_identities.py::test_quality_smoke_verifies_git_checkout_before_export[tree]
       intent: Unauthenticated fixture is rejected.
       observable: Real disposable Git fixtures verify commit, tree and cleanliness before export; successful relocation
         preserves commit and clean status outside the candidate path.
@@ -143,7 +143,7 @@ requirements:
       method: test
       selector:
         runner: pytest
-        node_id: tests/unit/workflows/test_paired_core_ref_trust.py::test_quality_smoke_verifies_git_checkout_before_export[tracked]
+        node_id: tests/host/proof_quality_fixture_identities.py::test_quality_smoke_verifies_git_checkout_before_export[tracked]
       intent: Unauthenticated fixture is rejected.
       observable: Real disposable Git fixtures verify commit, tree and cleanliness before export; successful relocation
         preserves commit and clean status outside the candidate path.
@@ -153,7 +153,7 @@ requirements:
       method: test
       selector:
         runner: pytest
-        node_id: tests/unit/workflows/test_paired_core_ref_trust.py::test_quality_smoke_verifies_git_checkout_before_export[untracked]
+        node_id: tests/host/proof_quality_fixture_identities.py::test_quality_smoke_verifies_git_checkout_before_export[untracked]
       intent: Unauthenticated fixture is rejected.
       observable: Real disposable Git fixtures verify commit, tree and cleanliness before export; successful relocation
         preserves commit and clean status outside the candidate path.
@@ -248,3 +248,39 @@ requirements:
       intent: Ineligible candidate fails the local deferral guard.
       observable: The real shell hook checks the staged Git candidate and returns the required status and diagnostic.
       implementation_task: '4.3'
+    - case_id: CI-03-3-10
+      scenario_id: approved-orchestrator-candidates-retain-guarded-local-deferral
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/host/proof_capsule_deferred_review_ci.py::test_deferral_rejects_broken_indexed_orchestrator
+      intent: Broken indexed scheduling cannot qualify either orchestrator or capsule-payload candidates for deferral.
+      observable: The real hook rejects each staged routing bypass even with an unstaged restoration and preserves other Block 2 checks.
+      implementation_task: '5.3'
+    - case_id: CI-03-3-11
+      scenario_id: approved-orchestrator-candidates-retain-guarded-local-deferral
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/host/proof_capsule_deferred_review_ci.py::test_deferral_requires_exact_indexed_workflow_bytes
+      intent: Exact indexed reviewed bytes are required even for comment changes or missing files.
+      observable: The validator rejects changed bytes and missing index entries despite working-copy restoration.
+      implementation_task: '6.3'
+  openspec:ci-03-quality-fixture-identities:quality-fixture-identities:bash-fixture-proofs-execute-on-the-host:
+    rationale: Keep Bash fixture proofs mandatory without extending capsule capabilities.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#518
+    touchpoints:
+    - id: full-test-host-proof
+      kind: code
+      locator: pyproject.toml
+    verification_cases:
+    - case_id: CI-03-4-1
+      scenario_id: bash-fixture-proofs-execute-on-the-host
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/workflows/test_paired_core_ref_trust.py::test_default_full_suite_schedules_quality_fixture_host_proofs
+      intent: The default full test command retains explicit host proof execution.
+      observable: The unit assertion fails when the host proof is absent from the command before the ordinary suite.
+      implementation_task: '6.3'

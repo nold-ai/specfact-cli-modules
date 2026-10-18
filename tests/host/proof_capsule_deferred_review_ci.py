@@ -249,3 +249,133 @@ def test_independent_invalid_no_impact_stops_before_review(
     assert not (trusted / "prepared").exists()
     assert (trusted / "cleaned").exists()
     assert "private-reason" not in result.stdout
+
+
+@pytest.mark.parametrize(
+    "candidate_path",
+    [
+        ".github/workflows/pr-orchestrator.yml",
+        "packages/specfact-code-review/resources/example.py",
+    ],
+)
+@pytest.mark.parametrize(
+    "mutation",
+    [
+        "workflow-default-shell",
+        "workflow-default-working-directory",
+        "quality-container",
+        "root-env",
+        "job-env",
+        "quality-runner",
+        "filter-entry-removed",
+        "job-removed",
+        "condition-disabled",
+        "continue-on-error",
+        "pr-trigger-excluded",
+        "filter-output-removed",
+        "filter-disabled",
+        "job-needs-removed",
+        "job-uses-replaced",
+        "quality-needs-removed",
+        "quality-disabled",
+        "quality-continue-on-error",
+        "prerequisite-disabled",
+        "prerequisite-nonblocking",
+        "prerequisite-removed",
+        "prerequisite-body-replaced",
+    ],
+)
+@pytest.mark.parametrize("restore_schedule", [False, True], ids=["indexed", "unstaged-restoration"])
+def test_deferral_rejects_broken_indexed_orchestrator(
+    tmp_path: Path, candidate_path: str, mutation: str, restore_schedule: bool
+) -> None:
+    def break_schedule(workflow):
+        jobs = workflow["jobs"]
+        customer = jobs["customer-capsules"]
+        quality = jobs["quality"]
+        filters = jobs["changes"]["steps"][1]
+        prerequisite = quality["steps"][0]
+        target, key, replacement = {
+            "workflow-default-shell": (workflow, "defaults", {"run": {"shell": 'bash -c "exit 0" {0}'}}),
+            "workflow-default-working-directory": (workflow, "defaults", {"run": {"working-directory": "/tmp"}}),
+            "filter-entry-removed": (
+                filters["with"],
+                "filters",
+                filters["with"]["filters"].replace('  - ".github/workflows/pr-orchestrator.yml"\n', ""),
+            ),
+            "quality-container": (quality, "container", "alpine:latest"),
+            "root-env": (workflow, "env", {"BASH_ENV": "/tmp/override"}),
+            "job-env": (quality, "env", {"BASH_ENV": "/tmp/override"}),
+            "quality-runner": (quality, "runs-on", "windows-latest"),
+            "job-removed": (jobs, "customer-capsules", None),
+            "condition-disabled": (customer, "if", "false"),
+            "continue-on-error": (customer, "continue-on-error", "true"),
+            "pr-trigger-excluded": (workflow["on"]["pull_request"], "paths-ignore", [".github/**"]),
+            "filter-output-removed": (jobs["changes"]["outputs"], "capsule_changed", None),
+            "filter-disabled": (filters, "if", "false"),
+            "job-needs-removed": (customer, "needs", None),
+            "job-uses-replaced": (customer, "uses", "./.github/workflows/unrelated.yml"),
+            "quality-needs-removed": (quality, "needs", ["changes", "verify-module-signatures"]),
+            "quality-disabled": (quality, "if", "false"),
+            "quality-continue-on-error": (quality, "continue-on-error", "true"),
+            "prerequisite-disabled": (prerequisite, "if", "false"),
+            "prerequisite-nonblocking": (prerequisite, "continue-on-error", "true"),
+            "prerequisite-removed": (quality, "steps", quality["steps"][1:]),
+            "prerequisite-body-replaced": (prerequisite, "run", "echo review is optional"),
+        }[mutation]
+        if replacement is None:
+            del target[key]
+        else:
+            target[key] = replacement
+
+    scenario = ("Darwin", "", "github-linux", candidate_path, False, True, 1)
+    worktree = deferral_worktree(
+        tmp_path, scenario, schedule_mutation=break_schedule, restore_schedule=restore_schedule
+    )
+    calls = tmp_path / "calls"
+    script = (REPO_ROOT / "scripts/pre-commit-quality-checks.sh").read_text().rsplit('main "$@"', 1)[0]
+    environment = os.environ | {
+        "FIXTURE_PLATFORM": "Darwin",
+        "FIXTURE_CALLS": str(calls),
+        "GITHUB_ACTIONS": "",
+        "CI": "",
+        "SPECFACT_CODE_REVIEW_DEFER_TO_CI": "github-linux",
+    }
+    result = subprocess.run(
+        ["bash", "-c", script + _BLOCK2_HATCH_FIXTURE],
+        cwd=worktree,
+        env=environment,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 1, result.stdout + result.stderr
+    assert "DEFERRED" not in result.stderr
+    assert "supported indexed orchestration" in result.stderr
+    assert "validate_capsule_ci_schedule.py" in calls.read_text()
+    assert_block2_trace(calls.read_text(), 1, result.stderr)
+
+
+@pytest.mark.parametrize("mutation", ["single-byte", "comment", "missing"])
+@pytest.mark.parametrize("restore_schedule", [False, True])
+def test_deferral_requires_exact_indexed_workflow_bytes(tmp_path: Path, mutation: str, restore_schedule: bool):
+    scenario = ("Darwin", "", "github-linux", "packages/specfact-code-review/resources/example.py", False, True, 1)
+    worktree = deferral_worktree(tmp_path, scenario)
+    path = worktree / ".github/workflows/pr-orchestrator.yml"
+    reviewed = path.read_bytes()
+    if mutation == "missing":
+        path.unlink()
+    else:
+        path.write_bytes(reviewed + (b" " if mutation == "single-byte" else b"\n# Changed comment.\n"))
+    _git(worktree, "add", "-A")
+    if restore_schedule:
+        path.write_bytes(reviewed)
+    result = subprocess.run(
+        [sys.executable, str(REPO_ROOT / "scripts/validate_capsule_ci_schedule.py")],
+        cwd=worktree,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 1, result.stdout + result.stderr
+    assert "supported indexed orchestration" in result.stderr

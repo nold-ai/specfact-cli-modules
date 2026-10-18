@@ -34,7 +34,7 @@ The workflow SHALL read the paired core smoke fixture lock, require repository `
 
 ### Requirement: Approved orchestrator candidates retain guarded local deferral
 
-The local quality hook SHALL include `.github/workflows/pr-orchestrator.yml` in its existing candidate-path eligibility check for an explicitly approved local ARM64 Darwin feature-worktree review deferral. It SHALL preserve all existing guard conditions, every other Block 2 check and the DEFERRED warning. Mandatory blocking exact-head Linux candidate and independent signed review SHALL remain required before merge.
+The local quality hook SHALL include `.github/workflows/pr-orchestrator.yml` in its existing candidate-path eligibility check for an explicitly approved local ARM64 Darwin feature-worktree review deferral. It SHALL preserve all existing guard conditions, every other Block 2 check and the DEFERRED warning. Mandatory blocking exact-head Linux candidate and independent signed review SHALL remain required before merge. Deferral eligibility SHALL require the indexed orchestrator to preserve the supported pull-request trigger, capsule path detection and output, mandatory reusable workflow call, and blocking quality prerequisite. Unsupported routing SHALL reject local deferral. Workflow-level defaults SHALL be absent from the supported contract, including run shell and working-directory overrides.
 
 #### Scenario: Orchestrator-only candidate defers local review
 
@@ -47,3 +47,25 @@ The local quality hook SHALL include `.github/workflows/pr-orchestrator.yml` in 
 - **GIVEN** an orchestrator candidate in CI, on Linux, with invalid opt-in, or without indexed independent review, including an unstaged restoration
 - **WHEN** the local deferral is requested
 - **THEN** the hook rejects the deferral; an unrelated workflow candidate also remains ineligible even if origin/dev advanced.
+
+#### Scenario: Indexed orchestration preserves mandatory review scheduling
+
+- **GIVEN** an otherwise eligible orchestrator or capsule-payload candidate
+- **WHEN** indexed orchestration removes or disables the pull-request trigger, capsule filter/output, customer workflow call, or blocking quality prerequisite, or introduces workflow-level run defaults
+- **THEN** the hook rejects deferral, including when an unstaged restoration repairs the working copy; only the indexed scheduling contract permits DEFERRED.
+
+#### Scenario: Exact reviewed orchestration bytes authorize deferral
+
+- **GIVEN** an otherwise eligible local worktree
+- **WHEN** the indexed orchestrator differs by any byte from the reviewed workflow, including comments, quality containers, root or job environment, runners or defaults, or is absent
+- **THEN** local deferral fails even if the working copy restores the reviewed bytes; a literal reviewed SHA-256 pin must be updated through review before any changed workflow is eligible.
+
+### Requirement: Bash fixture proofs execute on the host
+
+The default Hatch full test command SHALL explicitly execute the quality fixture identity host proof before the ordinary test suite. All seven lock validation cases and five checkout verification cases SHALL remain mandatory. Static workflow and host scheduling assertions SHALL remain in the unit suite. Capsule capabilities SHALL remain unchanged.
+
+#### Scenario: Full tests retain the host proof
+
+- **GIVEN** the default Hatch test entrypoint
+- **WHEN** the quality fixture identity proofs run
+- **THEN** the twelve Bash cases run on the host and the static unit assertion rejects removal of their explicit schedule.

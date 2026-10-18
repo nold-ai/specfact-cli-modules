@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import subprocess
+import sys
 import venv
 from pathlib import Path
 from string import Template
@@ -87,6 +88,9 @@ _BLOCK2_HATCH_FIXTURE = (
     'uname() { if [[ "${1:-}" == "-m" ]]; then echo arm64; else echo "$FIXTURE_PLATFORM"; fi; }\n'
     "hatch() {\n"
     '  printf \'%s\\n\' "$*" >> "$FIXTURE_CALLS"\n'
+    '  if [[ "$*" == "run python scripts/validate_capsule_ci_schedule.py" ]]; then\n'
+    f'    "{sys.executable}" "{REPO_ROOT}/scripts/validate_capsule_ci_schedule.py"; return $?\n'
+    "  fi\n"
     '  if [[ "$*" == *pre_commit_code_review.py* ]]; then return 99; fi\n'
     '  if [[ "$*" == *contract-test-status* ]]; then return 1; fi\n'
     "  return 0\n"
@@ -162,7 +166,9 @@ _ISOLATED_REVIEWER_TEMPLATES = {
     "    assert request.scope=='index' and "
     "request.portable_project_runtime\n"
     "    return "
-    "SimpleNamespace(status=$STATUS,reason=$REASON,selected_paths=$SELECTED_PATHS,ci_exit_code=$SCOPE_EXIT,base_snapshot=SimpleNamespace(root=request.repository/'base'),head_snapshot=SimpleNamespace(root=request.repository/'head'))\n"
+    "SimpleNamespace(status=$STATUS,reason=$REASON,selected_paths=$SELECTED_PATHS,"
+    "ci_exit_code=$SCOPE_EXIT,base_snapshot=SimpleNamespace(root=request.repository/'base'),"
+    "head_snapshot=SimpleNamespace(root=request.repository/'head'))\n"
     "def cleanup_scope_resolution(resolution):\n"
     "    import os\n    from pathlib import Path\n"
     "    (Path(os.environ['HOME']).parent/'cleaned').touch()\n",
@@ -265,8 +271,8 @@ def deferred_review_repository(tmp_path: Path, advanced_dev: bool):
     return repository, base, head
 
 
-def deferral_worktree(tmp_path: Path, scenario):
-    _platform, _ci, _deferral, candidate_path, advanced_dev, independent_review, _expected = scenario
+def deferral_worktree(tmp_path: Path, scenario, *, schedule_mutation=None, restore_schedule=False):
+    candidate_path, advanced_dev, independent_review = scenario[3:6]
     repository = tmp_path / "repository"
     repository.mkdir()
     _git(repository, "init", "-q")
@@ -290,6 +296,13 @@ def deferral_worktree(tmp_path: Path, scenario):
         path = repository / relative
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text("baseline\n")
+    orchestrator = repository / ".github/workflows/pr-orchestrator.yml"
+    orchestrator_source = (REPO_ROOT / ".github/workflows/pr-orchestrator.yml").read_text()
+    orchestrator.write_text(
+        orchestrator_source + "\n# Baseline routing fixture.\n"
+        if candidate_path == ".github/workflows/pr-orchestrator.yml"
+        else orchestrator_source
+    )
     capsule_manifest = repository / "packages/specfact-code-review/module-package.yaml"
     capsule_manifest.parent.mkdir(parents=True, exist_ok=True)
     capsule_manifest.write_text("version: 1\n")
@@ -303,16 +316,44 @@ def deferral_worktree(tmp_path: Path, scenario):
         _git(repository, "add", ".")
         _git(repository, "-c", "core.hooksPath=/dev/null", "commit", "-qm", "fixture advanced dev")
         _git(repository, "update-ref", "refs/remotes/origin/dev", "HEAD")
-    for relative in files[-3:]:
-        (worktree / relative).write_text("candidate\n")
+    _stage_deferral_candidate(
+        worktree,
+        files[-3:],
+        orchestrator_source,
+        workflow_source,
+        independent_review,
+        schedule_mutation,
+        restore_schedule,
+    )
+    return worktree
+
+
+def _stage_deferral_candidate(
+    worktree,
+    candidate_files,
+    orchestrator_source,
+    workflow_source,
+    independent_review,
+    schedule_mutation,
+    restore_schedule,
+):
+    for relative in candidate_files:
+        (worktree / relative).write_text(
+            orchestrator_source if relative == ".github/workflows/pr-orchestrator.yml" else "candidate\n"
+        )
     if independent_review == "unstaged_restore":
         (worktree / ".github/workflows/capsule-customer-execution.yml").write_text(
             workflow_source.split("\n  independent-review:", 1)[0]
         )
+    if schedule_mutation:
+        staged_schedule = yaml.load(orchestrator_source, Loader=yaml.BaseLoader)
+        schedule_mutation(staged_schedule)
+        (worktree / ".github/workflows/pr-orchestrator.yml").write_text(yaml.safe_dump(staged_schedule))
     _git(worktree, "add", ".")
+    if restore_schedule:
+        (worktree / ".github/workflows/pr-orchestrator.yml").write_text(orchestrator_source)
     if independent_review == "unstaged_restore":
         (worktree / ".github/workflows/capsule-customer-execution.yml").write_text(workflow_source)
-    return worktree
 
 
 def assert_block2_trace(invoked, expected, stderr):
@@ -328,6 +369,7 @@ def assert_block2_trace(invoked, expected, stderr):
         assert command in invoked
     assert "pre_commit_code_review.py" not in invoked
     if expected == 0:
+        assert "validate_capsule_ci_schedule.py" in invoked
         assert "DEFERRED" in stderr
         assert "mandatory exact-head GitHub Linux CI; this is not a PASS" in stderr
         assert "contract-test-contracts" in invoked

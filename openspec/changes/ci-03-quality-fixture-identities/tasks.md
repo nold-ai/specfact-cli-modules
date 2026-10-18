@@ -25,3 +25,19 @@
 - [x] 4.3 Add only the approved eligibility path and verify positive and negative behavior.
 - [x] 4.4 Validate source diff, requirements mappings and strict OpenSpec checks.
 - [ ] 4.5 Complete normal hooks and mandatory hosted exact-head review before merge.
+
+## 5. Indexed orchestration review correction
+
+- [x] 5.1 Specify indexed scheduling preservation within the approved local deferral scope.
+- [x] 5.2 Reproduce broken staged routing with the maintained host proof before production edits.
+- [x] 5.3 Validate indexed scheduling before deferral for orchestrator and payload candidates.
+- [x] 5.4 Complete focused verification, strict OpenSpec and staged Requirements evidence.
+- [ ] 5.5 Complete parent independent review, normal hooks and mandatory hosted exact-head acceptance.
+
+## 6. Closed byte contract and host proof ownership
+
+- [x] 6.1 Specify reviewed-byte eligibility and host-owned Bash proofs.
+- [x] 6.2 Capture failing execution-context, byte-change and schedule assertions before implementation.
+- [x] 6.3 Replace partial parsing with the reviewed byte pin and schedule all twelve host cases.
+- [x] 6.4 Complete focused tests, lint, types, strict OpenSpec and planned Requirements evidence.
+- [ ] 6.5 Complete parent independent review, normal hooks and hosted exact-head acceptance.
