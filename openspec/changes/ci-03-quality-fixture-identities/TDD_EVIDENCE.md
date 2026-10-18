@@ -151,3 +151,48 @@ passed with one source passed and zero failed. Observed maturity remains `planne
 and implementation evidence `not-yet-available`. Final standard lint passed after
 helper extraction, and staged whitespace validation passed. No commit or push was
 performed by the delegate; independent review and normal hooks remain parent-owned.
+
+
+## 2026-10-18 native schedule validator coverage
+
+The existing native coverage policy selected `src`, `packages` and `tools`.
+`target_coverage._reviewer_sources` preserves configured coverage sources, while
+`runner._portable_coverage_sources` selects the changed schedule script as
+production code. Adding seven unit cases alone passed all seven cases but left
+the script absent from actual pytest-cov JSON. Feeding that JSON to
+`evaluate_portable_pytest_coverage` reproduced the exact error
+`Coverage data missing for scripts/validate_capsule_ci_schedule.py`.
+This is failing coverage evidence, not a fabricated failing behavior test.
+
+After specifying the coverage requirement, the coverage source list gained only
+`scripts.validate_capsule_ci_schedule`. The tests import that qualified module
+and exercise the real entrypoint through `runpy`, mocking only the external Git
+read. Actual `pytest --cov --cov-report=json:... --cov-fail-under=0` measurement
+reported 18 of 18 statements and four of four branches covered, with no excluded
+lines. The existing portable adapter returned no findings for that JSON under
+its unchanged per-source threshold. The local measurement command disables the
+aggregate gate only for this focused seven-case probe; repository thresholds
+and exclusions remain unchanged. This does not claim hosted capsule acceptance.
+
+The CLI refusal text and newline are preserved using `sys.stderr.write`.
+An actual Semgrep scan identified `print-in-src`; actual Pylint identified
+`line-too-long` at 121 characters. Both are resolved without suppressions.
+The existing fixture tuples remain the data shape. Natural assertion, baseline
+file setup and schedule mutation helpers remove the parameter-count, complexity
+and long-function findings without introducing fixture models. Function-local
+imports in the host proof moved to module scope; generated bootstrap fixture
+imports and their lazy-import behavior remain intact.
+
+Before refactoring, the maintained files passed 148 cases. Afterward, the same
+files plus the seven new cases and two split assertion tests passed 157 cases.
+All twelve host identity cases remain included. Explicit Pylint, Ruff,
+BasedPyright, Radon and AI-bloat checks passed for all six touched Python files.
+Semgrep scanned those six files with twelve rules and reported zero findings.
+Strict OpenSpec validation passed. Local logs are retained under
+`.audit/ci519-coverage-*`; audit files are not staged. Parent independent review,
+normal hooks and exact-head hosted acceptance remain outstanding.
+
+The staged Requirements evidence gate passed with one source passed and zero
+failed after aligning the new mapping with its requirement-level scenario id.
+Required and observed maturity remain `planned`; implementation evidence remains
+`not-yet-available`. Staged whitespace validation also passed.

@@ -3,12 +3,15 @@ from __future__ import annotations
 import os
 import subprocess
 import sys
+import textwrap
 import venv
+from functools import partial
 from pathlib import Path
 
 import pytest
 import yaml
 
+from specfact_code_review.run.runtime_discovery import discover_project
 from tests.support.capsule_review_fixtures import (
     _BLOCK2_HATCH_FIXTURE,
     _TRUSTED_BOOTSTRAP_LAUNCHER,
@@ -21,6 +24,7 @@ from tests.support.capsule_review_fixtures import (
     create_isolated_reviewer,
     deferral_worktree,
     deferred_review_repository,
+    independent_review_job,
 )
 
 
@@ -55,7 +59,6 @@ def test_deferred_gate_reviews_exact_staged_tree_and_propagates_failure(
         ["bash", "-c", step["run"]], cwd=repository, env=environment, capture_output=True, text=True, check=False
     )
     assert result.returncode == gate_exit, result.stdout + result.stderr
-    from specfact_code_review.run.runtime_discovery import discover_project
 
     plan = discover_project(REPO_ROOT, config_path=customer / "commit-review-project.toml")
     assert (plan.manager, plan.environment) == ("hatch", "default")
@@ -174,8 +177,6 @@ def test_isolated_reviewer_preloads_trusted_code_and_never_accepts_incomplete_pr
 
 
 def test_trusted_bootstrap_cannot_import_candidate_venv_module(tmp_path: Path) -> None:
-    import textwrap
-
     workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())
     step = workflow["jobs"]["independent-review"]["steps"][2]
     candidate = tmp_path / "candidate"
@@ -213,8 +214,6 @@ def test_deferred_host_fixture_does_not_alias_managed_caller_python(tmp_path: Pa
 
 @pytest.mark.parametrize("review_exit", [0, 2, 7])
 def test_independent_no_impact_still_reviews_and_cleans_resolution(tmp_path: Path, review_exit: int) -> None:
-    from tests.support.capsule_review_fixtures import independent_review_job
-
     step = next(item for item in independent_review_job()["steps"] if item.get("id") == "independent_review")
     trusted, environment = create_isolated_reviewer(tmp_path, (review_exit, "NOT_APPLICABLE", "no_governed_impact"))
     result = subprocess.run(["bash", "-c", step["run"]], env=environment, text=True, capture_output=True, check=False)
@@ -237,8 +236,6 @@ def test_independent_no_impact_still_reviews_and_cleans_resolution(tmp_path: Pat
 def test_independent_invalid_no_impact_stops_before_review(
     tmp_path: Path, status, reason, selected, scope_exit
 ) -> None:
-    from tests.support.capsule_review_fixtures import independent_review_job
-
     step = next(item for item in independent_review_job()["steps"] if item.get("id") == "independent_review")
     trusted, environment = create_isolated_reviewer(
         tmp_path, (0, status, reason), selected_paths=selected, scope_exit=scope_exit
@@ -249,6 +246,46 @@ def test_independent_invalid_no_impact_stops_before_review(
     assert not (trusted / "prepared").exists()
     assert (trusted / "cleaned").exists()
     assert "private-reason" not in result.stdout
+
+
+def _break_schedule(workflow, mutation):
+    jobs = workflow["jobs"]
+    customer = jobs["customer-capsules"]
+    quality = jobs["quality"]
+    filters = jobs["changes"]["steps"][1]
+    prerequisite = quality["steps"][0]
+    target, key, replacement = {
+        "workflow-default-shell": (workflow, "defaults", {"run": {"shell": 'bash -c "exit 0" {0}'}}),
+        "workflow-default-working-directory": (workflow, "defaults", {"run": {"working-directory": "/tmp"}}),
+        "filter-entry-removed": (
+            filters["with"],
+            "filters",
+            filters["with"]["filters"].replace('  - ".github/workflows/pr-orchestrator.yml"\n', ""),
+        ),
+        "quality-container": (quality, "container", "alpine:latest"),
+        "root-env": (workflow, "env", {"BASH_ENV": "/tmp/override"}),
+        "job-env": (quality, "env", {"BASH_ENV": "/tmp/override"}),
+        "quality-runner": (quality, "runs-on", "windows-latest"),
+        "job-removed": (jobs, "customer-capsules", None),
+        "condition-disabled": (customer, "if", "false"),
+        "continue-on-error": (customer, "continue-on-error", "true"),
+        "pr-trigger-excluded": (workflow["on"]["pull_request"], "paths-ignore", [".github/**"]),
+        "filter-output-removed": (jobs["changes"]["outputs"], "capsule_changed", None),
+        "filter-disabled": (filters, "if", "false"),
+        "job-needs-removed": (customer, "needs", None),
+        "job-uses-replaced": (customer, "uses", "./.github/workflows/unrelated.yml"),
+        "quality-needs-removed": (quality, "needs", ["changes", "verify-module-signatures"]),
+        "quality-disabled": (quality, "if", "false"),
+        "quality-continue-on-error": (quality, "continue-on-error", "true"),
+        "prerequisite-disabled": (prerequisite, "if", "false"),
+        "prerequisite-nonblocking": (prerequisite, "continue-on-error", "true"),
+        "prerequisite-removed": (quality, "steps", quality["steps"][1:]),
+        "prerequisite-body-replaced": (prerequisite, "run", "echo review is optional"),
+    }[mutation]
+    if replacement is None:
+        del target[key]
+    else:
+        target[key] = replacement
 
 
 @pytest.mark.parametrize(
@@ -289,48 +326,13 @@ def test_independent_invalid_no_impact_stops_before_review(
 def test_deferral_rejects_broken_indexed_orchestrator(
     tmp_path: Path, candidate_path: str, mutation: str, restore_schedule: bool
 ) -> None:
-    def break_schedule(workflow):
-        jobs = workflow["jobs"]
-        customer = jobs["customer-capsules"]
-        quality = jobs["quality"]
-        filters = jobs["changes"]["steps"][1]
-        prerequisite = quality["steps"][0]
-        target, key, replacement = {
-            "workflow-default-shell": (workflow, "defaults", {"run": {"shell": 'bash -c "exit 0" {0}'}}),
-            "workflow-default-working-directory": (workflow, "defaults", {"run": {"working-directory": "/tmp"}}),
-            "filter-entry-removed": (
-                filters["with"],
-                "filters",
-                filters["with"]["filters"].replace('  - ".github/workflows/pr-orchestrator.yml"\n', ""),
-            ),
-            "quality-container": (quality, "container", "alpine:latest"),
-            "root-env": (workflow, "env", {"BASH_ENV": "/tmp/override"}),
-            "job-env": (quality, "env", {"BASH_ENV": "/tmp/override"}),
-            "quality-runner": (quality, "runs-on", "windows-latest"),
-            "job-removed": (jobs, "customer-capsules", None),
-            "condition-disabled": (customer, "if", "false"),
-            "continue-on-error": (customer, "continue-on-error", "true"),
-            "pr-trigger-excluded": (workflow["on"]["pull_request"], "paths-ignore", [".github/**"]),
-            "filter-output-removed": (jobs["changes"]["outputs"], "capsule_changed", None),
-            "filter-disabled": (filters, "if", "false"),
-            "job-needs-removed": (customer, "needs", None),
-            "job-uses-replaced": (customer, "uses", "./.github/workflows/unrelated.yml"),
-            "quality-needs-removed": (quality, "needs", ["changes", "verify-module-signatures"]),
-            "quality-disabled": (quality, "if", "false"),
-            "quality-continue-on-error": (quality, "continue-on-error", "true"),
-            "prerequisite-disabled": (prerequisite, "if", "false"),
-            "prerequisite-nonblocking": (prerequisite, "continue-on-error", "true"),
-            "prerequisite-removed": (quality, "steps", quality["steps"][1:]),
-            "prerequisite-body-replaced": (prerequisite, "run", "echo review is optional"),
-        }[mutation]
-        if replacement is None:
-            del target[key]
-        else:
-            target[key] = replacement
 
     scenario = ("Darwin", "", "github-linux", candidate_path, False, True, 1)
     worktree = deferral_worktree(
-        tmp_path, scenario, schedule_mutation=break_schedule, restore_schedule=restore_schedule
+        tmp_path,
+        scenario,
+        schedule_mutation=partial(_break_schedule, mutation=mutation),
+        restore_schedule=restore_schedule,
     )
     calls = tmp_path / "calls"
     script = (REPO_ROOT / "scripts/pre-commit-quality-checks.sh").read_text().rsplit('main "$@"', 1)[0]

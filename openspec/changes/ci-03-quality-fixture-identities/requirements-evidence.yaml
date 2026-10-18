@@ -284,3 +284,21 @@ requirements:
       intent: The default full test command retains explicit host proof execution.
       observable: The unit assertion fails when the host proof is absent from the command before the ordinary suite.
       implementation_task: '6.3'
+  openspec:ci-03-quality-fixture-identities:quality-fixture-identities:indexed-schedule-validation-has-capsule-safe-coverage:
+    rationale: Measure the validator with the native coverage policy without adding capsule capabilities.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#518
+    touchpoints:
+    - id: schedule-validator
+      kind: code
+      locator: scripts/validate_capsule_ci_schedule.py
+    verification_cases:
+    - case_id: CI-03-5-1
+      scenario_id: indexed-schedule-validation-has-capsule-safe-coverage
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_validate_capsule_ci_schedule.py::test_entrypoint_reads_index_and_reports_refusal
+      intent: Execute the actual entrypoint without spawning Git inside the capsule.
+      observable: Reviewed bytes return zero; altered bytes and missing index entries return one with a refusal.
+      implementation_task: '7.2'

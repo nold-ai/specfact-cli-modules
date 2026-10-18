@@ -110,17 +110,17 @@ def test_quality_smoke_verifies_git_checkout_before_export(tmp_path: Path, misma
         check=False,
         timeout=10,
     )
-    _assert_smoke_checkout_result(result, mismatch, output, runner_temp, fixture, commit)
-
-
-def _assert_smoke_checkout_result(result, mismatch, output, runner_temp, fixture, commit):
     if mismatch is not None:
         assert result.returncode != 0
         assert not output.exists() or not output.read_text()
     else:
         assert result.returncode == 0, result.stderr
-        relocated = runner_temp / "runtime-smoke-modules"
-        assert output.read_text().strip() == f"SPECFACT_SMOKE_MODULES_REPO={relocated}"
-        assert not fixture.exists()
-        assert subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=relocated, text=True).strip() == commit
-        assert not subprocess.check_output(["git", "status", "--porcelain"], cwd=relocated, text=True).strip()
+        _assert_authenticated_smoke_checkout(output, runner_temp, fixture, commit)
+
+
+def _assert_authenticated_smoke_checkout(output, runner_temp, fixture, commit):
+    relocated = runner_temp / "runtime-smoke-modules"
+    assert output.read_text().strip() == f"SPECFACT_SMOKE_MODULES_REPO={relocated}"
+    assert not fixture.exists()
+    assert subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=relocated, text=True).strip() == commit
+    assert not subprocess.check_output(["git", "status", "--porcelain"], cwd=relocated, text=True).strip()

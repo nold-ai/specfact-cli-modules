@@ -28,10 +28,10 @@ def main() -> int:
         )
         validate_schedule(source)
     except (subprocess.CalledProcessError, ValueError) as error:
-        print(
+        sys.stderr.write(
             f"Capsule review deferral requires supported indexed orchestration: {error}. "
-            "Restore the staged workflow or review an explicit pin update; otherwise run local review without deferral.",
-            file=sys.stderr,
+            "Restore the staged workflow or review an explicit pin update; "
+            "otherwise run local review without deferral.\n"
         )
         return 1
     return 0

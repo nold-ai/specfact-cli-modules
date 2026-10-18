@@ -271,13 +271,7 @@ def deferred_review_repository(tmp_path: Path, advanced_dev: bool):
     return repository, base, head
 
 
-def deferral_worktree(tmp_path: Path, scenario, *, schedule_mutation=None, restore_schedule=False):
-    candidate_path, advanced_dev, independent_review = scenario[3:6]
-    repository = tmp_path / "repository"
-    repository.mkdir()
-    _git(repository, "init", "-q")
-    _git(repository, "config", "user.email", "fixture@example.invalid")
-    _git(repository, "config", "user.name", "Fixture")
+def _write_deferral_baseline(repository, candidate_path, independent_review):
     workflow = repository / ".github/workflows/capsule-customer-execution.yml"
     workflow.parent.mkdir(parents=True)
     workflow_source = (REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text()
@@ -306,6 +300,17 @@ def deferral_worktree(tmp_path: Path, scenario, *, schedule_mutation=None, resto
     capsule_manifest = repository / "packages/specfact-code-review/module-package.yaml"
     capsule_manifest.parent.mkdir(parents=True, exist_ok=True)
     capsule_manifest.write_text("version: 1\n")
+    return files[-3:], capsule_manifest
+
+
+def deferral_worktree(tmp_path: Path, scenario, *, schedule_mutation=None, restore_schedule=False):
+    candidate_path, advanced_dev, independent_review = scenario[3:6]
+    repository = tmp_path / "repository"
+    repository.mkdir()
+    _git(repository, "init", "-q")
+    _git(repository, "config", "user.email", "fixture@example.invalid")
+    _git(repository, "config", "user.name", "Fixture")
+    candidate_files, capsule_manifest = _write_deferral_baseline(repository, candidate_path, independent_review)
     _git(repository, "add", ".")
     _git(repository, "-c", "core.hooksPath=/dev/null", "commit", "-qm", "fixture base")
     _git(repository, "update-ref", "refs/remotes/origin/dev", "HEAD")
@@ -318,9 +323,7 @@ def deferral_worktree(tmp_path: Path, scenario, *, schedule_mutation=None, resto
         _git(repository, "update-ref", "refs/remotes/origin/dev", "HEAD")
     _stage_deferral_candidate(
         worktree,
-        files[-3:],
-        orchestrator_source,
-        workflow_source,
+        candidate_files,
         independent_review,
         schedule_mutation,
         restore_schedule,
@@ -331,12 +334,12 @@ def deferral_worktree(tmp_path: Path, scenario, *, schedule_mutation=None, resto
 def _stage_deferral_candidate(
     worktree,
     candidate_files,
-    orchestrator_source,
-    workflow_source,
     independent_review,
     schedule_mutation,
     restore_schedule,
 ):
+    orchestrator_source = (REPO_ROOT / ".github/workflows/pr-orchestrator.yml").read_text()
+    workflow_source = (REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text()
     for relative in candidate_files:
         (worktree / relative).write_text(
             orchestrator_source if relative == ".github/workflows/pr-orchestrator.yml" else "candidate\n"

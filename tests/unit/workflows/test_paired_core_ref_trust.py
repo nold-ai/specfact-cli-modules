@@ -111,17 +111,30 @@ def test_quality_full_suite_selects_only_declared_baseline() -> None:
         "ref": "d579970565530c3fd7b98bad4de90cf874c2a99d",
         "persist-credentials": False,
     }
+
+
+def test_quality_baseline_verification_precedes_full_suite() -> None:
+    yaml = import_module("yaml")
+    workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/pr-orchestrator.yml").read_text())
+    steps = {step.get("name"): step for step in workflow["jobs"]["quality"]["steps"]}
     verification = steps["Verify declared core baseline"]["run"]
     assert "d579970565530c3fd7b98bad4de90cf874c2a99d" in verification
     assert "f49667f21e4a20a432ad80032a01a5c6894b0c91" in verification
+    names = list(steps)
+    assert names.index("Smart Test Configuration") < names.index("Checkout declared core baseline")
+    assert names.index("Verify declared core baseline") < names.index("Full Test Suite")
+
+
+def test_quality_other_steps_retain_paired_core_override() -> None:
+    yaml = import_module("yaml")
+    workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/pr-orchestrator.yml").read_text())
+    quality = workflow["jobs"]["quality"]
+    steps = {step.get("name"): step for step in quality["steps"]}
     assert "SPECFACT_CLI_REPO=${GITHUB_WORKSPACE}/specfact-cli" in steps["Export paired core CLI path"]["run"]
     assert "SPECFACT_CLI_REPO" not in quality.get("env", {})
     for name, step in steps.items():
         if name != "Full Test Suite":
             assert "SPECFACT_CLI_REPO" not in step.get("env", {})
-    names = list(steps)
-    assert names.index("Smart Test Configuration") < names.index("Checkout declared core baseline")
-    assert names.index("Verify declared core baseline") < names.index("Full Test Suite")
 
 
 def test_quality_smoke_preserves_all_launchers_with_separate_checkout() -> None:

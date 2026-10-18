@@ -69,3 +69,13 @@ The default Hatch full test command SHALL explicitly execute the quality fixture
 - **GIVEN** the default Hatch test entrypoint
 - **WHEN** the quality fixture identity proofs run
 - **THEN** the twelve Bash cases run on the host and the static unit assertion rejects removal of their explicit schedule.
+
+### Requirement: Indexed schedule validation has capsule-safe coverage
+
+The declared coverage sources SHALL include the qualified `scripts.validate_capsule_ci_schedule` module. Capsule-safe unit tests SHALL execute its byte validator and command entrypoint with the external Git read mocked. Reviewed bytes SHALL succeed; changed bytes and missing index entries SHALL return a refusal. Existing real Git index host proofs, coverage thresholds, exclusions and hosted review requirements SHALL remain intact.
+
+#### Scenario: The native coverage adapter observes the schedule validator
+
+- **GIVEN** the repository coverage policy and capsule-safe schedule unit tests
+- **WHEN** pytest executes the tests and the portable coverage adapter evaluates the validator
+- **THEN** coverage contains the validator and satisfies the existing per-source threshold without enabling subprocess capabilities.

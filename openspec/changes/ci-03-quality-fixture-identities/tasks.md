@@ -41,3 +41,11 @@
 - [x] 6.3 Replace partial parsing with the reviewed byte pin and schedule all twelve host cases.
 - [x] 6.4 Complete focused tests, lint, types, strict OpenSpec and planned Requirements evidence.
 - [ ] 6.5 Complete parent independent review, normal hooks and hosted exact-head acceptance.
+
+## 7. Native validator coverage and owned review findings
+
+- [x] 7.1 Reproduce missing coverage with real pytest-cov output and the portable coverage adapter.
+- [x] 7.2 Add capsule-safe byte and entrypoint tests and include only the qualified validator module in coverage sources.
+- [x] 7.3 Resolve owned lint, complexity and readability findings with focused fixture extractions.
+- [x] 7.4 Verify maintained host proofs, focused adapters, lint, types and strict OpenSpec.
+- [ ] 7.5 Complete parent independent review, normal hooks and hosted exact-head acceptance.
