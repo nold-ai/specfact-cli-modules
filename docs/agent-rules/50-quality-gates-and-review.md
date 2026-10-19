@@ -13,7 +13,7 @@ tracks:
   - scripts/pre_commit_code_review.py
   - scripts/verify-modules-signature.py
   - docs/agent-rules/**
-last_reviewed: 2026-10-05
+last_reviewed: 2026-10-19
 exempt: false
 exempt_reason: ""
 id: agent-rules-quality-gates-and-review
@@ -67,6 +67,25 @@ to the blocking exact-head GitHub Linux customer job. Every other hook component
 still executes. This reports DEFERRED, never PASS; it is rejected in CI, on other
 platforms or protected checkouts. Record maintainer approval in change evidence
 and require hosted review completion before merge.
+
+Select both required caller inputs before invoking that exception:
+
+- `SPECFACT_CODE_REVIEW_POLICY_COMMIT` must be a full 40-character SHA of an available Git commit containing `scripts/validate_capsule_ci_schedule.py`. Review that immutable checker and its complete indexed-workflow byte pin independently of the candidate changes. Do not automatically select candidate `HEAD` or accept a candidate-edited pin.
+- `SPECFACT_CODE_REVIEW_POLICY_PYTHON` must be an absolute path to an executable host Python. Its resolved target and physical parent must be outside the candidate repository. Candidate virtual environments, launchers and aliases into the checkout are rejected.
+
+After assigning the inspected values to `reviewed_policy_commit` and
+`external_host_python` in your shell, run:
+
+```bash
+SPECFACT_CODE_REVIEW_DEFER_TO_CI=github-linux \
+SPECFACT_CODE_REVIEW_POLICY_COMMIT="${reviewed_policy_commit:?select a reviewed full commit SHA}" \
+SPECFACT_CODE_REVIEW_POLICY_PYTHON="${external_host_python:?select an external absolute host Python}" \
+hatch run pre-commit run
+```
+
+Missing or invalid inputs refuse deferral. These caller selections do not grant
+protected policy authority. The approved platform, worktree and indexed-workflow
+checks still apply, and exact-head hosted review remains mandatory.
 
 ## SpecFact code review JSON
 
