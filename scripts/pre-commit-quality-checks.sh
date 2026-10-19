@@ -326,9 +326,21 @@ validate_immutable_capsule_policy() (
     error "Capsule review deferral requires an explicit absolute executable host Python path."
     return 1
   fi
-  local repository_root object_type policy_directory
+  local repository_root object_type policy_directory python_directory python_target
   repository_root="$(git rev-parse --show-toplevel)" || return 1
   cd "${repository_root}" || return 1
+  repository_root="$(pwd -P)" || return 1
+  if ! python_directory="$(cd -P "$(dirname "${policy_python}")" && pwd -P)" \
+    || ! python_target="$(realpath "${policy_python}")"; then
+    error "Capsule review deferral cannot resolve the external host Python path."
+    return 1
+  fi
+  if [[ "${python_directory}" == "${repository_root}" || "${python_directory}" == "${repository_root}/"* \
+    || "${python_target}" == "${repository_root}/"* ]]; then
+    error "Capsule review deferral requires host Python outside the candidate repository."
+    return 1
+  fi
+  policy_python="${python_target}"
   if ! object_type="$(git --no-replace-objects cat-file -t "${policy_commit}")" \
     || [[ "${object_type}" != "commit" ]]; then
     error "Capsule review deferral policy selection must identify an available commit."

@@ -1,24 +1,18 @@
 from __future__ import annotations
 
 import json
-import os
 import subprocess
 import sys
-from pathlib import Path
+import tomllib
 
 import pytest
 import yaml
 
 from tests.support.capsule_review_fixtures import (
-    _DEPTH_FAILURE_FINDING_ROWS,
-    _FIXED_ANALYZER_FINDING_ROWS,
     REPO_ROOT,
     STEP_NAME,
-    _git,
-    _write_public_report,
     independent_review_job,
-    public_projector,
-    write_public_phase_record_report,
+    write_preparation_fixture,
 )
 
 
@@ -31,6 +25,10 @@ def test_hosted_preparation_has_separate_bound_and_cannot_bypass_review() -> Non
     assert recipe.index("code review runtime prepare --scope index") < recipe.index("review_exit=0")
     assert 'SPECFACT_CODE_REVIEW_CAPSULE_CACHE="$CUSTOMER_ROOT/commit-review-cache"' in recipe
     assert "continue-on-error" not in step
+    config = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text())
+    command = config["tool"]["hatch"]["envs"]["default"]["scripts"]["test"]
+    host_stage = command.split(" && ")[1]
+    assert "tests/host/proof_capsule_review_projection.py" in host_stage.split()
 
 
 def test_independent_reviewer_runs_in_fresh_job_without_candidate_host_code() -> None:
@@ -81,36 +79,10 @@ def test_independent_reviewer_cannot_continue_after_failure_or_retain_credential
 
 
 def _run_projector(tmp_path, program):
-    import subprocess
-    import sys
 
     path = tmp_path / "projector.py"
     path.write_text(program)
     return subprocess.run([sys.executable, str(path)], capture_output=True, text=True, check=False, cwd=tmp_path)
-
-
-def _write_preparation_fixture(tmp_path, case):
-    import json
-
-    descriptor = tmp_path / "descriptor.json"
-    descriptor.write_text("{}")
-    payload = {"runtimes": {side: {"descriptor": str(descriptor)} for side in ("base", "head")}}
-    if case.startswith("not_applicable"):
-        payload = {"scope": "index", "status": "NOT_APPLICABLE", "diagnostic": "no_governed_impact", "runtimes": {}}
-        overrides = {
-            "not_applicable_reason": {"diagnostic": "private-reason"},
-            "not_applicable_scope": {"scope": "full"},
-            "not_applicable_runtimes": {"runtimes": ["private"]},
-            "not_applicable_nonempty": {"runtimes": {"head": {"descriptor": str(descriptor)}}},
-        }
-        payload.update(overrides.get(case, {}))
-    elif case == "missing_base":
-        payload["runtimes"].pop("base")
-    elif case == "missing_files":
-        descriptor.unlink()
-    report = tmp_path / "preparation.private.json"
-    report.write_text("not-json/private" if case == "invalid" else json.dumps(payload))
-    return report
 
 
 @pytest.mark.parametrize(
@@ -133,14 +105,13 @@ def _write_preparation_fixture(tmp_path, case):
     ],
 )
 def test_successful_index_preparation_requires_both_descriptors(tmp_path, monkeypatch, case, expected):
-    import json
 
     workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())
     step = next(item for item in workflow["jobs"]["customer"]["steps"] if item.get("name") == STEP_NAME)
     assert "PY_PREPARATION" in step["run"]
     program = step["run"].split("<<'PY_PREPARATION'\n", 1)[1].split("\nPY_PREPARATION", 1)[0]
     monkeypatch.setenv("PREPARATION_COMMAND_SUCCEEDED", "1")
-    monkeypatch.setenv("PREPARATION_REPORT", str(_write_preparation_fixture(tmp_path, case)))
+    monkeypatch.setenv("PREPARATION_REPORT", str(write_preparation_fixture(tmp_path, case)))
     result = _run_projector(tmp_path, program)
     code, status, outcome, base_supplied, head_supplied, base, head = expected
     assert result.returncode == code
@@ -165,7 +136,6 @@ def test_successful_index_preparation_requires_both_descriptors(tmp_path, monkey
     ],
 )
 def test_independent_preparation_failure_projects_only_fixed_classes(tmp_path, monkeypatch, text, expected):
-    import json
 
     recipe = next(
         step["run"]
@@ -211,7 +181,6 @@ def _write_audit_fixture(tmp_path, profile):
     ],
 )
 def test_namespace_audit_retains_only_fixed_observation_booleans(tmp_path, monkeypatch, profile, flags):
-    import json
 
     workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())
     selected = [
@@ -250,7 +219,6 @@ def test_namespace_audit_retains_only_fixed_observation_booleans(tmp_path, monke
 
 
 def _write_independent_failure_fixture(tmp_path, case):
-    import json
 
     report = {"assurance_status": "FAIL", "overall_verdict": "FAIL", "findings": [], "analyzer_evidence": []}
     if case == "findings":
@@ -319,7 +287,6 @@ def _expected_review_projection(expected, case):
     ],
 )
 def test_independent_review_failure_keeps_nested_evidence_and_private_tokens(tmp_path, monkeypatch, case, expected):
-    import json
 
     steps = independent_review_job()["steps"]
     selected = [step for step in steps if step.get("name") == "Project independent review failure privately"]
@@ -368,7 +335,6 @@ def test_independent_review_failure_keeps_nested_evidence_and_private_tokens(tmp
     ],
 )
 def test_candidate_crosshair_failure_emits_only_fixed_classes(tmp_path, message, tool, category, expected):
-    import json
 
     workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())
     step = next(item for item in workflow["jobs"]["customer"]["steps"] if item.get("name") == STEP_NAME)
@@ -414,7 +380,6 @@ def _large_report_fixture():
 
 
 def _oversized_report_payload(case):
-    import json
 
     root = _large_report_fixture()
     if case == "nested":
@@ -440,7 +405,6 @@ def _oversized_report_payload(case):
     "case", ["valid", "unicode", "nested", "duplicate", "malformed", "incomplete", "wrong_findings_shape"]
 )
 def test_oversized_independent_report_preserves_only_complete_root_header(tmp_path, monkeypatch, case):
-    import json
 
     payload = _oversized_report_payload(case)
     report, log = _write_independent_failure_fixture(tmp_path, "missing")
@@ -469,7 +433,6 @@ def test_oversized_independent_report_preserves_only_complete_root_header(tmp_pa
 
 
 def _literal_prefix_report(row, token, cut):
-    import json
 
     prefix = '{"analyzer_evidence":[' + json.dumps(row) + ',{"target_execution":{"padding":"'
     middle = '","value":'
@@ -478,7 +441,6 @@ def _literal_prefix_report(row, token, cut):
 
 
 def _oversized_analyzer_payload(case):
-    import json
 
     row = _large_report_fixture()["analyzer_evidence"][0]
     literals = {
@@ -535,7 +497,6 @@ def _oversized_analyzer_payload(case):
     ],
 )
 def test_oversized_analyzer_inventory_preserves_complete_prior_rows(tmp_path, monkeypatch, case):
-    import json
 
     payload = _oversized_analyzer_payload(case)
     report, log = _write_independent_failure_fixture(tmp_path, "missing")
@@ -570,19 +531,22 @@ def test_oversized_analyzer_inventory_preserves_complete_prior_rows(tmp_path, mo
     assert "private-token" not in result.stdout + result.stderr
 
 
-@pytest.mark.parametrize(
-    "case,expected_classes",
-    [
-        ("contracts", ["crosshair_process_error_observed", "value_error_observed"]),
-        ("unknown_only", ["crosshair_process_error_observed", "value_error_observed"]),
-        ("other_tool", []),
-        ("other_category", []),
-        ("unknown_message", []),
-        ("duplicate", None),
-        ("malformed", None),
-    ],
-)
-def test_structured_contract_failure_projects_only_bounded_observations(tmp_path, monkeypatch, case, expected_classes):
+def _assert_contract_failure_projection(value, expected_classes):
+    if expected_classes is None:
+        assert value["report_outcome"] in {"unreadable_report", "invalid_json"}
+        assert value["assurance_status"] == value["overall_verdict"] == "UNAVAILABLE"
+        assert not value.get("error_analyzer_sides")
+        assert not value.get("crosshair_failure_observations")
+    else:
+        assert value["report_outcome"] == "structured_report"
+        assert value["assurance_status"] == "UNKNOWN" and value["overall_verdict"] == "FAIL"
+        assert value["unknown_analyzers"] == ["contracts"]
+        assert value["error_analyzer_sides"] == {"contracts": ["head"]}
+        assert value["crosshair_failure_observations"] == expected_classes
+        assert "report_header_observed" not in value
+
+
+def _structured_contract_failure_payload(case):
     canary = "private-token:/private/review.py --private-argument"
     node = {"execution_state": "ran" if case == "unknown_only" else "error", "evidence_outcome": "UNKNOWN"}
     root = {
@@ -605,6 +569,23 @@ def test_structured_contract_failure_projects_only_bounded_observations(tmp_path
         payload = payload[:-1] + ', "findings": []}'
     elif case == "malformed":
         payload = payload[:-1]
+    return payload
+
+
+@pytest.mark.parametrize(
+    "case,expected_classes",
+    [
+        ("contracts", ["crosshair_process_error_observed", "value_error_observed"]),
+        ("unknown_only", ["crosshair_process_error_observed", "value_error_observed"]),
+        ("other_tool", []),
+        ("other_category", []),
+        ("unknown_message", []),
+        ("duplicate", None),
+        ("malformed", None),
+    ],
+)
+def test_structured_contract_failure_projects_only_bounded_observations(tmp_path, monkeypatch, case, expected_classes):
+    payload = _structured_contract_failure_payload(case)
     report, log = _write_independent_failure_fixture(tmp_path, "missing")
     report.write_text(payload)
     monkeypatch.setenv("REVIEW_REPORT", str(report))
@@ -618,18 +599,7 @@ def test_structured_contract_failure_projects_only_bounded_observations(tmp_path
     result = _run_projector(tmp_path, program)
     assert result.returncode == 0
     value = json.loads(result.stdout)
-    if expected_classes is None:
-        assert value["report_outcome"] in {"unreadable_report", "invalid_json"}
-        assert value["assurance_status"] == value["overall_verdict"] == "UNAVAILABLE"
-        assert not value.get("error_analyzer_sides")
-        assert not value.get("crosshair_failure_observations")
-    else:
-        assert value["report_outcome"] == "structured_report"
-        assert value["assurance_status"] == "UNKNOWN" and value["overall_verdict"] == "FAIL"
-        assert value["unknown_analyzers"] == ["contracts"]
-        assert value["error_analyzer_sides"] == {"contracts": ["head"]}
-        assert value["crosshair_failure_observations"] == expected_classes
-        assert "report_header_observed" not in value
+    _assert_contract_failure_projection(value, expected_classes)
     assert "private-token" not in result.stdout + result.stderr
     assert "/private/" not in result.stdout + result.stderr
     assert "--private-argument" not in result.stdout + result.stderr
@@ -650,7 +620,6 @@ def test_structured_contract_failure_projects_only_bounded_observations(tmp_path
 def test_large_private_report_projects_contract_failure_classes_without_acceptance(
     tmp_path, monkeypatch, case, expected_sides, expected_classes
 ):
-    import json
 
     root = _large_report_fixture()
     root["analyzer_evidence"][0]["head"] = {"execution_state": "ran", "evidence_outcome": "PASS"}
@@ -694,7 +663,6 @@ def test_large_private_report_projects_contract_failure_classes_without_acceptan
     ],
 )
 def test_candidate_large_report_retains_unavailable_marker_and_fixed_failure_classes(tmp_path, case, expected_classes):
-    import json
 
     workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())
     step = next(item for item in workflow["jobs"]["customer"]["steps"] if item.get("name") == STEP_NAME)
@@ -735,7 +703,6 @@ def test_candidate_large_report_retains_unavailable_marker_and_fixed_failure_cla
 
 
 def test_candidate_projection_ignores_retired_sample_frames(tmp_path):
-    import json
 
     workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())
     step = next(item for item in workflow["jobs"]["customer"]["steps"] if item.get("name") == STEP_NAME)
@@ -751,7 +718,10 @@ def test_candidate_projection_ignores_retired_sample_frames(tmp_path):
                     {
                         "category": "tool_error",
                         "tool": "crosshair",
-                        "message": "CrossHair timed out before mandatory evidence completed. sampled_frames=argument_generation,PRIVATE_TOKEN,run_portable_pytest",
+                        "message": (
+                            "CrossHair timed out before mandatory evidence completed. "
+                            "sampled_frames=argument_generation,PRIVATE_TOKEN,run_portable_pytest"
+                        ),
                     }
                 ]
             }
@@ -775,7 +745,6 @@ def test_candidate_projection_ignores_retired_sample_frames(tmp_path):
     ],
 )
 def test_candidate_incomplete_snapshot_projection_is_finite(tmp_path, nested, expected):
-    import json
 
     workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())
     step = next(item for item in workflow["jobs"]["customer"]["steps"] if item.get("name") == STEP_NAME)
@@ -799,757 +768,3 @@ def test_candidate_incomplete_snapshot_projection_is_finite(tmp_path, nested, ex
     rows = [json.loads(line) for line in result.stdout.splitlines()]
     assert rows == ([{"analyzer": "contracts", "incomplete_snapshot_sides": expected}] if expected else [])
     assert "PRIVATE_TOKEN" not in result.stdout + result.stderr
-
-
-def _write_preparation_interpreter(tmp_path):
-    import sys
-
-    interpreter = tmp_path / "venv/bin/python"
-    interpreter.parent.mkdir(parents=True)
-    interpreter.write_text(
-        "#!" + sys.executable + "\n"
-        "import os,sys\nfrom pathlib import Path\n"
-        "if sys.argv[1:3] == ['-I','-c']:\n"
-        "    if os.environ['REPORT_CASE'] == 'missing':\n"
-        "        Path('commit-review-preparation.private.json').unlink()\n"
-        "    else: print(Path('controlled-report.json').read_text())\n"
-        "    raise SystemExit(int(os.environ['PREPARATION_EXIT']))\n"
-        "os.execv(sys.executable, [sys.executable, *sys.argv[1:]])\n"
-    )
-    interpreter.chmod(0o700)
-
-
-@pytest.fixture
-def preparation_shell(tmp_path, monkeypatch):
-    import subprocess
-
-    workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())
-    step = next(item for item in workflow["jobs"]["customer"]["steps"] if item.get("name") == STEP_NAME)
-    recipe = "# Provisioning" + step["run"].split("# Provisioning", 1)[1].split("review_exit=0", 1)[0]
-    _write_preparation_interpreter(tmp_path)
-
-    def invoke(preparation):
-        preparation_exit, report_case = preparation
-        report = _write_preparation_fixture(tmp_path, "prepared" if report_case == "missing" else report_case)
-        (tmp_path / "controlled-report.json").write_text(report.read_text())
-        for name, value in {
-            "CUSTOMER_ROOT": str(tmp_path),
-            "GITHUB_WORKSPACE": str(tmp_path),
-            "PROJECT_CONFIG": str(tmp_path / "project.toml"),
-            "PREPARATION_EXIT": str(preparation_exit),
-            "REPORT_CASE": report_case,
-        }.items():
-            monkeypatch.setenv(name, value)
-        return subprocess.run(
-            ["bash", "-c", "set -euo pipefail\n" + recipe + "printf 'REVIEW_STARTED\\n'"],
-            cwd=tmp_path,
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-
-    return invoke
-
-
-@pytest.mark.parametrize(
-    "preparation,expected",
-    [
-        ((0, "prepared"), (0, "PREPARED", "prepared")),
-        ((0, "not_applicable"), (0, "NOT_APPLICABLE", "not_applicable")),
-        ((7, "not_applicable"), (7, "INCOMPLETE", "preparation_command_failed")),
-        ((0, "not_applicable_reason"), (1, "INCOMPLETE", "invalid_not_applicable")),
-        ((7, "prepared"), (7, "INCOMPLETE", "preparation_command_failed")),
-        ((0, "invalid"), (1, "INCOMPLETE", "invalid_json")),
-        ((7, "invalid"), (7, "INCOMPLETE", "invalid_json")),
-        ((0, "missing"), (1, "INCOMPLETE", "unreadable_report")),
-        ((7, "missing"), (7, "INCOMPLETE", "unreadable_report")),
-    ],
-)
-def test_preparation_shell_preserves_failure_and_projects_incomplete(preparation_shell, preparation, expected):
-    import json
-
-    expected_exit, expected_status, expected_outcome = expected
-    accepted = expected_status in {"PREPARED", "NOT_APPLICABLE"}
-    result = preparation_shell(preparation)
-    assert result.returncode == expected_exit
-    lines = result.stdout.splitlines()
-    assert lines, "every preparation exit must produce bounded diagnosis"
-    projection = json.loads(lines[0])
-    assert projection["status"] == expected_status
-    assert ("REVIEW_STARTED" in lines) is accepted
-    assert "private" not in result.stdout + result.stderr
-    assert projection["report_outcome"] == expected_outcome
-
-
-def test_failed_candidate_diagnostics_expose_only_bounded_tracked_locations(tmp_path: Path) -> None:
-    code = public_projector("customer")
-    _git(tmp_path, "init", "-q")
-    source = tmp_path / "public.py"
-    source.write_text("value = 1\n")
-    _git(tmp_path, "add", "public.py")
-    report = tmp_path / ".specfact/code-review.json"
-    report.parent.mkdir()
-    report.write_text(
-        json.dumps(
-            {
-                "analyzer_evidence": [{"id": "PRIVATE_ANALYZER", "diagnostic": "PRIVATE_TOKEN"}],
-                "findings": [
-                    {"file": "public.py", "line": 12, "severity": "warning", "message": "PRIVATE_MESSAGE"},
-                    {"file": "/private/SECRET.py", "line": 1, "severity": "error"},
-                    {"file": "untracked_SECRET.py", "line": 1, "severity": "error"},
-                    {"file": "public.py", "line": True, "severity": "error"},
-                    {"file": "public.py", "line": 0, "severity": "error"},
-                    {"file": "public.py", "line": 1, "severity": "PRIVATE_SEVERITY"},
-                    *[{"file": "public.py", "line": line, "severity": "info"} for line in range(20, 225)],
-                ],
-            }
-        )
-    )
-    result = subprocess.run([sys.executable, "-c", code], cwd=tmp_path, capture_output=True, text=True, check=False)
-    assert result.returncode == 0, result.stderr
-    rows = [json.loads(line)["finding_location"] for line in result.stdout.splitlines()]
-    assert len(rows) == 200
-    assert rows[0] == {"file": "public.py", "line": 12, "severity": "warning"}
-    assert "PRIVATE" not in result.stdout and "SECRET" not in result.stdout
-
-
-@pytest.mark.parametrize("job_name", ["customer", "independent-review"])
-def test_both_failed_reviews_project_fixed_analyzer_identity_without_private_text(
-    tmp_path: Path, job_name: str
-) -> None:
-    code = public_projector(job_name)
-    _write_public_report(tmp_path, _FIXED_ANALYZER_FINDING_ROWS)
-    result = subprocess.run([sys.executable, "-c", code], cwd=tmp_path, capture_output=True, text=True, check=False)
-    assert result.returncode == 0, result.stderr
-    rows = [json.loads(line)["finding_location"] for line in result.stdout.splitlines()]
-    assert rows[1] == {
-        "file": "public.py",
-        "line": 1,
-        "severity": "error",
-        "category": "clean_code",
-        "tool": "radon",
-        "rule": "CC34",
-    }
-    assert rows[0]["failure_class"] == "timeout"
-    assert "PRIVATE" not in result.stdout
-
-
-@pytest.mark.parametrize("job_name", ["customer", "independent-review"])
-def test_public_tool_errors_cannot_disappear_after_two_hundred_ordinary_findings(tmp_path: Path, job_name):
-    _git(tmp_path, "init", "-q")
-    (tmp_path / "public.py").write_text("value = 1\n")
-    _git(tmp_path, "add", "public.py")
-    report = tmp_path / ".specfact/code-review.json"
-    report.parent.mkdir()
-    rows = [{"file": "public.py", "line": n, "severity": "info"} for n in range(1, 220)]
-    rows.append(
-        {
-            "file": "public.py",
-            "line": 1,
-            "severity": "error",
-            "category": "tool_error",
-            "tool": "pytest",
-            "message": "PRIVATE_SECRET",
-        }
-    )
-    report.write_text(json.dumps({"findings": rows}))
-    result = subprocess.run(
-        [sys.executable, "-c", public_projector(job_name)], cwd=tmp_path, capture_output=True, text=True, check=False
-    )
-    projected = [json.loads(line)["finding_location"] for line in result.stdout.splitlines()]
-    assert result.returncode == 0, result.stderr
-    assert len(projected) == 200
-    assert projected[0]["category"] == "tool_error" and projected[0]["tool"] == "pytest"
-    assert "PRIVATE" not in result.stdout
-
-
-@pytest.mark.parametrize("job_name", ["customer", "independent-review"])
-@pytest.mark.parametrize("review_exit,diagnostic", [("1", "review_report_missing"), ("124", "analysis_timeout")])
-def test_missing_review_report_has_fixed_public_cause(tmp_path: Path, job_name, review_exit, diagnostic):
-    environment = dict(os.environ, REVIEW_PUBLIC_EXIT=review_exit)
-    result = subprocess.run(
-        [sys.executable, "-c", public_projector(job_name)],
-        cwd=tmp_path,
-        env=environment,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    assert result.returncode == 0, result.stderr
-    assert json.loads(result.stdout) == {"status": "INCOMPLETE", "phase": "review", "diagnostic": diagnostic}
-
-
-@pytest.mark.parametrize("job_name", ["customer", "independent-review"])
-@pytest.mark.parametrize(
-    "message,failure_class",
-    [
-        ("semgrep returned structured errors PRIVATE", "structured_errors"),
-        ("semgrep process failed PRIVATE", "process_failure"),
-        ("semgrep returned empty stdout PRIVATE", "empty_output"),
-        ("Unrecognized CrossHair output PRIVATE", "unrecognized_output"),
-    ],
-)
-def test_public_execution_classification_never_prints_raw_messages(tmp_path: Path, job_name, message, failure_class):
-    _git(tmp_path, "init", "-q")
-    (tmp_path / "public.py").write_text("value = 1\n")
-    _git(tmp_path, "add", "public.py")
-    report = tmp_path / ".specfact/code-review.json"
-    report.parent.mkdir()
-    report.write_text(
-        json.dumps(
-            {
-                "findings": [
-                    {"file": "public.py", "line": 1, "severity": "error", "category": "tool_error", "message": message}
-                ]
-            }
-        )
-    )
-    result = subprocess.run(
-        [sys.executable, "-c", public_projector(job_name)], cwd=tmp_path, capture_output=True, text=True, check=False
-    )
-    assert result.returncode == 0, result.stderr
-    row = json.loads(result.stdout)["finding_location"]
-    assert row["failure_class"] == failure_class
-    assert "PRIVATE" not in result.stdout
-
-
-def test_trusted_review_budget_timeout_retains_three_hundred_seconds_and_fixed_exit(monkeypatch, tmp_path):
-    import re
-    import runpy
-
-    recipe = next(
-        step["run"]
-        for step in independent_review_job()["steps"]
-        if step.get("name") == "Prepare and review through the authenticated installed controller"
-    )
-    command = re.findall(r"-I -c \\\n\s*'([^']+)'", recipe)[-1]
-    wrapper = tmp_path / "trusted_review_budget.py"
-    wrapper.write_text(command)
-    observed = []
-
-    def timeout(args, *, timeout, check):
-        observed.append((args, timeout, check))
-        raise subprocess.TimeoutExpired(args, timeout, stderr="PRIVATE_SECRET")
-
-    monkeypatch.setattr(subprocess, "run", timeout)
-    monkeypatch.setattr(sys, "argv", ["-c", "trusted-python", "trusted-reviewer.py"])
-    with pytest.raises(SystemExit) as result:
-        runpy.run_path(str(wrapper), run_name="__main__")
-    assert result.value.code == 124
-    assert observed == [(["trusted-python", "trusted-reviewer.py"], 300, False)]
-
-
-@pytest.mark.parametrize("job_name", ["customer", "independent-review"])
-@pytest.mark.parametrize(
-    "details,expected",
-    [
-        (
-            [{"type": "Syntax error", "message": "PRIVATE_SOURCE"}, {"type": "Timeout"}, {"type": "SECRET_TYPE"}],
-            ["Syntax error", "Timeout"],
-        ),
-        (
-            [{"type": ["PartialParsing", "PRIVATE_SPAN"]}, {"type": "Fatal error", "private": "PRIVATE_TOKEN"}],
-            ["Fatal error", "PartialParsing"],
-        ),
-        (
-            [{"type": "Syntax error"}, {"type": "Timeout"}, {"type": "Fatal error"}, {"type": "Out of memory"}],
-            ["Fatal error", "Syntax error", "Timeout"],
-        ),
-    ],
-)
-def test_structured_semgrep_failure_projects_only_fixed_variant_tags(tmp_path: Path, job_name, details, expected):
-    _git(tmp_path, "init", "-q")
-    (tmp_path / "public.py").write_text("value = 1\n")
-    _git(tmp_path, "add", "public.py")
-    report = tmp_path / ".specfact/code-review.json"
-    report.parent.mkdir()
-    finding = {
-        "file": "public.py",
-        "line": 1,
-        "severity": "error",
-        "category": "tool_error",
-        "tool": "semgrep",
-        "message": "semgrep returned structured errors; details=" + json.dumps(details),
-    }
-    report.write_text(json.dumps({"findings": [finding]}))
-    result = subprocess.run(
-        [sys.executable, "-c", public_projector(job_name)], cwd=tmp_path, text=True, capture_output=True, check=False
-    )
-    assert result.returncode == 0, result.stderr
-    projected = json.loads(result.stdout)["finding_location"]
-    assert projected["failure_class"] == "structured_errors"
-    assert projected["semgrep_error_types"] == expected
-    assert "PRIVATE" not in result.stdout and "SECRET" not in result.stdout
-
-
-@pytest.mark.parametrize("job_name", ["customer", "independent-review"])
-@pytest.mark.parametrize(
-    "details",
-    [
-        '{"type":"Syntax error"}',
-        "not-json",
-        '[{"type":"SECRET_TYPE"}]',
-        '[{"type":"Syntax error"}]' + "PRIVATE" * 1000,
-        "[" * 1500 + "]" * 1500,
-    ],
-)
-def test_malformed_or_oversized_semgrep_details_keep_generic_public_cause(tmp_path: Path, job_name, details):
-    _git(tmp_path, "init", "-q")
-    (tmp_path / "public.py").write_text("value = 1\n")
-    _git(tmp_path, "add", "public.py")
-    report = tmp_path / ".specfact/code-review.json"
-    report.parent.mkdir()
-    finding = {
-        "file": "public.py",
-        "line": 1,
-        "severity": "error",
-        "category": "tool_error",
-        "tool": "semgrep",
-        "message": "semgrep returned structured errors; details=" + details,
-    }
-    report.write_text(json.dumps({"findings": [finding]}))
-    result = subprocess.run(
-        [sys.executable, "-c", public_projector(job_name)], cwd=tmp_path, text=True, capture_output=True, check=False
-    )
-    assert result.returncode == 0, result.stderr
-    projected = json.loads(result.stdout)["finding_location"]
-    assert projected["failure_class"] == "structured_errors"
-    assert "semgrep_error_types" not in projected
-    assert "PRIVATE" not in result.stdout and "SECRET" not in result.stdout
-
-
-@pytest.mark.parametrize("job_name", ["customer", "independent-review"])
-def test_semgrep_decoder_depth_failure_keeps_generic_public_cause(tmp_path: Path, job_name):
-    _write_public_report(tmp_path, _DEPTH_FAILURE_FINDING_ROWS)
-    fault = """import json
-_original_loads = json.loads
-def _depth_failure(value, *args, **kwargs):
-    if value == "DECODER_DEPTH_FAILURE":
-        raise RecursionError("PRIVATE_DECODER_TRACE")
-    return _original_loads(value, *args, **kwargs)
-json.loads = _depth_failure
-"""
-    result = subprocess.run(
-        [sys.executable, "-c", fault + public_projector(job_name)],
-        cwd=tmp_path,
-        text=True,
-        capture_output=True,
-        check=False,
-    )
-    assert result.returncode == 0, result.stderr
-    projected = json.loads(result.stdout)["finding_location"]
-    assert projected["failure_class"] == "structured_errors"
-    assert "semgrep_error_types" not in projected
-    assert "PRIVATE" not in result.stdout and "PRIVATE" not in result.stderr
-
-
-@pytest.mark.parametrize("job_name", ["customer", "independent-review"])
-@pytest.mark.parametrize(
-    "message,code",
-    [
-        ("project_pytest_coverage_worker_missing; PRIVATE", "project_pytest_coverage_worker_missing"),
-        ("project_pytest_coverage_evidence_unavailable:PRIVATE", "project_pytest_coverage_evidence_unavailable"),
-        ("project_pytest_execution_incomplete:exit=4 PRIVATE", "project_pytest_execution_incomplete"),
-        ("project_pytest_root_outside_snapshot", "project_pytest_root_outside_snapshot"),
-        ("project_pytest_root_missing_or_invalid; PRIVATE", "project_pytest_root_missing_or_invalid"),
-        ("project_pytest_collection_error; PRIVATE", "project_pytest_collection_error"),
-        ("project_pytest_coverage_diagnostic_invalid:PRIVATE", "project_pytest_coverage_diagnostic_invalid"),
-        ("project_pytest_coverage_policy_invalid:PRIVATE", "project_pytest_coverage_policy_invalid"),
-        ("project_pytest_coverage_candidate_invalid:PRIVATE", "project_pytest_coverage_candidate_invalid"),
-        (
-            "project_pytest_installed_coverage_directory_invalid:PRIVATE",
-            "project_pytest_installed_coverage_directory_invalid",
-        ),
-        (
-            "project_pytest_installed_coverage_module_invalid:PRIVATE",
-            "project_pytest_installed_coverage_module_invalid",
-        ),
-        ("[Errno 2] PRIVATE_PATH", "file_missing"),
-        ("[Errno 13] PRIVATE_PATH", "permission_denied"),
-        ("PRIVATE project_pytest_execution_incomplete", None),
-        ("project_pytest_execution_incomplete_PRIVATE", None),
-        ("PRIVATE_UNKNOWN", None),
-    ],
-)
-def test_public_pytest_failure_codes_withhold_private_payload(tmp_path: Path, job_name, message, code):
-    _git(tmp_path, "init", "-q")
-    (tmp_path / "public.py").write_text("value = 1\n")
-    _git(tmp_path, "add", "public.py")
-    report = tmp_path / ".specfact/code-review.json"
-    report.parent.mkdir()
-    report.write_text(
-        json.dumps(
-            {
-                "findings": [
-                    {
-                        "file": "public.py",
-                        "line": 1,
-                        "severity": "error",
-                        "category": "tool_error",
-                        "tool": "pytest",
-                        "message": message,
-                    }
-                ]
-            }
-        )
-    )
-    result = subprocess.run(
-        [sys.executable, "-c", public_projector(job_name)],
-        cwd=tmp_path,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    assert result.returncode == 0, result.stderr
-    projected = json.loads(result.stdout)["finding_location"]
-    assert projected.get("diagnostic_code") == code
-    assert "PRIVATE" not in result.stdout
-
-
-@pytest.mark.parametrize(
-    "progress,analyzer",
-    [
-        ("PRIVATE\nChecking capsule analyzer contracts...\n", "contracts"),
-        (
-            "Checking capsule analyzer pylint...\nPRIVATE\nChecking capsule analyzer targeted-pytest-coverage...\n",
-            "targeted-pytest-coverage",
-        ),
-        ("Checking capsule analyzer PRIVATE...\n", None),
-        ("PRIVATE Checking capsule analyzer pylint...\n", None),
-        ("Checking capsule analyzer pylint...\n" + "X" * 65537, None),
-    ],
-)
-def test_independent_timeout_projects_only_bounded_exact_progress(tmp_path: Path, progress, analyzer):
-    log = tmp_path / "progress.private.log"
-    log.write_text(progress)
-    environment = dict(os.environ, REVIEW_PUBLIC_EXIT="124", REVIEW_PUBLIC_PROGRESS=str(log))
-    result = subprocess.run(
-        [sys.executable, "-c", public_projector("independent-review")],
-        cwd=tmp_path,
-        env=environment,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    assert result.returncode == 0, result.stderr
-    row = json.loads(result.stdout)
-    assert row["diagnostic"] == "analysis_timeout"
-    assert row.get("analyzer") == analyzer
-    assert "PRIVATE" not in result.stdout
-
-
-@pytest.mark.parametrize("job_name", ["customer", "independent-review"])
-@pytest.mark.parametrize("rule", ["TEST_OUTCOME_NOT_PASS", "TEST_COVERAGE_POLICY_FAILED"])
-def test_public_testing_findings_survive_ordinary_location_cap(tmp_path: Path, job_name, rule):
-    rows = [{"file": "public.py", "line": n, "severity": "info"} for n in range(1, 220)]
-    rows.append(
-        {
-            "file": "public.py",
-            "line": 1,
-            "severity": "error",
-            "category": "testing",
-            "tool": "pytest",
-            "rule": rule,
-            "message": "PRIVATE_TRACE_WITH_PARAMETERS",
-        }
-    )
-    _write_public_report(tmp_path, rows)
-    result = subprocess.run(
-        [sys.executable, "-c", public_projector(job_name)],
-        cwd=tmp_path,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    projected = [json.loads(line)["finding_location"] for line in result.stdout.splitlines()]
-    assert result.returncode == 0, result.stderr
-    assert len(projected) == 200
-    assert projected[0].get("category") == "testing"
-    assert projected[0].get("rule") == rule
-    assert "PRIVATE" not in result.stdout
-
-
-@pytest.mark.parametrize("job_name", ["customer", "independent-review"])
-@pytest.mark.parametrize(
-    "outcome,phase,xfail", [("failed", "call", False), ("skipped", "setup", False), ("passed", "call", True)]
-)
-def test_public_test_observations_identify_only_tracked_source_functions(tmp_path, job_name, outcome, phase, xfail):
-    suffix = " with an xfail marker." if xfail else "."
-    finding = {
-        "file": "public.py",
-        "line": 1,
-        "severity": "error",
-        "category": "testing",
-        "tool": "pytest",
-        "rule": "TEST_OUTCOME_NOT_PASS",
-        "message": f"Test public.py::test_public_case[PRIVATE_PARAMETER::test_inner[PRIVATE_NESTED]] {outcome} during {phase}{suffix}",
-    }
-    _write_public_report(tmp_path, [finding])
-    (tmp_path / "public.py").write_text("def test_public_case():\n    pass\ndef test_inner():\n    pass\n")
-    result = subprocess.run(
-        [sys.executable, "-c", public_projector(job_name)],
-        cwd=tmp_path,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    assert result.returncode == 0, result.stderr
-    row = json.loads(result.stdout)["finding_location"]
-    assert row.get("test_outcome") == outcome
-    assert row.get("test_phase") == phase
-    assert row.get("test_xfail") is xfail
-    assert row.get("test_function") == "test_public_case"
-    assert "PRIVATE" not in result.stdout
-
-
-@pytest.mark.parametrize("job_name", ["customer", "independent-review"])
-@pytest.mark.parametrize(
-    "message",
-    [
-        "Test public.py::PRIVATE_FUNCTION[PRIVATE_PARAMETER] failed during call.",
-        "Test /private/SECRET.py::test_public_case failed during call.",
-        "Test public.py::test_public_case failed during PRIVATE_PHASE.",
-        "Test public.py::test_public_case[" + "PRIVATE" * 1000 + "] failed during call.",
-    ],
-)
-def test_public_test_observations_reject_private_or_malformed_identity(tmp_path, job_name, message):
-    finding = {
-        "file": "public.py",
-        "line": 1,
-        "severity": "error",
-        "category": "testing",
-        "tool": "pytest",
-        "rule": "TEST_OUTCOME_NOT_PASS",
-        "message": message,
-    }
-    _write_public_report(tmp_path, [finding])
-    (tmp_path / "public.py").write_text("def test_public_case():\n    pass\n")
-    result = subprocess.run(
-        [sys.executable, "-c", public_projector(job_name)],
-        cwd=tmp_path,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    assert result.returncode == 0, result.stderr
-    row = json.loads(result.stdout)["finding_location"]
-    assert "test_function" not in row
-    assert "PRIVATE" not in result.stdout and "SECRET" not in result.stdout
-
-
-@pytest.mark.parametrize("job_name", ["customer", "independent-review"])
-@pytest.mark.parametrize(
-    "failure_case",
-    [
-        ("E FileNotFoundError: [Errno 2] PRIVATE_PATH", "FileNotFoundError", None, None),
-        ("E subprocess.CalledProcessError: PRIVATE_COMMAND", "CalledProcessError", None, None),
-        (
-            "E RuntimeError: project_python_option_unsupported:-I; PRIVATE_TRACE",
-            "RuntimeError",
-            "project_python_option_unsupported",
-            "-I",
-        ),
-        ("E PRIVATE_EXCEPTION: PRIVATE_TRACE", None, None, None),
-    ],
-)
-def test_public_test_failure_class_uses_matching_record_only(tmp_path, job_name, failure_case):
-    detail, exception, diagnostic, option = failure_case
-    write_public_phase_record_report(tmp_path, "public.py::test_public_case[PRIVATE_PARAMETER]", detail)
-    result = subprocess.run(
-        [sys.executable, "-c", public_projector(job_name)],
-        cwd=tmp_path,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    assert result.returncode == 0, result.stderr
-    row = json.loads(result.stdout)["finding_location"]
-    assert row.get("test_failure_class") == exception
-    assert row.get("test_diagnostic") == diagnostic
-    assert row.get("python_option") == option
-    assert "PRIVATE" not in result.stdout and "PermissionError" not in result.stdout
-
-
-@pytest.mark.parametrize("job_name", ["customer", "independent-review"])
-@pytest.mark.parametrize("snapshot", ["head", "base", "head_and_base"])
-def test_public_test_failure_reads_immutable_snapshot_records(tmp_path, job_name, snapshot):
-    nodeid = "public.py::test_public_case[PRIVATE_PARAMETER]"
-    write_public_phase_record_report(tmp_path, nodeid, "E FileNotFoundError: PRIVATE_PATH")
-    report = tmp_path / ".specfact/code-review.json"
-    data = json.loads(report.read_text())
-    evidence = data["analyzer_evidence"][0]
-    execution = evidence.pop("target_execution")
-    selected = "head" if snapshot == "head_and_base" else snapshot
-    evidence[selected] = {"target_execution": execution}
-    if snapshot == "head_and_base":
-        evidence["base"] = {
-            "target_execution": {
-                "records": [
-                    {
-                        "nodeid": nodeid,
-                        "phase": "call",
-                        "outcome": "failed",
-                        "detail": "E PermissionError: PRIVATE_BASE",
-                    },
-                ]
-            }
-        }
-    report.write_text(json.dumps(data))
-    result = subprocess.run(
-        [sys.executable, "-c", public_projector(job_name)],
-        cwd=tmp_path,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    assert result.returncode == 0, result.stderr
-    row = json.loads(result.stdout)["finding_location"]
-    assert row.get("test_failure_class") == "FileNotFoundError"
-    assert "PRIVATE" not in result.stdout and "PermissionError" not in result.stdout
-
-
-@pytest.mark.parametrize("job_name", ["customer", "independent-review"])
-@pytest.mark.parametrize("case", ["invalid", "non_object", "oversized", "recursive", "unreadable"])
-def test_public_projector_bounds_and_rejects_unreadable_reports(tmp_path: Path, job_name, case):
-    report = tmp_path / ".specfact/code-review.json"
-    report.parent.mkdir()
-    fault = ""
-    if case == "oversized":
-        with report.open("wb") as stream:
-            stream.write(b'{"private":"PRIVATE_SECRET')
-            for _ in range(512):
-                stream.write(b"x" * 65536)
-            stream.write(b'"}')
-    elif case == "recursive":
-        report.write_text("[" * 10000 + "0" + "]" * 10000)
-    else:
-        report.write_text("PRIVATE_SECRET invalid JSON" if case == "invalid" else '["PRIVATE_SECRET"]')
-    if case == "unreadable":
-        fault = "from pathlib import Path\ndef denied_open(*args, **kwargs):\n    raise OSError('PRIVATE_SECRET')\nPath.open = denied_open\n"
-    result = subprocess.run(
-        [sys.executable, "-c", fault + public_projector(job_name)],
-        cwd=tmp_path,
-        env=dict(os.environ, REVIEW_PUBLIC_EXIT="17"),
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    assert result.returncode == 0, "Malformed diagnostic input must not crash projection"
-    assert json.loads(result.stdout) == {
-        "status": "INCOMPLETE",
-        "phase": "review",
-        "diagnostic": "review_report_unreadable",
-    }
-    assert "PRIVATE_SECRET" not in result.stdout
-
-
-@pytest.mark.parametrize("job_name", ["customer", "independent-review"])
-@pytest.mark.parametrize("review_exit", [17, 124])
-def test_projector_crash_preserves_original_review_exit(tmp_path: Path, job_name, review_exit):
-    import shlex
-
-    workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())
-    name = STEP_NAME if job_name == "customer" else "Prepare and review through the authenticated installed controller"
-    recipe = next(step["run"] for step in workflow["jobs"][job_name]["steps"] if step.get("name") == name)
-    invocation = next(line for line in recipe.splitlines() if "REVIEW_PUBLIC_EXIT=" in line and "<<'PY'" in line)
-    guard = invocation.split("<<'PY'", 1)[1]
-    report = tmp_path / ".specfact/code-review.json"
-    report.parent.mkdir()
-    report.write_text('{"analyzer_evidence":42}')
-    program = public_projector(job_name)
-    shell = (
-        f"set -e\nreview_exit={review_exit}\nREVIEW_PUBLIC_EXIT=$review_exit {shlex.quote(sys.executable)} - <<'PY'{guard}\n"
-        + program
-        + '\nPY\nexit "$review_exit"\n'
-    )
-    result = subprocess.run(
-        ["bash", "-c", shell],
-        cwd=tmp_path,
-        env=dict(os.environ, CUSTOMER_ROOT=str(tmp_path), TRUSTED_ROOT=str(tmp_path)),
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    assert result.returncode == review_exit, "Diagnostics must preserve the original failed review result"
-    assert result.stderr == "", "Projector tracebacks must remain private"
-    assert json.loads(result.stdout.splitlines()[-1]) == {
-        "status": "INCOMPLETE",
-        "phase": "review",
-        "diagnostic": "review_projection_failed",
-    }
-    assert "TypeError" in (tmp_path / "review-projection.private.log").read_text()
-
-
-@pytest.mark.parametrize("review_exit", [17, 124])
-def test_candidate_secondary_projector_crash_preserves_review_exit(tmp_path: Path, review_exit):
-    import shlex
-
-    workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())
-    recipe = next(step["run"] for step in workflow["jobs"]["customer"]["steps"] if step.get("name") == STEP_NAME)
-    marker = "<<'PY_CANDIDATE_FAILURE'"
-    invocation = next(line for line in recipe.splitlines() if marker in line)
-    guard = invocation.split(marker, 1)[1]
-    program = recipe.split(marker, 1)[1].split("\n", 1)[1].split("\nPY_CANDIDATE_FAILURE", 1)[0]
-    shell = (
-        f"set -e\nreview_exit={review_exit}\n{shlex.quote(sys.executable)} - {marker}{guard}\n"
-        + "raise SystemExit(3)\n"
-        + program
-        + '\nPY_CANDIDATE_FAILURE\nexit "$review_exit"\n'
-    )
-    result = subprocess.run(
-        ["bash", "-c", shell],
-        cwd=tmp_path,
-        env=dict(os.environ, CUSTOMER_ROOT=str(tmp_path)),
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    assert result.returncode == review_exit, "Every diagnostic invocation must preserve the failed review result"
-    assert result.stderr == ""
-    assert json.loads(result.stdout) == {
-        "status": "INCOMPLETE",
-        "phase": "review",
-        "diagnostic": "review_projection_failed",
-    }
-
-
-@pytest.mark.parametrize("job_name", ["customer", "independent-review"])
-@pytest.mark.parametrize("module_name", ["ast", "json"])
-@pytest.mark.parametrize("import_origin", ["checkout", "pythonpath"])
-@pytest.mark.parametrize("review_exit", [17, 124])
-def test_actual_projector_launch_excludes_untrusted_imports(
-    tmp_path: Path, job_name, module_name, import_origin, review_exit
-):
-    workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())
-    name = STEP_NAME if job_name == "customer" else "Prepare and review through the authenticated installed controller"
-    recipe = next(step["run"] for step in workflow["jobs"][job_name]["steps"] if step.get("name") == name)
-    invocation = next(line for line in recipe.splitlines() if "REVIEW_PUBLIC_EXIT=" in line and "<<'PY'" in line)
-    interpreter = tmp_path / "venv/bin/python"
-    interpreter.parent.mkdir(parents=True)
-    interpreter.symlink_to(sys.executable)
-    candidate = tmp_path / "candidate"
-    candidate.mkdir()
-    ambient = tmp_path / "ambient"
-    ambient.mkdir()
-    marker = tmp_path / "untrusted-import-executed"
-    poison = candidate if import_origin == "checkout" else ambient
-    (poison / f"{module_name}.py").write_text(
-        f"from pathlib import Path\nPath({str(marker)!r}).write_text('executed')\nraise RuntimeError('UNTRUSTED_IMPORT')\n"
-    )
-    report = candidate / ".specfact/code-review.json" if job_name == "customer" else tmp_path / "review.private.json"
-    report.parent.mkdir(exist_ok=True)
-    report.write_text("PRIVATE_REPORT invalid JSON")
-    shell = f"set -e\ntrusted_env=(env)\nreview_exit={review_exit}\n" + invocation + "\n" + public_projector(job_name)
-    shell += '\nPY\nexit "$review_exit"\n'
-    environment = dict(os.environ, CUSTOMER_ROOT=str(tmp_path), TRUSTED_ROOT=str(tmp_path), PYTHONPATH=str(ambient))
-    environment["REVIEW_PUBLIC_REPORT"] = str(report)
-    result = subprocess.run(
-        ["bash", "-c", shell], cwd=candidate, env=environment, capture_output=True, text=True, check=False
-    )
-    assert not marker.exists(), "Candidate or ambient standard-library lookalikes executed on the host"
-    assert result.returncode == review_exit and result.stderr == ""
-    rows = [json.loads(line) for line in result.stdout.splitlines()]
-    assert rows[-1] == {"status": "INCOMPLETE", "phase": "review", "diagnostic": "review_report_unreadable"}
-    assert (review_exit != 124) or rows[0]["diagnostic"] == "analysis_timeout"
-    assert "PRIVATE_REPORT" not in result.stdout and "UNTRUSTED_IMPORT" not in result.stdout
-    assert report.read_text() == "PRIVATE_REPORT invalid JSON"

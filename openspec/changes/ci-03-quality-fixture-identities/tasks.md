@@ -67,3 +67,21 @@
 - [x] 9.3 Execute the selected immutable checker with explicit external host Python and verify refusal cases.
 - [x] 9.4 Complete focused tests, normal hooks, strict OpenSpec and planned Requirements evidence.
 - [ ] 9.5 Complete parent independent review and mandatory hosted exact-head acceptance.
+
+
+## 10. External interpreter boundary follow-up
+
+- [x] 10.1 Specify physical interpreter location checks within the approved local deferral.
+- [x] 10.2 Reproduce candidate launchers and symlink aliases before production changes.
+- [x] 10.3 Reject candidate paths before execution and preserve legitimate external symlinks.
+- [x] 10.4 Complete bounded host and parity proofs, lint, types, strict OpenSpec and planned Requirements validation.
+- [ ] 10.5 Complete parent independent review, normal hooks and hosted exact-head acceptance.
+
+
+## 11. Projection fixture host boundary
+
+- [x] 11.1 Record observed failures and fixture-only host partition design.
+- [x] 11.2 Prove mandatory host scheduling fails before the invocation changes.
+- [x] 11.3 Partition tests with case and assertion preservation and fix measured fixture lint and complexity.
+- [x] 11.4 Run host and unit proofs, analyzers, strict OpenSpec and planned Requirements validation.
+- [ ] 11.5 Complete parent independent review, normal hooks and exact-head hosted acceptance.

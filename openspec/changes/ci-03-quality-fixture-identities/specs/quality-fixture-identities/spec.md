@@ -121,3 +121,22 @@ This is an explicit trusted-caller approval boundary, not protected-branch polic
 - **GIVEN** exact reviewed indexed orchestration and explicit valid caller selections
 - **WHEN** the existing local eligibility checks execute
 - **THEN** the hook reports DEFERRED and retains contracts and all other checks, while cleaning its temporary checker.
+
+#### Scenario: Candidate interpreter paths cannot bypass immutable policy
+
+- **GIVEN** an otherwise eligible local candidate and explicit policy selection
+- **WHEN** the interpreter path is inside the physical candidate repository, including a checkout alias or symlinked parent directory, or resolves through an external symlink into that repository
+- **THEN** the hook refuses deferral before executing that interpreter; a legitimate external symlink to an external host interpreter remains eligible.
+
+The hook SHALL canonicalize the repository, interpreter parent directory and interpreter target using host tools before executing the selected interpreter. Both the selected physical location and resolved target SHALL be outside the candidate repository. Resolution failures SHALL refuse deferral. This safeguards the already approved local deferral and grants no new policy authority.
+
+
+### Requirement: Shell projection checks execute in the mandatory host stage
+
+The default Hatch test command SHALL execute all four shell projection regression functions and their 31 parameter cases in an explicit host proof before ordinary unit discovery. The remaining 200 projection cases SHALL retain ordinary unit discovery. Fixture partitioning SHALL preserve assertions, review exit codes, privacy checks and isolation checks without changing runtime capabilities, analyzer gates or budgets.
+
+#### Scenario: Default suite retains shell projection coverage
+
+- **GIVEN** the default Hatch test command
+- **WHEN** its mandatory host stage runs
+- **THEN** all 31 shell projection cases execute alongside existing host proofs and fail the command on failure.

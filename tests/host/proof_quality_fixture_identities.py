@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import shlex
 import subprocess
 from importlib import import_module
 from pathlib import Path
@@ -290,3 +291,49 @@ def test_immutable_policy_isolates_python_imports(policy_candidate) -> None:
     result = _run_policy_candidate(policy_candidate)
     assert result.returncode == 0, result.stderr
     assert not marker.exists(), "candidate Python import executed"
+
+
+@pytest.mark.parametrize("selection", ["direct", "external-link", "parent-link", "checkout-alias"])
+def test_immutable_policy_rejects_candidate_interpreter_before_execution(policy_candidate, selection: str) -> None:
+    worktree, environment = policy_candidate
+    _change_policy_candidate(worktree, "successful-canary")
+    interpreter = worktree / ".venv/bin/python"
+    interpreter.parent.mkdir(parents=True)
+    marker = worktree / "candidate-interpreter-executed"
+    interpreter.write_text(f"#!/bin/sh\ntouch {shlex.quote(str(marker))}\nexit 0\n")
+    interpreter.chmod(0o700)
+    selected = interpreter
+    if selection == "external-link":
+        selected = worktree.parent / "external-python"
+        selected.symlink_to(interpreter)
+    elif selection == "parent-link":
+        alias = worktree.parent / "external-bin"
+        alias.symlink_to(interpreter.parent, target_is_directory=True)
+        selected = alias / "python"
+    elif selection == "checkout-alias":
+        alias = worktree.parent / "checkout-alias"
+        alias.symlink_to(worktree, target_is_directory=True)
+        selected = alias / ".venv/bin/python"
+        policy_candidate = alias, environment
+    environment["SPECFACT_CODE_REVIEW_POLICY_PYTHON"] = str(selected)
+    result = _run_policy_candidate(policy_candidate)
+    assert result.returncode != 0, result.stderr
+    assert "outside the candidate repository" in result.stderr
+    assert "DEFERRED" not in result.stderr
+    assert not marker.exists(), "candidate interpreter executed"
+
+
+@pytest.mark.parametrize("inside", [False, True])
+def test_immutable_policy_checks_external_interpreter_symlink_location(policy_candidate, inside: bool) -> None:
+    worktree, environment = policy_candidate
+    selected = (worktree if inside else worktree.parent) / "host-python-link"
+    selected.symlink_to(environment["SPECFACT_CODE_REVIEW_POLICY_PYTHON"])
+    environment["SPECFACT_CODE_REVIEW_POLICY_PYTHON"] = str(selected)
+    result = _run_policy_candidate(policy_candidate)
+    if inside:
+        assert result.returncode != 0, result.stderr
+        assert "outside the candidate repository" in result.stderr
+        assert "DEFERRED" not in result.stderr
+    else:
+        assert result.returncode == 0, result.stderr
+        assert_block2_trace(Path(environment["FIXTURE_CALLS"]).read_text(), 0, result.stderr)

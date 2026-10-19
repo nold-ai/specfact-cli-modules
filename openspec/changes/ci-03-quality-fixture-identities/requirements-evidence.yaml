@@ -402,3 +402,40 @@ requirements:
       intent: Candidate imports cannot alter the selected checker execution.
       observable: Exact reviewed bytes qualify without importing candidate hashlib or sitecustomize.
       implementation_task: '9.3'
+
+    - case_id: CI-03-7-8
+      scenario_id: local-deferral-executes-caller-selected-immutable-policy
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/host/proof_quality_fixture_identities.py::test_immutable_policy_rejects_candidate_interpreter_before_execution
+      intent: Candidate executable locations cannot skip immutable policy execution.
+      observable: Direct and aliased candidate interpreters refuse deferral before their canaries execute.
+      implementation_task: '10.3'
+    - case_id: CI-03-7-9
+      scenario_id: local-deferral-executes-caller-selected-immutable-policy
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/host/proof_quality_fixture_identities.py::test_immutable_policy_checks_external_interpreter_symlink_location
+      intent: External host interpreter symlinks preserve the approved local workflow.
+      observable: An external symlink succeeds with all checks retained and a candidate-local symlink refuses deferral.
+      implementation_task: '10.3'
+  openspec:ci-03-quality-fixture-identities:quality-fixture-identities:shell-projection-checks-execute-in-the-mandatory-host-stage:
+    rationale: Preserve shell workflow proofs at the host boundary without adding capsule capabilities.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#518
+    touchpoints:
+    - id: default-host-stage
+      kind: config
+      locator: pyproject.toml
+    verification_cases:
+    - case_id: CI-03-8-1
+      scenario_id: shell-projection-checks-execute-in-the-mandatory-host-stage
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_review_projection.py::test_hosted_preparation_has_separate_bound_and_cannot_bypass_review
+      intent: The mandatory host stage executes the shell projection proofs.
+      observable: The default Hatch test invocation includes the new proof before ordinary tests.
+      implementation_task: '11.3'

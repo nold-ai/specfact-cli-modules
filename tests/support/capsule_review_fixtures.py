@@ -496,3 +496,26 @@ def deferral_policy_environment(worktree: Path) -> dict[str, str]:
         "SPECFACT_CODE_REVIEW_POLICY_COMMIT": _git(worktree, "rev-parse", "HEAD"),
         "SPECFACT_CODE_REVIEW_POLICY_PYTHON": str(interpreter),
     }
+
+
+def write_preparation_fixture(tmp_path, case):
+
+    descriptor = tmp_path / "descriptor.json"
+    descriptor.write_text("{}")
+    payload = {"runtimes": {side: {"descriptor": str(descriptor)} for side in ("base", "head")}}
+    if case.startswith("not_applicable"):
+        payload = {"scope": "index", "status": "NOT_APPLICABLE", "diagnostic": "no_governed_impact", "runtimes": {}}
+        overrides = {
+            "not_applicable_reason": {"diagnostic": "private-reason"},
+            "not_applicable_scope": {"scope": "full"},
+            "not_applicable_runtimes": {"runtimes": ["private"]},
+            "not_applicable_nonempty": {"runtimes": {"head": {"descriptor": str(descriptor)}}},
+        }
+        payload.update(overrides.get(case, {}))
+    elif case == "missing_base":
+        payload["runtimes"].pop("base")
+    elif case == "missing_files":
+        descriptor.unlink()
+    report = tmp_path / "preparation.private.json"
+    report.write_text("not-json/private" if case == "invalid" else json.dumps(payload))
+    return report
