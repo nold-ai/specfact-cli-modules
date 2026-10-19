@@ -336,4 +336,4 @@ def test_immutable_policy_checks_external_interpreter_symlink_location(policy_ca
         assert "DEFERRED" not in result.stderr
     else:
         assert result.returncode == 0, result.stderr
-        assert_block2_trace(Path(environment["FIXTURE_CALLS"]).read_text(), 0, result.stderr)
+        assert_block2_trace(Path(environment["FIXTURE_CALLS"]).read_text(encoding="utf-8"), 0, result.stderr)
