@@ -196,3 +196,67 @@ The staged Requirements evidence gate passed with one source passed and zero
 failed after aligning the new mapping with its requirement-level scenario id.
 Required and observed maturity remain `planned`; implementation evidence remains
 `not-yet-available`. Staged whitespace validation also passed.
+
+
+## 2026-10-18 structured independent failure diagnostics
+
+The subject is PR 519 at `413f8f1211222eb7d2a15d530d86f8423234adff`.
+Run 39167860375 identifies contracts as the only error and UNKNOWN analyzer in
+the independent structured report. The actual contract fault remains unknown.
+The public artifact contains no failed-review report. The observed diagnostic
+gap is that the existing side and class projection ran only for oversized reports.
+
+After the spec update and before production edits,
+`.venv/bin/python -m pytest tests/unit/test_capsule_review_projection.py -k 'structured_contract_failure or independent_review_failure_keeps' -o addopts= -q`
+returned **9 failed, 6 passed, 216 deselected in 0.65s**. The decisive new assertion
+failed with `KeyError: 'error_analyzer_sides'`. Existing structured golden outputs
+also rejected the two missing additive fields. Malformed and duplicate-key cases
+passed before the correction.
+
+The production diff adds structured reports to the existing diagnostic condition
+and reads classes from the already validated `evidence_source`. The complete
+projector file then passed **231 tests in 11.57s** using
+`.venv/bin/python -m pytest tests/unit/test_capsule_review_projection.py -o addopts= -q`.
+The new cases cover error and UNKNOWN-only sides, unrelated tools and categories,
+unknown messages, malformed and duplicate JSON, and private token/path/argument
+canaries. Existing oversized and diagnostic-bound cases also pass.
+
+Focused Ruff lint and format, strict OpenSpec validation and whitespace checks
+pass. The indexed orchestrator SHA-256 remains
+`827e26667ef9951783bfeaffebca5833e1e16a90151676b164b88d303f7ac371`.
+No classifier, validation, input bound, raw-output handling, review exit, timeout,
+required check, runtime or signed payload changed. Requirements mappings remain
+planned test mappings and do not claim accepted or verified lifecycle evidence.
+The staged native Requirements command passed with one source passed and zero
+failed. Required and observed maturity remain `planned`, and implementation
+evidence remains `not-yet-available`.
+
+`SPECFACT_CLI_REPO=/Users/dom/git/nold-ai/specfact-cli-worktrees/codex/code-review-local-report-planning SPECFACT_CODE_REVIEW_DEFER_TO_CI=github-linux hatch run pre-commit run`
+completed with exit 0. Signature verification, formatting, YAML validation,
+bundle imports, full lint, generated command and documentation checks, staged
+Requirements evidence and all 28 contract tests passed. BasedPyright reported
+zero errors and warnings; Pylint reported 10.00/10. Only the local capsule review
+reported the existing explicit DEFERRED warning. That is not analyzer PASS.
+The existing reusable-workflow eligibility path and the indexed orchestrator
+byte pin were unchanged. Parent independent review and exact-head hosted
+acceptance remain required.
+
+Durable RED and GREEN logs are retained under
+`/Users/dom/git/nold-ai/specfact-cli-worktrees/codex/ci518-review-artifacts/ci519-structured-diagnostic/`.
+
+
+## 2026-10-19 caller-selected immutable local policy
+
+PR review 4308833955 identified that the local hook executed candidate-owned checker code, allowing changed indexed workflow bytes and a matching candidate digest update to authorize deferral. The approved correction preserves the trusted local caller as the approval boundary. The caller explicitly selects a full policy commit SHA and an external absolute host Python executable; this is not owner acceptance, protected-branch policy or hostile-caller isolation. Candidate hook/control changes and exact-head Linux candidate and independent signed review remain independently blocking.
+
+The spec was updated before host regression tests and production edits. With the original hook and a test-only Hatch adapter executing the candidate checker, `.venv/bin/python -m pytest tests/host/proof_quality_fixture_identities.py -k immutable_policy -o addopts= -q` produced **16 failed, 2 passed, 12 deselected in 4.02s**. The candidate-pin case returned zero with `DEFERRED: only the local capsule review requires mandatory exact-head GitHub Linux CI; this is not a PASS.` instead of the required refusal. Candidate canaries, absent selections and Git/Python failure injections also exposed the old invocation. The final replacement fixture uses a parentless replacement commit, avoiding an ancestry cycle that would otherwise stop at the existing merge-base guard rather than test immutable extraction.
+
+The production change adds one private subshell function and replaces the old Hatch checker call. It validates caller inputs, reads the exact commit blob with Git replacements disabled, runs the nonempty extracted checker using `-I -S` from the candidate repository root, and cleans its private temporary directory. The checker itself remains blob `ec30685c4755e4d0f78faf3bc88fe292b022fb79`, SHA-256 `2d8e4b4f5e0200c4293fa1a98c2daa44c6be4e82849bdc2a423b9fce82c7602d`; its orchestrator digest remains unchanged.
+
+All **18 immutable-policy host cases passed** after the fix. The final combined host, pre-commit parity, seven unchanged validator unit cases and preserved diagnostic suite passed **414 tests in 50.15s**. The command selected `tests/host/proof_quality_fixture_identities.py`, `tests/host/proof_capsule_deferred_review_ci.py`, `tests/unit/test_pre_commit_quality_parity.py`, `tests/unit/test_validate_capsule_ci_schedule.py`, and `tests/unit/test_capsule_review_projection.py` with `-o addopts= -q`. Tests use real disposable Git indexes and an external base interpreter, exercise changed indexed bytes despite restored working copies, reject invalid/missing/non-commit/empty policy selections and Git/Python failures, ignore replacement objects and candidate Python imports, and preserve contracts plus temporary cleanup. The test-only Hatch checker adapter is removed after the failing-before run.
+
+Focused Ruff format/lint, Pylint (10.00/10 for the three host/support files), BasedPyright (zero errors/warnings), Bash syntax and strict OpenSpec validation passed. Native staged Requirements validation against a private temporary index passed one source with zero failures, required and observed maturity `planned`, and implementation evidence `not-yet-available`. The earlier branch-diff probe reported no impact and is not counted as mapping evidence. Normal hooks, parent independent review and hosted exact-head acceptance remain to be completed.
+
+Durable RED/GREEN logs and the preserved original eight-file staged patch are retained under `/Users/dom/git/nold-ai/specfact-cli-worktrees/codex/ci518-review-artifacts/ci519-immutable-policy/`. No commit, push, API write or lifecycle promotion is included in this handoff.
+
+The normal hook command completed with exit zero using `SPECFACT_CLI_REPO=/Users/dom/git/nold-ai/specfact-cli-worktrees/codex/code-review-local-report-planning`, `SPECFACT_CODE_REVIEW_DEFER_TO_CI=github-linux`, `SPECFACT_CODE_REVIEW_POLICY_COMMIT=413f8f1211222eb7d2a15d530d86f8423234adff` and `SPECFACT_CODE_REVIEW_POLICY_PYTHON=/opt/homebrew/bin/python3` with `hatch run pre-commit run`. Signature verification, format, YAML, bundle boundaries, full lint, generated command and documentation checks, staged planned Requirements evidence and **28 contract tests** passed. Only the existing local capsule review reported DEFERRED, never analyzer PASS. Parent independent review and mandatory hosted exact-head acceptance remain outstanding.

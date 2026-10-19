@@ -46,3 +46,21 @@ checks. Runtime capabilities, namespace policy and dependencies are unchanged.
 Public hosted records identify failing test nodes but redact private tracebacks;
 FileNotFoundError attribution requires separate local reproduction, not inference
 from those public records alone.
+
+
+## Structured failure diagnostics for PR 519
+
+The maintainer needs the failing snapshot side and any recognized error class from the existing independent review failure. Exact-head run 39167860375 reports contracts error and UNKNOWN with an unclassified structured report. The actual contract fault remains unidentified. The public artifact contains no failed-review report.
+
+Reuse the existing validated `evidence_source`, `incomplete_sides` and `crosshair_failure_observations`. Minimal adaptation removes only the report-size restriction on the two diagnostic fields. A separate parser or new classifier would add maintenance without improving this bounded observation. The data shape remains an allowlisted analyzer-to-side map and a list of fixed class names. Structured output keeps its existing status, findings and enforcement semantics. Oversized output retains unavailable status and its header observation.
+
+The first milestone executes the actual embedded workflow projector against structured private fixtures and proves bounded output, privacy and validation behavior. It does not establish a contracts fix or hosted review success. Runtime, dependencies, security capabilities, signatures, thresholds, required checks, timeouts, the orchestrator byte pin and planning changes are outside scope. Reverting this diagnostic addition restores the prior projection. Runtime cost is bounded by the existing ten analyzer rows and ten thousand finding rows; elapsed cost has not been measured.
+
+
+## Caller-selected immutable local policy (2026-10-19)
+
+PR review 4308833955 demonstrates that a candidate can update both indexed workflow bytes and the digest in the candidate-owned checker. The caller must select an independently inspected full commit SHA and an absolute external host Python executable. Those two explicit environment strings are the entire new data shape. The existing checker is reused unchanged from that commit; a private shell subshell extracts it with replacement objects disabled and runs it with isolated, no-site Python from the candidate repository root. Extraction and execution failures refuse eligibility, with temporary-file cleanup and no fallback.
+
+Reuse of the mutable working-copy checker cannot satisfy this boundary. The minimal adaptation is one private shell function at its existing invocation. An installed hook, protected bootstrap, trust store or external policy service would invent authority and maintenance outside the approved workflow. This selection records caller review only, not owner acceptance, protected-branch policy or independence from a caller who can edit or bypass hooks. Candidate hook/control changes still need independent review, and exact-head Linux candidate and independent signed review remain blocking.
+
+The initial caller-reviewed source is commit `413f8f1211222eb7d2a15d530d86f8423234adff`, checker blob `ec30685c4755e4d0f78faf3bc88fe292b022fb79`, with the existing orchestrator digest unchanged. It is an explicit invocation input, never a default in code. A new policy selection requires caller inspection. Tests use disposable Git commits and real indexes with an external host interpreter. Reverting the private function and its call restores the mutable-checker vulnerability. No runtime, package, dependency, workflow-policy or forge authority changes are included.

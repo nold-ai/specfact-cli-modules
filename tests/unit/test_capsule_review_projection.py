@@ -283,7 +283,7 @@ def _write_independent_failure_fixture(tmp_path, case):
     return path, log
 
 
-def _expected_review_projection(expected):
+def _expected_review_projection(expected, case):
     outcome, flags, codes = expected
     verdict = "FAIL" if outcome == "structured_report" else "UNAVAILABLE"
     keys = ("findings_present", "tool_error_present", "execution_error_present", "unknown_evidence_present")
@@ -299,7 +299,8 @@ def _expected_review_projection(expected):
     }
     if outcome == "oversized_report":
         projection["report_header_observed"] = False
-        projection["error_analyzer_sides"] = {}
+    if outcome in {"structured_report", "oversized_report"}:
+        projection["error_analyzer_sides"] = {"pylint": ["head"]} if case == "nested" else {}
         projection["crosshair_failure_observations"] = []
     return projection
 
@@ -331,7 +332,7 @@ def test_independent_review_failure_keeps_nested_evidence_and_private_tokens(tmp
     monkeypatch.setenv("REVIEW_LOG", str(log))
     result = _run_projector(tmp_path, program)
     assert result.returncode == 0
-    assert json.loads(result.stdout) == _expected_review_projection(expected)
+    assert json.loads(result.stdout) == _expected_review_projection(expected, case)
     assert "private-token" not in result.stdout + result.stderr
 
 
@@ -567,6 +568,71 @@ def test_oversized_analyzer_inventory_preserves_complete_prior_rows(tmp_path, mo
     assert value["error_analyzers"] == value["unknown_analyzers"] == (["contracts"] if observed else [])
     assert value["findings_present"] is False
     assert "private-token" not in result.stdout + result.stderr
+
+
+@pytest.mark.parametrize(
+    "case,expected_classes",
+    [
+        ("contracts", ["crosshair_process_error_observed", "value_error_observed"]),
+        ("unknown_only", ["crosshair_process_error_observed", "value_error_observed"]),
+        ("other_tool", []),
+        ("other_category", []),
+        ("unknown_message", []),
+        ("duplicate", None),
+        ("malformed", None),
+    ],
+)
+def test_structured_contract_failure_projects_only_bounded_observations(tmp_path, monkeypatch, case, expected_classes):
+    canary = "private-token:/private/review.py --private-argument"
+    node = {"execution_state": "ran" if case == "unknown_only" else "error", "evidence_outcome": "UNKNOWN"}
+    root = {
+        "assurance_status": "UNKNOWN",
+        "overall_verdict": "FAIL",
+        "analyzer_evidence": [
+            {"id": "contracts", "head": node, "base": {"execution_state": "ran", "evidence_outcome": "PASS"}},
+            {"id": canary, "base": node},
+        ],
+        "findings": [
+            {
+                "category": "security" if case == "other_category" else "tool_error",
+                "tool": "ruff" if case == "other_tool" else "crosshair",
+                "message": canary if case == "unknown_message" else "CrossHair process error: ValueError: " + canary,
+            }
+        ],
+    }
+    payload = json.dumps(root)
+    if case == "duplicate":
+        payload = payload[:-1] + ', "findings": []}'
+    elif case == "malformed":
+        payload = payload[:-1]
+    report, log = _write_independent_failure_fixture(tmp_path, "missing")
+    report.write_text(payload)
+    monkeypatch.setenv("REVIEW_REPORT", str(report))
+    monkeypatch.setenv("REVIEW_LOG", str(log))
+    step = next(
+        step
+        for step in independent_review_job()["steps"]
+        if step.get("name") == "Project independent review failure privately"
+    )
+    program = step["run"].split("<<'PY_REVIEW_FAILURE'\n", 1)[1].split("\nPY_REVIEW_FAILURE", 1)[0]
+    result = _run_projector(tmp_path, program)
+    assert result.returncode == 0
+    value = json.loads(result.stdout)
+    if expected_classes is None:
+        assert value["report_outcome"] in {"unreadable_report", "invalid_json"}
+        assert value["assurance_status"] == value["overall_verdict"] == "UNAVAILABLE"
+        assert not value.get("error_analyzer_sides")
+        assert not value.get("crosshair_failure_observations")
+    else:
+        assert value["report_outcome"] == "structured_report"
+        assert value["assurance_status"] == "UNKNOWN" and value["overall_verdict"] == "FAIL"
+        assert value["unknown_analyzers"] == ["contracts"]
+        assert value["error_analyzer_sides"] == {"contracts": ["head"]}
+        assert value["crosshair_failure_observations"] == expected_classes
+        assert "report_header_observed" not in value
+    assert "private-token" not in result.stdout + result.stderr
+    assert "/private/" not in result.stdout + result.stderr
+    assert "--private-argument" not in result.stdout + result.stderr
 
 
 @pytest.mark.parametrize(

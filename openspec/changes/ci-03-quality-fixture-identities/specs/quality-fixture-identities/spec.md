@@ -79,3 +79,45 @@ The declared coverage sources SHALL include the qualified `scripts.validate_caps
 - **GIVEN** the repository coverage policy and capsule-safe schedule unit tests
 - **WHEN** pytest executes the tests and the portable coverage adapter evaluates the validator
 - **THEN** coverage contains the validator and satisfies the existing per-source threshold without enabling subprocess capabilities.
+
+
+### Requirement: Structured review failures retain bounded diagnostic observations
+
+The independent review failure projector SHALL publish the existing allowlisted analyzer snapshot sides and CrossHair failure classes for complete structured reports as well as oversized reports. It SHALL derive these observations from the existing validated evidence source and preserve complete JSON validation, duplicate-key rejection, input bounds, private output handling, review status and exit behavior. It SHALL NOT publish raw messages, paths, tokens, command arguments or arbitrary analyzer identifiers.
+
+#### Scenario: Structured contracts evidence identifies its incomplete side
+
+- **GIVEN** a complete structured report with contracts error or UNKNOWN evidence
+- **WHEN** the independent failure projector executes
+- **THEN** it publishes only allowlisted incomplete snapshot sides and recognized CrossHair tool-error classes, with private canaries absent from stdout and stderr.
+
+#### Scenario: Invalid or unrelated evidence cannot supply diagnostic classes
+
+- **GIVEN** malformed or duplicate-key JSON, an unrelated tool or category, or an unknown failure message
+- **WHEN** the independent failure projector executes
+- **THEN** validation and allowlists prevent unsupported classifications and private output, while the existing oversized-report behavior remains bounded.
+
+
+### Requirement: Local deferral executes caller-selected immutable policy
+
+The existing local deferral hook SHALL require the trusted local caller to provide `SPECFACT_CODE_REVIEW_POLICY_COMMIT` as a full lowercase 40-character commit SHA and `SPECFACT_CODE_REVIEW_POLICY_PYTHON` as an absolute executable host Python path selected outside the candidate environment. It SHALL extract the existing schedule checker from that exact commit with Git replacement objects disabled, execute the nonempty blob from a private temporary directory with Python `-I -S`, preserve the candidate repository as working directory, and propagate refusal or execution failure. Missing or invalid selection, a non-commit object, unavailable checker blob, and Git or Python failure SHALL refuse deferral without falling back to candidate code, HEAD, repository configuration or candidate Hatch Python. The temporary directory SHALL be cleaned after execution.
+
+This is an explicit trusted-caller approval boundary, not protected-branch policy or hostile-code isolation. Caller edits or hook bypass are outside this local check; candidate hook/control changes still require independent review. Existing platform, worktree, branch, CI, eligible-path and blocking-job guards and mandatory hosted exact-head acceptance SHALL remain intact.
+
+#### Scenario: Candidate policy cannot approve changed indexed orchestration
+
+- **GIVEN** a caller-selected reviewed policy commit and external host Python
+- **WHEN** the candidate changes indexed orchestration and updates its checker pin or replaces its working-copy checker with a successful canary, including an unstaged workflow restoration
+- **THEN** immutable policy refuses the changed indexed bytes and the candidate checker never executes.
+
+#### Scenario: Explicit immutable selection fails closed
+
+- **GIVEN** an otherwise eligible local candidate
+- **WHEN** the commit or Python selection is missing or invalid, the selected object is not a commit, the checker is absent or empty, or Git or Python fails
+- **THEN** the hook refuses deferral without executing candidate policy; Git replacement objects cannot substitute an approving checker.
+
+#### Scenario: Reviewed indexed bytes retain local deferral
+
+- **GIVEN** exact reviewed indexed orchestration and explicit valid caller selections
+- **WHEN** the existing local eligibility checks execute
+- **THEN** the hook reports DEFERRED and retains contracts and all other checks, while cleaning its temporary checker.

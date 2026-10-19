@@ -315,6 +315,36 @@ run_lint_if_staged_python() {
   fi
 }
 
+validate_immutable_capsule_policy() (
+  local policy_commit="${SPECFACT_CODE_REVIEW_POLICY_COMMIT:-}"
+  local policy_python="${SPECFACT_CODE_REVIEW_POLICY_PYTHON:-}"
+  if [[ ! "${policy_commit}" =~ ^[0-9a-f]{40}$ ]]; then
+    error "Capsule review deferral requires an explicit caller-reviewed full policy commit SHA."
+    return 1
+  fi
+  if [[ "${policy_python}" != /* || ! -f "${policy_python}" || ! -x "${policy_python}" ]]; then
+    error "Capsule review deferral requires an explicit absolute executable host Python path."
+    return 1
+  fi
+  local repository_root object_type policy_directory
+  repository_root="$(git rev-parse --show-toplevel)" || return 1
+  cd "${repository_root}" || return 1
+  if ! object_type="$(git --no-replace-objects cat-file -t "${policy_commit}")" \
+    || [[ "${object_type}" != "commit" ]]; then
+    error "Capsule review deferral policy selection must identify an available commit."
+    return 1
+  fi
+  policy_directory="$(mktemp -d "${TMPDIR:-/tmp}/specfact-review-policy.XXXXXXXX")" || return 1
+  trap 'rm -rf -- "${policy_directory}"' EXIT
+  if ! git --no-replace-objects show "${policy_commit}:scripts/validate_capsule_ci_schedule.py" \
+    > "${policy_directory}/validate_capsule_ci_schedule.py" \
+    || [[ ! -s "${policy_directory}/validate_capsule_ci_schedule.py" ]]; then
+    error "Capsule review deferral cannot read the selected immutable policy checker."
+    return 1
+  fi
+  GIT_NO_REPLACE_OBJECTS=1 "${policy_python}" -I -S "${policy_directory}/validate_capsule_ci_schedule.py"
+)
+
 run_code_review_gate() {
   local deferral="${SPECFACT_CODE_REVIEW_DEFER_TO_CI:-}"
   if [[ -n "${deferral}" ]]; then
@@ -353,7 +383,7 @@ run_code_review_gate() {
       error "Capsule review deferral requires a candidate change that schedules the blocking capsule workflow."
       exit 1
     fi
-    if ! hatch run python scripts/validate_capsule_ci_schedule.py; then
+    if ! validate_immutable_capsule_policy; then
       error "Capsule review deferral requires indexed orchestration that schedules and blocks on exact-head review."
       exit 1
     fi

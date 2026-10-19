@@ -38,3 +38,8 @@ Execute the workflow validation steps against disposable Git fixtures, including
 ## Approved local review deferral
 
 On 2026-10-18 (Europe/Berlin), the maintainer explicitly approved the #518 local review deferral proposal and required all checks to remain intact. The exact scope is one additional eligible path, `.github/workflows/pr-orchestrator.yml`, in `scripts/pre-commit-quality-checks.sh`. It already schedules the blocking Linux capsule workflow. The local native review remains UNKNOWN; an eligible local run must report DEFERRED, never PASS. Hosted exact-head review and all existing gates must pass before merge. Core #774 remains separately owned; modules #517 and core #770 remain planning-only.
+
+
+## Diagnostic follow-up within approved maintenance scope
+
+Expose the existing fixed analyzer-side and CrossHair-class observations for normal structured independent failure reports. Exact-head run 39167860375 identifies contracts as incomplete but omits those fields. This diagnostic-only correction is covered by the maintainer's #518 maintenance authorization with all checks intact. It does not claim to repair the unknown contract fault. Only the reusable workflow projector, its behavioral tests and this change's evidence are added to the current correction scope.

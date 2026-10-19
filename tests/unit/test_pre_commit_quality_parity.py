@@ -379,3 +379,17 @@ def test_helper_forwards_explicit_project_configuration(monkeypatch: MonkeyPatch
     monkeypatch.setenv("SPECFACT_CODE_REVIEW_PROJECT_CONFIG", str(config))
     command = gate.build_review_command(["app.py"])
     assert command[command.index("--project-config") + 1] == str(config)
+
+
+def test_local_deferral_delegates_to_explicit_immutable_policy() -> None:
+    script = (REPO_ROOT / "scripts/pre-commit-quality-checks.sh").read_text()
+    assert "if ! validate_immutable_capsule_policy; then" in script
+    assert "hatch run python scripts/validate_capsule_ci_schedule.py" not in script
+    for fragment in (
+        "SPECFACT_CODE_REVIEW_POLICY_COMMIT:-",
+        "SPECFACT_CODE_REVIEW_POLICY_PYTHON:-",
+        "git --no-replace-objects cat-file -t",
+        'git --no-replace-objects show "${policy_commit}:scripts/validate_capsule_ci_schedule.py"',
+        'GIT_NO_REPLACE_OBJECTS=1 "${policy_python}" -I -S',
+    ):
+        assert fragment in script

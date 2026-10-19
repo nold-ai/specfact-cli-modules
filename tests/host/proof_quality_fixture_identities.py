@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import subprocess
@@ -9,6 +10,14 @@ from importlib import import_module
 from pathlib import Path
 
 import pytest
+
+from tests.support.capsule_review_fixtures import (
+    _BLOCK2_HATCH_FIXTURE,
+    _git,
+    assert_block2_trace,
+    deferral_policy_environment,
+    deferral_worktree,
+)
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -124,3 +133,160 @@ def _assert_authenticated_smoke_checkout(output, runner_temp, fixture, commit):
     assert not fixture.exists()
     assert subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=relocated, text=True).strip() == commit
     assert not subprocess.check_output(["git", "status", "--porcelain"], cwd=relocated, text=True).strip()
+
+
+@pytest.fixture(name="policy_candidate")
+def fixture_policy_candidate(tmp_path: Path):
+    scenario = ("Darwin", "", "github-linux", "packages/specfact-code-review/resources/example.py", False, True, 0)
+    worktree = deferral_worktree(tmp_path, scenario)
+    temporary = tmp_path / "policy-temporary"
+    temporary.mkdir()
+    environment = (
+        os.environ
+        | deferral_policy_environment(worktree)
+        | {
+            "FIXTURE_PLATFORM": "Darwin",
+            "FIXTURE_CALLS": str(tmp_path / "calls"),
+            "GITHUB_ACTIONS": "",
+            "CI": "",
+            "SPECFACT_CODE_REVIEW_DEFER_TO_CI": "github-linux",
+            "TMPDIR": str(temporary),
+        }
+    )
+    return worktree, environment
+
+
+def _run_policy_candidate(candidate, shell_setup=""):
+    worktree, environment = candidate
+    payload = worktree / "packages/specfact-code-review/resources/example.py"
+    payload.write_text("candidate invocation\n")
+    _git(worktree, "add", str(payload))
+    script = (REPO_ROOT / "scripts/pre-commit-quality-checks.sh").read_text().rsplit('main "$@"', 1)[0]
+    result = subprocess.run(
+        ["bash", "-c", script + shell_setup + _BLOCK2_HATCH_FIXTURE],
+        timeout=20,
+        cwd=worktree,
+        env=environment,
+        capture_output=True,
+        check=False,
+        text=True,
+    )
+    assert not list(Path(environment["TMPDIR"]).iterdir()), "temporary policy checker was not cleaned"
+    return result
+
+
+def _change_policy_candidate(worktree: Path, mutation: str) -> Path:
+    workflow = worktree / ".github/workflows/pr-orchestrator.yml"
+    original = workflow.read_bytes()
+    workflow.write_bytes(original + b"\n# Candidate-controlled routing change.\n")
+    _git(worktree, "add", str(workflow))
+    checker = worktree / "scripts/validate_capsule_ci_schedule.py"
+    marker = worktree / "candidate-checker-executed"
+    if mutation == "candidate-pin":
+        checker.write_text(
+            checker.read_text().replace(
+                hashlib.sha256(original).hexdigest(), hashlib.sha256(workflow.read_bytes()).hexdigest()
+            )
+        )
+        _git(worktree, "add", str(checker))
+    else:
+        checker.write_text(f"from pathlib import Path\nPath({str(marker)!r}).touch()\nraise SystemExit(0)\n")
+    if mutation == "unstaged-restoration":
+        workflow.write_bytes(original)
+    return marker
+
+
+@pytest.mark.parametrize("mutation", ["candidate-pin", "successful-canary", "unstaged-restoration"])
+def test_immutable_policy_rejects_candidate_self_approval(policy_candidate, mutation: str) -> None:
+    worktree, _environment = policy_candidate
+    marker = _change_policy_candidate(worktree, mutation)
+    result = _run_policy_candidate(policy_candidate)
+    assert result.returncode == 1, result.stderr
+    assert "indexed orchestrator bytes differ" in result.stderr
+    assert "DEFERRED" not in result.stderr
+    assert not marker.exists(), "candidate checker executed"
+
+
+def test_immutable_policy_accepts_reviewed_index_and_retains_contracts(policy_candidate) -> None:
+    result = _run_policy_candidate(policy_candidate)
+    assert result.returncode == 0, result.stderr
+    assert_block2_trace(Path(policy_candidate[1]["FIXTURE_CALLS"]).read_text(encoding="utf-8"), 0, result.stderr)
+
+
+@pytest.mark.parametrize(
+    "selection", ["missing", "short", "uppercase", "unknown", "blob", "missing-checker", "empty-checker"]
+)
+def test_immutable_policy_requires_available_commit_checker(policy_candidate, selection: str) -> None:
+    worktree, environment = policy_candidate
+    commit_key = "SPECFACT_CODE_REVIEW_POLICY_COMMIT"
+    if selection in {"missing-checker", "empty-checker"}:
+        checker = worktree / "scripts/validate_capsule_ci_schedule.py"
+        if selection == "missing-checker":
+            checker.unlink()
+        else:
+            checker.write_text("")
+        _git(worktree, "add", str(checker))
+        _git(worktree, "-c", "core.hooksPath=/dev/null", "commit", "-qm", "unusable policy")
+        environment[commit_key] = _git(worktree, "rev-parse", "HEAD")
+    else:
+        environment[commit_key] = {
+            "missing": "",
+            "short": "abc123",
+            "uppercase": "A" * 40,
+            "unknown": "0" * 40,
+            "blob": _git(worktree, "rev-parse", "HEAD:scripts/validate_capsule_ci_schedule.py"),
+        }[selection]
+    result = _run_policy_candidate(policy_candidate)
+    assert result.returncode != 0, result.stderr
+    assert "DEFERRED" not in result.stderr
+
+
+@pytest.mark.parametrize("selection", ["missing", "relative", "nonexistent", "failure"])
+def test_immutable_policy_requires_explicit_working_host_python(policy_candidate, selection: str) -> None:
+    worktree, environment = policy_candidate
+    failing = worktree.parent / "failed-python"
+    failing.write_text("#!/bin/sh\nexit 73\n")
+    failing.chmod(0o700)
+    environment["SPECFACT_CODE_REVIEW_POLICY_PYTHON"] = {
+        "missing": "",
+        "relative": "python3",
+        "nonexistent": str(worktree.parent / "absent"),
+        "failure": str(failing),
+    }[selection]
+    result = _run_policy_candidate(policy_candidate)
+    assert result.returncode != 0, result.stderr
+    assert "DEFERRED" not in result.stderr
+
+
+def test_immutable_policy_refuses_git_extraction_failure(policy_candidate) -> None:
+    result = _run_policy_candidate(
+        policy_candidate,
+        '\ngit() { if [[ "$1 $2" == "--no-replace-objects show" ]]; then return 74; fi; command git "$@"; }\n',
+    )
+    assert result.returncode != 0, result.stderr
+    assert "DEFERRED" not in result.stderr
+
+
+def test_immutable_policy_ignores_git_replacement(policy_candidate) -> None:
+    worktree, environment = policy_candidate
+    marker = _change_policy_candidate(worktree, "successful-canary")
+    _git(worktree, "add", "scripts/validate_capsule_ci_schedule.py")
+    _git(worktree, "-c", "core.hooksPath=/dev/null", "commit", "-qm", "candidate replacement")
+    replacement = _git(worktree, "commit-tree", "HEAD^{tree}", "-m", "replacement without ancestry cycle")
+    _git(worktree, "replace", environment["SPECFACT_CODE_REVIEW_POLICY_COMMIT"], replacement)
+    result = _run_policy_candidate(policy_candidate)
+    assert result.returncode == 1, result.stderr
+    assert "indexed orchestrator bytes differ" in result.stderr
+    assert not marker.exists(), "replacement policy executed"
+
+
+def test_immutable_policy_isolates_python_imports(policy_candidate) -> None:
+    worktree, environment = policy_candidate
+    marker = worktree / "candidate-import-executed"
+    poison = f"from pathlib import Path\nPath({str(marker)!r}).touch()\nraise SystemExit(0)\n"
+    for name in ("hashlib.py", "sitecustomize.py"):
+        (worktree / name).write_text(poison)
+    environment["PYTHONPATH"] = str(worktree)
+    result = _run_policy_candidate(policy_candidate)
+    assert result.returncode == 0, result.stderr
+    assert not marker.exists(), "candidate Python import executed"

@@ -29,6 +29,7 @@ __all__ = [
     "assert_incomplete_preparation",
     "assert_installed_review_arguments",
     "create_isolated_reviewer",
+    "deferral_policy_environment",
     "deferral_worktree",
     "deferred_review_repository",
     "independent_review_job",
@@ -88,9 +89,6 @@ _BLOCK2_HATCH_FIXTURE = (
     'uname() { if [[ "${1:-}" == "-m" ]]; then echo arm64; else echo "$FIXTURE_PLATFORM"; fi; }\n'
     "hatch() {\n"
     '  printf \'%s\\n\' "$*" >> "$FIXTURE_CALLS"\n'
-    '  if [[ "$*" == "run python scripts/validate_capsule_ci_schedule.py" ]]; then\n'
-    f'    "{sys.executable}" "{REPO_ROOT}/scripts/validate_capsule_ci_schedule.py"; return $?\n'
-    "  fi\n"
     '  if [[ "$*" == *pre_commit_code_review.py* ]]; then return 99; fi\n'
     '  if [[ "$*" == *contract-test-status* ]]; then return 1; fi\n'
     "  return 0\n"
@@ -300,6 +298,9 @@ def _write_deferral_baseline(repository, candidate_path, independent_review):
     capsule_manifest = repository / "packages/specfact-code-review/module-package.yaml"
     capsule_manifest.parent.mkdir(parents=True, exist_ok=True)
     capsule_manifest.write_text("version: 1\n")
+    checker = repository / "scripts/validate_capsule_ci_schedule.py"
+    checker.parent.mkdir()
+    checker.write_bytes((REPO_ROOT / "scripts/validate_capsule_ci_schedule.py").read_bytes())
     return files[-3:], capsule_manifest
 
 
@@ -372,7 +373,6 @@ def assert_block2_trace(invoked, expected, stderr):
         assert command in invoked
     assert "pre_commit_code_review.py" not in invoked
     if expected == 0:
-        assert "validate_capsule_ci_schedule.py" in invoked
         assert "DEFERRED" in stderr
         assert "mandatory exact-head GitHub Linux CI; this is not a PASS" in stderr
         assert "contract-test-contracts" in invoked
@@ -485,3 +485,14 @@ def write_public_phase_record_report(root, nodeid, detail):
     ]
     data["analyzer_evidence"] = [{"id": "targeted-pytest-coverage", "target_execution": {"records": records}}]
     report.write_text(json.dumps(data))
+
+
+def deferral_policy_environment(worktree: Path) -> dict[str, str]:
+    interpreter = (Path(sys.base_prefix) / "bin/python3").resolve()
+    assert interpreter.is_file()
+    assert not interpreter.is_relative_to(REPO_ROOT)
+    assert not interpreter.is_relative_to(worktree)
+    return {
+        "SPECFACT_CODE_REVIEW_POLICY_COMMIT": _git(worktree, "rev-parse", "HEAD"),
+        "SPECFACT_CODE_REVIEW_POLICY_PYTHON": str(interpreter),
+    }

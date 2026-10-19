@@ -22,6 +22,7 @@ from tests.support.capsule_review_fixtures import (
     assert_incomplete_preparation,
     assert_installed_review_arguments,
     create_isolated_reviewer,
+    deferral_policy_environment,
     deferral_worktree,
     deferred_review_repository,
     independent_review_job,
@@ -130,13 +131,17 @@ def test_narrow_local_deferral_retains_block2_and_cannot_run_in_ci(tmp_path: Pat
     calls = tmp_path / "calls"
     script = (REPO_ROOT / "scripts/pre-commit-quality-checks.sh").read_text().rsplit('main "$@"', 1)[0]
     recipe = script + _BLOCK2_HATCH_FIXTURE
-    environment = os.environ | {
-        "FIXTURE_PLATFORM": platform,
-        "FIXTURE_CALLS": str(calls),
-        "GITHUB_ACTIONS": ci,
-        "CI": ci,
-        "SPECFACT_CODE_REVIEW_DEFER_TO_CI": deferral,
-    }
+    environment = (
+        os.environ
+        | deferral_policy_environment(worktree)
+        | {
+            "FIXTURE_PLATFORM": platform,
+            "FIXTURE_CALLS": str(calls),
+            "GITHUB_ACTIONS": ci,
+            "CI": ci,
+            "SPECFACT_CODE_REVIEW_DEFER_TO_CI": deferral,
+        }
+    )
     result = subprocess.run(
         ["bash", "-c", recipe], cwd=worktree, env=environment, capture_output=True, text=True, check=False
     )
@@ -336,13 +341,17 @@ def test_deferral_rejects_broken_indexed_orchestrator(
     )
     calls = tmp_path / "calls"
     script = (REPO_ROOT / "scripts/pre-commit-quality-checks.sh").read_text().rsplit('main "$@"', 1)[0]
-    environment = os.environ | {
-        "FIXTURE_PLATFORM": "Darwin",
-        "FIXTURE_CALLS": str(calls),
-        "GITHUB_ACTIONS": "",
-        "CI": "",
-        "SPECFACT_CODE_REVIEW_DEFER_TO_CI": "github-linux",
-    }
+    environment = (
+        os.environ
+        | deferral_policy_environment(worktree)
+        | {
+            "FIXTURE_PLATFORM": "Darwin",
+            "FIXTURE_CALLS": str(calls),
+            "GITHUB_ACTIONS": "",
+            "CI": "",
+            "SPECFACT_CODE_REVIEW_DEFER_TO_CI": "github-linux",
+        }
+    )
     result = subprocess.run(
         ["bash", "-c", script + _BLOCK2_HATCH_FIXTURE],
         cwd=worktree,
@@ -354,7 +363,6 @@ def test_deferral_rejects_broken_indexed_orchestrator(
     assert result.returncode == 1, result.stdout + result.stderr
     assert "DEFERRED" not in result.stderr
     assert "supported indexed orchestration" in result.stderr
-    assert "validate_capsule_ci_schedule.py" in calls.read_text()
     assert_block2_trace(calls.read_text(), 1, result.stderr)
 
 

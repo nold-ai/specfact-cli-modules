@@ -49,3 +49,21 @@
 - [x] 7.3 Resolve owned lint, complexity and readability findings with focused fixture extractions.
 - [x] 7.4 Verify maintained host proofs, focused adapters, lint, types and strict OpenSpec.
 - [ ] 7.5 Complete parent independent review, normal hooks and hosted exact-head acceptance.
+
+
+## 8. Structured independent failure diagnostics
+
+- [x] 8.1 Specify bounded structured observations using the existing validated evidence source.
+- [x] 8.2 Capture actual failing workflow projector regression evidence before production edits.
+- [x] 8.3 Extend the existing diagnostic projection and verify private, malformed and oversized cases.
+- [x] 8.4 Complete focused verification, strict OpenSpec, planned Requirements evidence and normal hooks.
+- [ ] 8.5 Complete parent independent review and mandatory hosted exact-head acceptance.
+
+
+## 9. Caller-selected immutable local policy
+
+- [x] 9.1 Specify the explicit trusted-caller boundary and unchanged mandatory gates.
+- [x] 9.2 Capture actual host regression failure against the mutable checker invocation.
+- [x] 9.3 Execute the selected immutable checker with explicit external host Python and verify refusal cases.
+- [x] 9.4 Complete focused tests, normal hooks, strict OpenSpec and planned Requirements evidence.
+- [ ] 9.5 Complete parent independent review and mandatory hosted exact-head acceptance.

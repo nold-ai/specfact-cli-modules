@@ -302,3 +302,103 @@ requirements:
       intent: Execute the actual entrypoint without spawning Git inside the capsule.
       observable: Reviewed bytes return zero; altered bytes and missing index entries return one with a refusal.
       implementation_task: '7.2'
+  openspec:ci-03-quality-fixture-identities:quality-fixture-identities:structured-review-failures-retain-bounded-diagnostic-observations:
+    rationale: Expose existing bounded observations for structured failures without changing review enforcement or private output.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#518
+    touchpoints:
+    - id: independent-failure-projection
+      kind: workflow
+      locator: .github/workflows/capsule-customer-execution.yml
+    verification_cases:
+    - case_id: CI-03-6-1
+      scenario_id: structured-review-failures-retain-bounded-diagnostic-observations
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_review_projection.py::test_structured_contract_failure_projects_only_bounded_observations
+      intent: Structured failures expose allowed sides and classes while rejecting invalid or unrelated evidence.
+      observable: The actual embedded projector preserves UNKNOWN and FAIL, rejects duplicate and malformed JSON, and omits private canaries.
+      implementation_task: '8.3'
+    - case_id: CI-03-6-2
+      scenario_id: structured-review-failures-retain-bounded-diagnostic-observations
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_review_projection.py::test_large_private_report_projects_contract_failure_classes_without_acceptance
+      intent: Oversized diagnostics keep their existing bound and unavailable status.
+      observable: The actual embedded projector retains fixed classifications only within its existing diagnostic bound.
+      implementation_task: '8.3'
+
+  openspec:ci-03-quality-fixture-identities:quality-fixture-identities:local-deferral-executes-caller-selected-immutable-policy:
+    rationale: Require explicit caller-reviewed immutable policy while preserving hosted review authority.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#518
+    touchpoints:
+    - id: immutable-local-policy
+      kind: code
+      locator: scripts/pre-commit-quality-checks.sh
+    verification_cases:
+    - case_id: CI-03-7-1
+      scenario_id: local-deferral-executes-caller-selected-immutable-policy
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/host/proof_quality_fixture_identities.py::test_immutable_policy_rejects_candidate_self_approval
+      intent: Candidate changes cannot approve their own indexed orchestration.
+      observable: Changed indexed bytes refuse deferral and candidate checker canaries remain absent.
+      implementation_task: '9.3'
+    - case_id: CI-03-7-2
+      scenario_id: local-deferral-executes-caller-selected-immutable-policy
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/host/proof_quality_fixture_identities.py::test_immutable_policy_accepts_reviewed_index_and_retains_contracts
+      intent: Reviewed indexed bytes retain only the approved local deferral.
+      observable: DEFERRED remains explicit and contracts plus every other Block 2 check execute.
+      implementation_task: '9.3'
+    - case_id: CI-03-7-3
+      scenario_id: local-deferral-executes-caller-selected-immutable-policy
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/host/proof_quality_fixture_identities.py::test_immutable_policy_requires_available_commit_checker
+      intent: Missing, malformed and unavailable immutable policy selections fail closed.
+      observable: Invalid commit selectors and missing or empty checker blobs refuse deferral.
+      implementation_task: '9.3'
+    - case_id: CI-03-7-4
+      scenario_id: local-deferral-executes-caller-selected-immutable-policy
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/host/proof_quality_fixture_identities.py::test_immutable_policy_requires_explicit_working_host_python
+      intent: An explicit working external host Python is required.
+      observable: Missing, relative, unavailable and failed Python selections refuse deferral.
+      implementation_task: '9.3'
+    - case_id: CI-03-7-5
+      scenario_id: local-deferral-executes-caller-selected-immutable-policy
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/host/proof_quality_fixture_identities.py::test_immutable_policy_refuses_git_extraction_failure
+      intent: Git extraction failure cannot fall back to candidate policy.
+      observable: The hook refuses deferral when the immutable blob read fails.
+      implementation_task: '9.3'
+    - case_id: CI-03-7-6
+      scenario_id: local-deferral-executes-caller-selected-immutable-policy
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/host/proof_quality_fixture_identities.py::test_immutable_policy_ignores_git_replacement
+      intent: Git replacement objects cannot replace selected policy.
+      observable: Changed indexed bytes still fail and the replacement checker canary remains absent.
+      implementation_task: '9.3'
+    - case_id: CI-03-7-7
+      scenario_id: local-deferral-executes-caller-selected-immutable-policy
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/host/proof_quality_fixture_identities.py::test_immutable_policy_isolates_python_imports
+      intent: Candidate imports cannot alter the selected checker execution.
+      observable: Exact reviewed bytes qualify without importing candidate hashlib or sitecustomize.
+      implementation_task: '9.3'
