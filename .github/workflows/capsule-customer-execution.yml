@@ -443,6 +443,40 @@ jobs:
           import json
           from pathlib import Path
 
+          def snapshot_diagnostic_observations(evidence):
+              rows = evidence.get("analyzer_evidence")
+              if not isinstance(rows, list) or len(rows) > 10:
+                  return []
+              contracts = [row for row in rows if isinstance(row, dict) and row.get("id") == "contracts"]
+              if len(contracts) != 1:
+                  return []
+              reasons = {
+                  "analyzer_reported_incomplete_execution", "analyzer_output_invalid",
+                  "capsule_request_failed", "linux_bubblewrap_identity_missing",
+                  "namespace_unavailable", "sandbox_filesystem_error", "analyzer_process_error",
+                  "sandbox_launch_failed", "reserved_import_catalog_unavailable",
+                  "reserved_import_collision", "bubblewrap_identity_mismatch", "trace_helper_failed",
+                  "pre_namespace_observation_unsupported", "pre_namespace_observation_requires_single_thread",
+                  "pre_namespace_exec_stop_missing", "pre_namespace_observation_failed",
+                  "pre_namespace_executable_missing", "pre_namespace_executable_ambiguous",
+                  "pre_namespace_host_object", "unclassified",
+              }
+              observations = []
+              for side in ("base", "head"):
+                  node = contracts[0].get(side)
+                  if not isinstance(node, dict) or not (
+                      node.get("execution_state") == "error" or node.get("evidence_outcome") == "UNKNOWN"
+                  ):
+                      continue
+                  diagnostic = node.get("diagnostic")
+                  reason = "unclassified"
+                  if isinstance(diagnostic, str) and len(diagnostic) <= 4096:
+                      token = diagnostic.split(":", 1)[0]
+                      if token in reasons:
+                          reason = token
+                  observations.append({"analyzer": "contracts", "side": side, "reason": reason})
+              return observations
+
           def unique_candidate_json_object(pairs):
               value = {}
               for key, item in pairs:
@@ -505,6 +539,9 @@ jobs:
               for code, observed in sorted(observations.items()):
                   row = {"analyzer": "contracts", "diagnostic_class": code, "exception_observations": sorted(observed)}
                   print(json.dumps(row))
+              snapshot_observations = snapshot_diagnostic_observations(data)
+              if snapshot_observations:
+                  print(json.dumps({"snapshot_diagnostic_observations": snapshot_observations}))
           PY_CANDIDATE_FAILURE
           fi
           exit "$review_exit"
@@ -1017,6 +1054,40 @@ jobs:
           import os
           from pathlib import Path
 
+          def snapshot_diagnostic_observations(evidence):
+              rows = evidence.get("analyzer_evidence")
+              if not isinstance(rows, list) or len(rows) > 10:
+                  return []
+              contracts = [row for row in rows if isinstance(row, dict) and row.get("id") == "contracts"]
+              if len(contracts) != 1:
+                  return []
+              reasons = {
+                  "analyzer_reported_incomplete_execution", "analyzer_output_invalid",
+                  "capsule_request_failed", "linux_bubblewrap_identity_missing",
+                  "namespace_unavailable", "sandbox_filesystem_error", "analyzer_process_error",
+                  "sandbox_launch_failed", "reserved_import_catalog_unavailable",
+                  "reserved_import_collision", "bubblewrap_identity_mismatch", "trace_helper_failed",
+                  "pre_namespace_observation_unsupported", "pre_namespace_observation_requires_single_thread",
+                  "pre_namespace_exec_stop_missing", "pre_namespace_observation_failed",
+                  "pre_namespace_executable_missing", "pre_namespace_executable_ambiguous",
+                  "pre_namespace_host_object", "unclassified",
+              }
+              observations = []
+              for side in ("base", "head"):
+                  node = contracts[0].get(side)
+                  if not isinstance(node, dict) or not (
+                      node.get("execution_state") == "error" or node.get("evidence_outcome") == "UNKNOWN"
+                  ):
+                      continue
+                  diagnostic = node.get("diagnostic")
+                  reason = "unclassified"
+                  if isinstance(diagnostic, str) and len(diagnostic) <= 4096:
+                      token = diagnostic.split(":", 1)[0]
+                      if token in reasons:
+                          reason = token
+                  observations.append({"analyzer": "contracts", "side": side, "reason": reason})
+              return observations
+
           def unique_json_object(pairs):
               value = {}
               for key, item in pairs:
@@ -1126,5 +1197,8 @@ jobs:
           if outcome in ("structured_report", "oversized_report"):
               projected["error_analyzer_sides"] = incomplete_sides(members)
               projected["crosshair_failure_observations"] = crosshair_failure_observations(evidence_source.get("findings", []))
+          snapshot_observations = snapshot_diagnostic_observations(evidence_source)
+          if snapshot_observations:
+              projected["snapshot_diagnostic_observations"] = snapshot_observations
           print(json.dumps(projected))
           PY_REVIEW_FAILURE

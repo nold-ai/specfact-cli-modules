@@ -160,3 +160,33 @@ The default Hatch test command SHALL execute all four shell projection regressio
 - **GIVEN** the default Hatch test command
 - **WHEN** its mandatory host stage runs
 - **THEN** all 31 shell projection cases execute alongside existing host proofs and fail the command on failure.
+
+
+### Requirement: Failure diagnostics associate contracts reasons with snapshot sides
+
+Both existing inline failure projectors SHALL optionally publish `snapshot_diagnostic_observations` as at most two records in base then head order. Each record SHALL contain exactly `analyzer` with literal value `contracts`, `side` with literal value `base` or `head`, and `reason` from the closed vocabulary below. Candidate output SHALL append one JSONL envelope containing this value. Independent output SHALL add the same value to its existing summary. Both SHALL omit the field or envelope when the observation list is empty.
+
+The new observation SHALL require analyzer_evidence to be a list with at most ten entries and exactly one object row whose id equals contracts. Repeated contracts rows, including identical duplicates, and lists over ten entries SHALL produce no new observation. A side SHALL qualify only when it is an object and execution_state equals error or evidence_outcome equals UNKNOWN. A missing, nonobject or complete side SHALL contribute no record.
+
+For a qualifying side, reason SHALL be the canonical value matching the exact diagnostic token before its first colon. Classification SHALL accept only strings of at most 4096 Unicode code points, without coercion, trimming, case changes or suffix search. Missing, nonstring, empty, unknown and longer diagnostics SHALL yield literal `unclassified`. The closed vocabulary SHALL be `analyzer_reported_incomplete_execution`, `analyzer_output_invalid`, `capsule_request_failed`, `linux_bubblewrap_identity_missing`, `namespace_unavailable`, `sandbox_filesystem_error`, `analyzer_process_error`, `sandbox_launch_failed`, `reserved_import_catalog_unavailable`, `reserved_import_collision`, `bubblewrap_identity_mismatch`, `trace_helper_failed`, `pre_namespace_observation_unsupported`, `pre_namespace_observation_requires_single_thread`, `pre_namespace_exec_stop_missing`, `pre_namespace_observation_failed`, `pre_namespace_executable_missing`, `pre_namespace_executable_ambiguous`, `pre_namespace_host_object`, and `unclassified`.
+
+Only complete reports accepted by the existing duplicate-safe readers SHALL supply observations. Complete reports above 2 MiB and at most 32 MiB MAY supply diagnostics through the existing header path while existing unavailable acceptance remains unchanged. Malformed, truncated, trailing-garbage, duplicate-key and over-32-MiB reports SHALL supply no new observations. Existing report-byte bounds, output fields and lines, legacy substring observations, finding handling, assurance, verdicts, original review exits, privacy, import isolation and protected gates SHALL remain unchanged. Parent diagnostics, findings, logs and unrelated analyzer diagnostics SHALL NOT supply a snapshot reason. No raw suffix, private path, token, argument or source fragment SHALL be published.
+
+#### Scenario: Distinct reasons retain their snapshot association
+
+- **GIVEN** one contracts row with incomplete base and head objects and distinct recognized leading reasons
+- **WHEN** either actual failure projector reads a complete small or diagnostic-size report
+- **THEN** two ordered records identify each side's own reason, and swapping diagnostics swaps reasons while preserving the side identities
+- **AND** removing the new field or envelope leaves every legacy output unchanged, including unavailable assurance for diagnostic-size reports.
+
+#### Scenario: Finite reasons reject private suffix promotion
+
+- **GIVEN** eligible contracts sides with any allowed reason or missing, nonstring, unknown, whitespace-prefixed, embedded or over-bound diagnostics
+- **WHEN** either actual failure projector classifies those sides
+- **THEN** only canonical exact leading reasons or unclassified appear, 4096 Unicode code points are accepted, 4097 are rejected, and private canaries remain absent.
+
+#### Scenario: Ambiguous or invalid evidence cannot invent association
+
+- **GIVEN** duplicate contracts rows, an over-ten-entry list, absent or invalid sides, unrelated analyzers, duplicate JSON keys, truncated or over-bound reports
+- **WHEN** either actual failure projector executes
+- **THEN** no unsupported snapshot record is emitted, an empty field is omitted, and existing outputs and review exits remain intact.

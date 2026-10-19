@@ -766,5 +766,15 @@ def test_candidate_incomplete_snapshot_projection_is_finite(tmp_path, nested, ex
     result = _run_projector(tmp_path, program)
     assert result.returncode == 0
     rows = [json.loads(line) for line in result.stdout.splitlines()]
-    assert rows == ([{"analyzer": "contracts", "incomplete_snapshot_sides": expected}] if expected else [])
+    expected_rows = []
+    if expected:
+        expected_rows = [
+            {"analyzer": "contracts", "incomplete_snapshot_sides": expected},
+            {
+                "snapshot_diagnostic_observations": [
+                    {"analyzer": "contracts", "side": side, "reason": "unclassified"} for side in expected
+                ]
+            },
+        ]
+    assert rows == expected_rows
     assert "PRIVATE_TOKEN" not in result.stdout + result.stderr

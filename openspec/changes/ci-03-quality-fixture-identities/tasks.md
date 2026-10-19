@@ -103,3 +103,12 @@
 - [x] 13.3 Require the external Python/checker execution contract before accepting local deferral.
 - [x] 13.4 Complete focused proofs, analyzers, native planned Requirements, strict OpenSpec, normal hooks and independent review.
 - [ ] 13.5 Complete mandatory exact-head hosted acceptance before merge.
+
+
+## 14. Associate bounded contracts snapshot reasons
+
+- [x] 14.1 Specify additive per-side observations within approved diagnostic maintenance scope.
+- [x] 14.2 Add actual-heredoc behavioral regressions and capture intended RED before workflow edits.
+- [x] 14.3 Add only the selected inline diagnostic projection and preserve legacy output.
+- [ ] 14.4 Complete focused GREEN, privacy and exit proofs, native analyzers, strict OpenSpec and normal review gates.
+- [ ] 14.5 Complete mandatory exact-head hosted acceptance before merge.
