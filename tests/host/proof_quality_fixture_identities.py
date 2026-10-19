@@ -391,35 +391,42 @@ def test_immutable_policy_accepts_external_python_without_realpath(portable_poli
     host_python = Path(environment["SPECFACT_CODE_REVIEW_POLICY_PYTHON"])
     external = worktree.parent / "external host [python]"
     external.mkdir()
-    selected = host_python
-    if selection in {"absolute-link", "spaces-and-glob", "prefix-sibling"}:
-        selected = (
-            worktree.with_name(worktree.name + "-other") / "python"
-            if selection == "prefix-sibling"
-            else external / ("python * [host]" if selection == "spaces-and-glob" else "python")
-        )
-        selected.parent.mkdir(exist_ok=True)
-        selected.symlink_to(host_python)
-    elif selection in {"relative-chain", "absolute-chain", "native-limit-chain", "intermediate-candidate-link"}:
-        selected = external / "python-0"
-        selected.symlink_to(host_python)
-        count = (32 if sys.platform == "darwin" else 40) if selection == "native-limit-chain" else 3
+    paths = {
+        "direct": host_python,
+        "absolute-link": external / "python",
+        "spaces-and-glob": external / "python * [host]",
+        "prefix-sibling": worktree.with_name(worktree.name + "-other") / "python",
+    }
+    for name in ("absolute-link", "spaces-and-glob", "prefix-sibling"):
+        paths[name].parent.mkdir(exist_ok=True)
+        paths[name].symlink_to(host_python)
+    physical_child = external / "child"
+    physical_child.mkdir()
+    alias = worktree.parent / "host-parent-alias"
+    alias.symlink_to(external, target_is_directory=True)
+    child_alias = worktree.parent / "host-child-alias"
+    child_alias.symlink_to(physical_child, target_is_directory=True)
+    paths["parent-alias"] = alias / "python"
+    paths["parent-alias-dotdot"] = child_alias / "../python"
+    for name, count, absolute in (
+        ("relative-chain", 3, False),
+        ("absolute-chain", 3, True),
+        ("native-limit-chain", 32 if sys.platform == "darwin" else 40, False),
+    ):
+        directory = external / name
+        directory.mkdir()
+        previous = directory / "python-0"
+        previous.symlink_to(host_python)
         for index in range(1, count):
-            link = external / f"python-{index}"
-            link.symlink_to(str(selected) if selection == "absolute-chain" else selected.name)
-            selected = link
-        if selection == "intermediate-candidate-link":
-            intermediate = worktree / "intermediate-link"
-            intermediate.symlink_to(selected)
-            selected = external / "external-selection"
-            selected.symlink_to(intermediate)
-    elif selection in {"parent-alias", "parent-alias-dotdot"}:
-        (external / "python").symlink_to(host_python)
-        physical_child = external / "child"
-        physical_child.mkdir()
-        alias = worktree.parent / "host-parent-alias"
-        alias.symlink_to(physical_child if selection == "parent-alias-dotdot" else external, target_is_directory=True)
-        selected = alias / "../python" if selection == "parent-alias-dotdot" else alias / "python"
+            link = directory / f"python-{index}"
+            link.symlink_to(previous if absolute else previous.name)
+            previous = link
+        paths[name] = previous
+    intermediate = worktree / "intermediate-link"
+    intermediate.symlink_to(paths["relative-chain"])
+    paths["intermediate-candidate-link"] = external / "external-selection"
+    paths["intermediate-candidate-link"].symlink_to(intermediate)
+    selected = paths[selection]
     assert selected.is_file() and os.access(selected, os.X_OK), "fixture exceeded the host's executable link limit"
     environment["SPECFACT_CODE_REVIEW_POLICY_PYTHON"] = str(selected)
     result = _run_policy_candidate(portable_policy_candidate)

@@ -315,6 +315,32 @@ run_lint_if_staged_python() {
   fi
 }
 
+_resolve_host_executable_path() (
+  local path="$1" parent leaf target hops=0
+  [[ "${path}" == /* ]] || return 1
+  while :; do
+    parent="${path%/*}"
+    leaf="${path##*/}"
+    # The sentinel preserves trailing newlines in paths across command substitution.
+    parent="$(cd -P "${parent:-/}" && pwd -P && printf '.')" || return 1
+    parent="${parent%.}"
+    parent="${parent%$'\n'}"
+    path="${parent%/}/${leaf}"
+    [[ -L "${path}" ]] || break
+    [[ "${hops}" -lt 40 ]] || return 1
+    target="$(readlink -n "${path}" && printf '.')" || return 1
+    target="${target%.}"
+    if [[ "${target}" == /* ]]; then
+      path="${target}"
+    else
+      path="${parent%/}/${target}"
+    fi
+    hops=$((hops + 1))
+  done
+  [[ -f "${path}" && -x "${path}" ]] || return 1
+  printf '%s' "${path}"
+)
+
 validate_immutable_capsule_policy() (
   local policy_commit="${SPECFACT_CODE_REVIEW_POLICY_COMMIT:-}"
   local policy_python="${SPECFACT_CODE_REVIEW_POLICY_PYTHON:-}"
@@ -330,11 +356,15 @@ validate_immutable_capsule_policy() (
   repository_root="$(git rev-parse --show-toplevel)" || return 1
   cd "${repository_root}" || return 1
   repository_root="$(pwd -P)" || return 1
-  if ! python_directory="$(cd -P "$(dirname "${policy_python}")" && pwd -P)" \
-    || ! python_target="$(realpath "${policy_python}")"; then
+  python_directory="${policy_python%/*}"
+  if ! python_directory="$(cd -P "${python_directory:-/}" && pwd -P && printf '.')" \
+    || ! python_target="$(_resolve_host_executable_path "${policy_python}" && printf '.')"; then
     error "Capsule review deferral cannot resolve the external host Python path."
     return 1
   fi
+  python_directory="${python_directory%.}"
+  python_directory="${python_directory%$'\n'}"
+  python_target="${python_target%.}"
   if [[ "${python_directory}" == "${repository_root}" || "${python_directory}" == "${repository_root}/"* \
     || "${python_target}" == "${repository_root}/"* ]]; then
     error "Capsule review deferral requires host Python outside the candidate repository."

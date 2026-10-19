@@ -91,6 +91,6 @@
 
 - [x] 12.1 Specify unchanged eligibility and interpreter-location invariants without a realpath CLI dependency.
 - [x] 12.2 Capture failing host regressions with realpath unavailable before production edits.
-- [ ] 12.3 Resolve external interpreter paths with portable host primitives while preserving candidate refusal and cleanup.
-- [ ] 12.4 Complete focused proofs, native planned Requirements, strict OpenSpec, analyzers, normal hooks and independent review.
+- [x] 12.3 Resolve external interpreter paths with portable host primitives while preserving candidate refusal and cleanup.
+- [x] 12.4 Complete focused proofs, native planned Requirements, strict OpenSpec, analyzers, normal hooks and independent review.
 - [ ] 12.5 Complete mandatory exact-head hosted acceptance before merge.
