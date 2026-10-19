@@ -131,6 +131,16 @@ This is an explicit trusted-caller approval boundary, not protected-branch polic
 The hook SHALL canonicalize the repository, interpreter parent directory and interpreter target using host tools before executing the selected interpreter. Both the selected physical location and resolved target SHALL be outside the candidate repository. Resolution failures SHALL refuse deferral. This safeguards the already approved local deferral and grants no new policy authority.
 
 
+#### Scenario: Existing Darwin eligibility does not depend on the realpath command
+
+- **GIVEN** an otherwise eligible local Darwin ARM64 feature worktree with caller-reviewed immutable policy and an external host interpreter
+- **WHEN** the host has no `realpath` command
+- **THEN** host path canonicalization SHALL still qualify legitimate external direct paths and symlinks without executing the selected interpreter to establish its location
+- **AND** candidate-owned selected locations or resolved targets SHALL still refuse deferral before interpreter execution
+- **AND** resolution failures SHALL refuse deferral without a candidate fallback
+- **AND** no minimum OS version, policy authority, workflow pin, capability, timeout or hosted-review gate changes.
+
+
 ### Requirement: Shell projection checks execute in the mandatory host stage
 
 The default Hatch test command SHALL execute all four shell projection regression functions and their 31 parameter cases in an explicit host proof before ordinary unit discovery. The remaining 200 projection cases SHALL retain ordinary unit discovery. Fixture partitioning SHALL preserve assertions, review exit codes, privacy checks and isolation checks without changing runtime capabilities, analyzer gates or budgets.

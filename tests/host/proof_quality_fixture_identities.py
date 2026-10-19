@@ -6,7 +6,9 @@ import hashlib
 import json
 import os
 import shlex
+import shutil
 import subprocess
+import sys
 from importlib import import_module
 from pathlib import Path
 
@@ -337,3 +339,168 @@ def test_immutable_policy_checks_external_interpreter_symlink_location(policy_ca
     else:
         assert result.returncode == 0, result.stderr
         assert_block2_trace(Path(environment["FIXTURE_CALLS"]).read_text(encoding="utf-8"), 0, result.stderr)
+
+
+@pytest.fixture(name="portable_policy_candidate")
+def fixture_portable_policy_candidate(policy_candidate):
+    worktree, environment = policy_candidate
+    commands = worktree.parent / "host-commands-without-realpath"
+    commands.mkdir()
+    for name in ("bash", "git", "dirname", "grep", "mktemp", "rm", "readlink", "mkdir", "sort"):
+        executable = "/bin/bash" if name == "bash" and sys.platform == "darwin" else shutil.which(name)
+        assert executable is not None, f"required host fixture command is missing: {name}"
+        (commands / name).symlink_to(executable)
+    environment["PATH"] = str(commands)
+    assert shutil.which("realpath", path=environment["PATH"]) is None
+    unavailable = subprocess.run(
+        [str(commands / "bash"), "-c", "command -v realpath"],
+        env=environment,
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=5,
+    )
+    assert unavailable.returncode == 1 and not unavailable.stdout, unavailable.stderr
+    return policy_candidate
+
+
+def _write_interpreter_canary(path: Path, marker: Path, host_python: str | None = None) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    invocation = f'exec {shlex.quote(host_python)} "$@"' if host_python else "exit 0"
+    path.write_text(f"#!/bin/sh\nprintf '%s' \"$0\" > {shlex.quote(str(marker))}\n{invocation}\n", encoding="utf-8")
+    path.chmod(0o700)
+
+
+@pytest.mark.parametrize(
+    "selection",
+    [
+        "direct",
+        "absolute-link",
+        "relative-chain",
+        "absolute-chain",
+        "parent-alias",
+        "parent-alias-dotdot",
+        "spaces-and-glob",
+        "prefix-sibling",
+        "native-limit-chain",
+        "intermediate-candidate-link",
+    ],
+)
+def test_immutable_policy_accepts_external_python_without_realpath(portable_policy_candidate, selection: str) -> None:
+    worktree, environment = portable_policy_candidate
+    host_python = Path(environment["SPECFACT_CODE_REVIEW_POLICY_PYTHON"])
+    external = worktree.parent / "external host [python]"
+    external.mkdir()
+    selected = host_python
+    if selection in {"absolute-link", "spaces-and-glob", "prefix-sibling"}:
+        selected = (
+            worktree.with_name(worktree.name + "-other") / "python"
+            if selection == "prefix-sibling"
+            else external / ("python * [host]" if selection == "spaces-and-glob" else "python")
+        )
+        selected.parent.mkdir(exist_ok=True)
+        selected.symlink_to(host_python)
+    elif selection in {"relative-chain", "absolute-chain", "native-limit-chain", "intermediate-candidate-link"}:
+        selected = external / "python-0"
+        selected.symlink_to(host_python)
+        count = (32 if sys.platform == "darwin" else 40) if selection == "native-limit-chain" else 3
+        for index in range(1, count):
+            link = external / f"python-{index}"
+            link.symlink_to(str(selected) if selection == "absolute-chain" else selected.name)
+            selected = link
+        if selection == "intermediate-candidate-link":
+            intermediate = worktree / "intermediate-link"
+            intermediate.symlink_to(selected)
+            selected = external / "external-selection"
+            selected.symlink_to(intermediate)
+    elif selection in {"parent-alias", "parent-alias-dotdot"}:
+        (external / "python").symlink_to(host_python)
+        physical_child = external / "child"
+        physical_child.mkdir()
+        alias = worktree.parent / "host-parent-alias"
+        alias.symlink_to(physical_child if selection == "parent-alias-dotdot" else external, target_is_directory=True)
+        selected = alias / "../python" if selection == "parent-alias-dotdot" else alias / "python"
+    assert selected.is_file() and os.access(selected, os.X_OK), "fixture exceeded the host's executable link limit"
+    environment["SPECFACT_CODE_REVIEW_POLICY_PYTHON"] = str(selected)
+    result = _run_policy_candidate(portable_policy_candidate)
+    assert result.returncode == 0, result.stderr
+    assert_block2_trace(Path(environment["FIXTURE_CALLS"]).read_text(encoding="utf-8"), 0, result.stderr)
+
+
+@pytest.mark.parametrize(
+    "selection", ["direct", "external-link", "relative-chain", "parent-link", "checkout-alias", "inside-to-host"]
+)
+def test_immutable_policy_refuses_candidate_python_without_realpath(portable_policy_candidate, selection: str) -> None:
+    worktree, environment = portable_policy_candidate
+    marker = worktree / "candidate-interpreter-executed"
+    interpreter = worktree / ".venv/bin/python"
+    _write_interpreter_canary(interpreter, marker)
+    selected = interpreter
+    if selection in {"external-link", "relative-chain"}:
+        selected = worktree.parent / "external-python"
+        selected.symlink_to(interpreter)
+        if selection == "relative-chain":
+            outer = worktree.parent / "relative-python"
+            outer.symlink_to(selected.name)
+            selected = outer
+    elif selection in {"parent-link", "checkout-alias"}:
+        alias = worktree.parent / "candidate-alias"
+        alias.symlink_to(interpreter.parent if selection == "parent-link" else worktree, target_is_directory=True)
+        selected = alias / "python" if selection == "parent-link" else alias / ".venv/bin/python"
+        if selection == "checkout-alias":
+            portable_policy_candidate = alias, environment
+    elif selection == "inside-to-host":
+        host = worktree.parent / "external-python-canary"
+        _write_interpreter_canary(host, marker, environment["SPECFACT_CODE_REVIEW_POLICY_PYTHON"])
+        selected = worktree / "host-python-link"
+        selected.symlink_to(host)
+    environment["SPECFACT_CODE_REVIEW_POLICY_PYTHON"] = str(selected)
+    result = _run_policy_candidate(portable_policy_candidate)
+    assert result.returncode == 1, result.stderr
+    assert "Capsule review deferral" in result.stderr
+    assert "DEFERRED" not in result.stderr
+    assert not marker.exists(), "candidate-owned selected location or target executed"
+
+
+@pytest.mark.parametrize("failure", ["broken-link", "cycle", "readlink-failure"])
+def test_immutable_policy_refuses_unresolved_python_without_realpath(portable_policy_candidate, failure: str) -> None:
+    worktree, environment = portable_policy_candidate
+    marker = worktree / "unresolved-interpreter-executed"
+    host = worktree.parent / "external-python-canary"
+    _write_interpreter_canary(host, marker, environment["SPECFACT_CODE_REVIEW_POLICY_PYTHON"])
+    selected = worktree.parent / "selected-python"
+    selected.symlink_to(host if failure == "readlink-failure" else selected.name if failure == "cycle" else "absent")
+    environment["SPECFACT_CODE_REVIEW_POLICY_PYTHON"] = str(selected)
+    shell_setup = "\nreadlink() { return 74; }\n" if failure == "readlink-failure" else ""
+    result = _run_policy_candidate(portable_policy_candidate, shell_setup)
+    assert result.returncode == 1, result.stderr
+    assert "Capsule review deferral" in result.stderr
+    assert "DEFERRED" not in result.stderr
+    assert not marker.exists(), "unresolved interpreter executed"
+
+
+@pytest.mark.parametrize("selection", ["direct", "relative-link", "absolute-link", "parent-newlines"])
+def test_immutable_policy_preserves_host_path_bytes_without_realpath(portable_policy_candidate, selection: str) -> None:
+    worktree, environment = portable_policy_candidate
+    external = worktree.parent / "external host"
+    marker = worktree.parent / "intended-host-executed"
+    wrong_marker = worktree.parent / "wrong-host-executed"
+    host_python = environment["SPECFACT_CODE_REVIEW_POLICY_PYTHON"]
+    target = external / "python\n\n"
+    if selection == "parent-newlines":
+        target = external / "directory\n\n" / "python"
+        wrong_target = external / "directory" / "python"
+    else:
+        wrong_target = external / "python"
+    _write_interpreter_canary(target, marker, host_python)
+    _write_interpreter_canary(wrong_target, wrong_marker)
+    selected = target
+    if selection in {"relative-link", "absolute-link"}:
+        selected = external / "selected-python"
+        selected.symlink_to(target.name if selection == "relative-link" else target)
+    environment["SPECFACT_CODE_REVIEW_POLICY_PYTHON"] = str(selected)
+    result = _run_policy_candidate(portable_policy_candidate)
+    assert not wrong_marker.exists(), "newline-stripped sibling executed"
+    assert result.returncode == 0, result.stderr
+    assert marker.read_text(encoding="utf-8") == str(target.resolve()), "the exact external executable was not invoked"
+    assert_block2_trace(Path(environment["FIXTURE_CALLS"]).read_text(encoding="utf-8"), 0, result.stderr)

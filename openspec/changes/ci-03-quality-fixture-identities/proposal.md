@@ -43,3 +43,8 @@ On 2026-10-18 (Europe/Berlin), the maintainer explicitly approved the #518 local
 ## Diagnostic follow-up within approved maintenance scope
 
 Expose the existing fixed analyzer-side and CrossHair-class observations for normal structured independent failure reports. Exact-head run 39167860375 identifies contracts as incomplete but omits those fields. This diagnostic-only correction is covered by the maintainer's #518 maintenance authorization with all checks intact. It does not claim to repair the unknown contract fault. Only the reusable workflow projector, its behavioral tests and this change's evidence are added to the current correction scope.
+
+
+## Portable host interpreter follow-up
+
+Preserve the already approved Darwin ARM64 eligibility when the host has no realpath CLI. Replace that accidental utility dependency with one private portable host path resolver while retaining both candidate-location exclusions before interpreter execution. The current caller-selected policy, complete workflow pin, DEFERRED status, all other hooks and mandatory exact-head hosted checks remain unchanged. No new OS floor, package requirement or capsule capability is authorized. Regression proof precedes source implementation; old-host native acceptance is not inferred from a current-host missing-command simulation.

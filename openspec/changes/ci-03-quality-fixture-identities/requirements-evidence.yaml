@@ -421,6 +421,42 @@ requirements:
       intent: External host interpreter symlinks preserve the approved local workflow.
       observable: An external symlink succeeds with all checks retained and a candidate-local symlink refuses deferral.
       implementation_task: '10.3'
+    - case_id: CI-03-7-10
+      scenario_id: local-deferral-executes-caller-selected-immutable-policy
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/host/proof_quality_fixture_identities.py::test_immutable_policy_accepts_external_python_without_realpath
+      intent: Existing eligible external interpreters work without a realpath CLI.
+      observable: Direct paths, absolute and relative chains, physical aliases, prefix siblings and host-valid link limits reach DEFERRED with all downstream checks retained.
+      implementation_task: '12.3'
+    - case_id: CI-03-7-11
+      scenario_id: local-deferral-executes-caller-selected-immutable-policy
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/host/proof_quality_fixture_identities.py::test_immutable_policy_refuses_candidate_python_without_realpath
+      intent: Removing the utility dependency cannot admit candidate-owned interpreters.
+      observable: Candidate selected locations and resolved targets refuse before any canary executes, including alias and symlink forms.
+      implementation_task: '12.3'
+    - case_id: CI-03-7-12
+      scenario_id: local-deferral-executes-caller-selected-immutable-policy
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/host/proof_quality_fixture_identities.py::test_immutable_policy_refuses_unresolved_python_without_realpath
+      intent: Resolution failures retain fail-closed local eligibility.
+      observable: Broken or cyclic links and readlink errors refuse deferral without interpreter execution or leaked temporary checker state.
+      implementation_task: '12.3'
+    - case_id: CI-03-7-13
+      scenario_id: local-deferral-executes-caller-selected-immutable-policy
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/host/proof_quality_fixture_identities.py::test_immutable_policy_preserves_host_path_bytes_without_realpath
+      intent: Canonicalization preserves the exact selected external executable.
+      observable: Newline-ending targets and parent directories execute only the intended trusted wrapper, never a newline-stripped sibling, and retain immutable checker and downstream checks.
+      implementation_task: '12.3'
   openspec:ci-03-quality-fixture-identities:quality-fixture-identities:shell-projection-checks-execute-in-the-mandatory-host-stage:
     rationale: Preserve shell workflow proofs at the host boundary without adding capsule capabilities.
     stakeholder_refs:

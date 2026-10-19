@@ -85,3 +85,12 @@
 - [x] 11.3 Partition tests with case and assertion preservation and fix measured fixture lint and complexity.
 - [x] 11.4 Run host and unit proofs, analyzers, strict OpenSpec and planned Requirements validation.
 - [ ] 11.5 Complete parent independent review, normal hooks and exact-head hosted acceptance.
+
+
+## 12. Portable host interpreter path resolution
+
+- [x] 12.1 Specify unchanged eligibility and interpreter-location invariants without a realpath CLI dependency.
+- [x] 12.2 Capture failing host regressions with realpath unavailable before production edits.
+- [ ] 12.3 Resolve external interpreter paths with portable host primitives while preserving candidate refusal and cleanup.
+- [ ] 12.4 Complete focused proofs, native planned Requirements, strict OpenSpec, analyzers, normal hooks and independent review.
+- [ ] 12.5 Complete mandatory exact-head hosted acceptance before merge.
