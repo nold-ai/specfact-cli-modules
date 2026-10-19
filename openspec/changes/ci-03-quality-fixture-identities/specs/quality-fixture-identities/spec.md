@@ -141,6 +141,16 @@ The hook SHALL canonicalize the repository, interpreter parent directory and int
 - **AND** no minimum OS version, policy authority, workflow pin, capability, timeout or hosted-review gate changes.
 
 
+#### Scenario: Successful external executable is not policy completion
+
+- **GIVEN** a trusted caller selects the reviewed immutable checker and an external executable that exits zero without running Python or the checker
+- **WHEN** local deferral evaluates the indexed orchestration
+- **THEN** the hook SHALL refuse deferral without treating that exit status as completed policy validation
+- **AND** a working external Python SHALL still execute the selected immutable checker and accept only its successful completion
+- **AND** invalid indexed orchestration and checker execution errors SHALL still refuse deferral
+- **AND** interpreter-location checks, isolation, immutable extraction, cleanup, workflow pin and hosted-review gates SHALL remain unchanged.
+
+
 ### Requirement: Shell projection checks execute in the mandatory host stage
 
 The default Hatch test command SHALL execute all four shell projection regression functions and their 31 parameter cases in an explicit host proof before ordinary unit discovery. The remaining 200 projection cases SHALL retain ordinary unit discovery. Fixture partitioning SHALL preserve assertions, review exit codes, privacy checks and isolation checks without changing runtime capabilities, analyzer gates or budgets.

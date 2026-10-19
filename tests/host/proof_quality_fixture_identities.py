@@ -511,3 +511,115 @@ def test_immutable_policy_preserves_host_path_bytes_without_realpath(portable_po
     assert result.returncode == 0, result.stderr
     assert marker.read_text(encoding="utf-8") == str(target.resolve()), "the exact external executable was not invoked"
     assert_block2_trace(Path(environment["FIXTURE_CALLS"]).read_text(encoding="utf-8"), 0, result.stderr)
+
+
+def _select_external_policy_launcher(candidate, body: str) -> None:
+    worktree, environment = candidate
+    launcher = worktree.parent / "external-policy-launcher"
+    launcher.write_text(f"#!/bin/sh\n{body}\n", encoding="utf-8")
+    launcher.chmod(0o700)
+    environment["SPECFACT_CODE_REVIEW_POLICY_PYTHON"] = str(launcher)
+
+
+def _assert_policy_refused_before_contracts(candidate, result) -> None:
+    assert result.returncode != 0, result.stderr
+    assert "DEFERRED" not in result.stdout + result.stderr
+    trace = Path(candidate[1]["FIXTURE_CALLS"]).read_text(encoding="utf-8")
+    assert "run contract-test-contracts" not in trace, trace
+
+
+@pytest.mark.parametrize("invalid_index", [False, True], ids=["reviewed-index", "invalid-index"])
+@pytest.mark.parametrize("executable", ["zero-shell", "usr-bin-true"])
+def test_immutable_policy_refuses_zero_exit_without_checker(policy_candidate, executable: str, invalid_index: bool):
+    worktree, environment = policy_candidate
+    if invalid_index:
+        _change_policy_candidate(worktree, "successful-canary")
+    if executable == "usr-bin-true":
+        selected = Path("/usr/bin/true")
+        if not selected.is_file() or not os.access(selected, os.X_OK):
+            pytest.skip("/usr/bin/true is unavailable; portable zero-shell covers this host")
+        environment["SPECFACT_CODE_REVIEW_POLICY_PYTHON"] = str(selected)
+    else:
+        _select_external_policy_launcher(policy_candidate, "exit 0")
+    result = _run_policy_candidate(policy_candidate)
+    _assert_policy_refused_before_contracts(policy_candidate, result)
+
+
+@pytest.mark.parametrize(
+    ("invalid_index", "launcher_status", "python_status"),
+    [(False, 73, 0), (True, 0, 1)],
+    ids=["successful-checker-failing-launcher", "failed-checker-masked-by-launcher"],
+)
+def test_immutable_policy_requires_checker_and_launcher_success(
+    policy_candidate, invalid_index: bool, launcher_status: int, python_status: int
+) -> None:
+    worktree, environment = policy_candidate
+    if invalid_index:
+        _change_policy_candidate(worktree, "successful-canary")
+    python = shlex.quote(environment["SPECFACT_CODE_REVIEW_POLICY_PYTHON"])
+    _select_external_policy_launcher(
+        policy_candidate,
+        f'{python} "$@"\nstatus=$?\nprintf "policy-python-status=%s\\n" "$status" >&2\nexit {launcher_status}',
+    )
+    result = _run_policy_candidate(policy_candidate)
+    assert f"policy-python-status={python_status}" in result.stderr, result.stderr
+    if invalid_index:
+        assert "indexed orchestrator bytes differ" in result.stderr
+    _assert_policy_refused_before_contracts(policy_candidate, result)
+
+
+def _select_immutable_cli_checker(candidate, termination: str) -> None:
+    worktree, environment = candidate
+    checker = worktree / "scripts/validate_capsule_ci_schedule.py"
+    checker.write_text(
+        "import os\n"
+        "import sys\n"
+        "from pathlib import Path\n"
+        "assert __name__ == '__main__'\n"
+        "assert sys.argv == [__file__]\n"
+        "assert Path(__file__).is_absolute() and Path(__file__).is_file()\n"
+        "assert Path(__file__).name == 'validate_capsule_ci_schedule.py'\n"
+        f"assert Path.cwd() == Path({str(worktree)!r})\n"
+        "assert sys.flags.isolated == 1 and sys.flags.no_site == 1\n"
+        "assert os.environ['GIT_NO_REPLACE_OBJECTS'] == '1'\n"
+        "print('immutable-cli-stdout', flush=True)\n"
+        "print('immutable-cli-stderr', file=sys.stderr, flush=True)\n"
+        f"{termination}\n",
+        encoding="utf-8",
+    )
+    _git(worktree, "add", str(checker))
+    _git(
+        worktree,
+        "-c",
+        "core.hooksPath=/dev/null",
+        "commit",
+        "-qm",
+        "fixture compatible CLI policy",
+        "--only",
+        str(checker),
+    )
+    environment["SPECFACT_CODE_REVIEW_POLICY_COMMIT"] = _git(worktree, "rev-parse", "HEAD")
+
+
+@pytest.mark.parametrize(
+    ("termination", "accepted"),
+    [
+        ("", True),
+        ("raise SystemExit(0)", True),
+        ("os._exit(0)", True),
+        ("raise SystemExit(7)", False),
+        ("raise RuntimeError('immutable CLI error')", False),
+    ],
+    ids=["fallthrough", "system-exit-zero", "direct-exit-zero", "failed-exit", "exception"],
+)
+def test_immutable_policy_preserves_selected_checker_cli(policy_candidate, termination: str, accepted: bool) -> None:
+    _select_immutable_cli_checker(policy_candidate, termination)
+    result = _run_policy_candidate(policy_candidate)
+    assert result.stdout.splitlines() == ["immutable-cli-stdout"], result.stdout
+    assert "immutable-cli-stderr" in result.stderr, result.stderr
+    if accepted:
+        assert result.returncode == 0, result.stderr
+        trace = Path(policy_candidate[1]["FIXTURE_CALLS"]).read_text(encoding="utf-8")
+        assert_block2_trace(trace, 0, result.stderr)
+    else:
+        _assert_policy_refused_before_contracts(policy_candidate, result)

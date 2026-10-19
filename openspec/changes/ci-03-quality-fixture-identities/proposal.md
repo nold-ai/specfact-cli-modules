@@ -48,3 +48,8 @@ Expose the existing fixed analyzer-side and CrossHair-class observations for nor
 ## Portable host interpreter follow-up
 
 Preserve the already approved Darwin ARM64 eligibility when the host has no realpath CLI. Replace that accidental utility dependency with one private portable host path resolver while retaining both candidate-location exclusions before interpreter execution. The current caller-selected policy, complete workflow pin, DEFERRED status, all other hooks and mandatory exact-head hosted checks remain unchanged. No new OS floor, package requirement or capsule capability is authorized. Regression proof precedes source implementation; old-host native acceptance is not inferred from a current-host missing-command simulation.
+
+
+## External checker completion follow-up
+
+The existing requirement is a working external host Python executing the caller-reviewed immutable checker. Current-head review and a full-hook reproduction show that accepting only a zero exit code also accepts `/usr/bin/true`, which does not execute that checker. Correct the existing execution boundary before reporting DEFERRED. Retain the trusted caller, host process/account and stable filesystem assumptions. This does not authenticate a deliberately malicious host executable or grant protected authority. No policy selection, byte pin, workflow, capability or hosted gate change is included.

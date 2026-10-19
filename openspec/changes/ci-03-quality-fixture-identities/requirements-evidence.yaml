@@ -457,6 +457,33 @@ requirements:
       intent: Canonicalization preserves the exact selected external executable.
       observable: Newline-ending targets and parent directories execute only the intended trusted wrapper, never a newline-stripped sibling, and retain immutable checker and downstream checks.
       implementation_task: '12.3'
+    - case_id: CI-03-7-14
+      scenario_id: local-deferral-executes-caller-selected-immutable-policy
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/host/proof_quality_fixture_identities.py::test_immutable_policy_refuses_zero_exit_without_checker
+      intent: A zero-exit external executable cannot qualify without running the checker.
+      observable: The hook refuses both reviewed and invalid indexed workflows before contracts when the selected executable ignores its operands.
+      implementation_task: '13.3'
+    - case_id: CI-03-7-15
+      scenario_id: local-deferral-executes-caller-selected-immutable-policy
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/host/proof_quality_fixture_identities.py::test_immutable_policy_requires_checker_and_launcher_success
+      intent: Both checker completion and launcher success are required.
+      observable: Masked checker failure and outer failure both refuse deferral before contracts.
+      implementation_task: '13.3'
+    - case_id: CI-03-7-16
+      scenario_id: local-deferral-executes-caller-selected-immutable-policy
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/host/proof_quality_fixture_identities.py::test_immutable_policy_preserves_selected_checker_cli
+      intent: Compatible selected checker CLI semantics remain intact.
+      observable: Ordinary, SystemExit and direct successful exits qualify while failed exits and exceptions refuse; argv, cwd, isolation and output remain intact.
+      implementation_task: '13.3'
   openspec:ci-03-quality-fixture-identities:quality-fixture-identities:shell-projection-checks-execute-in-the-mandatory-host-stage:
     rationale: Preserve shell workflow proofs at the host boundary without adding capsule capabilities.
     stakeholder_refs:

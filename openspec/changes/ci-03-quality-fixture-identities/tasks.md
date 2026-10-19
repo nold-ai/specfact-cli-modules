@@ -94,3 +94,12 @@
 - [x] 12.3 Resolve external interpreter paths with portable host primitives while preserving candidate refusal and cleanup.
 - [x] 12.4 Complete focused proofs, native planned Requirements, strict OpenSpec, analyzers, normal hooks and independent review.
 - [ ] 12.5 Complete mandatory exact-head hosted acceptance before merge.
+
+
+## 13. Confirm immutable checker execution
+
+- [x] 13.1 Specify checker completion and reproduce zero-exit non-Python refusal gap in the full hook.
+- [x] 13.2 Add mapped regressions and capture actual failing evidence before production edits.
+- [ ] 13.3 Require the external Python/checker execution contract before accepting local deferral.
+- [ ] 13.4 Complete focused proofs, analyzers, native planned Requirements, strict OpenSpec, normal hooks and independent review.
+- [ ] 13.5 Complete mandatory exact-head hosted acceptance before merge.
