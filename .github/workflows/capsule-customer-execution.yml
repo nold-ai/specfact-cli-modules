@@ -443,6 +443,19 @@ jobs:
           import json
           from pathlib import Path
 
+          _SNAPSHOT_REASONS = {
+              "analyzer_reported_incomplete_execution", "analyzer_output_invalid",
+              "capsule_request_failed", "linux_bubblewrap_identity_missing",
+              "namespace_unavailable", "sandbox_filesystem_error", "analyzer_process_error",
+              "sandbox_launch_failed", "reserved_import_catalog_unavailable",
+              "reserved_import_collision", "bubblewrap_identity_mismatch", "trace_helper_failed",
+              "pre_namespace_observation_unsupported", "pre_namespace_observation_requires_single_thread",
+              "pre_namespace_exec_stop_missing", "pre_namespace_observation_failed",
+              "pre_namespace_executable_missing", "pre_namespace_executable_ambiguous",
+              "pre_namespace_host_object", "unclassified",
+          }
+
+
           def snapshot_diagnostic_observations(evidence):
               rows = evidence.get("analyzer_evidence")
               if not isinstance(rows, list) or len(rows) > 10:
@@ -450,17 +463,6 @@ jobs:
               contracts = [row for row in rows if isinstance(row, dict) and row.get("id") == "contracts"]
               if len(contracts) != 1:
                   return []
-              reasons = {
-                  "analyzer_reported_incomplete_execution", "analyzer_output_invalid",
-                  "capsule_request_failed", "linux_bubblewrap_identity_missing",
-                  "namespace_unavailable", "sandbox_filesystem_error", "analyzer_process_error",
-                  "sandbox_launch_failed", "reserved_import_catalog_unavailable",
-                  "reserved_import_collision", "bubblewrap_identity_mismatch", "trace_helper_failed",
-                  "pre_namespace_observation_unsupported", "pre_namespace_observation_requires_single_thread",
-                  "pre_namespace_exec_stop_missing", "pre_namespace_observation_failed",
-                  "pre_namespace_executable_missing", "pre_namespace_executable_ambiguous",
-                  "pre_namespace_host_object", "unclassified",
-              }
               observations = []
               for side in ("base", "head"):
                   node = contracts[0].get(side)
@@ -472,10 +474,54 @@ jobs:
                   reason = "unclassified"
                   if isinstance(diagnostic, str) and len(diagnostic) <= 4096:
                       token = diagnostic.split(":", 1)[0]
-                      if token in reasons:
+                      if token in _SNAPSHOT_REASONS:
                           reason = token
                   observations.append({"analyzer": "contracts", "side": side, "reason": reason})
               return observations
+
+          _SNAPSHOT_PREFIX_LIMIT = max(map(len, _SNAPSHOT_REASONS)) + 1
+
+
+          def _snapshot_length_bucket(diagnostic):
+              length = len(diagnostic)
+              if length == 0:
+                  return "empty"
+              if length <= 4096:
+                  return "within_bound"
+              return "over_bound"
+
+
+          def _snapshot_recognized_leading_token(diagnostic):
+              prefix = diagnostic[:_SNAPSHOT_PREFIX_LIMIT]
+              if ":" not in prefix and len(diagnostic) >= _SNAPSHOT_PREFIX_LIMIT:
+                  return False
+              return prefix.split(":", 1)[0] in _SNAPSHOT_REASONS
+
+
+          def _snapshot_diagnostic_fact(side, node):
+              fact = {
+                  "analyzer": "contracts",
+                  "side": side,
+                  "shape": "missing" if "diagnostic" not in node else "non_string",
+                  "length_bucket": "not_string",
+                  "recognized_leading_token": False,
+              }
+              diagnostic = node.get("diagnostic")
+              if not isinstance(diagnostic, str):
+                  return fact
+              fact["shape"] = "string"
+              fact["length_bucket"] = _snapshot_length_bucket(diagnostic)
+              fact["recognized_leading_token"] = _snapshot_recognized_leading_token(diagnostic)
+              return fact
+
+
+          def snapshot_diagnostic_facts(evidence, observations):
+              selected = [item for item in observations if item["reason"] == "unclassified"]
+              if not selected:
+                  return []
+              contracts = next(row for row in evidence["analyzer_evidence"] if isinstance(row, dict) and row.get("id") == "contracts")
+              return [_snapshot_diagnostic_fact(item["side"], contracts[item["side"]]) for item in selected]
+
 
           def unique_candidate_json_object(pairs):
               value = {}
@@ -542,6 +588,9 @@ jobs:
               snapshot_observations = snapshot_diagnostic_observations(data)
               if snapshot_observations:
                   print(json.dumps({"snapshot_diagnostic_observations": snapshot_observations}))
+              snapshot_facts = snapshot_diagnostic_facts(data, snapshot_observations)
+              if snapshot_facts:
+                  print(json.dumps({"snapshot_diagnostic_facts": snapshot_facts}))
           PY_CANDIDATE_FAILURE
           fi
           exit "$review_exit"
@@ -1054,6 +1103,19 @@ jobs:
           import os
           from pathlib import Path
 
+          _SNAPSHOT_REASONS = {
+              "analyzer_reported_incomplete_execution", "analyzer_output_invalid",
+              "capsule_request_failed", "linux_bubblewrap_identity_missing",
+              "namespace_unavailable", "sandbox_filesystem_error", "analyzer_process_error",
+              "sandbox_launch_failed", "reserved_import_catalog_unavailable",
+              "reserved_import_collision", "bubblewrap_identity_mismatch", "trace_helper_failed",
+              "pre_namespace_observation_unsupported", "pre_namespace_observation_requires_single_thread",
+              "pre_namespace_exec_stop_missing", "pre_namespace_observation_failed",
+              "pre_namespace_executable_missing", "pre_namespace_executable_ambiguous",
+              "pre_namespace_host_object", "unclassified",
+          }
+
+
           def snapshot_diagnostic_observations(evidence):
               rows = evidence.get("analyzer_evidence")
               if not isinstance(rows, list) or len(rows) > 10:
@@ -1061,17 +1123,6 @@ jobs:
               contracts = [row for row in rows if isinstance(row, dict) and row.get("id") == "contracts"]
               if len(contracts) != 1:
                   return []
-              reasons = {
-                  "analyzer_reported_incomplete_execution", "analyzer_output_invalid",
-                  "capsule_request_failed", "linux_bubblewrap_identity_missing",
-                  "namespace_unavailable", "sandbox_filesystem_error", "analyzer_process_error",
-                  "sandbox_launch_failed", "reserved_import_catalog_unavailable",
-                  "reserved_import_collision", "bubblewrap_identity_mismatch", "trace_helper_failed",
-                  "pre_namespace_observation_unsupported", "pre_namespace_observation_requires_single_thread",
-                  "pre_namespace_exec_stop_missing", "pre_namespace_observation_failed",
-                  "pre_namespace_executable_missing", "pre_namespace_executable_ambiguous",
-                  "pre_namespace_host_object", "unclassified",
-              }
               observations = []
               for side in ("base", "head"):
                   node = contracts[0].get(side)
@@ -1083,10 +1134,54 @@ jobs:
                   reason = "unclassified"
                   if isinstance(diagnostic, str) and len(diagnostic) <= 4096:
                       token = diagnostic.split(":", 1)[0]
-                      if token in reasons:
+                      if token in _SNAPSHOT_REASONS:
                           reason = token
                   observations.append({"analyzer": "contracts", "side": side, "reason": reason})
               return observations
+
+          _SNAPSHOT_PREFIX_LIMIT = max(map(len, _SNAPSHOT_REASONS)) + 1
+
+
+          def _snapshot_length_bucket(diagnostic):
+              length = len(diagnostic)
+              if length == 0:
+                  return "empty"
+              if length <= 4096:
+                  return "within_bound"
+              return "over_bound"
+
+
+          def _snapshot_recognized_leading_token(diagnostic):
+              prefix = diagnostic[:_SNAPSHOT_PREFIX_LIMIT]
+              if ":" not in prefix and len(diagnostic) >= _SNAPSHOT_PREFIX_LIMIT:
+                  return False
+              return prefix.split(":", 1)[0] in _SNAPSHOT_REASONS
+
+
+          def _snapshot_diagnostic_fact(side, node):
+              fact = {
+                  "analyzer": "contracts",
+                  "side": side,
+                  "shape": "missing" if "diagnostic" not in node else "non_string",
+                  "length_bucket": "not_string",
+                  "recognized_leading_token": False,
+              }
+              diagnostic = node.get("diagnostic")
+              if not isinstance(diagnostic, str):
+                  return fact
+              fact["shape"] = "string"
+              fact["length_bucket"] = _snapshot_length_bucket(diagnostic)
+              fact["recognized_leading_token"] = _snapshot_recognized_leading_token(diagnostic)
+              return fact
+
+
+          def snapshot_diagnostic_facts(evidence, observations):
+              selected = [item for item in observations if item["reason"] == "unclassified"]
+              if not selected:
+                  return []
+              contracts = next(row for row in evidence["analyzer_evidence"] if isinstance(row, dict) and row.get("id") == "contracts")
+              return [_snapshot_diagnostic_fact(item["side"], contracts[item["side"]]) for item in selected]
+
 
           def unique_json_object(pairs):
               value = {}
@@ -1200,5 +1295,8 @@ jobs:
           snapshot_observations = snapshot_diagnostic_observations(evidence_source)
           if snapshot_observations:
               projected["snapshot_diagnostic_observations"] = snapshot_observations
+          snapshot_facts = snapshot_diagnostic_facts(evidence_source, snapshot_observations)
+          if snapshot_facts:
+              projected["snapshot_diagnostic_facts"] = snapshot_facts
           print(json.dumps(projected))
           PY_REVIEW_FAILURE

@@ -118,5 +118,13 @@
 
 - [x] 15.1 Classify actual attachment and static-review failures, compare architectures and capture the pre-change 268-case inventory.
 - [x] 15.2 Relocate all 152 native cases into the existing mandatory host proof and repair measured complexity without assertion or case loss.
-- [ ] 15.3 Verify exact collection and assertion preservation, native execution, complexity and required local gates.
+- [x] 15.3 Verify exact collection and assertion preservation, native execution, complexity and required local gates.
 - [ ] 15.4 Publish normally signed correction and complete current-head hosted acceptance.
+
+
+## 16. Finite unclassified diagnostic facts
+
+- [x] 16.1 Ground the actual observation gap and independently select bounded fact reuse without a producer identity claim.
+- [x] 16.2 Author mandatory native behavioral cases and capture predicted missing-field RED before workflow edits.
+- [x] 16.3 Add only the finite facts and verify unchanged legacy output, privacy and gates.
+- [ ] 16.4 Publish the batched signed corrections and inspect exact-head hosted evidence before runtime diagnosis.

@@ -190,3 +190,17 @@ Only complete reports accepted by the existing duplicate-safe readers SHALL supp
 - **GIVEN** duplicate contracts rows, an over-ten-entry list, absent or invalid sides, unrelated analyzers, duplicate JSON keys, truncated or over-bound reports
 - **WHEN** either actual failure projector executes
 - **THEN** no unsupported snapshot record is emitted, an empty field is omitted, and existing outputs and review exits remain intact.
+
+
+### Requirement: Unclassified snapshot diagnostics expose only finite fallback facts
+
+For each existing eligible contracts snapshot observation whose reason is unclassified, both actual failure projectors SHALL optionally publish `snapshot_diagnostic_facts`. At most two records SHALL retain base then head order. Each record SHALL contain exactly analyzer=contracts, side=base/head, shape=missing/non_string/string, length_bucket=not_string/empty/within_bound/over_bound and recognized_leading_token as a JSON boolean. Missing and present null diagnostics SHALL remain distinguishable. String lengths SHALL use Unicode code points with the existing 4096 boundary. Recognized membership SHALL inspect at most 49 code points against the unchanged 20-token vocabulary, without normalization or suffix search. A known oversized leading token MAY be recognized while its old reason remains unclassified.
+
+No classified side SHALL produce these fallback facts. Empty results SHALL omit the field or envelope. Eligibility, complete duplicate-safe parsing, ten-row cap, 2-MiB/32-MiB bounds, existing reason records, legacy output, review exits, assurance, verdicts and privacy SHALL remain unchanged. Exact lengths, unknown tokens, private suffixes, paths, arguments and source SHALL NOT be published. These are diagnostic observations and SHALL NOT authenticate a producer, establish executed source identity, change runtime behavior or provide acceptance.
+
+#### Scenario: Fallback shapes remain finite without promoting private text
+
+- **GIVEN** incomplete contracts sides with missing, nonstring, empty, unknown or over-bound diagnostics
+- **WHEN** either actual isolated failure program runs
+- **THEN** only the closed shape, length bucket and membership facts appear, with the existing reason remaining unclassified
+- **AND** removing only the validated additive field preserves every prior output, while invalid, ambiguous or complete evidence supplies no new fact.

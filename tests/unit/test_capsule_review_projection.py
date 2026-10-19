@@ -745,7 +745,6 @@ def test_candidate_projection_ignores_retired_sample_frames(tmp_path):
     ],
 )
 def test_candidate_incomplete_snapshot_projection_is_finite(tmp_path, nested, expected):
-
     workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())
     step = next(item for item in workflow["jobs"]["customer"]["steps"] if item.get("name") == STEP_NAME)
     program = (
@@ -753,16 +752,9 @@ def test_candidate_incomplete_snapshot_projection_is_finite(tmp_path, nested, ex
     )
     root = tmp_path / ".specfact"
     root.mkdir()
-    (root / "code-review.json").write_text(
-        json.dumps(
-            {
-                "analyzer_evidence": [
-                    {"id": "contracts", **nested},
-                    {"id": "PRIVATE_TOKEN", "base": {"execution_state": "error"}},
-                ]
-            }
-        )
-    )
+    unrelated = {"id": "PRIVATE_TOKEN", "base": {"execution_state": "error"}}
+    report = {"analyzer_evidence": [{"id": "contracts", **nested}, unrelated]}
+    (root / "code-review.json").write_text(json.dumps(report))
     result = _run_projector(tmp_path, program)
     assert result.returncode == 0
     rows = [json.loads(line) for line in result.stdout.splitlines()]
@@ -773,6 +765,18 @@ def test_candidate_incomplete_snapshot_projection_is_finite(tmp_path, nested, ex
             {
                 "snapshot_diagnostic_observations": [
                     {"analyzer": "contracts", "side": side, "reason": "unclassified"} for side in expected
+                ]
+            },
+            {
+                "snapshot_diagnostic_facts": [
+                    {
+                        "analyzer": "contracts",
+                        "side": side,
+                        "shape": "string" if "diagnostic" in nested[side] else "missing",
+                        "length_bucket": "within_bound" if "diagnostic" in nested[side] else "not_string",
+                        "recognized_leading_token": False,
+                    }
+                    for side in expected
                 ]
             },
         ]

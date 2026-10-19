@@ -477,3 +477,210 @@ def test_snapshot_observation_never_salvages_invalid_private_report(snapshot_pro
         payload = payload[:-1] + ', "private_inventory": "' + "x" * (32 * 1024 * 1024) + '"}'
     rows = invoke(payload)
     assert all(_SNAPSHOT_FIELD not in row for row in rows)
+    assert all(_SNAPSHOT_FACTS_FIELD not in row for row in rows)
+
+
+_SNAPSHOT_FACTS_FIELD = "snapshot_diagnostic_facts"
+_SNAPSHOT_FACT_CASES = [
+    pytest.param(({}, ("missing", "not_string", False), "unclassified"), id="missing"),
+    *[
+        pytest.param(({"diagnostic": value}, ("non_string", "not_string", False), "unclassified"), id=name)
+        for name, value in (
+            ("null", None),
+            ("false", False),
+            ("number", 42),
+            ("list", []),
+            ("object", {"private": _SNAPSHOT_CANARY}),
+        )
+    ],
+    pytest.param(({"diagnostic": ""}, ("string", "empty", False), "unclassified"), id="empty"),
+    *[
+        pytest.param(({"diagnostic": value}, ("string", "within_bound", recognized), "unclassified"), id=name)
+        for name, value, recognized in (
+            ("unknown", "unknown:" + _SNAPSHOT_CANARY, False),
+            ("literal-unclassified", "unclassified", True),
+            ("unclassified-suffix", "unclassified:" + _SNAPSHOT_CANARY, True),
+            ("embedded", "private:analyzer_process_error", False),
+            ("leading-space", " analyzer_process_error", False),
+            ("case-changed", "ANALYZER_PROCESS_ERROR", False),
+            ("longest-prefix-extended", "pre_namespace_observation_requires_single_threadx:" + _SNAPSHOT_CANARY, False),
+            ("longest-prefix-no-colon", "pre_namespace_observation_requires_single_threadx", False),
+        )
+    ],
+]
+for _character in ("x", "é"):
+    for _length in (4096, 4097):
+        for _prefix in ("unknown", "unclassified", "analyzer_process_error"):
+            _diagnostic = _prefix + ":" + _character * (_length - len(_prefix) - 1)
+            assert len(_diagnostic) == _length
+            _classified = _prefix == "analyzer_process_error" and _length == 4096
+            _expected = (
+                None
+                if _classified
+                else ("string", "within_bound" if _length == 4096 else "over_bound", _prefix != "unknown")
+            )
+            _SNAPSHOT_FACT_CASES.append(
+                pytest.param(
+                    ({"diagnostic": _diagnostic}, _expected, _prefix if _classified else "unclassified"),
+                    id=f"{_prefix}-{_length}-{ord(_character)}",
+                )
+            )
+
+
+def _assert_snapshot_fact_rows(owner, rows, expected):
+    if expected is None:
+        assert all(_SNAPSHOT_FACTS_FIELD not in row for row in rows)
+        return
+    if owner == "candidate":
+        envelopes = [row for row in rows if _SNAPSHOT_FACTS_FIELD in row]
+        assert envelopes == [{_SNAPSHOT_FACTS_FIELD: expected}], "Missing or invalid finite fallback envelope"
+        actual = envelopes[0][_SNAPSHOT_FACTS_FIELD]
+    else:
+        assert len(rows) == 1
+        assert _SNAPSHOT_FACTS_FIELD in rows[0], "Missing finite fallback field"
+        assert rows[0][_SNAPSHOT_FACTS_FIELD] == expected
+        actual = rows[0][_SNAPSHOT_FACTS_FIELD]
+    assert all(isinstance(fact["recognized_leading_token"], bool) for fact in actual)
+
+
+@pytest.mark.parametrize("diagnostic_case", _SNAPSHOT_FACT_CASES)
+@pytest.mark.parametrize("side", ("base", "head"))
+@pytest.mark.parametrize("state", ({"execution_state": "error"}, {"evidence_outcome": "UNKNOWN"}))
+def test_snapshot_fallback_facts_retain_only_closed_observations(snapshot_projector, diagnostic_case, side, state):
+    owner, invoke = snapshot_projector
+    fields, facts, reason = diagnostic_case
+    rows = invoke(json.dumps(_snapshot_report(**{side: {**state, **fields}})))
+    expected = None
+    if facts is not None:
+        shape, bucket, recognized = facts
+        expected = [
+            {
+                "analyzer": "contracts",
+                "side": side,
+                "shape": shape,
+                "length_bucket": bucket,
+                "recognized_leading_token": recognized,
+            }
+        ]
+    _assert_snapshot_fact_rows(owner, rows, expected)
+    assert [row[_SNAPSHOT_FIELD] for row in rows if _SNAPSHOT_FIELD in row] == [
+        [{"analyzer": "contracts", "side": side, "reason": reason}]
+    ]
+
+
+@pytest.mark.parametrize("reason", _SNAPSHOT_REASONS)
+def test_snapshot_fallback_facts_recognize_every_bounded_vocabulary_token(snapshot_projector, reason):
+    owner, invoke = snapshot_projector
+    diagnostic = reason + ":" + "x" * (4097 - len(reason) - 1)
+    assert len(diagnostic) == 4097
+    rows = invoke(json.dumps(_snapshot_report(base={"execution_state": "error", "diagnostic": diagnostic})))
+    _assert_snapshot_fact_rows(
+        owner,
+        rows,
+        [
+            {
+                "analyzer": "contracts",
+                "side": "base",
+                "shape": "string",
+                "length_bucket": "over_bound",
+                "recognized_leading_token": True,
+            }
+        ],
+    )
+    assert [row[_SNAPSHOT_FIELD] for row in rows if _SNAPSHOT_FIELD in row] == [
+        [{"analyzer": "contracts", "side": "base", "reason": "unclassified"}]
+    ]
+
+
+@pytest.mark.parametrize("large", (False, True))
+@pytest.mark.parametrize("swapped", (False, True))
+def test_snapshot_fallback_facts_preserve_order_and_report_acceptance(snapshot_projector, large, swapped):
+    owner, invoke = snapshot_projector
+    nodes = [
+        {"execution_state": "error"},
+        {"evidence_outcome": "UNKNOWN", "diagnostic": "sandbox_launch_failed:" + "x" * 4097},
+    ]
+    facts = [("missing", "not_string", False), ("string", "over_bound", True)]
+    if swapped:
+        nodes.reverse()
+        facts.reverse()
+    root = _snapshot_report(**dict(zip(("base", "head"), nodes, strict=True)))
+    root["private_inventory"] = "x" * (2 * 1024 * 1024 if large else 0)
+    rows = invoke(json.dumps(root))
+    expected = [
+        {
+            "analyzer": "contracts",
+            "side": side,
+            "shape": shape,
+            "length_bucket": bucket,
+            "recognized_leading_token": recognized,
+        }
+        for side, (shape, bucket, recognized) in zip(("base", "head"), facts, strict=True)
+    ]
+    _assert_snapshot_fact_rows(owner, rows, expected)
+    assert [row[_SNAPSHOT_FIELD] for row in rows if _SNAPSHOT_FIELD in row] == [
+        [{"analyzer": "contracts", "side": side, "reason": "unclassified"} for side in ("base", "head")]
+    ]
+    if owner == "independent":
+        assert rows[0]["report_outcome"] == ("oversized_report" if large else "structured_report")
+        assert rows[0]["assurance_status"] == ("UNAVAILABLE" if large else "UNKNOWN")
+        assert rows[0]["overall_verdict"] == ("UNAVAILABLE" if large else "FAIL")
+
+
+@pytest.mark.parametrize("payload", ("null", "[]", "42", '"PRIVATE_CANARY"', '{"analyzer_evidence":"PRIVATE_CANARY"}'))
+def test_snapshot_fallback_facts_omit_invalid_report_shapes(snapshot_projector, payload):
+    _, invoke = snapshot_projector
+    rows = invoke(payload)
+    assert all(_SNAPSHOT_FACTS_FIELD not in row for row in rows)
+
+
+def test_snapshot_fallback_facts_accept_unique_contracts_among_unrelated_values(snapshot_projector):
+    owner, invoke = snapshot_projector
+    report = _snapshot_report(head={"evidence_outcome": "UNKNOWN"})
+    report["analyzer_evidence"] = [None, [], _SNAPSHOT_CANARY, {"id": "ruff"}, *report["analyzer_evidence"]]
+    rows = invoke(json.dumps(report))
+    _assert_snapshot_fact_rows(
+        owner,
+        rows,
+        [
+            {
+                "analyzer": "contracts",
+                "side": "head",
+                "shape": "missing",
+                "length_bucket": "not_string",
+                "recognized_leading_token": False,
+            }
+        ],
+    )
+
+
+@pytest.mark.parametrize("unclassified_side", ("base", "head"))
+def test_snapshot_fallback_facts_do_not_promote_the_classified_side(snapshot_projector, unclassified_side):
+    owner, invoke = snapshot_projector
+    classified_side = "head" if unclassified_side == "base" else "base"
+    rows = invoke(
+        json.dumps(
+            _snapshot_report(
+                **{
+                    unclassified_side: {"execution_state": "error"},
+                    classified_side: {
+                        "execution_state": "error",
+                        "diagnostic": "analyzer_process_error:" + _SNAPSHOT_CANARY,
+                    },
+                }
+            )
+        )
+    )
+    _assert_snapshot_fact_rows(
+        owner,
+        rows,
+        [
+            {
+                "analyzer": "contracts",
+                "side": unclassified_side,
+                "shape": "missing",
+                "length_bucket": "not_string",
+                "recognized_leading_token": False,
+            }
+        ],
+    )

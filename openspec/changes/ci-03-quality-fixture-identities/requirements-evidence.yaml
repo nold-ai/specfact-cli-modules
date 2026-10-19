@@ -556,3 +556,49 @@ requirements:
       intent: Rejected private JSON cannot restore public evidence.
       observable: Duplicate keys, malformed or over-bound reports yield no new records while the existing unavailable state and privacy stay intact.
       implementation_task: '14.3'
+
+  openspec:ci-03-quality-fixture-identities:quality-fixture-identities:unclassified-snapshot-diagnostics-expose-only-finite-fallback-facts:
+    rationale: Separate collapsed diagnostic shapes without exposing private text or changing review enforcement.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#518
+    touchpoints:
+    - id: finite-fallback-projection
+      kind: workflow
+      locator: .github/workflows/capsule-customer-execution.yml
+    verification_cases:
+    - case_id: CI-03-10-1
+      scenario_id: unclassified-snapshot-diagnostics-expose-only-finite-fallback-facts
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/host/proof_capsule_review_projection.py::test_snapshot_fallback_facts_retain_only_closed_observations
+      intent: Classify only finite diagnostic shape and Unicode length buckets.
+      observable: Both actual programs preserve old reasons and publish only exact closed facts on both sides and incomplete-state routes.
+      implementation_task: '16.3'
+    - case_id: CI-03-10-2
+      scenario_id: unclassified-snapshot-diagnostics-expose-only-finite-fallback-facts
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/host/proof_capsule_review_projection.py::test_snapshot_fallback_facts_recognize_every_bounded_vocabulary_token
+      intent: Recognize the exact unchanged vocabulary using bounded leading prefixes.
+      observable: Every current token is recognized in an over-bound diagnostic while its legacy reason remains unclassified.
+      implementation_task: '16.3'
+    - case_id: CI-03-10-3
+      scenario_id: unclassified-snapshot-diagnostics-expose-only-finite-fallback-facts
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/host/proof_capsule_review_projection.py::test_snapshot_fallback_facts_preserve_order_and_report_acceptance
+      intent: Preserve side ordering and existing report acceptance.
+      observable: Distinct base/head shapes retain association for small and diagnostic-size reports without changing unavailable assurance.
+      implementation_task: '16.3'
+    - case_id: CI-03-10-4
+      scenario_id: unclassified-snapshot-diagnostics-expose-only-finite-fallback-facts
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/host/proof_capsule_review_projection.py::test_snapshot_fallback_facts_omit_invalid_report_shapes
+      intent: Omit facts for invalid report shapes.
+      observable: Actual isolated programs reject unsupported roots without publishing finite facts or private canaries.
+      implementation_task: '16.3'
