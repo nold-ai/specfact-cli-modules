@@ -384,7 +384,23 @@ validate_immutable_capsule_policy() (
     error "Capsule review deferral cannot read the selected immutable policy checker."
     return 1
   fi
-  GIT_NO_REPLACE_OBJECTS=1 "${policy_python}" -I -S "${policy_directory}/validate_capsule_ci_schedule.py"
+  if ! GIT_NO_REPLACE_OBJECTS=1 "${policy_python}" -I -S -c '
+import subprocess
+import sys
+
+result = subprocess.run([sys.executable, "-I", "-S", sys.argv[1]], check=False)
+if result.returncode != 0:
+    raise SystemExit(1)
+with open(sys.argv[2], "x"):
+    pass
+' "${policy_directory}/validate_capsule_ci_schedule.py" "${policy_directory}/completed"; then
+    return 1
+  fi
+  if [[ ! -f "${policy_directory}/completed" ]]; then
+    error "Capsule review deferral requires host Python to complete the immutable policy checker."
+    return 1
+  fi
+  return 0
 )
 
 run_code_review_gate() {

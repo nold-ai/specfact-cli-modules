@@ -100,6 +100,6 @@
 
 - [x] 13.1 Specify checker completion and reproduce zero-exit non-Python refusal gap in the full hook.
 - [x] 13.2 Add mapped regressions and capture actual failing evidence before production edits.
-- [ ] 13.3 Require the external Python/checker execution contract before accepting local deferral.
-- [ ] 13.4 Complete focused proofs, analyzers, native planned Requirements, strict OpenSpec, normal hooks and independent review.
+- [x] 13.3 Require the external Python/checker execution contract before accepting local deferral.
+- [x] 13.4 Complete focused proofs, analyzers, native planned Requirements, strict OpenSpec, normal hooks and independent review.
 - [ ] 13.5 Complete mandatory exact-head hosted acceptance before merge.
