@@ -782,3 +782,15 @@ def test_candidate_incomplete_snapshot_projection_is_finite(tmp_path, nested, ex
         ]
     assert rows == expected_rows
     assert "PRIVATE_TOKEN" not in result.stdout + result.stderr
+
+
+def test_installed_source_publisher_is_one_independent_always_step():
+    job = independent_review_job()
+    steps = job["steps"]
+    command_index = next(index for index, step in enumerate(steps) if step.get("id") == "independent_review")
+    publishers = [step for step in steps if step.get("name") == "Publish installed controller source observation"]
+    assert len(publishers) == 1, "installed source publication needs one always step"
+    assert steps[command_index + 1] is publishers[0]
+    assert publishers[0]["if"] == "always()"
+    workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())
+    assert "installed_controller_source" not in json.dumps(workflow["jobs"]["customer"])

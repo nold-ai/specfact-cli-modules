@@ -204,3 +204,49 @@ No classified side SHALL produce these fallback facts. Empty results SHALL omit 
 - **WHEN** either actual isolated failure program runs
 - **THEN** only the closed shape, length bucket and membership facts appear, with the existing reason remaining unclassified
 - **AND** removing only the validated additive field preserves every prior output, while invalid, ambiguous or complete evidence supplies no new fact.
+
+
+### Requirement: Installed controller source observations remain bounded and non-authoritative
+
+The independent-review job SHALL observe the installed controller sources separately for preparation and review, after the existing imports and before entering the subject directory. It SHALL retain the original process results, arguments, isolation, reports, findings, assurance, acceptance, capabilities, installation pins and deadlines. The candidate job SHALL NOT receive this installed-controller observation.
+
+The observer SHALL use only installed USER_MODULES_ROOT/specfact-code-review and its fixed module-package.yaml, src/specfact_code_review/run/runner.py and src/specfact_code_review/run/sandbox.py. Metadata SHALL pass the installed ModulePackageMetadata.model_validate and name nold-ai/specfact-code-review. The native core 0.55.4 verify_module_artifact API SHALL receive that package and metadata, allow_unsigned=False, require_integrity=True, require_signature=True and explicit bundled PEM. Only a true verification result permits observation. The observer SHALL NOT duplicate the install version pin or accept environment keys, candidate registries or report-selected paths.
+
+Both already loaded modules SHALL have absolute string __file__ and __spec__.origin paths identifying their exact fixed contained sources. A non-null callable sandbox.execute_launch_plan SHALL be identical to runner.execute_launch_plan. Missing attributes, shared noncallables, alternative bindings, missing specs, relative or mismatched origins SHALL yield unavailable. No cache-absence predicate, reload or alternate module import SHALL be added.
+
+Fixed components SHALL reject symlinks. Final reads SHALL use nonblocking no-follow opens and require regular files, with limit-plus-one reads and byte limits of 4 MiB per source, 256 KiB manifest, 64 KiB PEM and 4096 bytes per receipt. Source and manifest bytes and file identity SHALL remain consistent across native verification. These are bounded checks under the existing fresh ordinary-user job trust, not an atomic snapshot against hostile same-user mutation. Ordinary observer and receipt-write exceptions SHALL leave the original operation unchanged. BaseException and original operation failures SHALL retain their behavior.
+
+Each invocation SHALL atomically replace its own complete private JSON receipt beside reviewer.py, using controller-source-preparation.private.json or controller-source-review.private.json. Receipt location SHALL derive from the generated script directory, without a caller-selected path. Observed records SHALL have exactly phase, invocation, status, identity_kind, runner_sha256 and sandbox_sha256, with phase installed_controller_source, invocation preparation or review, status observed, identity_kind authenticated_source_and_loaded_origins and lowercase 64-character SHA-256 hex digests of checked source bytes. Unavailable SHALL contain exactly phase, invocation and status unavailable.
+
+One subsequent always() step SHALL publish exactly two reconstructed JSON lines, preparation then review. It SHALL use the trusted interpreter with -I when available and standard-library-only projection. Missing root, interpreter, earlier installation, bootstrap or receipt SHALL produce the corresponding unavailable records. The shell SHALL buffer complete projector stdout and discard it on nonzero exit before printing two literal unavailable records. Observation failures SHALL return zero from the publisher while preserving the earlier command result. Runner termination is outside this later-step guarantee.
+
+The publisher SHALL reject symlinks, nonregular or oversized receipts, invalid UTF-8, malformed or trailing JSON, duplicate keys, nonobject roots, wrong or extra keys, wrong fixed labels and invalid digests. It SHALL reconstruct each result independently and never echo raw bytes, private errors, paths, tokens or unknown keys. Unavailable SHALL contain no hashes, identity kind or reason.
+
+These records SHALL describe authenticated source and loaded-origin observations only. They SHALL NOT identify literal executed bytes, caches, worker or capsule-child imports, candidate source, historical producers or root cause. They SHALL NOT influence runtime behavior or acceptance.
+
+#### Scenario: Complete loaded source predicates produce separate receipts before subject entry
+
+- **GIVEN** synthetic installed modules with fixed regular sources, valid metadata, strict verifier success, matching loaded origins and one shared callable
+- **WHEN** each complete real reviewer dispatch enters the subject
+- **THEN** its own complete observed receipt already exists and its source hashes match independently calculated fixture bytes
+- **AND** different invocation fixtures remain distinct, a different metadata version is permitted, and a present cache does not invalidate source-only observation.
+
+#### Scenario: Unusable source identity does not change the original operation
+
+- **GIVEN** failed verification, invalid metadata or key, origin or binding mismatch, symlink, nonregular or oversized file, consistency drift or ordinary receipt-write failure
+- **WHEN** the complete reviewer executes preparation or review
+- **THEN** it retains the original dispatch, cleanup and exit and supplies unavailable or absent evidence without private public output.
+
+#### Scenario: Separate publication preserves command success and failure
+
+- **GIVEN** successful preparation, no governed impact, failed preparation, failed bootstrap, or review exit 0, 2, 7, 17 or 124
+- **WHEN** the original command recipe and separate always publisher execute
+- **THEN** the original command result and public output remain unchanged and publication emits exactly two ordered source records
+- **AND** early setup failure, missing interpreter and projector failure after partial stdout yield two unavailable records without a public traceback.
+
+#### Scenario: Receipt projection reconstructs only the two exact public variants
+
+- **GIVEN** valid, missing, malformed, duplicate, oversized, nonregular or privacy-canary receipts
+- **WHEN** the actual complete isolated publisher recipe executes
+- **THEN** each valid record round-trips through an exact allowed shape and each invalid record becomes its own three-key unavailable result
+- **AND** no raw receipt text, canary, path or partial projector stdout reaches public output.

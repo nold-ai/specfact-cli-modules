@@ -128,3 +128,12 @@
 - [x] 16.2 Author mandatory native behavioral cases and capture predicted missing-field RED before workflow edits.
 - [x] 16.3 Add only the finite facts and verify unchanged legacy output, privacy and gates.
 - [ ] 16.4 Publish the batched signed corrections and inspect exact-head hosted evidence before runtime diagnosis.
+
+
+## 17. Installed controller source observation
+
+- [x] 17.1 Record the independently selected bounded source-observation contract and its trust limits.
+- [x] 17.2 Add complete-bootstrap and separate-step native proofs, preserve the old inventory and capture actual intended RED before production edits.
+- [x] 17.3 Implement only the inline observer and one always publisher in independent-review.
+- [x] 17.4 Obtain GREEN, privacy and exit evidence, native quality gates and independent implementation review.
+- [ ] 17.5 Publish through normal signed hooks and inspect exact-head hosted observations without claiming a runtime repair.

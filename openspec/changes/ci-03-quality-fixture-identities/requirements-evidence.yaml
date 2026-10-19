@@ -602,3 +602,48 @@ requirements:
       intent: Omit facts for invalid report shapes.
       observable: Actual isolated programs reject unsupported roots without publishing finite facts or private canaries.
       implementation_task: '16.3'
+  openspec:ci-03-quality-fixture-identities:quality-fixture-identities:installed-controller-source-observations-remain-bounded-and-non-authoritative:
+    rationale: Observe installed controller sources without changing runtime or acceptance.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#518
+    touchpoints:
+    - id: installed-controller-source
+      kind: workflow
+      locator: .github/workflows/capsule-customer-execution.yml
+    verification_cases:
+    - case_id: CI-03-17-1
+      scenario_id: installed-controller-source-observations-remain-bounded-and-non-authoritative
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/host/proof_capsule_review_projection.py::test_installed_source_receipt_precedes_subject_entry
+      intent: Preserve the bounded source observation and original operation.
+      observable: Complete real workflow programs emit only fixed observations and preserve process outcomes.
+      implementation_task: '17.3'
+    - case_id: CI-03-17-2
+      scenario_id: installed-controller-source-observations-remain-bounded-and-non-authoritative
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/host/proof_capsule_review_projection.py::test_installed_source_predicates_preserve_operation
+      intent: Preserve the bounded source observation and original operation.
+      observable: Complete real workflow programs emit only fixed observations and preserve process outcomes.
+      implementation_task: '17.3'
+    - case_id: CI-03-17-3
+      scenario_id: installed-controller-source-observations-remain-bounded-and-non-authoritative
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/host/proof_capsule_review_projection.py::test_installed_source_publication_preserves_command_result
+      intent: Preserve the bounded source observation and original operation.
+      observable: Complete real workflow programs emit only fixed observations and preserve process outcomes.
+      implementation_task: '17.3'
+    - case_id: CI-03-17-4
+      scenario_id: installed-controller-source-observations-remain-bounded-and-non-authoritative
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/host/proof_capsule_review_projection.py::test_installed_source_publisher_rejects_private_receipts
+      intent: Preserve the bounded source observation and original operation.
+      observable: Complete real workflow programs emit only fixed observations and preserve process outcomes.
+      implementation_task: '17.3'

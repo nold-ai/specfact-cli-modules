@@ -795,6 +795,113 @@ jobs:
               ScopeRequest, resolve_scope, cleanup_scope_resolution,
           )
 
+          def _read_observation_file(path: Path, limit: int) -> tuple[bytes, tuple[int, ...]]:
+              import stat
+
+              def identity(info):
+                  return (info.st_dev, info.st_ino, info.st_size, info.st_mtime_ns, info.st_ctime_ns)
+
+              descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+              with os.fdopen(descriptor, "rb") as stream:
+                  before = os.fstat(stream.fileno())
+                  if not stat.S_ISREG(before.st_mode) or before.st_size > limit:
+                      raise ValueError("observation_file_unavailable")
+                  content = stream.read(limit + 1)
+                  after = os.fstat(stream.fileno())
+              if len(content) > limit or identity(before) != identity(after):
+                  raise ValueError("observation_file_changed")
+              return content, identity(after)
+
+
+          def _checked_controller_path(package: Path, relative: str) -> Path:
+              path = package
+              for component in ("", *Path(relative).parts):
+                  path = path / component
+                  if path.is_symlink():
+                      raise ValueError("observation_symlink")
+              resolved = path.resolve(strict=True)
+              resolved.relative_to(package.resolve(strict=True))
+              return resolved
+
+
+          def _loaded_controller_source(package: Path, name: str):
+              module = sys.modules[f"specfact_code_review.run.{name}"]
+              source = _checked_controller_path(package, f"src/specfact_code_review/run/{name}.py")
+              for origin in (module.__file__, module.__spec__.origin):
+                  if not isinstance(origin, str) or not Path(origin).is_absolute():
+                      raise ValueError("observation_origin_unavailable")
+                  relative = Path(origin).relative_to(package)
+                  if _checked_controller_path(package, str(relative)) != source:
+                      raise ValueError("observation_origin_mismatch")
+              return module, source
+
+
+          def _controller_source_observation(invocation: str) -> dict[str, str]:
+              import hashlib
+              import yaml
+              from specfact_cli.models.module_package import ModulePackageMetadata
+              from specfact_cli.registry import module_installer
+
+              package = module_installer.USER_MODULES_ROOT / "specfact-code-review"
+              runner, runner_path = _loaded_controller_source(package, "runner")
+              sandbox, sandbox_path = _loaded_controller_source(package, "sandbox")
+              launch = getattr(sandbox, "execute_launch_plan", None)
+              if not callable(launch) or getattr(runner, "execute_launch_plan", None) is not launch:
+                  raise ValueError("observation_binding_mismatch")
+              manifest = _checked_controller_path(package, "module-package.yaml")
+              inputs = ((runner_path, 4 * 1024 * 1024), (sandbox_path, 4 * 1024 * 1024),
+                        (manifest, 256 * 1024))
+              before = [_read_observation_file(path, limit) for path, limit in inputs]
+              metadata = ModulePackageMetadata.model_validate(yaml.safe_load(before[2][0]))
+              if metadata.name != "nold-ai/specfact-code-review":
+                  raise ValueError("observation_module_mismatch")
+              public_key, _ = _read_observation_file(module_installer._bundled_public_key_path(), 64 * 1024)
+              authenticated = module_installer.verify_module_artifact(
+                  package, metadata, allow_unsigned=False, require_integrity=True,
+                  require_signature=True, public_key_pem=public_key.decode("utf-8"),
+              )
+              if authenticated is not True:
+                  raise ValueError("observation_authentication_unavailable")
+              after = [_read_observation_file(path, limit) for path, limit in inputs]
+              if before != after:
+                  raise ValueError("observation_source_changed")
+              return {
+                  "phase": "installed_controller_source", "invocation": invocation, "status": "observed",
+                  "identity_kind": "authenticated_source_and_loaded_origins",
+                  "runner_sha256": hashlib.sha256(before[0][0]).hexdigest(),
+                  "sandbox_sha256": hashlib.sha256(before[1][0]).hexdigest(),
+              }
+
+
+          def _write_controller_source_receipt() -> None:
+              temporary = None
+              try:
+                  import tempfile
+
+                  invocation = "preparation" if sys.argv[2] == "prepare-index" else "review"
+                  try:
+                      receipt = _controller_source_observation(invocation)
+                  except Exception:
+                      receipt = {"phase": "installed_controller_source", "invocation": invocation,
+                                 "status": "unavailable"}
+                  destination = Path(__file__).parent / f"controller-source-{invocation}.private.json"
+                  payload = json.dumps(receipt, separators=(",", ":")).encode("utf-8")
+                  with tempfile.NamedTemporaryFile(dir=destination.parent, prefix=".controller-source-", delete=False) as stream:
+                      temporary = Path(stream.name)
+                      stream.write(payload)
+                  os.replace(temporary, destination)
+              except (OSError, ValueError, TypeError, ImportError):
+                  pass
+              finally:
+                  if temporary is not None:
+                      try:
+                          temporary.unlink(missing_ok=True)
+                      except OSError:
+                          pass
+
+
+          _write_controller_source_receipt()
+
           os.chdir(sys.argv[1])
           if sys.argv[2] != "prepare-index":
               app(args=sys.argv[2:])
@@ -1091,6 +1198,78 @@ jobs:
           PY
           fi
           exit "$review_exit"
+      - name: Publish installed controller source observation
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -n "${TRUSTED_ROOT:-}" && -x "$TRUSTED_ROOT/venv/bin/python" ]] && \
+            projected=$("$TRUSTED_ROOT/venv/bin/python" -I - 2>/dev/null <<'PY_CONTROLLER_SOURCE'
+          import json
+          import os
+          import re
+          import stat
+          import sys
+          from pathlib import Path
+
+
+          def _unique_receipt_keys(pairs):
+              receipt = {}
+              for key, value in pairs:
+                  if key in receipt:
+                      raise ValueError("duplicate_receipt_key")
+                  receipt[key] = value
+              return receipt
+
+
+          def _read_source_receipt(path):
+              descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+              with os.fdopen(descriptor, "rb") as stream:
+                  info = os.fstat(stream.fileno())
+                  if not stat.S_ISREG(info.st_mode) or info.st_size > 4096:
+                      raise ValueError("receipt_unavailable")
+                  content = stream.read(4097)
+              if len(content) > 4096:
+                  raise ValueError("receipt_oversized")
+              return json.loads(content.decode("utf-8"), object_pairs_hook=_unique_receipt_keys)
+
+
+          def _project_source_receipt(invocation):
+              unavailable = {"phase": "installed_controller_source", "invocation": invocation,
+                             "status": "unavailable"}
+              try:
+                  path = Path(os.environ["TRUSTED_ROOT"]) / f"controller-source-{invocation}.private.json"
+                  receipt = _read_source_receipt(path)
+                  if not isinstance(receipt, dict):
+                      return unavailable
+                  if receipt == unavailable:
+                      return unavailable
+                  labels = {"phase": "installed_controller_source", "invocation": invocation,
+                            "status": "observed", "identity_kind": "authenticated_source_and_loaded_origins"}
+                  digests = ("runner_sha256", "sandbox_sha256")
+                  if set(receipt) != set(labels) | set(digests):
+                      return unavailable
+                  if any(receipt[key] != value for key, value in labels.items()):
+                      return unavailable
+                  if any(not isinstance(receipt[key], str) or re.fullmatch(r"[0-9a-f]{64}", receipt[key]) is None
+                         for key in digests):
+                      return unavailable
+                  return labels | {key: receipt[key] for key in digests}
+              except Exception:
+                  return unavailable
+
+
+          records = [_project_source_receipt(invocation) for invocation in ("preparation", "review")]
+          output = "\n".join(json.dumps(record, separators=(",", ":")) for record in records)
+          sys.stdout.write(output + "\n")
+          PY_CONTROLLER_SOURCE
+          ); then
+            printf '%s\n' "$projected"
+          else
+            printf '%s\n' \
+              '{"phase":"installed_controller_source","invocation":"preparation","status":"unavailable"}' \
+              '{"phase":"installed_controller_source","invocation":"review","status":"unavailable"}'
+          fi
       - name: Project independent review failure privately
         if: failure() && steps.independent_review.outcome == 'failure'
         shell: bash
