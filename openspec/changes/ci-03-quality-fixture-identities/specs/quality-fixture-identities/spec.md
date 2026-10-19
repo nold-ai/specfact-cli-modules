@@ -153,7 +153,7 @@ The hook SHALL canonicalize the repository, interpreter parent directory and int
 
 ### Requirement: Shell projection checks execute in the mandatory host stage
 
-The default Hatch test command SHALL execute all four shell projection regression functions and their 31 parameter cases in an explicit host proof before ordinary unit discovery. The remaining 200 projection cases SHALL retain ordinary unit discovery. Fixture partitioning SHALL preserve assertions, review exit codes, privacy checks and isolation checks without changing runtime capabilities, analyzer gates or budgets.
+The default Hatch test command SHALL execute all four shell projection regression functions and their 31 parameter cases in an explicit host proof before ordinary unit discovery. The remaining 200 projection cases SHALL retain ordinary unit discovery. Fixture partitioning SHALL preserve assertions, review exit codes, privacy checks and isolation checks without changing runtime capabilities, analyzer gates or budgets. The same existing mandatory host selection SHALL also own all 152 native snapshot diagnostic cases, retaining their names, parameter identities, exact legacy assertions and real isolated `-I` invocation. Ordinary discovery SHALL retain all original 85 projection cases and SHALL NOT duplicate the moved corpus. Both groups SHALL pass ordinary complexity and nesting gates without suppression. The original 31 host cases and indexed orchestrator SHALL remain unchanged.
 
 #### Scenario: Default suite retains shell projection coverage
 

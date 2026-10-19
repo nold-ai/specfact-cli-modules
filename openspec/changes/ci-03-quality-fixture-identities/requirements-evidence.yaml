@@ -516,7 +516,7 @@ requirements:
       method: test
       selector:
         runner: pytest
-        node_id: tests/unit/test_capsule_snapshot_diagnostics.py::test_snapshot_reasons_preserve_side_association_and_legacy_output
+        node_id: tests/host/proof_capsule_review_projection.py::test_snapshot_reasons_preserve_side_association_and_legacy_output
       intent: Distinct side reasons survive without changing legacy output.
       observable: Small and diagnostic-size reports preserve exact old fields and append correctly associated finite reasons, including swapped sides.
       implementation_task: '14.3'
@@ -525,7 +525,7 @@ requirements:
       method: test
       selector:
         runner: pytest
-        node_id: tests/unit/test_capsule_snapshot_diagnostics.py::test_snapshot_reason_vocabulary_uses_both_incompleteness_routes
+        node_id: tests/host/proof_capsule_review_projection.py::test_snapshot_reason_vocabulary_uses_both_incompleteness_routes
       intent: Every approved producer reason remains finite on both incomplete-state routes.
       observable: Both actual inline projectors emit canonical values for the complete reviewed vocabulary and literal base/head keys.
       implementation_task: '14.3'
@@ -534,7 +534,7 @@ requirements:
       method: test
       selector:
         runner: pytest
-        node_id: tests/unit/test_capsule_snapshot_diagnostics.py::test_snapshot_reason_accepts_only_bounded_exact_leading_token
+        node_id: tests/host/proof_capsule_review_projection.py::test_snapshot_reason_accepts_only_bounded_exact_leading_token
       intent: Private suffixes and malformed diagnostics cannot become public reason values.
       observable: Only exact leading tokens within 4096 Unicode code points classify; all unavailable inputs yield literal unclassified and private canaries remain absent.
       implementation_task: '14.3'
@@ -543,7 +543,7 @@ requirements:
       method: test
       selector:
         runner: pytest
-        node_id: tests/unit/test_capsule_snapshot_diagnostics.py::test_snapshot_observation_requires_one_unambiguous_contracts_row
+        node_id: tests/host/proof_capsule_review_projection.py::test_snapshot_observation_requires_one_unambiguous_contracts_row
       intent: Ambiguous rows and invalid or complete sides cannot invent association.
       observable: Only one contracts row in at most ten rows yields eligible records, and empty results omit the additive field.
       implementation_task: '14.3'
@@ -552,7 +552,7 @@ requirements:
       method: test
       selector:
         runner: pytest
-        node_id: tests/unit/test_capsule_snapshot_diagnostics.py::test_snapshot_observation_never_salvages_invalid_private_report
+        node_id: tests/host/proof_capsule_review_projection.py::test_snapshot_observation_never_salvages_invalid_private_report
       intent: Rejected private JSON cannot restore public evidence.
       observable: Duplicate keys, malformed or over-bound reports yield no new records while the existing unavailable state and privacy stay intact.
       implementation_task: '14.3'

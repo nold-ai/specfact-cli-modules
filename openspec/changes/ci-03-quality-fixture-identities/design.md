@@ -119,3 +119,12 @@ The bounded proof drives both actual named heredocs with distinct and swapped ba
 Selected design evidence is the local `ci519-contract-reason-projection/synthesis.md` and `arena/sol/design.md`, inspected on 2026-10-19 Europe/Berlin. The bounded enum comes from cached installed controller 0.51.2 source, not observed authenticated hosted reasons. Unknown future producer values remain unclassified until a reviewed contract extension.
 
 The association corpus lives in `tests/unit/test_capsule_snapshot_diagnostics.py` and executes both actual named workflow heredocs with synthetic private reports. The existing projection unit module retains its assertions and extends one exact expected stream with the new diagnostic envelope. The host proof remains byte-identical. This separate module keeps the bounded diagnostic contract together and avoids increasing the existing module beyond its maintainability limit.
+
+
+## Native snapshot fixture ownership correction (2026-10-20)
+
+The published 8c10 candidate records `project_python_option_unsupported` for the new native `-I` corpus. Runtime attachment intentionally rejects that flag. The new test also has measured CC17 and nested branching findings. These are distinct from the still-unclassified contracts UNKNOWN on both base and head. The existing mandatory host proof already owns native isolated process checks and is explicitly selected by `hatch run test` before ordinary discovery. It will own all 152 moved cases alongside its original 31. The original 85 projection unit cases remain unchanged.
+
+Three independent model sketches and a fresh cross-judge select existing host ownership. An adapter inside ordinary discovery would add interpreter provenance and a second execution policy. A separate host file would add a selector without improving the caller. Native isolation remains intact; no runtime guard changes. Two private helpers retain the complete candidate and independent expected output formats, and an explicit nine-case table replaces the mutation ladder. Collection inventories, original ASTs and exact input/output comparisons provide the preservation oracle. The selected sketch and rationale are retained under `ci519-contract-reason-projection/follow-up-architecture/selected-*`.
+
+This unit changes test ownership and structure only. Workflow diagnostics and installed producer identity are separate work. No contracts runtime fix or current-head acceptance is inferred. Rollback restores the original test file ownership and its observed attachment incompatibility.

@@ -112,3 +112,11 @@
 - [x] 14.3 Add only the selected inline diagnostic projection and preserve legacy output.
 - [ ] 14.4 Complete focused GREEN, privacy and exit proofs, native analyzers, strict OpenSpec and normal review gates.
 - [ ] 14.5 Complete mandatory exact-head hosted acceptance before merge.
+
+
+## 15. Native snapshot fixture ownership
+
+- [x] 15.1 Classify actual attachment and static-review failures, compare architectures and capture the pre-change 268-case inventory.
+- [x] 15.2 Relocate all 152 native cases into the existing mandatory host proof and repair measured complexity without assertion or case loss.
+- [ ] 15.3 Verify exact collection and assertion preservation, native execution, complexity and required local gates.
+- [ ] 15.4 Publish normally signed correction and complete current-head hosted acceptance.
