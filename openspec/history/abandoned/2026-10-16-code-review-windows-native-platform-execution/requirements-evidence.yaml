@@ -7,7 +7,7 @@ requirements:
     touchpoints:
     - id: openspec-source-spec
       kind: config_file
-      locator: openspec/changes/code-review-windows-native-platform-execution/specs/review-windows-native-execution/spec.md
+      locator: openspec/history/abandoned/2026-10-16-code-review-windows-native-platform-execution/specs/review-windows-native-execution/spec.md
     verification_cases:
     - case_id: 495-1-1
       scenario_id: project-driven-windows-preparation
@@ -21,7 +21,7 @@ requirements:
     touchpoints:
     - id: openspec-source-spec
       kind: config_file
-      locator: openspec/changes/code-review-windows-native-platform-execution/specs/review-windows-native-execution/spec.md
+      locator: openspec/history/abandoned/2026-10-16-code-review-windows-native-platform-execution/specs/review-windows-native-execution/spec.md
     verification_cases:
     - case_id: 495-2-1
       scenario_id: proven-windows-execution-boundary
@@ -35,7 +35,7 @@ requirements:
     touchpoints:
     - id: openspec-source-spec
       kind: config_file
-      locator: openspec/changes/code-review-windows-native-platform-execution/specs/review-windows-native-execution/spec.md
+      locator: openspec/history/abandoned/2026-10-16-code-review-windows-native-platform-execution/specs/review-windows-native-execution/spec.md
     verification_cases:
     - case_id: 495-3-1
       scenario_id: equivalent-physical-and-vm-acceptance

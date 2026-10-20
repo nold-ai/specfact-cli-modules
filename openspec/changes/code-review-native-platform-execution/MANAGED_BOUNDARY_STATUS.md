@@ -1,5 +1,11 @@
 # Managed boundary implementation checkpoint
 
+> Superseded on 2026-10-16 (Europe/Berlin): #460 and #488 are closed Not Planned.
+> All capsule instructions, milestones and publication gates below are historical;
+> they grant no remaining implementation or release authority. Delivered results
+> retain their recorded scope. [The replacement design](../code-review-17-project-runtime-bootstrap/design.md)
+> and [issue dispositions](../code-review-17-project-runtime-bootstrap/GITHUB_ALIGNMENT.md) govern follow-up work.
+
 Current project-driven checkpoint (2026-10-05, Europe/Berlin): real cold pip
 preparation, confined setuptools root build, offline cache reuse and all ten
 analyzers execute on an unrelated repository. A private unpublished root with
@@ -26,7 +32,7 @@ release is claimed. Apple distribution requirements were explicitly deferred.
 
 This owner-approved revision supersedes the earlier Developer-ID-first milestone.
 Optional [#488](https://github.com/nold-ai/specfact-cli-modules/issues/488) /
-[`code-review-macos-developer-id-distribution`](../code-review-macos-developer-id-distribution/proposal.md)
+[`code-review-macos-developer-id-distribution`](../../history/abandoned/2026-10-16-code-review-macos-developer-id-distribution/proposal.md)
 is blocked by #460; it does not block this change, shipment or publication.
 "Signed runtime" in this change means native signatures plus an authenticated
 SpecFact payload manifest, not a mandatory Apple publisher identity. Preserve

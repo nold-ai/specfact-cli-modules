@@ -1,5 +1,9 @@
 # Design: Signal-Calibrated Blocking Gate
 
+## Local-runtime compatibility coordination (2026-10-16)
+
+Modules #513-#516 and core #769 plan trusted-local project review and a separately versioned schema 2.0. Issue #417 remains In Progress with its existing owner, status, acceptance and native blocker relationships. This additive note does not authorize edits to active C15 implementation or reinterpret schema 1.7/protected C14 evidence as local evidence. Review the replacement producer/ordinary-consumer compatibility before later integration. C15 and protected core #680 are not blanket prerequisites for local review. Runtime behavior is unchanged by this planning note.
+
 ## Scope rescope — 2026-09-20
 
 Remove optional preflight hardening #432 as a prerequisite. Preserve C14 protected adoption, policy/profile and exception authority, measured calibration, meaningful dogfood checks and signatures. Use current-run results; historical RED and development seals are not required.

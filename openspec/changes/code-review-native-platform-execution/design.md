@@ -1,5 +1,11 @@
 # Design: Dedicated macOS ARM64 Code Review Capsule
 
+## Remaining capsule scope superseded (2026-10-16)
+
+The owner explicitly replaced the capsule/sandbox approach with trusted local project-aware review. Modules #513-#516 and core #769 now own the replacement sequence. This partially delivered lineage remains in place to preserve shipped fixes, experiments, original task states and evidence. Its remaining capsule preparation, isolation, native publication and installed-capsule acceptance tasks are retired, not completed. Historical unchecked tasks below are not current implementation authority. No runtime code is removed and no unimplemented delta is promoted by this planning delivery.
+
+See [the replacement design](../code-review-17-project-runtime-bootstrap/design.md) and [issue dispositions](../code-review-17-project-runtime-bootstrap/GITHUB_ALIGNMENT.md). Native release/repair PRs #506/#509/#510 and capsule prerequisite #512 are superseded. Reuse customer-observable correctness cases as replacement tests; preserve independent signing/security obligations.
+
 ## Project-driven preparation and VM acceptance — 2026-10-04
 
 ProjectPlan and existing --project-config/--project-runtime interfaces are shared
@@ -31,7 +37,7 @@ remain linked follow-up deliveries, never implied by booting their guests.
 
 This owner-approved revision supersedes the earlier Developer-ID-first milestone.
 Optional [#488](https://github.com/nold-ai/specfact-cli-modules/issues/488) /
-[`code-review-macos-developer-id-distribution`](../code-review-macos-developer-id-distribution/proposal.md)
+[`code-review-macos-developer-id-distribution`](../../history/abandoned/2026-10-16-code-review-macos-developer-id-distribution/proposal.md)
 is blocked by #460; it does not block this change, shipment or publication.
 "Signed runtime" in this change means native signatures plus an authenticated
 SpecFact payload manifest, not a mandatory Apple publisher identity. Preserve

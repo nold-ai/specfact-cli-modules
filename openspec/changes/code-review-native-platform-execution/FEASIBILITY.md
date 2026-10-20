@@ -1,5 +1,11 @@
 # macOS ARM64 feasibility gate
 
+> Superseded on 2026-10-16 (Europe/Berlin): #460 and #488 are closed Not Planned.
+> All capsule instructions, milestones and publication gates below are historical;
+> they grant no remaining implementation or release authority. Delivered results
+> retain their recorded scope. [The replacement design](../code-review-17-project-runtime-bootstrap/design.md)
+> and [issue dispositions](../code-review-17-project-runtime-bootstrap/GITHUB_ALIGNMENT.md) govern follow-up work.
+
 ## Project-driven and full-VM revision — 2026-10-04 (Europe/Berlin)
 
 Shared ProjectPlan discovery or explicit caller configuration now determines
@@ -32,7 +38,7 @@ individual measured checkpoints and remaining corpus failures.
 
 This owner-approved revision supersedes the earlier Developer-ID-first milestone.
 Optional [#488](https://github.com/nold-ai/specfact-cli-modules/issues/488) /
-[`code-review-macos-developer-id-distribution`](../code-review-macos-developer-id-distribution/proposal.md)
+[`code-review-macos-developer-id-distribution`](../../history/abandoned/2026-10-16-code-review-macos-developer-id-distribution/proposal.md)
 is blocked by #460; it does not block this change, shipment or publication.
 "Signed runtime" in this change means native signatures plus an authenticated
 SpecFact payload manifest, not a mandatory Apple publisher identity. Preserve

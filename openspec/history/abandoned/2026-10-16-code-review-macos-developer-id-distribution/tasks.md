@@ -1,5 +1,9 @@
 # Tasks: Optional Apple distribution trust
 
+## Abandoned remaining proposal (2026-10-16)
+
+The owner approved replacing capsules with trusted local project-aware review. Issue #488 is superseded by modules #513-#516 and core #769. This never-delivered capability is retained as non-canonical abandoned history. No implementation, completed archive or specification promotion is claimed. Original task states and planning records below are historical, not remaining implementation authority. The replacement architecture is in `openspec/changes/code-review-17-project-runtime-bootstrap/design.md`.
+
 - [x] Create optional story #488 and OpenSpec change; #460 blocks this story, never the reverse.
 - [x] Keep Apple credential preflight outside initial-release admission; synchronize reciprocal links and change order.
 - [ ] After #460 acceptance and explicit prioritization, configure enrollment, certificates and protected notary credentials.
