@@ -647,3 +647,30 @@ requirements:
       intent: Preserve the bounded source observation and original operation.
       observable: Complete real workflow programs emit only fixed observations and preserve process outcomes.
       implementation_task: '17.3'
+  openspec:ci-03-quality-fixture-identities:quality-fixture-identities:contracts-snapshot-producer-categories-remain-sparse-and-non-authoritative:
+    rationale: Confirm only bounded exact producer families while retaining existing diagnostic and acceptance contracts.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#518
+    touchpoints:
+    - id: contracts-producer-diagnosis
+      kind: workflow
+      locator: .github/workflows/capsule-customer-execution.yml
+    verification_cases:
+    - case_id: CI-03-19-1
+      scenario_id: contracts-snapshot-producer-categories-remain-sparse-and-non-authoritative
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/host/proof_capsule_review_projection.py::test_snapshot_producer_categories_are_additive
+      intent: Preserve exact owner-specific family association and all legacy outputs across complete-program boundaries.
+      observable: Fixed positive records match explicit expectations while negative, malformed and bounded cases retain old outputs.
+      implementation_task: '19.3'
+    - case_id: CI-03-19-2
+      scenario_id: contracts-snapshot-producer-categories-remain-sparse-and-non-authoritative
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/host/proof_capsule_review_projection.py::test_candidate_producer_category_preserves_review_exit
+      intent: Preserve the real candidate failure-tail exit and privacy during positive publication.
+      observable: Exact two-family rows accompany original exits 17 and 124 with empty public and private stderr and unchanged report bytes.
+      implementation_task: '19.3'

@@ -65,3 +65,10 @@ The confirmed user is the maintainer diagnosing PR #519 with private controller 
 ## Installed controller source observation follow-up (2026-10-20)
 
 The maintainer needs to compare cached public runner and sandbox analysis with the actual independent controller after the hosted 29ee run reported two short unknown diagnostic tokens. The root cause remains unknown. The confirmed scope adds source and loaded-origin observations before subject entry for preparation and review, then one independent always publisher. This is source observability only. Existing trust, runtime, cache policy, installation pins, candidate execution, core #779 and acceptance remain outside the change. The first milestone is actual missing-receipt and missing-record assertions against unchanged workflow bytes. Three architecture candidates and an independent cross-judge selected this bounded shape; their package is retained in follow-up-installed-source-identity/selected.
+
+
+## Sparse producer-family diagnosis within approved maintenance scope
+
+The maintainer needs a bounded confirmation of the existing contracts diagnostic family on base and head. The selected addition is optional `snapshot_producer_categories`, containing only exact `project_analyzer_dependency_incompatible` or `project_runtime_required` confirmations. Existing reasons and fallback facts remain unchanged. Absence alone does not establish a negative result. Interpretation requires the corresponding existing facts and a deployed revision supporting this field.
+
+This unit reuses existing validated unclassified observations in both failure programs. It adds native complete-program tests and pure fixture data, with no runtime, dependency, acceptance, assurance or authority changes. The actual hosted family remains unknown. A family observation cannot identify a package, version, descriptor or historical fault. The first milestone is frozen spec and tests with genuine missing-field RED against unchanged programs. Implementation, normal signed hooks and hosted acceptance remain later gates.

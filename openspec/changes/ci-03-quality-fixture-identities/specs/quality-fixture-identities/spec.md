@@ -250,3 +250,42 @@ These records SHALL describe authenticated source and loaded-origin observations
 - **WHEN** the actual complete isolated publisher recipe executes
 - **THEN** each valid record round-trips through an exact allowed shape and each invalid record becomes its own three-key unavailable result
 - **AND** no raw receipt text, canary, path or partial projector stdout reaches public output.
+
+
+### Requirement: Contracts snapshot producer categories remain sparse and non-authoritative
+
+Both actual failure projectors SHALL optionally publish snapshot_producer_categories using only existing eligible contracts observations whose reason is unclassified. Each of at most two records SHALL contain exactly analyzer=contracts, side=base/head and category=project_analyzer_dependency_incompatible/project_runtime_required, ordered base then head. Candidate SHALL append one envelope containing only this field after its existing facts. Independent SHALL add only this property to its existing summary. Empty results SHALL omit the field or envelope.
+
+Only a nonempty string of at most 4096 Unicode code points whose exact token before the first colon equals one of those two families SHALL confirm a category. Bare family strings SHALL qualify. No coercion, trimming, case normalization, substring match or suffix search SHALL occur. Missing, non-string, empty and oversized diagnostics SHALL remain unavailable to classification. Other bounded strings SHALL remain other internally. Neither internal outcome SHALL be published. Existing five-key fallback facts SHALL retain negative shape information, with old reason unclassified and recognized_leading_token false for these families. Absence alone SHALL NOT establish a negative observation without the corresponding existing facts and known deployed contract support.
+
+The existing at-most-ten-entry, unique contracts row, object side and error-or-UNKNOWN eligibility rules SHALL remain unchanged. Existing complete duplicate-safe report parsing and 2-MiB/32-MiB bounds SHALL apply. A valid whitespace-padded report exactly 32 MiB MAY supply categories without restoring assurance; cap plus one SHALL NOT. Parent, finding, log and unrelated analyzer text SHALL NOT supply categories. Candidate dictionaries without findings SHALL retain their existing eligibility, while independent invalid report shapes SHALL remain rejected.
+
+Removing only the validated new field or dedicated envelope SHALL leave every old output unchanged. The twenty old reason values, three-key observations, five-key facts, original exits, private bytes, import isolation, observer, publisher, complete orchestrator, selection, dependencies, signatures, budgets, gates and authority SHALL remain unchanged. No raw token, suffix, path, argument or source SHALL be published. These categories SHALL NOT authenticate producers, identify packages or versions, prove historical cause, change runtime behavior or provide acceptance.
+
+#### Scenario: Exact producer families retain their eligible snapshot association
+
+- **GIVEN** eligible contracts base and head diagnostics with bare or colon-suffixed exact producer families
+- **WHEN** either complete actual failure program executes
+- **THEN** only the exact ordered three-key positive records appear, including swapped families and both error-or-UNKNOWN eligibility routes
+- **AND** all legacy outputs remain identical after removing only the validated addition.
+
+#### Scenario: Other or unavailable diagnostics retain finite existing facts
+
+- **GIVEN** missing, non-string, empty, unknown, normalized-looking, embedded or oversized diagnostic values
+- **WHEN** either complete actual failure program executes
+- **THEN** it emits no invented category and retains the exact existing reason and shape facts
+- **AND** Unicode lengths 4096 and 4097, mixed classified sides, invalid or ambiguous evidence and rejected complete reports retain their existing boundaries.
+
+#### Scenario: Report acceptance and owner asymmetry remain unchanged
+
+- **GIVEN** the same positive family evidence in small, above-2-MiB, exactly-32-MiB or over-cap reports, or a dictionary without findings
+- **WHEN** the candidate and independent programs execute
+- **THEN** only accepted diagnostic evidence supplies categories, oversized assurance remains unavailable, and the dictionary without findings confirms only for candidate
+- **AND** private canaries remain absent and report bytes remain unchanged.
+
+#### Scenario: Positive publication preserves the original candidate failure
+
+- **GIVEN** the actual candidate failure tail and a controlled prior exit of 17 or 124
+- **WHEN** its unchanged guard, isolated interpreter invocation, complete heredoc and final exit execute under native Python
+- **THEN** the original exit is preserved, exact two-family categories appear, public and private stderr are empty and report bytes remain unchanged
+- **AND** this native synthetic proof does not claim to reproduce the original review command or hosted interpreter.

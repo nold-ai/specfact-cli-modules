@@ -146,3 +146,12 @@
 - [x] 18.3 Extract the cohesive native fixture owner and migrate the unused bootstrap argument without behavior changes.
 - [x] 18.4 Prove quality GREEN and unchanged668-case/14-control behavior, normal gates and independent review.
 - [ ] 18.5 Publish normally signed correction and inspect mandatory current-head hosted acceptance.
+
+
+## 19. Sparse contracts producer categories
+
+- [x] 19.1 Record the selected sparse producer-family contract and unchanged trust boundaries.
+- [x] 19.2 Freeze native tests and independent legacy expectations, preserve old identities and capture genuine missing-field RED.
+- [x] 19.3 Add only the two private classification helpers and emission calls in each existing failure program.
+- [x] 19.4 Verify frozen tests, legacy controls, preservation and required native quality gates, then obtain independent review.
+- [ ] 19.5 Complete normal signed hooks and publication, then inspect exact-head hosted evidence before any runtime diagnosis.

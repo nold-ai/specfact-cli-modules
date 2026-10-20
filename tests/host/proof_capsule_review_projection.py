@@ -23,6 +23,7 @@ from tests.host.capsule_source_fixtures import (
     synthetic_installed_source_reviewer,
     write_source_receipt_case,
 )
+from tests.support import capsule_producer_cases as producer_cases
 from tests.support.capsule_review_fixtures import (
     REPO_ROOT,
     STEP_NAME,
@@ -947,3 +948,52 @@ def test_installed_source_publication_survives_setup_and_projector_failure(tmp_p
     assert _source_rows(run_source_publication(trusted, environment)) == [
         source_unavailable(name) for name in SOURCE_INVOCATIONS
     ]
+
+
+@pytest.mark.parametrize("case", producer_cases.CASES, ids=lambda case: case["id"])
+def test_snapshot_producer_categories_are_additive(snapshot_projector, case):
+    field = producer_cases.FIELD
+    owner, invoke = snapshot_projector
+    Path(os.environ["REVIEW_LOG"]).write_text(case.get("log", _SNAPSHOT_CANARY), encoding="utf-8")
+    rows = invoke(case["payload"])
+    expected = case["categories"][owner]
+    assert [row[field] for row in rows if field in row] == ([expected] if expected else []), (
+        "Missing finite producer field"
+    )
+    if owner == "candidate":
+        assert all(set(row) == {field} for row in rows if field in row)
+        legacy = [row for row in rows if field not in row]
+    else:
+        legacy = [{key: value for key, value in row.items() if key != field} for row in rows]
+    assert legacy == case["legacy"][owner]
+
+
+@pytest.mark.parametrize("review_exit", (17, 124))
+def test_candidate_producer_category_preserves_review_exit(tmp_path, review_exit):
+    field = producer_cases.FIELD
+    report = tmp_path / ".specfact/code-review.json"
+    report.parent.mkdir()
+    report.write_text(producer_cases.FAILURE_PAYLOAD)
+    interpreter = tmp_path / "venv/bin/python"
+    interpreter.parent.mkdir(parents=True)
+    interpreter.symlink_to(sys.executable)
+    workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())
+    recipe = next(step["run"] for step in workflow["jobs"]["customer"]["steps"] if step.get("name") == STEP_NAME)
+    guard = recipe[recipe.index('if [ "$review_exit" -ne 0 ]; then') :].splitlines()[0]
+    invocation = next(line for line in recipe.splitlines() if "<<'PY_CANDIDATE_FAILURE'" in line)
+    shell = f"set -euo pipefail\nreview_exit={review_exit}\n{guard}\n" + recipe[recipe.index(invocation) :]
+    result = subprocess.run(
+        ["bash", "-c", shell],
+        cwd=tmp_path,
+        env=dict(os.environ, CUSTOMER_ROOT=str(tmp_path)),
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=15,
+    )
+    rows = [json.loads(line) for line in result.stdout.splitlines()]
+    assert result.returncode == review_exit and result.stderr == ""
+    assert (tmp_path / "contract-projection.private.log").read_bytes() == b""
+    assert [row[field] for row in rows if field in row] == [producer_cases.FAILURE_ROWS]
+    assert "PRIVATE_CANARY" not in result.stdout + result.stderr
+    assert report.read_text() == producer_cases.FAILURE_PAYLOAD

@@ -523,6 +523,33 @@ jobs:
               return [_snapshot_diagnostic_fact(item["side"], contracts[item["side"]]) for item in selected]
 
 
+          def _snapshot_producer_category(node):
+              diagnostic = node.get("diagnostic")
+              if not isinstance(diagnostic, str) or not diagnostic or len(diagnostic) > 4096:
+                  return "unavailable"
+              families = {
+                  "project_analyzer_dependency_incompatible": "project_analyzer_dependency_incompatible",
+                  "project_runtime_required": "project_runtime_required",
+              }
+              return families.get(diagnostic.split(":", 1)[0], "other")
+
+
+          def snapshot_producer_categories(evidence, diagnostic_observations):
+              selected = [item for item in diagnostic_observations if item["reason"] == "unclassified"]
+              if not selected:
+                  return []
+              contracts = next(
+                  row for row in evidence["analyzer_evidence"]
+                  if isinstance(row, dict) and row.get("id") == "contracts"
+              )
+              category_rows = []
+              for item in selected:
+                  category = _snapshot_producer_category(contracts[item["side"]])
+                  if category in ("project_analyzer_dependency_incompatible", "project_runtime_required"):
+                      category_rows.append({"analyzer": "contracts", "side": item["side"], "category": category})
+              return category_rows
+
+
           def unique_candidate_json_object(pairs):
               value = {}
               for key, item in pairs:
@@ -591,6 +618,9 @@ jobs:
               snapshot_facts = snapshot_diagnostic_facts(data, snapshot_observations)
               if snapshot_facts:
                   print(json.dumps({"snapshot_diagnostic_facts": snapshot_facts}))
+              categories = snapshot_producer_categories(data, snapshot_observations)
+              if categories:
+                  print(json.dumps({"snapshot_producer_categories": categories}))
           PY_CANDIDATE_FAILURE
           fi
           exit "$review_exit"
@@ -1362,6 +1392,33 @@ jobs:
               return [_snapshot_diagnostic_fact(item["side"], contracts[item["side"]]) for item in selected]
 
 
+          def _snapshot_producer_category(node):
+              diagnostic = node.get("diagnostic")
+              if not isinstance(diagnostic, str) or not diagnostic or len(diagnostic) > 4096:
+                  return "unavailable"
+              families = {
+                  "project_analyzer_dependency_incompatible": "project_analyzer_dependency_incompatible",
+                  "project_runtime_required": "project_runtime_required",
+              }
+              return families.get(diagnostic.split(":", 1)[0], "other")
+
+
+          def snapshot_producer_categories(evidence, diagnostic_observations):
+              selected = [item for item in diagnostic_observations if item["reason"] == "unclassified"]
+              if not selected:
+                  return []
+              contracts = next(
+                  row for row in evidence["analyzer_evidence"]
+                  if isinstance(row, dict) and row.get("id") == "contracts"
+              )
+              category_rows = []
+              for item in selected:
+                  category = _snapshot_producer_category(contracts[item["side"]])
+                  if category in ("project_analyzer_dependency_incompatible", "project_runtime_required"):
+                      category_rows.append({"analyzer": "contracts", "side": item["side"], "category": category})
+              return category_rows
+
+
           def unique_json_object(pairs):
               value = {}
               for key, item in pairs:
@@ -1477,5 +1534,8 @@ jobs:
           snapshot_facts = snapshot_diagnostic_facts(evidence_source, snapshot_observations)
           if snapshot_facts:
               projected["snapshot_diagnostic_facts"] = snapshot_facts
+          categories = snapshot_producer_categories(evidence_source, snapshot_observations)
+          if categories:
+              projected["snapshot_producer_categories"] = categories
           print(json.dumps(projected))
           PY_REVIEW_FAILURE
