@@ -34,15 +34,19 @@ requirements:
     touchpoints:
     - id: complete-actual-outcomes-gate-success
       kind: source
-      locator: tests/native/proof_native_execution.py
+      locator: scripts/native_release/native_execution_proof.py
     verification_cases:
     - case_id: CI-05-2-1
       scenario_id: complete-actual-outcomes-gate-success
       method: test
-      intent: admit actual serial R100 outcomes; functional result tests and native run remain planned
+      intent: Admit exact original successful outcomes; synthetic unit reports remain distinct from actual native
+        execution.
       observable: exact 702 unique passes and bounded inspectable JUnit/summary qualify; incomplete outcomes never
         qualify
       implementation_task: '2.2'
+      selector:
+        runner: pytest
+        node_id: tests/unit/native_release/test_native_execution_proof.py::test_incomplete_or_unsuccessful_results_refuse
   openspec:ci-05-native-test-ownership:native-test-ownership:existing-matrix-schedules-every-proof-input:
     rationale: existing matrix schedules every proof input
     stakeholder_refs:
@@ -77,15 +81,19 @@ requirements:
     touchpoints:
     - id: fixture-admission-preserves-delivered-bytes
       kind: source
-      locator: tests/native/proof_native_execution.py
+      locator: scripts/native_release/native_execution_proof.py
     verification_cases:
     - case_id: CI-05-4-1
       scenario_id: fixture-admission-preserves-delivered-bytes
       method: test
-      intent: prepare normal and stalled roots; planned functional and physical controls after RED acceptance
+      intent: Prepare separate roots and require exact normal bytes, copied-source stall transformation and real
+        build invocation; unit signature substitute is not native evidence.
       observable: exact normal bytes and separately signed stall are admitted; missing stall, stock-as-stall and
         changed bytes each refuse
       implementation_task: '2.2'
+      selector:
+        runner: pytest
+        node_id: tests/unit/native_release/test_native_execution_proof.py::test_preparation_preserves_normal_bytes_and_builds_private_stall
   openspec:ci-05-native-test-ownership:native-test-ownership:physical-corpus-has-one-explicit-native-owner:
     rationale: physical corpus has one explicit native owner
     stakeholder_refs:
@@ -156,12 +164,16 @@ requirements:
     touchpoints:
     - id: timeout-cleanup-owns-only-its-process-group
       kind: source
-      locator: tests/native/proof_native_execution.py
+      locator: scripts/native_release/native_execution_proof.py
     verification_cases:
     - case_id: CI-05-8-1
       scenario_id: timeout-cleanup-owns-only-its-process-group
       method: test
-      intent: expire an owned invocation; functional cleanup tests remain planned
+      intent: Expire a real owned process tree and observe descendant reaping, forced leader kill, group disappearance
+        and survival of an unrelated child.
       observable: terminate/kill only owned group, reap child and observe bounded disappearance; timeout always
         fails
       implementation_task: '2.2'
+      selector:
+        runner: pytest
+        node_id: tests/unit/native_release/test_native_execution_proof.py::test_timeout_cleans_real_descendant_group_without_signalling_unrelated_child

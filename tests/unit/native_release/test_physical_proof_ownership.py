@@ -3,6 +3,7 @@ from __future__ import annotations
 import ast
 import hashlib
 import json
+import sys
 from pathlib import Path
 
 import pytest
@@ -30,6 +31,19 @@ def _functions(path: Path) -> dict[str, ast.FunctionDef]:
     return {node.name: node for node in tree.body if isinstance(node, ast.FunctionDef)}
 
 
+def _dump(node: ast.AST) -> str:
+    options = {"show_empty": True} if sys.version_info >= (3, 13) else {}
+    return ast.dump(node, include_attributes=False, **options)
+
+
+def _direct_calls(statements: list[ast.stmt]) -> dict[int, ast.Call]:
+    return {
+        index: node.value
+        for index, node in enumerate(statements)
+        if isinstance(node, ast.Expr) and isinstance(node.value, ast.Call)
+    }
+
+
 @pytest.fixture
 def corpus() -> dict:
     return json.loads((ROOT / CORPUS).read_text())
@@ -38,9 +52,7 @@ def corpus() -> dict:
 def test_explicit_owner_preserves_every_original_physical_definition(corpus):
     expected = corpus["physical_function_asts"]
     definitions = _functions(ROOT / PROOF)
-    observed = {
-        name: ast.dump(node, include_attributes=False) for name, node in definitions.items() if name.startswith("test_")
-    }
+    observed = {name: _dump(node) for name, node in definitions.items() if name.startswith("test_")}
     assert observed == expected, (
         f"Physical proof definitions differ: observed={sorted(observed)}, expected={sorted(expected)}"
     )
@@ -49,7 +61,7 @@ def test_explicit_owner_preserves_every_original_physical_definition(corpus):
 def test_portable_definitions_and_collected_inventory_remain_intact(corpus):
     definitions = _functions(ROOT / UNIT)
     expected = corpus["portable_function_asts"]
-    observed = {name: ast.dump(definitions[name], include_attributes=False) for name in expected if name in definitions}
+    observed = {name: _dump(definitions[name]) for name in expected if name in definitions}
     assert observed == expected
     assert "request" in definitions
     assert corpus["collections"]["1"]["portable"] == corpus["collections"]["100"]["portable"]
@@ -80,22 +92,18 @@ def test_actual_portable_selection_never_owns_physical_functions(corpus):
 def test_acceptance_requires_proof_inside_runtime_before_receipt():
     candidate = _functions(ROOT / "scripts/native_release/acceptance.py")["candidate_acceptance"]
     runtime = next(node for node in candidate.body if isinstance(node, ast.With))
-    direct_calls = [
-        node.value for node in runtime.body if isinstance(node, ast.Expr) and isinstance(node.value, ast.Call)
-    ]
+    direct_calls = list(_direct_calls(runtime.body).values())
     names = [ast.unparse(call.func) for call in direct_calls]
     assert "require_native_execution_proof" in names, f"Unconditional runtime calls lack physical proof: {names}"
     proof = direct_calls[names.index("require_native_execution_proof")]
     assert ast.unparse(proof.args[0]) == "runtime.root"
     assert names.index("delivered_boundary") < names.index("require_native_execution_proof")
     receipts = [
-        node
-        for node in candidate.body
-        if isinstance(node, ast.Expr)
-        and isinstance(node.value, ast.Call)
-        and ast.unparse(node.value.func) == "write_candidate_receipt"
+        index
+        for index, call in _direct_calls(candidate.body).items()
+        if ast.unparse(call.func) == "write_candidate_receipt"
     ]
-    assert len(receipts) == 1 and candidate.body.index(receipts[0]) > candidate.body.index(runtime)
+    assert len(receipts) == 1 and receipts[0] > candidate.body.index(runtime)
     assert not any(isinstance(node, ast.Try) for node in ast.walk(candidate)), "Proof failures must reach the caller"
 
 

@@ -8,13 +8,13 @@
 - [x] 1.5 Strictly validate OpenSpec and native requirement mapping; run scoped quality checks and preserve source/index evidence for independent root review.
 
 ## 2. Bounded implementation after independent RED acceptance
-- [ ] 2.1 Partition exact physical functions and preserve portable/PID consumers.
-- [ ] 2.2 Add focused functional fixture/result/cleanup tests and genuine RED for the selected operation, then implement exact copy, private build/sign/admission and bounded invocation.
-- [ ] 2.3 Require proof before receipt, required check, scheduling and bounded outcome artifacts; repair old host-recipe assertion minimally.
-- [ ] 2.4 Prove portable GREEN and replay frozen identities/ASTs/source boundaries independently.
+- [x] 2.1 Partition exact physical functions and preserve portable/PID consumers.
+- [x] 2.2 Add focused functional fixture/result/cleanup tests and genuine RED for the selected operation, then implement exact copy, private build/sign/admission and bounded invocation.
+- [x] 2.3 Require proof before receipt, required check, scheduling and bounded outcome artifacts; repair old host-recipe assertion minimally.
+- [x] 2.4 Prove portable GREEN and replay frozen identities/ASTs/source boundaries independently.
 
 ## 3. Physical and final acceptance
-- [ ] 3.1 Prove one ordinary-user Darwin ARM64 cell with exact normal and real signed stall, all 702 unique passing outcomes, zero skips, real106/EOF and survivor evidence.
-- [ ] 3.2 Prove missing-stall, stock-as-stall and changed-delivered-byte refusal controls separately.
+- [x] 3.1 Prove one ordinary-user Darwin ARM64 cell with exact normal and real signed stall, all 702 unique passing outcomes, zero skips, real106/EOF and survivor evidence.
+- [x] 3.2 Prove missing-stall, stock-as-stall and changed-delivered-byte refusal controls separately.
 - [ ] 3.3 Require all nine existing cells and every prior delivered/customer/signature/review gate with unchanged limits.
 - [ ] 3.4 Complete mandatory repository quality gates, reviewed signed integration and publication only under root authority; archive through OpenSpec after merge.

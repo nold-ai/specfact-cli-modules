@@ -14,6 +14,9 @@ on:
       - packages/specfact-code-review/**
       - tests/native/**
       - tests/fixtures/portable-runtime/**
+      - tests/fixtures/native-execution-proof/**
+      - tests/unit/specfact_code_review/run/test_native_execution.py
+      - tests/unit/test_capsule_proof_contexts.py
       - tests/unit/native_release/**
       - pyproject.toml
       - tests/conftest.py
@@ -157,7 +160,7 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
           architecture: arm64
-      - run: python -m pip install specfact-cli==0.55.4 cryptography==50.0.2
+      - run: python -m pip install specfact-cli==0.55.4 cryptography==50.0.2 pytest==9.1.1 pytest-xdist==3.8.0
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with:
           name: darwin-arm64-${{ matrix.abi }}
@@ -172,6 +175,17 @@ jobs:
         with:
           name: receipt-${{ matrix.runner }}-${{ matrix.abi }}
           path: ${{ runner.temp }}/acceptance/receipt.json
+          if-no-files-found: error
+          retention-days: 7
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: native-execution-${{ matrix.runner }}-${{ matrix.abi }}
+          path: |
+            ${{ runner.temp }}/acceptance/native-execution/junit.xml
+            ${{ runner.temp }}/acceptance/native-execution/outcomes.json
+            ${{ runner.temp }}/acceptance/native-execution/summary.json
           if-no-files-found: error
           retention-days: 7
 

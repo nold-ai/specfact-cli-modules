@@ -1,16 +1,22 @@
+from types import SimpleNamespace
+
 import pytest
 
-from scripts.native_release import acceptance
+from scripts.native_release import acceptance, platforms
 
 
 def test_supported_platform_receipt_rejects_a_newer_mac(monkeypatch):
-    monkeypatch.setattr(acceptance.platform, "system", lambda: "Darwin")
-    monkeypatch.setattr(acceptance.platform, "machine", lambda: "arm64")
+    monkeypatch.setattr(platforms.platform, "system", lambda: "Darwin")
+    monkeypatch.setattr(platforms.platform, "machine", lambda: "arm64")
     monkeypatch.setattr(
-        acceptance, "system_value", lambda name: {"-productVersion": "27.0.1", "-buildVersion": "26A434"}[name]
+        platforms.subprocess,
+        "run",
+        lambda command, **_kwargs: SimpleNamespace(
+            stdout={"-productVersion": "27.0.1", "-buildVersion": "26A434"}[command[1]]
+        ),
     )
     with pytest.raises(ValueError, match="platform"):
-        acceptance.platform_context("macos-26")
+        platforms.platform_context("macos-26")
 
 
 def test_customer_gate_rejects_all_development_overrides():
@@ -44,8 +50,6 @@ def test_extension_receipt_uses_verified_boolean_phase_outcome(monkeypatch):
 
 
 def test_customer_trust_observation_preserves_quarantine(monkeypatch, tmp_path):
-    from types import SimpleNamespace
-
     commands = []
 
     def observe(command, **options):
@@ -61,8 +65,6 @@ def test_customer_trust_observation_preserves_quarantine(monkeypatch, tmp_path):
 
 
 def test_customer_trust_observation_rejects_failed_attribute_query(monkeypatch, tmp_path):
-    from types import SimpleNamespace
-
     monkeypatch.setattr(
         acceptance.subprocess,
         "run",
@@ -70,3 +72,17 @@ def test_customer_trust_observation_rejects_failed_attribute_query(monkeypatch, 
     )
     with pytest.raises(ValueError, match="trust observation"):
         acceptance.observe_customer_trust(tmp_path, "cold", 2)
+
+
+@pytest.mark.parametrize("empty_option", ["-productVersion", "-buildVersion"])
+def test_platform_context_refuses_empty_native_observation(monkeypatch, empty_option):
+    monkeypatch.setattr(platforms.platform, "system", lambda: "Darwin")
+    monkeypatch.setattr(platforms.platform, "machine", lambda: "arm64")
+    monkeypatch.setattr(platforms.os, "getuid", lambda: 1000)
+    monkeypatch.setattr(
+        platforms.subprocess,
+        "run",
+        lambda command, **_kwargs: SimpleNamespace(stdout="" if command[1] == empty_option else "observed"),
+    )
+    with pytest.raises(ValueError, match="native platform observations"):
+        platforms.platform_context("local")

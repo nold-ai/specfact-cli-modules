@@ -16,7 +16,8 @@ from unittest.mock import patch
 
 from scripts.capsule_customer_gate import _capsule_identities, _validate_warm_composition
 from scripts.external_capsule_corpus import MANIFEST, assert_completed_report, checkout, json_document
-from scripts.native_release.platforms import PLATFORMS, REQUIRED_CHECKS
+from scripts.native_release.native_execution_proof import require_native_execution_proof
+from scripts.native_release.platforms import PLATFORMS, REQUIRED_CHECKS, platform_context
 
 
 if TYPE_CHECKING:
@@ -33,24 +34,6 @@ FORBIDDEN_CUSTOMER_ENV = (
     "SPECFACT_NATIVE_CAPSULE_PRIVATE_SIGN_KEY",
 )
 ROOT = Path(__file__).resolve().parents[2]
-
-
-def system_value(option: str) -> str:
-    return subprocess.run(
-        ["/usr/bin/sw_vers", option], check=True, text=True, capture_output=True, timeout=10
-    ).stdout.strip()
-
-
-def platform_context(label: str) -> dict[str, str]:
-    version, build = system_value("-productVersion"), system_value("-buildVersion")
-    if platform.system() != "Darwin" or platform.machine() != "arm64":
-        raise ValueError("native platform is not Darwin ARM64")
-    if label != "local" and (version, build) != PLATFORMS.get(label):
-        raise ValueError("supported native platform image drift")
-    if os.getuid() == 0:
-        raise ValueError("native acceptance requires an ordinary user")
-    subprocess.run(["/bin/launchctl", "print", f"gui/{os.getuid()}"], check=True, capture_output=True, timeout=10)
-    return {"runner": label, "os_version": version, "os_build": build, "architecture": "arm64"}
 
 
 def require_customer_context(environment: Mapping[str, str]) -> None:
@@ -224,6 +207,7 @@ def candidate_acceptance(artifact_path: Path, work: Path, label: str) -> None:
         from scripts.native_release.boundary import delivered_boundary
 
         delivered_boundary(runtime.root, work / "delivered-boundary")
+        require_native_execution_proof(runtime.root, work / "native-execution")
         plan = discover_project(project, config_path=config)
         prepared = prepare_runtime(plan, runtime=runtime, cache_root=work / "project-cache")
         offline = prepare_runtime(plan, runtime=runtime, cache_root=work / "project-cache", offline=True)

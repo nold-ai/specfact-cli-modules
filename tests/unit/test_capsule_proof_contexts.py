@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+import shlex
 from pathlib import Path
 
 import pytest
@@ -22,10 +23,28 @@ def test_full_and_smart_host_runs_require_the_retained_host_proof(monkeypatch):
     import tomllib
 
     configuration = tomllib.loads((ROOT / "pyproject.toml").read_text())
-    assert (
-        "pytest " + HOST_PROOF + " && pytest tests "
-        in configuration["tool"]["hatch"]["envs"]["default"]["scripts"]["test"]
-    )
+    commands = [
+        shlex.split(command)
+        for command in configuration["tool"]["hatch"]["envs"]["default"]["scripts"]["test"].split("&&")
+    ]
+    assert commands[1] == [
+        "pytest",
+        HOST_PROOF,
+        "tests/host/proof_quality_fixture_identities.py",
+        "tests/host/proof_capsule_review_projection.py",
+        "tests/host/proof_capsule_compatibility_observation.py",
+        "tests/host/proof_capsule_compatibility_publisher.py",
+        "tests/host/proof_capsule_compatibility_observer_errors.py",
+    ]
+    assert commands[2] == [
+        "pytest",
+        "tests",
+        "--ignore=tests/unit/test_capsule_deferred_review_ci.py",
+        "--ignore=tests/unit/test_macos_managed_uv_child.py",
+        "--ignore=tests/unit/test_macos_native_broker_wait.py",
+        "--ignore=tests/unit/test_macos_python_candidate.py",
+        "{args}",
+    ]
     monkeypatch.syspath_prepend(str(ROOT / "tools"))
     spec = importlib.util.spec_from_file_location("context_smart_test", ROOT / "tools/smart_test_coverage.py")
     assert spec and spec.loader
