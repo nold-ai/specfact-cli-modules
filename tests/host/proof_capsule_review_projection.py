@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import shlex
@@ -10,21 +11,25 @@ from pathlib import Path
 import pytest
 import yaml
 
-from tests.support.capsule_review_fixtures import (
-    REPO_ROOT,
+from tests.host.capsule_source_fixtures import (
     SOURCE_CANARY,
     SOURCE_INVOCATIONS,
+    run_complete_source_bootstrap,
+    run_independent_source_command,
+    run_source_publication,
+    source_observed,
+    source_publisher_environment,
+    source_unavailable,
+    synthetic_installed_source_reviewer,
+    write_source_receipt_case,
+)
+from tests.support.capsule_review_fixtures import (
+    REPO_ROOT,
     STEP_NAME,
     assert_incomplete_preparation,
     assert_installed_review_arguments,
     create_isolated_reviewer,
-    independent_review_job,
     public_projector,
-    run_independent_source_command,
-    run_source_publication,
-    source_observed,
-    source_unavailable,
-    synthetic_installed_source_reviewer,
     write_preparation_fixture,
 )
 
@@ -710,45 +715,11 @@ def _source_rows(result):
     return rows
 
 
-def _run_complete_source_bootstrap(trusted, environment, invocation):
-    recipe = next(step["run"] for step in independent_review_job()["steps"] if step.get("id") == "independent_review")
-    program = recipe.split("<<'PY'\n", 1)[1].split("\nPY\n", 1)[0]
-    reviewer = trusted / "reviewer.py"
-    reviewer.write_text(program)
-    args = ["prepare-index", str(trusted / "project.toml")] if invocation == "preparation" else ["code", "review"]
-    isolated = {
-        "HOME": str(trusted / "home"),
-        "TMPDIR": str(trusted / "tmp"),
-        "PATH": str(trusted / "venv/bin") + ":/usr/bin:/bin",
-        "SPECFACT_MODULES_BRANCH": "main",
-        "SPECFACT_CODE_REVIEW_CAPSULE_CACHE": str(trusted / "cache"),
-    }
-    result = subprocess.run(
-        [str(trusted / "venv/bin/python"), "-I", str(reviewer), str(trusted / "subject"), *args],
-        cwd=trusted,
-        env=isolated,
-        capture_output=True,
-        text=True,
-        check=False,
-        timeout=15,
-    )
-    assert result.returncode == 0, result.stdout + result.stderr
-    assert (trusted / "preloaded").exists()
-    entry = json.loads((trusted / f"entry-{invocation}.json").read_text())
-    assert entry["cwd"] == str(trusted)
-    if invocation == "preparation":
-        assert (trusted / "cleaned").exists()
-        assert (trusted / "prepared").read_text().splitlines() == ["base", "head"]
-    else:
-        assert json.loads((trusted / "argv.json").read_text()) == ["code", "review"]
-    return entry
-
-
 @pytest.mark.parametrize("case", ["valid", "other_version", "cache_present"])
 @pytest.mark.parametrize("invocation", SOURCE_INVOCATIONS)
 def test_installed_source_receipt_precedes_subject_entry(tmp_path, case, invocation):
     trusted, environment, digests = synthetic_installed_source_reviewer(tmp_path, case)
-    entry = _run_complete_source_bootstrap(trusted, environment, invocation)
+    entry = run_complete_source_bootstrap(trusted, invocation)
     assert entry["receipt"] is not None, "complete source receipt must exist before subject entry"
     expected = source_observed(invocation, digests)
     assert json.loads(entry["receipt"]) == expected
@@ -809,7 +780,7 @@ def test_installed_source_receipt_precedes_subject_entry(tmp_path, case, invocat
 @pytest.mark.parametrize("invocation", SOURCE_INVOCATIONS)
 def test_installed_source_predicates_preserve_operation(tmp_path, case, invocation):
     trusted, environment, _ = synthetic_installed_source_reviewer(tmp_path, case)
-    entry = _run_complete_source_bootstrap(trusted, environment, invocation)
+    entry = run_complete_source_bootstrap(trusted, invocation)
     assert entry["receipt"] is not None, "unavailable source receipt must exist before subject entry"
     assert json.loads(entry["receipt"]) == source_unavailable(invocation)
     assert _source_rows(run_source_publication(trusted, environment)) == [
@@ -820,7 +791,7 @@ def test_installed_source_predicates_preserve_operation(tmp_path, case, invocati
 @pytest.mark.parametrize("invocation", SOURCE_INVOCATIONS)
 def test_installed_source_receipt_write_failure_preserves_operation(tmp_path, invocation):
     trusted, environment, _ = synthetic_installed_source_reviewer(tmp_path, "receipt_write_error")
-    _run_complete_source_bootstrap(trusted, environment, invocation)
+    run_complete_source_bootstrap(trusted, invocation)
     assert not (trusted / f"controller-source-{invocation}.private.json").exists()
     assert _source_rows(run_source_publication(trusted, environment)) == [
         source_unavailable(name) for name in SOURCE_INVOCATIONS
@@ -868,8 +839,6 @@ def test_installed_source_publication_preserves_command_result(tmp_path, review_
 
 
 def test_installed_source_invocations_keep_distinct_authenticated_bytes(tmp_path):
-    import hashlib
-
     trusted, environment, digests = synthetic_installed_source_reviewer(tmp_path, "distinct_invocations")
     sandbox = trusted / "home/.specfact/modules/specfact-code-review/src/specfact_code_review/run/sandbox.py"
     review_digests = digests | {"sandbox": hashlib.sha256(sandbox.read_bytes() + b"# review source\n").hexdigest()}
@@ -880,67 +849,6 @@ def test_installed_source_invocations_keep_distinct_authenticated_bytes(tmp_path
         source_observed("preparation", digests),
         source_observed("review", review_digests),
     ]
-
-
-def _source_publisher_environment(tmp_path):
-    trusted = tmp_path / "trusted"
-    (trusted / "venv/bin").mkdir(parents=True)
-    (trusted / "venv/bin/python").symlink_to(sys.executable)
-    return trusted, dict(os.environ, TRUSTED_ROOT=str(trusted))
-
-
-def _malformed_source_receipt(case):
-    observed = source_observed("preparation", {"runner": "a" * 64, "sandbox": "b" * 64})
-    variants = {
-        "invalid_utf8": b"\xffPRIVATE_SOURCE_CANARY",
-        "invalid_json": b"{PRIVATE_SOURCE_CANARY",
-        "trailing_json": json.dumps(observed).encode() + b' "PRIVATE_SOURCE_CANARY"',
-        "duplicate_key": b'{"phase":"PRIVATE_SOURCE_CANARY",' + json.dumps(observed).encode()[1:],
-        "nonobject": b'["PRIVATE_SOURCE_CANARY"]',
-        "oversized": b" " * 4097,
-        "oversized_unicode": ("é" * 2049).encode(),
-    }
-    updates = {
-        "extra_key": {"PRIVATE_SOURCE_CANARY": "PRIVATE_SOURCE_CANARY"},
-        "wrong_phase": {"phase": "PRIVATE_SOURCE_CANARY"},
-        "wrong_invocation": {"invocation": "review"},
-        "wrong_status": {"status": "verified"},
-        "wrong_identity": {"identity_kind": "PRIVATE_SOURCE_CANARY"},
-        "null_digest": {"runner_sha256": None},
-        "uppercase_digest": {"runner_sha256": "A" * 64},
-        "nonhex_digest": {"sandbox_sha256": "g" * 64},
-        "short_digest": {"runner_sha256": "a" * 63},
-        "long_digest": {"sandbox_sha256": "b" * 65},
-    }
-    if case in variants:
-        return variants[case]
-    if case in updates:
-        return json.dumps(observed | updates[case]).encode()
-    if case == "missing_digest":
-        del observed["runner_sha256"]
-        return json.dumps(observed).encode()
-    unavailable = source_unavailable("preparation")
-    return json.dumps(unavailable | {case: "PRIVATE_SOURCE_CANARY"}).encode()
-
-
-def _write_source_receipt_case(receipt, case):
-    if case == "symlink":
-        target = receipt.parent / "PRIVATE_SOURCE_CANARY.json"
-        target.write_text(json.dumps(source_unavailable("preparation")))
-        receipt.symlink_to(target)
-        return
-    if case == "directory":
-        receipt.mkdir()
-        return
-    if case == "fifo":
-        os.mkfifo(receipt)
-        return
-    if case == "unreadable":
-        receipt.write_text("PRIVATE_SOURCE_CANARY")
-        receipt.chmod(0)
-        return
-    if case != "missing":
-        receipt.write_bytes(_malformed_source_receipt(case))
 
 
 @pytest.mark.parametrize(
@@ -976,9 +884,9 @@ def _write_source_receipt_case(receipt, case):
     ],
 )
 def test_installed_source_publisher_rejects_private_receipts(tmp_path, case):
-    trusted, environment = _source_publisher_environment(tmp_path)
+    trusted, environment = source_publisher_environment(tmp_path)
     receipt = trusted / "controller-source-preparation.private.json"
-    _write_source_receipt_case(receipt, case)
+    write_source_receipt_case(receipt, case)
     review = source_observed("review", {"runner": "c" * 64, "sandbox": "d" * 64})
     (trusted / "controller-source-review.private.json").write_text(json.dumps(review))
     try:
@@ -994,7 +902,7 @@ def test_installed_source_publisher_rejects_private_receipts(tmp_path, case):
     [("observed", "observed"), ("unavailable", "unavailable"), ("observed", "invalid"), ("exact_bound", "observed")],
 )
 def test_installed_source_publication_reconstructs_independent_variants(tmp_path, first, second):
-    trusted, environment = _source_publisher_environment(tmp_path)
+    trusted, environment = source_publisher_environment(tmp_path)
     expected = []
     for invocation, variant in zip(SOURCE_INVOCATIONS, (first, second), strict=True):
         value = (
@@ -1014,7 +922,7 @@ def test_installed_source_publication_reconstructs_independent_variants(tmp_path
     "case", ["missing_root", "missing_interpreter", "missing_reviewer", "partial_projector", "bootstrap_failure"]
 )
 def test_installed_source_publication_survives_setup_and_projector_failure(tmp_path, case):
-    trusted, environment = _source_publisher_environment(tmp_path)
+    trusted, environment = source_publisher_environment(tmp_path)
     if case == "missing_root":
         environment.pop("TRUSTED_ROOT")
     if case == "missing_interpreter":
@@ -1023,7 +931,9 @@ def test_installed_source_publication_survives_setup_and_projector_failure(tmp_p
         interpreter = trusted / "venv/bin/python"
         interpreter.unlink()
         interpreter.write_text(
-            "#!/bin/sh\nprintf 'PRIVATE_SOURCE_CANARY partial\\n'\nprintf 'PRIVATE_SOURCE_CANARY error\\n' >&2\nexit 7\n"
+            "#!/bin/sh\n"
+            "printf 'PRIVATE_SOURCE_CANARY partial\\n'\n"
+            "printf 'PRIVATE_SOURCE_CANARY error\\n' >&2\nexit 7\n"
         )
         interpreter.chmod(0o700)
     if case == "bootstrap_failure":

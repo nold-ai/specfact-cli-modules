@@ -136,4 +136,13 @@
 - [x] 17.2 Add complete-bootstrap and separate-step native proofs, preserve the old inventory and capture actual intended RED before production edits.
 - [x] 17.3 Implement only the inline observer and one always publisher in independent-review.
 - [x] 17.4 Obtain GREEN, privacy and exit evidence, native quality gates and independent implementation review.
-- [ ] 17.5 Publish through normal signed hooks and inspect exact-head hosted observations without claiming a runtime repair.
+- [x] 17.5 Publish through normal signed hooks and inspect exact-head hosted observations without claiming a runtime repair.
+
+
+## 18. Native source fixture quality
+
+- [x] 18.1 Ground the actual native analyzer findings and select the existing host-only helper ownership.
+- [x] 18.2 Retain thirteen-finding native RED, clean-parent comparison and exact case/assertion/byte baselines before source edits.
+- [x] 18.3 Extract the cohesive native fixture owner and migrate the unused bootstrap argument without behavior changes.
+- [x] 18.4 Prove quality GREEN and unchanged668-case/14-control behavior, normal gates and independent review.
+- [ ] 18.5 Publish normally signed correction and inspect mandatory current-head hosted acceptance.
