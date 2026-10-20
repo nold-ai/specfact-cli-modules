@@ -189,8 +189,8 @@ requirements:
     - case_id: CI-05-9-1
       scenario_id: customer-entry-does-not-require-candidate-proof-imports
       method: test
-      intent: start the real acceptance CLI without an importable developer namespace
-      observable: help exits successfully and exposes candidate and customer modes
+      intent: start the real acceptance CLI without loading candidate-only proof dependencies
+      observable: help exits successfully, exposes both modes and has no candidate proof import event
       implementation_task: '4.2'
       selector:
         runner: pytest

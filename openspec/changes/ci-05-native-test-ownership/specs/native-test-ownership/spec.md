@@ -58,8 +58,8 @@ Execution SHALL use a bounded owned process group, terminate and kill only that 
 
 
 ### Requirement: Customer entry does not require candidate proof imports
-The acceptance CLI SHALL start and display help without a developer source path or an importable code-review namespace. Customer mode SHALL retain its separate installed-CLI workflow. Candidate acceptance SHALL still require physical proof inside the admitted runtime before project preparation and receipt writing.
+The acceptance CLI SHALL start and display help without a developer source path, whether the code-review namespace is available or absent in the interpreter. Help SHALL NOT import the candidate physical proof adapter. Customer mode SHALL retain its separate installed-CLI workflow. Candidate acceptance SHALL still require physical proof inside the admitted runtime before project preparation and receipt writing.
 
 #### Scenario: customer-entry-does-not-require-candidate-proof-imports
-- **WHEN** the acceptance CLI starts without developer import paths and the code-review namespace is unavailable
+- **WHEN** the acceptance CLI starts without developer import paths in a valid interpreter environment
 - **THEN** help and customer dispatch remain available while candidate proof remains mandatory

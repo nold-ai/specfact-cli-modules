@@ -95,18 +95,8 @@ def test_platform_context_refuses_empty_native_observation(monkeypatch, empty_op
 def test_customer_entry_help_works_without_developer_import_paths():
     environment = {name: value for name, value in os.environ.items() if name not in acceptance.FORBIDDEN_CUSTOMER_ENV}
     root = Path(__file__).resolve().parents[3]
-    namespace = subprocess.run(
-        [sys.executable, "-B", "-c", "import importlib.util; print(importlib.util.find_spec('specfact_code_review'))"],
-        cwd=root,
-        env=environment,
-        capture_output=True,
-        text=True,
-        check=True,
-        timeout=30,
-    )
-    assert namespace.stdout.strip() == "None", "startup regression requires an absent developer namespace"
     result = subprocess.run(
-        [sys.executable, "-B", "-m", "scripts.native_release.acceptance", "--help"],
+        [sys.executable, "-B", "-X", "importtime", "-m", "scripts.native_release.acceptance", "--help"],
         cwd=root,
         env=environment,
         capture_output=True,
@@ -114,5 +104,12 @@ def test_customer_entry_help_works_without_developer_import_paths():
         check=False,
         timeout=30,
     )
-    assert result.returncode == 0, result.stderr
-    assert "--mode {candidate,customer}" in result.stdout
+    assert result.returncode == 0, (result.stdout, result.stderr)
+    assert "--mode {candidate,customer}" in result.stdout, (result.stdout, result.stderr)
+    imported_modules = {
+        line.rsplit("|", 1)[-1].strip()
+        for line in result.stderr.splitlines()
+        if line.startswith("import time:") and "|" in line
+    }
+    assert "scripts.native_release.platforms" in imported_modules, (result.stdout, result.stderr)
+    assert "scripts.native_release.native_execution_proof" not in imported_modules, (result.stdout, result.stderr)
