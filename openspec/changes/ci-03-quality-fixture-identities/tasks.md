@@ -164,3 +164,13 @@
 - [x] 20.3 Separately implement private observation and strict final projection after checkpoint acceptance.
 - [x] 20.4 Verify GREEN, native quality, normal hooks and independent review without weakening gates.
 - [ ] 20.5 Publish normally signed correction and inspect exact-head hosted evidence; scope any dependency correction separately.
+
+
+## 21. Preserve operation across optional observer errors
+
+- [x] 21.1 Append the ordinary-exception contract and reproduce real YAML parser failure through genuine preparation and the complete recipe.
+- [x] 21.2 Bound ordinary observer and receipt failures while preserving native preparation errors and BaseException cleanup.
+- [x] 21.3 Run supplemental GREEN, existing focused controls, preservation hashes and actual native analyzer comparison.
+
+- [x] 21.4 Confirm explicit regression registration independently and complete applicable normal hooks.
+- [ ] 21.5 Publish the signed correction normally and inspect exact-head hosted acceptance.

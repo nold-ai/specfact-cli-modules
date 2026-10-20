@@ -805,6 +805,7 @@ jobs:
           set -euo pipefail
           cd "$TRUSTED_ROOT"
           cat > "$TRUSTED_ROOT/reviewer.py" <<'PY'
+          from contextlib import suppress
           from copy import deepcopy
           from hashlib import sha256
           from inspect import getfile, unwrap
@@ -1291,15 +1292,12 @@ jobs:
 
 
           def _record_prepared_compatibility(sides, snapshot_side, project_plan, worker_runtime, prepared_runtime):
-              try:
+              observation = {"status": "unavailable", "side": snapshot_side}
+              with suppress(Exception):
                   observation = _observe_prepared_compatibility(snapshot_side, project_plan, worker_runtime, prepared_runtime)
-              except _COMPATIBILITY_ERRORS:
-                  observation = {"status": "unavailable", "side": snapshot_side}
               sides.append(observation)
-              try:
+              with suppress(Exception):
                   _write_compatibility_receipt(sides)
-              except _COMPATIBILITY_ERRORS:
-                  pass
           _write_controller_source_receipt()
 
           os.chdir(sys.argv[1])
@@ -1307,10 +1305,8 @@ jobs:
               app(args=sys.argv[2:])
               raise SystemExit(0)
           compatibility_sides = []
-          try:
+          with suppress(Exception):
               _write_compatibility_receipt(compatibility_sides)
-          except _COMPATIBILITY_ERRORS:
-              pass
           resolution = resolve_scope(ScopeRequest(
               repository=Path.cwd(), scope="index", portable_project_runtime=True,
           ))

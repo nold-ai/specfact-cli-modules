@@ -192,3 +192,14 @@ Source/format drift is mitigated by pinned full-map parity; stale cross-side evi
 
 
 The new compatibility_proof field is scoped to the existing trusted protocol invocation: TRUSTED_ROOT identifies its directory and REVIEW_REPORT and REVIEW_LOG resolve to that directory’s fixed review.private.json and review.private.log paths. Without that context, the standalone final Python publisher retains its complete legacy object and omits compatibility_proof. Within the bound context missing or invalid receipt yields exactly unavailable. This uses no new environment variable.
+
+
+## Ordinary compatibility observer exception boundary
+
+The 2026-10-20 bounded review correction enforces the existing observation-only contract. The data shape remains an observed or unavailable private side record. Maintainers need review exits, private logs and native cleanup to remain authoritative when optional observation fails. A fixed exception list cannot represent all ordinary parser, metadata and serialization failures. Catch Exception only at the existing observer call, receipt write call and initial receipt reset boundaries. Preserve the narrower inner interpretation rules, actual prepare_runtime call and BaseException propagation.
+
+Reuse the current unavailable record and existing whole-program host fixture. Adding YAML errors alone leaves other ordinary observation errors able to escape. A new wrapper or error taxonomy adds ownership without improving this contract. New supplemental tests execute the complete Bash recipe with genuine native preparation and declared synthetic installation, acquisition and CLI seams. A malformed manifest is introduced only after the genuine prepare_runtime return. It proves a real YAML parser failure without replacing native models, decorators, compatibility decisions or origins. Explicit serialization and process-control fault injection tests the same public boundary. Existing frozen cases, selectors, signing, pins, dependencies and policy remain unchanged.
+
+The first milestone is intended RED followed by focused GREEN and before/after native analyzer comparison. Failure risks are swallowing native preparation errors or process-control exceptions and accidentally treating host fixtures as released installation proof. Dedicated negative controls and explicit runtime provenance address these risks. This is a bounded local correction with no paid CI work or state migration. Rollback restores the three catch clauses and removes only the additive supplemental coverage and evidence.
+
+The measured native Pylint baseline flags catch Exception. The implementation therefore expresses the same three ordinary-error boundaries with standard contextlib.suppress(Exception) and an explicit unavailable default. It adds no exception alias, lint waiver or helper abstraction.

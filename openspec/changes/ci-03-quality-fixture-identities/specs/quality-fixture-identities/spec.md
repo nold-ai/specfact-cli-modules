@@ -356,3 +356,11 @@ The independent preparation and final failure publisher SHALL implement the sele
 - **WHEN** the complete Python publisher executes
 - **THEN** its complete legacy object is unchanged and compatibility_proof is omitted.
 - **AND** within the actual TRUSTED_ROOT context with both fixed private report/log paths, absent or invalid receipt produces exactly unavailable.
+
+
+#### Scenario: Ordinary compatibility observer errors preserve native operation
+
+- **GIVEN** genuine native preparation succeeds and compatibility observation encounters an ordinary exception, including malformed YAML or a receipt serialization failure
+- **WHEN** the complete preparation and review recipe executes
+- **THEN** the failed observation is unavailable, original review exits 17 and 124 and private logs are preserved, and worker and scope cleanup complete.
+- **AND** failures from actual prepare_runtime still abort preparation without review, while SystemExit and KeyboardInterrupt from observation or transport propagate through the existing cleanup.

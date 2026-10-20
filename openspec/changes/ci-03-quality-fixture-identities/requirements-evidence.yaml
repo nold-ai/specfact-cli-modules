@@ -891,3 +891,39 @@ requirements:
       intent: Verify genuine complete native construction and payload verification causality.
       observable: Exact native category evidence or unavailable observation with preserved exit and cleanup.
       implementation_task: '20.3'
+    - case_id: CI-03-21-01
+      scenario_id: independent-compatibility-proof-is-native-bound-and-finite
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/host/proof_capsule_compatibility_observer_errors.py::test_yaml_observation_error_preserves_review
+      intent: Preserve operation across optional observer errors and process-control boundaries.
+      observable: Review exits and private logs survive ordinary observer errors; native failures and process-control exceptions still propagate with cleanup.
+      implementation_task: '21.3'
+    - case_id: CI-03-21-02
+      scenario_id: independent-compatibility-proof-is-native-bound-and-finite
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/host/proof_capsule_compatibility_observer_errors.py::test_yaml_observation_error_preserves_native_failure
+      intent: Preserve operation across optional observer errors and process-control boundaries.
+      observable: Review exits and private logs survive ordinary observer errors; native failures and process-control exceptions still propagate with cleanup.
+      implementation_task: '21.3'
+    - case_id: CI-03-21-03
+      scenario_id: independent-compatibility-proof-is-native-bound-and-finite
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/host/proof_capsule_compatibility_observer_errors.py::test_transport_error_preserves_review
+      intent: Preserve operation across optional observer errors and process-control boundaries.
+      observable: Review exits and private logs survive ordinary observer errors; native failures and process-control exceptions still propagate with cleanup.
+      implementation_task: '21.3'
+    - case_id: CI-03-21-04
+      scenario_id: independent-compatibility-proof-is-native-bound-and-finite
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/host/proof_capsule_compatibility_observer_errors.py::test_observer_interruptions_propagate
+      intent: Preserve operation across optional observer errors and process-control boundaries.
+      observable: Review exits and private logs survive ordinary observer errors; native failures and process-control exceptions still propagate with cleanup.
+      implementation_task: '21.3'
