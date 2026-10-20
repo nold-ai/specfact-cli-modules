@@ -1,3 +1,7 @@
+import os
+import subprocess
+import sys
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -86,3 +90,29 @@ def test_platform_context_refuses_empty_native_observation(monkeypatch, empty_op
     )
     with pytest.raises(ValueError, match="native platform observations"):
         platforms.platform_context("local")
+
+
+def test_customer_entry_help_works_without_developer_import_paths():
+    environment = {name: value for name, value in os.environ.items() if name not in acceptance.FORBIDDEN_CUSTOMER_ENV}
+    root = Path(__file__).resolve().parents[3]
+    namespace = subprocess.run(
+        [sys.executable, "-B", "-c", "import importlib.util; print(importlib.util.find_spec('specfact_code_review'))"],
+        cwd=root,
+        env=environment,
+        capture_output=True,
+        text=True,
+        check=True,
+        timeout=30,
+    )
+    assert namespace.stdout.strip() == "None", "startup regression requires an absent developer namespace"
+    result = subprocess.run(
+        [sys.executable, "-B", "-m", "scripts.native_release.acceptance", "--help"],
+        cwd=root,
+        env=environment,
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=30,
+    )
+    assert result.returncode == 0, result.stderr
+    assert "--mode {candidate,customer}" in result.stdout

@@ -177,3 +177,21 @@ requirements:
       selector:
         runner: pytest
         node_id: tests/unit/native_release/test_native_execution_proof.py::test_timeout_cleans_real_descendant_group_without_signalling_unrelated_child
+  openspec:ci-05-native-test-ownership:native-test-ownership:customer-entry-does-not-require-candidate-proof-imports:
+    rationale: keep ordinary customer startup independent of candidate-only developer imports
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#521
+    touchpoints:
+    - id: customer-entry-does-not-require-candidate-proof-imports
+      kind: source
+      locator: scripts/native_release/acceptance.py
+    verification_cases:
+    - case_id: CI-05-9-1
+      scenario_id: customer-entry-does-not-require-candidate-proof-imports
+      method: test
+      intent: start the real acceptance CLI without an importable developer namespace
+      observable: help exits successfully and exposes candidate and customer modes
+      implementation_task: '4.2'
+      selector:
+        runner: pytest
+        node_id: tests/unit/native_release/test_acceptance.py::test_customer_entry_help_works_without_developer_import_paths

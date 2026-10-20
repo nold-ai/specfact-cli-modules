@@ -18,3 +18,8 @@
 - [x] 3.2 Prove missing-stall, stock-as-stall and changed-delivered-byte refusal controls separately.
 - [ ] 3.3 Require all nine existing cells and every prior delivered/customer/signature/review gate with unchanged limits.
 - [ ] 3.4 Complete mandatory repository quality gates, reviewed signed integration and publication only under root authority; archive through OpenSpec after merge.
+
+## 4. Customer startup regression
+- [x] 4.1 Reproduce the eager proof import with released core and absent developer namespace, then capture a real subprocess regression before code.
+- [ ] 4.2 Restore candidate-only proof imports while retaining unconditional proof and candidate runtime cleanup.
+- [ ] 4.3 Verify startup and focused candidate controls, normal applicable gates and independent review before signed publication.
