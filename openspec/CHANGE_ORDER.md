@@ -3,6 +3,10 @@
 This document is the modules-side source of truth for active OpenSpec work. It
 must be read together with the core repo change order in `nold-ai/specfact-cli`.
 
+## Native physical test ownership maintenance (2026-10-20)
+
+`ci-05-native-test-ownership` tracks [modules #521](https://github.com/nold-ai/specfact-cli-modules/issues/521), under Feature #163. This bounded specification/RED checkpoint preserves the seven physical functions and portable/PID consumers, then plans one required native acceptance operation with exact delivered and private signed-stall inputs. All 702 R100 outcomes per existing nine cells remain unproved. Frozen ci-04 and ci-03 stay separate; no production C, signed asset, runtime release or gate relaxation is authorized. Implementation requires root's independent acceptance of genuine RED.
+
 ## Native PID observation maintenance (2026-10-20)
 
 `ci-04-native-pid-observation` tracks [modules #520](https://github.com/nold-ai/specfact-cli-modules/issues/520), under Feature #163. It repairs the two existing Python proof readers for legitimate create-then-write PID publication using the existing five-second deadline. Specification and genuine portable RED precede implementation. Native assets, physical acceptance and ci-03 compatibility inputs remain unchanged. This does not reopen rejected #460 or authorize a native runtime release. Hosted acceptance and post-merge archival remain pending.

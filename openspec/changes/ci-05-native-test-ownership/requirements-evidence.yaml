@@ -1,0 +1,167 @@
+schema_version: '2'
+requirements:
+  openspec:ci-05-native-test-ownership:native-test-ownership:acceptance-requires-physical-proof-before-receipt:
+    rationale: acceptance requires physical proof before receipt
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#521
+    touchpoints:
+    - id: acceptance-requires-physical-proof-before-receipt
+      kind: source
+      locator: scripts/native_release/acceptance.py
+    verification_cases:
+    - case_id: CI-05-1-1
+      scenario_id: acceptance-requires-physical-proof-before-receipt
+      method: test
+      intent: attempt candidate acceptance
+      observable: unconditional admitted-runtime proof call precedes the success receipt without swallowed failure
+      implementation_task: '2.1'
+      selector:
+        runner: pytest
+        node_id: tests/unit/native_release/test_physical_proof_ownership.py::test_acceptance_requires_proof_inside_runtime_before_receipt
+    - case_id: CI-05-1-2
+      scenario_id: acceptance-requires-physical-proof-before-receipt
+      method: test
+      intent: validate release receipt checks
+      observable: native_execution is a required existing receipt check
+      implementation_task: '2.1'
+      selector:
+        runner: pytest
+        node_id: tests/unit/native_release/test_physical_proof_ownership.py::test_release_receipts_require_native_execution
+  openspec:ci-05-native-test-ownership:native-test-ownership:complete-actual-outcomes-gate-success:
+    rationale: complete actual outcomes gate success
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#521
+    touchpoints:
+    - id: complete-actual-outcomes-gate-success
+      kind: source
+      locator: tests/native/proof_native_execution.py
+    verification_cases:
+    - case_id: CI-05-2-1
+      scenario_id: complete-actual-outcomes-gate-success
+      method: test
+      intent: admit actual serial R100 outcomes; functional result tests and native run remain planned
+      observable: exact 702 unique passes and bounded inspectable JUnit/summary qualify; incomplete outcomes never
+        qualify
+      implementation_task: '2.2'
+  openspec:ci-05-native-test-ownership:native-test-ownership:existing-matrix-schedules-every-proof-input:
+    rationale: existing matrix schedules every proof input
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#521
+    touchpoints:
+    - id: existing-matrix-schedules-every-proof-input
+      kind: source
+      locator: tests/native/proof_native_execution.py
+    verification_cases:
+    - case_id: CI-05-3-1
+      scenario_id: existing-matrix-schedules-every-proof-input
+      method: test
+      intent: change any proof input
+      observable: all proof paths match the actual workflow schedule
+      implementation_task: '2.1'
+      selector:
+        runner: pytest
+        node_id: tests/unit/native_release/test_physical_proof_ownership.py::test_all_physical_proof_inputs_schedule_native_acceptance
+    - case_id: CI-05-3-2
+      scenario_id: existing-matrix-schedules-every-proof-input
+      method: test
+      intent: run native acceptance
+      observable: nine original OS/ABI cells require candidate acceptance and keep the 60-minute ceiling
+      implementation_task: '2.1'
+      selector:
+        runner: pytest
+        node_id: tests/unit/native_release/test_physical_proof_ownership.py::test_existing_nine_cell_matrix_and_acceptance_remain_required
+  openspec:ci-05-native-test-ownership:native-test-ownership:fixture-admission-preserves-delivered-bytes:
+    rationale: fixture admission preserves delivered bytes
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#521
+    touchpoints:
+    - id: fixture-admission-preserves-delivered-bytes
+      kind: source
+      locator: tests/native/proof_native_execution.py
+    verification_cases:
+    - case_id: CI-05-4-1
+      scenario_id: fixture-admission-preserves-delivered-bytes
+      method: test
+      intent: prepare normal and stalled roots; planned functional and physical controls after RED acceptance
+      observable: exact normal bytes and separately signed stall are admitted; missing stall, stock-as-stall and
+        changed bytes each refuse
+      implementation_task: '2.2'
+  openspec:ci-05-native-test-ownership:native-test-ownership:physical-corpus-has-one-explicit-native-owner:
+    rationale: physical corpus has one explicit native owner
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#521
+    touchpoints:
+    - id: physical-corpus-has-one-explicit-native-owner
+      kind: source
+      locator: tests/native/proof_native_execution.py
+    verification_cases:
+    - case_id: CI-05-5-1
+      scenario_id: physical-corpus-has-one-explicit-native-owner
+      method: test
+      intent: partition the physical corpus
+      observable: all seven full ASTs match the frozen original
+      implementation_task: '2.1'
+      selector:
+        runner: pytest
+        node_id: tests/unit/native_release/test_physical_proof_ownership.py::test_explicit_owner_preserves_every_original_physical_definition
+  openspec:ci-05-native-test-ownership:native-test-ownership:portable-selection-excludes-physical-proof:
+    rationale: portable selection excludes physical proof
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#521
+    touchpoints:
+    - id: portable-selection-excludes-physical-proof
+      kind: source
+      locator: tests/native/proof_native_execution.py
+    verification_cases:
+    - case_id: CI-05-6-1
+      scenario_id: portable-selection-excludes-physical-proof
+      method: test
+      intent: select portable test paths
+      observable: the actual selector selects portable paths without physical definitions
+      implementation_task: '2.1'
+      selector:
+        runner: pytest
+        node_id: tests/unit/native_release/test_physical_proof_ownership.py::test_actual_portable_selection_never_owns_physical_functions
+  openspec:ci-05-native-test-ownership:native-test-ownership:portable-tests-and-pid-consumers-remain-intact:
+    rationale: portable tests and pid consumers remain intact
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#521
+    touchpoints:
+    - id: portable-tests-and-pid-consumers-remain-intact
+      kind: source
+      locator: tests/native/proof_native_execution.py
+    verification_cases:
+    - case_id: CI-05-7-1
+      scenario_id: portable-tests-and-pid-consumers-remain-intact
+      method: test
+      intent: retain portable functions and corpus
+      observable: original portable ASTs and collected inventory stay intact
+      implementation_task: '2.1'
+      selector:
+        runner: pytest
+        node_id: tests/unit/native_release/test_physical_proof_ownership.py::test_portable_definitions_and_collected_inventory_remain_intact
+    - case_id: CI-05-7-2
+      scenario_id: portable-tests-and-pid-consumers-remain-intact
+      method: test
+      intent: retain existing PID consumers
+      observable: both frozen files match hashes and the unit alias is the actual shared function
+      implementation_task: '2.1'
+      selector:
+        runner: pytest
+        node_id: tests/unit/native_release/test_physical_proof_ownership.py::test_frozen_pid_consumers_keep_the_real_shared_alias
+  openspec:ci-05-native-test-ownership:native-test-ownership:timeout-cleanup-owns-only-its-process-group:
+    rationale: timeout cleanup owns only its process group
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#521
+    touchpoints:
+    - id: timeout-cleanup-owns-only-its-process-group
+      kind: source
+      locator: tests/native/proof_native_execution.py
+    verification_cases:
+    - case_id: CI-05-8-1
+      scenario_id: timeout-cleanup-owns-only-its-process-group
+      method: test
+      intent: expire an owned invocation; functional cleanup tests remain planned
+      observable: terminate/kill only owned group, reap child and observe bounded disappearance; timeout always
+        fails
+      implementation_task: '2.2'
