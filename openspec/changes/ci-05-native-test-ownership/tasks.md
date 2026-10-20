@@ -21,5 +21,5 @@
 
 ## 4. Customer startup regression
 - [x] 4.1 Reproduce the eager proof import with released core and absent developer namespace, then capture a real subprocess regression before code.
-- [ ] 4.2 Restore candidate-only proof imports while retaining unconditional proof and candidate runtime cleanup.
+- [x] 4.2 Restore candidate-only proof imports while retaining unconditional proof and candidate runtime cleanup.
 - [ ] 4.3 Verify startup and focused candidate controls, normal applicable gates and independent review before signed publication.

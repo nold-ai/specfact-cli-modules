@@ -16,7 +16,6 @@ from unittest.mock import patch
 
 from scripts.capsule_customer_gate import _capsule_identities, _validate_warm_composition
 from scripts.external_capsule_corpus import MANIFEST, assert_completed_report, checkout, json_document
-from scripts.native_release.native_execution_proof import require_native_execution_proof
 from scripts.native_release.platforms import PLATFORMS, REQUIRED_CHECKS, platform_context
 
 
@@ -194,6 +193,7 @@ def write_candidate_receipt(artifact, work: Path, context: dict[str, str]) -> No
 
 def candidate_acceptance(artifact_path: Path, work: Path, label: str) -> None:
     from scripts.native_release.artifacts import inspect_archive
+    from scripts.native_release.native_execution_proof import require_native_execution_proof
     from specfact_code_review.run.runtime_builder import prepare_runtime
     from specfact_code_review.run.runtime_discovery import discover_project
 

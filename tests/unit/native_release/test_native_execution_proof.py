@@ -413,7 +413,7 @@ def test_local_acceptance_does_not_review_or_write_receipt_after_proof_failure(t
     monkeypatch.setattr(artifacts, "inspect_archive", lambda _path: object())
     monkeypatch.setattr(acceptance, "candidate_runtime", runtime)
     monkeypatch.setattr(boundary, "delivered_boundary", lambda *_args: None)
-    monkeypatch.setattr(acceptance, "require_native_execution_proof", refuse)
+    monkeypatch.setattr(proof, "require_native_execution_proof", refuse)
     monkeypatch.setattr(
         specfact_code_review.run.runtime_discovery,
         "discover_project",
