@@ -289,3 +289,70 @@ Removing only the validated new field or dedicated envelope SHALL leave every ol
 - **WHEN** its unchanged guard, isolated interpreter invocation, complete heredoc and final exit execute under native Python
 - **THEN** the original exit is preserved, exact two-family categories appear, public and private stderr are empty and report bytes remain unchanged
 - **AND** this native synthetic proof does not claim to reproduce the original review command or hosted interpreter.
+
+
+### Requirement: Independent compatibility proof is native bound and finite
+
+The independent preparation and final failure publisher SHALL implement the selected bound compatibility observation contract in design.md. Genuine native compatibility SHALL remain the only predicate owner. Exact verified return, authenticated source/origins, complete-map parity, unique native reason attribution and final descriptor/report/diagnostic joins SHALL precede any observed public claim. The fixed receipt schema, private bounds and finite public schema SHALL be enforced without raw metadata publication. Native reference substitution SHALL preserve actual metadata except recognized witnessed version strings and SHALL require whole-map clearance plus every genuine member graph; both sides SHALL share one unique smallest clearing subset. This remains a counterfactual, never resolver acceptance, historical attribution, repaired runtime or restored assurance. Existing proof inventory, parsers, caps, exits, cleanup, source publication, deadlines, protected gates and authority SHALL remain intact.
+
+#### Scenario: Native preparation binds genuine compatibility predicates
+
+- **GIVEN** the actual genuine prepare_runtime return for current base and head snapshots and live sealed analyzer metadata
+- **WHEN** preparation verifies each descriptor and observes native conflicts before worker cleanup
+- **THEN** each side has a current private observation bound to the exact descriptor, project, environment, worker and source roots, and cleanup and original exits remain intact.
+
+#### Scenario: Native fixtures preserve compatibility and complete graphs
+
+- **GIVEN** real Distribution metadata for pinned inequality, active rejection, false marker, satisfied, missing and accepted-prerelease inputs
+- **WHEN** the genuine compatibility owner and every member graph owner execute
+- **THEN** native decisions and graph contents remain authoritative without copied predicate logic or weakened incompatibility.
+
+#### Scenario: Native observation rejects false authority and mismatched returns
+
+- **GIVEN** failed source authentication, altered returned descriptor context, source drift or incomplete native reason coverage
+- **WHEN** the observer verifies the returned object, participating origins and complete map
+- **THEN** the affected side becomes unavailable and original preparation behavior and source publication persist.
+
+#### Scenario: Authenticated reference comparison remains a counterfactual
+
+- **GIVEN** a unique authenticated fixed reference matching live sealed versions and actual inventory with recognized witnesses
+- **WHEN** copied version-only substitutions run through the entire native map and all native graphs
+- **THEN** only complete clearing subsets are retained, the original inventory is unchanged, and unrelated family conflicts or graph errors prevent a corrective claim.
+
+#### Scenario: Final proof requires complete exact report joins
+
+- **GIVEN** a complete private report with exact side runtime bindings and eligible native diagnostic strings
+- **WHEN** the final independent publisher joins it to the current private receipt
+- **THEN** the exact finite proof is emitted only after every binding and conflict digest joins, with old output and private bytes preserved.
+
+#### Scenario: Receipt transport rejects malformed and stale input
+
+- **GIVEN** a missing, stale, malformed, duplicate, oversized, unstable, symlinked, hardlinked or special-file receipt
+- **WHEN** the final publisher reads only the fixed bounded private path
+- **THEN** the proof is exactly unavailable without blocking, private output or receipt-selected indirection.
+
+#### Scenario: Pair comparison requires unique smallest common subset
+
+- **GIVEN** two bound side observations with candidate clearing subsets from the same authenticated reference
+- **WHEN** the final publisher intersects side subsets and compares minimum sizes
+- **THEN** only one unique smallest common subset yields native_compatibility_clear; disjoint, tied, other and unavailable evidence cannot claim correction.
+
+#### Scenario: Proof ownership preserves native isolation and original outcomes
+
+- **GIVEN** the existing three explicit host selectors and ordinary test_*.py discovery
+- **WHEN** the default test command runs both additional native owners and ordinary discovery collects tests in a fresh process
+- **THEN** the new owners execute explicitly, ordinary collection never imports them or their native helper, and the old ordered identities and assertions remain unchanged.
+
+#### Scenario: Preparation and review failures preserve exits and cleanup
+
+- **GIVEN** a current invocation that encounters failed head preparation or review exit 17 or 124
+- **WHEN** the complete preparation and review shell plus separate final publisher execute
+- **THEN** original exits and private logs remain intact, worker and scope cleanup occur, failed preparation never attempts review, and no stale pair or canary is published.
+
+
+#### Scenario: Standalone publication preserves its complete legacy object
+
+- **GIVEN** a standalone final publisher with REVIEW_REPORT and REVIEW_LOG and no existing trusted protocol context
+- **WHEN** the complete Python publisher executes
+- **THEN** its complete legacy object is unchanged and compatibility_proof is omitted.
+- **AND** within the actual TRUSTED_ROOT context with both fixed private report/log paths, absent or invalid receipt produces exactly unavailable.

@@ -1,0 +1,632 @@
+schema_version: '2'
+requirements:
+  openspec:ci-04-native-pid-observation:native-pid-observation:complete-positive-records-remain-observable:
+    rationale: A complete positive ASCII decimal PID plus one final newline, at most
+      31 bytes total, SHALL be accepted without a pending-publication sleep.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#520
+    touchpoints:
+    - id: pid-readers
+      kind: source
+      locator: tests/native/proof_macos_native_broker_wait.py
+    verification_cases:
+    - case_id: CI-04-1-1
+      scenario_id: complete-positive-records-remain-observable
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/native_release/test_boundary.py::test_pid_observation_accepts_complete_record[controller-31-bytes]
+      intent: an immediately complete valid marker is read
+      observable: both existing consumers observe its integer value, and the controller
+        retains exact JSON, WAIT payload and WAIT_SENT
+      implementation_task: '2.1'
+    - case_id: CI-04-1-2
+      scenario_id: complete-positive-records-remain-observable
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/native_release/test_boundary.py::test_pid_observation_accepts_complete_record[controller-leading-zero]
+      intent: an immediately complete valid marker is read
+      observable: both existing consumers observe its integer value, and the controller
+        retains exact JSON, WAIT payload and WAIT_SENT
+      implementation_task: '2.1'
+    - case_id: CI-04-1-3
+      scenario_id: complete-positive-records-remain-observable
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/native_release/test_boundary.py::test_pid_observation_accepts_complete_record[controller-positive]
+      intent: an immediately complete valid marker is read
+      observable: both existing consumers observe its integer value, and the controller
+        retains exact JSON, WAIT payload and WAIT_SENT
+      implementation_task: '2.1'
+    - case_id: CI-04-1-4
+      scenario_id: complete-positive-records-remain-observable
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/native_release/test_boundary.py::test_pid_observation_accepts_complete_record[sibling-31-bytes]
+      intent: an immediately complete valid marker is read
+      observable: both existing consumers observe its integer value, and the controller
+        retains exact JSON, WAIT payload and WAIT_SENT
+      implementation_task: '2.1'
+    - case_id: CI-04-1-5
+      scenario_id: complete-positive-records-remain-observable
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/native_release/test_boundary.py::test_pid_observation_accepts_complete_record[sibling-leading-zero]
+      intent: an immediately complete valid marker is read
+      observable: both existing consumers observe its integer value, and the controller
+        retains exact JSON, WAIT payload and WAIT_SENT
+      implementation_task: '2.1'
+    - case_id: CI-04-1-6
+      scenario_id: complete-positive-records-remain-observable
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/native_release/test_boundary.py::test_pid_observation_accepts_complete_record[sibling-positive]
+      intent: an immediately complete valid marker is read
+      observable: both existing consumers observe its integer value, and the controller
+        retains exact JSON, WAIT payload and WAIT_SENT
+      implementation_task: '2.1'
+  openspec:ci-04-native-pid-observation:native-pid-observation:creation-does-not-imply-publication:
+    rationale: Both active readers SHALL await complete publication when a real marker
+      is empty or contains only an incomplete ASCII numeric prefix.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#520
+    touchpoints:
+    - id: pid-readers
+      kind: source
+      locator: tests/native/proof_macos_native_broker_wait.py
+    verification_cases:
+    - case_id: CI-04-2-1
+      scenario_id: creation-does-not-imply-publication
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/native_release/test_boundary.py::test_pid_observation_waits_for_publication[controller-empty]
+      intent: the producer exclusively creates its real marker and publishes the remaining
+        actual PID bytes and newline after the first pending poll
+      observable: both consumers observe the complete actual PID and never prematurely
+        parse the empty or partial record
+      implementation_task: '2.1'
+    - case_id: CI-04-2-2
+      scenario_id: creation-does-not-imply-publication
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/native_release/test_boundary.py::test_pid_observation_waits_for_publication[controller-numeric-prefix]
+      intent: the producer exclusively creates its real marker and publishes the remaining
+        actual PID bytes and newline after the first pending poll
+      observable: both consumers observe the complete actual PID and never prematurely
+        parse the empty or partial record
+      implementation_task: '2.1'
+    - case_id: CI-04-2-3
+      scenario_id: creation-does-not-imply-publication
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/native_release/test_boundary.py::test_pid_observation_waits_for_publication[sibling-empty]
+      intent: the producer exclusively creates its real marker and publishes the remaining
+        actual PID bytes and newline after the first pending poll
+      observable: both consumers observe the complete actual PID and never prematurely
+        parse the empty or partial record
+      implementation_task: '2.1'
+    - case_id: CI-04-2-4
+      scenario_id: creation-does-not-imply-publication
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/native_release/test_boundary.py::test_pid_observation_waits_for_publication[sibling-numeric-prefix]
+      intent: the producer exclusively creates its real marker and publishes the remaining
+        actual PID bytes and newline after the first pending poll
+      observable: both consumers observe the complete actual PID and never prematurely
+        parse the empty or partial record
+      implementation_task: '2.1'
+  openspec:ci-04-native-pid-observation:native-pid-observation:pending-publication-uses-one-five-second-deadline:
+    rationale: Absent, empty and newline-free numeric markers SHALL remain pending
+      under one fixed five-second monotonic deadline, with positive sleeps at most
+      10 ms capped by remaining time.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#520
+    touchpoints:
+    - id: pid-readers
+      kind: source
+      locator: tests/native/proof_macos_native_broker_wait.py
+    verification_cases:
+    - case_id: CI-04-3-1
+      scenario_id: pending-publication-uses-one-five-second-deadline
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/native_release/test_boundary.py::test_pid_observation_pending_times_out[controller-absent]
+      intent: publication remains absent, empty or incomplete
+      observable: both consumers raise AssertionError by the same deadline without
+        PID output or WAIT
+      implementation_task: '2.1'
+    - case_id: CI-04-3-2
+      scenario_id: pending-publication-uses-one-five-second-deadline
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/native_release/test_boundary.py::test_pid_observation_pending_times_out[controller-empty]
+      intent: publication remains absent, empty or incomplete
+      observable: both consumers raise AssertionError by the same deadline without
+        PID output or WAIT
+      implementation_task: '2.1'
+    - case_id: CI-04-3-3
+      scenario_id: pending-publication-uses-one-five-second-deadline
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/native_release/test_boundary.py::test_pid_observation_pending_times_out[controller-incomplete]
+      intent: publication remains absent, empty or incomplete
+      observable: both consumers raise AssertionError by the same deadline without
+        PID output or WAIT
+      implementation_task: '2.1'
+    - case_id: CI-04-3-4
+      scenario_id: pending-publication-uses-one-five-second-deadline
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/native_release/test_boundary.py::test_pid_observation_pending_times_out[sibling-absent]
+      intent: publication remains absent, empty or incomplete
+      observable: both consumers raise AssertionError by the same deadline without
+        PID output or WAIT
+      implementation_task: '2.1'
+    - case_id: CI-04-3-5
+      scenario_id: pending-publication-uses-one-five-second-deadline
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/native_release/test_boundary.py::test_pid_observation_pending_times_out[sibling-empty]
+      intent: publication remains absent, empty or incomplete
+      observable: both consumers raise AssertionError by the same deadline without
+        PID output or WAIT
+      implementation_task: '2.1'
+    - case_id: CI-04-3-6
+      scenario_id: pending-publication-uses-one-five-second-deadline
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/native_release/test_boundary.py::test_pid_observation_pending_times_out[sibling-incomplete]
+      intent: publication remains absent, empty or incomplete
+      observable: both consumers raise AssertionError by the same deadline without
+        PID output or WAIT
+      implementation_task: '2.1'
+  openspec:ci-04-native-pid-observation:native-pid-observation:invalid-publication-fails-before-observation:
+    rationale: Readers SHALL reject oversize, non-ASCII, signed, whitespace, zero,
+      empty-line, multiline and trailing-byte records with ValueError before PID output
+      or WAIT.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#520
+    touchpoints:
+    - id: pid-readers
+      kind: source
+      locator: tests/native/proof_macos_native_broker_wait.py
+    verification_cases:
+    - case_id: CI-04-4-1
+      scenario_id: invalid-publication-fails-before-observation
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/native_release/test_boundary.py::test_pid_observation_rejects_invalid_record[controller-32-bytes]
+      intent: a marker contains an invalid record
+      observable: both consumers fail immediately without polling or observable PID
+        output
+      implementation_task: '2.1'
+    - case_id: CI-04-4-2
+      scenario_id: invalid-publication-fails-before-observation
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/native_release/test_boundary.py::test_pid_observation_rejects_invalid_record[controller-crlf]
+      intent: a marker contains an invalid record
+      observable: both consumers fail immediately without polling or observable PID
+        output
+      implementation_task: '2.1'
+    - case_id: CI-04-4-3
+      scenario_id: invalid-publication-fails-before-observation
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/native_release/test_boundary.py::test_pid_observation_rejects_invalid_record[controller-empty-line]
+      intent: a marker contains an invalid record
+      observable: both consumers fail immediately without polling or observable PID
+        output
+      implementation_task: '2.1'
+    - case_id: CI-04-4-4
+      scenario_id: invalid-publication-fails-before-observation
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/native_release/test_boundary.py::test_pid_observation_rejects_invalid_record[controller-leading-space]
+      intent: a marker contains an invalid record
+      observable: both consumers fail immediately without polling or observable PID
+        output
+      implementation_task: '2.1'
+    - case_id: CI-04-4-5
+      scenario_id: invalid-publication-fails-before-observation
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/native_release/test_boundary.py::test_pid_observation_rejects_invalid_record[controller-multiline]
+      intent: a marker contains an invalid record
+      observable: both consumers fail immediately without polling or observable PID
+        output
+      implementation_task: '2.1'
+    - case_id: CI-04-4-6
+      scenario_id: invalid-publication-fails-before-observation
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/native_release/test_boundary.py::test_pid_observation_rejects_invalid_record[controller-negative]
+      intent: a marker contains an invalid record
+      observable: both consumers fail immediately without polling or observable PID
+        output
+      implementation_task: '2.1'
+    - case_id: CI-04-4-7
+      scenario_id: invalid-publication-fails-before-observation
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/native_release/test_boundary.py::test_pid_observation_rejects_invalid_record[controller-non-ascii]
+      intent: a marker contains an invalid record
+      observable: both consumers fail immediately without polling or observable PID
+        output
+      implementation_task: '2.1'
+    - case_id: CI-04-4-8
+      scenario_id: invalid-publication-fails-before-observation
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/native_release/test_boundary.py::test_pid_observation_rejects_invalid_record[controller-nondigit-incomplete]
+      intent: a marker contains an invalid record
+      observable: both consumers fail immediately without polling or observable PID
+        output
+      implementation_task: '2.1'
+    - case_id: CI-04-4-9
+      scenario_id: invalid-publication-fails-before-observation
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/native_release/test_boundary.py::test_pid_observation_rejects_invalid_record[controller-oversize-incomplete]
+      intent: a marker contains an invalid record
+      observable: both consumers fail immediately without polling or observable PID
+        output
+      implementation_task: '2.1'
+    - case_id: CI-04-4-10
+      scenario_id: invalid-publication-fails-before-observation
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/native_release/test_boundary.py::test_pid_observation_rejects_invalid_record[controller-plus]
+      intent: a marker contains an invalid record
+      observable: both consumers fail immediately without polling or observable PID
+        output
+      implementation_task: '2.1'
+    - case_id: CI-04-4-11
+      scenario_id: invalid-publication-fails-before-observation
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/native_release/test_boundary.py::test_pid_observation_rejects_invalid_record[controller-trailing-bytes]
+      intent: a marker contains an invalid record
+      observable: both consumers fail immediately without polling or observable PID
+        output
+      implementation_task: '2.1'
+    - case_id: CI-04-4-12
+      scenario_id: invalid-publication-fails-before-observation
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/native_release/test_boundary.py::test_pid_observation_rejects_invalid_record[controller-trailing-space]
+      intent: a marker contains an invalid record
+      observable: both consumers fail immediately without polling or observable PID
+        output
+      implementation_task: '2.1'
+    - case_id: CI-04-4-13
+      scenario_id: invalid-publication-fails-before-observation
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/native_release/test_boundary.py::test_pid_observation_rejects_invalid_record[controller-zero]
+      intent: a marker contains an invalid record
+      observable: both consumers fail immediately without polling or observable PID
+        output
+      implementation_task: '2.1'
+    - case_id: CI-04-4-14
+      scenario_id: invalid-publication-fails-before-observation
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/native_release/test_boundary.py::test_pid_observation_rejects_invalid_record[sibling-32-bytes]
+      intent: a marker contains an invalid record
+      observable: both consumers fail immediately without polling or observable PID
+        output
+      implementation_task: '2.1'
+    - case_id: CI-04-4-15
+      scenario_id: invalid-publication-fails-before-observation
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/native_release/test_boundary.py::test_pid_observation_rejects_invalid_record[sibling-crlf]
+      intent: a marker contains an invalid record
+      observable: both consumers fail immediately without polling or observable PID
+        output
+      implementation_task: '2.1'
+    - case_id: CI-04-4-16
+      scenario_id: invalid-publication-fails-before-observation
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/native_release/test_boundary.py::test_pid_observation_rejects_invalid_record[sibling-empty-line]
+      intent: a marker contains an invalid record
+      observable: both consumers fail immediately without polling or observable PID
+        output
+      implementation_task: '2.1'
+    - case_id: CI-04-4-17
+      scenario_id: invalid-publication-fails-before-observation
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/native_release/test_boundary.py::test_pid_observation_rejects_invalid_record[sibling-leading-space]
+      intent: a marker contains an invalid record
+      observable: both consumers fail immediately without polling or observable PID
+        output
+      implementation_task: '2.1'
+    - case_id: CI-04-4-18
+      scenario_id: invalid-publication-fails-before-observation
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/native_release/test_boundary.py::test_pid_observation_rejects_invalid_record[sibling-multiline]
+      intent: a marker contains an invalid record
+      observable: both consumers fail immediately without polling or observable PID
+        output
+      implementation_task: '2.1'
+    - case_id: CI-04-4-19
+      scenario_id: invalid-publication-fails-before-observation
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/native_release/test_boundary.py::test_pid_observation_rejects_invalid_record[sibling-negative]
+      intent: a marker contains an invalid record
+      observable: both consumers fail immediately without polling or observable PID
+        output
+      implementation_task: '2.1'
+    - case_id: CI-04-4-20
+      scenario_id: invalid-publication-fails-before-observation
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/native_release/test_boundary.py::test_pid_observation_rejects_invalid_record[sibling-non-ascii]
+      intent: a marker contains an invalid record
+      observable: both consumers fail immediately without polling or observable PID
+        output
+      implementation_task: '2.1'
+    - case_id: CI-04-4-21
+      scenario_id: invalid-publication-fails-before-observation
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/native_release/test_boundary.py::test_pid_observation_rejects_invalid_record[sibling-nondigit-incomplete]
+      intent: a marker contains an invalid record
+      observable: both consumers fail immediately without polling or observable PID
+        output
+      implementation_task: '2.1'
+    - case_id: CI-04-4-22
+      scenario_id: invalid-publication-fails-before-observation
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/native_release/test_boundary.py::test_pid_observation_rejects_invalid_record[sibling-oversize-incomplete]
+      intent: a marker contains an invalid record
+      observable: both consumers fail immediately without polling or observable PID
+        output
+      implementation_task: '2.1'
+    - case_id: CI-04-4-23
+      scenario_id: invalid-publication-fails-before-observation
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/native_release/test_boundary.py::test_pid_observation_rejects_invalid_record[sibling-plus]
+      intent: a marker contains an invalid record
+      observable: both consumers fail immediately without polling or observable PID
+        output
+      implementation_task: '2.1'
+    - case_id: CI-04-4-24
+      scenario_id: invalid-publication-fails-before-observation
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/native_release/test_boundary.py::test_pid_observation_rejects_invalid_record[sibling-trailing-bytes]
+      intent: a marker contains an invalid record
+      observable: both consumers fail immediately without polling or observable PID
+        output
+      implementation_task: '2.1'
+    - case_id: CI-04-4-25
+      scenario_id: invalid-publication-fails-before-observation
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/native_release/test_boundary.py::test_pid_observation_rejects_invalid_record[sibling-trailing-space]
+      intent: a marker contains an invalid record
+      observable: both consumers fail immediately without polling or observable PID
+        output
+      implementation_task: '2.1'
+    - case_id: CI-04-4-26
+      scenario_id: invalid-publication-fails-before-observation
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/native_release/test_boundary.py::test_pid_observation_rejects_invalid_record[sibling-zero]
+      intent: a marker contains an invalid record
+      observable: both consumers fail immediately without polling or observable PID
+        output
+      implementation_task: '2.1'
+  openspec:ci-04-native-pid-observation:native-pid-observation:late-observations-do-not-become-ready:
+    rationale: Readers SHALL recheck the same deadline after observation and reject
+      a ready record observed at or after that deadline.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#520
+    touchpoints:
+    - id: pid-readers
+      kind: source
+      locator: tests/native/proof_macos_native_broker_wait.py
+    verification_cases:
+    - case_id: CI-04-5-1
+      scenario_id: late-observations-do-not-become-ready
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/native_release/test_boundary.py::test_pid_observation_rejects_late_record[controller-after-deadline]
+      intent: a real valid record is read but the final monotonic observation reaches
+        the deadline
+      observable: both consumers raise AssertionError without PID output or WAIT
+      implementation_task: '2.1'
+    - case_id: CI-04-5-2
+      scenario_id: late-observations-do-not-become-ready
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/native_release/test_boundary.py::test_pid_observation_rejects_late_record[controller-at-deadline]
+      intent: a real valid record is read but the final monotonic observation reaches
+        the deadline
+      observable: both consumers raise AssertionError without PID output or WAIT
+      implementation_task: '2.1'
+    - case_id: CI-04-5-3
+      scenario_id: late-observations-do-not-become-ready
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/native_release/test_boundary.py::test_pid_observation_rejects_late_record[sibling-after-deadline]
+      intent: a real valid record is read but the final monotonic observation reaches
+        the deadline
+      observable: both consumers raise AssertionError without PID output or WAIT
+      implementation_task: '2.1'
+    - case_id: CI-04-5-4
+      scenario_id: late-observations-do-not-become-ready
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/native_release/test_boundary.py::test_pid_observation_rejects_late_record[sibling-at-deadline]
+      intent: a real valid record is read but the final monotonic observation reaches
+        the deadline
+      observable: both consumers raise AssertionError without PID output or WAIT
+      implementation_task: '2.1'
+  openspec:ci-04-native-pid-observation:native-pid-observation:only-regular-non-symlink-markers-are-admitted:
+    rationale: Readers SHALL reject symlinks, directories and FIFOs promptly without
+      a blocking read or retry.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#520
+    touchpoints:
+    - id: pid-readers
+      kind: source
+      locator: tests/native/proof_macos_native_broker_wait.py
+    verification_cases:
+    - case_id: CI-04-6-1
+      scenario_id: only-regular-non-symlink-markers-are-admitted
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/native_release/test_boundary.py::test_pid_observation_rejects_nonregular_marker[controller-directory]
+      intent: the marker pathname is a symlink, directory or FIFO
+      observable: both consumers fail immediately before PID output or WAIT
+      implementation_task: '2.1'
+    - case_id: CI-04-6-2
+      scenario_id: only-regular-non-symlink-markers-are-admitted
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/native_release/test_boundary.py::test_pid_observation_rejects_nonregular_marker[controller-fifo]
+      intent: the marker pathname is a symlink, directory or FIFO
+      observable: both consumers fail immediately before PID output or WAIT
+      implementation_task: '2.1'
+    - case_id: CI-04-6-3
+      scenario_id: only-regular-non-symlink-markers-are-admitted
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/native_release/test_boundary.py::test_pid_observation_rejects_nonregular_marker[controller-symlink]
+      intent: the marker pathname is a symlink, directory or FIFO
+      observable: both consumers fail immediately before PID output or WAIT
+      implementation_task: '2.1'
+    - case_id: CI-04-6-4
+      scenario_id: only-regular-non-symlink-markers-are-admitted
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/native_release/test_boundary.py::test_pid_observation_rejects_nonregular_marker[sibling-directory]
+      intent: the marker pathname is a symlink, directory or FIFO
+      observable: both consumers fail immediately before PID output or WAIT
+      implementation_task: '2.1'
+    - case_id: CI-04-6-5
+      scenario_id: only-regular-non-symlink-markers-are-admitted
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/native_release/test_boundary.py::test_pid_observation_rejects_nonregular_marker[sibling-fifo]
+      intent: the marker pathname is a symlink, directory or FIFO
+      observable: both consumers fail immediately before PID output or WAIT
+      implementation_task: '2.1'
+    - case_id: CI-04-6-6
+      scenario_id: only-regular-non-symlink-markers-are-admitted
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/native_release/test_boundary.py::test_pid_observation_rejects_nonregular_marker[sibling-symlink]
+      intent: the marker pathname is a symlink, directory or FIFO
+      observable: both consumers fail immediately before PID output or WAIT
+      implementation_task: '2.1'
+  openspec:ci-04-native-pid-observation:native-pid-observation:ordinary-i-o-failures-retain-their-identity:
+    rationale: Readers SHALL propagate ordinary OSError unchanged and SHALL retry
+      only FileNotFoundError from opening an absent marker.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#520
+    touchpoints:
+    - id: pid-readers
+      kind: source
+      locator: tests/native/proof_macos_native_broker_wait.py
+    verification_cases:
+    - case_id: CI-04-7-1
+      scenario_id: ordinary-i-o-failures-retain-their-identity
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/native_release/test_boundary.py::test_pid_observation_propagates_io_error[controller-io]
+      intent: Opening the real marker raises an ordinary permission or I/O exception.
+      observable: the same exception reaches the caller without polling, PID output
+        or WAIT
+      implementation_task: '2.1'
+    - case_id: CI-04-7-2
+      scenario_id: ordinary-i-o-failures-retain-their-identity
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/native_release/test_boundary.py::test_pid_observation_propagates_io_error[controller-permission]
+      intent: Opening the real marker raises an ordinary permission or I/O exception.
+      observable: the same exception reaches the caller without polling, PID output
+        or WAIT
+      implementation_task: '2.1'
+    - case_id: CI-04-7-3
+      scenario_id: ordinary-i-o-failures-retain-their-identity
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/native_release/test_boundary.py::test_pid_observation_propagates_io_error[sibling-io]
+      intent: Opening the real marker raises an ordinary permission or I/O exception.
+      observable: the same exception reaches the caller without polling, PID output
+        or WAIT
+      implementation_task: '2.1'
+    - case_id: CI-04-7-4
+      scenario_id: ordinary-i-o-failures-retain-their-identity
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/native_release/test_boundary.py::test_pid_observation_propagates_io_error[sibling-permission]
+      intent: Opening the real marker raises an ordinary permission or I/O exception.
+      observable: the same exception reaches the caller without polling, PID output
+        or WAIT
+      implementation_task: '2.1'

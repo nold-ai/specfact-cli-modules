@@ -805,12 +805,34 @@ jobs:
           set -euo pipefail
           cd "$TRUSTED_ROOT"
           cat > "$TRUSTED_ROOT/reviewer.py" <<'PY'
+          from copy import deepcopy
+          from hashlib import sha256
+          from inspect import getfile, unwrap
+          from itertools import combinations
+          from stat import S_IMODE
+          from tempfile import NamedTemporaryFile
+          from importlib.metadata import distributions
           import json
           import os
           import sys
           from pathlib import Path
+          _COMPATIBILITY_IMPORTS_AVAILABLE = True
+          try:
+              from yaml import safe_load
+              from packaging.markers import default_environment
+              from packaging.requirements import Requirement
+              from packaging.utils import canonicalize_name
+              from packaging.version import Version
+          except ImportError:
+              _COMPATIBILITY_IMPORTS_AVAILABLE = False
+
           from specfact_cli.cli import app
           from specfact_cli.registry import CommandRegistry
+
+          try:
+              from specfact_cli.registry.module_installer import USER_MODULES_ROOT
+          except ImportError:
+              _COMPATIBILITY_IMPORTS_AVAILABLE = False
 
           # Register and load the installed reviewer before entering the subject.
           # This fresh job has never executed candidate-controlled host programs.
@@ -824,6 +846,14 @@ jobs:
           from specfact_code_review.run.scope import (
               ScopeRequest, resolve_scope, cleanup_scope_resolution,
           )
+
+          try:
+              from specfact_code_review.run import runtime_artifacts, runtime_compatibility, runtime_domains, runtime_models
+              from specfact_code_review.run import runtime_builder, runner as native_runner
+              from specfact_code_review.run.runtime_compatibility import analyzer_dependency_conflicts, _member_conflicts
+              from specfact_code_review.run.runtime_domains import member_dependency_graphs
+          except ImportError:
+              _COMPATIBILITY_IMPORTS_AVAILABLE = False
 
           def _read_observation_file(path: Path, limit: int) -> tuple[bytes, tuple[int, ...]]:
               import stat
@@ -930,12 +960,357 @@ jobs:
                           pass
 
 
+          _COMPATIBILITY_CATEGORIES = {
+              "crosshair-tool": "contracts_entry",
+              "z3-solver": "contracts_pinned_transitive",
+              "pylint": "pylint_entry",
+              "astroid": "pylint_pinned_transitive",
+          }
+          _COMPATIBILITY_SOURCE_PINS = {
+              "runtime_compatibility": "d4345ad0e2af6f186d8cdb2c68d63804d353f78da491f56767802a3dddfc2e58",
+              "runtime_domains": "5b939268cce96c9c264e2589203c5db1708024580aeee605ae5be24ac91f2549",
+          }
+          _COMPATIBILITY_REFERENCE_HASH = "395c7eb2d3f4a4dd471840c2c8672a0ec218c4b47fb84c400b875170d4dd7aaa"
+          _COMPATIBILITY_ERRORS = (
+              OSError,
+              ValueError,
+              TypeError,
+              ImportError,
+              AttributeError,
+              KeyError,
+              RuntimeError,
+              IndexError,
+          )
+
+
+          def _compatibility_native_owners():
+              if not _COMPATIBILITY_IMPORTS_AVAILABLE:
+                  raise ImportError("compatibility_native_unavailable")
+
+              return {
+                  "runtime_artifacts": (runtime_artifacts, ("load_runtime",)),
+                  "runtime_compatibility": (runtime_compatibility, ("analyzer_dependency_conflicts", "_member_conflicts")),
+                  "runtime_domains": (runtime_domains, ("member_dependency_graphs",)),
+                  "runtime_models": (runtime_models, ("PreparedRuntime", "ProjectPlan", "document_digest")),
+                  "runtime_builder": (runtime_builder, ("prepare_runtime",)),
+                  "runner": (native_runner, ("CapsuleRuntime",)),
+              }
+
+
+          def _compatibility_sources(package, owners):
+
+              inputs = []
+              for name, (owner, bindings) in owners.items():
+                  loaded, source = _loaded_controller_source(package, name)
+                  if loaded is not owner:
+                      raise ValueError("compatibility_owner_mismatch")
+                  content = _read_observation_file(source, 4 * 1024 * 1024)
+                  expected = _COMPATIBILITY_SOURCE_PINS.get(name)
+                  if expected is not None and sha256(content[0]).hexdigest() != expected:
+                      raise ValueError("compatibility_source_drift")
+                  _compatibility_callable_origins(owner, bindings, source)
+                  inputs.append((source, content))
+              _compatibility_native_bindings(owners)
+              return inputs
+
+
+          def _compatibility_callable_origins(owner, bindings, source):
+              for binding in bindings:
+                  value = getattr(owner, binding)
+                  if not callable(value) or value.__module__ != owner.__name__:
+                      raise ValueError("compatibility_callable_mismatch")
+                  original = unwrap(value)
+                  if original.__name__ != binding or Path(getfile(original)).resolve() != source:
+                      raise ValueError("compatibility_callable_origin_mismatch")
+
+
+          def _compatibility_native_bindings(owners):
+              declared = vars(owners["runtime_compatibility"][0])
+              graph_owner = owners["runtime_domains"][0]
+              bindings = (
+                  (prepare_runtime, owners["runtime_builder"][0].prepare_runtime),
+                  (_member_conflicts, declared["_member_conflicts"]),
+                  (analyzer_dependency_conflicts, declared["analyzer_dependency_conflicts"]),
+                  (graph_owner.analyzer_dependency_conflicts, analyzer_dependency_conflicts),
+                  (member_dependency_graphs, graph_owner.member_dependency_graphs),
+              )
+              if any(actual is not expected for actual, expected in bindings):
+                  raise ValueError("compatibility_native_binding_mismatch")
+
+
+          def _compatibility_authentication(owners):
+
+              package = USER_MODULES_ROOT / "specfact-code-review"
+              inputs = _compatibility_sources(package, owners)
+              manifest_path = _checked_controller_path(package, "module-package.yaml")
+              manifest = _read_observation_file(manifest_path, 256 * 1024)
+              _controller_source_observation("preparation")
+              if manifest != _read_observation_file(manifest_path, 256 * 1024):
+                  raise ValueError("compatibility_manifest_changed")
+              if any(content != _read_observation_file(path, 4 * 1024 * 1024) for path, content in inputs):
+                  raise ValueError("compatibility_source_changed")
+              return package, safe_load(manifest[0])
+
+
+          def _compatibility_inputs(inventory, analyzer_root):
+
+              target = {
+                  str(canonicalize_name(row["metadata"]["name"])): row["metadata"] for row in inventory.get("installed", [])
+              }
+              sealed = {str(canonicalize_name(dist.metadata["Name"])): dist for dist in distributions(path=[str(analyzer_root)])}
+              environment = {
+                  **default_environment(),
+                  "sys_platform": "linux",
+                  "platform_system": "Linux",
+                  "platform_machine": "x86_64",
+                  **inventory.get("environment", {}),
+                  "extra": "",
+              }
+              return target, sealed, environment
+
+
+          def _compatibility_reason_candidates(target, sealed):
+
+              candidates = {}
+              for name, distribution in sealed.items():
+                  actual = target.get(name)
+                  if actual:
+                      native_reason = f"{name}: target={actual['version']}, sealed entry={distribution.version}"
+                      candidates.setdefault(native_reason, set()).add(("pinned_version_string_inequality", name))
+                  requirements = list(distribution.requires or []) + list((actual or {}).get("requires_dist", []) or [])
+                  for raw in requirements:
+                      requirement = Requirement(raw)
+                      dependency = str(canonicalize_name(requirement.name))
+                      target_rows = target.get(dependency)
+                      if target_rows:
+                          native_reason = (
+                              f"{dependency}: target={target_rows['version']}, required={requirement.specifier} by {name}"
+                          )
+                          candidates.setdefault(native_reason, set()).add(("active_requirement_rejects_target", dependency))
+              return candidates
+
+
+          def _compatibility_witnesses(member, reasons, candidates):
+              witnesses = []
+              for native_reason in reasons:
+                  matches = candidates.get(native_reason, set())
+                  if len(matches) != 1:
+                      raise ValueError("compatibility_reason_unattributed")
+                  predicate, name = next(iter(matches))
+                  category = _COMPATIBILITY_CATEGORIES.get(name, "other")
+                  if category != "other" and not category.startswith(member + "_"):
+                      raise ValueError("compatibility_category_mismatch")
+                  if predicate == "pinned_version_string_inequality" and category == "other":
+                      raise ValueError("compatibility_pinned_unrecognized")
+                  witnesses.append(
+                      {"member": member, "predicate": predicate, "category": category, "native_reason": native_reason}
+                  )
+              return witnesses
+
+
+          def _compatibility_native_evidence(inventory, analyzer_root, compatibility):
+              target, sealed, environment = _compatibility_inputs(inventory, analyzer_root)
+              conflicts = compatibility.analyzer_dependency_conflicts(inventory, analyzer_root)
+              if conflicts != inventory.get("analyzer_conflicts"):
+                  raise ValueError("compatibility_descriptor_conflict_mismatch")
+              candidates = _compatibility_reason_candidates(target, sealed)
+              reconstructed, witnesses = {}, []
+              for member in compatibility.MEMBER_DISTRIBUTIONS:
+                  reasons = _member_conflicts(member, target, sealed, environment)
+                  if reasons:
+                      reconstructed[member] = "project_analyzer_dependency_incompatible:" + "; ".join(sorted(set(reasons)))
+                      if member not in ("contracts", "pylint"):
+                          raise ValueError("compatibility_member_uncovered")
+                      witnesses.extend(_compatibility_witnesses(member, reasons, candidates))
+              if reconstructed != conflicts:
+                  raise ValueError("compatibility_reason_map_mismatch")
+              predicates = ("pinned_version_string_inequality", "active_requirement_rejects_target")
+              witnesses.sort(
+                  key=lambda item: (
+                      ("contracts", "pylint").index(item["member"]),
+                      predicates.index(item["predicate"]),
+                      (*_COMPATIBILITY_CATEGORIES.values(), "other").index(item["category"]),
+                      item["native_reason"],
+                  )
+              )
+              return conflicts, witnesses, target, sealed
+
+
+          def _compatibility_reference_versions(package, manifest, environment_id, sealed):
+
+              resource = "resources/contracts/pr-range-v1-toolchain-lock.json"
+              if manifest["authenticated_resources"][resource].get("digest") != "sha256:" + _COMPATIBILITY_REFERENCE_HASH:
+                  raise ValueError("compatibility_reference_manifest_mismatch")
+              path = _checked_controller_path(package, "src/specfact_code_review/" + resource)
+              content = _read_observation_file(path, 4 * 1024 * 1024)
+              if sha256(content[0]).hexdigest() != _COMPATIBILITY_REFERENCE_HASH:
+                  raise ValueError("compatibility_reference_digest_mismatch")
+              lock = json.loads(content[0])
+              environments = [row for row in lock["environments"] if row["environment_id"] == environment_id]
+              if len(environments) != 1 or not environment_id.startswith("linux-"):
+                  raise ValueError("compatibility_reference_environment_mismatch")
+              versions = _compatibility_reference_components(environments[0]["components"], sealed)
+              if content != _read_observation_file(path, 4 * 1024 * 1024):
+                  raise ValueError("compatibility_reference_changed")
+              return versions
+
+
+          def _compatibility_reference_components(components, sealed):
+
+              versions = {}
+              for name, category in _COMPATIBILITY_CATEGORIES.items():
+                  rows = [row for row in components if row.get("normalized_name") == name]
+                  if len(rows) != 1:
+                      raise ValueError("compatibility_reference_component_ambiguous")
+                  row = rows[0]
+                  version = row["version"]
+                  role = "direct" if category.endswith("_entry") else "transitive"
+                  if row["kind"] != "python_distribution" or row["role"] != role:
+                      raise ValueError("compatibility_reference_role_mismatch")
+                  if not isinstance(version, str) or row["specifier"] != "==" + version:
+                      raise ValueError("compatibility_reference_version_mismatch")
+                  Version(version)
+                  if sealed[name].version != version:
+                      raise ValueError("compatibility_reference_seal_mismatch")
+                  versions[name] = version
+              return versions
+
+
+          def _compatibility_trial_clears(trial, analyzer_root):
+              if analyzer_dependency_conflicts(trial, analyzer_root):
+                  return False
+              try:
+                  member_dependency_graphs(trial, analyzer_root)
+              except _COMPATIBILITY_ERRORS:
+                  return False
+              return True
+
+
+          def _compatibility_version_trial(inventory, subset, reference):
+              trial = deepcopy(inventory)
+              target_rows = [
+                  row["metadata"] for row in trial["installed"] if str(canonicalize_name(row["metadata"]["name"])) in subset
+              ]
+              if len(target_rows) != len(subset):
+                  return None
+              for row in target_rows:
+                  row["version"] = reference[str(canonicalize_name(row["name"]))]
+              return trial
+
+
+          def _compatibility_clear_subsets(inventory, analyzer_root, witnesses, reference):
+
+              witnessed = {item["category"] for item in witnesses}
+              if "other" in witnessed:
+                  return []
+              names = [name for name, category in _COMPATIBILITY_CATEGORIES.items() if category in witnessed]
+              clearing = []
+              for size in range(1, len(names) + 1):
+                  for subset in combinations(names, size):
+                      trial = _compatibility_version_trial(inventory, subset, reference)
+                      if trial is not None and _compatibility_trial_clears(trial, analyzer_root):
+                          clearing.append([_COMPATIBILITY_CATEGORIES[name] for name in subset])
+              return clearing
+
+
+          def _observe_prepared_compatibility(snapshot_side, project_plan, worker_runtime, prepared_runtime):
+              owners = _compatibility_native_owners()
+              models = owners["runtime_models"][0]
+              if prepared_runtime.__class__ is not models.PreparedRuntime or project_plan.__class__ is not models.ProjectPlan:
+                  raise ValueError("compatibility_model_mismatch")
+              if worker_runtime.__class__ is not owners["runner"][0].CapsuleRuntime:
+                  raise ValueError("compatibility_worker_mismatch")
+              package, manifest = _compatibility_authentication(owners)
+              verified = owners["runtime_artifacts"][0].load_runtime(
+                  prepared_runtime.descriptor_path,
+                  plan=project_plan,
+                  environment_id=str(worker_runtime.environment_id),
+                  worker_identity=worker_runtime.identity,
+              )
+              if (
+                  prepared_runtime.root,
+                  prepared_runtime.descriptor_path,
+                  prepared_runtime.identity,
+                  prepared_runtime.descriptor,
+              ) != (
+                  verified.root,
+                  verified.descriptor_path,
+                  verified.identity,
+                  verified.descriptor,
+              ):
+                  raise ValueError("compatibility_return_mismatch")
+              inventory = prepared_runtime.descriptor["inventory"]
+              analyzer_root = worker_runtime.root / "opt/specfact/analyzers"
+              conflicts, witnesses, _, sealed = _compatibility_native_evidence(
+                  inventory, analyzer_root, owners["runtime_compatibility"][0]
+              )
+              reference_matches, clearing = False, []
+              try:
+                  reference = _compatibility_reference_versions(package, manifest, str(worker_runtime.environment_id), sealed)
+                  reference_matches = True
+                  clearing = _compatibility_clear_subsets(inventory, analyzer_root, witnesses, reference)
+              except _COMPATIBILITY_ERRORS:
+                  reference_matches = False
+              return {
+                  "status": "observed",
+                  "binding": {
+                      "side": snapshot_side,
+                      "descriptor_identity": prepared_runtime.identity,
+                      "project_identity": project_plan.identity,
+                      "environment_id": str(worker_runtime.environment_id),
+                      "worker_identity": worker_runtime.identity,
+                      "source_roots": prepared_runtime.descriptor["project"]["source_roots"],
+                  },
+                  "native_conflicts": conflicts,
+                  "conflict_digest": models.document_digest(conflicts),
+                  "witnesses": witnesses,
+                  "signed_reference_matches": reference_matches,
+                  "clearing_subsets": clearing,
+              }
+
+
+          def _write_compatibility_receipt(sides):
+
+              temporary = None
+              destination = Path(__file__).parent / "compatibility.private.json"
+              try:
+                  if S_IMODE(destination.parent.stat().st_mode) != 0o700:
+                      raise ValueError("compatibility_directory_unavailable")
+                  content = json.dumps({"schema": "compatibility-observation-v1", "sides": sides}, separators=(",", ":")).encode()
+                  if len(content) > 64 * 1024 or len(sides) > 2:
+                      raise ValueError("compatibility_receipt_overflow")
+                  with NamedTemporaryFile(dir=destination.parent, prefix=".compatibility-", delete=False) as stream:
+                      temporary = Path(stream.name)
+                      stream.write(content)
+                  os.replace(temporary, destination)
+              except _COMPATIBILITY_ERRORS:
+                  destination.unlink(missing_ok=True)
+              finally:
+                  if temporary is not None:
+                      temporary.unlink(missing_ok=True)
+
+
+          def _record_prepared_compatibility(sides, snapshot_side, project_plan, worker_runtime, prepared_runtime):
+              try:
+                  observation = _observe_prepared_compatibility(snapshot_side, project_plan, worker_runtime, prepared_runtime)
+              except _COMPATIBILITY_ERRORS:
+                  observation = {"status": "unavailable", "side": snapshot_side}
+              sides.append(observation)
+              try:
+                  _write_compatibility_receipt(sides)
+              except _COMPATIBILITY_ERRORS:
+                  pass
           _write_controller_source_receipt()
 
           os.chdir(sys.argv[1])
           if sys.argv[2] != "prepare-index":
               app(args=sys.argv[2:])
               raise SystemExit(0)
+          compatibility_sides = []
+          try:
+              _write_compatibility_receipt(compatibility_sides)
+          except _COMPATIBILITY_ERRORS:
+              pass
           resolution = resolve_scope(ScopeRequest(
               repository=Path.cwd(), scope="index", portable_project_runtime=True,
           ))
@@ -955,14 +1330,15 @@ jobs:
                       "status": "INCOMPLETE", "phase": "trusted_index_preparation", "diagnostic": diagnostic,
                   }))
                   raise RuntimeError("trusted_index_preparation_incomplete")
-              for snapshot in (resolution.base_snapshot, resolution.head_snapshot):
+              for side, snapshot in zip(("base", "head"), (resolution.base_snapshot, resolution.head_snapshot), strict=True):
                   plan = discover_snapshot(snapshot.root, config_path=Path(sys.argv[3]), source_snapshot=snapshot)
                   selected = select_environment(plan, current=_capsule_environment_id())
                   runtime, reason = _prepare_capsule_runtime(environment_id=selected)
                   if runtime is None:
                       raise RuntimeError("trusted_runtime_preparation_incomplete:" + reason)
                   try:
-                      prepare_runtime(plan, runtime=runtime)
+                      prepared = prepare_runtime(plan, runtime=runtime)
+                      _record_prepared_compatibility(compatibility_sides, side, plan, runtime, prepared)
                   finally:
                       _cleanup_capsule_runtime(runtime)
           finally:
@@ -1466,6 +1842,290 @@ jobs:
                           observed.setdefault(name, set()).add(side)
               return {name: sorted(sides) for name, sides in sorted(observed.items())}
 
+          import hashlib
+          import re
+          import stat
+
+          _COMPATIBILITY_MEMBERS = ("contracts", "pylint")
+          _COMPATIBILITY_PREDICATES = ("pinned_version_string_inequality", "active_requirement_rejects_target")
+          _COMPATIBILITY_NAMES = {
+              "contracts_entry": "crosshair-tool",
+              "contracts_pinned_transitive": "z3-solver",
+              "pylint_entry": "pylint",
+              "pylint_pinned_transitive": "astroid",
+          }
+          _COMPATIBILITY_CATEGORY_ORDER = (*_COMPATIBILITY_NAMES, "other")
+
+
+          def compatibility_protocol_root():
+              value = os.environ.get("TRUSTED_ROOT")
+              if not value:
+                  return None
+              root = Path(value)
+              try:
+                  if not root.is_absolute() or root.is_symlink() or not root.is_dir():
+                      return None
+                  root = root.resolve(strict=True)
+                  for variable, filename in (("REVIEW_REPORT", "review.private.json"), ("REVIEW_LOG", "review.private.log")):
+                      if Path(os.environ[variable]).resolve() != root / filename:
+                          return None
+              except (OSError, ValueError, KeyError):
+                  return None
+              return root
+
+
+          def _compatibility_file_identity(info):
+              return (info.st_dev, info.st_ino, info.st_size, info.st_mtime_ns, info.st_ctime_ns, info.st_mode, info.st_nlink)
+
+
+          def _compatibility_private_receipt(root):
+
+              if stat.S_IMODE(root.stat().st_mode) != 0o700:
+                  raise ValueError("compatibility_directory_unavailable")
+              path = root / "compatibility.private.json"
+              descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+              with os.fdopen(descriptor, "rb") as receipt_stream:
+                  before = os.fstat(receipt_stream.fileno())
+                  if not stat.S_ISREG(before.st_mode) or stat.S_IMODE(before.st_mode) != 0o600 or before.st_nlink != 1:
+                      raise ValueError("compatibility_receipt_not_private_regular")
+                  if before.st_size > 64 * 1024:
+                      raise ValueError("compatibility_receipt_overflow")
+                  content = receipt_stream.read(64 * 1024 + 1)
+                  after = os.fstat(receipt_stream.fileno())
+              identities = {_compatibility_file_identity(info) for info in (before, after, path.lstat())}
+              if len(identities) != 1 or len(content) != before.st_size:
+                  raise ValueError("compatibility_receipt_changed")
+              value = json.loads(content.decode("utf-8"), object_pairs_hook=unique_json_object)
+              _compatibility_exact_object(value, {"schema", "sides"})
+              if value["schema"] != "compatibility-observation-v1" or not isinstance(value["sides"], list):
+                  raise ValueError("compatibility_receipt_schema")
+              if len(value["sides"]) != 2:
+                  raise ValueError("compatibility_pair_missing")
+              return value["sides"]
+
+
+          def _compatibility_exact_object(value, keys):
+              if not isinstance(value, dict) or set(value) != keys:
+                  raise ValueError("compatibility_object_fields")
+
+
+          def _compatibility_digest(value):
+
+              return "sha256:" + hashlib.sha256(json.dumps(value, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+
+
+          def _compatibility_valid_binding(binding, side):
+
+              _compatibility_exact_object(
+                  binding,
+                  {
+                      "side",
+                      "descriptor_identity",
+                      "project_identity",
+                      "environment_id",
+                      "worker_identity",
+                      "source_roots",
+                  },
+              )
+              if binding["side"] != side:
+                  raise ValueError("compatibility_side_mismatch")
+              for key in ("descriptor_identity", "project_identity", "worker_identity"):
+                  if not isinstance(binding[key], str) or re.fullmatch(r"sha256:[0-9a-f]{64}", binding[key]) is None:
+                      raise ValueError("compatibility_identity_invalid")
+              if not isinstance(binding["environment_id"], str) or not binding["environment_id"].startswith("linux-"):
+                  raise ValueError("compatibility_environment_invalid")
+              roots = binding["source_roots"]
+              if not isinstance(roots, list) or any(not isinstance(item, str) for item in roots):
+                  raise ValueError("compatibility_roots_invalid")
+              return roots
+
+
+          def _compatibility_bound_runtime(binding, side, evidence):
+              roots = _compatibility_valid_binding(binding, side)
+              runtime = evidence["scope_evidence"]["project_runtime"][side]
+              expected = {
+                  "status": "PASS",
+                  "schema": "project-runtime-layer-v2",
+                  "identity": binding["descriptor_identity"],
+                  "project_identity": binding["project_identity"],
+                  "environment_id": binding["environment_id"],
+                  "authority": "local_build",
+                  "protected_pr_eligible": False,
+                  "source_roots": roots,
+              }
+              if not isinstance(runtime, dict) or any(runtime.get(key) != value for key, value in expected.items()):
+                  raise ValueError("compatibility_report_binding_mismatch")
+              if runtime.get("protected_pr_eligible") is not False:
+                  raise ValueError("compatibility_report_authority_mismatch")
+
+
+          def _compatibility_bound_conflicts(observation, side, evidence):
+              conflicts = observation["native_conflicts"]
+              if not isinstance(conflicts, dict) or not conflicts or not set(conflicts) <= set(_COMPATIBILITY_MEMBERS):
+                  raise ValueError("compatibility_conflicts_uncovered")
+              if observation["conflict_digest"] != _compatibility_digest(conflicts):
+                  raise ValueError("compatibility_conflict_digest_mismatch")
+              analyzer_rows = evidence["analyzer_evidence"]
+              if not isinstance(analyzer_rows, list) or len(analyzer_rows) > 10:
+                  raise ValueError("compatibility_analyzer_rows_unavailable")
+              for member, diagnostic in conflicts.items():
+                  _compatibility_member_diagnostic(analyzer_rows, member, side, diagnostic)
+              return conflicts
+
+
+          def _compatibility_member_diagnostic(analyzer_rows, member, side, diagnostic):
+              if not isinstance(diagnostic, str) or len(diagnostic) > 4096:
+                  raise ValueError("compatibility_diagnostic_invalid")
+              matching = [row for row in analyzer_rows if isinstance(row, dict) and row.get("id") == member]
+              if len(matching) != 1:
+                  raise ValueError("compatibility_analyzer_ambiguous")
+              _compatibility_bound_diagnostic(matching[0].get(side), diagnostic)
+
+
+          def _compatibility_bound_diagnostic(node, diagnostic):
+              if not isinstance(node, dict) or not (
+                  node.get("execution_state") == "error" or node.get("evidence_outcome") == "UNKNOWN"
+              ):
+                  raise ValueError("compatibility_analyzer_ineligible")
+              if node.get("diagnostic") != diagnostic:
+                  raise ValueError("compatibility_report_diagnostic_mismatch")
+
+
+          def _compatibility_witness_record(witness, side):
+
+              _compatibility_exact_object(witness, {"member", "predicate", "category", "native_reason"})
+              member, predicate, category = (witness[key] for key in ("member", "predicate", "category"))
+              if member not in _COMPATIBILITY_MEMBERS or predicate not in _COMPATIBILITY_PREDICATES:
+                  raise ValueError("compatibility_witness_unknown")
+              if category not in _COMPATIBILITY_CATEGORY_ORDER:
+                  raise ValueError("compatibility_category_unknown")
+              if category != "other" and not category.startswith(member + "_"):
+                  raise ValueError("compatibility_category_member_mismatch")
+              _compatibility_witness_reason(witness["native_reason"], predicate, category)
+              return {"side": side, "analyzer": member, "predicate": predicate, "category": category}
+
+
+          def _compatibility_witness_reason(reason, predicate, category):
+              if not isinstance(reason, str) or len(reason) > 4096:
+                  raise ValueError("compatibility_reason_invalid")
+              match = re.fullmatch(r"([a-z0-9]+(?:[.-][a-z0-9]+)*): target=(.+), (.+)", reason)
+              if match is None:
+                  raise ValueError("compatibility_reason_format")
+              name, _, suffix = match.groups()
+              expected = next((key for key, value in _COMPATIBILITY_NAMES.items() if value == name), "other")
+              if category != expected:
+                  raise ValueError("compatibility_reason_category_mismatch")
+              _compatibility_witness_predicate(predicate, category, suffix)
+
+
+          def _compatibility_witness_predicate(predicate, category, suffix):
+              if predicate == "pinned_version_string_inequality":
+                  if category == "other" or not suffix.startswith("sealed entry=") or not suffix.removeprefix("sealed entry="):
+                      raise ValueError("compatibility_pinned_reason_invalid")
+              elif not suffix.startswith("required=") or " by " not in suffix:
+                  raise ValueError("compatibility_requirement_reason_invalid")
+
+
+          def _compatibility_bound_witnesses(observation, side, conflicts):
+              witnesses = observation["witnesses"]
+              if not isinstance(witnesses, list) or not witnesses:
+                  raise ValueError("compatibility_witnesses_missing")
+              records, reasons = [], {}
+              for witness in witnesses:
+                  records.append(_compatibility_witness_record(witness, side))
+                  reasons.setdefault(witness["member"], set()).add(witness["native_reason"])
+              reconstructed = {
+                  member: "project_analyzer_dependency_incompatible:" + "; ".join(sorted(values))
+                  for member, values in reasons.items()
+              }
+              if reconstructed != conflicts:
+                  raise ValueError("compatibility_witness_map_mismatch")
+              return records
+
+
+          def _compatibility_subset_set(observation, records):
+              if not isinstance(observation["signed_reference_matches"], bool):
+                  raise ValueError("compatibility_reference_flag_invalid")
+              subsets = observation["clearing_subsets"]
+              if not isinstance(subsets, list) or len(subsets) > 15:
+                  raise ValueError("compatibility_subsets_invalid")
+              witnessed = {record["category"] for record in records}
+              result = set()
+              for subset in subsets:
+                  result.add(_compatibility_valid_subset(subset, witnessed))
+              if len(result) != len(subsets) or (not observation["signed_reference_matches"] and result):
+                  raise ValueError("compatibility_subsets_unbound")
+              return result
+
+
+          def _compatibility_valid_subset(subset, witnessed):
+              if not isinstance(subset, list) or not 1 <= len(subset) <= 4:
+                  raise ValueError("compatibility_subset_invalid")
+              if any(category not in _COMPATIBILITY_NAMES for category in subset):
+                  raise ValueError("compatibility_subset_unknown")
+              ordered = [category for category in _COMPATIBILITY_NAMES if category in subset]
+              if subset != ordered or ("other" not in witnessed and not set(subset) <= witnessed):
+                  raise ValueError("compatibility_subset_unwitnessed")
+              return tuple(subset)
+
+
+          def _compatibility_reference_comparison(observations, subsets, records):
+              status, substitution_categories = "unavailable", []
+              if all(row["signed_reference_matches"] for row in observations):
+                  status = "not_proven"
+                  common = subsets[0] & subsets[1]
+                  if common and all(row["category"] != "other" for row in records):
+                      minimum = min(map(len, common))
+                      selected = [subset for subset in common if len(subset) == minimum]
+                      status = "ambiguous"
+                      if len(selected) == 1:
+                          status, substitution_categories = "native_compatibility_clear", list(selected[0])
+              return {"status": status, "substitution_categories": substitution_categories}
+
+
+          def _compatibility_record_order(record):
+              return (
+                  ("base", "head").index(record["side"]),
+                  _COMPATIBILITY_MEMBERS.index(record["analyzer"]),
+                  _COMPATIBILITY_PREDICATES.index(record["predicate"]),
+                  _COMPATIBILITY_CATEGORY_ORDER.index(record["category"]),
+              )
+
+
+          def bound_compatibility_proof(root, evidence):
+              try:
+                  observations = _compatibility_private_receipt(root)
+                  records, subsets = [], []
+                  for side, observation in zip(("base", "head"), observations, strict=True):
+                      _compatibility_exact_object(
+                          observation,
+                          {
+                              "status",
+                              "binding",
+                              "native_conflicts",
+                              "conflict_digest",
+                              "witnesses",
+                              "signed_reference_matches",
+                              "clearing_subsets",
+                          },
+                      )
+                      if observation["status"] != "observed":
+                          raise ValueError("compatibility_observation_unavailable")
+                      _compatibility_bound_runtime(observation["binding"], side, evidence)
+                      conflicts = _compatibility_bound_conflicts(observation, side, evidence)
+                      side_records = _compatibility_bound_witnesses(observation, side, conflicts)
+                      subsets.append(_compatibility_subset_set(observation, side_records))
+                      records.extend(side_records)
+                  records = sorted({tuple(row.items()): row for row in records}.values(), key=_compatibility_record_order)
+                  if len(records) > 20:
+                      raise ValueError("compatibility_records_overflow")
+                  return {
+                      "status": "observed",
+                      "records": records,
+                      "reference_comparison": _compatibility_reference_comparison(observations, subsets, records),
+                  }
+              except (OSError, ValueError, TypeError, KeyError, AttributeError, RecursionError):
+                  return {"status": "unavailable"}
           report, header = {}, {}
           outcome = "unreadable_report"
           diagnostic_bound = 32 * 1024 * 1024
@@ -1537,5 +2197,8 @@ jobs:
           categories = snapshot_producer_categories(evidence_source, snapshot_observations)
           if categories:
               projected["snapshot_producer_categories"] = categories
+          compatibility_root = compatibility_protocol_root()
+          if compatibility_root is not None:
+              projected["compatibility_proof"] = bound_compatibility_proof(compatibility_root, evidence_source)
           print(json.dumps(projected))
           PY_REVIEW_FAILURE

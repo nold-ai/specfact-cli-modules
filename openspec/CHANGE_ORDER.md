@@ -3,6 +3,10 @@
 This document is the modules-side source of truth for active OpenSpec work. It
 must be read together with the core repo change order in `nold-ai/specfact-cli`.
 
+## Native PID observation maintenance (2026-10-20)
+
+`ci-04-native-pid-observation` tracks [modules #520](https://github.com/nold-ai/specfact-cli-modules/issues/520), under Feature #163. It repairs the two existing Python proof readers for legitimate create-then-write PID publication using the existing five-second deadline. Specification and genuine portable RED precede implementation. Native assets, physical acceptance and ci-03 compatibility inputs remain unchanged. This does not reopen rejected #460 or authorize a native runtime release. Hosted acceptance and post-merge archival remain pending.
+
 ## Quality fixture maintenance (2026-10-16)
 
 `ci-03-quality-fixture-identities` tracks [modules #518](https://github.com/nold-ai/specfact-cli-modules/issues/518), under Feature #163. It separates paired integration core, immutable declared core 0.55.4 for the existing full suite, and the paired core's reviewed modules smoke fixture. The 2026-10-18 approved local deferral addition aligns orchestrator path eligibility with the existing blocking Linux workflow while retaining all guards and mandatory exact-head review. The caller-selected immutable checker and external-interpreter guard safeguard that already approved local deferral. They grant no new policy authority. No runtime, module release, dependency declaration, hosted security or workflow-policy change is included. Planning PR #517 and core #770 remain independent. Hosted acceptance and post-merge archival remain pending.

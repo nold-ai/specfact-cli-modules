@@ -7,6 +7,7 @@ import os
 import select
 import signal
 import socket
+import stat
 import struct
 import subprocess
 import sys
@@ -47,13 +48,52 @@ def _assert_bootstrap_failure(parent, broker, invocation: Path, reply) -> None:
     sys.stdout.flush()
 
 
-def _hold_worker(parent, broker, temporary: Path, handle: int) -> None:
+def _parse_pid_record(record: bytes) -> int | None:
+    if len(record) > 31:
+        raise ValueError("worker PID record exceeds 31 bytes")
+    if not record:
+        return None
+    complete = record.endswith(b"\n")
+    digits = record[:-1] if complete else record
+    if not digits or not digits.isdigit():
+        raise ValueError("worker PID record is not ASCII decimal with a final newline")
+    if not complete:
+        return None
+    pid = int(digits)
+    if pid == 0:
+        raise ValueError("worker PID must be positive")
+    return pid
+
+
+def wait_worker_pid(temporary: Path) -> int:
+    """Observe a complete PID publication within the fixed five-second deadline."""
     marker = temporary / "native-self-test.pid"
     deadline = time.monotonic() + 5
-    while not marker.is_file() and time.monotonic() < deadline:
-        time.sleep(0.01)
-    assert marker.is_file(), "held worker did not report its PID"
-    worker = int(marker.read_text().strip())
+    while time.monotonic() < deadline:
+        pid = None
+        try:
+            descriptor = os.open(marker, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+        except FileNotFoundError:
+            pass
+        else:
+            try:
+                record = os.read(descriptor, 32) if stat.S_ISREG(os.fstat(descriptor).st_mode) else None
+            finally:
+                os.close(descriptor)
+            if record is None:
+                raise ValueError("worker PID marker is not a regular file")
+            pid = _parse_pid_record(record)
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            break
+        if pid is not None:
+            return pid
+        time.sleep(min(0.01, remaining))
+    raise AssertionError("worker PID marker was not completely published within five seconds")
+
+
+def _hold_worker(parent, broker, temporary: Path, handle: int) -> None:
+    worker = wait_worker_pid(temporary)
     sys.stdout.write(json.dumps({"broker": broker.pid, "worker": worker, "handle": handle}) + "\n")
     sys.stdout.flush()
     parent.sendall(REQUEST.pack(0x53464E31, 1, 2, 0, handle, 900_000, 0, 0, 0, 0, b"", b"", b"", b""))

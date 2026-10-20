@@ -15,6 +15,7 @@ from typing import Any
 import pytest
 
 from specfact_code_review.run import native_execution
+from tests.native.proof_macos_native_broker_wait import wait_worker_pid as _worker_pid
 
 
 NATIVE_SOURCE = Path("packages/specfact-code-review/native/macos-arm64")
@@ -426,16 +427,6 @@ def _physical_lease(source: Path, tmp_path: Path) -> tuple[SimpleNamespace, dict
         },
     )
     return lease, {"invocation": invocation, "project": project, "output": output, "temporary": temporary}, fds
-
-
-def _worker_pid(temporary: Path) -> int:
-    marker = temporary / "native-self-test.pid"
-    deadline = time.monotonic() + 5
-    while time.monotonic() < deadline:
-        if marker.is_file():
-            return int(marker.read_text(encoding="utf-8"))
-        time.sleep(0.01)
-    raise AssertionError("worker PID marker was not written")
 
 
 def _assert_dead(pid: int) -> None:

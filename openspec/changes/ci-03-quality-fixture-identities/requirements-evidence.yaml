@@ -674,3 +674,220 @@ requirements:
       intent: Preserve the real candidate failure-tail exit and privacy during positive publication.
       observable: Exact two-family rows accompany original exits 17 and 124 with empty public and private stderr and unchanged report bytes.
       implementation_task: '19.3'
+
+  ? openspec:ci-03-quality-fixture-identities:quality-fixture-identities:independent-compatibility-proof-is-native-bound-and-finite
+  : rationale: Bind native predicates and signed-reference counterfactuals without changing compatibility, privacy
+      or acceptance.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#518
+    touchpoints:
+    - id: independent-compatibility-proof
+      kind: workflow
+      locator: .github/workflows/capsule-customer-execution.yml
+    verification_cases:
+    - case_id: CI-03-20-1
+      scenario_id: independent-compatibility-proof-is-native-bound-and-finite
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/host/proof_capsule_compatibility_observation.py::test_preparation_writes_bound_native_observations
+      intent: Preparation writes bound native observations.
+      observable: Complete native workflow programs preserve exact binding, finite projection, cleanup and private
+        bytes under the mapped boundary controls.
+      implementation_task: '20.3'
+    - case_id: CI-03-20-2
+      scenario_id: independent-compatibility-proof-is-native-bound-and-finite
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/host/proof_capsule_compatibility_observation.py::test_preparation_receipt_identity_values
+      intent: Preparation receipt identity values.
+      observable: Complete native workflow programs preserve exact binding, finite projection, cleanup and private
+        bytes under the mapped boundary controls.
+      implementation_task: '20.3'
+    - case_id: CI-03-20-3
+      scenario_id: independent-compatibility-proof-is-native-bound-and-finite
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/host/proof_capsule_compatibility_observation.py::test_preparation_receipt_predicate_values
+      intent: Preparation receipt predicate values.
+      observable: Complete native workflow programs preserve exact binding, finite projection, cleanup and private
+        bytes under the mapped boundary controls.
+      implementation_task: '20.3'
+    - case_id: CI-03-20-4
+      scenario_id: independent-compatibility-proof-is-native-bound-and-finite
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/host/proof_capsule_compatibility_observation.py::test_native_predicates_and_graphs
+      intent: Native predicates and graphs.
+      observable: Complete native workflow programs preserve exact binding, finite projection, cleanup and private
+        bytes under the mapped boundary controls.
+      implementation_task: '20.3'
+    - case_id: CI-03-20-5
+      scenario_id: independent-compatibility-proof-is-native-bound-and-finite
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/host/proof_capsule_compatibility_observation.py::test_reference_comparison_requires_whole_native_clear
+      intent: Reference comparison requires whole native clear.
+      observable: Complete native workflow programs preserve exact binding, finite projection, cleanup and private
+        bytes under the mapped boundary controls.
+      implementation_task: '20.3'
+    - case_id: CI-03-20-6
+      scenario_id: independent-compatibility-proof-is-native-bound-and-finite
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/host/proof_capsule_compatibility_observation.py::test_preparation_preserves_failure_and_cleanup
+      intent: Preparation preserves failure and cleanup.
+      observable: Complete native workflow programs preserve exact binding, finite projection, cleanup and private
+        bytes under the mapped boundary controls.
+      implementation_task: '20.3'
+    - case_id: CI-03-20-7
+      scenario_id: independent-compatibility-proof-is-native-bound-and-finite
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/host/proof_capsule_compatibility_observation.py::test_observation_refuses_unbound_native_state
+      intent: Observation refuses unbound native state.
+      observable: Complete native workflow programs preserve exact binding, finite projection, cleanup and private
+        bytes under the mapped boundary controls.
+      implementation_task: '20.3'
+    - case_id: CI-03-20-8
+      scenario_id: independent-compatibility-proof-is-native-bound-and-finite
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/host/proof_capsule_compatibility_observation.py::test_native_owner_is_explicit_and_ordinary_collection_isolated
+      intent: Native owner is explicit and ordinary collection isolated.
+      observable: Complete native workflow programs preserve exact binding, finite projection, cleanup and private
+        bytes under the mapped boundary controls.
+      implementation_task: '20.3'
+    - case_id: CI-03-20-9
+      scenario_id: independent-compatibility-proof-is-native-bound-and-finite
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/host/proof_capsule_compatibility_observation.py::test_preparation_refuses_untrusted_observation
+      intent: Preparation refuses untrusted observation.
+      observable: Complete native workflow programs preserve exact binding, finite projection, cleanup and private
+        bytes under the mapped boundary controls.
+      implementation_task: '20.3'
+    - case_id: CI-03-20-10
+      scenario_id: independent-compatibility-proof-is-native-bound-and-finite
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/host/proof_capsule_compatibility_observation.py::test_preparation_rejects_modified_genuine_return
+      intent: Preparation rejects modified genuine return.
+      observable: Complete native workflow programs preserve exact binding, finite projection, cleanup and private
+        bytes under the mapped boundary controls.
+      implementation_task: '20.3'
+    - case_id: CI-03-20-11
+      scenario_id: independent-compatibility-proof-is-native-bound-and-finite
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/host/proof_capsule_compatibility_observation.py::test_preparation_does_not_reuse_a_prior_pair
+      intent: Preparation does not reuse a prior pair.
+      observable: Complete native workflow programs preserve exact binding, finite projection, cleanup and private
+        bytes under the mapped boundary controls.
+      implementation_task: '20.3'
+    - case_id: CI-03-20-12
+      scenario_id: independent-compatibility-proof-is-native-bound-and-finite
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/host/proof_capsule_compatibility_observation.py::test_native_preparation_to_final_publisher
+      intent: Native preparation to final publisher.
+      observable: Complete native workflow programs preserve exact binding, finite projection, cleanup and private
+        bytes under the mapped boundary controls.
+      implementation_task: '20.3'
+    - case_id: CI-03-20-13
+      scenario_id: independent-compatibility-proof-is-native-bound-and-finite
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/host/proof_capsule_compatibility_publisher.py::test_publisher_binds_complete_report
+      intent: Publisher binds complete report.
+      observable: Complete native workflow programs preserve exact binding, finite projection, cleanup and private
+        bytes under the mapped boundary controls.
+      implementation_task: '20.3'
+    - case_id: CI-03-20-14
+      scenario_id: independent-compatibility-proof-is-native-bound-and-finite
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/host/proof_capsule_compatibility_publisher.py::test_publisher_rejects_invalid_receipt
+      intent: Publisher rejects invalid receipt.
+      observable: Complete native workflow programs preserve exact binding, finite projection, cleanup and private
+        bytes under the mapped boundary controls.
+      implementation_task: '20.3'
+    - case_id: CI-03-20-15
+      scenario_id: independent-compatibility-proof-is-native-bound-and-finite
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/host/proof_capsule_compatibility_publisher.py::test_publisher_selects_common_reference_subset
+      intent: Publisher selects common reference subset.
+      observable: Complete native workflow programs preserve exact binding, finite projection, cleanup and private
+        bytes under the mapped boundary controls.
+      implementation_task: '20.3'
+    - case_id: CI-03-20-16
+      scenario_id: independent-compatibility-proof-is-native-bound-and-finite
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/host/proof_capsule_compatibility_publisher.py::test_existing_projection_fields_are_preserved
+      intent: Existing projection fields are preserved.
+      observable: Complete native workflow programs preserve exact binding, finite projection, cleanup and private
+        bytes under the mapped boundary controls.
+      implementation_task: '20.3'
+    - case_id: CI-03-20-17
+      scenario_id: independent-compatibility-proof-is-native-bound-and-finite
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/host/proof_capsule_compatibility_publisher.py::test_publisher_projects_finite_member_predicates
+      intent: Publisher projects finite member predicates.
+      observable: Complete native workflow programs preserve exact binding, finite projection, cleanup and private
+        bytes under the mapped boundary controls.
+      implementation_task: '20.3'
+    - case_id: CI-03-20-18
+      scenario_id: independent-compatibility-proof-is-native-bound-and-finite
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/host/proof_capsule_compatibility_observation.py::test_preparation_attributes_every_fixed_native_category
+      intent: Verify selected native coverage and trusted invocation boundary.
+      observable: Exact native category attribution or complete standalone legacy output is preserved.
+      implementation_task: '20.3'
+    - case_id: CI-03-20-19
+      scenario_id: independent-compatibility-proof-is-native-bound-and-finite
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/host/proof_capsule_compatibility_publisher.py::test_standalone_publisher_preserves_complete_legacy_output
+      intent: Verify selected native coverage and trusted invocation boundary.
+      observable: Exact native category attribution or complete standalone legacy output is preserved.
+      implementation_task: '20.3'
+    - case_id: CI-03-20-20
+      scenario_id: independent-compatibility-proof-is-native-bound-and-finite
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/host/proof_capsule_compatibility_observation.py::test_preparation_constructs_every_fixed_native_category
+      intent: Verify genuine complete native construction and payload verification causality.
+      observable: Exact native category evidence or unavailable observation with preserved exit and cleanup.
+      implementation_task: '20.3'
+    - case_id: CI-03-20-21
+      scenario_id: independent-compatibility-proof-is-native-bound-and-finite
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/host/proof_capsule_compatibility_observation.py::test_preparation_verifies_payload_after_genuine_return
+      intent: Verify genuine complete native construction and payload verification causality.
+      observable: Exact native category evidence or unavailable observation with preserved exit and cleanup.
+      implementation_task: '20.3'

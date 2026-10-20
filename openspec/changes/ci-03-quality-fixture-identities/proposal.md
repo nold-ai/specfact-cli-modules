@@ -72,3 +72,15 @@ The maintainer needs to compare cached public runner and sandbox analysis with t
 The maintainer needs a bounded confirmation of the existing contracts diagnostic family on base and head. The selected addition is optional `snapshot_producer_categories`, containing only exact `project_analyzer_dependency_incompatible` or `project_runtime_required` confirmations. Existing reasons and fallback facts remain unchanged. Absence alone does not establish a negative result. Interpretation requires the corresponding existing facts and a deployed revision supporting this field.
 
 This unit reuses existing validated unclassified observations in both failure programs. It adds native complete-program tests and pure fixture data, with no runtime, dependency, acceptance, assurance or authority changes. The actual hosted family remains unknown. A family observation cannot identify a package, version, descriptor or historical fault. The first milestone is frozen spec and tests with genuine missing-field RED against unchanged programs. Implementation, normal signed hooks and hosted acceptance remain later gates.
+
+
+## Bound native compatibility proof (2026-10-20)
+
+The maintainer needs the deciding native predicate and fixed package category for the independent base/head incompatibility before choosing a dependency correction. Root selected Astra private transport and attribution with Sol whole-map graph validation and one unique smallest common clearing subset. Owner authorization covers necessary guideline-compliant corrections without another question, within existing maintenance scope. Actual historical package versions and predicates remain unknown. Candidate artifacts cannot replace the missing independent report.
+
+This diagnostic adds one bounded private preparation receipt and one finite compatibility_proof field to the independent failure summary. Genuine SDK constructors, sealed verification, native compatibility decisions and all member graphs remain authoritative. Public values never include versions, arbitrary names, requirements, suffixes, paths or source. Existing ordinary-user installation/private-storage assumptions remain; no hostile same-user guarantee, policy grant, new dependency, deadline, release, retention or acceptance change is introduced.
+
+The first milestone is specification, mapped genuine native full-program RED and full-file feasibility. A separate workflow writer implements only after that checkpoint. Successful reference substitution establishes a metadata counterfactual, never resolver acceptance or repair. An other witness is explicitly partial delivery. Planning #517/#770 and core #779 remain outside scope.
+
+
+The new compatibility_proof field is scoped to the existing trusted protocol invocation: TRUSTED_ROOT identifies its directory and REVIEW_REPORT and REVIEW_LOG resolve to that directory’s fixed review.private.json and review.private.log paths. Without that context, the standalone final Python publisher retains its complete legacy object and omits compatibility_proof. Within the bound context missing or invalid receipt yields exactly unavailable. This uses no new environment variable.

@@ -155,3 +155,12 @@
 - [x] 19.3 Add only the two private classification helpers and emission calls in each existing failure program.
 - [x] 19.4 Verify frozen tests, legacy controls, preservation and required native quality gates, then obtain independent review.
 - [ ] 19.5 Complete normal signed hooks and publication, then inspect exact-head hosted evidence before any runtime diagnosis.
+
+
+## 20. Bound native compatibility predicate proof
+
+- [x] 20.1 Reconcile the selected contract and map named tests before test implementation.
+- [x] 20.2 Prove genuine native fixtures, complete-program intended RED, baseline preservation and full-file native feasibility.
+- [x] 20.3 Separately implement private observation and strict final projection after checkpoint acceptance.
+- [x] 20.4 Verify GREEN, native quality, normal hooks and independent review without weakening gates.
+- [ ] 20.5 Publish normally signed correction and inspect exact-head hosted evidence; scope any dependency correction separately.
