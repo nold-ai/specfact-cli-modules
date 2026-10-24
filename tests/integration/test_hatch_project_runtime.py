@@ -276,14 +276,14 @@ def test_configured_native_cell_fails_missing_prerequisites(tmp_path, monkeypatc
     monkeypatch.setenv("SPECFACT_HATCH_PROJECT_PYTHON", str(tmp_path / "unused-python"))
     for name in missing:
         monkeypatch.delenv(name)
+    workflow, arguments = {
+        "workflow": (test_existing_and_cold_native_hatch_workflow, ()),
+        "storage": (test_native_hatch_customer_storage_survives_controller_context, (tmp_path, monkeypatch)),
+        "absolute": (test_native_hatch_absolute_python_declaration, (tmp_path, monkeypatch, False, False)),
+    }[case]
     with pytest.raises(pytest.fail.Exception, match="Configured native acceptance cell requires:") as failure:
         try:
-            if case == "workflow":
-                test_existing_and_cold_native_hatch_workflow()
-            elif case == "storage":
-                test_native_hatch_customer_storage_survives_controller_context(tmp_path, monkeypatch)
-            else:
-                test_native_hatch_absolute_python_declaration(tmp_path, monkeypatch, False, False)
+            workflow(*arguments)
         except pytest.skip.Exception as skipped:
             raise AssertionError("Configured native cell skipped missing prerequisites") from skipped
     assert all(name in str(failure.value) for name in missing)
