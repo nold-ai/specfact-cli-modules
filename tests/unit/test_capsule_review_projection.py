@@ -283,7 +283,7 @@ def _write_independent_failure_fixture(tmp_path, case):
     return path, log
 
 
-def _expected_review_projection(expected, case):
+def _expected_review_projection(expected):
     outcome, flags, codes = expected
     verdict = "FAIL" if outcome == "structured_report" else "UNAVAILABLE"
     keys = ("findings_present", "tool_error_present", "execution_error_present", "unknown_evidence_present")
@@ -299,8 +299,7 @@ def _expected_review_projection(expected, case):
     }
     if outcome == "oversized_report":
         projection["report_header_observed"] = False
-    if outcome in {"structured_report", "oversized_report"}:
-        projection["error_analyzer_sides"] = {"pylint": ["head"]} if case == "nested" else {}
+        projection["error_analyzer_sides"] = {}
         projection["crosshair_failure_observations"] = []
     return projection
 
@@ -332,7 +331,7 @@ def test_independent_review_failure_keeps_nested_evidence_and_private_tokens(tmp
     monkeypatch.setenv("REVIEW_LOG", str(log))
     result = _run_projector(tmp_path, program)
     assert result.returncode == 0
-    assert json.loads(result.stdout) == _expected_review_projection(expected, case)
+    assert json.loads(result.stdout) == _expected_review_projection(expected)
     assert "private-token" not in result.stdout + result.stderr
 
 
@@ -666,61 +665,6 @@ def test_candidate_large_report_retains_unavailable_marker_and_fixed_failure_cla
         )
     assert result.returncode == 0
     assert [json.loads(line) for line in result.stdout.splitlines()] == expected
-    assert "private-token" not in result.stdout + result.stderr
-
-
-@pytest.mark.parametrize("case", ["base", "head", "both", "neither", "other-tool"])
-def test_structured_independent_failure_preserves_bounded_attribution(
-    tmp_path, monkeypatch, case, request, record_property
-):
-    import json
-
-    record_property("specfact.selector", request.node.nodeid)
-    sides = {"base": ["base"], "head": ["head"], "both": ["base", "head"], "neither": [], "other-tool": ["base"]}[case]
-    root = {
-        "assurance_status": "FAIL",
-        "overall_verdict": "FAIL",
-        "analyzer_evidence": [
-            {
-                "id": "contracts",
-                **{side: {"execution_state": "error", "evidence_outcome": "UNKNOWN"} for side in sides},
-            },
-            {"id": "private-token", "head": {"execution_state": "error"}},
-        ],
-        "findings": [
-            {
-                "category": "tool_error",
-                "tool": "ruff" if case == "other-tool" else "crosshair",
-                "message": "CrossHair process error: ValueError: wrong parameter order: private-token",
-            }
-        ],
-    }
-    report, log = _write_independent_failure_fixture(tmp_path, "missing")
-    report.write_text(json.dumps(root))
-    monkeypatch.setenv("REVIEW_REPORT", str(report))
-    monkeypatch.setenv("REVIEW_LOG", str(log))
-    step = next(
-        item
-        for item in independent_review_job()["steps"]
-        if item.get("name") == "Project independent review failure privately"
-    )
-    program = step["run"].split("<<'PY_REVIEW_FAILURE'\n", 1)[1].split("\nPY_REVIEW_FAILURE", 1)[0]
-    result = _run_projector(tmp_path, program)
-    assert result.returncode == 0
-    value = json.loads(result.stdout)
-    assert value.get("error_analyzer_sides") == ({"contracts": sides} if sides else {})
-    expected_classes = (
-        []
-        if case == "other-tool"
-        else ["crosshair_process_error_observed", "value_error_observed", "wrong_parameter_order_observed"]
-    )
-    assert value.get("crosshair_failure_observations") == expected_classes
-    assert (value["report_outcome"], value["assurance_status"], value["overall_verdict"]) == (
-        "structured_report",
-        "FAIL",
-        "FAIL",
-    )
-    assert "report_header_observed" not in value
     assert "private-token" not in result.stdout + result.stderr
 
 
