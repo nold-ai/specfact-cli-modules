@@ -524,7 +524,7 @@ def _check_preparation(plan: ProjectPlan, workspace: Path) -> None:
 
 
 def _check_selected_target(requested: InterpreterFacts, target: Path, existing: bool, workspace: Path) -> None:
-    if workspace.is_relative_to(requested.prefix):
+    if workspace.is_relative_to(requested.prefix) or (existing and workspace.is_relative_to(target.resolve())):
         raise ValueError("Preparation workspace must be outside the selected interpreter prefix")
     if requested.prefix != requested.base_prefix and (not existing or requested.prefix.resolve() != target.resolve()):
         raise ValueError("Explicit virtualenv is not the selected native Hatch environment")

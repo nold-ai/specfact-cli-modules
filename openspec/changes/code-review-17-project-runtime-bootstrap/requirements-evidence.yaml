@@ -215,6 +215,30 @@ requirements:
       selector:
         runner: pytest
         node_id: tests/integration/test_hatch_project_runtime.py::test_native_hatch_customer_storage_survives_controller_context
+    - case_id: first-hatch-existing-target-workspace-inside
+      scenario_id: faithful-external-sidecar-preparation
+      method: test
+      intent: Keep explicit-base preparation storage outside the existing customer environment.
+      observable: A nested workspace is refused without allocation, receipt or environment mutation.
+      selector:
+        runner: pytest
+        node_id: tests/unit/specfact_codebase/test_project_runtime.py::test_explicit_base_existing_target_excludes_workspace[inside]
+    - case_id: first-hatch-existing-target-workspace-symlink
+      scenario_id: faithful-external-sidecar-preparation
+      method: test
+      intent: Resolve the existing target workspace before applying the same external-storage contract.
+      observable: A symlink into the selected environment is refused without allocation or receipt.
+      selector:
+        runner: pytest
+        node_id: tests/unit/specfact_codebase/test_project_runtime.py::test_explicit_base_existing_target_excludes_workspace[symlink]
+    - case_id: first-hatch-existing-target-workspace-external
+      scenario_id: faithful-external-sidecar-preparation
+      method: test
+      intent: Preserve valid external preparation with an explicit compatible base Python.
+      observable: A fresh external workspace publishes a receipt while the existing target remains unchanged.
+      selector:
+        runner: pytest
+        node_id: tests/unit/specfact_codebase/test_project_runtime.py::test_explicit_base_existing_target_excludes_workspace[external]
   openspec:code-review-17-project-runtime-bootstrap:project-runtime-bootstrap:single-project-execution-owner:
     rationale: Review the owner-approved replacement contract at planned maturity without claiming implementation
       evidence.
