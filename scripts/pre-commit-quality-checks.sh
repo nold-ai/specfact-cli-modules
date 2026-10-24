@@ -345,7 +345,7 @@ run_code_review_gate() {
       exit 1
     fi
     if ! capsule_paths="$(git diff --cached --name-only "${candidate_base}" -- \
-      packages/specfact-code-review .github/workflows/capsule-customer-execution.yml)"; then
+      packages/specfact-code-review tests/fixtures/portable-runtime .github/workflows/capsule-customer-execution.yml)"; then
       error "Capsule review deferral cannot determine the staged candidate delta against origin/dev."
       exit 1
     fi

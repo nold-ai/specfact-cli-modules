@@ -22,6 +22,149 @@ requirements:
       intent: 'Inspect planned scenario: Ambiguous or missing interpreter.'
       observable: it names the candidates or missing version and performs no installation or controller-Python fallback.
         Planning inspection only; runtime tests, RED/GREEN, installed acceptance and publication remain pending.
+    - case_id: first-hatch-selected-venv-identity-and-no-sync-even-with-stale-dependencies
+      scenario_id: independent-customer-interpreter-selection
+      method: test
+      intent: Bounded first Hatch milestone. selected venv identity and no sync even with stale dependencies.
+      observable: Actual selected environment execution satisfies the test predicate; full manager and reviewer
+        rollout remains pending.
+      selector:
+        runner: pytest
+        node_id: tests/unit/specfact_codebase/test_project_runtime.py::test_selected_venv_identity_and_no_sync_even_with_stale_dependencies
+    - case_id: first-hatch-missing-tool-never-falls-back-to-controller-path
+      scenario_id: independent-customer-interpreter-selection
+      method: test
+      intent: Bounded first Hatch milestone. missing tool never falls back to controller path.
+      observable: Actual selected environment execution satisfies the test predicate; full manager and reviewer
+        rollout remains pending.
+      selector:
+        runner: pytest
+        node_id: tests/unit/specfact_codebase/test_project_runtime.py::test_missing_tool_never_falls_back_to_controller_path
+    - case_id: first-hatch-project-python-constraint
+      scenario_id: independent-customer-interpreter-selection
+      method: test
+      intent: Reject selected Python incompatible with project.requires-python before native manager queries.
+      observable: Structured failure preserves requested constraint and does not invoke native Hatch.
+      selector:
+        runner: pytest
+        node_id: tests/unit/specfact_codebase/test_project_runtime.py::test_project_python_constraint_rejected_before_native_query
+    - case_id: first-hatch-discover-existing-without-python-override
+      scenario_id: independent-customer-interpreter-selection
+      method: test
+      intent: Use a probeable selected existing native environment without requiring redundant caller Python configuration.
+      observable: Preparation discovers and validates the selected existing interpreter without lifecycle calls.
+      selector:
+        runner: pytest
+        node_id: tests/unit/specfact_codebase/test_project_runtime.py::test_existing_environment_discovered_without_redundant_python_override
+    - case_id: first-hatch-explicit-base-python-existing
+      scenario_id: independent-customer-interpreter-selection
+      method: test
+      intent: Bind an explicit base Python selection to the existing target installation.
+      observable: Equal version with a different base installation returns a diagnostic naming both bases and no
+        completed capability.
+      selector:
+        runner: pytest
+        node_id: tests/unit/specfact_codebase/test_project_runtime.py::test_explicit_base_python_must_match_prepared_target[existing]
+    - case_id: first-hatch-explicit-base-python-cold
+      scenario_id: independent-customer-interpreter-selection
+      method: test
+      intent: Bind an explicit base Python selection to the native-created cold target installation.
+      observable: Equal version with a different base installation returns a diagnostic naming both bases and no
+        completed capability.
+      selector:
+        runner: pytest
+        node_id: tests/unit/specfact_codebase/test_project_runtime.py::test_explicit_base_python_must_match_prepared_target[cold]
+    - case_id: first-hatch-absolute-python-facts-base-prefix
+      scenario_id: independent-customer-interpreter-selection
+      method: test
+      intent: Require absolute Hatch declaration facts to match selected target.
+      observable: A mismatched base prefix or full version returns structured failure naming the declaration.
+      selector:
+        runner: pytest
+        node_id: tests/unit/specfact_codebase/test_project_runtime.py::test_absolute_hatch_python_must_match_selected_interpreter[base-prefix]
+    - case_id: first-hatch-absolute-python-facts-version
+      scenario_id: independent-customer-interpreter-selection
+      method: test
+      intent: Require absolute Hatch declaration facts to match selected target.
+      observable: A mismatched base prefix or full version returns structured failure naming the declaration.
+      selector:
+        runner: pytest
+        node_id: tests/unit/specfact_codebase/test_project_runtime.py::test_absolute_hatch_python_must_match_selected_interpreter[version]
+    - case_id: first-hatch-numeric-version-components
+      scenario_id: independent-customer-interpreter-selection
+      method: test
+      intent: Compare numeric declarations by whole components during pure inspection.
+      observable: 3.11.1 and 3.11.15 conflict without native queries.
+      selector:
+        runner: pytest
+        node_id: tests/unit/specfact_codebase/test_project_runtime.py::test_numeric_hatch_and_version_file_compare_whole_components
+    - case_id: first-hatch-native-absolute-python-cold-without-version-file
+      scenario_id: independent-customer-interpreter-selection
+      method: test
+      intent: Use a native absolute Hatch interpreter declaration for existing and cold targets, with and without
+        version file.
+      observable: Native command base prefix and full version match the declared interpreter; declarations remain
+        unchanged.
+      selector:
+        runner: pytest
+        node_id: tests/integration/test_hatch_project_runtime.py::test_native_hatch_absolute_python_declaration[cold-without-version-file]
+    - case_id: first-hatch-native-absolute-python-cold-with-version-file
+      scenario_id: independent-customer-interpreter-selection
+      method: test
+      intent: Use a native absolute Hatch interpreter declaration for existing and cold targets, with and without
+        version file.
+      observable: Native command base prefix and full version match the declared interpreter; declarations remain
+        unchanged.
+      selector:
+        runner: pytest
+        node_id: tests/integration/test_hatch_project_runtime.py::test_native_hatch_absolute_python_declaration[cold-with-version-file]
+    - case_id: first-hatch-native-absolute-python-existing-without-version-file
+      scenario_id: independent-customer-interpreter-selection
+      method: test
+      intent: Use a native absolute Hatch interpreter declaration for existing and cold targets, with and without
+        version file.
+      observable: Native command base prefix and full version match the declared interpreter; declarations remain
+        unchanged.
+      selector:
+        runner: pytest
+        node_id: tests/integration/test_hatch_project_runtime.py::test_native_hatch_absolute_python_declaration[existing-without-version-file]
+    - case_id: first-hatch-native-absolute-python-existing-with-version-file
+      scenario_id: independent-customer-interpreter-selection
+      method: test
+      intent: Use a native absolute Hatch interpreter declaration for existing and cold targets, with and without
+        version file.
+      observable: Native command base prefix and full version match the declared interpreter; declarations remain
+        unchanged.
+      selector:
+        runner: pytest
+        node_id: tests/integration/test_hatch_project_runtime.py::test_native_hatch_absolute_python_declaration[existing-with-version-file]
+    - case_id: first-hatch-cold-created-absolute-base-identity
+      scenario_id: independent-customer-interpreter-selection
+      method: test
+      intent: Validate the native-created cold target against the absolute declared base interpreter, even at equal
+        full version.
+      observable: A changed created-target base prefix fails structurally before completion metadata is published.
+      selector:
+        runner: pytest
+        node_id: tests/unit/specfact_codebase/test_project_runtime.py::test_cold_absolute_hatch_python_validates_created_base
+    - case_id: first-hatch-explicit-numeric-python-matching
+      scenario_id: independent-customer-interpreter-selection
+      method: test
+      intent: Validate every explicitly requested numeric Python component.
+      observable: Mismatched patch refuses before native queries; a matching full version selects the existing target
+        without synchronization.
+      selector:
+        runner: pytest
+        node_id: tests/unit/specfact_codebase/test_project_runtime.py::test_explicit_numeric_python_checks_all_requested_components[matching]
+    - case_id: first-hatch-explicit-numeric-python-wrong-patch
+      scenario_id: independent-customer-interpreter-selection
+      method: test
+      intent: Validate every explicitly requested numeric Python component.
+      observable: Mismatched patch refuses before native queries; a matching full version selects the existing target
+        without synchronization.
+      selector:
+        runner: pytest
+        node_id: tests/unit/specfact_codebase/test_project_runtime.py::test_explicit_numeric_python_checks_all_requested_components[wrong-patch]
   openspec:code-review-17-project-runtime-bootstrap:project-runtime-bootstrap:faithful-external-sidecar-preparation:
     rationale: Review the owner-approved replacement contract at planned maturity without claiming implementation
       evidence.
@@ -53,6 +196,25 @@ requirements:
       observable: the resulting dependency and origin identities are recorded externally and no lock or constraints
         are written into the customer project. Planning inspection only; runtime tests, RED/GREEN, installed acceptance
         and publication remain pending.
+    - case_id: first-hatch-existing-and-cold-native-hatch-workflow
+      scenario_id: faithful-external-sidecar-preparation
+      method: test
+      intent: Bounded first Hatch milestone. existing and cold native hatch workflow.
+      observable: Actual selected environment execution satisfies the test predicate; full manager and reviewer
+        rollout remains pending.
+      selector:
+        runner: pytest
+        node_id: tests/integration/test_hatch_project_runtime.py::test_existing_and_cold_native_hatch_workflow
+    - case_id: first-hatch-native-customer-storage
+      scenario_id: faithful-external-sidecar-preparation
+      method: test
+      intent: Discover a real existing native environment in customer-selected data and cache storage despite controller
+        contamination.
+      observable: The exact existing prefix executes with customer storage settings and without controller Hatch
+        selectors.
+      selector:
+        runner: pytest
+        node_id: tests/integration/test_hatch_project_runtime.py::test_native_hatch_customer_storage_survives_controller_context
   openspec:code-review-17-project-runtime-bootstrap:project-runtime-bootstrap:single-project-execution-owner:
     rationale: Review the owner-approved replacement contract at planned maturity without claiming implementation
       evidence.
@@ -77,6 +239,42 @@ requirements:
       observable: the chosen working directory, manager environment, script expansion and import roots match the
         project context rather than a controller heuristic. Planning inspection only; runtime tests, RED/GREEN,
         installed acceptance and publication remain pending.
+    - case_id: first-hatch-controller-python-path-removed-and-explicit-override-honored
+      scenario_id: single-project-execution-owner
+      method: test
+      intent: Bounded first Hatch milestone. controller python path removed and explicit override honored.
+      observable: Actual selected environment execution satisfies the test predicate; full manager and reviewer
+        rollout remains pending.
+      selector:
+        runner: pytest
+        node_id: tests/unit/specfact_codebase/test_project_runtime.py::test_controller_python_path_removed_and_explicit_override_honored
+    - case_id: first-hatch-nonzero-timeout-and-bounded-output-are-distinct
+      scenario_id: single-project-execution-owner
+      method: test
+      intent: Bounded first Hatch milestone. nonzero timeout and bounded output are distinct.
+      observable: Actual selected environment execution satisfies the test predicate; full manager and reviewer
+        rollout remains pending.
+      selector:
+        runner: pytest
+        node_id: tests/unit/specfact_codebase/test_project_runtime.py::test_nonzero_timeout_and_bounded_output_are_distinct
+    - case_id: first-hatch-unrelated-scripts-and-locks-do-not-block-existing-execution
+      scenario_id: single-project-execution-owner
+      method: test
+      intent: Bounded first Hatch milestone. unrelated scripts and locks do not block existing execution.
+      observable: Actual selected environment execution satisfies the test predicate; full manager and reviewer
+        rollout remains pending.
+      selector:
+        runner: pytest
+        node_id: tests/unit/specfact_codebase/test_project_runtime.py::test_unrelated_scripts_and_locks_do_not_block_existing_execution
+    - case_id: first-hatch-controller-python-startup-isolation
+      scenario_id: single-project-execution-owner
+      method: test
+      intent: Remove inherited controller Python startup settings while allowing explicit nonidentity overrides.
+      observable: Ambient optimization and startup values are absent in project execution, while explicit optimization
+        changes the child flags.
+      selector:
+        runner: pytest
+        node_id: tests/unit/specfact_codebase/test_project_runtime.py::test_controller_python_startup_removed_and_explicit_override_honored
   openspec:code-review-17-project-runtime-bootstrap:project-runtime-bootstrap:preparation-failure-and-reuse-are-explicit:
     rationale: Review the owner-approved replacement contract at planned maturity without claiming implementation
       evidence.
@@ -101,6 +299,48 @@ requirements:
       observable: the partial or stale context is not treated as ready and a fresh owned preparation can proceed
         without modifying customer inputs. Planning inspection only; runtime tests, RED/GREEN, installed acceptance
         and publication remain pending.
+    - case_id: first-hatch-source-edits-allowed-but-dependency-drift-requires-reinspection
+      scenario_id: preparation-failure-and-reuse-are-explicit
+      method: test
+      intent: Bounded first Hatch milestone. source edits allowed but dependency drift requires reinspection.
+      observable: Actual selected environment execution satisfies the test predicate; full manager and reviewer
+        rollout remains pending.
+      selector:
+        runner: pytest
+        node_id: tests/unit/specfact_codebase/test_project_runtime.py::test_source_edits_allowed_but_dependency_drift_requires_reinspection
+    - case_id: first-hatch-external-fresh-workspace-required
+      scenario_id: preparation-failure-and-reuse-are-explicit
+      method: test
+      intent: Bounded first Hatch milestone. external fresh workspace required.
+      observable: Actual selected environment execution satisfies the test predicate; full manager and reviewer
+        rollout remains pending.
+      selector:
+        runner: pytest
+        node_id: tests/unit/specfact_codebase/test_project_runtime.py::test_external_fresh_workspace_required
+    - case_id: first-hatch-unreadable-execution-identity-before-command
+      scenario_id: preparation-failure-and-reuse-are-explicit
+      method: test
+      intent: Fail structurally for fingerprint read failures before and after command execution.
+      observable: Before-command failure prevents execution; after-command failure retains output and reports execution_failed.
+      selector:
+        runner: pytest
+        node_id: tests/unit/specfact_codebase/test_project_runtime.py::test_unreadable_execution_identity_is_structured[before-command]
+    - case_id: first-hatch-unreadable-execution-identity-after-command
+      scenario_id: preparation-failure-and-reuse-are-explicit
+      method: test
+      intent: Fail structurally for fingerprint read failures before and after command execution.
+      observable: Before-command failure prevents execution; after-command failure retains output and reports execution_failed.
+      selector:
+        runner: pytest
+        node_id: tests/unit/specfact_codebase/test_project_runtime.py::test_unreadable_execution_identity_is_structured[after-command]
+    - case_id: first-hatch-cleanup-preserves-primary-failure
+      scenario_id: preparation-failure-and-reuse-are-explicit
+      method: test
+      intent: Retain the original preparation error when incomplete workspace cleanup also fails.
+      observable: Structured failure identifies cleanup residue and requires a fresh workspace.
+      selector:
+        runner: pytest
+        node_id: tests/unit/specfact_codebase/test_project_runtime.py::test_cleanup_failure_preserves_preparation_failure
   openspec:code-review-17-project-runtime-bootstrap:project-runtime-bootstrap:portable-inspection-and-bootstrap-commands:
     rationale: Review the owner-approved replacement contract at planned maturity without claiming implementation
       evidence.
@@ -125,3 +365,171 @@ requirements:
       observable: it either reads an explicitly supported versioned local descriptor or returns a migration diagnostic,
         and never silently treats the descriptor path as an interpreter executable. Planning inspection only; runtime
         tests, RED/GREEN, installed acceptance and publication remain pending.
+    - case_id: first-hatch-inspection-is-pure-and-ambiguity-is-actionable
+      scenario_id: portable-inspection-and-bootstrap-commands
+      method: test
+      intent: Bounded first Hatch milestone. inspection is pure and ambiguity is actionable.
+      observable: Actual selected environment execution satisfies the test predicate; full manager and reviewer
+        rollout remains pending.
+      selector:
+        runner: pytest
+        node_id: tests/unit/specfact_codebase/test_project_runtime.py::test_inspection_is_pure_and_ambiguity_is_actionable
+    - case_id: first-hatch-selected-unsupported-context-rejected-before-native-query
+      scenario_id: portable-inspection-and-bootstrap-commands
+      method: test
+      intent: Bounded first Hatch milestone. selected unsupported context rejected before native query.
+      observable: Actual selected environment execution satisfies the test predicate; full manager and reviewer
+        rollout remains pending.
+      selector:
+        runner: pytest
+        node_id: tests/unit/specfact_codebase/test_project_runtime.py::test_selected_unsupported_context_rejected_before_native_query
+    - case_id: first-hatch-unreadable-inspection-identity
+      scenario_id: portable-inspection-and-bootstrap-commands
+      method: test
+      intent: Return an inspection diagnostic when fingerprint input cannot be read.
+      observable: No input identity is invented and preparation does not query Hatch.
+      selector:
+        runner: pytest
+        node_id: tests/unit/specfact_codebase/test_project_runtime.py::test_unreadable_inspection_identity_is_diagnostic
+    - case_id: first-hatch-custom-global-config-explicitly-unsupported
+      scenario_id: portable-inspection-and-bootstrap-commands
+      method: test
+      intent: Refuse unsupported custom global Hatch project context before native queries.
+      observable: HATCH_CONFIG appears in inspection diagnostics and no Hatch invocation occurs.
+      selector:
+        runner: pytest
+        node_id: tests/unit/specfact_codebase/test_project_runtime.py::test_custom_hatch_config_is_diagnostic_before_native_query
+  openspec:code-review-17-project-runtime-bootstrap:project-runtime-bootstrap:first-hatch-delivery-review-handoff:
+    rationale: Delivery verification for the explicitly approved Darwin-to-blocking-Linux review handoff.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#513
+    touchpoints:
+    - id: project-runtime-bootstrap-spec
+      kind: config_file
+      locator: openspec/changes/code-review-17-project-runtime-bootstrap/specs/project-runtime-bootstrap/spec.md
+    verification_cases:
+    - case_id: first-hatch-portable-fixture-review-handoff-guards-staged-fixture
+      scenario_id: first-hatch-delivery-review-handoff
+      method: test
+      intent: Exercise staged fixture admission, unstaged fixture rejection and mandatory indexed independent review.
+      observable: Only the staged fixture with required indexed jobs reports DEFERRED and executes all remaining
+        Block 2 checks.
+      selector:
+        runner: pytest
+        node_id: tests/host/proof_capsule_deferred_review_ci.py::test_portable_fixture_deferral_retains_block2_guards[staged-fixture]
+    - case_id: first-hatch-portable-fixture-review-handoff-guards-unstaged-fixture
+      scenario_id: first-hatch-delivery-review-handoff
+      method: test
+      intent: Exercise staged fixture admission, unstaged fixture rejection and mandatory indexed independent review.
+      observable: Only the staged fixture with required indexed jobs reports DEFERRED and executes all remaining
+        Block 2 checks.
+      selector:
+        runner: pytest
+        node_id: tests/host/proof_capsule_deferred_review_ci.py::test_portable_fixture_deferral_retains_block2_guards[unstaged-fixture]
+    - case_id: first-hatch-portable-fixture-review-handoff-guards-missing-indexed-independent-review
+      scenario_id: first-hatch-delivery-review-handoff
+      method: test
+      intent: Exercise staged fixture admission, unstaged fixture rejection and mandatory indexed independent review.
+      observable: Only the staged fixture with required indexed jobs reports DEFERRED and executes all remaining
+        Block 2 checks.
+      selector:
+        runner: pytest
+        node_id: tests/host/proof_capsule_deferred_review_ci.py::test_portable_fixture_deferral_retains_block2_guards[missing-indexed-independent-review]
+    - case_id: first-hatch-optimized-proof-rejected-flag
+      scenario_id: first-hatch-delivery-review-handoff
+      method: test
+      intent: Refuse optimized local native proof before workspace allocation.
+      observable: Actual -O and PYTHONOPTIMIZE invocations report the named diagnostic and create no workspace or
+        receipt.
+      selector:
+        runner: pytest
+        node_id: tests/integration/test_hatch_project_runtime.py::test_native_proof_rejects_optimized_python_before_allocation[flag]
+    - case_id: first-hatch-optimized-proof-rejected-environment
+      scenario_id: first-hatch-delivery-review-handoff
+      method: test
+      intent: Refuse optimized local native proof before workspace allocation.
+      observable: Actual -O and PYTHONOPTIMIZE invocations report the named diagnostic and create no workspace or
+        receipt.
+      selector:
+        runner: pytest
+        node_id: tests/integration/test_hatch_project_runtime.py::test_native_proof_rejects_optimized_python_before_allocation[environment]
+    - case_id: first-hatch-wrong-controller-proof-rejected
+      scenario_id: first-hatch-delivery-review-handoff
+      method: test
+      intent: Refuse wrong proof controller before workspace allocation.
+      observable: An explicit controller diagnostic occurs before workspace or receipt exists.
+      selector:
+        runner: pytest
+        node_id: tests/integration/test_hatch_project_runtime.py::test_native_proof_rejects_wrong_controller_before_allocation
+    - case_id: first-hatch-configured-native-cell-missing0-workflow
+      scenario_id: first-hatch-delivery-review-handoff
+      method: test
+      intent: Reject an explicitly configured native cell with missing prerequisites before allocation.
+      observable: The selected workflow fails with each missing prerequisite name and creates no workspace.
+      selector:
+        runner: pytest
+        node_id: tests/integration/test_hatch_project_runtime.py::test_configured_native_cell_fails_missing_prerequisites[missing0-workflow]
+    - case_id: first-hatch-configured-native-cell-missing0-storage
+      scenario_id: first-hatch-delivery-review-handoff
+      method: test
+      intent: Reject an explicitly configured native cell with missing prerequisites before allocation.
+      observable: The selected workflow fails with each missing prerequisite name and creates no workspace.
+      selector:
+        runner: pytest
+        node_id: tests/integration/test_hatch_project_runtime.py::test_configured_native_cell_fails_missing_prerequisites[missing0-storage]
+    - case_id: first-hatch-configured-native-cell-missing0-absolute
+      scenario_id: first-hatch-delivery-review-handoff
+      method: test
+      intent: Reject an explicitly configured native cell with missing prerequisites before allocation.
+      observable: The selected workflow fails with each missing prerequisite name and creates no workspace.
+      selector:
+        runner: pytest
+        node_id: tests/integration/test_hatch_project_runtime.py::test_configured_native_cell_fails_missing_prerequisites[missing0-absolute]
+    - case_id: first-hatch-configured-native-cell-missing1-workflow
+      scenario_id: first-hatch-delivery-review-handoff
+      method: test
+      intent: Reject an explicitly configured native cell with missing prerequisites before allocation.
+      observable: The selected workflow fails with each missing prerequisite name and creates no workspace.
+      selector:
+        runner: pytest
+        node_id: tests/integration/test_hatch_project_runtime.py::test_configured_native_cell_fails_missing_prerequisites[missing1-workflow]
+    - case_id: first-hatch-configured-native-cell-missing1-storage
+      scenario_id: first-hatch-delivery-review-handoff
+      method: test
+      intent: Reject an explicitly configured native cell with missing prerequisites before allocation.
+      observable: The selected workflow fails with each missing prerequisite name and creates no workspace.
+      selector:
+        runner: pytest
+        node_id: tests/integration/test_hatch_project_runtime.py::test_configured_native_cell_fails_missing_prerequisites[missing1-storage]
+    - case_id: first-hatch-configured-native-cell-missing1-absolute
+      scenario_id: first-hatch-delivery-review-handoff
+      method: test
+      intent: Reject an explicitly configured native cell with missing prerequisites before allocation.
+      observable: The selected workflow fails with each missing prerequisite name and creates no workspace.
+      selector:
+        runner: pytest
+        node_id: tests/integration/test_hatch_project_runtime.py::test_configured_native_cell_fails_missing_prerequisites[missing1-absolute]
+    - case_id: first-hatch-configured-native-cell-missing2-workflow
+      scenario_id: first-hatch-delivery-review-handoff
+      method: test
+      intent: Reject an explicitly configured native cell with missing prerequisites before allocation.
+      observable: The selected workflow fails with each missing prerequisite name and creates no workspace.
+      selector:
+        runner: pytest
+        node_id: tests/integration/test_hatch_project_runtime.py::test_configured_native_cell_fails_missing_prerequisites[missing2-workflow]
+    - case_id: first-hatch-configured-native-cell-missing2-storage
+      scenario_id: first-hatch-delivery-review-handoff
+      method: test
+      intent: Reject an explicitly configured native cell with missing prerequisites before allocation.
+      observable: The selected workflow fails with each missing prerequisite name and creates no workspace.
+      selector:
+        runner: pytest
+        node_id: tests/integration/test_hatch_project_runtime.py::test_configured_native_cell_fails_missing_prerequisites[missing2-storage]
+    - case_id: first-hatch-configured-native-cell-missing2-absolute
+      scenario_id: first-hatch-delivery-review-handoff
+      method: test
+      intent: Reject an explicitly configured native cell with missing prerequisites before allocation.
+      observable: The selected workflow fails with each missing prerequisite name and creates no workspace.
+      selector:
+        runner: pytest
+        node_id: tests/integration/test_hatch_project_runtime.py::test_configured_native_cell_fails_missing_prerequisites[missing2-absolute]

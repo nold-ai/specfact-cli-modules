@@ -39,39 +39,41 @@ The public boundary hides manager orchestration and subprocess mechanics. Its sk
 ```python
 @dataclass(frozen=True)
 class ProjectSelection:
-    python: str | None
-    manager: str | None
-    environment: str | None
-    groups: tuple[str, ...]
-    extras: tuple[str, ...]
+    python: str | None = None
+    manager: str | None = None
+    environment: str | None = None
+    groups: tuple[str, ...] = ()
+    extras: tuple[str, ...] = ()
+    hatch: str = "hatch"
 
 
 @dataclass(frozen=True)
 class ProjectCommand:
     argv: tuple[str, ...]
     cwd: Path
-    env_overrides: Mapping[str, str]
+    env_overrides: Mapping[str, str] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
 class ProjectPlan:
     root: Path
     selection: ProjectSelection
-    dependency_inputs: tuple[Path, ...]
-    configuration_inputs: tuple[Path, ...]
-    source_identity: SourceIdentity
+    input_identity: str
+    environment: str | None
+    python_request: str | None
+    python_constraint: str
+    diagnostics: tuple[str, ...]
 
 
 class PreparedProject:
-    root: Path
-    python: Path
-    environment_identity: EnvironmentIdentity
+    plan: ProjectPlan
+    identity: EnvironmentIdentity
 
     def run(self, command: ProjectCommand, *, timeout: float) -> ProcessResult:
         raise NotImplementedError
 
 
-def inspect_project(root: Path, selection: ProjectSelection) -> ProjectPlan:
+def inspect_project(root: Path, selection: ProjectSelection | None = None) -> ProjectPlan:
     raise NotImplementedError
 
 
@@ -154,7 +156,27 @@ Laziness Protocol determines the single runner and small service. Subtract Befor
 
 ## Delivery sequence and reconciliation
 
-Changes 17, 18, 19, paired core adoption, then 20 form the runtime delivery sequence. All current implementation tasks remain unchecked. During implementation, bind scenario-derived tests into the requirement mappings with executable selectors before RED and require the Requirements evidence gate to verify actual results at implementation maturity before GREEN; planning inspection is insufficient. Change 17 proves one complete existing/cold Hatch workflow before expanding managers. Change 18 establishes project standards and analyzer fidelity. Change 19 emits local evidence and prepares the single-runner cutover candidate, deleting both obsolete execution routes in that candidate. Core adopts ordinary consumption against the exact reviewed immutable signed candidate, without requiring its stable publication first. Change 20 proves installations, replaces capsule-only CI and owns coordinated stable canonical publication after paired compatibility and release acceptance. Candidate preparation does not expose an unaccepted stable cutover or add a reverse implementation dependency.
+### Authorized first Hatch milestone, 2026-10-23
+
+The owner explicitly authorized this chat to take over In Progress #513 and deliver its first existing and cold detached Hatch milestone. The confirmed intent is straightforward trusted-project review without developer-managed conflicts between SpecFact and customer dependencies. This first slice calls the shared service directly. It does not expose an unaccepted public reviewer cutover or complete all of change 17.
+
+The refreshed architect comparison considered a direct prepared-environment capability and a structurally distinct external native-Hatch bridge for script/context evaluation. The independent cross-judge selected the direct capability. The three configured sketch roles were `gpt-6-astra`, `gpt-6.1-sol` and `gpt-6-luna`. These are requested dispatch roles, not independently measured model identities. The bridge would add a private-API protocol and unproved plugin/lifecycle side effects before the first workflow works. Native `hatch run` is unsuitable for existing execution because it enters preparation and can synchronize dependencies.
+
+Start with one cohesive `specfact_codebase.project_runtime` implementation and the public types/functions already sketched above. `ProjectSelection` has useful defaults. `ProjectCommand.argv` is always executable-first, with explicit working directory and overrides. Preparation returns either a ready project or a structured failure without a usable interpreter. Both existing and cold targets use the same execution-only `PreparedProject.run`. Native Hatch may create an owned cold environment but is absent from the executor's authority. A compatible dependency console entrypoint is explicitly sufficient for this detached first-slice proof; no project console-script installation is claimed.
+
+Use the Astra sketch as the base and graft Sol's stale-dependency no-sync tripwire and exact missing-command behavior. Bare `python` binds to the probed environment executable, preserving its venv path rather than resolving its symlink to the base binary. Other bare commands resolve only in the environment's executable directory. A missing tool is unavailable and never falls back to the controller PATH. Remove controller Python path/activation contamination and support validated explicit environment overrides. Preserve genuine nonzero command exits, timeouts, bounded output and execution failures separately.
+
+Pure inspection reads declarations without importing project setup or provisioning plugins. Admit selected manager/plugin capabilities before any potentially provisioning native query. Do not refuse explicit execution merely because unrelated scripts, environments or lockfiles exist. Reject only a selected unsupported operation with a specific remedy. Full native Hatch script expansion and unsupported effective environment-context behavior remain pending cells; do not reimplement Hatch shell expansion or silently discard required context.
+
+The prepared binding fixes the canonical project root, selected environment and relevant configuration/dependency inputs. Ordinary source edits between commands are allowed and must appear as current command provenance, so a seeded defect reaches the actual test runner. Configuration/dependency drift requires reinspection rather than silent synchronization. Build/cache outputs must not invalidate their own commands. This is current-worktree service evidence, not immutable range or protected authority.
+
+Cold preparation uses a private external invocation workspace and native Hatch with the selected project Python. Keep the environment at its final path from creation onward because moving a venv can break entrypoint shebangs. Atomically publish completion metadata only after successful preparation and identity checks. Interrupted output is not reusable readiness; clean up only owned state. Do not add a cross-invocation registry, broker or shared cache protocol.
+
+Preserve the original reconstructed fixture byte-for-byte. Add a labeled companion retaining detached review/default dependency separation and pytest plugin/import-layout conditions, omitting ODBC only for this first-slice companion and declaring its own customer linter/configuration. The original native-dependency assertions remain for later acceptance. Both existing and cold proofs must use actual target Python 3.11 from the Python 3.12 controller, dependency imports, a dependency entrypoint, configured native pytest plugin, enabled/disabled customer lint rules, seeded failing test, and before/after declaration and existing-environment inventory checks. Record actual native Hatch executable/version. Native Python/library or cross-platform support beyond the executed cell is not inferred.
+
+Model the Domain drove the ready-versus-failure and execution-only capability shape. Separate Before Serializing Shared State drove per-invocation ownership. Prove It Works drove the actual wrong-interpreter RED and complete two-case workflow instead of treating import failure or planning validation as acceptance. Sketches, rubric and judgment are retained under `/private/tmp/specfact-513-design/` during this run, with the accepted synthesis recorded here.
+
+Changes 17, 18, 19, paired core adoption, then 20 form the runtime delivery sequence. The full-change checklist remains pending beyond the bounded first-Hatch checkpoint. During implementation, bind scenario-derived tests into the requirement mappings with executable selectors before RED and require the Requirements evidence gate to verify actual results at implementation maturity before GREEN; planning inspection is insufficient. Change 17 proves one complete existing/cold Hatch workflow before expanding managers. Change 18 establishes project standards and analyzer fidelity. Change 19 emits local evidence and prepares the single-runner cutover candidate, deleting both obsolete execution routes in that candidate. Core adopts ordinary consumption against the exact reviewed immutable signed candidate, without requiring its stable publication first. Change 20 proves installations, replaces capsule-only CI and owns coordinated stable canonical publication after paired compatibility and release acceptance. Candidate preparation does not expose an unaccepted stable cutover or add a reverse implementation dependency.
 
 At cutover, delete native macOS broker/worker and Linux OCI/Bubblewrap acquisition, capsule admission/descriptors/catalogs, sealed import policing, dependency/native-library copying and the parallel legacy host orchestrator after useful helpers move. No permanent runtime backend switch remains. Distribution cleanup removes residual native builds and capsule-only release/support configuration. Preserve cryptographic module verification and independent security work.
 
@@ -189,3 +211,42 @@ Confidence is Medium. Ownership, observed code coupling and live issue lineage a
 - [uv project environment configuration](https://docs.astral.sh/uv/concepts/projects/config/) and [locked synchronization](https://docs.astral.sh/uv/concepts/projects/sync/), accessed 2026-10-16.
 - [Hatch virtual environment options](https://hatch.pypa.io/latest/plugins/environment/virtual/) and [Poetry configuration](https://python-poetry.org/docs/configuration/), accessed 2026-10-16.
 - [BasedPyright target-interpreter option](https://docs.basedpyright.com/latest/configuration/command-line/) and [CrossHair contracts](https://crosshair.readthedocs.io/en/latest/contracts.html), accessed 2026-10-16.
+
+### First-milestone implementation reconciliation, 2026-10-23
+
+The implemented boundary retains the accepted direct execution capability. Useful defaults are concrete, and `ProjectSelection.hatch` optionally names the external native executable for reproducible local discovery. Without an explicit Python override, the selected existing native environment supplies its own interpreter, including when a valid version declaration is present; that interpreter is checked directly against the declaration. Explicit Python and project `requires-python` remain validated. The Codebase manifest declares `packaging` for the controller-side constraint parser, without installing it into the customer environment.
+
+`ProjectPlan.input_identity` frames declaration paths and file digests. `ProcessResult` carries `outcome`, optional `exit_code`, bounded `stdout`/`stderr`, `output_truncated` and observational `source_identity`. Normal nonzero exits remain `exited`; missing tools are `unavailable`; timeouts and execution failures are distinct. The service uses Unix process groups for this executed Darwin cell. Cross-platform process control remains unproved.
+
+The unchanged reconstruction explicitly loads `pytest_asyncio.plugin` and also exposes its duplicate auto-discovery alias. The companion proof uses the existing corpus's visible `-p no:asyncio` accommodation, preserving explicit plugin execution and other native plugin discovery. This is a caller argv fact, not a claim that the reconstructed configuration needs no accommodation.
+
+Native Hatch 1.18.1 gives selected environment `python` precedence over `HATCH_PYTHON`. Cold preparation therefore supplies the explicitly probed interpreter's scripts directory first in the manager subprocess PATH as well as the native Python variable. It probes and validates the actual completed environment, preserving the stable venv path from creation. This adaptation follows the approved selection contract; it does not import private manager APIs or claim native script/context fidelity.
+
+### Accepted bounded review corrections, 2026-10-23
+
+The parent and independent final engineering reviewer accepted three internal corrections under the existing API and first-slice scope. The review is retained at `/private/tmp/specfact-513-design/final-review.md`; parent steering in this implementation session authorizes these focused fixes. An empty selected environment configuration must still satisfy detached admission before native queries. Implicit existing environment discovery now finds/probes the native target and validates declared constraints directly, without requiring a separate host interpreter or enforcing an unrelated host patch version. Only explicit Python overrides are resolved before existing lookup; cold preparation still resolves a compatible local base interpreter.
+
+The first reader-thread implementation could exceed its timeout when a detached descendant retained inherited pipes, because buffered stream closure waited on a blocked reader. The accepted replacement uses POSIX selectors and nonblocking descriptors with an explicit deadline and bounded buffers. It preserves public `ProcessResult` outcomes and original-process-group cleanup. It does not promise to kill independently detached descendants or provide a security sandbox. The regression measures the command independently with a three-second bound and a separate 30-second startup/preparation watchdog, and explicitly cleans up its own detached descendant. No broker, manager adapter or extra public command mode was introduced.
+
+The native proof now exercises implicit existing discovery with declarations and explicit cold Python selection. Fixture materialization and proof fingerprints exclude generated caches. Eight optional narration blocks were removed from the new companion/tests following the accepted scoped comment review, while original-fixture bytes, public contracts and intentional customer lint/plugin inputs remain unchanged.
+
+
+### Bounded external-review corrections, 2026-10-23
+
+The approved CodeRabbit pass identified read failures escaping structured results, cleanup masking the original preparation failure and ambient customer Hatch storage being removed. The service now reports fingerprint failures at inspection/execution boundaries without inventing a verified identity; after-command failures preserve captured output. Failed removal of incomplete owned storage preserves the primary error and identifies cleanup residue in the remedy. No source cache was added without a measured need.
+
+Native Hatch 1.18.1 and its official configuration documentation establish HATCH_DATA_DIR and HATCH_CACHE_DIR as storage selections. Those two values survive controller isolation; interpreter, active-environment, virtual-target and project selectors do not. A custom HATCH_CONFIG can change project context and remains unsupported in this milestone, checked during inspection and again before preparation's native queries. This preserves the requested root without introducing a global-context adapter. The real native existing-environment acceptance uses custom data/cache storage with controller contamination present.
+
+The user-approved Darwin delivery exception now recognizes the portable-runtime fixture path already selected by CI. Only the existing staged candidate pathspec changes. Required indexed independent review, platform/worktree/branch/CI checks and all other Block 2 checks remain in force. DEFERRED is not PASS, and hosted exact-head completion remains mandatory.
+
+### Linux static-finding reconciliation, 2026-10-24
+
+The three architect candidates and independent cross-judge selected bounded function-oriented decomposition in the existing runtime module. The owner accepts Astra's preservation of partially inspected fields after late read failures, process deadline semantics, and single preparation cleanup owner. Sol's smaller helper discipline is retained. Internal `_environment_config` metadata becomes `hatch_environment` with the same Mapping interface, position, default and hidden representation; it has no external adopters and is absent the agreed public usage sketch. No new Plan lifecycle methods, runtime state framework or public caller options are introduced. Small inspection/native lookup value records may group facts where necessary to avoid repeated parameter bundles.
+
+Declaration policy, command admission, bounded output capture, native target lookup and atomic receipt publication remain behind the same inspect/prepare/run boundary. Existing diagnostic wording, order, interpreter selection, process outcomes, cleanup timing and the explicit selected-base identity guard are preserved. Unrequested base-prefix workspace-admission guards suggested by two candidates are rejected because they change behavior. Proof/test helpers retain selector IDs, conditions, assertions and fixture bytes. Static budgets are verified from actual analyzer output; no new suppression or changed enforcement is authorized. Sealed capsule missing native prerequisites and unclassified analyzer failures remain separate blockers. Candidate and cross-judge artifacts are retained under `/private/tmp/513-static-design/`.
+
+### Additional in-scope PR correctness findings, 2026-10-24
+
+Independent pre-RED review accepted exact regressions for complete numeric interpreter selection and controller Python startup isolation after narrowing a mapping overclaim to selection rather than execution. A matching full version is a positive control. The two intended failures were reproduced against unchanged production before fixes. Numeric caller selection now validates every supplied component against the actual probe before native queries. Ambient `PYTHON*` startup settings are removed at the subprocess boundary, while existing explicit nonidentity command overrides remain available. This adds one private validation helper and no public option or changed result type.
+
+The test portability correction uses CPython's actual base executable, the same input used by its installed venv builder, instead of assuming an unversioned base/bin/python path. The detached-descendant watchdog allows one second for the legitimate child while retaining its independent three-second completion assertion and eight-second escaped descendant. No observed flake or speedup is claimed. Configurable cold creation budgets are deferred under open #513 because the approved first milestone retains its bounded existing/cold fixture and established timeout. No new preparation option, timeout relaxation, ordinary review adoption or capsule-boundary change is introduced.
