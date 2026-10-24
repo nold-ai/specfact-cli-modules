@@ -87,6 +87,13 @@ def test_native_hatch_customer_storage_survives_controller_context(tmp_path, mon
     hatch = os.environ.get("SPECFACT_HATCH_EXECUTABLE")
     python = os.environ.get("SPECFACT_HATCH_PROJECT_PYTHON")
     if not hatch or not python:
+        if os.environ.get("SPECFACT_HATCH_PROOF_WORKSPACE"):
+            missing = [
+                name
+                for name in ("SPECFACT_HATCH_EXECUTABLE", "SPECFACT_HATCH_PROJECT_PYTHON")
+                if not os.environ.get(name)
+            ]
+            pytest.fail("Configured native acceptance cell requires: " + ", ".join(missing))
         pytest.skip("Native Hatch and project Python are required for customer storage acceptance")
     root, data, cache, prefix = _create_storage_customer(tmp_path, hatch, python)
     monkeypatch.setenv("HATCH_DATA_DIR", str(data))
@@ -233,6 +240,13 @@ def test_native_hatch_absolute_python_declaration(tmp_path, monkeypatch, existin
     hatch = os.environ.get("SPECFACT_HATCH_EXECUTABLE")
     python = os.environ.get("SPECFACT_HATCH_PROJECT_PYTHON")
     if not hatch or not python:
+        if os.environ.get("SPECFACT_HATCH_PROOF_WORKSPACE"):
+            missing = [
+                name
+                for name in ("SPECFACT_HATCH_EXECUTABLE", "SPECFACT_HATCH_PROJECT_PYTHON")
+                if not os.environ.get(name)
+            ]
+            pytest.fail("Configured native acceptance cell requires: " + ", ".join(missing))
         pytest.skip("Native Hatch and project Python are required for absolute declaration acceptance")
     customer, expected, declarations = _create_absolute_customer(tmp_path, python, version_file)
     expected_target = _absolute_target(tmp_path, monkeypatch, customer, hatch, existing)
@@ -244,3 +258,35 @@ def test_native_hatch_absolute_python_declaration(tmp_path, monkeypatch, existin
     assert isinstance(prepared, PreparedProject), prepared
     _assert_absolute_identity(prepared, customer, expected_target, expected, existing)
     assert {name: (customer / name).read_bytes() for name in declarations} == declarations
+
+
+@pytest.mark.parametrize("case", ["workflow", "storage", "absolute"])
+@pytest.mark.parametrize(
+    "missing",
+    [
+        ("SPECFACT_HATCH_EXECUTABLE",),
+        ("SPECFACT_HATCH_PROJECT_PYTHON",),
+        ("SPECFACT_HATCH_EXECUTABLE", "SPECFACT_HATCH_PROJECT_PYTHON"),
+    ],
+)
+def test_configured_native_cell_fails_missing_prerequisites(tmp_path, monkeypatch, case, missing):
+    workspace = tmp_path / "native-proof"
+    monkeypatch.setenv("SPECFACT_HATCH_PROOF_WORKSPACE", str(workspace))
+    monkeypatch.setenv("SPECFACT_HATCH_EXECUTABLE", str(tmp_path / "unused-hatch"))
+    monkeypatch.setenv("SPECFACT_HATCH_PROJECT_PYTHON", str(tmp_path / "unused-python"))
+    for name in missing:
+        monkeypatch.delenv(name)
+    with pytest.raises(pytest.fail.Exception, match="Configured native acceptance cell requires:") as failure:
+        try:
+            if case == "workflow":
+                test_existing_and_cold_native_hatch_workflow()
+            elif case == "storage":
+                test_native_hatch_customer_storage_survives_controller_context(tmp_path, monkeypatch)
+            else:
+                test_native_hatch_absolute_python_declaration(tmp_path, monkeypatch, False, False)
+        except pytest.skip.Exception as skipped:
+            raise AssertionError("Configured native cell skipped missing prerequisites") from skipped
+    assert all(name in str(failure.value) for name in missing)
+    assert not workspace.exists()
+    assert not (tmp_path / "customer").exists()
+    assert not (tmp_path / "invocation").exists()

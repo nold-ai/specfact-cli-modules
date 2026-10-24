@@ -161,3 +161,9 @@ For delivery verification of the first Hatch milestone, the approved local ARM64
 - **WHEN** it is invoked with optimized Python or another controller version
 - **THEN** it refuses with an explicit diagnostic before creating the proof workspace or receipt
 - **AND** the local proof remains development evidence rather than release or protected CI authority
+
+#### Scenario: Configured native acceptance cell cannot skip missing prerequisites
+- **GIVEN** SPECFACT_HATCH_PROOF_WORKSPACE explicitly enables the native acceptance cell
+- **WHEN** any mapped native Hatch workflow lacks SPECFACT_HATCH_EXECUTABLE or SPECFACT_HATCH_PROJECT_PYTHON
+- **THEN** that workflow fails with the missing prerequisite names before allocating a customer or invocation workspace
+- **AND** an unconfigured full-suite run may still skip native cases whose prerequisites are absent

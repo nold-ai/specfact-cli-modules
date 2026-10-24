@@ -461,3 +461,75 @@ requirements:
       selector:
         runner: pytest
         node_id: tests/integration/test_hatch_project_runtime.py::test_native_proof_rejects_wrong_controller_before_allocation
+    - case_id: first-hatch-configured-native-cell-missing0-workflow
+      scenario_id: first-hatch-delivery-review-handoff
+      method: test
+      intent: Reject an explicitly configured native cell with missing prerequisites before allocation.
+      observable: The selected workflow fails with each missing prerequisite name and creates no workspace.
+      selector:
+        runner: pytest
+        node_id: tests/integration/test_hatch_project_runtime.py::test_configured_native_cell_fails_missing_prerequisites[missing0-workflow]
+    - case_id: first-hatch-configured-native-cell-missing0-storage
+      scenario_id: first-hatch-delivery-review-handoff
+      method: test
+      intent: Reject an explicitly configured native cell with missing prerequisites before allocation.
+      observable: The selected workflow fails with each missing prerequisite name and creates no workspace.
+      selector:
+        runner: pytest
+        node_id: tests/integration/test_hatch_project_runtime.py::test_configured_native_cell_fails_missing_prerequisites[missing0-storage]
+    - case_id: first-hatch-configured-native-cell-missing0-absolute
+      scenario_id: first-hatch-delivery-review-handoff
+      method: test
+      intent: Reject an explicitly configured native cell with missing prerequisites before allocation.
+      observable: The selected workflow fails with each missing prerequisite name and creates no workspace.
+      selector:
+        runner: pytest
+        node_id: tests/integration/test_hatch_project_runtime.py::test_configured_native_cell_fails_missing_prerequisites[missing0-absolute]
+    - case_id: first-hatch-configured-native-cell-missing1-workflow
+      scenario_id: first-hatch-delivery-review-handoff
+      method: test
+      intent: Reject an explicitly configured native cell with missing prerequisites before allocation.
+      observable: The selected workflow fails with each missing prerequisite name and creates no workspace.
+      selector:
+        runner: pytest
+        node_id: tests/integration/test_hatch_project_runtime.py::test_configured_native_cell_fails_missing_prerequisites[missing1-workflow]
+    - case_id: first-hatch-configured-native-cell-missing1-storage
+      scenario_id: first-hatch-delivery-review-handoff
+      method: test
+      intent: Reject an explicitly configured native cell with missing prerequisites before allocation.
+      observable: The selected workflow fails with each missing prerequisite name and creates no workspace.
+      selector:
+        runner: pytest
+        node_id: tests/integration/test_hatch_project_runtime.py::test_configured_native_cell_fails_missing_prerequisites[missing1-storage]
+    - case_id: first-hatch-configured-native-cell-missing1-absolute
+      scenario_id: first-hatch-delivery-review-handoff
+      method: test
+      intent: Reject an explicitly configured native cell with missing prerequisites before allocation.
+      observable: The selected workflow fails with each missing prerequisite name and creates no workspace.
+      selector:
+        runner: pytest
+        node_id: tests/integration/test_hatch_project_runtime.py::test_configured_native_cell_fails_missing_prerequisites[missing1-absolute]
+    - case_id: first-hatch-configured-native-cell-missing2-workflow
+      scenario_id: first-hatch-delivery-review-handoff
+      method: test
+      intent: Reject an explicitly configured native cell with missing prerequisites before allocation.
+      observable: The selected workflow fails with each missing prerequisite name and creates no workspace.
+      selector:
+        runner: pytest
+        node_id: tests/integration/test_hatch_project_runtime.py::test_configured_native_cell_fails_missing_prerequisites[missing2-workflow]
+    - case_id: first-hatch-configured-native-cell-missing2-storage
+      scenario_id: first-hatch-delivery-review-handoff
+      method: test
+      intent: Reject an explicitly configured native cell with missing prerequisites before allocation.
+      observable: The selected workflow fails with each missing prerequisite name and creates no workspace.
+      selector:
+        runner: pytest
+        node_id: tests/integration/test_hatch_project_runtime.py::test_configured_native_cell_fails_missing_prerequisites[missing2-storage]
+    - case_id: first-hatch-configured-native-cell-missing2-absolute
+      scenario_id: first-hatch-delivery-review-handoff
+      method: test
+      intent: Reject an explicitly configured native cell with missing prerequisites before allocation.
+      observable: The selected workflow fails with each missing prerequisite name and creates no workspace.
+      selector:
+        runner: pytest
+        node_id: tests/integration/test_hatch_project_runtime.py::test_configured_native_cell_fails_missing_prerequisites[missing2-absolute]
