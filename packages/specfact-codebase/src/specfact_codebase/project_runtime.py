@@ -21,7 +21,7 @@ import tomllib
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Literal
+from typing import IO, Literal
 
 from packaging.specifiers import InvalidSpecifier, SpecifierSet
 
@@ -77,7 +77,7 @@ class ProjectPlan:
     python_request: str | None
     python_constraint: str
     diagnostics: tuple[str, ...]
-    _environment_config: Mapping[str, object] = field(default_factory=dict, repr=False)
+    hatch_environment: Mapping[str, object] = field(default_factory=dict, repr=False)
 
 
 @dataclass(frozen=True)
@@ -140,100 +140,116 @@ def _identity(root: Path, *, source: bool = False) -> str:
 
 def _version_components(request: str) -> tuple[int, ...] | None:
     parts = request.split(".")
-    if not 1 <= len(parts) <= 3 or not all(part.isdigit() for part in parts):
-        return None
-    return tuple(map(int, parts))
+    valid = 1 <= len(parts) <= 3 and all(part.isdigit() for part in parts)
+    return tuple(map(int, parts)) if valid else None
+
+
+@dataclass
+class _Inspection:
+    environment: str | None
+    python_request: str | None = None
+    python_constraint: str = ""
+    hatch_environment: Mapping[str, object] = field(default_factory=dict)
+    diagnostics: list[str] = field(default_factory=list)
+
+
+def _select_environment(envs: object, state: _Inspection) -> None:
+    if not isinstance(envs, dict):
+        raise ValueError("Hatch envs must be a table")
+    if state.environment is None:
+        if len(envs) == 1:
+            state.environment = next(iter(envs))
+        else:
+            state.diagnostics.append("Choose environment explicitly from: " + ", ".join(sorted(envs)))
+    if state.environment is not None:
+        if state.environment not in envs or not isinstance(envs[state.environment], dict):
+            state.diagnostics.append(
+                f"Unknown environment {state.environment!r}; candidates: {', '.join(sorted(envs))}"
+            )
+        else:
+            state.hatch_environment = envs[state.environment]
+
+
+def _check_environment(state: _Inspection) -> None:
+    config = state.hatch_environment
+    if config.get("type", "virtual") != "virtual":
+        state.diagnostics.append("Selected environment type is unsupported; select standard virtual")
+    if config.get("detached") is not True:
+        state.diagnostics.append("Selected environment must be detached in this milestone")
+    for key in ("env-vars", "env-include", "env-exclude", "matrix", "template", "platforms"):
+        if config.get(key):
+            state.diagnostics.append(
+                f"Selected Hatch {key} requires native context fidelity not supported in this milestone"
+            )
+
+
+def _read_python_request(root: Path, state: _Inspection) -> None:
+    raw_python = state.hatch_environment.get("python")
+    if raw_python is None or isinstance(raw_python, str):
+        state.python_request = raw_python
+    else:
+        state.diagnostics.append("Selected Python declaration must be a string")
+    version_file = root / ".python-version"
+    if not version_file.exists():
+        return
+    declared = version_file.read_text().strip()
+    if state.python_request and not os.path.isabs(state.python_request):
+        hatch_parts = _version_components(state.python_request)
+        file_parts = _version_components(declared)
+        width = min(len(hatch_parts or ()), len(file_parts or ()))
+        if not hatch_parts or not file_parts or hatch_parts[:width] != file_parts[:width]:
+            state.diagnostics.append(
+                "Selected Hatch Python conflicts with .python-version; choose a consistent declaration"
+            )
+    state.python_request = declared
+
+
+def _read_declarations(root: Path, selection: ProjectSelection, state: _Inspection) -> None:
+    project = tomllib.loads((root / "pyproject.toml").read_text())
+    state.python_constraint = project.get("project", {}).get("requires-python", "")
+    SpecifierSet(state.python_constraint)
+    hatch_file = root / "hatch.toml"
+    hatch = tomllib.loads(hatch_file.read_text()) if hatch_file.exists() else project.get("tool", {}).get("hatch", {})
+    envs = hatch.get("envs", {"default": {}})
+    _select_environment(envs, state)
+    if selection.manager not in {None, "hatch"}:
+        state.diagnostics.append("Only native Hatch is supported in this milestone")
+    if selection.groups or selection.extras:
+        state.diagnostics.append("Explicit groups/extras are not supported in this Hatch slice")
+    if hatch.get("env", {}).get("requires"):
+        state.diagnostics.append(
+            "Hatch environment plugin requirements are unsupported; provision a standard virtual environment"
+        )
+    if state.environment is not None and state.environment in envs:
+        _check_environment(state)
+    _read_python_request(root, state)
 
 
 def inspect_project(root: Path, selection: ProjectSelection | None = None) -> ProjectPlan:
     """Inspect declarations only. Ambiguities and unsupported cells remain diagnostics."""
     selection = selection or ProjectSelection()
     root = root.resolve()
-    diagnostics: list[str] = []
+    state = _Inspection(selection.environment)
     if os.environ.get("HATCH_CONFIG"):
-        diagnostics.append(_HATCH_CONFIG_DIAGNOSTIC)
-    environment_config: dict[str, object] = {}
-    environment = selection.environment
-    python_request = None
-    python_constraint = ""
+        state.diagnostics.append(_HATCH_CONFIG_DIAGNOSTIC)
     try:
-        project = tomllib.loads((root / "pyproject.toml").read_text())
-        python_constraint = project.get("project", {}).get("requires-python", "")
-        SpecifierSet(python_constraint)
-        hatch_file = root / "hatch.toml"
-        hatch = (
-            tomllib.loads(hatch_file.read_text()) if hatch_file.exists() else project.get("tool", {}).get("hatch", {})
-        )
-        envs = hatch.get("envs", {"default": {}})
-        if not isinstance(envs, dict):
-            raise ValueError("Hatch envs must be a table")
-        if environment is None:
-            if len(envs) == 1:
-                environment = next(iter(envs))
-            else:
-                diagnostics.append("Choose environment explicitly from: " + ", ".join(sorted(envs)))
-        if environment is not None:
-            if environment not in envs or not isinstance(envs[environment], dict):
-                diagnostics.append(f"Unknown environment {environment!r}; candidates: {', '.join(sorted(envs))}")
-            else:
-                environment_config = envs[environment]
-        if selection.manager not in {None, "hatch"}:
-            diagnostics.append("Only native Hatch is supported in this milestone")
-        if selection.groups or selection.extras:
-            diagnostics.append("Explicit groups/extras are not supported in this Hatch slice")
-        if hatch.get("env", {}).get("requires"):
-            diagnostics.append(
-                "Hatch environment plugin requirements are unsupported; provision a standard virtual environment"
-            )
-        if environment is not None and environment in envs:
-            if environment_config.get("type", "virtual") != "virtual":
-                diagnostics.append("Selected environment type is unsupported; select standard virtual")
-            if environment_config.get("detached") is not True:
-                diagnostics.append("Selected environment must be detached in this milestone")
-            for key in (
-                "env-vars",
-                "env-include",
-                "env-exclude",
-                "matrix",
-                "template",
-                "platforms",
-            ):
-                if environment_config.get(key):
-                    diagnostics.append(
-                        f"Selected Hatch {key} requires native context fidelity not supported in this milestone"
-                    )
-        python_request = environment_config.get("python")
-        if python_request is not None and not isinstance(python_request, str):
-            diagnostics.append("Selected Python declaration must be a string")
-            python_request = None
-        version_file = root / ".python-version"
-        if version_file.exists():
-            declared = version_file.read_text().strip()
-            if python_request and not os.path.isabs(python_request):
-                hatch_parts = _version_components(python_request)
-                file_parts = _version_components(declared)
-                width = min(len(hatch_parts or ()), len(file_parts or ()))
-                if not hatch_parts or not file_parts or hatch_parts[:width] != file_parts[:width]:
-                    diagnostics.append(
-                        "Selected Hatch Python conflicts with .python-version; choose a consistent declaration"
-                    )
-            python_request = declared
+        _read_declarations(root, selection, state)
     except (OSError, ValueError, TypeError, AttributeError, InvalidSpecifier) as error:
-        diagnostics.append(f"Cannot inspect project declarations: {error}")
+        state.diagnostics.append(f"Cannot inspect project declarations: {error}")
     input_identity = ""
     try:
         input_identity = _identity(root)
     except OSError as error:
-        diagnostics.append(f"Cannot fingerprint project declarations: {error}")
+        state.diagnostics.append(f"Cannot fingerprint project declarations: {error}")
     return ProjectPlan(
         root,
         selection,
         input_identity,
-        environment,
-        python_request,
-        python_constraint,
-        tuple(diagnostics),
-        environment_config,
+        state.environment,
+        state.python_request,
+        state.python_constraint,
+        tuple(state.diagnostics),
+        state.hatch_environment,
     )
 
 
@@ -242,17 +258,61 @@ def _environment(scripts: Path | None = None) -> dict[str, str]:
         key: value
         for key, value in os.environ.items()
         if key not in _RESERVED_ENV
+        and not key.startswith("PYTHON")
         and (not key.startswith(("HATCH_", "CONDA_")) or key in {"HATCH_DATA_DIR", "HATCH_CACHE_DIR"})
     }
     env["PATH"] = os.pathsep.join([str(scripts)] if scripts else []) + (os.pathsep if scripts else "") + os.defpath
     return env
 
 
+def _register_pipe(selector: selectors.BaseSelector, stream: IO[bytes] | None, index: int) -> None:
+    if stream is None:
+        raise ValueError("Subprocess capture pipe is unavailable")
+    os.set_blocking(stream.fileno(), False)
+    selector.register(stream, selectors.EVENT_READ, index)
+
+
+def _read_output(selector, buffers, truncated, wait: float) -> bool:
+    events = selector.select(wait)
+    for key, _ in events:
+        block = os.read(key.fd, 8192)
+        if not block:
+            selector.unregister(key.fileobj)
+            continue
+        index = key.data
+        available = _OUTPUT_LIMIT - len(buffers[index])
+        buffers[index].extend(block[:available])
+        truncated[index] |= len(block) > available
+    return bool(events)
+
+
+def _capture_output(process, selector, timeout: float):
+    buffers = [bytearray(), bytearray()]
+    truncated = [False, False]
+    deadline = time.monotonic() + timeout
+    outcome: Literal["exited", "timed_out"] = "exited"
+    while selector.get_map() or process.poll() is None:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            if process.poll() is None:
+                outcome = "timed_out"
+            break
+        events = _read_output(selector, buffers, truncated, min(remaining, 0.05))
+        if not events and process.poll() is not None:
+            break
+    return outcome, buffers, truncated
+
+
+def _stop_process(process) -> None:
+    # Detached descendants can retain pipes beyond the original process group.
+    with contextlib.suppress(ProcessLookupError):
+        os.killpg(process.pid, signal.SIGKILL)
+    process.wait()
+
+
 def _execute(argv: tuple[str, ...], cwd: Path, env: Mapping[str, str], timeout: float) -> ProcessResult:
     if timeout <= 0:
         return ProcessResult("execution_failed", None, stderr="Timeout must be positive")
-    buffers = [bytearray(), bytearray()]
-    truncated = [False, False]
     try:
         with (
             subprocess.Popen(
@@ -261,34 +321,11 @@ def _execute(argv: tuple[str, ...], cwd: Path, env: Mapping[str, str], timeout: 
             selectors.DefaultSelector() as selector,
         ):
             for index, stream in enumerate((process.stdout, process.stderr)):
-                os.set_blocking(stream.fileno(), False)
-                selector.register(stream, selectors.EVENT_READ, index)
-            deadline = time.monotonic() + timeout
-            outcome = "exited"
+                _register_pipe(selector, stream, index)
             try:
-                while selector.get_map() or process.poll() is None:
-                    remaining = deadline - time.monotonic()
-                    if remaining <= 0:
-                        if process.poll() is None:
-                            outcome = "timed_out"
-                        break
-                    events = selector.select(min(remaining, 0.05))
-                    for key, _ in events:
-                        block = os.read(key.fd, 8192)
-                        if not block:
-                            selector.unregister(key.fileobj)
-                            continue
-                        index = key.data
-                        available = _OUTPUT_LIMIT - len(buffers[index])
-                        buffers[index].extend(block[:available])
-                        truncated[index] |= len(block) > available
-                    if not events and process.poll() is not None:
-                        break
+                outcome, buffers, truncated = _capture_output(process, selector, timeout)
             finally:
-                # Detached descendants can retain pipes beyond the original process group.
-                with contextlib.suppress(ProcessLookupError):
-                    os.killpg(process.pid, signal.SIGKILL)
-                process.wait()
+                _stop_process(process)
             return ProcessResult(
                 outcome,
                 process.returncode if outcome == "exited" else None,
@@ -303,7 +340,10 @@ def _execute(argv: tuple[str, ...], cwd: Path, env: Mapping[str, str], timeout: 
 
 
 def _probe(executable: Path, cwd: Path) -> InterpreterFacts:
-    code = "import json,sys,sysconfig; print(json.dumps([sys.executable,sys.prefix,sys.base_prefix,list(sys.version_info[:3]),sysconfig.get_path('scripts')]))"
+    code = (
+        "import json,sys,sysconfig; print(json.dumps([sys.executable,sys.prefix,sys.base_prefix,"
+        "list(sys.version_info[:3]),sysconfig.get_path('scripts')]))"
+    )
     result = _execute((str(executable), "-I", "-c", code), cwd, _environment(), 15)
     if result.outcome != "exited" or result.exit_code != 0:
         raise ValueError(f"Selected Python probe failed: {result.stderr}")
@@ -317,7 +357,7 @@ def _probe(executable: Path, cwd: Path) -> InterpreterFacts:
 
 
 def _python(plan: ProjectPlan) -> InterpreterFacts:
-    declared = plan._environment_config.get("python")
+    declared = plan.hatch_environment.get("python")
     absolute_declared = declared if isinstance(declared, str) and os.path.isabs(declared) else None
     request = plan.selection.python or absolute_declared or plan.python_request
     if not request:
@@ -334,8 +374,15 @@ def _python(plan: ProjectPlan) -> InterpreterFacts:
             raise ValueError(f"Project Python {request} is not available locally; select its absolute executable")
         executable = Path(found).absolute()
     facts = _probe(executable, plan.root)
+    _validate_explicit_request(facts, plan.selection.python)
     _validate_python(facts, plan)
     return facts
+
+
+def _validate_explicit_request(facts: InterpreterFacts, request: str | None) -> None:
+    parts = _version_components(request) if request else None
+    if parts and facts.version[: len(parts)] != parts:
+        raise ValueError(f"Selected Python {facts.version} does not match explicitly requested {request}")
 
 
 def _validate_python(facts: InterpreterFacts, plan: ProjectPlan) -> None:
@@ -343,7 +390,7 @@ def _validate_python(facts: InterpreterFacts, plan: ProjectPlan) -> None:
         raise ValueError(f"Selected Python {facts.version} violates project requires-python {plan.python_constraint}")
     declarations = {
         request
-        for request in (plan.python_request, plan._environment_config.get("python"))
+        for request in (plan.python_request, plan.hatch_environment.get("python"))
         if isinstance(request, str) and request
     }
     for request in sorted(declarations):
@@ -351,7 +398,8 @@ def _validate_python(facts: InterpreterFacts, plan: ProjectPlan) -> None:
             declared = _probe(Path(request), plan.root)
             if facts.base_prefix.resolve() != declared.base_prefix.resolve() or facts.version != declared.version:
                 raise ValueError(
-                    f"Selected Python {facts.version} at {facts.base_prefix} does not match declared Hatch Python {request}"
+                    f"Selected Python {facts.version} at {facts.base_prefix} "
+                    f"does not match declared Hatch Python {request}"
                 )
         else:
             parts = _version_components(request)
@@ -368,6 +416,40 @@ def _execution_failure(result: ProcessResult, diagnostic: str, source: str) -> P
         stderr[:_OUTPUT_LIMIT].decode(errors="replace"),
         result.output_truncated or len(stderr) > _OUTPUT_LIMIT,
         source,
+    )
+
+
+def _command_admission(command: ProjectCommand, cwd: Path, root: Path, source: str) -> ProcessResult | None:
+    if not cwd.is_relative_to(root) or not cwd.is_dir() or not command.argv:
+        return ProcessResult(
+            "execution_failed",
+            None,
+            stderr="Command needs executable-first argv and a project working directory",
+            source_identity=source,
+        )
+    if _RESERVED_ENV.intersection(command.env_overrides) or any(
+        not isinstance(key, str) or not isinstance(value, str) or "=" in key or "\0" in key + value
+        for key, value in command.env_overrides.items()
+    ):
+        return ProcessResult(
+            "execution_failed",
+            None,
+            stderr="Invalid or identity-reserved environment override",
+            source_identity=source,
+        )
+    return None
+
+
+def _command_executable(command: ProjectCommand, facts: InterpreterFacts, source: str) -> Path | ProcessResult:
+    name = command.argv[0]
+    if name == "python":
+        return facts.executable
+    if Path(name).name == name and name not in {".", ".."}:
+        return facts.scripts / name
+    if Path(name).is_absolute() and (Path(name) == facts.executable or Path(name).parent == facts.scripts):
+        return Path(name)
+    return ProcessResult(
+        "unavailable", None, stderr="Executable must belong to the selected environment", source_identity=source
     )
 
 
@@ -393,40 +475,22 @@ class PreparedProject:
                 source_identity=source,
             )
         cwd = command.cwd.resolve()
-        if not cwd.is_relative_to(self.plan.root) or not cwd.is_dir() or not command.argv:
-            return ProcessResult(
-                "execution_failed",
-                None,
-                stderr="Command needs executable-first argv and a project working directory",
-                source_identity=source,
-            )
-        if _RESERVED_ENV.intersection(command.env_overrides) or any(
-            not isinstance(key, str) or not isinstance(value, str) or "=" in key or "\0" in key + value
-            for key, value in command.env_overrides.items()
-        ):
-            return ProcessResult(
-                "execution_failed",
-                None,
-                stderr="Invalid or identity-reserved environment override",
-                source_identity=source,
-            )
+        refusal = _command_admission(command, cwd, self.plan.root, source)
+        if refusal is not None:
+            return refusal
         facts = self.identity.interpreter
         name = command.argv[0]
-        if name == "python":
-            executable = facts.executable
-        elif Path(name).name == name and name not in {".", ".."}:
-            executable = facts.scripts / name
-        elif Path(name).is_absolute() and (Path(name) == facts.executable or Path(name).parent == facts.scripts):
-            executable = Path(name)
-        else:
-            return ProcessResult(
-                "unavailable", None, stderr="Executable must belong to the selected environment", source_identity=source
-            )
+        executable = _command_executable(command, facts, source)
+        if isinstance(executable, ProcessResult):
+            return executable
         if not executable.is_file() or not os.access(executable, os.X_OK):
             return ProcessResult(
                 "unavailable",
                 None,
-                stderr=f"Selected environment has no executable {name!r}; install it through the project manager in a separate preparation",
+                stderr=(
+                    f"Selected environment has no executable {name!r}; "
+                    "install it through the project manager in a separate preparation"
+                ),
                 source_identity=source,
             )
         env = _environment(facts.scripts)
@@ -492,7 +556,7 @@ def prepare_project(plan: ProjectPlan, workspace: Path) -> PreparedProject | Pre
         workspace.mkdir(parents=True, mode=0o700)
         owned = True
         if not existing:
-            if plan._environment_config.get("locked") or plan._environment_config.get("path"):
+            if plan.hatch_environment.get("locked") or plan.hatch_environment.get("path"):
                 raise ValueError(
                     "Cold selected locked/path environment is unsupported until immutable native preparation is proved"
                 )
@@ -509,7 +573,9 @@ def prepare_project(plan: ProjectPlan, workspace: Path) -> PreparedProject | Pre
             or facts.base_prefix.resolve() != requested.base_prefix.resolve()
         ):
             raise ValueError(
-                f"Prepared interpreter {facts.version} at {facts.prefix} with base {facts.base_prefix} does not match selected Python {requested.version} with base {requested.base_prefix} at environment {target}"
+                f"Prepared interpreter {facts.version} at {facts.prefix} with base {facts.base_prefix} "
+                f"does not match selected Python {requested.version} with base {requested.base_prefix} "
+                f"at environment {target}"
             )
         if _identity(plan.root) != plan.input_identity:
             raise ValueError("Project inputs changed during preparation; reinspect")

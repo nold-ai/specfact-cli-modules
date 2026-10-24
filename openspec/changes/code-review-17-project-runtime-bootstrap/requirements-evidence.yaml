@@ -60,7 +60,8 @@ requirements:
       scenario_id: independent-customer-interpreter-selection
       method: test
       intent: Bind an explicit base Python selection to the existing target installation.
-      observable: Equal version with a different base installation returns a diagnostic naming both bases and no completed capability.
+      observable: Equal version with a different base installation returns a diagnostic naming both bases and no
+        completed capability.
       selector:
         runner: pytest
         node_id: tests/unit/specfact_codebase/test_project_runtime.py::test_explicit_base_python_must_match_prepared_target[existing]
@@ -68,7 +69,8 @@ requirements:
       scenario_id: independent-customer-interpreter-selection
       method: test
       intent: Bind an explicit base Python selection to the native-created cold target installation.
-      observable: Equal version with a different base installation returns a diagnostic naming both bases and no completed capability.
+      observable: Equal version with a different base installation returns a diagnostic naming both bases and no
+        completed capability.
       selector:
         runner: pytest
         node_id: tests/unit/specfact_codebase/test_project_runtime.py::test_explicit_base_python_must_match_prepared_target[cold]
@@ -145,6 +147,24 @@ requirements:
       selector:
         runner: pytest
         node_id: tests/unit/specfact_codebase/test_project_runtime.py::test_cold_absolute_hatch_python_validates_created_base
+    - case_id: first-hatch-explicit-numeric-python-matching
+      scenario_id: independent-customer-interpreter-selection
+      method: test
+      intent: Validate every explicitly requested numeric Python component.
+      observable: Mismatched patch refuses before native queries; a matching full version selects the existing target
+        without synchronization.
+      selector:
+        runner: pytest
+        node_id: tests/unit/specfact_codebase/test_project_runtime.py::test_explicit_numeric_python_checks_all_requested_components[matching]
+    - case_id: first-hatch-explicit-numeric-python-wrong-patch
+      scenario_id: independent-customer-interpreter-selection
+      method: test
+      intent: Validate every explicitly requested numeric Python component.
+      observable: Mismatched patch refuses before native queries; a matching full version selects the existing target
+        without synchronization.
+      selector:
+        runner: pytest
+        node_id: tests/unit/specfact_codebase/test_project_runtime.py::test_explicit_numeric_python_checks_all_requested_components[wrong-patch]
   openspec:code-review-17-project-runtime-bootstrap:project-runtime-bootstrap:faithful-external-sidecar-preparation:
     rationale: Review the owner-approved replacement contract at planned maturity without claiming implementation
       evidence.
@@ -246,6 +266,15 @@ requirements:
       selector:
         runner: pytest
         node_id: tests/unit/specfact_codebase/test_project_runtime.py::test_unrelated_scripts_and_locks_do_not_block_existing_execution
+    - case_id: first-hatch-controller-python-startup-isolation
+      scenario_id: single-project-execution-owner
+      method: test
+      intent: Remove inherited controller Python startup settings while allowing explicit nonidentity overrides.
+      observable: Ambient optimization and startup values are absent in project execution, while explicit optimization
+        changes the child flags.
+      selector:
+        runner: pytest
+        node_id: tests/unit/specfact_codebase/test_project_runtime.py::test_controller_python_startup_removed_and_explicit_override_honored
   openspec:code-review-17-project-runtime-bootstrap:project-runtime-bootstrap:preparation-failure-and-reuse-are-explicit:
     rationale: Review the owner-approved replacement contract at planned maturity without claiming implementation
       evidence.

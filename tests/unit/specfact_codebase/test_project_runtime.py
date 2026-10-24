@@ -4,15 +4,19 @@ import os
 import signal
 import subprocess
 import sys
+from dataclasses import replace
 from pathlib import Path
+from sys import _base_executable as base_executable
 
 import pytest
 
+from specfact_codebase import project_runtime
 from specfact_codebase.project_runtime import (
     PreparationFailure,
     PreparedProject,
     ProjectCommand,
     ProjectSelection,
+    _probe as probe_python,
     inspect_project,
     prepare_project,
 )
@@ -23,8 +27,8 @@ def lifecycle_selector(request, record_property):
     record_property("specfact.selector", request.node.nodeid)
 
 
-@pytest.fixture
-def project(tmp_path):
+@pytest.fixture(name="project")
+def customer_project(tmp_path):
     root = tmp_path / "customer"
     root.mkdir()
     (root / "pyproject.toml").write_text('[project]\nname="customer"\nversion="0"\n')
@@ -36,7 +40,9 @@ def project(tmp_path):
     log = tmp_path / "hatch.log"
     hatch = tmp_path / "hatch"
     hatch.write_text(
-        f'#!{sys.executable}\nimport sys\nfrom pathlib import Path\nwith Path({str(log)!r}).open("a") as f: f.write(" ".join(sys.argv[1:])+"\\n")\nprint("Hatch, version test" if sys.argv[1:]==["--version"] else {str(target)!r})\n'
+        f"#!{sys.executable}\nimport sys\nfrom pathlib import Path\n"
+        f'with Path({str(log)!r}).open("a") as f: f.write(" ".join(sys.argv[1:])+"\\n")\n'
+        f'print("Hatch, version test" if sys.argv[1:]==["--version"] else {str(target)!r})\n'
     )
     hatch.chmod(0o700)
     return root, target, hatch, log
@@ -133,7 +139,7 @@ def test_nonzero_timeout_and_bounded_output_are_distinct(project, tmp_path):
         f"project=prepare_project(inspect_project(root,selection),Path({str(tmp_path / 'watchdog-invocation')!r})); "
         "assert isinstance(project,PreparedProject); "
         "started=time.monotonic(); "
-        f"result=project.run(ProjectCommand(('python','-c',{child_code!r}),root),timeout=.2); "
+        f"result=project.run(ProjectCommand(('python','-c',{child_code!r}),root),timeout=1.0); "
         "assert time.monotonic()-started < 3, 'project command exceeded bounded pipe drain'; "
         "assert result.outcome=='exited' and result.exit_code==0; "
         "assert 'parent-finished' in result.stdout"
@@ -168,7 +174,9 @@ def test_source_edits_allowed_but_dependency_drift_requires_reinspection(project
         (
             "python",
             "-c",
-            f"import sys; from pathlib import Path; p=Path({str(config)!r}); p.write_text(p.read_text()+'\\n# during execution\\n'); print('native-drift-stderr', file=sys.stderr)",
+            "import sys; from pathlib import Path; "
+            f"p=Path({str(config)!r}); p.write_text(p.read_text()+'\\n# during execution\\n'); "
+            "print('native-drift-stderr', file=sys.stderr)",
         ),
         project[0],
     )
@@ -246,8 +254,6 @@ def test_existing_environment_discovered_without_redundant_python_override(proje
     assert prepared.run(ProjectCommand(("python", "-V"), root), timeout=10).exit_code == 0
     assert "create" not in log.read_text()
 
-    from specfact_codebase import project_runtime
-
     native_which = project_runtime.shutil.which
     monkeypatch.setattr(
         project_runtime.shutil, "which", lambda name: native_which(name) if name == str(hatch) else None
@@ -305,7 +311,9 @@ def test_unreadable_execution_identity_is_structured(project, tmp_path, monkeypa
         (
             "python",
             "-c",
-            f"import sys; from pathlib import Path; Path({str(marker)!r}).touch(); print('command-output'); print('native-stderr', file=sys.stderr); print('x'*65500, file=sys.stderr)",
+            f"import sys; from pathlib import Path; Path({str(marker)!r}).touch(); "
+            "print('command-output'); print('native-stderr', file=sys.stderr); "
+            "print('x'*65500, file=sys.stderr)",
         ),
         root,
     )
@@ -315,19 +323,21 @@ def test_unreadable_execution_identity_is_structured(project, tmp_path, monkeypa
     assert "customer identity unreadable" in failed.stderr
     assert marker.exists() is after_execution
     if after_execution:
-        assert failed.stdout == "command-output\n"
-        assert "native-stderr" in failed.stderr
-        assert len(failed.stderr) <= 65536
-        assert failed.output_truncated
-        assert failed.source_identity
+        assert_captured_failure(failed)
     else:
         assert not failed.stdout
         assert not failed.source_identity
 
 
-def test_cleanup_failure_preserves_preparation_failure(project, tmp_path, monkeypatch):
-    from specfact_codebase import project_runtime
+def assert_captured_failure(failed):
+    assert failed.stdout == "command-output\n"
+    assert "native-stderr" in failed.stderr
+    assert len(failed.stderr) <= 65536
+    assert failed.output_truncated
+    assert failed.source_identity
 
+
+def test_cleanup_failure_preserves_preparation_failure(project, tmp_path, monkeypatch):
     root, _, hatch, _ = project
     plan = inspect_project(root, ProjectSelection(environment="review", hatch=str(hatch)))
     workspace = tmp_path / "invocation"
@@ -372,20 +382,15 @@ def test_custom_hatch_config_is_diagnostic_before_native_query(project, tmp_path
 
 @pytest.mark.parametrize("mismatch", ["base-prefix", "version"])
 def test_absolute_hatch_python_must_match_selected_interpreter(project, tmp_path, monkeypatch, mismatch):
-    from dataclasses import replace
-
-    from specfact_codebase import project_runtime
-
     customer, _, hatch, _ = project
-    declared = Path(sys.base_prefix) / "bin/python"
+    declared = Path(base_executable).resolve()
     config = customer / "hatch.toml"
     config.write_text(config.read_text() + f"python={json.dumps(str(declared))}\n")
     plan = inspect_project(customer, ProjectSelection(environment="review", hatch=str(hatch)))
     assert not plan.diagnostics
-    probe = project_runtime._probe
 
     def mismatched_declaration(executable, cwd):
-        facts = probe(executable, cwd)
+        facts = probe_python(executable, cwd)
         if executable == declared:
             return (
                 replace(facts, base_prefix=tmp_path / "different-base")
@@ -416,29 +421,28 @@ def test_numeric_hatch_and_version_file_compare_whole_components(project):
 
 
 def test_cold_absolute_hatch_python_validates_created_base(project, tmp_path, monkeypatch):
-    from dataclasses import replace
-
-    from specfact_codebase import project_runtime
-
     customer, _, hatch, _ = project
-    declared = Path(sys.base_prefix) / "bin/python"
+    declared = Path(base_executable).resolve()
     config = customer / "hatch.toml"
     config.write_text(config.read_text() + f"python={json.dumps(str(declared))}\n")
     hatch.write_text(
         f"#!{sys.executable}\nimport os,subprocess,sys\n"
         "if sys.argv[1:]==['env','create','review']:\n"
-        f"    subprocess.run([{str(declared)!r},'-m','venv','--without-pip',os.environ['HATCH_ENV_TYPE_VIRTUAL_PATH']],check=True)\n"
-        f"print('Hatch, version test' if sys.argv[1:]==['--version'] else {str(tmp_path / 'missing-native-target')!r})\n"
+        f"    subprocess.run([{str(declared)!r},'-m','venv','--without-pip',"
+        "os.environ['HATCH_ENV_TYPE_VIRTUAL_PATH']],check=True)\n"
+        "print('Hatch, version test' if sys.argv[1:]==['--version'] "
+        f"else {str(tmp_path / 'missing-native-target')!r})\n"
     )
     plan = inspect_project(customer, ProjectSelection(environment="review", hatch=str(hatch)))
     assert not plan.diagnostics
     workspace = tmp_path / "invocation"
     target_python = workspace / "environment/bin/python"
-    probe = project_runtime._probe
 
     def mismatched_created_target(executable, cwd):
-        facts = probe(executable, cwd)
-        return replace(facts, base_prefix=tmp_path / "different-created-base") if executable == target_python else facts
+        facts = probe_python(executable, cwd)
+        if executable == target_python:
+            return replace(facts, base_prefix=tmp_path / "different-created-base")
+        return facts
 
     monkeypatch.setattr(project_runtime, "_probe", mismatched_created_target)
     failed = prepare_project(plan, workspace)
@@ -450,26 +454,23 @@ def test_cold_absolute_hatch_python_validates_created_base(project, tmp_path, mo
 
 @pytest.mark.parametrize("existing", [True, False], ids=["existing", "cold"])
 def test_explicit_base_python_must_match_prepared_target(project, tmp_path, monkeypatch, existing):
-    from dataclasses import replace
-
-    from specfact_codebase import project_runtime
-
     customer, target, hatch, _ = project
-    selected = Path(sys.base_prefix) / "bin/python"
+    selected = Path(base_executable).resolve()
     workspace = tmp_path / "invocation"
     if not existing:
         hatch.write_text(
             f"#!{sys.executable}\nimport os,subprocess,sys\n"
             "if sys.argv[1:]==['env','create','review']:\n"
-            f"    subprocess.run([{str(selected)!r},'-m','venv','--without-pip',os.environ['HATCH_ENV_TYPE_VIRTUAL_PATH']],check=True)\n"
-            f"print('Hatch, version test' if sys.argv[1:]==['--version'] else {str(tmp_path / 'missing-native-target')!r})\n"
+            f"    subprocess.run([{str(selected)!r},'-m','venv','--without-pip',"
+            "os.environ['HATCH_ENV_TYPE_VIRTUAL_PATH']],check=True)\n"
+            "print('Hatch, version test' if sys.argv[1:]==['--version'] "
+            f"else {str(tmp_path / 'missing-native-target')!r})\n"
         )
         target = workspace / "environment"
     other_base = tmp_path / "different-python-installation"
-    probe = project_runtime._probe
 
     def different_target_base(executable, cwd):
-        facts = probe(executable, cwd)
+        facts = probe_python(executable, cwd)
         return replace(facts, base_prefix=other_base) if executable == target / "bin/python" else facts
 
     monkeypatch.setattr(project_runtime, "_probe", different_target_base)
@@ -482,3 +483,54 @@ def test_explicit_base_python_must_match_prepared_target(project, tmp_path, monk
     assert str(other_base) in failed.reason
     assert str(Path(sys.base_prefix).resolve()) in failed.reason
     assert not (workspace / "completed.json").exists()
+
+
+@pytest.mark.parametrize("mismatch", [False, True], ids=["matching", "wrong-patch"])
+def test_explicit_numeric_python_checks_all_requested_components(project, tmp_path, monkeypatch, mismatch):
+    customer, target, hatch, log = project
+    actual = tuple(sys.version_info[:3])
+    requested = (*actual[:2], actual[2] + 1000) if mismatch else actual
+    request = ".".join(map(str, requested))
+    lookup = "python" + ".".join(map(str, actual[:2]))
+    native_which = project_runtime.shutil.which
+    monkeypatch.setattr(
+        project_runtime.shutil,
+        "which",
+        lambda name: str(target / "bin/python") if name == lookup else native_which(name),
+    )
+    plan = inspect_project(customer, ProjectSelection(environment="review", python=request, hatch=str(hatch)))
+    prepared = prepare_project(plan, tmp_path / "invocation")
+    if mismatch:
+        assert isinstance(prepared, PreparationFailure), prepared
+        assert request in prepared.reason
+        assert str(actual) in prepared.reason
+        assert not log.exists()
+    else:
+        assert isinstance(prepared, PreparedProject), prepared
+        assert prepared.identity.interpreter.version == actual
+        assert "create" not in log.read_text()
+
+
+def test_controller_python_startup_removed_and_explicit_override_honored(project, tmp_path, monkeypatch):
+    prepared = ready(project, tmp_path)
+    startup = {
+        "PYTHONOPTIMIZE": "1",
+        "PYTHONSTARTUP": "/controller/startup.py",
+        "PYTHONUSERBASE": "/controller/user-base",
+        "PYTHONSAFEPATH": "1",
+        "PYTHONEXECUTABLE": "/controller/python",
+        "PYTHONINSPECT": "1",
+    }
+    for name, value in startup.items():
+        monkeypatch.setenv(name, value)
+    code = (
+        "import os,sys,json\n"
+        f"names={list(startup)!r}\n"
+        "print(json.dumps([sys.flags.optimize,*[os.getenv(name) for name in names]]))"
+    )
+    inherited = prepared.run(ProjectCommand(("python", "-c", code), project[0]), timeout=10)
+    assert inherited.outcome == "exited" and inherited.exit_code == 0, inherited
+    assert json.loads(inherited.stdout) == [0, *[None] * len(startup)]
+    explicit = prepared.run(ProjectCommand(("python", "-c", code), project[0], {"PYTHONOPTIMIZE": "1"}), timeout=10)
+    assert explicit.outcome == "exited" and explicit.exit_code == 0, explicit
+    assert json.loads(explicit.stdout) == [1, "1", *[None] * (len(startup) - 1)]
