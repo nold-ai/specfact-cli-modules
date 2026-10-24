@@ -63,6 +63,117 @@ def inventory(python: Path, root: Path) -> list:
     return json.loads(process.stdout)
 
 
+def _prepare_existing(root: Path, workspace: Path, hatch: Path, python: Path):
+    prefix = workspace / "existing-native"
+    config = root / "hatch.toml"
+    config.write_text(config.read_text() + f"path = {json.dumps(str(prefix))}\n")
+    environment = {
+        key: value
+        for key, value in os.environ.items()
+        if key not in {"PYTHONPATH", "PYTHONHOME", "VIRTUAL_ENV", "__PYVENV_LAUNCHER__"}
+        and not key.startswith("HATCH_")
+    }
+    environment["HATCH_PYTHON"] = str(python)
+    process = subprocess.run(
+        [str(hatch), "env", "create", "review"],
+        cwd=root,
+        env=environment,
+        capture_output=True,
+        text=True,
+        timeout=180,
+        check=False,
+    )
+    setup = {"exit_code": process.returncode, "stdout": process.stdout, "stderr": process.stderr}
+    assert process.returncode == 0, setup
+    selected_python = prefix / "bin/python"
+    return selected_python, setup, inventory(selected_python, root)
+
+
+def _run_command(prepared: PreparedProject, root: Path, argv):
+    return prepared.run(ProjectCommand(tuple(argv), root), timeout=60)
+
+
+def _record_command(commands: dict, name: str, result, expected: int):
+    commands[name] = asdict(result)
+    assert result.outcome == "exited" and result.exit_code == expected, (name, result)
+
+
+def _run_checks(prepared: PreparedProject, root: Path) -> dict:
+    commands = {}
+    imports = _run_command(
+        prepared,
+        root,
+        [
+            "python",
+            "-c",
+            "import requests,pytest,pytest_asyncio,sys; print(sys.executable); "
+            "print(sys.prefix); print(requests.Request('GET','https://example.invalid').prepare().method)",
+        ],
+    )
+    _record_command(commands, "imports", imports, 0)
+    entrypoint = _run_command(prepared, root, ["pytest", "--version"])
+    _record_command(commands, "dependency_entrypoint", entrypoint, 0)
+    tests = _run_command(prepared, root, ["python", "-m", "pytest", "-p", "no:asyncio", "-v"])
+    _record_command(commands, "native_async_pytest", tests, 0)
+    assert "test_runtime_dependencies PASSED" in tests.stdout and "8 passed" in tests.stdout, tests
+    lint = _run_command(prepared, root, ["ruff", "check", "lint_probe.py"])
+    _record_command(commands, "enabled_customer_rule", lint, 1)
+    assert "F821" in lint.stdout and "F401" not in lint.stdout
+    disabled = _run_command(prepared, root, ["ruff", "check", "lint_probe.py", "--ignore", "F821"])
+    _record_command(commands, "disabled_customer_rule", disabled, 0)
+    seeded = root / "tests/test_seeded_failure.py"
+    seeded.write_text("def test_seeded_customer_defect():\n    assert 2 + 2 == 5\n")
+    defect = _run_command(prepared, root, ["python", "-m", "pytest", "-p", "no:asyncio", "-v"])
+    _record_command(commands, "seeded_real_failure", defect, 1)
+    assert "test_seeded_customer_defect FAILED" in defect.stdout and "1 failed" in defect.stdout
+    assert defect.source_identity != tests.source_identity
+    seeded.unlink()
+    return commands
+
+
+def _prove_case(workspace: Path, case: str, hatch: Path, python: Path) -> dict:
+    root = workspace / case / "customer"
+    materialize(root)
+    setup = None
+    if case == "existing":
+        selected_python, setup, before_inventory = _prepare_existing(root, workspace, hatch, python)
+    else:
+        selected_python = python
+        before_inventory = None
+    before_declarations = declarations(root)
+    plan = inspect_project(
+        root,
+        ProjectSelection(
+            environment="review", python=str(selected_python) if case == "cold" else None, hatch=str(hatch)
+        ),
+    )
+    prepared = prepare_project(plan, workspace / case / "invocation")
+    assert isinstance(prepared, PreparedProject), prepared
+    assert prepared.identity.ownership == ("existing" if case == "existing" else "invocation")
+    assert prepared.identity.interpreter.version == (3, 11, 15)
+    actual_python = prepared.identity.interpreter.executable
+    installed_before_checks = inventory(actual_python, root)
+    assert not any(
+        name.lower().startswith("specfact") or name.lower() in {"crosshair-tool", "beartype", "icontract"}
+        for name, _, _ in installed_before_checks
+    )
+    commands = _run_checks(prepared, root)
+    after_inventory = inventory(actual_python, root)
+    assert after_inventory == installed_before_checks
+    if before_inventory is not None:
+        assert after_inventory == before_inventory
+    assert declarations(root) == before_declarations
+    return {
+        "identity": asdict(prepared.identity),
+        "setup": setup,
+        "declarations_before": before_declarations,
+        "declarations_after": declarations(root),
+        "inventory_before": before_inventory or installed_before_checks,
+        "inventory_after": after_inventory,
+        "commands": commands,
+    }
+
+
 def prove(workspace: Path, *, hatch: Path, python: Path) -> dict:
     if not __debug__:
         raise RuntimeError("Native proof refuses optimized Python; assertions must remain enabled")
@@ -82,95 +193,7 @@ def prove(workspace: Path, *, hatch: Path, python: Path) -> dict:
         "cases": {},
     }
     for case in ("existing", "cold"):
-        root = workspace / case / "customer"
-        materialize(root)
-        setup = None
-        if case == "existing":
-            prefix = workspace / "existing-native"
-            config = root / "hatch.toml"
-            config.write_text(config.read_text() + f"path = {json.dumps(str(prefix))}\n")
-            environment = {
-                key: value
-                for key, value in os.environ.items()
-                if key not in {"PYTHONPATH", "PYTHONHOME", "VIRTUAL_ENV", "__PYVENV_LAUNCHER__"}
-                and not key.startswith("HATCH_")
-            }
-            environment["HATCH_PYTHON"] = str(python)
-            process = subprocess.run(
-                [str(hatch), "env", "create", "review"],
-                cwd=root,
-                env=environment,
-                capture_output=True,
-                text=True,
-                timeout=180,
-            )
-            setup = {"exit_code": process.returncode, "stdout": process.stdout, "stderr": process.stderr}
-            assert process.returncode == 0, setup
-            selected_python = prefix / "bin/python"
-            before_inventory = inventory(selected_python, root)
-        else:
-            selected_python = python
-            before_inventory = None
-        before_declarations = declarations(root)
-        plan = inspect_project(
-            root,
-            ProjectSelection(
-                environment="review", python=str(selected_python) if case == "cold" else None, hatch=str(hatch)
-            ),
-        )
-        prepared = prepare_project(plan, workspace / case / "invocation")
-        assert isinstance(prepared, PreparedProject), prepared
-        assert prepared.identity.ownership == ("existing" if case == "existing" else "invocation")
-        assert prepared.identity.interpreter.version == (3, 11, 15)
-        actual_python = prepared.identity.interpreter.executable
-        installed_before_checks = inventory(actual_python, root)
-        assert not any(
-            name.lower().startswith("specfact") or name.lower() in {"crosshair-tool", "beartype", "icontract"}
-            for name, _, _ in installed_before_checks
-        )
-        commands = {}
-
-        def run(name, argv, expected, prepared=prepared, root=root, commands=commands):
-            result = prepared.run(ProjectCommand(tuple(argv), root), timeout=60)
-            commands[name] = asdict(result)
-            assert result.outcome == "exited" and result.exit_code == expected, (name, result)
-            return result
-
-        run(
-            "imports",
-            [
-                "python",
-                "-c",
-                "import requests,pytest,pytest_asyncio,sys; print(sys.executable); print(sys.prefix); print(requests.Request('GET','https://example.invalid').prepare().method)",
-            ],
-            0,
-        )
-        run("dependency_entrypoint", ["pytest", "--version"], 0)
-        tests = run("native_async_pytest", ["python", "-m", "pytest", "-p", "no:asyncio", "-v"], 0)
-        assert "test_runtime_dependencies PASSED" in tests.stdout and "8 passed" in tests.stdout, tests
-        lint = run("enabled_customer_rule", ["ruff", "check", "lint_probe.py"], 1)
-        assert "F821" in lint.stdout and "F401" not in lint.stdout
-        run("disabled_customer_rule", ["ruff", "check", "lint_probe.py", "--ignore", "F821"], 0)
-        seeded = root / "tests/test_seeded_failure.py"
-        seeded.write_text("def test_seeded_customer_defect():\n    assert 2 + 2 == 5\n")
-        defect = run("seeded_real_failure", ["python", "-m", "pytest", "-p", "no:asyncio", "-v"], 1)
-        assert "test_seeded_customer_defect FAILED" in defect.stdout and "1 failed" in defect.stdout
-        assert defect.source_identity != tests.source_identity
-        seeded.unlink()
-        after_inventory = inventory(actual_python, root)
-        assert after_inventory == installed_before_checks
-        if before_inventory is not None:
-            assert after_inventory == before_inventory
-        assert declarations(root) == before_declarations
-        receipt["cases"][case] = {
-            "identity": asdict(prepared.identity),
-            "setup": setup,
-            "declarations_before": before_declarations,
-            "declarations_after": declarations(root),
-            "inventory_before": before_inventory or installed_before_checks,
-            "inventory_after": after_inventory,
-            "commands": commands,
-        }
+        receipt["cases"][case] = _prove_case(workspace, case, hatch, python)
     assert files_identity(ORIGINAL) == original
     receipt["original_fixture_unchanged"] = original
     (workspace / "receipt.json").write_text(json.dumps(receipt, indent=2, default=str))
@@ -184,7 +207,7 @@ def main() -> None:
     parser.add_argument("--python", required=True, type=Path)
     arguments = parser.parse_args()
     prove(arguments.workspace, hatch=arguments.hatch, python=arguments.python)
-    print(arguments.workspace / "receipt.json")
+    sys.stdout.write(f"{arguments.workspace / 'receipt.json'}\n")
 
 
 if __name__ == "__main__":

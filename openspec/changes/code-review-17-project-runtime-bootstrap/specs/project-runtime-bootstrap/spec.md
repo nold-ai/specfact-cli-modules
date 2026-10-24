@@ -19,6 +19,12 @@ The runtime service SHALL select and probe the customer interpreter independentl
 - **THEN** preparation refuses with a diagnostic naming the selected and observed base installations
 - **AND** it does not publish completion metadata or return an execution capability for the mismatched target
 
+#### Scenario: Explicit numeric interpreter selection
+- **GIVEN** a caller explicitly selects a numeric Python version
+- **WHEN** the executable found for its major/minor name reports a different requested component
+- **THEN** preparation refuses with the requested and observed versions before native manager queries
+- **AND** a matching full numeric version still selects the existing environment without synchronization
+
 #### Scenario: Absolute native Hatch Python declaration
 - **GIVEN** a detached Hatch environment declares an absolute Python executable, optionally alongside a compatible .python-version
 - **WHEN** pure inspection records the declarations and preparation selects an existing or cold environment
@@ -65,6 +71,12 @@ Preparation SHALL use native pip or pip-tools, Hatch, uv, or Poetry semantics in
 
 ### Requirement: Single project execution owner
 specfact_codebase.project_runtime SHALL own inspection, preparation, and project command execution. Code Review and existing framework sidecar validation SHALL consume this service without a reverse dependency on Code Review. Commands SHALL bind argv, working directory, environment overrides, and a timeout.
+
+#### Scenario: Controller Python startup isolation
+- **GIVEN** the controller carries Python startup settings including optimization or user-base selection
+- **WHEN** a project command executes without an explicit override
+- **THEN** inherited Python startup variables do not change the selected interpreter's execution settings
+- **AND** callers can explicitly supply nonidentity Python startup overrides through command environment overrides
 
 #### Scenario: Existing sidecar consumes project context
 - **GIVEN** framework sidecar validation needs a project interpreter and dependencies

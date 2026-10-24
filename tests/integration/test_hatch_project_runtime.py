@@ -1,15 +1,29 @@
 import importlib.util
+import json
 import os
+import subprocess
+import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
+from specfact_codebase import project_runtime
+from specfact_codebase.project_runtime import (
+    PreparedProject,
+    ProjectCommand,
+    ProjectSelection,
+    inspect_project,
+    prepare_project,
+)
 
-def test_existing_and_cold_native_hatch_workflow(record_property):
-    record_property(
-        "specfact.selector",
-        "tests/integration/test_hatch_project_runtime.py::test_existing_and_cold_native_hatch_workflow",
-    )
+
+@pytest.fixture(autouse=True)
+def record_selector(request, record_property):
+    record_property("specfact.selector", request.node.nodeid)
+
+
+def test_existing_and_cold_native_hatch_workflow():
     location = os.environ.get("SPECFACT_HATCH_PROOF_WORKSPACE")
     if not location:
         pytest.skip(
@@ -33,26 +47,7 @@ def test_existing_and_cold_native_hatch_workflow(record_property):
     assert set(receipt["cases"]) == {"existing", "cold"}
 
 
-def test_native_hatch_customer_storage_survives_controller_context(tmp_path, monkeypatch, record_property):
-    import json
-    import subprocess
-
-    from specfact_codebase.project_runtime import (
-        PreparedProject,
-        ProjectCommand,
-        ProjectSelection,
-        inspect_project,
-        prepare_project,
-    )
-
-    record_property(
-        "specfact.selector",
-        "tests/integration/test_hatch_project_runtime.py::test_native_hatch_customer_storage_survives_controller_context",
-    )
-    hatch = os.environ.get("SPECFACT_HATCH_EXECUTABLE")
-    python = os.environ.get("SPECFACT_HATCH_PROJECT_PYTHON")
-    if not hatch or not python:
-        pytest.skip("Native Hatch and project Python are required for customer storage acceptance")
+def _create_storage_customer(tmp_path, hatch, python):
     root = tmp_path / "customer"
     root.mkdir()
     (root / "pyproject.toml").write_text('[project]\nname="storage-customer"\nversion="0"\n')
@@ -85,6 +80,15 @@ def test_native_hatch_customer_storage_survives_controller_context(tmp_path, mon
     )
     prefix = Path(location.stdout.strip())
     assert prefix.is_relative_to(data)
+    return root, data, cache, prefix
+
+
+def test_native_hatch_customer_storage_survives_controller_context(tmp_path, monkeypatch):
+    hatch = os.environ.get("SPECFACT_HATCH_EXECUTABLE")
+    python = os.environ.get("SPECFACT_HATCH_PROJECT_PYTHON")
+    if not hatch or not python:
+        pytest.skip("Native Hatch and project Python are required for customer storage acceptance")
+    root, data, cache, prefix = _create_storage_customer(tmp_path, hatch, python)
     monkeypatch.setenv("HATCH_DATA_DIR", str(data))
     monkeypatch.setenv("HATCH_CACHE_DIR", str(cache))
     monkeypatch.delenv("HATCH_CONFIG", raising=False)
@@ -100,7 +104,10 @@ def test_native_hatch_customer_storage_survives_controller_context(tmp_path, mon
             (
                 "python",
                 "-c",
-                "import os,json; print(json.dumps([os.getenv('HATCH_DATA_DIR'),os.getenv('HATCH_CACHE_DIR'),os.getenv('HATCH_ENV_ACTIVE'),os.getenv('HATCH_PYTHON'),os.getenv('HATCH_ENV_TYPE_VIRTUAL_PATH'),os.getenv('HATCH_PROJECT')]))",
+                "import os,json; print(json.dumps([os.getenv('HATCH_DATA_DIR'),"
+                "os.getenv('HATCH_CACHE_DIR'),os.getenv('HATCH_ENV_ACTIVE'),"
+                "os.getenv('HATCH_PYTHON'),os.getenv('HATCH_ENV_TYPE_VIRTUAL_PATH'),"
+                "os.getenv('HATCH_PROJECT')]))",
             ),
             root,
         ),
@@ -111,11 +118,7 @@ def test_native_hatch_customer_storage_survives_controller_context(tmp_path, mon
 
 
 @pytest.mark.parametrize("optimization", ["flag", "environment"])
-def test_native_proof_rejects_optimized_python_before_allocation(tmp_path, record_property, request, optimization):
-    import subprocess
-    import sys
-
-    record_property("specfact.selector", request.node.nodeid)
+def test_native_proof_rejects_optimized_python_before_allocation(tmp_path, optimization):
     repository = Path(__file__).resolve().parents[2]
     workspace = tmp_path / "proof"
     command = [sys.executable]
@@ -140,10 +143,7 @@ def test_native_proof_rejects_optimized_python_before_allocation(tmp_path, recor
     assert not (workspace / "receipt.json").exists()
 
 
-def test_native_proof_rejects_wrong_controller_before_allocation(tmp_path, record_property, request, monkeypatch):
-    from types import SimpleNamespace
-
-    record_property("specfact.selector", request.node.nodeid)
+def test_native_proof_rejects_wrong_controller_before_allocation(tmp_path, monkeypatch):
     script = Path(__file__).resolve().parents[2] / "scripts/prove_hatch_project_runtime.py"
     spec = importlib.util.spec_from_file_location("hatch_precondition_proof", script)
     assert spec and spec.loader
@@ -157,27 +157,7 @@ def test_native_proof_rejects_wrong_controller_before_allocation(tmp_path, recor
     assert not (workspace / "receipt.json").exists()
 
 
-@pytest.mark.parametrize("version_file", [False, True], ids=["without-version-file", "with-version-file"])
-@pytest.mark.parametrize("existing", [False, True], ids=["cold", "existing"])
-def test_native_hatch_absolute_python_declaration(
-    tmp_path, monkeypatch, record_property, request, existing, version_file
-):
-    import json
-    import subprocess
-
-    from specfact_codebase.project_runtime import (
-        PreparedProject,
-        ProjectCommand,
-        ProjectSelection,
-        inspect_project,
-        prepare_project,
-    )
-
-    record_property("specfact.selector", request.node.nodeid)
-    hatch = os.environ.get("SPECFACT_HATCH_EXECUTABLE")
-    python = os.environ.get("SPECFACT_HATCH_PROJECT_PYTHON")
-    if not hatch or not python:
-        pytest.skip("Native Hatch and project Python are required for absolute declaration acceptance")
+def _create_absolute_customer(tmp_path, python, version_file):
     expected = json.loads(
         subprocess.check_output(
             [python, "-I", "-c", "import sys,json; print(json.dumps([sys.base_prefix,list(sys.version_info[:3])]))"],
@@ -193,6 +173,10 @@ def test_native_hatch_absolute_python_declaration(
     if version_file:
         (customer / ".python-version").write_text(".".join(map(str, expected[1])) + "\n")
     declarations = {path.name: path.read_bytes() for path in customer.iterdir()}
+    return customer, expected, declarations
+
+
+def _absolute_target(tmp_path, monkeypatch, customer, hatch, existing):
     for name in tuple(os.environ):
         if name.startswith("HATCH_"):
             monkeypatch.delenv(name)
@@ -213,21 +197,16 @@ def test_native_hatch_absolute_python_declaration(
             text=True,
             timeout=180,
         )
-    expected_target = (
+    return (
         Path(
             subprocess.check_output([hatch, "env", "find", "review"], cwd=customer, env=environment, text=True).strip()
         )
         if existing
         else tmp_path / "invocation/environment"
     )
-    from specfact_codebase import project_runtime
 
-    native_which = project_runtime.shutil.which
-    monkeypatch.setattr(project_runtime.shutil, "which", lambda name: native_which(name) if name == hatch else None)
-    plan = inspect_project(customer, ProjectSelection(environment="review", hatch=hatch))
-    assert not plan.diagnostics
-    prepared = prepare_project(plan, tmp_path / "invocation")
-    assert isinstance(prepared, PreparedProject), prepared
+
+def _assert_absolute_identity(prepared, customer, expected_target, expected, existing):
     assert prepared.identity.ownership == ("existing" if existing else "invocation")
     assert prepared.identity.interpreter.prefix == expected_target
     assert str(prepared.identity.interpreter.base_prefix) == expected[0]
@@ -237,7 +216,8 @@ def test_native_hatch_absolute_python_declaration(
             (
                 "python",
                 "-c",
-                "import sys,json; print(json.dumps([sys.base_prefix,list(sys.version_info[:3]),sys.prefix,sys.executable]))",
+                "import sys,json; print(json.dumps([sys.base_prefix,list(sys.version_info[:3]),"
+                "sys.prefix,sys.executable]))",
             ),
             customer,
         ),
@@ -245,4 +225,22 @@ def test_native_hatch_absolute_python_declaration(
     )
     assert result.outcome == "exited" and result.exit_code == 0
     assert json.loads(result.stdout) == [*expected, str(expected_target), str(prepared.identity.interpreter.executable)]
+
+
+@pytest.mark.parametrize("version_file", [False, True], ids=["without-version-file", "with-version-file"])
+@pytest.mark.parametrize("existing", [False, True], ids=["cold", "existing"])
+def test_native_hatch_absolute_python_declaration(tmp_path, monkeypatch, existing, version_file):
+    hatch = os.environ.get("SPECFACT_HATCH_EXECUTABLE")
+    python = os.environ.get("SPECFACT_HATCH_PROJECT_PYTHON")
+    if not hatch or not python:
+        pytest.skip("Native Hatch and project Python are required for absolute declaration acceptance")
+    customer, expected, declarations = _create_absolute_customer(tmp_path, python, version_file)
+    expected_target = _absolute_target(tmp_path, monkeypatch, customer, hatch, existing)
+    native_which = project_runtime.shutil.which
+    monkeypatch.setattr(project_runtime.shutil, "which", lambda name: native_which(name) if name == hatch else None)
+    plan = inspect_project(customer, ProjectSelection(environment="review", hatch=hatch))
+    assert not plan.diagnostics
+    prepared = prepare_project(plan, tmp_path / "invocation")
+    assert isinstance(prepared, PreparedProject), prepared
+    _assert_absolute_identity(prepared, customer, expected_target, expected, existing)
     assert {name: (customer / name).read_bytes() for name in declarations} == declarations
