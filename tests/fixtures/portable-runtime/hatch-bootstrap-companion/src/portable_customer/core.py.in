@@ -1,0 +1,5 @@
+import requests
+
+
+def prepared_method() -> str:
+    return requests.Request("GET", "https://example.invalid").prepare().method

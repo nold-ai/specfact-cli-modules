@@ -205,3 +205,47 @@ def test_independent_invalid_no_impact_stops_before_review(
     assert not (trusted / "prepared").exists()
     assert (trusted / "cleaned").exists()
     assert "private-reason" not in result.stdout
+
+
+@pytest.mark.parametrize(
+    "staged,independent_review,expected,diagnostic",
+    [
+        (True, True, 0, "DEFERRED: only the local capsule review"),
+        (False, True, 1, "requires a candidate change that schedules the blocking capsule workflow"),
+        (True, False, 1, "requires the blocking independent signed-review job"),
+    ],
+    ids=["staged-fixture", "unstaged-fixture", "missing-indexed-independent-review"],
+)
+def test_portable_fixture_deferral_retains_block2_guards(
+    tmp_path: Path, staged: bool, independent_review: bool, expected: int, diagnostic: str, request, record_property
+) -> None:
+    record_property("specfact.selector", request.node.nodeid)
+    scenario = ("Darwin", "", "github-linux", "specfact-project", False, independent_review, expected)
+    worktree = deferral_worktree(tmp_path, scenario)
+    fixture = worktree / "tests/fixtures/portable-runtime/hatch-bootstrap-companion/pyproject.toml"
+    fixture.parent.mkdir(parents=True)
+    fixture.write_text('[project]\nname = "portable-fixture"\n')
+    if staged:
+        _git(worktree, "add", str(fixture.relative_to(worktree)))
+    calls = tmp_path / "calls"
+    script = (REPO_ROOT / "scripts/pre-commit-quality-checks.sh").read_text().rsplit('main "$@"', 1)[0]
+    environment = os.environ | {
+        "FIXTURE_PLATFORM": "Darwin",
+        "FIXTURE_CALLS": str(calls),
+        "GITHUB_ACTIONS": "",
+        "CI": "",
+        "SPECFACT_CODE_REVIEW_DEFER_TO_CI": "github-linux",
+    }
+    result = subprocess.run(
+        ["bash", "-c", script + _BLOCK2_HATCH_FIXTURE],
+        cwd=worktree,
+        env=environment,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == expected, result.stdout + result.stderr
+    assert diagnostic in result.stderr
+    assert_block2_trace(calls.read_text(), expected, result.stderr)
+    if expected == 0:
+        assert "this is not a PASS" in result.stderr

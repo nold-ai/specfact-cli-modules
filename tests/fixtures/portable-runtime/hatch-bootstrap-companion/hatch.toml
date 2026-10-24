@@ -1,0 +1,9 @@
+[envs.default]
+dependencies = ["pytest<8"]
+
+[envs.review]
+detached = true
+dependencies = ["pytest>=9,<10", "pytest-asyncio>=1,<2", "requests>=2.32,<3", "ruff>=0.14,<1"]
+
+python = "3.11"
+python-sources = ["external"]
