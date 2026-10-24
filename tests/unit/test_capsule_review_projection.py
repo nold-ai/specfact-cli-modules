@@ -283,7 +283,7 @@ def _write_independent_failure_fixture(tmp_path, case):
     return path, log
 
 
-def _expected_review_projection(expected):
+def _expected_review_projection(expected, case):
     outcome, flags, codes = expected
     verdict = "FAIL" if outcome == "structured_report" else "UNAVAILABLE"
     keys = ("findings_present", "tool_error_present", "execution_error_present", "unknown_evidence_present")
@@ -300,6 +300,10 @@ def _expected_review_projection(expected):
     if outcome == "oversized_report":
         projection["report_header_observed"] = False
         projection["error_analyzer_sides"] = {}
+        projection["crosshair_failure_observations"] = []
+    if outcome == "structured_report":
+        sides = {"nested": {"pylint": ["head"]}, "direct": {"pylint": ["unavailable"]}}
+        projection["error_analyzer_sides"] = sides.get(case, {})
         projection["crosshair_failure_observations"] = []
     return projection
 
@@ -331,7 +335,7 @@ def test_independent_review_failure_keeps_nested_evidence_and_private_tokens(tmp
     monkeypatch.setenv("REVIEW_LOG", str(log))
     result = _run_projector(tmp_path, program)
     assert result.returncode == 0
-    assert json.loads(result.stdout) == _expected_review_projection(expected)
+    assert json.loads(result.stdout) == _expected_review_projection(expected, case)
     assert "private-token" not in result.stdout + result.stderr
 
 
@@ -1100,9 +1104,9 @@ json.loads = _depth_failure
         ),
         ("[Errno 2] PRIVATE_PATH", "file_missing"),
         ("[Errno 13] PRIVATE_PATH", "permission_denied"),
-        ("PRIVATE project_pytest_execution_incomplete", None),
-        ("project_pytest_execution_incomplete_PRIVATE", None),
-        ("PRIVATE_UNKNOWN", None),
+        ("PRIVATE project_pytest_execution_incomplete", "unclassified"),
+        ("project_pytest_execution_incomplete_PRIVATE", "unclassified"),
+        ("PRIVATE_UNKNOWN", "unclassified"),
     ],
 )
 def test_public_pytest_failure_codes_withhold_private_payload(tmp_path: Path, job_name, message, code):
