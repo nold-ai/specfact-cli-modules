@@ -13,6 +13,12 @@ The runtime service SHALL select and probe the customer interpreter independentl
 - **WHEN** inspection resolves the project
 - **THEN** it names the candidates or missing version and performs no installation or controller-Python fallback
 
+#### Scenario: Explicit base interpreter identity
+- **GIVEN** the caller explicitly selects an absolute base Python executable
+- **WHEN** an existing or newly created Hatch target reports the same Python version from a different base installation
+- **THEN** preparation refuses with a diagnostic naming the selected and observed base installations
+- **AND** it does not publish completion metadata or return an execution capability for the mismatched target
+
 #### Scenario: Absolute native Hatch Python declaration
 - **GIVEN** a detached Hatch environment declares an absolute Python executable, optionally alongside a compatible .python-version
 - **WHEN** pure inspection records the declarations and preparation selects an existing or cold environment

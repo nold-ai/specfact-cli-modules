@@ -446,3 +446,39 @@ def test_cold_absolute_hatch_python_validates_created_base(project, tmp_path, mo
     assert "declared Hatch Python" in failed.reason
     assert "does not match" in failed.reason
     assert not (workspace / "completed.json").exists()
+
+
+@pytest.mark.parametrize("existing", [True, False], ids=["existing", "cold"])
+def test_explicit_base_python_must_match_prepared_target(project, tmp_path, monkeypatch, existing):
+    from dataclasses import replace
+
+    from specfact_codebase import project_runtime
+
+    customer, target, hatch, _ = project
+    selected = Path(sys.base_prefix) / "bin/python"
+    workspace = tmp_path / "invocation"
+    if not existing:
+        hatch.write_text(
+            f"#!{sys.executable}\nimport os,subprocess,sys\n"
+            "if sys.argv[1:]==['env','create','review']:\n"
+            f"    subprocess.run([{str(selected)!r},'-m','venv','--without-pip',os.environ['HATCH_ENV_TYPE_VIRTUAL_PATH']],check=True)\n"
+            f"print('Hatch, version test' if sys.argv[1:]==['--version'] else {str(tmp_path / 'missing-native-target')!r})\n"
+        )
+        target = workspace / "environment"
+    other_base = tmp_path / "different-python-installation"
+    probe = project_runtime._probe
+
+    def different_target_base(executable, cwd):
+        facts = probe(executable, cwd)
+        return replace(facts, base_prefix=other_base) if executable == target / "bin/python" else facts
+
+    monkeypatch.setattr(project_runtime, "_probe", different_target_base)
+    plan = inspect_project(customer, ProjectSelection(environment="review", python=str(selected), hatch=str(hatch)))
+    assert not plan.diagnostics
+    failed = prepare_project(plan, workspace)
+    assert isinstance(failed, PreparationFailure), failed
+    assert "selected Python" in failed.reason
+    assert "base" in failed.reason
+    assert str(other_base) in failed.reason
+    assert str(Path(sys.base_prefix).resolve()) in failed.reason
+    assert not (workspace / "completed.json").exists()
