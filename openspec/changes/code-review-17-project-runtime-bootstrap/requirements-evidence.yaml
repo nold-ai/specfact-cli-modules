@@ -365,6 +365,38 @@ requirements:
       selector:
         runner: pytest
         node_id: tests/unit/specfact_codebase/test_project_runtime.py::test_cleanup_failure_preserves_preparation_failure
+    - case_id: first-hatch-pytest-config-drift-pytest-toml
+      scenario_id: preparation-failure-and-reuse-are-explicit
+      method: test
+      intent: Include pytest.toml in prepared project configuration identity.
+      observable: Changed pytest configuration refuses execution and changes both input and source provenance.
+      selector:
+        runner: pytest
+        node_id: tests/unit/specfact_codebase/test_project_runtime.py::test_pytest_config_drift_requires_reinspection[pytest.toml]
+    - case_id: first-hatch-pytest-config-drift-dot-pytest-toml
+      scenario_id: preparation-failure-and-reuse-are-explicit
+      method: test
+      intent: Include .pytest.toml in prepared project configuration identity.
+      observable: Changed pytest configuration refuses execution and changes both input and source provenance.
+      selector:
+        runner: pytest
+        node_id: tests/unit/specfact_codebase/test_project_runtime.py::test_pytest_config_drift_requires_reinspection[.pytest.toml]
+    - case_id: first-hatch-pytest-config-drift-dot-pytest-ini
+      scenario_id: preparation-failure-and-reuse-are-explicit
+      method: test
+      intent: Include .pytest.ini in prepared project configuration identity.
+      observable: Changed pytest configuration refuses execution and changes both input and source provenance.
+      selector:
+        runner: pytest
+        node_id: tests/unit/specfact_codebase/test_project_runtime.py::test_pytest_config_drift_requires_reinspection[.pytest.ini]
+    - case_id: first-hatch-pytest-config-drift-tox-ini
+      scenario_id: preparation-failure-and-reuse-are-explicit
+      method: test
+      intent: Include tox.ini in prepared project configuration identity.
+      observable: Changed pytest configuration refuses execution and changes both input and source provenance.
+      selector:
+        runner: pytest
+        node_id: tests/unit/specfact_codebase/test_project_runtime.py::test_pytest_config_drift_requires_reinspection[tox.ini]
   openspec:code-review-17-project-runtime-bootstrap:project-runtime-bootstrap:portable-inspection-and-bootstrap-commands:
     rationale: Review the owner-approved replacement contract at planned maturity without claiming implementation
       evidence.
@@ -557,43 +589,3 @@ requirements:
       selector:
         runner: pytest
         node_id: tests/integration/test_hatch_project_runtime.py::test_configured_native_cell_fails_missing_prerequisites[missing2-absolute]
-    - case_id: first-hatch-structured-hosted-attribution-base
-      scenario_id: first-hatch-delivery-review-handoff
-      method: test
-      intent: Preserve existing bounded analyzer-side and exception classifications on complete hosted failures.
-      observable: Only fixed classifications are public; failure verdicts and private-message omission remain intact.
-      selector:
-        runner: pytest
-        node_id: tests/unit/test_capsule_review_projection.py::test_structured_independent_failure_preserves_bounded_attribution[base]
-    - case_id: first-hatch-structured-hosted-attribution-head
-      scenario_id: first-hatch-delivery-review-handoff
-      method: test
-      intent: Preserve existing bounded analyzer-side and exception classifications on complete hosted failures.
-      observable: Only fixed classifications are public; failure verdicts and private-message omission remain intact.
-      selector:
-        runner: pytest
-        node_id: tests/unit/test_capsule_review_projection.py::test_structured_independent_failure_preserves_bounded_attribution[head]
-    - case_id: first-hatch-structured-hosted-attribution-both
-      scenario_id: first-hatch-delivery-review-handoff
-      method: test
-      intent: Preserve existing bounded analyzer-side and exception classifications on complete hosted failures.
-      observable: Only fixed classifications are public; failure verdicts and private-message omission remain intact.
-      selector:
-        runner: pytest
-        node_id: tests/unit/test_capsule_review_projection.py::test_structured_independent_failure_preserves_bounded_attribution[both]
-    - case_id: first-hatch-structured-hosted-attribution-neither
-      scenario_id: first-hatch-delivery-review-handoff
-      method: test
-      intent: Preserve existing bounded analyzer-side and exception classifications on complete hosted failures.
-      observable: Only fixed classifications are public; failure verdicts and private-message omission remain intact.
-      selector:
-        runner: pytest
-        node_id: tests/unit/test_capsule_review_projection.py::test_structured_independent_failure_preserves_bounded_attribution[neither]
-    - case_id: first-hatch-structured-hosted-attribution-other-tool
-      scenario_id: first-hatch-delivery-review-handoff
-      method: test
-      intent: Preserve existing bounded analyzer-side and exception classifications on complete hosted failures.
-      observable: Only fixed classifications are public; failure verdicts and private-message omission remain intact.
-      selector:
-        runner: pytest
-        node_id: tests/unit/test_capsule_review_projection.py::test_structured_independent_failure_preserves_bounded_attribution[other-tool]

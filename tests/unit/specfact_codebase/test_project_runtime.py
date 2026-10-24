@@ -220,6 +220,26 @@ def test_unrelated_scripts_and_locks_do_not_block_existing_execution(project, tm
     assert ready(project, tmp_path).run(ProjectCommand(("python", "-V"), root), timeout=10).exit_code == 0
 
 
+@pytest.mark.parametrize("filename", ["pytest.toml", ".pytest.toml", ".pytest.ini", "tox.ini"])
+def test_pytest_config_drift_requires_reinspection(project, tmp_path, filename):
+    root = project[0]
+    config = root / filename
+    content = '[pytest]\ntestpaths=["tests"]\n' if filename.endswith("toml") else "[pytest]\ntestpaths=tests\n"
+    config.write_text(content)
+    prepared = ready(project, tmp_path)
+    command = ProjectCommand(("python", "-c", "print('customer-command')"), root)
+    before = prepared.run(command, timeout=10)
+    assert before.outcome == "exited"
+    config.write_text(content.replace("tests", "other_tests"))
+    stale = prepared.run(command, timeout=10)
+    assert stale.outcome == "execution_failed", stale
+    assert stale.stdout == ""
+    assert "reinspect" in stale.stderr.lower()
+    assert stale.source_identity != before.source_identity
+    refreshed = inspect_project(root, prepared.plan.selection)
+    assert refreshed.input_identity != prepared.plan.input_identity
+
+
 def test_external_fresh_workspace_required(project, tmp_path):
     root, target, hatch, _ = project
     plan = inspect_project(

@@ -1123,8 +1123,7 @@ jobs:
               "diagnostic_observations": codes or ["unclassified"]}
           if outcome == "oversized_report":
               projected["report_header_observed"] = bool(header)
-          if outcome in {"structured_report", "oversized_report"}:
               projected["error_analyzer_sides"] = incomplete_sides(members)
-              projected["crosshair_failure_observations"] = crosshair_failure_observations(evidence_source.get("findings", []))
+              projected["crosshair_failure_observations"] = crosshair_failure_observations(header.get("findings", []))
           print(json.dumps(projected))
           PY_REVIEW_FAILURE

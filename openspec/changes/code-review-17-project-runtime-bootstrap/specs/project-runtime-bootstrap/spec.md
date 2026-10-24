@@ -107,6 +107,12 @@ Preparation SHALL distinguish ready context from structured failure. Reuse SHALL
 - **WHEN** another invocation attempts reuse
 - **THEN** the partial or stale context is not treated as ready and a fresh owned preparation can proceed without modifying customer inputs
 
+#### Scenario: Pytest configuration changes invalidate prepared identity
+- **GIVEN** a prepared project using `pytest.toml`, `.pytest.toml`, `.pytest.ini`, or `tox.ini`
+- **WHEN** the selected test configuration changes
+- **THEN** the next command refuses stale preparation before execution and requires reinspection
+- **AND** both the inspected input identity and reported source identity reflect the changed configuration
+
 #### Scenario: Unreadable execution identity fails structurally
 - **GIVEN** a prepared project has a source or configuration file that cannot be read
 - **WHEN** execution fingerprints the project before or after running a command
@@ -173,9 +179,3 @@ For delivery verification of the first Hatch milestone, the approved local ARM64
 - **WHEN** any mapped native Hatch workflow lacks SPECFACT_HATCH_EXECUTABLE or SPECFACT_HATCH_PROJECT_PYTHON
 - **THEN** that workflow fails with the missing prerequisite names before allocating a customer or invocation workspace
 - **AND** an unconfigured full-suite run may still skip native cases whose prerequisites are absent
-
-#### Scenario: Structured hosted failures preserve bounded attribution
-- **GIVEN** an independent hosted review produces a complete structured failure report
-- **WHEN** failure evidence is projected publicly
-- **THEN** the existing fixed analyzer-side and CrossHair exception classifications identify applicable base or head failures
-- **AND** report verdicts, private-message omission, size bounds and the existing classifier allowlists remain unchanged
