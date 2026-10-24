@@ -7,6 +7,7 @@ import sys
 from dataclasses import replace
 from pathlib import Path
 from sys import _base_executable as base_executable
+from unittest.mock import MagicMock, Mock
 
 import pytest
 
@@ -314,6 +315,71 @@ def test_existing_environment_discovered_without_redundant_python_override(proje
     configured = prepare_project(hatch_plan, tmp_path / "configured-invocation")
     assert isinstance(configured, PreparedProject), configured
     assert configured.identity.interpreter.prefix == target
+
+
+@pytest.mark.parametrize(
+    "phase,failure",
+    [
+        ("inspection", "enumeration"),
+        ("inspection", "classification"),
+        ("before-command", "enumeration"),
+        ("before-command", "classification"),
+        ("after-command", "enumeration"),
+        ("after-command", "classification"),
+    ],
+)
+def test_directory_traversal_failure_rejects_incomplete_identity(project, tmp_path, monkeypatch, phase, failure):
+    root, _, hatch, log = project
+    blocked = root / "blocked"
+    blocked.mkdir()
+    (blocked / "pytest.ini").write_text("[pytest]\ntestpaths=tests\n")
+    prepared = ready(project, tmp_path)
+    native_calls = log.read_text()
+    marker = tmp_path / "command-ran"
+    scandir = os.scandir
+
+    def classify_or_deny(entry):
+        if (
+            failure == "classification"
+            and Path(entry.path) == blocked
+            and (phase != "after-command" or marker.exists())
+        ):
+            rejected = Mock(wraps=entry)
+            rejected.name = entry.name
+            rejected.path = entry.path
+            rejected.is_dir.side_effect = PermissionError("customer directory unreadable")
+            return rejected
+        return entry
+
+    def scan_or_deny(path):
+        if failure == "enumeration" and Path(path) == blocked and (phase != "after-command" or marker.exists()):
+            raise PermissionError("customer directory unreadable")
+        entries = scandir(path)
+        iterator = MagicMock(wraps=entries)
+        iterator.__enter__.return_value = iterator
+        iterator.__exit__.side_effect = entries.__exit__
+        iterator.__iter__.side_effect = lambda: iterator
+        iterator.__next__.side_effect = lambda: classify_or_deny(next(entries))
+        return iterator
+
+    monkeypatch.setattr(os, "scandir", scan_or_deny)
+    if phase == "inspection":
+        plan = inspect_project(root, ProjectSelection(environment="review", hatch=str(hatch)))
+        assert "customer directory unreadable" in " ".join(plan.diagnostics)
+        assert not plan.input_identity
+        failed = prepare_project(plan, tmp_path / "new-invocation")
+        assert isinstance(failed, PreparationFailure)
+        assert "customer directory unreadable" in failed.reason
+        assert log.read_text() == native_calls
+        return
+    command = ProjectCommand(
+        ("python", "-c", f"from pathlib import Path; Path({str(marker)!r}).touch(); print('customer-output')"), root
+    )
+    failed = prepared.run(command, timeout=10)
+    assert failed.outcome == "execution_failed", failed
+    assert "customer directory unreadable" in failed.stderr
+    assert marker.exists() == (phase == "after-command")
+    assert failed.stdout == ("customer-output\n" if phase == "after-command" else "")
 
 
 def test_unreadable_inspection_identity_is_diagnostic(project, tmp_path, monkeypatch):

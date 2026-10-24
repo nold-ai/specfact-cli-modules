@@ -397,6 +397,54 @@ requirements:
       selector:
         runner: pytest
         node_id: tests/unit/specfact_codebase/test_project_runtime.py::test_pytest_config_drift_requires_reinspection[tox.ini]
+    - case_id: first-hatch-directory-traversal-inspection-enumeration
+      scenario_id: preparation-failure-and-reuse-are-explicit
+      method: test
+      intent: Reject incomplete project identities after directory enumeration fails during inspection.
+      observable: Traversal failure is structured, blocks unstarted commands and preserves output after execution.
+      selector:
+        runner: pytest
+        node_id: tests/unit/specfact_codebase/test_project_runtime.py::test_directory_traversal_failure_rejects_incomplete_identity[inspection-enumeration]
+    - case_id: first-hatch-directory-traversal-inspection-classification
+      scenario_id: preparation-failure-and-reuse-are-explicit
+      method: test
+      intent: Reject incomplete project identities after directory classification fails during inspection.
+      observable: Traversal failure is structured, blocks unstarted commands and preserves output after execution.
+      selector:
+        runner: pytest
+        node_id: tests/unit/specfact_codebase/test_project_runtime.py::test_directory_traversal_failure_rejects_incomplete_identity[inspection-classification]
+    - case_id: first-hatch-directory-traversal-before-command-enumeration
+      scenario_id: preparation-failure-and-reuse-are-explicit
+      method: test
+      intent: Reject incomplete project identities after directory enumeration fails during before-command.
+      observable: Traversal failure is structured, blocks unstarted commands and preserves output after execution.
+      selector:
+        runner: pytest
+        node_id: tests/unit/specfact_codebase/test_project_runtime.py::test_directory_traversal_failure_rejects_incomplete_identity[before-command-enumeration]
+    - case_id: first-hatch-directory-traversal-before-command-classification
+      scenario_id: preparation-failure-and-reuse-are-explicit
+      method: test
+      intent: Reject incomplete project identities after directory classification fails during before-command.
+      observable: Traversal failure is structured, blocks unstarted commands and preserves output after execution.
+      selector:
+        runner: pytest
+        node_id: tests/unit/specfact_codebase/test_project_runtime.py::test_directory_traversal_failure_rejects_incomplete_identity[before-command-classification]
+    - case_id: first-hatch-directory-traversal-after-command-enumeration
+      scenario_id: preparation-failure-and-reuse-are-explicit
+      method: test
+      intent: Reject incomplete project identities after directory enumeration fails during after-command.
+      observable: Traversal failure is structured, blocks unstarted commands and preserves output after execution.
+      selector:
+        runner: pytest
+        node_id: tests/unit/specfact_codebase/test_project_runtime.py::test_directory_traversal_failure_rejects_incomplete_identity[after-command-enumeration]
+    - case_id: first-hatch-directory-traversal-after-command-classification
+      scenario_id: preparation-failure-and-reuse-are-explicit
+      method: test
+      intent: Reject incomplete project identities after directory classification fails during after-command.
+      observable: Traversal failure is structured, blocks unstarted commands and preserves output after execution.
+      selector:
+        runner: pytest
+        node_id: tests/unit/specfact_codebase/test_project_runtime.py::test_directory_traversal_failure_rejects_incomplete_identity[after-command-classification]
   openspec:code-review-17-project-runtime-bootstrap:project-runtime-bootstrap:portable-inspection-and-bootstrap-commands:
     rationale: Review the owner-approved replacement contract at planned maturity without claiming implementation
       evidence.

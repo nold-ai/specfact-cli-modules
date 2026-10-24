@@ -121,10 +121,20 @@ class ProjectCommandResult:
 
 
 def _files(root: Path):
-    for directory, names, files in os.walk(root):
-        names[:] = sorted(name for name in names if name not in _IGNORED_DIRS and not name.endswith(".egg-info"))
-        for name in sorted(files):
-            yield Path(directory) / name
+    pending = [root]
+    while pending:
+        directory = pending.pop()
+        with os.scandir(directory) as stream:
+            entries = sorted(stream, key=lambda entry: entry.name)
+        directories = []
+        for entry in entries:
+            if not entry.is_dir():
+                yield Path(entry.path)
+                continue
+            if entry.name in _IGNORED_DIRS or entry.name.endswith(".egg-info") or entry.is_symlink():
+                continue
+            directories.append(Path(entry.path))
+        pending.extend(reversed(directories))
 
 
 def _identity(root: Path, *, source: bool = False) -> str:

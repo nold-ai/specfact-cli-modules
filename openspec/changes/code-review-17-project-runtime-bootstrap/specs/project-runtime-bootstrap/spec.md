@@ -113,6 +113,12 @@ Preparation SHALL distinguish ready context from structured failure. Reuse SHALL
 - **THEN** the next command refuses stale preparation before execution and requires reinspection
 - **AND** both the inspected input identity and reported source identity reflect the changed configuration
 
+#### Scenario: Unreadable directories cannot produce verified identities
+- **GIVEN** a project directory cannot be enumerated or classified during configuration or source fingerprinting
+- **WHEN** inspection or execution fingerprints the project before or after a command
+- **THEN** it reports the directory traversal failure instead of accepting an incomplete identity
+- **AND** a failure before execution does not run the command, while a failure after execution preserves its captured output
+
 #### Scenario: Unreadable execution identity fails structurally
 - **GIVEN** a prepared project has a source or configuration file that cannot be read
 - **WHEN** execution fingerprints the project before or after running a command
