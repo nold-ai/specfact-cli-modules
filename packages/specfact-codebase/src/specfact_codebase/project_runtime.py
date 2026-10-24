@@ -510,21 +510,32 @@ class PreparedProject:
         )
 
 
+def _check_preparation(plan: ProjectPlan, workspace: Path) -> None:
+    if plan.diagnostics:
+        raise ValueError("; ".join(plan.diagnostics))
+    if os.environ.get("HATCH_CONFIG"):
+        raise ValueError(_HATCH_CONFIG_DIAGNOSTIC)
+    if _identity(plan.root) != plan.input_identity:
+        raise ValueError("Project inputs changed; reinspect before preparation")
+    if workspace.is_relative_to(plan.root) or plan.root.is_relative_to(workspace):
+        raise ValueError("Preparation workspace must be external to the project")
+    if workspace.exists():
+        raise ValueError("Preparation workspace must be fresh and invocation-owned")
+
+
+def _check_selected_target(requested: InterpreterFacts, target: Path, existing: bool, workspace: Path) -> None:
+    if workspace.is_relative_to(requested.prefix):
+        raise ValueError("Preparation workspace must be outside the selected interpreter prefix")
+    if requested.prefix != requested.base_prefix and (not existing or requested.prefix.resolve() != target.resolve()):
+        raise ValueError("Explicit virtualenv is not the selected native Hatch environment")
+
+
 def prepare_project(plan: ProjectPlan, workspace: Path) -> PreparedProject | PreparationFailure:
     """Resolve existing Hatch without sync, or natively create one owned cold target."""
     owned = False
     workspace = workspace.resolve()
     try:
-        if plan.diagnostics:
-            raise ValueError("; ".join(plan.diagnostics))
-        if os.environ.get("HATCH_CONFIG"):
-            raise ValueError(_HATCH_CONFIG_DIAGNOSTIC)
-        if _identity(plan.root) != plan.input_identity:
-            raise ValueError("Project inputs changed; reinspect before preparation")
-        if workspace.is_relative_to(plan.root) or plan.root.is_relative_to(workspace):
-            raise ValueError("Preparation workspace must be external to the project")
-        if workspace.exists():
-            raise ValueError("Preparation workspace must be fresh and invocation-owned")
+        _check_preparation(plan, workspace)
         requested = _python(plan) if plan.selection.python else None
         if requested is not None and workspace.is_relative_to(requested.prefix):
             raise ValueError("Preparation workspace must be outside the selected interpreter prefix")
@@ -545,12 +556,7 @@ def prepare_project(plan: ProjectPlan, workspace: Path) -> PreparedProject | Pre
         if requested is None:
             requested = _probe(target / "bin/python", plan.root) if existing else _python(plan)
             _validate_python(requested, plan)
-        if workspace.is_relative_to(requested.prefix):
-            raise ValueError("Preparation workspace must be outside the selected interpreter prefix")
-        if requested.prefix != requested.base_prefix and (
-            not existing or requested.prefix.resolve() != target.resolve()
-        ):
-            raise ValueError("Explicit virtualenv is not the selected native Hatch environment")
+        _check_selected_target(requested, target, existing, workspace)
         env["PATH"] = str(requested.scripts) + os.pathsep + env["PATH"]
         env["HATCH_PYTHON"] = str(requested.executable)
         workspace.mkdir(parents=True, mode=0o700)
