@@ -233,6 +233,30 @@ def test_external_fresh_workspace_required(project, tmp_path):
     assert (workspace / "unowned").read_text() == "preserve"
 
 
+@pytest.mark.parametrize("location", ["inside", "symlink", "external"])
+def test_explicit_base_existing_target_excludes_workspace(project, tmp_path, location):
+    root, target, hatch, log = project
+    prefix = target
+    if location == "symlink":
+        prefix = tmp_path / "target-link"
+        prefix.symlink_to(target, target_is_directory=True)
+    workspace = (tmp_path if location == "external" else prefix) / "invocation"
+    before = {path.relative_to(target) for path in target.rglob("*")}
+    plan = inspect_project(
+        root, ProjectSelection(environment="review", python=str(Path(base_executable).resolve()), hatch=str(hatch))
+    )
+    result = prepare_project(plan, workspace)
+    if location == "external":
+        assert isinstance(result, PreparedProject), result
+        assert (workspace / "completed.json").is_file()
+    else:
+        assert isinstance(result, PreparationFailure), result
+        assert "outside the selected" in result.reason
+        assert not workspace.exists()
+    assert {path.relative_to(target) for path in target.rglob("*")} == before
+    assert "create" not in log.read_text()
+
+
 def test_project_python_constraint_rejected_before_native_query(project, tmp_path):
     root, target, hatch, log = project
     (root / "pyproject.toml").write_text('[project]\nname="customer"\nversion="0"\nrequires-python=">=3.99"\n')

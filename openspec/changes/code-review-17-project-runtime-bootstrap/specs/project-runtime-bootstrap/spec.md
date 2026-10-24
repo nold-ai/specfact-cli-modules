@@ -47,6 +47,12 @@ Preparation SHALL use native pip or pip-tools, Hatch, uv, or Poetry semantics in
 - **THEN** execution uses that environment without invoking dependency synchronization or installing SpecFact or analyzer packages
 - **AND** the environment package inventory and project declarations remain unchanged
 
+#### Scenario: Existing Hatch targets exclude preparation storage
+- **GIVEN** an existing selected Hatch environment and a compatible explicit base Python
+- **WHEN** the invocation workspace resolves inside that environment, directly or through a symlink
+- **THEN** preparation refuses before allocating the workspace or writing a receipt in the customer environment
+- **AND** an external fresh workspace still prepares successfully without modifying the existing environment
+
 #### Scenario: Cold Hatch state stays outside the project
 - **GIVEN** the selected detached Hatch environment does not exist and the required project interpreter and Hatch executable are available
 - **WHEN** preparation creates the environment in SpecFact-owned external storage
