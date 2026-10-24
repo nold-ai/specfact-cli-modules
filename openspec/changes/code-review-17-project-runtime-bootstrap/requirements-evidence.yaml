@@ -56,6 +56,22 @@ requirements:
       selector:
         runner: pytest
         node_id: tests/unit/specfact_codebase/test_project_runtime.py::test_existing_environment_discovered_without_redundant_python_override
+    - case_id: first-hatch-explicit-base-python-existing
+      scenario_id: independent-customer-interpreter-selection
+      method: test
+      intent: Bind an explicit base Python selection to the existing target installation.
+      observable: Equal version with a different base installation returns a diagnostic naming both bases and no completed capability.
+      selector:
+        runner: pytest
+        node_id: tests/unit/specfact_codebase/test_project_runtime.py::test_explicit_base_python_must_match_prepared_target[existing]
+    - case_id: first-hatch-explicit-base-python-cold
+      scenario_id: independent-customer-interpreter-selection
+      method: test
+      intent: Bind an explicit base Python selection to the native-created cold target installation.
+      observable: Equal version with a different base installation returns a diagnostic naming both bases and no completed capability.
+      selector:
+        runner: pytest
+        node_id: tests/unit/specfact_codebase/test_project_runtime.py::test_explicit_base_python_must_match_prepared_target[cold]
     - case_id: first-hatch-absolute-python-facts-base-prefix
       scenario_id: independent-customer-interpreter-selection
       method: test

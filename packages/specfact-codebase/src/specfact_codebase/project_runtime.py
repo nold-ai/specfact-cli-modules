@@ -503,9 +503,13 @@ def prepare_project(plan: ProjectPlan, workspace: Path) -> PreparedProject | Pre
                 raise ValueError(f"Native Hatch preparation {creation.outcome}: {creation.stderr}")
         facts = _probe(target / "bin/python", plan.root)
         _validate_python(facts, plan)
-        if facts.prefix.resolve() != target.resolve() or facts.version != requested.version:
+        if (
+            facts.prefix.resolve() != target.resolve()
+            or facts.version != requested.version
+            or facts.base_prefix.resolve() != requested.base_prefix.resolve()
+        ):
             raise ValueError(
-                f"Prepared interpreter {facts.version} at {facts.prefix} does not match selected Python {requested.version} at environment {target}"
+                f"Prepared interpreter {facts.version} at {facts.prefix} with base {facts.base_prefix} does not match selected Python {requested.version} with base {requested.base_prefix} at environment {target}"
             )
         if _identity(plan.root) != plan.input_identity:
             raise ValueError("Project inputs changed during preparation; reinspect")
