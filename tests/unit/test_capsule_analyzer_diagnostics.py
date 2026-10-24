@@ -58,8 +58,8 @@ def _program(job, projection):
     return recipe.split("<<'" + marker + "'", 1)[1].split("\n", 1)[1].split("\n" + marker, 1)[0]
 
 
-@pytest.fixture
-def project(tmp_path):
+@pytest.fixture(name="project")
+def customer_project(tmp_path):
     source = tmp_path / SOURCE
     source.parent.mkdir()
     source.write_text("def test_customer():\n    assert True\n")
@@ -81,7 +81,7 @@ def _run(project, job, projection, data, review_exit=17):
         REVIEW_PUBLIC_EXIT=str(review_exit),
     )
     result = subprocess.run(
-        [sys.executable, "-I", "-c", _program(job, projection)],
+        [sys.executable, "-c", _program(job, projection)],
         cwd=project,
         env=environment,
         capture_output=True,
