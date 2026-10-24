@@ -167,3 +167,9 @@ For delivery verification of the first Hatch milestone, the approved local ARM64
 - **WHEN** any mapped native Hatch workflow lacks SPECFACT_HATCH_EXECUTABLE or SPECFACT_HATCH_PROJECT_PYTHON
 - **THEN** that workflow fails with the missing prerequisite names before allocating a customer or invocation workspace
 - **AND** an unconfigured full-suite run may still skip native cases whose prerequisites are absent
+
+#### Scenario: Structured hosted failures preserve bounded attribution
+- **GIVEN** an independent hosted review produces a complete structured failure report
+- **WHEN** failure evidence is projected publicly
+- **THEN** the existing fixed analyzer-side and CrossHair exception classifications identify applicable base or head failures
+- **AND** report verdicts, private-message omission, size bounds and the existing classifier allowlists remain unchanged

@@ -107,7 +107,7 @@ class PreparationFailure:
 
 
 @dataclass(frozen=True)
-class ProcessResult:
+class ProjectCommandResult:
     outcome: Literal["exited", "unavailable", "timed_out", "execution_failed"]
     exit_code: int | None
     stdout: str = ""
@@ -310,9 +310,9 @@ def _stop_process(process) -> None:
     process.wait()
 
 
-def _execute(argv: tuple[str, ...], cwd: Path, env: Mapping[str, str], timeout: float) -> ProcessResult:
+def _execute(argv: tuple[str, ...], cwd: Path, env: Mapping[str, str], timeout: float) -> ProjectCommandResult:
     if timeout <= 0:
-        return ProcessResult("execution_failed", None, stderr="Timeout must be positive")
+        return ProjectCommandResult("execution_failed", None, stderr="Timeout must be positive")
     try:
         with (
             subprocess.Popen(
@@ -326,7 +326,7 @@ def _execute(argv: tuple[str, ...], cwd: Path, env: Mapping[str, str], timeout: 
                 outcome, buffers, truncated = _capture_output(process, selector, timeout)
             finally:
                 _stop_process(process)
-            return ProcessResult(
+            return ProjectCommandResult(
                 outcome,
                 process.returncode if outcome == "exited" else None,
                 buffers[0].decode(errors="replace"),
@@ -334,9 +334,9 @@ def _execute(argv: tuple[str, ...], cwd: Path, env: Mapping[str, str], timeout: 
                 any(truncated),
             )
     except FileNotFoundError as error:
-        return ProcessResult("unavailable", None, stderr=str(error))
+        return ProjectCommandResult("unavailable", None, stderr=str(error))
     except (OSError, ValueError) as error:
-        return ProcessResult("execution_failed", None, stderr=str(error))
+        return ProjectCommandResult("execution_failed", None, stderr=str(error))
 
 
 def _probe(executable: Path, cwd: Path) -> InterpreterFacts:
@@ -407,9 +407,9 @@ def _validate_python(facts: InterpreterFacts, plan: ProjectPlan) -> None:
                 raise ValueError(f"Selected Python {facts.version} does not match {request}")
 
 
-def _execution_failure(result: ProcessResult, diagnostic: str, source: str) -> ProcessResult:
+def _execution_failure(result: ProjectCommandResult, diagnostic: str, source: str) -> ProjectCommandResult:
     stderr = (diagnostic + "\n" + result.stderr).encode()
-    return ProcessResult(
+    return ProjectCommandResult(
         "execution_failed",
         None,
         result.stdout,
@@ -419,9 +419,9 @@ def _execution_failure(result: ProcessResult, diagnostic: str, source: str) -> P
     )
 
 
-def _command_admission(command: ProjectCommand, cwd: Path, root: Path, source: str) -> ProcessResult | None:
+def _command_admission(command: ProjectCommand, cwd: Path, root: Path, source: str) -> ProjectCommandResult | None:
     if not cwd.is_relative_to(root) or not cwd.is_dir() or not command.argv:
-        return ProcessResult(
+        return ProjectCommandResult(
             "execution_failed",
             None,
             stderr="Command needs executable-first argv and a project working directory",
@@ -431,7 +431,7 @@ def _command_admission(command: ProjectCommand, cwd: Path, root: Path, source: s
         not isinstance(key, str) or not isinstance(value, str) or "=" in key or "\0" in key + value
         for key, value in command.env_overrides.items()
     ):
-        return ProcessResult(
+        return ProjectCommandResult(
             "execution_failed",
             None,
             stderr="Invalid or identity-reserved environment override",
@@ -440,7 +440,7 @@ def _command_admission(command: ProjectCommand, cwd: Path, root: Path, source: s
     return None
 
 
-def _command_executable(command: ProjectCommand, facts: InterpreterFacts, source: str) -> Path | ProcessResult:
+def _command_executable(command: ProjectCommand, facts: InterpreterFacts, source: str) -> Path | ProjectCommandResult:
     name = command.argv[0]
     if name == "python":
         return facts.executable
@@ -448,7 +448,7 @@ def _command_executable(command: ProjectCommand, facts: InterpreterFacts, source
         return facts.scripts / name
     if Path(name).is_absolute() and (Path(name) == facts.executable or Path(name).parent == facts.scripts):
         return Path(name)
-    return ProcessResult(
+    return ProjectCommandResult(
         "unavailable", None, stderr="Executable must belong to the selected environment", source_identity=source
     )
 
@@ -458,17 +458,17 @@ class PreparedProject:
     plan: ProjectPlan
     identity: EnvironmentIdentity
 
-    def run(self, command: ProjectCommand, *, timeout: float) -> ProcessResult:
+    def run(self, command: ProjectCommand, *, timeout: float) -> ProjectCommandResult:
         """Run in the selected environment, with no manager lifecycle authority."""
         try:
             source = _identity(self.plan.root, source=True)
             inputs = _identity(self.plan.root)
         except OSError as error:
-            return ProcessResult(
+            return ProjectCommandResult(
                 "execution_failed", None, stderr=f"Cannot fingerprint project before execution: {error}"
             )
         if inputs != self.plan.input_identity:
-            return ProcessResult(
+            return ProjectCommandResult(
                 "execution_failed",
                 None,
                 stderr="Project configuration/dependencies changed; reinspect before execution",
@@ -481,10 +481,10 @@ class PreparedProject:
         facts = self.identity.interpreter
         name = command.argv[0]
         executable = _command_executable(command, facts, source)
-        if isinstance(executable, ProcessResult):
+        if isinstance(executable, ProjectCommandResult):
             return executable
         if not executable.is_file() or not os.access(executable, os.X_OK):
-            return ProcessResult(
+            return ProjectCommandResult(
                 "unavailable",
                 None,
                 stderr=(
@@ -505,7 +505,7 @@ class PreparedProject:
             return _execution_failure(
                 result, "Project configuration/dependencies changed during execution; reinspect", source
             )
-        return ProcessResult(
+        return ProjectCommandResult(
             result.outcome, result.exit_code, result.stdout, result.stderr, result.output_truncated, source
         )
 
@@ -530,6 +530,91 @@ def _check_selected_target(requested: InterpreterFacts, target: Path, existing: 
         raise ValueError("Explicit virtualenv is not the selected native Hatch environment")
 
 
+@dataclass(frozen=True)
+class _HatchTarget:
+    executable: str
+    version: ProjectCommandResult
+    path: Path
+    environment: dict[str, str]
+    existing: bool
+
+
+def _find_hatch_target(plan: ProjectPlan) -> _HatchTarget:
+    hatch = shutil.which(plan.selection.hatch)
+    if not hatch:
+        raise ValueError("Native Hatch executable unavailable; install Hatch externally and select its path")
+    env = _environment(Path(hatch).parent)
+    version = _execute((hatch, "--version"), plan.root, env, 15)
+    if version.outcome != "exited" or version.exit_code:
+        raise ValueError(f"Native Hatch version query failed: {version.stderr}")
+    location = _execute((hatch, "env", "find", str(plan.environment)), plan.root, env, 30)
+    if location.outcome != "exited" or location.exit_code:
+        raise ValueError(f"Native Hatch environment lookup failed: {location.stderr}")
+    target = Path(location.stdout.strip())
+    if not target.is_absolute():
+        raise ValueError("Native Hatch returned an invalid environment path")
+    existing = (target / "bin/python").is_file()
+    return _HatchTarget(hatch, version, target, env, existing)
+
+
+def _create_cold_target(plan: ProjectPlan, native: _HatchTarget, workspace: Path) -> Path:
+    if plan.hatch_environment.get("locked") or plan.hatch_environment.get("path"):
+        raise ValueError(
+            "Cold selected locked/path environment is unsupported until immutable native preparation is proved"
+        )
+    target = workspace / "environment"
+    native.environment["HATCH_ENV_TYPE_VIRTUAL_PATH"] = str(target)
+    creation = _execute((native.executable, "env", "create", str(plan.environment)), plan.root, native.environment, 180)
+    if creation.outcome != "exited" or creation.exit_code:
+        raise ValueError(f"Native Hatch preparation {creation.outcome}: {creation.stderr}")
+    return target
+
+
+def _check_prepared_identity(facts: InterpreterFacts, requested: InterpreterFacts, target: Path) -> None:
+    if (
+        facts.prefix.resolve() != target.resolve()
+        or facts.version != requested.version
+        or facts.base_prefix.resolve() != requested.base_prefix.resolve()
+    ):
+        raise ValueError(
+            f"Prepared interpreter {facts.version} at {facts.prefix} with base {facts.base_prefix} "
+            f"does not match selected Python {requested.version} with base {requested.base_prefix} "
+            f"at environment {target}"
+        )
+
+
+def _publish_completion(plan: ProjectPlan, identity: EnvironmentIdentity, hatch: str, workspace: Path) -> None:
+    facts = identity.interpreter
+    payload = {
+        "root": str(plan.root),
+        "environment": plan.environment,
+        "inputs": plan.input_identity,
+        "python": str(facts.executable),
+        "prefix": str(facts.prefix),
+        "version": facts.version,
+        "hatch": hatch,
+        "hatch_version": identity.manager_version,
+        "ownership": identity.ownership,
+    }
+    with tempfile.NamedTemporaryFile(mode="w", dir=workspace, delete=False) as stream:
+        json.dump(payload, stream)
+        temporary = Path(stream.name)
+    temporary.replace(workspace / "completed.json")
+
+
+def _preparation_failure(plan: ProjectPlan, workspace: Path, owned: bool, error: Exception) -> PreparationFailure:
+    remedy = (
+        "Resolve the diagnostic and reinspect with an explicit compatible local environment/Python; "
+        "use a fresh external workspace"
+    )
+    if owned:
+        try:
+            shutil.rmtree(workspace)
+        except OSError as cleanup_error:
+            remedy += f". Incomplete workspace remains at {workspace}; cleanup failed: {cleanup_error}"
+    return PreparationFailure(plan, str(error), remedy)
+
+
 def prepare_project(plan: ProjectPlan, workspace: Path) -> PreparedProject | PreparationFailure:
     """Resolve existing Hatch without sync, or natively create one owned cold target."""
     owned = False
@@ -539,84 +624,32 @@ def prepare_project(plan: ProjectPlan, workspace: Path) -> PreparedProject | Pre
         requested = _python(plan) if plan.selection.python else None
         if requested is not None and workspace.is_relative_to(requested.prefix):
             raise ValueError("Preparation workspace must be outside the selected interpreter prefix")
-        hatch = shutil.which(plan.selection.hatch)
-        if not hatch:
-            raise ValueError("Native Hatch executable unavailable; install Hatch externally and select its path")
-        env = _environment(Path(hatch).parent)
-        version = _execute((hatch, "--version"), plan.root, env, 15)
-        if version.outcome != "exited" or version.exit_code:
-            raise ValueError(f"Native Hatch version query failed: {version.stderr}")
-        location = _execute((hatch, "env", "find", str(plan.environment)), plan.root, env, 30)
-        if location.outcome != "exited" or location.exit_code:
-            raise ValueError(f"Native Hatch environment lookup failed: {location.stderr}")
-        target = Path(location.stdout.strip())
-        if not target.is_absolute():
-            raise ValueError("Native Hatch returned an invalid environment path")
-        existing = (target / "bin/python").is_file()
+        native = _find_hatch_target(plan)
+        target = native.path
         if requested is None:
-            requested = _probe(target / "bin/python", plan.root) if existing else _python(plan)
+            requested = _probe(target / "bin/python", plan.root) if native.existing else _python(plan)
             _validate_python(requested, plan)
-        _check_selected_target(requested, target, existing, workspace)
-        env["PATH"] = str(requested.scripts) + os.pathsep + env["PATH"]
-        env["HATCH_PYTHON"] = str(requested.executable)
+        _check_selected_target(requested, target, native.existing, workspace)
+        native.environment["PATH"] = str(requested.scripts) + os.pathsep + native.environment["PATH"]
+        native.environment["HATCH_PYTHON"] = str(requested.executable)
         workspace.mkdir(parents=True, mode=0o700)
         owned = True
-        if not existing:
-            if plan.hatch_environment.get("locked") or plan.hatch_environment.get("path"):
-                raise ValueError(
-                    "Cold selected locked/path environment is unsupported until immutable native preparation is proved"
-                )
-            target = workspace / "environment"
-            env["HATCH_ENV_TYPE_VIRTUAL_PATH"] = str(target)
-            creation = _execute((hatch, "env", "create", str(plan.environment)), plan.root, env, 180)
-            if creation.outcome != "exited" or creation.exit_code:
-                raise ValueError(f"Native Hatch preparation {creation.outcome}: {creation.stderr}")
+        if not native.existing:
+            target = _create_cold_target(plan, native, workspace)
         facts = _probe(target / "bin/python", plan.root)
         _validate_python(facts, plan)
-        if (
-            facts.prefix.resolve() != target.resolve()
-            or facts.version != requested.version
-            or facts.base_prefix.resolve() != requested.base_prefix.resolve()
-        ):
-            raise ValueError(
-                f"Prepared interpreter {facts.version} at {facts.prefix} with base {facts.base_prefix} "
-                f"does not match selected Python {requested.version} with base {requested.base_prefix} "
-                f"at environment {target}"
-            )
+        _check_prepared_identity(facts, requested, target)
         if _identity(plan.root) != plan.input_identity:
             raise ValueError("Project inputs changed during preparation; reinspect")
         identity = EnvironmentIdentity(
             facts,
             "hatch",
-            version.stdout.strip(),
+            native.version.stdout.strip(),
             str(plan.environment),
-            "existing" if existing else "invocation",
+            "existing" if native.existing else "invocation",
             plan.input_identity,
         )
-        payload = {
-            "root": str(plan.root),
-            "environment": plan.environment,
-            "inputs": plan.input_identity,
-            "python": str(facts.executable),
-            "prefix": str(facts.prefix),
-            "version": facts.version,
-            "hatch": hatch,
-            "hatch_version": identity.manager_version,
-            "ownership": identity.ownership,
-        }
-        with tempfile.NamedTemporaryFile(mode="w", dir=workspace, delete=False) as stream:
-            json.dump(payload, stream)
-            temporary = Path(stream.name)
-        temporary.replace(workspace / "completed.json")
+        _publish_completion(plan, identity, native.executable, workspace)
         return PreparedProject(plan, identity)
     except (OSError, ValueError, TypeError) as error:
-        remedy = (
-            "Resolve the diagnostic and reinspect with an explicit compatible local environment/Python; "
-            "use a fresh external workspace"
-        )
-        if owned:
-            try:
-                shutil.rmtree(workspace)
-            except OSError as cleanup_error:
-                remedy += f". Incomplete workspace remains at {workspace}; cleanup failed: {cleanup_error}"
-        return PreparationFailure(plan, str(error), remedy)
+        return _preparation_failure(plan, workspace, owned, error)
