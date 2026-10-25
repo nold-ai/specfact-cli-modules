@@ -113,6 +113,11 @@ Preparation SHALL distinguish ready context from structured failure. Reuse SHALL
 - **THEN** the next command refuses stale preparation before execution and requires reinspection
 - **AND** both the inspected input identity and reported source identity reflect the changed configuration
 
+#### Scenario: Coverage configuration changes invalidate prepared identity
+- **GIVEN** a prepared project uses `.coveragerc`
+- **WHEN** its coverage selection changes after preparation
+- **THEN** execution requires reinspection before starting the command and both configuration and source identities reflect the change
+
 #### Scenario: Unreadable directories cannot produce verified identities
 - **GIVEN** a project directory cannot be enumerated or classified during configuration or source fingerprinting
 - **WHEN** inspection or execution fingerprints the project before or after a command

@@ -43,6 +43,7 @@ _CONFIG_NAMES = frozenset(
         ".pytest.ini",
         "pytest.toml",
         ".pytest.toml",
+        ".coveragerc",
         "tox.ini",
         "setup.cfg",
         "setup.py",

@@ -186,16 +186,24 @@ def _native_test_command(*, python: Path, config: Path, output: Path, selectors:
     return command
 
 
+def _source_tests(root: Path, relative: Path) -> tuple[Path, ...]:
+    expected = Path("tests/unit") / relative.parent / f"test_{relative.name}"
+    if (root / expected).is_file():
+        return (expected,)
+    package = root / "tests/unit" / relative.parts[0]
+    return tuple(path.relative_to(root) for path in sorted(package.rglob("test_*.py")))
+
+
 def _test_inventory(root: Path, files: list[Path]) -> tuple[str, ...]:
     tests = {str(path) for path in files if path.parts[0] == "tests" and path.name.startswith("test_")}
     for path in files:
         if path.parts[0] != "packages" or "src" not in path.parts or path.name == "__init__.py":
             continue
         relative = Path(*path.parts[path.parts.index("src") + 1 :])
-        expected = Path("tests/unit") / relative.parent / f"test_{relative.name}"
-        if not (root / expected).is_file():
-            raise ValueError(f"required source test missing: {expected}")
-        tests.add(str(expected))
+        candidates = _source_tests(root, relative)
+        if not candidates:
+            raise ValueError(f"required package tests missing: {relative.parts[0]}")
+        tests.update(str(path) for path in candidates)
     return tuple(sorted(tests))
 
 

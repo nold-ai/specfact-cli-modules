@@ -358,6 +358,39 @@
             "runner": "pytest",
             "node_id": "tests/unit/scripts/test_native_pr_review.py::test_runtime_smoke_preserves_launchers_and_isolates_dependencies"
           }
+        },
+        {
+          "case_id": "existing-package-test-layout",
+          "scenario_id": "bind-acceptance-to-exact-source-and-required-jobs",
+          "method": "test",
+          "intent": "Preserve existing test layouts and complete paired-core smoke prerequisites.",
+          "observable": "Existing package tests are selected, absent package tests fail closed, and trusted frozen cache seeding precedes offline execution.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/scripts/test_native_pr_review.py::test_existing_nonmirrored_package_tests_are_selected"
+          }
+        },
+        {
+          "case_id": "missing-package-tests-rejected",
+          "scenario_id": "bind-acceptance-to-exact-source-and-required-jobs",
+          "method": "test",
+          "intent": "Preserve existing test layouts and complete paired-core smoke prerequisites.",
+          "observable": "Existing package tests are selected, absent package tests fail closed, and trusted frozen cache seeding precedes offline execution.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/scripts/test_native_pr_review.py::test_missing_package_tests_cannot_pass_selection"
+          }
+        },
+        {
+          "case_id": "frozen-smoke-cache-seeding",
+          "scenario_id": "bind-acceptance-to-exact-source-and-required-jobs",
+          "method": "test",
+          "intent": "Preserve existing test layouts and complete paired-core smoke prerequisites.",
+          "observable": "Existing package tests are selected, absent package tests fail closed, and trusted frozen cache seeding precedes offline execution.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/scripts/test_native_pr_review.py::test_runtime_smoke_seeds_frozen_cache_before_offline_execution"
+          }
         }
       ]
     }

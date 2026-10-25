@@ -397,6 +397,14 @@ requirements:
       selector:
         runner: pytest
         node_id: tests/unit/specfact_codebase/test_project_runtime.py::test_pytest_config_drift_requires_reinspection[tox.ini]
+    - case_id: first-hatch-coverage-config-drift
+      scenario_id: preparation-failure-and-reuse-are-explicit
+      method: test
+      intent: Include coverage selection in prepared project configuration identity.
+      observable: Changed .coveragerc refuses execution and changes input and source provenance.
+      selector:
+        runner: pytest
+        node_id: tests/unit/specfact_codebase/test_project_runtime.py::test_coverage_config_drift_requires_reinspection
     - case_id: first-hatch-directory-traversal-inspection-enumeration
       scenario_id: preparation-failure-and-reuse-are-explicit
       method: test
