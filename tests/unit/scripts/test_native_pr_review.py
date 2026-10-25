@@ -237,8 +237,38 @@ def test_runtime_smoke_preserves_launchers_and_isolates_dependencies():
     for launcher in ("direct", "hatch-source", "pip-editable", "pipx", "uv-run", "uvx"):
         assert "--launcher " + launcher in smoke["run"]
     assert 'python -m venv "$launchers"' in smoke["run"]
-    assert '"$launchers/bin/python" -m pip install pipx uv "virtualenv<21"' in smoke["run"]
+    assert '"$launchers/bin/python" -m pip install uv' in smoke["run"]
     assert '--modules-repo "$GITHUB_WORKSPACE/specfact-cli/runtime-smoke-modules"' in smoke["run"]
+
+
+def test_runtime_smoke_seeds_frozen_cache_before_offline_execution():
+    jobs = yaml.safe_load((ROOT / ".github/workflows/pr-orchestrator.yml").read_text())["jobs"]
+    command = _step_named(jobs["quality"]["steps"], "Runtime discovery smoke across package managers")["run"]
+    assert "check_dependency_trust_exceptions.py" in command
+    assert "sync --locked --all-extras --no-install-project --project specfact-cli" in command
+    assert (
+        command.index("check_dependency_trust_exceptions.py")
+        < command.index("sync --locked")
+        < command.index("runtime_discovery_smoke.py")
+    )
+    assert 'UV_PROJECT_ENVIRONMENT="$RUNNER_TEMP/runtime-smoke-seed"' in command
+    assert 'PATH="$RUNNER_TEMP/runtime-smoke-seed/bin:$launchers/bin:$PATH"' in command
+    assert "virtualenv<21" not in command
+
+
+def test_existing_nonmirrored_package_tests_are_selected(native_review):
+    inventory = native_review._test_inventory(
+        ROOT, [Path("packages/specfact-codebase/src/specfact_codebase/import_cmd/commands.py")]
+    )
+    assert "tests/unit/specfact_codebase/test_import_command_contract.py" in inventory
+    assert all((ROOT / path).is_file() for path in inventory)
+
+
+def test_missing_package_tests_cannot_pass_selection(native_review, tmp_path):
+    with pytest.raises(ValueError, match="test"):
+        native_review._test_inventory(
+            tmp_path, [Path("packages/specfact-codebase/src/specfact_codebase/import_cmd/commands.py")]
+        )
 
 
 def test__native_test_command_uses_trusted_config(native_review, tmp_path):

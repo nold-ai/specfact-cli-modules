@@ -274,6 +274,23 @@ def test_pytest_config_drift_requires_reinspection(project, tmp_path, filename):
     assert refreshed.input_identity != prepared.plan.input_identity
 
 
+def test_coverage_config_drift_requires_reinspection(project, tmp_path):
+    root = project[0]
+    config = root / ".coveragerc"
+    config.write_text("[run]\nomit=first/*\n")
+    prepared = ready(project, tmp_path)
+    command = ProjectCommand(("python", "-c", "print('customer-command')"), root)
+    before = prepared.run(command, timeout=10)
+    assert before.outcome == "exited"
+    config.write_text("[run]\nomit=second/*\n")
+    stale = prepared.run(command, timeout=10)
+    assert stale.outcome == "execution_failed", stale
+    assert stale.stdout == ""
+    assert "reinspect" in stale.stderr.lower()
+    assert stale.source_identity != before.source_identity
+    assert inspect_project(root, prepared.plan.selection).input_identity != prepared.plan.input_identity
+
+
 def test_external_fresh_workspace_required(project, tmp_path):
     root, target, hatch, _ = project
     plan = inspect_project(

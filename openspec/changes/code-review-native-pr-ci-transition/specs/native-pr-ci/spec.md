@@ -30,7 +30,12 @@ The native CI receipt SHALL bind the event head and complete required-member inv
 - **WHEN** signatures, native Hatch, independent review or migration scope fail or are skipped
 - **THEN** quality cannot pass
 
+#### Scenario: Existing package test layouts
+- **WHEN** a changed package source lacks a mirrored unit-test filename
+- **THEN** native review selects the package's existing unit-test files without requiring a new layout, and rejects a package with no unit tests
+
 #### Scenario: Preserve paired-core smoke ownership
 - **WHEN** the paired core requires its reviewed portable fixture for package-manager smoke
 - **THEN** CI authenticates that fixture and runs all six existing launchers with isolated launcher dependencies, while candidate source remains subject to the complete quality, native acceptance and signing gates
 - **AND** fixture smoke does not claim candidate module acceptance
+- **AND** CI authenticates and seeds the paired core's frozen dependency cache before its offline child synchronization

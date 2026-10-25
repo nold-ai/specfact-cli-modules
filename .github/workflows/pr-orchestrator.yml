@@ -272,8 +272,10 @@ jobs:
         run: |
           launchers="$RUNNER_TEMP/runtime-smoke-launchers"
           python -m venv "$launchers"
-          "$launchers/bin/python" -m pip install pipx uv "virtualenv<21"
-          PATH="$launchers/bin:$PATH" hatch run python specfact-cli/scripts/runtime_discovery_smoke.py --modules-repo "$GITHUB_WORKSPACE/specfact-cli/runtime-smoke-modules" --launcher direct --launcher hatch-source --launcher pip-editable --launcher pipx --launcher uv-run --launcher uvx
+          "$launchers/bin/python" -m pip install uv
+          (cd specfact-cli && python scripts/check_dependency_trust_exceptions.py)
+          UV_PROJECT_ENVIRONMENT="$RUNNER_TEMP/runtime-smoke-seed" "$launchers/bin/uv" sync --locked --all-extras --no-install-project --project specfact-cli --python "$(command -v python)"
+          PATH="$RUNNER_TEMP/runtime-smoke-seed/bin:$launchers/bin:$PATH" hatch run python specfact-cli/scripts/runtime_discovery_smoke.py --modules-repo "$GITHUB_WORKSPACE/specfact-cli/runtime-smoke-modules" --launcher direct --launcher hatch-source --launcher pip-editable --launcher pipx --launcher uv-run --launcher uvx
       - name: Validate generated command overview
         if: needs.changes.outputs.skip_tests_dev_to_main != 'true'
         run: |
