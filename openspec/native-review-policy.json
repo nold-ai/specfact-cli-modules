@@ -1,0 +1,18 @@
+{
+  "execution_backend": "trusted-local-native",
+  "freeze_ref": "23967ee8dc22545935427cd737b418e5b21198e5",
+  "legacy_paths": [
+    ".github/workflows/*capsule*.yml",
+    ".github/workflows/code-review-macos-boundary.yml",
+    "packages/specfact-code-review/src/specfact_code_review/run/*",
+    "scripts/*capsule*.py",
+    "scripts/*macos*.py",
+    "scripts/native_release/*",
+    "scripts/native_analyzer_inputs/*",
+    "scripts/macos_managed_boundary/*",
+    "tests/native/*",
+    "tests/fixtures/portable-runtime/*",
+    "tests/unit/*capsule*.py",
+    "tests/host/proof_capsule*"
+  ]
+}
