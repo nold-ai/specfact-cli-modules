@@ -131,7 +131,10 @@ def _files(root: Path):
             if not entry.is_dir():
                 yield Path(entry.path)
                 continue
-            if entry.name in _IGNORED_DIRS or entry.name.endswith(".egg-info") or entry.is_symlink():
+            if entry.name in _IGNORED_DIRS or entry.name.endswith(".egg-info"):
+                continue
+            if entry.is_symlink():
+                yield Path(entry.path)
                 continue
             directories.append(Path(entry.path))
         pending.extend(reversed(directories))
@@ -140,6 +143,9 @@ def _files(root: Path):
 def _identity(root: Path, *, source: bool = False) -> str:
     digest = hashlib.sha256()
     for path in _files(root):
+        if path.is_symlink() and path.is_dir():
+            digest.update(json.dumps(["directory-link", str(path.relative_to(root)), os.readlink(path)]).encode())
+            continue
         selected = (
             path.name in _CONFIG_NAMES
             or path.name.startswith(("requirements", "constraints"))

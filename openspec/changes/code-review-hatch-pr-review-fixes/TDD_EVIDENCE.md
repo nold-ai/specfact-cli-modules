@@ -1,0 +1,31 @@
+# Native PR review correction evidence
+
+Recorded 2026-10-25, Europe/Berlin, against signed base `8171f496711e436e6e788b35b1d3434368c0f3e5`.
+
+## Confirmed scope
+
+The owner requested PR #524 merge readiness with native-only implementation, signing and independent gates preserved. Open threads `PRRT_kwDORVEFbs6v8Unx` and `PRRT_kwDORVEFbs6wBmka` report directory alias retargeting and a baseline commit lost after squash. Exact-head Linux also reports Radon complexity in three native tests. Capsule runtime/tooling/admission repairs and reviewer cutover remain excluded.
+
+## Actual failing-first sequence
+
+Spec and tests preceded source edits. The first draft run included a missing required timeout in a newly authored control; that test defect is not production RED. Corrected `/private/tmp/513-babysit-red-corrected.xml` contains seven intended failures and one already passing physical-target content control. Both identities remained equal after alias retargeting. All six final-tree-only checkout cases failed on `freeze_ref comparison unavailable` instead of performing the required comparison. Independent pre-code eight-selector acceptance and actual test-authored evaluation are `/private/tmp/513-babysit-mapping-{acceptance,evaluation}.json`.
+
+Implementation retained the physical traversal and added directory-link bindings. The guard now carries the exact 167 classified mode/blob records from its existing freeze in the committed policy. Its default path does not resolve that historical commit. A disposable second Git repository contains only the final tree and proves the original commit is absent. Historical CLI comparisons still validate revisions safely. An inert, provenance-labeled exact excerpt of the real earlier capsule repair replaces the suite's dependency on disappearing feature history; the original full historical comparison remains prior recorded evidence, not a newly claimed portable checkout.
+
+Independent review found missed staged chmod when `core.filemode=false`; CodeRabbit found CRLF normalization. Spec and two mapped tests preceded both corrections. `/private/tmp/513-babysit-portability-red.xml` records two intended failures. Fresh ten-selector technical acceptance is `/private/tmp/513-babysit-portability-mapping-acceptance.json`. This acceptance precedes the two corrections, not the initial eight-case implementation. Regular file identities now use Git clean filters and actual index modes when filesystem mode tracking is disabled; symlinks hash raw link text. These retain the previous trusted-local Git semantics.
+
+All 144 nearby runtime, scope, native workflow and unchanged prerequisite cases pass in `/private/tmp/513-babysit-portability-green.xml`. Three native test functions were decomposed with their collected selectors and assertions retained. Direct Radon measurement finds no function above complexity 10 in the affected checker and two native test files. Actual local execution of the unchanged native workflow passes all 59 mapped cases with zero skips; receipt/JUnit provenance is `.audit/513-babysit-native-real-run.json`.
+
+The final ten exact mapped cases pass in `/private/tmp/513-babysit-exact-green.xml`. Requirements reconciliation uses an explicit incremental legacy-TDD ledger, not a fabricated all-case initial RED. Canonical local records are `.audit/513-babysit-{plan,tdd-ledger,tdd-record,reconciliation,tested-source}.json`.
+
+Independent final engineering review accepted the staged corrections after checking mode/CRLF parity, directory replacement rejection, all 167 exact records and the preserved 24 workflow assertions. `/private/tmp/513-babysit-implementation-review.md` records the actual probes and scope limits. CodeRabbit completed final review of all seventeen staged files. Its remaining major staged-blob suggestion is dismissed as a bypass of supported mandatory paths: a fresh disposable fixture using the actual installed `pre_commit.staged_files_only` rejects the staged repair, restores the working tree, and committed-tree checking rejects it too. `.audit/513-babysit-staged-boundary.txt` records results 0/1/1 for standalone working-tree, actual pre-commit and committed-tree modes. Standalone working-tree mode retains its documented limitation; no new index-only admission rule is added.
+
+## Signing and delivery limits
+
+The runtime edit changes the codebase payload. Its development checksum is refreshed through the documented dev policy. The existing unreleased version 0.42.0 remains above dev 0.41.16; this is another correction within the same PR. Local release-key variables are unavailable. Canonical cryptographic module signing remains with the trusted-review CI signer, and no strict-signature PASS is claimed for the changed payload. Human commits remain GPG-signed as djm81. No signing workflow, key, registry or publication policy is changed.
+
+Required final gates, final independent review and delivery are recorded only after completion. The first SMART cycle passed 5,892 tests before the two later portability cases/corrections; its orchestrator was stopped before full testing. It is not final-source evidence. The final source needs its own gate record.
+
+The final source gate cycle then passed format, types, lint, YAML, actionlint, import boundaries, development module payload integrity/version verification, contracts, SMART, full testing and the full staged pipeline. SMART and full each passed 5,894 tests with 77 existing opt-in skips, five baseline warnings and 95 passing subtests. The pipeline passed Requirements and 28 contract cases. `.audit/513-babysit-terminal-gate-status.json` and adjacent logs record actual exit codes. Development integrity verification uses the existing dev policy; canonical cryptographic module signing is still pending trusted-review CI. Only the approved local Darwin capsule component is DEFERRED, never PASS. Signed delivery and exact-head hosted status are recorded in the PR after push.
+
+At base head, candidate 3.12 fails with pytest FileNotFoundError observations, native test complexity and incomplete targeted coverage. Independent signed review times out with analysis_timeout and missing_report. Quality fails on the existing customer-capsule prerequisite. These remain actual blockers; no repair, retry, threshold increase or replacement verdict is made here.

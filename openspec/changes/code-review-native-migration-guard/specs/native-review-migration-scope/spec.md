@@ -24,7 +24,7 @@ The repository SHALL reject additions or edits on classified legacy capsule surf
 - **THEN** the scope check accepts that change without claiming runtime acceptance
 
 ### Requirement: Fail closed on invalid migration policy
-The checker SHALL accept only the established trusted-local-native execution direction and an available Git freeze revision. An invalid policy or unavailable revision SHALL fail with an actionable diagnostic.
+The checker SHALL accept only the established trusted-local-native execution direction and the committed reviewed baseline manifest. The freeze revision SHALL remain audit metadata rather than a default runtime dependency. An invalid policy or unavailable explicitly requested historical revision SHALL fail with an actionable diagnostic.
 
 The policy SHALL be bound to the reviewed fingerprint in the checker. A policy-only change that alters its baseline or removes a classified surface SHALL fail rather than silently authorizing capsule work. This binding does not authenticate a candidate that also rewrites the checker and its fingerprint. Revision arguments SHALL resolve to commit identities before comparison and SHALL never be interpreted as Git options.
 
@@ -40,8 +40,8 @@ The policy SHALL be bound to the reviewed fingerprint in the checker. A policy-o
 - **WHEN** policy selects capsule execution
 - **THEN** the boundary check fails rather than reopening the architecture decision
 
-#### Scenario: Reject an unavailable baseline
-- **WHEN** the configured freeze revision is unavailable
+#### Scenario: Reject an unavailable historical baseline
+- **WHEN** an explicitly requested historical freeze revision is unavailable
 - **THEN** the boundary check fails and identifies the missing revision
 
 ### Requirement: Preserve independent gates and test the correction on real history

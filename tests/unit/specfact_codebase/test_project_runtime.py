@@ -84,6 +84,39 @@ def test_selected_venv_identity_and_no_sync_even_with_stale_dependencies(project
     assert "run" not in log.read_text()
 
 
+def test_directory_alias_retargeting_invalidates_prepared_identity(project, tmp_path):
+    root = project[0]
+    for name, contents in (("first", "[pytest]\naddopts=-q\n"), ("second", "[pytest]\naddopts=-v\n")):
+        target = root / name
+        target.mkdir()
+        (target / "pytest.ini").write_text(contents)
+    alias = root / "tests"
+    alias.symlink_to("first", target_is_directory=True)
+    prepared = ready(project, tmp_path)
+    before = (project_runtime._identity(root), project_runtime._identity(root, source=True))
+    alias.unlink()
+    alias.symlink_to("second", target_is_directory=True)
+    after = (project_runtime._identity(root), project_runtime._identity(root, source=True))
+    assert all(old != new for old, new in zip(before, after, strict=True)), (before, after)
+    result = prepared.run(ProjectCommand(("python", "-c", "print('command-ran')"), root), timeout=2)
+    assert result.outcome == "execution_failed"
+    assert "command-ran" not in result.stdout
+
+
+def test_directory_alias_target_configuration_remains_fingerprinted(project, tmp_path):
+    root = project[0]
+    target = root / "selected"
+    target.mkdir()
+    config = target / "pytest.ini"
+    config.write_text("[pytest]\naddopts=-q\n")
+    (root / "tests").symlink_to("selected", target_is_directory=True)
+    prepared = ready(project, tmp_path)
+    config.write_text("[pytest]\naddopts=-v\n")
+    result = prepared.run(ProjectCommand(("python", "-c", "print('command-ran')"), root), timeout=2)
+    assert result.outcome == "execution_failed"
+    assert "command-ran" not in result.stdout
+
+
 def test_missing_tool_never_falls_back_to_controller_path(project, tmp_path, monkeypatch):
     prepared = ready(project, tmp_path)
     shadow = tmp_path / "controller-bin"
