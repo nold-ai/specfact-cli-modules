@@ -43,6 +43,13 @@ This file is the mandatory bootstrap governance surface for coding agents workin
 
 ## Strategic context
 
+The code-review execution direction is already decided: trusted local native project execution. Do not reopen capsule expansion or spend work repairing capsule prerequisites for this migration. `openspec/native-review-policy.json` owns the frozen legacy surfaces and migration baseline.
+
+| Rule | Enforcement |
+| --- | --- |
+| Preserve existing capsule history or delete it for retirement; do not add or repair classified capsule surfaces. | `scripts/check_native_review_scope.py`, invoked by mandatory `check-bundle-imports` and `.github/workflows/native-review-scope.yml`. |
+| Preserve signing and independent security; failed legacy gates do not become PASS through native scope checks. | Existing signature/review gates remain unchanged; the scope checker grants no runtime or protected-review authority. |
+
 This public modules repository does not depend on a sibling internal wiki checkout for change design. Shared design and governance context lives in the paired public `specfact-cli` repository and the active OpenSpec artifacts in this repo. When a modules change is explicitly paired with a core change, review both public change folders before widening scope or redefining shared workflow semantics.
 
 ## Canonical rule docs

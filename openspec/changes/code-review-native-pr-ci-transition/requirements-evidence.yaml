@@ -1,0 +1,442 @@
+{
+  "schema_version": "2",
+  "requirements": {
+    "openspec:code-review-native-pr-ci-transition:native-pr-ci:preserve-complete-independent-native-review": {
+      "rationale": "Explicit maintainer authorization advances only CI/security before PR524 merge.",
+      "stakeholder_refs": [
+        "nold-ai/specfact-cli-modules#513"
+      ],
+      "touchpoints": [
+        {
+          "id": "preserve-complete-independent-native-review",
+          "kind": "config_file",
+          "locator": "openspec/changes/code-review-native-pr-ci-transition/specs/native-pr-ci/spec.md"
+        }
+      ],
+      "verification_cases": [
+        {
+          "case_id": "preserve-complete-independent-native-review-9",
+          "scenario_id": "preserve-complete-independent-native-review",
+          "method": "test",
+          "intent": "Execute the actual native CI boundary and reject incomplete evidence.",
+          "observable": "No stale source, unavailable analyzer, skipped mandatory case or missing independent prerequisite can grant acceptance.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/scripts/test_native_pr_review.py::test_raw_incomplete_findings_block_even_when_policy_exit_is_zero[finding0]"
+          }
+        },
+        {
+          "case_id": "preserve-complete-independent-native-review-10",
+          "scenario_id": "preserve-complete-independent-native-review",
+          "method": "test",
+          "intent": "Execute the actual native CI boundary and reject incomplete evidence.",
+          "observable": "No stale source, unavailable analyzer, skipped mandatory case or missing independent prerequisite can grant acceptance.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/scripts/test_native_pr_review.py::test_raw_incomplete_findings_block_even_when_policy_exit_is_zero[finding1]"
+          }
+        },
+        {
+          "case_id": "preserve-complete-independent-native-review-11",
+          "scenario_id": "preserve-complete-independent-native-review",
+          "method": "test",
+          "intent": "Execute the actual native CI boundary and reject incomplete evidence.",
+          "observable": "No stale source, unavailable analyzer, skipped mandatory case or missing independent prerequisite can grant acceptance.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/scripts/test_native_pr_review.py::test_raw_incomplete_findings_block_even_when_policy_exit_is_zero[finding2]"
+          }
+        },
+        {
+          "case_id": "preserve-complete-independent-native-review-12",
+          "scenario_id": "preserve-complete-independent-native-review",
+          "method": "test",
+          "intent": "Execute the actual native CI boundary and reject incomplete evidence.",
+          "observable": "No stale source, unavailable analyzer, skipped mandatory case or missing independent prerequisite can grant acceptance.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/scripts/test_native_pr_review.py::test_required_signed_rule_pack_cannot_silently_disappear"
+          }
+        },
+        {
+          "case_id": "preserve-complete-independent-native-review-15",
+          "scenario_id": "preserve-complete-independent-native-review",
+          "method": "test",
+          "intent": "Execute the actual native CI boundary and reject incomplete evidence.",
+          "observable": "No stale source, unavailable analyzer, skipped mandatory case or missing independent prerequisite can grant acceptance.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/scripts/test_native_pr_review.py::test_all_signed_semgrep_passes_are_required"
+          }
+        },
+        {
+          "case_id": "preserve-complete-independent-native-review-16",
+          "scenario_id": "preserve-complete-independent-native-review",
+          "method": "test",
+          "intent": "Execute the actual native CI boundary and reject incomplete evidence.",
+          "observable": "No stale source, unavailable analyzer, skipped mandatory case or missing independent prerequisite can grant acceptance.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/scripts/test_native_pr_review.py::test_native_tools_are_installed_from_base_before_project_bootstrap"
+          }
+        },
+        {
+          "case_id": "preserve-complete-independent-native-review-17",
+          "scenario_id": "preserve-complete-independent-native-review",
+          "method": "test",
+          "intent": "Execute the actual native CI boundary and reject incomplete evidence.",
+          "observable": "No stale source, unavailable analyzer, skipped mandatory case or missing independent prerequisite can grant acceptance.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/scripts/test_native_pr_review.py::test__native_test_command_uses_trusted_config"
+          }
+        },
+        {
+          "case_id": "preserve-complete-independent-native-review-19",
+          "scenario_id": "preserve-complete-independent-native-review",
+          "method": "test",
+          "intent": "Execute the actual native CI boundary and reject incomplete evidence.",
+          "observable": "No stale source, unavailable analyzer, skipped mandatory case or missing independent prerequisite can grant acceptance.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/scripts/test_native_pr_review.py::test_project_tests_do_not_inherit_controller_diff_mode"
+          }
+        },
+        {
+          "case_id": "preserve-complete-independent-native-review-21",
+          "scenario_id": "preserve-complete-independent-native-review",
+          "method": "test",
+          "intent": "Execute the actual native CI boundary and reject incomplete evidence.",
+          "observable": "No stale source, unavailable analyzer, skipped mandatory case or missing independent prerequisite can grant acceptance.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/scripts/test_native_pr_review.py::test_no_python_sources_requires_positive_applicability"
+          }
+        },
+        {
+          "case_id": "preserve-complete-independent-native-review-22",
+          "scenario_id": "preserve-complete-independent-native-review",
+          "method": "test",
+          "intent": "Execute the actual native CI boundary and reject incomplete evidence.",
+          "observable": "No stale source, unavailable analyzer, skipped mandatory case or missing independent prerequisite can grant acceptance.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/scripts/test_native_pr_review.py::test_boundary_script_imports_through_native_contract_analyzer"
+          }
+        },
+        {
+          "case_id": "preserve-complete-independent-native-review-23",
+          "scenario_id": "preserve-complete-independent-native-review",
+          "method": "test",
+          "intent": "Reject a skipped required source test in actual JUnit evidence.",
+          "observable": "A targeted source test skip makes native execution incomplete.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/scripts/test_native_pr_review.py::test_targeted_source_test_skip_is_incomplete"
+          }
+        },
+        {
+          "case_id": "preserve-complete-independent-native-review-24",
+          "scenario_id": "preserve-complete-independent-native-review",
+          "method": "test",
+          "intent": "Reject a selected test file with no executed JUnit cases.",
+          "observable": "Every explicit selected file must appear in pytest source attribution.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/scripts/test_native_pr_review.py::test_selected_test_file_cannot_disappear_from_evidence"
+          }
+        },
+        {
+          "case_id": "semgrep-isolation",
+          "scenario_id": "preserve-complete-independent-native-review",
+          "method": "test",
+          "intent": "Keep incompatible analyzer CLI dependencies separate from the signed controller.",
+          "observable": "Pinned Semgrep remains selected and its invoked version is recorded without imposing its Click dependency on core.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/scripts/test_native_pr_review.py::test_semgrep_dependencies_are_separate_from_signed_controller"
+          }
+        },
+        {
+          "case_id": "semgrep-version",
+          "scenario_id": "preserve-complete-independent-native-review",
+          "method": "test",
+          "intent": "Keep incompatible analyzer CLI dependencies separate from the signed controller.",
+          "observable": "Pinned Semgrep remains selected and its invoked version is recorded without imposing its Click dependency on core.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/scripts/test_native_pr_review.py::test_semgrep_version_comes_from_selected_executable"
+          }
+        },
+        {
+          "case_id": "semgrep-startup-diagnostics",
+          "scenario_id": "preserve-complete-independent-native-review",
+          "method": "test",
+          "intent": "Keep native analyzer startup errors actionable without accepting incomplete evidence.",
+          "observable": "A failed Semgrep startup retains bounded stderr in the incomplete receipt exception.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/scripts/test_native_pr_review.py::test_semgrep_startup_failure_preserves_bounded_stderr"
+          }
+        },
+        {
+          "case_id": "changed-type-inventory",
+          "scenario_id": "preserve-complete-independent-native-review",
+          "method": "test",
+          "intent": "Analyze every changed Python file with trusted type settings and import context.",
+          "observable": "Projection matches the complete changed-source inventory and real pinned BasedPyright still reports imported type errors without scanning unrelated files.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/scripts/test_native_pr_review.py::test_type_projection_covers_exact_changed_python_inventory"
+          }
+        },
+        {
+          "case_id": "imported-type-error",
+          "scenario_id": "preserve-complete-independent-native-review",
+          "method": "test",
+          "intent": "Analyze every changed Python file with trusted type settings and import context.",
+          "observable": "Projection matches the complete changed-source inventory and real pinned BasedPyright still reports imported type errors without scanning unrelated files.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/scripts/test_native_pr_review.py::test_type_projection_retains_imported_type_errors"
+          }
+        }
+      ]
+    },
+    "openspec:code-review-native-pr-ci-transition:native-pr-ci:bind-acceptance-to-exact-source-and-required-jobs": {
+      "rationale": "Explicit maintainer authorization advances only CI/security before PR524 merge.",
+      "stakeholder_refs": [
+        "nold-ai/specfact-cli-modules#513"
+      ],
+      "touchpoints": [
+        {
+          "id": "bind-acceptance-to-exact-source-and-required-jobs",
+          "kind": "config_file",
+          "locator": "openspec/changes/code-review-native-pr-ci-transition/specs/native-pr-ci/spec.md"
+        }
+      ],
+      "verification_cases": [
+        {
+          "case_id": "bind-acceptance-to-exact-source-and-required-jobs-1",
+          "scenario_id": "bind-acceptance-to-exact-source-and-required-jobs",
+          "method": "test",
+          "intent": "Execute the actual native CI boundary and reject incomplete evidence.",
+          "observable": "No stale source, unavailable analyzer, skipped mandatory case or missing independent prerequisite can grant acceptance.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/scripts/test_native_pr_review.py::test_complete_native_review_accepts_exact_head"
+          }
+        },
+        {
+          "case_id": "bind-acceptance-to-exact-source-and-required-jobs-2",
+          "scenario_id": "bind-acceptance-to-exact-source-and-required-jobs",
+          "method": "test",
+          "intent": "Execute the actual native CI boundary and reject incomplete evidence.",
+          "observable": "No stale source, unavailable analyzer, skipped mandatory case or missing independent prerequisite can grant acceptance.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/scripts/test_native_pr_review.py::test_incomplete_native_review_cannot_pass[missing]"
+          }
+        },
+        {
+          "case_id": "bind-acceptance-to-exact-source-and-required-jobs-3",
+          "scenario_id": "bind-acceptance-to-exact-source-and-required-jobs",
+          "method": "test",
+          "intent": "Execute the actual native CI boundary and reject incomplete evidence.",
+          "observable": "No stale source, unavailable analyzer, skipped mandatory case or missing independent prerequisite can grant acceptance.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/scripts/test_native_pr_review.py::test_incomplete_native_review_cannot_pass[duplicate]"
+          }
+        },
+        {
+          "case_id": "bind-acceptance-to-exact-source-and-required-jobs-4",
+          "scenario_id": "bind-acceptance-to-exact-source-and-required-jobs",
+          "method": "test",
+          "intent": "Execute the actual native CI boundary and reject incomplete evidence.",
+          "observable": "No stale source, unavailable analyzer, skipped mandatory case or missing independent prerequisite can grant acceptance.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/scripts/test_native_pr_review.py::test_incomplete_native_review_cannot_pass[unknown]"
+          }
+        },
+        {
+          "case_id": "bind-acceptance-to-exact-source-and-required-jobs-5",
+          "scenario_id": "bind-acceptance-to-exact-source-and-required-jobs",
+          "method": "test",
+          "intent": "Execute the actual native CI boundary and reject incomplete evidence.",
+          "observable": "No stale source, unavailable analyzer, skipped mandatory case or missing independent prerequisite can grant acceptance.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/scripts/test_native_pr_review.py::test_incomplete_native_review_cannot_pass[stale]"
+          }
+        },
+        {
+          "case_id": "bind-acceptance-to-exact-source-and-required-jobs-6",
+          "scenario_id": "bind-acceptance-to-exact-source-and-required-jobs",
+          "method": "test",
+          "intent": "Execute the actual native CI boundary and reject incomplete evidence.",
+          "observable": "No stale source, unavailable analyzer, skipped mandatory case or missing independent prerequisite can grant acceptance.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/scripts/test_native_pr_review.py::test_incomplete_native_review_cannot_pass[source]"
+          }
+        },
+        {
+          "case_id": "bind-acceptance-to-exact-source-and-required-jobs-7",
+          "scenario_id": "bind-acceptance-to-exact-source-and-required-jobs",
+          "method": "test",
+          "intent": "Execute the actual native CI boundary and reject incomplete evidence.",
+          "observable": "No stale source, unavailable analyzer, skipped mandatory case or missing independent prerequisite can grant acceptance.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/scripts/test_native_pr_review.py::test_incomplete_native_review_cannot_pass[policy]"
+          }
+        },
+        {
+          "case_id": "bind-acceptance-to-exact-source-and-required-jobs-8",
+          "scenario_id": "bind-acceptance-to-exact-source-and-required-jobs",
+          "method": "test",
+          "intent": "Execute the actual native CI boundary and reject incomplete evidence.",
+          "observable": "No stale source, unavailable analyzer, skipped mandatory case or missing independent prerequisite can grant acceptance.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/scripts/test_native_pr_review.py::test_incomplete_native_review_cannot_pass[malformed]"
+          }
+        },
+        {
+          "case_id": "bind-acceptance-to-exact-source-and-required-jobs-13",
+          "scenario_id": "bind-acceptance-to-exact-source-and-required-jobs",
+          "method": "test",
+          "intent": "Execute the actual native CI boundary and reject incomplete evidence.",
+          "observable": "No stale source, unavailable analyzer, skipped mandatory case or missing independent prerequisite can grant acceptance.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/scripts/test_native_pr_review.py::test_quality_requires_native_review_without_capsule_prerequisite"
+          }
+        },
+        {
+          "case_id": "bind-acceptance-to-exact-source-and-required-jobs-14",
+          "scenario_id": "bind-acceptance-to-exact-source-and-required-jobs",
+          "method": "test",
+          "intent": "Execute the actual native CI boundary and reject incomplete evidence.",
+          "observable": "No stale source, unavailable analyzer, skipped mandatory case or missing independent prerequisite can grant acceptance.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/scripts/test_native_pr_review.py::test_independent_native_job_uses_signed_reviewer_and_exact_subject"
+          }
+        },
+        {
+          "case_id": "bind-acceptance-to-exact-source-and-required-jobs-18",
+          "scenario_id": "bind-acceptance-to-exact-source-and-required-jobs",
+          "method": "test",
+          "intent": "Execute the actual native CI boundary and reject incomplete evidence.",
+          "observable": "No stale source, unavailable analyzer, skipped mandatory case or missing independent prerequisite can grant acceptance.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/scripts/test_native_pr_review.py::test_darwin_deferral_requires_indexed_native_replacement"
+          }
+        },
+        {
+          "case_id": "bind-acceptance-to-exact-source-and-required-jobs-20",
+          "scenario_id": "bind-acceptance-to-exact-source-and-required-jobs",
+          "method": "test",
+          "intent": "Execute the actual native CI boundary and reject incomplete evidence.",
+          "observable": "No stale source, unavailable analyzer, skipped mandatory case or missing independent prerequisite can grant acceptance.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/scripts/test_native_pr_review.py::test_subject_detects_assume_unchanged_mutation"
+          }
+        },
+        {
+          "case_id": "runtime-fixture-accepted",
+          "scenario_id": "bind-acceptance-to-exact-source-and-required-jobs",
+          "method": "test",
+          "intent": "Preserve the paired core reviewed fixture contract without bypassing candidate quality.",
+          "observable": "Unreviewed fixture identities are rejected and all six launcher checks remain mandatory with separate launcher dependencies.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/scripts/test_native_pr_review.py::test_runtime_smoke_rejects_unreviewed_fixture_identity[046d366c190af7a188d6f48953a96edb65e766db]"
+          }
+        },
+        {
+          "case_id": "runtime-fixture-rejected",
+          "scenario_id": "bind-acceptance-to-exact-source-and-required-jobs",
+          "method": "test",
+          "intent": "Preserve the paired core reviewed fixture contract without bypassing candidate quality.",
+          "observable": "Unreviewed fixture identities are rejected and all six launcher checks remain mandatory with separate launcher dependencies.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/scripts/test_native_pr_review.py::test_runtime_smoke_rejects_unreviewed_fixture_identity[0000000000000000000000000000000000000000]"
+          }
+        },
+        {
+          "case_id": "runtime-launcher-ownership",
+          "scenario_id": "bind-acceptance-to-exact-source-and-required-jobs",
+          "method": "test",
+          "intent": "Preserve the paired core reviewed fixture contract without bypassing candidate quality.",
+          "observable": "Unreviewed fixture identities are rejected and all six launcher checks remain mandatory with separate launcher dependencies.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/scripts/test_native_pr_review.py::test_runtime_smoke_preserves_launchers_and_isolates_dependencies"
+          }
+        },
+        {
+          "case_id": "existing-package-test-layout",
+          "scenario_id": "bind-acceptance-to-exact-source-and-required-jobs",
+          "method": "test",
+          "intent": "Preserve existing test layouts and complete paired-core smoke prerequisites.",
+          "observable": "Existing package tests are selected, absent package tests fail closed, and trusted frozen cache seeding precedes offline execution.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/scripts/test_native_pr_review.py::test_existing_nonmirrored_package_tests_are_selected"
+          }
+        },
+        {
+          "case_id": "missing-package-tests-rejected",
+          "scenario_id": "bind-acceptance-to-exact-source-and-required-jobs",
+          "method": "test",
+          "intent": "Preserve existing test layouts and complete paired-core smoke prerequisites.",
+          "observable": "Existing package tests are selected, absent package tests fail closed, and trusted frozen cache seeding precedes offline execution.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/scripts/test_native_pr_review.py::test_missing_package_tests_cannot_pass_selection"
+          }
+        },
+        {
+          "case_id": "frozen-smoke-cache-seeding",
+          "scenario_id": "bind-acceptance-to-exact-source-and-required-jobs",
+          "method": "test",
+          "intent": "Preserve existing test layouts and complete paired-core smoke prerequisites.",
+          "observable": "Existing package tests are selected, absent package tests fail closed, and trusted frozen cache seeding precedes offline execution.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/scripts/test_native_pr_review.py::test_runtime_smoke_seeds_frozen_cache_before_offline_execution"
+          }
+        },
+        {
+          "case_id": "coverage-root-tool",
+          "scenario_id": "bind-acceptance-to-exact-source-and-required-jobs",
+          "method": "test",
+          "intent": "Select applicable existing tests for every coverage-enforced production root.",
+          "observable": "The reported tool module and flat-layout top-level source tests are selected before per-file coverage enforcement.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/scripts/test_native_pr_review.py::test_coverage_roots_select_existing_source_tests[tool]"
+          }
+        },
+        {
+          "case_id": "coverage-root-top-level-src",
+          "scenario_id": "bind-acceptance-to-exact-source-and-required-jobs",
+          "method": "test",
+          "intent": "Select applicable existing tests for every coverage-enforced production root.",
+          "observable": "The reported tool module and flat-layout top-level source tests are selected before per-file coverage enforcement.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/scripts/test_native_pr_review.py::test_coverage_roots_select_existing_source_tests[top-level-src]"
+          }
+        }
+      ]
+    }
+  }
+}

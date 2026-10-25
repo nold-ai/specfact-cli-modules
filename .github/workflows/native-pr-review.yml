@@ -1,0 +1,113 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+name: native-pr-review
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  independent-review:
+    name: independent signed native review
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout exact head
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up project Python
+        id: project-python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.11.15"
+      - name: Set up controller Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.12.13"
+      - name: Install independent signed reviewer
+        env:
+          EVENT_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+          EVENT_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          set -euo pipefail
+          trusted="$RUNNER_TEMP/native-independent-review"
+          mkdir -m 0700 "$trusted" "$trusted/home" "$trusted/output"
+          python -I -m venv "$trusted/venv"
+          "$trusted/venv/bin/python" -I -m pip install specfact-cli==0.55.4
+          base="$(git merge-base "$EVENT_HEAD" "$EVENT_BASE")"
+          git show "$base:pyproject.toml" > "$trusted/base-pyproject.toml"
+          git show "$base:packages/specfact-code-review/src/specfact_code_review/resources/contracts/pr-range-v1-toolchain-lock.json" > "$trusted/analyzer-lock.json"
+          "$trusted/venv/bin/python" -I - "$trusted" <<'PYTHON'
+          import json, sys, tomllib
+          from pathlib import Path
+          from packaging.requirements import Requirement
+          root = Path(sys.argv[1])
+          config = tomllib.loads((root / "base-pyproject.toml").read_text())
+          dependencies = config["tool"]["hatch"]["envs"]["default"]["dependencies"]
+          (root / "requirements.txt").write_text("\n".join(item for item in dependencies if Requirement(item).name != "semgrep") + "\n")
+          lock = json.loads((root / "analyzer-lock.json").read_text())
+          environment = next(item for item in lock["environments"] if item["python_abi"] == "cp312" and item["os"] == "linux")
+          pins = environment["wheelhouse"]["direct_requirements"]
+          (root / "constraints.txt").write_text("\n".join(item["normalized_name"] + item["specifier"] for item in pins) + "\n")
+          semgrep = next(item for item in pins if item["normalized_name"] == "semgrep")
+          (root / "semgrep-requirement.txt").write_text("semgrep" + semgrep["specifier"] + "\n")
+          wheels = environment["wheelhouse"]["wheels"]
+          (root / "semgrep-constraints.txt").write_text("\n".join(item["normalized_name"] + "==" + item["version"] for item in wheels) + "\n")
+          PYTHON
+          "$trusted/venv/bin/python" -I -m pip install -r "$trusted/requirements.txt" -c "$trusted/constraints.txt"
+          python -I -m venv "$trusted/semgrep"
+          "$trusted/semgrep/bin/python" -I -m pip install -r "$trusted/semgrep-requirement.txt" -c "$trusted/semgrep-constraints.txt"
+          cd "$trusted"
+          env -i HOME="$trusted/home" PATH="$trusted/venv/bin:/usr/bin:/bin" SPECFACT_MODULES_BRANCH=main \
+            "$trusted/venv/bin/python" -I -m specfact_cli.cli \
+            module install nold-ai/specfact-code-review --scope user --version 0.51.2 --source marketplace
+          cp "$GITHUB_WORKSPACE/scripts/native_pr_review.py" "$trusted/native_pr_review.py"
+      - name: Bootstrap native repository environment
+        run: |
+          set -euo pipefail
+          python -m pip install hatch==1.18.1
+          hatch run python -m pip --version
+          hatch run dev-deps
+      - name: Capture exact native subject
+        env:
+          EVENT_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+          EVENT_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          set -euo pipefail
+          trusted="$RUNNER_TEMP/native-independent-review"
+          base="$(git merge-base "$EVENT_HEAD" "$EVENT_BASE")"
+          git -c core.hooksPath=/dev/null worktree add --detach "$trusted/subject" "$EVENT_HEAD"
+          git -C "$trusted/subject" -c core.hooksPath=/dev/null reset --soft "$base"
+          ln -s "$GITHUB_WORKSPACE/.venv" "$trusted/subject/.venv"
+          echo "NATIVE_REVIEW_HEAD=$EVENT_HEAD" >> "$GITHUB_ENV"
+          echo "NATIVE_REVIEW_BASE=$base" >> "$GITHUB_ENV"
+      - name: Run complete independent native review
+        env:
+          SPECFACT_HATCH_PROJECT_PYTHON: ${{ steps.project-python.outputs.python-path }}
+        run: |
+          set -euo pipefail
+          trusted="$RUNNER_TEMP/native-independent-review"
+          project_paths="$(find "$trusted/subject/packages" -mindepth 2 -maxdepth 2 -type d -name src -print | sort | paste -sd : -)"
+          project_paths="$trusted/subject/src:$project_paths:$trusted/subject"
+          cd "$trusted"
+          env -i HOME="$trusted/home" TMPDIR="$RUNNER_TEMP" \
+            PATH="$trusted/venv/bin:$trusted/semgrep/bin:$(dirname "$SPECFACT_HATCH_PROJECT_PYTHON"):$(dirname "$(command -v hatch)"):/usr/local/bin:/usr/bin:/bin" \
+            PYTHONPATH="$project_paths" SPECFACT_MODULES_BRANCH=main \
+            NATIVE_REVIEW_HEAD="$NATIVE_REVIEW_HEAD" NATIVE_REVIEW_BASE="$NATIVE_REVIEW_BASE" \
+            SPECFACT_HATCH_PROJECT_PYTHON="$SPECFACT_HATCH_PROJECT_PYTHON" \
+            SPECFACT_HATCH_EXECUTABLE="$(command -v hatch)" \
+            SPECFACT_HATCH_PROOF_WORKSPACE="$trusted/hatch-proof" \
+            "$trusted/venv/bin/python" -I "$trusted/native_pr_review.py" \
+            --subject "$trusted/subject" --project-python "$GITHUB_WORKSPACE/.venv/bin/python" \
+            --output "$trusted/output"
+      - name: Upload exact-head native review evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: native-review-${{ github.event.pull_request.head.sha || github.sha }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/native-independent-review/output/
+          if-no-files-found: error

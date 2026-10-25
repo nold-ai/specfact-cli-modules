@@ -330,6 +330,13 @@ jobs:
                   detail = test_failure_details.get((nodeid, outcome, phase), "")
                   exception = re.search(r"^E\s+(?:subprocess\.)?(AssertionError|FileNotFoundError|PermissionError|CalledProcessError|RuntimeError|ImportError|ModuleNotFoundError|TypeError|ValueError)(?=:|\s|$)", detail, re.MULTILINE)
                   failure = {"test_failure_class": exception.group(1)} if exception else {}
+                  native_skips = {
+                      "Set SPECFACT_HATCH_PROOF_WORKSPACE with native Hatch and Python 3.11 prerequisites for the acceptance cell",
+                      "Native Hatch and project Python are required for customer storage acceptance",
+                      "Native Hatch and project Python are required for absolute declaration acceptance",
+                  }
+                  if outcome == "skipped" and detail in native_skips:
+                      failure["test_diagnostic"] = "native_prerequisites_not_supplied"
                   for option in ("-I", "-E", "-S"):
                       if "project_python_option_unsupported:" + option + ";" in detail:
                           failure.update(test_diagnostic="project_python_option_unsupported", python_option=option)
@@ -382,6 +389,8 @@ jobs:
                   ):
                       location = {"file": file, "line": line, "severity": severity}
                       public_values = {
+                          "differential_state": {"introduced", "fixed", "unchanged", "unknown"},
+                          "status": {"open", "fixed", "waived-by-reference"},
                           "category": {"clean_code", "security", "type_safety", "contracts", "testing", "style", "architecture", "tool_error", "naming", "kiss", "yagni", "dry", "solid", "ai_bloat"},
                           "tool": {"ruff", "radon", "radon-kiss", "semgrep", "ast", "basedpyright", "pylint", "contract_runner", "crosshair", "pytest"},
                           "rule": {"tool_error", "TEST_OUTCOME_NOT_PASS", "TEST_COVERAGE_POLICY_FAILED", "MISSING_ICONTRACT", "CROSSHAIR_COUNTEREXAMPLE", "CROSSHAIR_INCOMPLETE_EVIDENCE", "kiss.loc.error", "kiss.loc.warning", "kiss.nesting.error", "kiss.nesting.warning", "kiss.parameter-count.error", "kiss.parameter-count.warning", *(f"CC{number}" for number in range(1, 1001))},
@@ -390,6 +399,8 @@ jobs:
                           value = finding.get(key)
                           if isinstance(value, str) and value in allowed:
                               location[key] = value
+                      if type(finding.get("blocking")) is bool:
+                          location["blocking"] = finding["blocking"]
                       if location.get("tool") == "pytest" and location.get("rule") == "TEST_OUTCOME_NOT_PASS":
                           location.update(_public_test_observation(finding, file))
                       if location.get("category") == "tool_error":
@@ -401,7 +412,21 @@ jobs:
                               ("semgrep returned empty stdout", "empty_output"),
                               ("unrecognized crosshair output", "unrecognized_output"),
                           )
+                          if location.get("tool") == "pytest":
+                              location["diagnostic_code"] = "unclassified"
                           if isinstance(message, str) and location.get("tool") == "pytest":
+                              diagnostic_message = message
+                              producer_prefixes = {
+                                  "Unable to execute targeted tests: ": "pytest_execute_error",
+                                  "Unable to read targeted pytest evidence: ": "pytest_evidence_read_error",
+                              }
+                              for prefix, failure_class in producer_prefixes.items():
+                                  if message.startswith(prefix):
+                                      location["failure_class"] = failure_class
+                                      diagnostic_message = message[len(prefix):]
+                                      break
+                              if message == "Targeted pytest observer, JUnit, and process outcomes could not be reconciled.":
+                                  location["failure_class"] = "pytest_outcome_reconciliation_failed"
                               pytest_codes = {
                                   "project_pytest_request_invalid", "project_pytest_configuration_or_collection_failed",
                                   "project_pytest_collection_error", "project_pytest_root_missing_or_invalid",
@@ -418,14 +443,14 @@ jobs:
                                   "project_pytest_installed_coverage_unavailable", "project_pytest_installed_coverage",
                                   "project_pytest_failure_without_observed_test", "project_pytest_internal_error",
                               }
-                              prefix = message.split(":", 1)[0].split(";", 1)[0]
+                              prefix = diagnostic_message.split(":", 1)[0].split(";", 1)[0]
                               if prefix in pytest_codes:
                                   location["diagnostic_code"] = prefix
-                              elif message.startswith("[Errno 2] "):
+                              elif diagnostic_message.startswith("[Errno 2] "):
                                   location["diagnostic_code"] = "file_missing"
-                              elif message.startswith("[Errno 13] "):
+                              elif diagnostic_message.startswith("[Errno 13] "):
                                   location["diagnostic_code"] = "permission_denied"
-                          if isinstance(message, str):
+                          if isinstance(message, str) and "failure_class" not in location:
                               for marker, classification in classes:
                                   if marker in message.lower():
                                       location["failure_class"] = classification
@@ -475,6 +500,8 @@ jobs:
                       continue
                   incomplete_sides = [side for side in ("base", "head")
                       if isinstance(row.get(side), dict) and (row[side].get("execution_state") == "error" or row[side].get("evidence_outcome") == "UNKNOWN")]
+                  if not incomplete_sides and (row.get("execution_state") == "error" or row.get("evidence_outcome") == "UNKNOWN"):
+                      incomplete_sides = ["unavailable"]
                   if incomplete_sides:
                       print(json.dumps({"analyzer": row["id"], "incomplete_snapshot_sides": incomplete_sides}))
                   tokens = str(row.get("diagnostic", "")).split(":")[:3]
@@ -894,6 +921,13 @@ jobs:
                   detail = test_failure_details.get((nodeid, outcome, phase), "")
                   exception = re.search(r"^E\s+(?:subprocess\.)?(AssertionError|FileNotFoundError|PermissionError|CalledProcessError|RuntimeError|ImportError|ModuleNotFoundError|TypeError|ValueError)(?=:|\s|$)", detail, re.MULTILINE)
                   failure = {"test_failure_class": exception.group(1)} if exception else {}
+                  native_skips = {
+                      "Set SPECFACT_HATCH_PROOF_WORKSPACE with native Hatch and Python 3.11 prerequisites for the acceptance cell",
+                      "Native Hatch and project Python are required for customer storage acceptance",
+                      "Native Hatch and project Python are required for absolute declaration acceptance",
+                  }
+                  if outcome == "skipped" and detail in native_skips:
+                      failure["test_diagnostic"] = "native_prerequisites_not_supplied"
                   for option in ("-I", "-E", "-S"):
                       if "project_python_option_unsupported:" + option + ";" in detail:
                           failure.update(test_diagnostic="project_python_option_unsupported", python_option=option)
@@ -946,6 +980,8 @@ jobs:
                   ):
                       location = {"file": file, "line": line, "severity": severity}
                       public_values = {
+                          "differential_state": {"introduced", "fixed", "unchanged", "unknown"},
+                          "status": {"open", "fixed", "waived-by-reference"},
                           "category": {"clean_code", "security", "type_safety", "contracts", "testing", "style", "architecture", "tool_error", "naming", "kiss", "yagni", "dry", "solid", "ai_bloat"},
                           "tool": {"ruff", "radon", "radon-kiss", "semgrep", "ast", "basedpyright", "pylint", "contract_runner", "crosshair", "pytest"},
                           "rule": {"tool_error", "TEST_OUTCOME_NOT_PASS", "TEST_COVERAGE_POLICY_FAILED", "MISSING_ICONTRACT", "CROSSHAIR_COUNTEREXAMPLE", "CROSSHAIR_INCOMPLETE_EVIDENCE", "kiss.loc.error", "kiss.loc.warning", "kiss.nesting.error", "kiss.nesting.warning", "kiss.parameter-count.error", "kiss.parameter-count.warning", *(f"CC{number}" for number in range(1, 1001))},
@@ -954,6 +990,8 @@ jobs:
                           value = finding.get(key)
                           if isinstance(value, str) and value in allowed:
                               location[key] = value
+                      if type(finding.get("blocking")) is bool:
+                          location["blocking"] = finding["blocking"]
                       if location.get("tool") == "pytest" and location.get("rule") == "TEST_OUTCOME_NOT_PASS":
                           location.update(_public_test_observation(finding, file))
                       if location.get("category") == "tool_error":
@@ -965,7 +1003,21 @@ jobs:
                               ("semgrep returned empty stdout", "empty_output"),
                               ("unrecognized crosshair output", "unrecognized_output"),
                           )
+                          if location.get("tool") == "pytest":
+                              location["diagnostic_code"] = "unclassified"
                           if isinstance(message, str) and location.get("tool") == "pytest":
+                              diagnostic_message = message
+                              producer_prefixes = {
+                                  "Unable to execute targeted tests: ": "pytest_execute_error",
+                                  "Unable to read targeted pytest evidence: ": "pytest_evidence_read_error",
+                              }
+                              for prefix, failure_class in producer_prefixes.items():
+                                  if message.startswith(prefix):
+                                      location["failure_class"] = failure_class
+                                      diagnostic_message = message[len(prefix):]
+                                      break
+                              if message == "Targeted pytest observer, JUnit, and process outcomes could not be reconciled.":
+                                  location["failure_class"] = "pytest_outcome_reconciliation_failed"
                               pytest_codes = {
                                   "project_pytest_request_invalid", "project_pytest_configuration_or_collection_failed",
                                   "project_pytest_collection_error", "project_pytest_root_missing_or_invalid",
@@ -982,14 +1034,14 @@ jobs:
                                   "project_pytest_installed_coverage_unavailable", "project_pytest_installed_coverage",
                                   "project_pytest_failure_without_observed_test", "project_pytest_internal_error",
                               }
-                              prefix = message.split(":", 1)[0].split(";", 1)[0]
+                              prefix = diagnostic_message.split(":", 1)[0].split(";", 1)[0]
                               if prefix in pytest_codes:
                                   location["diagnostic_code"] = prefix
-                              elif message.startswith("[Errno 2] "):
+                              elif diagnostic_message.startswith("[Errno 2] "):
                                   location["diagnostic_code"] = "file_missing"
-                              elif message.startswith("[Errno 13] "):
+                              elif diagnostic_message.startswith("[Errno 13] "):
                                   location["diagnostic_code"] = "permission_denied"
-                          if isinstance(message, str):
+                          if isinstance(message, str) and "failure_class" not in location:
                               for marker, classification in classes:
                                   if marker in message.lower():
                                       location["failure_class"] = classification
@@ -1062,6 +1114,8 @@ jobs:
                       node = row.get(side)
                       if isinstance(node, dict) and (node.get("execution_state") == "error" or node.get("evidence_outcome") == "UNKNOWN"):
                           observed.setdefault(name, set()).add(side)
+                  if name not in observed and (row.get("execution_state") == "error" or row.get("evidence_outcome") == "UNKNOWN"):
+                      observed[name] = {"unavailable"}
               return {name: sorted(sides) for name, sides in sorted(observed.items())}
 
           report, header = {}, {}
@@ -1123,7 +1177,8 @@ jobs:
               "diagnostic_observations": codes or ["unclassified"]}
           if outcome == "oversized_report":
               projected["report_header_observed"] = bool(header)
+          if outcome in ("structured_report", "oversized_report"):
               projected["error_analyzer_sides"] = incomplete_sides(members)
-              projected["crosshair_failure_observations"] = crosshair_failure_observations(header.get("findings", []))
+              projected["crosshair_failure_observations"] = crosshair_failure_observations(evidence_source.get("findings", []))
           print(json.dumps(projected))
           PY_REVIEW_FAILURE
