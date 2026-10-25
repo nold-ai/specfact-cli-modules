@@ -190,16 +190,21 @@ def _source_tests(root: Path, relative: Path) -> tuple[Path, ...]:
     expected = Path("tests/unit") / relative.parent / f"test_{relative.name}"
     if (root / expected).is_file():
         return (expected,)
+    unit = root / "tests/unit"
+    flat = [unit / f"test_{relative.name}", *sorted(unit.glob(f"test_{relative.stem}_*.py"))]
+    existing = tuple(path.relative_to(root) for path in flat if path.is_file())
+    if existing:
+        return existing
     package = root / "tests/unit" / relative.parts[0]
     return tuple(path.relative_to(root) for path in sorted(package.rglob("test_*.py")))
 
 
-def _test_inventory(root: Path, files: list[Path]) -> tuple[str, ...]:
+def _test_inventory(root: Path, files: list[Path], *, roots: tuple[str, ...]) -> tuple[str, ...]:
     tests = {str(path) for path in files if path.parts[0] == "tests" and path.name.startswith("test_")}
     for path in files:
-        if path.parts[0] != "packages" or "src" not in path.parts or path.name == "__init__.py":
+        if path.parts[0] not in roots or "tests" in path.parts:
             continue
-        relative = Path(*path.parts[path.parts.index("src") + 1 :])
+        relative = Path(*path.parts[path.parts.index("src") + 1 :]) if "src" in path.parts else path
         candidates = _source_tests(root, relative)
         if not candidates:
             raise ValueError(f"required package tests missing: {relative.parts[0]}")
@@ -231,7 +236,8 @@ def _native_tests(root: Path, python: Path, output: Path, parsed: dict) -> tuple
 
     junit, coverage = output / "tests.xml", output / "coverage.json"
     _, files = _subject(root, os.environ["NATIVE_REVIEW_HEAD"], os.environ["NATIVE_REVIEW_BASE"])
-    selectors = _test_inventory(root, files)
+    roots = tuple(parsed["tool"]["coverage"]["run"]["source"])
+    selectors = _test_inventory(root, files, roots=roots)
     command = _native_test_command(python=python, config=output / "pyproject.toml", output=output, selectors=selectors)
     command.extend(
         (
@@ -245,7 +251,6 @@ def _native_tests(root: Path, python: Path, output: Path, parsed: dict) -> tuple
             command, stdout=log, stderr=subprocess.STDOUT, check=False, timeout=600, env=_native_test_environment()
         )
     _require_native_test_evidence(junit, selectors=selectors)
-    roots = parsed["tool"]["coverage"]["run"]["source"]
     sources = [path for path in files if path.parts[0] in roots and "tests" not in path.parts]
     findings, _ = _coverage_findings(
         sources,
