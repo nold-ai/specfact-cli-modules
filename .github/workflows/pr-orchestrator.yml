@@ -129,9 +129,14 @@ jobs:
     permissions:
       contents: read
 
+  native-hatch:
+    uses: ./.github/workflows/native-hatch-acceptance.yml
+    permissions:
+      contents: read
+
   quality:
     name: quality (${{ matrix.python-version }})
-    needs: [changes, verify-module-signatures, customer-capsules, native-scope]
+    needs: [changes, verify-module-signatures, customer-capsules, native-scope, native-hatch]
     if: always() && needs.changes.outputs.code_changed == 'true'
     runs-on: ubuntu-latest
     strategy:
@@ -153,6 +158,16 @@ jobs:
           fi
           if [ "$CAPSULE_REQUIRED" = "true" ] && [ "$CAPSULE_RESULT" != "success" ]; then
             echo "Required customer capsule matrix did not pass: $CAPSULE_RESULT" >&2
+            exit 1
+          fi
+      - name: Require native Hatch acceptance
+        shell: bash
+        env:
+          NATIVE_HATCH_RESULT: ${{ needs.native-hatch.result }}
+        run: |
+          set -euo pipefail
+          if [ "$NATIVE_HATCH_RESULT" != "success" ]; then
+            echo "Native Hatch acceptance prerequisite did not pass: $NATIVE_HATCH_RESULT" >&2
             exit 1
           fi
       - name: Require native migration scope
