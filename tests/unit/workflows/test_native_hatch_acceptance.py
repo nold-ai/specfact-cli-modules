@@ -28,25 +28,45 @@ def native_job():
     return workflow, workflow["jobs"]["native-hatch"]
 
 
+def steps_using(job, action):
+    return [step for step in job["steps"] if step.get("uses", "").startswith(action + "@")]
+
+
+def step_named(job, name):
+    return next(step for step in job["steps"] if step.get("name") == name)
+
+
 def test_native_hatch_job_binds_exact_head_and_separate_interpreters():
     workflow, job = native_job()
     assert workflow["permissions"] == {"contents": "read"}
     assert not job.get("needs")
     assert not job.get("continue-on-error", False)
-    checkout = next(s for s in job["steps"] if s.get("uses", "").startswith("actions/checkout@"))
+    assert_native_checkout(job)
+    assert_native_evidence_upload(job)
+    setups = {s["id"]: s["with"]["python-version"] for s in steps_using(job, "actions/setup-python")}
+    assert setups == {"project-python": "3.11.15", "controller-python": "3.12.13"}
+    assert any("hatch==1.18.1" in s.get("run", "") for s in job["steps"])
+    step = step_named(job, "Run mapped native Hatch acceptance")
+    assert_native_inputs(step)
+
+
+def assert_native_checkout(job):
+    checkout = steps_using(job, "actions/checkout")[0]
     assert checkout["with"] == {
         "ref": "${{ github.event.pull_request.head.sha || github.sha }}",
         "fetch-depth": 0,
         "persist-credentials": False,
     }
-    setups = {s["id"]: s["with"]["python-version"] for s in job["steps"] if "python-version" in s.get("with", {})}
-    assert setups == {"project-python": "3.11.15", "controller-python": "3.12.13"}
-    assert any("hatch==1.18.1" in s.get("run", "") for s in job["steps"])
-    step = next(s for s in job["steps"] if s.get("name") == "Run mapped native Hatch acceptance")
+
+
+def assert_native_inputs(step):
     assert step["env"]["SPECFACT_HATCH_PROJECT_PYTHON"] == "${{ steps.project-python.outputs.python-path }}"
     assert "SPECFACT_HATCH_EXECUTABLE" in step["env"]
     assert "SPECFACT_HATCH_PROOF_WORKSPACE" in step["env"]
-    artifacts = [s for s in job["steps"] if s.get("uses", "").startswith("actions/upload-artifact@")]
+
+
+def assert_native_evidence_upload(job):
+    artifacts = steps_using(job, "actions/upload-artifact")
     assert len(artifacts) == 1
     assert artifacts[0]["if"] == "always()"
     assert "receipt.json" in artifacts[0]["with"]["path"]
@@ -60,7 +80,7 @@ def test_native_hatch_result_blocks_quality_without_replacing_security(result, e
     assert workflow["jobs"]["native-hatch"]["uses"] == "./.github/workflows/native-hatch-acceptance.yml"
     quality = workflow["jobs"]["quality"]
     assert {"native-hatch", "native-scope", "customer-capsules", "verify-module-signatures"} <= set(quality["needs"])
-    step = next(s for s in quality["steps"] if s.get("name") == "Require native Hatch acceptance")
+    step = step_named(quality, "Require native Hatch acceptance")
     assert step["env"]["NATIVE_HATCH_RESULT"] == "${{ needs.native-hatch.result }}"
     completed = subprocess.run(
         ["bash", "-c", step["run"]], env={"NATIVE_HATCH_RESULT": result}, capture_output=True, text=True, check=False
@@ -99,46 +119,17 @@ def junit(selectors, outcome):
 )
 def test_native_hatch_accepts_only_complete_exact_mapping(tmp_path, outcome):
     _, job = native_job()
-    step = next(s for s in job["steps"] if s.get("name") == "Run mapped native Hatch acceptance")
+    step = step_named(job, "Run mapped native Hatch acceptance")
     program = step["run"]
     prefix = "hatch run python - <<'PY'\n"
     assert program.startswith(prefix) and program.rstrip().endswith("\nPY")
     program = program[len(prefix) :].rstrip()[:-3]
-    mapping = tmp_path / MAPPING
-    mapping.parent.mkdir(parents=True)
-    selected = (
-        [] if outcome == "empty-mapping" else SELECTORS + (SELECTORS[:1] if outcome == "duplicate-mapping" else [])
-    )
-    mapping.write_text(
-        json.dumps(
-            {
-                "schema_version": "2",
-                "requirements": {
-                    "native": {
-                        "verification_cases": [
-                            {"method": "test", "selector": {"runner": "pytest", "node_id": node}} for node in selected
-                        ]
-                        + [{"method": "inspection"}]
-                    }
-                },
-            }
-        )
-    )
-    if outcome in {"archived-mapping", "ambiguous-archive"}:
-        archive = tmp_path / "openspec/changes/archive/2026-01-01-code-review-17-project-runtime-bootstrap"
-        archive.mkdir(parents=True)
-        archived = archive / mapping.name
-        mapping.rename(archived)
-        if outcome == "ambiguous-archive":
-            other = archive.with_name("2026-01-02-code-review-17-project-runtime-bootstrap")
-            other.mkdir()
-            (other / mapping.name).write_bytes(archived.read_bytes())
-    observed = (
-        SELECTORS[:1]
-        if outcome == "missing"
-        else SELECTORS
-        + (SELECTORS[:1] if outcome == "duplicate" else ["tests/example.py::test_extra"] if outcome == "extra" else [])
-    )
+    write_mapping(tmp_path, outcome)
+    observed = {
+        "missing": SELECTORS[:1],
+        "duplicate": SELECTORS + SELECTORS[:1],
+        "extra": [*SELECTORS, "tests/example.py::test_extra"],
+    }.get(outcome, SELECTORS)
     source = tmp_path / "source.xml"
     source.write_text(junit(observed, outcome))
     fake = tmp_path / "pytest.py"
@@ -176,3 +167,33 @@ def test_native_hatch_accepts_only_complete_exact_mapping(tmp_path, outcome):
     else:
         arguments = json.loads(calls.read_text())
         assert [s for s in arguments if "::" in s] == SELECTORS
+
+
+def write_mapping(tmp_path, outcome):
+    mapping = tmp_path / MAPPING
+    mapping.parent.mkdir(parents=True)
+    selected = {"empty-mapping": [], "duplicate-mapping": SELECTORS + SELECTORS[:1]}.get(outcome, SELECTORS)
+    mapping.write_text(
+        json.dumps(
+            {
+                "schema_version": "2",
+                "requirements": {
+                    "native": {
+                        "verification_cases": [
+                            {"method": "test", "selector": {"runner": "pytest", "node_id": node}} for node in selected
+                        ]
+                        + [{"method": "inspection"}]
+                    }
+                },
+            }
+        )
+    )
+    if outcome in {"archived-mapping", "ambiguous-archive"}:
+        archive = tmp_path / "openspec/changes/archive/2026-01-01-code-review-17-project-runtime-bootstrap"
+        archive.mkdir(parents=True)
+        archived = archive / mapping.name
+        mapping.rename(archived)
+        if outcome == "ambiguous-archive":
+            other = archive.with_name("2026-01-02-code-review-17-project-runtime-bootstrap")
+            other.mkdir()
+            (other / mapping.name).write_bytes(archived.read_bytes())
