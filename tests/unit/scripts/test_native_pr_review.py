@@ -162,6 +162,10 @@ def test_semgrep_dependencies_are_separate_from_signed_controller(tmp_path):
     )
     assert (tmp_path / "semgrep-requirement.txt").read_text().strip() == "semgrep==1.144.0"
     assert '"$trusted/semgrep/bin/python" -I -m pip install -r "$trusted/semgrep-requirement.txt"' in install
+    constraints = (tmp_path / "semgrep-constraints.txt").read_text().splitlines()
+    assert "pydantic==2.13.4" in constraints
+    assert "mcp==1.16.0" in constraints
+    assert '-c "$trusted/semgrep-constraints.txt"' in install
     review = _step_named(steps, "Run complete independent native review")["run"]
     assert 'PATH="$trusted/venv/bin:$trusted/semgrep/bin:' in review
 
@@ -179,6 +183,21 @@ def test_semgrep_version_comes_from_selected_executable(native_review, monkeypat
     versions = native_review._tool_versions()
     assert versions["semgrep"] == "1.144.0"
     assert versions["specfact-cli"] == "controller-version"
+
+
+def test_semgrep_startup_failure_preserves_bounded_stderr(native_review, monkeypatch):
+    import subprocess
+
+    def fail(*args, **kwargs):
+        raise subprocess.CalledProcessError(
+            1, ["semgrep", "--version"], stderr="x" * 3000 + "missing dependency symbol"
+        )
+
+    monkeypatch.setattr(native_review.subprocess, "run", fail)
+    monkeypatch.setattr(native_review.importlib.metadata, "version", lambda name: "controller-version")
+    with pytest.raises(ValueError, match="missing dependency symbol") as error:
+        native_review._tool_versions()
+    assert len(str(error.value)) < 2100
 
 
 def test__native_test_command_uses_trusted_config(native_review, tmp_path):

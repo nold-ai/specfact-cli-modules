@@ -17,7 +17,7 @@ The repository SHALL require a separately installed verified signed reviewer, al
 
 #### Scenario: Conflicting analyzer dependencies
 - **WHEN** a pinned analyzer CLI has dependencies incompatible with the signed controller
-- **THEN** CI installs that CLI separately, preserves its trusted pin and records the version of the executable actually invoked
+- **THEN** CI installs that CLI separately, preserves its trusted pin and recorded transitive constraints, records the version of the executable actually invoked and retains bounded startup failure diagnostics
 
 ### Requirement: Bind acceptance to exact source and required jobs
 The native CI receipt SHALL bind the event head and complete required-member inventory. The quality matrix SHALL reject every non-successful native prerequisite. Native receipts SHALL NOT satisfy protected pr_range, core #680 or C15 contracts.

@@ -262,7 +262,10 @@ def _tool_versions() -> dict[str, str]:
         name: importlib.metadata.version(name)
         for name in ("specfact-cli", "ruff", "radon", "basedpyright", "pylint", "crosshair-tool")
     }
-    result = subprocess.run(["semgrep", "--version"], capture_output=True, text=True, check=True, timeout=30)
+    try:
+        result = subprocess.run(["semgrep", "--version"], capture_output=True, text=True, check=True, timeout=30)
+    except subprocess.CalledProcessError as error:
+        raise ValueError(f"Semgrep startup failed: {(error.stderr or '')[-2000:]}") from error
     versions["semgrep"] = result.stdout.strip()
     if not versions["semgrep"]:
         raise ValueError("required Semgrep version is unavailable")

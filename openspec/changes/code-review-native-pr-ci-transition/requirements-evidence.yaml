@@ -167,6 +167,17 @@
             "runner": "pytest",
             "node_id": "tests/unit/scripts/test_native_pr_review.py::test_semgrep_version_comes_from_selected_executable"
           }
+        },
+        {
+          "case_id": "semgrep-startup-diagnostics",
+          "scenario_id": "preserve-complete-independent-native-review",
+          "method": "test",
+          "intent": "Keep native analyzer startup errors actionable without accepting incomplete evidence.",
+          "observable": "A failed Semgrep startup retains bounded stderr in the incomplete receipt exception.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/scripts/test_native_pr_review.py::test_semgrep_startup_failure_preserves_bounded_stderr"
+          }
         }
       ]
     },
