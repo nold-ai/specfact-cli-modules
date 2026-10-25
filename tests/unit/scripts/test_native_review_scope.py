@@ -136,7 +136,7 @@ def test_native_scope_survives_squash_only_checkout(repository: Path, tmp_path: 
     git(final_tree, "add", ".")
     git(final_tree, "commit", "-qm", "single retained final tree")
     frozen = json.loads((final_tree / "openspec/native-review-policy.json").read_text())["freeze_ref"]
-    absent = subprocess.run(["git", "-C", str(final_tree), "cat-file", "-e", frozen], capture_output=True)
+    absent = subprocess.run(["git", "-C", str(final_tree), "cat-file", "-e", frozen], capture_output=True, check=False)
     assert absent.returncode != 0, "Fixture unexpectedly retained the pre-squash feature commit"
     apply_squash_change(final_tree, change)
     result = check(final_tree)
@@ -151,13 +151,17 @@ def test_native_scope_survives_squash_only_checkout(repository: Path, tmp_path: 
 def apply_squash_change(root: Path, change: str) -> None:
     if change == "native":
         (root / "native.py").write_text("VALUE = 1\n")
-    elif change == "retirement":
+        return
+    if change == "retirement":
         (root / LEGACY).unlink()
-    elif change == "repair":
+        return
+    if change == "repair":
         (root / LEGACY).write_text("# capsule repair\n")
-    elif change == "addition":
+        return
+    if change == "addition":
         (root / "tests/unit/test_capsule_new.py").write_text("VALUE = 1\n")
-    elif change == "mode":
+        return
+    if change == "mode":
         (root / LEGACY).chmod(0o755)
 
 

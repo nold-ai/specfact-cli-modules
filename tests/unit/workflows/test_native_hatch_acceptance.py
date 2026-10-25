@@ -79,7 +79,7 @@ def test_native_hatch_result_blocks_quality_without_replacing_security(result, e
     assert "native-hatch" in workflow["jobs"], "Required native Hatch prerequisite is missing"
     assert workflow["jobs"]["native-hatch"]["uses"] == "./.github/workflows/native-hatch-acceptance.yml"
     quality = workflow["jobs"]["quality"]
-    assert {"native-hatch", "native-scope", "customer-capsules", "verify-module-signatures"} <= set(quality["needs"])
+    assert {"native-hatch", "native-scope", "native-review", "verify-module-signatures"} <= set(quality["needs"])
     step = step_named(quality, "Require native Hatch acceptance")
     assert step["env"]["NATIVE_HATCH_RESULT"] == "${{ needs.native-hatch.result }}"
     completed = subprocess.run(

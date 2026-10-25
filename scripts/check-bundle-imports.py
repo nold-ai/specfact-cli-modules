@@ -2,8 +2,6 @@
 # ruff: noqa: N999
 """Enforce bundle import boundaries for specfact-cli-modules."""
 
-from __future__ import annotations
-
 import ast
 import subprocess
 import sys

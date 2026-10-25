@@ -116,11 +116,8 @@ jobs:
 
           "${VERIFY_CMD[@]}"
 
-  customer-capsules:
-    name: customer-capsules
-    needs: [changes]
-    if: github.event_name == 'pull_request' && needs.changes.outputs.capsule_changed == 'true'
-    uses: ./.github/workflows/capsule-customer-execution.yml
+  native-review:
+    uses: ./.github/workflows/native-pr-review.yml
     permissions:
       contents: read
 
@@ -136,7 +133,7 @@ jobs:
 
   quality:
     name: quality (${{ matrix.python-version }})
-    needs: [changes, verify-module-signatures, customer-capsules, native-scope, native-hatch]
+    needs: [changes, verify-module-signatures, native-review, native-scope, native-hatch]
     if: always() && needs.changes.outputs.code_changed == 'true'
     runs-on: ubuntu-latest
     strategy:
@@ -144,20 +141,24 @@ jobs:
       matrix:
         python-version: ["3.11", "3.12", "3.13"]
     steps:
-      - name: Require signature and customer capsule prerequisites
+      - name: Require signature prerequisite
         shell: bash
         env:
           SIGNATURE_RESULT: ${{ needs.verify-module-signatures.result }}
-          CAPSULE_REQUIRED: ${{ github.event_name == 'pull_request' && needs.changes.outputs.capsule_changed == 'true' }}
-          CAPSULE_RESULT: ${{ needs.customer-capsules.result }}
         run: |
           set -euo pipefail
           if [ "$SIGNATURE_RESULT" != "success" ]; then
             echo "Module signature prerequisite did not pass: $SIGNATURE_RESULT" >&2
             exit 1
           fi
-          if [ "$CAPSULE_REQUIRED" = "true" ] && [ "$CAPSULE_RESULT" != "success" ]; then
-            echo "Required customer capsule matrix did not pass: $CAPSULE_RESULT" >&2
+      - name: Require independent native review
+        shell: bash
+        env:
+          NATIVE_REVIEW_RESULT: ${{ needs.native-review.result }}
+        run: |
+          set -euo pipefail
+          if [ "$NATIVE_REVIEW_RESULT" != "success" ]; then
+            echo "Independent native review prerequisite did not pass: $NATIVE_REVIEW_RESULT" >&2
             exit 1
           fi
       - name: Require native Hatch acceptance

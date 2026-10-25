@@ -278,6 +278,9 @@ def deferral_worktree(tmp_path: Path, scenario):
     workflow.write_text(
         workflow_source if independent_review else workflow_source.split("\n  independent-review:", 1)[0]
     )
+    native = repository / ".github/workflows/native-pr-review.yml"
+    native_source = (REPO_ROOT / ".github/workflows/native-pr-review.yml").read_text()
+    native.write_text(native_source if independent_review else "name: missing-independent-review\n")
     files = [
         "llms.txt",
         "docs/reference/commands.generated.json",
@@ -308,9 +311,13 @@ def deferral_worktree(tmp_path: Path, scenario):
         (worktree / ".github/workflows/capsule-customer-execution.yml").write_text(
             workflow_source.split("\n  independent-review:", 1)[0]
         )
+    if independent_review == "unstaged_restore":
+        (worktree / ".github/workflows/native-pr-review.yml").write_text("name: missing-independent-review\n")
     _git(worktree, "add", ".")
     if independent_review == "unstaged_restore":
         (worktree / ".github/workflows/capsule-customer-execution.yml").write_text(workflow_source)
+    if independent_review == "unstaged_restore":
+        (worktree / ".github/workflows/native-pr-review.yml").write_text(native_source)
     return worktree
 
 
