@@ -87,6 +87,42 @@ def test_required_signed_rule_pack_cannot_silently_disappear(native_review, tmp_
         native_review._rule_identities(tmp_path)
 
 
+def test_type_projection_covers_exact_changed_python_inventory(native_review, tmp_path):
+    import json
+
+    files = [Path("scripts/native_pr_review.py"), Path("tests/unit/scripts/test_native_pr_review.py")]
+    _, config, parsed = native_review._trusted_configuration(ROOT, "HEAD", tmp_path, files)
+    projected = json.loads(config.read_text())
+    assert projected["include"] == [str(ROOT / path) for path in files]
+    assert projected["typeCheckingMode"] == parsed["tool"]["basedpyright"]["typeCheckingMode"]
+    assert projected["extraPaths"] == [str(ROOT / path) for path in parsed["tool"]["basedpyright"]["extraPaths"]]
+
+
+def test_type_projection_retains_imported_type_errors(native_review, tmp_path, monkeypatch):
+    import json
+    import subprocess
+
+    subject, output = tmp_path / "subject", tmp_path / "output"
+    subject.mkdir()
+    output.mkdir()
+    (subject / "helper.py").write_text("def value() -> str:\n    return 'value'\n")
+    (subject / "changed.py").write_text("from helper import value\nnumber: int = value()\n")
+    (subject / "unrelated.py").write_text("number: int = 'wrong'\n")
+    monkeypatch.setattr(native_review, "_git", lambda *args: (ROOT / "pyproject.toml").read_text())
+    _, config, _ = native_review._trusted_configuration(subject, "a" * 40, output, [Path("changed.py")])
+    result = subprocess.run(
+        ["basedpyright", "--outputjson", "--project", str(config)],
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=30,
+    )
+    assert result.returncode == 1, result.stderr
+    diagnostics = json.loads(result.stdout)["generalDiagnostics"]
+    assert any(row["rule"] == "reportAssignmentType" for row in diagnostics)
+    assert {Path(row["file"]).name for row in diagnostics} == {"changed.py"}
+
+
 def test_quality_requires_native_review_without_capsule_prerequisite():
     jobs = yaml.safe_load((ROOT / ".github/workflows/pr-orchestrator.yml").read_text())["jobs"]
     assert "customer-capsules" not in jobs
