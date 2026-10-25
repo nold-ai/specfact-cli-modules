@@ -178,6 +178,28 @@
             "runner": "pytest",
             "node_id": "tests/unit/scripts/test_native_pr_review.py::test_semgrep_startup_failure_preserves_bounded_stderr"
           }
+        },
+        {
+          "case_id": "changed-type-inventory",
+          "scenario_id": "preserve-complete-independent-native-review",
+          "method": "test",
+          "intent": "Analyze every changed Python file with trusted type settings and import context.",
+          "observable": "Projection matches the complete changed-source inventory and real pinned BasedPyright still reports imported type errors without scanning unrelated files.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/scripts/test_native_pr_review.py::test_type_projection_covers_exact_changed_python_inventory"
+          }
+        },
+        {
+          "case_id": "imported-type-error",
+          "scenario_id": "preserve-complete-independent-native-review",
+          "method": "test",
+          "intent": "Analyze every changed Python file with trusted type settings and import context.",
+          "observable": "Projection matches the complete changed-source inventory and real pinned BasedPyright still reports imported type errors without scanning unrelated files.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/scripts/test_native_pr_review.py::test_type_projection_retains_imported_type_errors"
+          }
         }
       ]
     },

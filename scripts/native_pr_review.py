@@ -132,7 +132,7 @@ def _subject(root: Path, head: str, base: str) -> tuple[str, list[Path]]:
     return _source_identity(root), files
 
 
-def _trusted_configuration(root: Path, base: str, output: Path) -> tuple[Path, Path, dict]:
+def _trusted_configuration(root: Path, base: str, output: Path, files: list[Path]) -> tuple[Path, Path, dict]:
     payload = _git(root, "show", f"{base}:pyproject.toml")
     config = output / "pyproject.toml"
     config.write_text(payload + "\n")
@@ -140,7 +140,7 @@ def _trusted_configuration(root: Path, base: str, output: Path) -> tuple[Path, P
     types = dict(parsed["tool"]["basedpyright"])
     types["extraPaths"] = [str(root / path) for path in types.get("extraPaths", [])]
     types["venvPath"] = str(root)
-    types["include"] = [str(root / path) for path in ("src", "packages", "scripts", "tests", "tools")]
+    types["include"] = [str(root / path) for path in files]
     for environment in types.get("executionEnvironments", []):
         environment["root"] = str(root / environment["root"])
     type_config = output / "pyrightconfig.json"
@@ -292,7 +292,7 @@ def _review(root: Path, reviewer: Path, project_python: Path, output: Path, rece
 
     head, base = receipt["head"], receipt["merge_base"]
     before, files = _subject(root, head, base)
-    config, type_config, parsed = _trusted_configuration(root, base, output)
+    config, type_config, parsed = _trusted_configuration(root, base, output, files)
     receipt.update(
         {
             "source_before": before,

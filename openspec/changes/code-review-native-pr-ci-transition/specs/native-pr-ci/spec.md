@@ -15,6 +15,11 @@ The repository SHALL require a separately installed verified signed reviewer, al
 - **WHEN** candidate code attempts to shadow reviewer imports or omit required rules
 - **THEN** the controller retains the signed installation and rejects missing control inputs
 
+#### Scenario: Changed-source type analysis
+- **WHEN** independent review checks the exact changed Python inventory
+- **THEN** its type-analysis projection includes every changed Python file, retains trusted type settings and import context, and does not scan unrelated files whose diagnostics the signed adapter discards
+- **AND** timeouts remain incomplete and the full-repository quality type gate remains required
+
 #### Scenario: Conflicting analyzer dependencies
 - **WHEN** a pinned analyzer CLI has dependencies incompatible with the signed controller
 - **THEN** CI installs that CLI separately, preserves its trusted pin and recorded transitive constraints, records the version of the executable actually invoked and retains bounded startup failure diagnostics
