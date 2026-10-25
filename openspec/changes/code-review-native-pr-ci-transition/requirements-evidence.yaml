@@ -145,6 +145,28 @@
             "runner": "pytest",
             "node_id": "tests/unit/scripts/test_native_pr_review.py::test_selected_test_file_cannot_disappear_from_evidence"
           }
+        },
+        {
+          "case_id": "semgrep-isolation",
+          "scenario_id": "preserve-complete-independent-native-review",
+          "method": "test",
+          "intent": "Keep incompatible analyzer CLI dependencies separate from the signed controller.",
+          "observable": "Pinned Semgrep remains selected and its invoked version is recorded without imposing its Click dependency on core.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/scripts/test_native_pr_review.py::test_semgrep_dependencies_are_separate_from_signed_controller"
+          }
+        },
+        {
+          "case_id": "semgrep-version",
+          "scenario_id": "preserve-complete-independent-native-review",
+          "method": "test",
+          "intent": "Keep incompatible analyzer CLI dependencies separate from the signed controller.",
+          "observable": "Pinned Semgrep remains selected and its invoked version is recorded without imposing its Click dependency on core.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/scripts/test_native_pr_review.py::test_semgrep_version_comes_from_selected_executable"
+          }
         }
       ]
     },

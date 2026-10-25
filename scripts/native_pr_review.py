@@ -257,6 +257,18 @@ def _run_analyzer(run: Callable[..., list[Any]], files: list[Path], record: dict
     return records
 
 
+def _tool_versions() -> dict[str, str]:
+    versions = {
+        name: importlib.metadata.version(name)
+        for name in ("specfact-cli", "ruff", "radon", "basedpyright", "pylint", "crosshair-tool")
+    }
+    result = subprocess.run(["semgrep", "--version"], capture_output=True, text=True, check=True, timeout=30)
+    versions["semgrep"] = result.stdout.strip()
+    if not versions["semgrep"]:
+        raise ValueError("required Semgrep version is unavailable")
+    return versions
+
+
 def _review(root: Path, reviewer: Path, project_python: Path, output: Path, receipt: dict) -> None:
     from specfact_code_review.run.findings import ReviewReport
     from specfact_code_review.run.runner import _suppress_known_noise, _with_enforcement
@@ -271,18 +283,7 @@ def _review(root: Path, reviewer: Path, project_python: Path, output: Path, rece
             "rules": _rule_identities(reviewer),
             "configuration": {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in (config, type_config)},
             "files": {str(path): hashlib.sha256(path.read_bytes()).hexdigest() for path in files},
-            "tools": {
-                name: importlib.metadata.version(name)
-                for name in (
-                    "specfact-cli",
-                    "ruff",
-                    "radon",
-                    "semgrep",
-                    "basedpyright",
-                    "pylint",
-                    "crosshair-tool",
-                )
-            },
+            "tools": _tool_versions(),
         }
     )
     findings = []

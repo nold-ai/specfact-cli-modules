@@ -44,15 +44,21 @@ jobs:
           "$trusted/venv/bin/python" -I - "$trusted" <<'PYTHON'
           import json, sys, tomllib
           from pathlib import Path
+          from packaging.requirements import Requirement
           root = Path(sys.argv[1])
           config = tomllib.loads((root / "base-pyproject.toml").read_text())
-          (root / "requirements.txt").write_text("\n".join(config["tool"]["hatch"]["envs"]["default"]["dependencies"]) + "\n")
+          dependencies = config["tool"]["hatch"]["envs"]["default"]["dependencies"]
+          (root / "requirements.txt").write_text("\n".join(item for item in dependencies if Requirement(item).name != "semgrep") + "\n")
           lock = json.loads((root / "analyzer-lock.json").read_text())
           environment = next(item for item in lock["environments"] if item["python_abi"] == "cp312" and item["os"] == "linux")
           pins = environment["wheelhouse"]["direct_requirements"]
           (root / "constraints.txt").write_text("\n".join(item["normalized_name"] + item["specifier"] for item in pins) + "\n")
+          semgrep = next(item for item in pins if item["normalized_name"] == "semgrep")
+          (root / "semgrep-requirement.txt").write_text("semgrep" + semgrep["specifier"] + "\n")
           PYTHON
           "$trusted/venv/bin/python" -I -m pip install -r "$trusted/requirements.txt" -c "$trusted/constraints.txt"
+          python -I -m venv "$trusted/semgrep"
+          "$trusted/semgrep/bin/python" -I -m pip install -r "$trusted/semgrep-requirement.txt"
           cd "$trusted"
           env -i HOME="$trusted/home" PATH="$trusted/venv/bin:/usr/bin:/bin" SPECFACT_MODULES_BRANCH=main \
             "$trusted/venv/bin/python" -I -m specfact_cli.cli \
@@ -87,7 +93,7 @@ jobs:
           project_paths="$trusted/subject/src:$project_paths:$trusted/subject"
           cd "$trusted"
           env -i HOME="$trusted/home" TMPDIR="$RUNNER_TEMP" \
-            PATH="$trusted/venv/bin:$(dirname "$SPECFACT_HATCH_PROJECT_PYTHON"):$(dirname "$(command -v hatch)"):/usr/local/bin:/usr/bin:/bin" \
+            PATH="$trusted/venv/bin:$trusted/semgrep/bin:$(dirname "$SPECFACT_HATCH_PROJECT_PYTHON"):$(dirname "$(command -v hatch)"):/usr/local/bin:/usr/bin:/bin" \
             PYTHONPATH="$project_paths" SPECFACT_MODULES_BRANCH=main \
             NATIVE_REVIEW_HEAD="$NATIVE_REVIEW_HEAD" NATIVE_REVIEW_BASE="$NATIVE_REVIEW_BASE" \
             SPECFACT_HATCH_PROJECT_PYTHON="$SPECFACT_HATCH_PROJECT_PYTHON" \

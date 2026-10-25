@@ -141,6 +141,46 @@ def test_native_tools_are_installed_from_base_before_project_bootstrap():
     assert 'PATH="$trusted/venv/bin:' in review["run"]
 
 
+def test_semgrep_dependencies_are_separate_from_signed_controller(tmp_path):
+    import subprocess
+    import sys
+
+    workflow = yaml.safe_load((ROOT / ".github/workflows/native-pr-review.yml").read_text())
+    steps = workflow["jobs"]["independent-review"]["steps"]
+    install = _step_named(steps, "Install independent signed reviewer")["run"]
+    program = install.split("<<'PYTHON'\n", 1)[1].split("\nPYTHON", 1)[0]
+    (tmp_path / "base-pyproject.toml").write_bytes((ROOT / "pyproject.toml").read_bytes())
+    lock = (
+        ROOT
+        / "packages/specfact-code-review/src/specfact_code_review/resources/contracts/pr-range-v1-toolchain-lock.json"
+    )
+    (tmp_path / "analyzer-lock.json").write_bytes(lock.read_bytes())
+    subprocess.run([sys.executable, "-I", "-c", program, str(tmp_path)], check=True)
+    requirements = (tmp_path / "requirements.txt").read_text().splitlines()
+    assert not any(item.startswith("semgrep") for item in requirements), (
+        "Semgrep and core require incompatible Click versions"
+    )
+    assert (tmp_path / "semgrep-requirement.txt").read_text().strip() == "semgrep==1.144.0"
+    assert '"$trusted/semgrep/bin/python" -I -m pip install -r "$trusted/semgrep-requirement.txt"' in install
+    review = _step_named(steps, "Run complete independent native review")["run"]
+    assert 'PATH="$trusted/venv/bin:$trusted/semgrep/bin:' in review
+
+
+def test_semgrep_version_comes_from_selected_executable(native_review, monkeypatch):
+    import subprocess
+
+    def version(command, **kwargs):
+        assert command == ["semgrep", "--version"]
+        assert kwargs["check"] and kwargs["timeout"] == 30
+        return subprocess.CompletedProcess(command, 0, "1.144.0\n", "")
+
+    monkeypatch.setattr(native_review.subprocess, "run", version)
+    monkeypatch.setattr(native_review.importlib.metadata, "version", lambda name: "controller-version")
+    versions = native_review._tool_versions()
+    assert versions["semgrep"] == "1.144.0"
+    assert versions["specfact-cli"] == "controller-version"
+
+
 def test__native_test_command_uses_trusted_config(native_review, tmp_path):
     command = native_review._native_test_command(
         python=Path("/project/python"),
