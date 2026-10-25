@@ -34,6 +34,10 @@ The native CI receipt SHALL bind the event head and complete required-member inv
 - **WHEN** a changed package source lacks a mirrored unit-test filename
 - **THEN** native review selects the package's existing unit-test files without requiring a new layout, and rejects a package with no unit tests
 
+#### Scenario: Test selection follows coverage roots
+- **WHEN** a changed production source belongs to a configured coverage root, including `tools/` or top-level `src/`
+- **THEN** native review selects its existing mirrored, flat or package unit tests before enforcing coverage, using the same trusted root inventory for both operations
+
 #### Scenario: Preserve paired-core smoke ownership
 - **WHEN** the paired core requires its reviewed portable fixture for package-manager smoke
 - **THEN** CI authenticates that fixture and runs all six existing launchers with isolated launcher dependencies, while candidate source remains subject to the complete quality, native acceptance and signing gates

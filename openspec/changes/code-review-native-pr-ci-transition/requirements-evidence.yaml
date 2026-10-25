@@ -391,6 +391,28 @@
             "runner": "pytest",
             "node_id": "tests/unit/scripts/test_native_pr_review.py::test_runtime_smoke_seeds_frozen_cache_before_offline_execution"
           }
+        },
+        {
+          "case_id": "coverage-root-tool",
+          "scenario_id": "bind-acceptance-to-exact-source-and-required-jobs",
+          "method": "test",
+          "intent": "Select applicable existing tests for every coverage-enforced production root.",
+          "observable": "The reported tool module and flat-layout top-level source tests are selected before per-file coverage enforcement.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/scripts/test_native_pr_review.py::test_coverage_roots_select_existing_source_tests[tool]"
+          }
+        },
+        {
+          "case_id": "coverage-root-top-level-src",
+          "scenario_id": "bind-acceptance-to-exact-source-and-required-jobs",
+          "method": "test",
+          "intent": "Select applicable existing tests for every coverage-enforced production root.",
+          "observable": "The reported tool module and flat-layout top-level source tests are selected before per-file coverage enforcement.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/scripts/test_native_pr_review.py::test_coverage_roots_select_existing_source_tests[top-level-src]"
+          }
         }
       ]
     }

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import tomllib
 from copy import deepcopy
 from pathlib import Path
 
@@ -10,6 +11,7 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[3]
 SCRIPT = ROOT / "scripts/native_pr_review.py"
+COVERAGE_ROOTS = tuple(tomllib.loads((ROOT / "pyproject.toml").read_text())["tool"]["coverage"]["run"]["source"])
 
 
 def _step_named(steps, name):
@@ -258,7 +260,7 @@ def test_runtime_smoke_seeds_frozen_cache_before_offline_execution():
 
 def test_existing_nonmirrored_package_tests_are_selected(native_review):
     inventory = native_review._test_inventory(
-        ROOT, [Path("packages/specfact-codebase/src/specfact_codebase/import_cmd/commands.py")]
+        ROOT, [Path("packages/specfact-codebase/src/specfact_codebase/import_cmd/commands.py")], roots=COVERAGE_ROOTS
     )
     assert "tests/unit/specfact_codebase/test_import_command_contract.py" in inventory
     assert all((ROOT / path).is_file() for path in inventory)
@@ -267,8 +269,23 @@ def test_existing_nonmirrored_package_tests_are_selected(native_review):
 def test_missing_package_tests_cannot_pass_selection(native_review, tmp_path):
     with pytest.raises(ValueError, match="test"):
         native_review._test_inventory(
-            tmp_path, [Path("packages/specfact-codebase/src/specfact_codebase/import_cmd/commands.py")]
+            tmp_path,
+            [Path("packages/specfact-codebase/src/specfact_codebase/import_cmd/commands.py")],
+            roots=COVERAGE_ROOTS,
         )
+
+
+@pytest.mark.parametrize(
+    "source,expected",
+    [
+        ("tools/contract_first_smart_test.py", "tests/unit/tools/test_contract_first_smart_test.py"),
+        ("src/specfact_cli_modules/dev_bootstrap.py", "tests/unit/test_dev_bootstrap.py"),
+    ],
+    ids=["tool", "top-level-src"],
+)
+def test_coverage_roots_select_existing_source_tests(native_review, source, expected):
+    inventory = native_review._test_inventory(ROOT, [Path(source)], roots=COVERAGE_ROOTS)
+    assert expected in inventory
 
 
 def test__native_test_command_uses_trusted_config(native_review, tmp_path):
