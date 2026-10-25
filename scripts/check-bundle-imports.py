@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import ast
+import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -183,6 +184,9 @@ def main() -> int:
             violations.extend(_scan_python_file(bundle_name, file_path))
 
     if not violations:
+        scope = subprocess.run([sys.executable, str(ROOT / "scripts/check_native_review_scope.py")], check=False)
+        if scope.returncode != 0:
+            return 1
         sys.stdout.write("Import boundary check passed.\n")
         return 0
 

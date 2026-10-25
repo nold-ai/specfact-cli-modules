@@ -1,0 +1,215 @@
+{
+  "schema_version": "2",
+  "requirements": {
+    "openspec:code-review-native-migration-guard:native-review-migration-scope:enforce-native-only-implementation-scope": {
+      "rationale": "Owner explicitly requested enforcement of the settled native migration. Exact case results and historical rejection are required; planning is not acceptance.",
+      "stakeholder_refs": [
+        "nold-ai/specfact-cli-modules#513"
+      ],
+      "touchpoints": [
+        {
+          "id": "native-migration-spec",
+          "kind": "config_file",
+          "locator": "openspec/changes/code-review-native-migration-guard/specs/native-review-migration-scope/spec.md"
+        }
+      ],
+      "verification_cases": [
+        {
+          "case_id": "enforce-native-only-implementation-scope-1",
+          "scenario_id": "enforce-native-only-implementation-scope",
+          "method": "test",
+          "intent": "Exercise the actual mandatory boundary command or its independent CI contract.",
+          "observable": "Classified capsule changes and invalid policy fail; native preservation controls and effective independent gating remain explicit.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/scripts/test_native_review_scope.py::test_boundary_rejects_capsule_changes[workflow]"
+          }
+        },
+        {
+          "case_id": "enforce-native-only-implementation-scope-2",
+          "scenario_id": "enforce-native-only-implementation-scope",
+          "method": "test",
+          "intent": "Exercise the actual mandatory boundary command or its independent CI contract.",
+          "observable": "Classified capsule changes and invalid policy fail; native preservation controls and effective independent gating remain explicit.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/scripts/test_native_review_scope.py::test_boundary_rejects_capsule_changes[runtime]"
+          }
+        },
+        {
+          "case_id": "enforce-native-only-implementation-scope-3",
+          "scenario_id": "enforce-native-only-implementation-scope",
+          "method": "test",
+          "intent": "Exercise the actual mandatory boundary command or its independent CI contract.",
+          "observable": "Classified capsule changes and invalid policy fail; native preservation controls and effective independent gating remain explicit.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/scripts/test_native_review_scope.py::test_boundary_rejects_capsule_changes[test]"
+          }
+        },
+        {
+          "case_id": "enforce-native-only-implementation-scope-4",
+          "scenario_id": "enforce-native-only-implementation-scope",
+          "method": "test",
+          "intent": "Exercise the actual mandatory boundary command or its independent CI contract.",
+          "observable": "Classified capsule changes and invalid policy fail; native preservation controls and effective independent gating remain explicit.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/scripts/test_native_review_scope.py::test_boundary_rejects_capsule_changes[untracked]"
+          }
+        },
+        {
+          "case_id": "enforce-native-only-implementation-scope-5",
+          "scenario_id": "enforce-native-only-implementation-scope",
+          "method": "test",
+          "intent": "Exercise the actual mandatory boundary command or its independent CI contract.",
+          "observable": "Classified capsule changes and invalid policy fail; native preservation controls and effective independent gating remain explicit.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/scripts/test_native_review_scope.py::test_boundary_preserves_native_work_and_retirement[unchanged]"
+          }
+        },
+        {
+          "case_id": "enforce-native-only-implementation-scope-6",
+          "scenario_id": "enforce-native-only-implementation-scope",
+          "method": "test",
+          "intent": "Exercise the actual mandatory boundary command or its independent CI contract.",
+          "observable": "Classified capsule changes and invalid policy fail; native preservation controls and effective independent gating remain explicit.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/scripts/test_native_review_scope.py::test_boundary_preserves_native_work_and_retirement[native]"
+          }
+        },
+        {
+          "case_id": "enforce-native-only-implementation-scope-7",
+          "scenario_id": "enforce-native-only-implementation-scope",
+          "method": "test",
+          "intent": "Exercise the actual mandatory boundary command or its independent CI contract.",
+          "observable": "Classified capsule changes and invalid policy fail; native preservation controls and effective independent gating remain explicit.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/scripts/test_native_review_scope.py::test_boundary_preserves_native_work_and_retirement[retirement]"
+          }
+        }
+      ]
+    },
+    "openspec:code-review-native-migration-guard:native-review-migration-scope:fail-closed-on-invalid-migration-policy": {
+      "rationale": "Owner explicitly requested enforcement of the settled native migration. Exact case results and historical rejection are required; planning is not acceptance.",
+      "stakeholder_refs": [
+        "nold-ai/specfact-cli-modules#513"
+      ],
+      "touchpoints": [
+        {
+          "id": "native-migration-spec",
+          "kind": "config_file",
+          "locator": "openspec/changes/code-review-native-migration-guard/specs/native-review-migration-scope/spec.md"
+        }
+      ],
+      "verification_cases": [
+        {
+          "case_id": "fail-closed-on-invalid-migration-policy-1",
+          "scenario_id": "fail-closed-on-invalid-migration-policy",
+          "method": "test",
+          "intent": "Exercise the actual mandatory boundary command or its independent CI contract.",
+          "observable": "Classified capsule changes and invalid policy fail; native preservation controls and effective independent gating remain explicit.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/scripts/test_native_review_scope.py::test_boundary_rejects_invalid_policy[backend]"
+          }
+        },
+        {
+          "case_id": "fail-closed-on-invalid-migration-policy-2",
+          "scenario_id": "fail-closed-on-invalid-migration-policy",
+          "method": "test",
+          "intent": "Exercise the actual mandatory boundary command or its independent CI contract.",
+          "observable": "Classified capsule changes and invalid policy fail; native preservation controls and effective independent gating remain explicit.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/scripts/test_native_review_scope.py::test_boundary_rejects_invalid_policy[revision]"
+          }
+        },
+        {
+          "case_id": "fail-closed-on-invalid-migration-policy-3",
+          "scenario_id": "fail-closed-on-invalid-migration-policy",
+          "method": "test",
+          "intent": "Reject configuration weakening and option-shaped revisions at the checker boundary.",
+          "observable": "The command fails and no unexpected output file is created.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/scripts/test_native_review_scope.py::test_boundary_rejects_policy_weakening[baseline]"
+          }
+        },
+        {
+          "case_id": "fail-closed-on-invalid-migration-policy-4",
+          "scenario_id": "fail-closed-on-invalid-migration-policy",
+          "method": "test",
+          "intent": "Reject configuration weakening and option-shaped revisions at the checker boundary.",
+          "observable": "The command fails and no unexpected output file is created.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/scripts/test_native_review_scope.py::test_boundary_rejects_policy_weakening[paths]"
+          }
+        },
+        {
+          "case_id": "fail-closed-on-invalid-migration-policy-5",
+          "scenario_id": "fail-closed-on-invalid-migration-policy",
+          "method": "test",
+          "intent": "Reject configuration weakening and option-shaped revisions at the checker boundary.",
+          "observable": "The command fails and no unexpected output file is created.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/scripts/test_native_review_scope.py::test_revision_options_cannot_write_files[policy]"
+          }
+        },
+        {
+          "case_id": "fail-closed-on-invalid-migration-policy-6",
+          "scenario_id": "fail-closed-on-invalid-migration-policy",
+          "method": "test",
+          "intent": "Reject configuration weakening and option-shaped revisions at the checker boundary.",
+          "observable": "The command fails and no unexpected output file is created.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/scripts/test_native_review_scope.py::test_revision_options_cannot_write_files[head]"
+          }
+        }
+      ]
+    },
+    "openspec:code-review-native-migration-guard:native-review-migration-scope:preserve-independent-gates-and-test-the-correction-on-real-history": {
+      "rationale": "Owner explicitly requested enforcement of the settled native migration. Exact case results and historical rejection are required; planning is not acceptance.",
+      "stakeholder_refs": [
+        "nold-ai/specfact-cli-modules#513"
+      ],
+      "touchpoints": [
+        {
+          "id": "native-migration-spec",
+          "kind": "config_file",
+          "locator": "openspec/changes/code-review-native-migration-guard/specs/native-review-migration-scope/spec.md"
+        }
+      ],
+      "verification_cases": [
+        {
+          "case_id": "preserve-independent-gates-and-test-the-correction-on-real-history-1",
+          "scenario_id": "preserve-independent-gates-and-test-the-correction-on-real-history",
+          "method": "test",
+          "intent": "Exercise the actual mandatory boundary command or its independent CI contract.",
+          "observable": "Classified capsule changes and invalid policy fail; native preservation controls and effective independent gating remain explicit.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/scripts/test_native_review_scope.py::test_boundary_rejects_actual_historical_capsule_repair"
+          }
+        },
+        {
+          "case_id": "preserve-independent-gates-and-test-the-correction-on-real-history-2",
+          "scenario_id": "preserve-independent-gates-and-test-the-correction-on-real-history",
+          "method": "test",
+          "intent": "Exercise the actual mandatory boundary command or its independent CI contract.",
+          "observable": "Classified capsule changes and invalid policy fail; native preservation controls and effective independent gating remain explicit.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/scripts/test_native_review_scope.py::test_native_scope_ci_is_independent_and_read_only"
+          }
+        }
+      ]
+    }
+  }
+}

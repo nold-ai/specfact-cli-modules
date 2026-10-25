@@ -124,9 +124,14 @@ jobs:
     permissions:
       contents: read
 
+  native-scope:
+    uses: ./.github/workflows/native-review-scope.yml
+    permissions:
+      contents: read
+
   quality:
     name: quality (${{ matrix.python-version }})
-    needs: [changes, verify-module-signatures, customer-capsules]
+    needs: [changes, verify-module-signatures, customer-capsules, native-scope]
     if: always() && needs.changes.outputs.code_changed == 'true'
     runs-on: ubuntu-latest
     strategy:
@@ -150,6 +155,16 @@ jobs:
             echo "Required customer capsule matrix did not pass: $CAPSULE_RESULT" >&2
             exit 1
           fi
+      - name: Require native migration scope
+        shell: bash
+        env:
+          NATIVE_SCOPE_RESULT: ${{ needs.native-scope.result }}
+        run: |
+          set -euo pipefail
+          if [ "$NATIVE_SCOPE_RESULT" != "success" ]; then
+            echo "Native review migration scope prerequisite did not pass: $NATIVE_SCOPE_RESULT" >&2
+            exit 1
+          fi
       - name: Skip full run (dev->main PR)
         if: needs.changes.outputs.skip_tests_dev_to_main == 'true'
         run: echo "Dev->main PR detected; skipping quality jobs."
@@ -158,6 +173,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           persist-credentials: false
+          fetch-depth: 0
       - name: Resolve paired core CLI ref
         id: core-ref
         if: needs.changes.outputs.skip_tests_dev_to_main != 'true'
