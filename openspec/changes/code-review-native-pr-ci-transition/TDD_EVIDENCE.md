@@ -53,3 +53,9 @@ Head `415abf69a1c98053c8ecdb6f88d4f7bc7dc617b6`, run 40230445251, failed before 
 The native workflow now installs the same trusted-base Semgrep pin in its own CLI environment. Controller dependencies retain trusted-base constraints; Semgrep remains on the sanitized controller PATH and its actual executable version enters the receipt. This changes CI packaging only, with no candidate runtime dependency, signed analyzer, finding-policy or admission change.
 
 Two focused regressions failed before implementation. The generated controller requirements still contained Semgrep, reproducing the conflicting ownership, and executable version collection was absent. After the fix all 26 transition cases passed with zero skips. Actual hosted dependency resolution and all ten review members remain blocking on the next signed event head.
+
+## Retained Semgrep transitive constraints
+
+Head `b223f55590f5f8c51e2b0b9575b1f19aa4f197ac`, run 40230829939, installed both environments successfully but failed at `semgrep --version`. A disposable native environment with Semgrep 1.144.0 reproduced the startup ImportError: MCP 1.16.0 imported `eval_type_backport`, removed from the newly resolved Pydantic 2.14.1. This disproved the assumption that the retained direct analyzer pin alone reproduced its runtime.
+
+The same native CLI started successfully after applying the existing trusted-base Linux wheel versions as transitive constraints, including Pydantic 2.13.4. CI now retains those recorded versions for the isolated Semgrep environment. No capsule tooling or lock file changed. A strengthened requirements-generation test failed because the constraints file was absent; a new startup-error test failed because CalledProcessError hid stderr. All 27 focused cases now pass. The failure remains fail-closed and retains bounded stderr for future diagnosis. Hosted exact-head acceptance remains pending.
