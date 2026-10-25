@@ -238,11 +238,42 @@ jobs:
       - name: Install specfact-cli dependency
         if: needs.changes.outputs.skip_tests_dev_to_main != 'true'
         run: hatch run pip install -e ./specfact-cli
+      - name: Checkout reviewed runtime smoke fixture
+        if: needs.changes.outputs.skip_tests_dev_to_main != 'true' && matrix.python-version == '3.12'
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          repository: nold-ai/specfact-cli-modules
+          ref: 046d366c190af7a188d6f48953a96edb65e766db
+          path: specfact-cli/runtime-smoke-modules
+          persist-credentials: false
+      - name: Verify reviewed runtime smoke fixture
+        if: needs.changes.outputs.skip_tests_dev_to_main != 'true' && matrix.python-version == '3.12'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -I - <<'PYTHON'
+          import json
+          from pathlib import Path
+          expected = {
+              "repository": "nold-ai/specfact-cli-modules",
+              "commit": "046d366c190af7a188d6f48953a96edb65e766db",
+              "tree": "c5b44db3477d1c9ea8dae1dceab2af276d265353",
+          }
+          actual = json.loads(Path("specfact-cli/ci/runtime-smoke-fixture.lock.json").read_text())
+          if actual != expected:
+              raise SystemExit("Unreviewed portable runtime fixture identity")
+          PYTHON
+          fixture="$GITHUB_WORKSPACE/specfact-cli/runtime-smoke-modules"
+          test "$(git -C "$fixture" rev-parse HEAD)" = "046d366c190af7a188d6f48953a96edb65e766db"
+          test "$(git -C "$fixture" rev-parse 'HEAD^{tree}')" = "c5b44db3477d1c9ea8dae1dceab2af276d265353"
+          test -z "$(git -C "$fixture" status --porcelain)"
       - name: Runtime discovery smoke across package managers
         if: needs.changes.outputs.skip_tests_dev_to_main != 'true' && matrix.python-version == '3.12'
         run: |
-          python -m pip install pipx uv "virtualenv<21"
-          hatch run python specfact-cli/scripts/runtime_discovery_smoke.py --modules-repo "${GITHUB_WORKSPACE}" --launcher direct --launcher hatch-source --launcher pip-editable --launcher pipx --launcher uv-run --launcher uvx
+          launchers="$RUNNER_TEMP/runtime-smoke-launchers"
+          python -m venv "$launchers"
+          "$launchers/bin/python" -m pip install pipx uv "virtualenv<21"
+          PATH="$launchers/bin:$PATH" hatch run python specfact-cli/scripts/runtime_discovery_smoke.py --modules-repo "$GITHUB_WORKSPACE/specfact-cli/runtime-smoke-modules" --launcher direct --launcher hatch-source --launcher pip-editable --launcher pipx --launcher uv-run --launcher uvx
       - name: Validate generated command overview
         if: needs.changes.outputs.skip_tests_dev_to_main != 'true'
         run: |
