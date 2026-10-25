@@ -325,6 +325,39 @@
             "runner": "pytest",
             "node_id": "tests/unit/scripts/test_native_pr_review.py::test_subject_detects_assume_unchanged_mutation"
           }
+        },
+        {
+          "case_id": "runtime-fixture-accepted",
+          "scenario_id": "bind-acceptance-to-exact-source-and-required-jobs",
+          "method": "test",
+          "intent": "Preserve the paired core reviewed fixture contract without bypassing candidate quality.",
+          "observable": "Unreviewed fixture identities are rejected and all six launcher checks remain mandatory with separate launcher dependencies.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/scripts/test_native_pr_review.py::test_runtime_smoke_rejects_unreviewed_fixture_identity[046d366c190af7a188d6f48953a96edb65e766db]"
+          }
+        },
+        {
+          "case_id": "runtime-fixture-rejected",
+          "scenario_id": "bind-acceptance-to-exact-source-and-required-jobs",
+          "method": "test",
+          "intent": "Preserve the paired core reviewed fixture contract without bypassing candidate quality.",
+          "observable": "Unreviewed fixture identities are rejected and all six launcher checks remain mandatory with separate launcher dependencies.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/scripts/test_native_pr_review.py::test_runtime_smoke_rejects_unreviewed_fixture_identity[0000000000000000000000000000000000000000]"
+          }
+        },
+        {
+          "case_id": "runtime-launcher-ownership",
+          "scenario_id": "bind-acceptance-to-exact-source-and-required-jobs",
+          "method": "test",
+          "intent": "Preserve the paired core reviewed fixture contract without bypassing candidate quality.",
+          "observable": "Unreviewed fixture identities are rejected and all six launcher checks remain mandatory with separate launcher dependencies.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/scripts/test_native_pr_review.py::test_runtime_smoke_preserves_launchers_and_isolates_dependencies"
+          }
         }
       ]
     }

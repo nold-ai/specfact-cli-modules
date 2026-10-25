@@ -200,6 +200,47 @@ def test_semgrep_startup_failure_preserves_bounded_stderr(native_review, monkeyp
     assert len(str(error.value)) < 2100
 
 
+@pytest.mark.parametrize("commit", ["046d366c190af7a188d6f48953a96edb65e766db", "0" * 40])
+def test_runtime_smoke_rejects_unreviewed_fixture_identity(tmp_path, commit):
+    import json
+    import subprocess
+    import sys
+
+    jobs = yaml.safe_load((ROOT / ".github/workflows/pr-orchestrator.yml").read_text())["jobs"]
+    verify = _step_named(jobs["quality"]["steps"], "Verify reviewed runtime smoke fixture")
+    program = verify["run"].split("<<'PYTHON'\n", 1)[1].split("\nPYTHON", 1)[0]
+    lock = tmp_path / "specfact-cli/ci/runtime-smoke-fixture.lock.json"
+    lock.parent.mkdir(parents=True)
+    lock.write_text(
+        json.dumps(
+            {
+                "repository": "nold-ai/specfact-cli-modules",
+                "commit": commit,
+                "tree": "c5b44db3477d1c9ea8dae1dceab2af276d265353",
+            }
+        )
+    )
+    result = subprocess.run(
+        [sys.executable, "-I", "-c", program], cwd=tmp_path, capture_output=True, text=True, check=False
+    )
+    assert (result.returncode == 0) == (commit != "0" * 40), result.stderr
+
+
+def test_runtime_smoke_preserves_launchers_and_isolates_dependencies():
+    jobs = yaml.safe_load((ROOT / ".github/workflows/pr-orchestrator.yml").read_text())["jobs"]
+    steps = jobs["quality"]["steps"]
+    checkout = _step_named(steps, "Checkout reviewed runtime smoke fixture")
+    assert checkout["with"]["ref"] == "046d366c190af7a188d6f48953a96edb65e766db"
+    assert checkout["with"]["persist-credentials"] is False
+    smoke = _step_named(steps, "Runtime discovery smoke across package managers")
+    assert steps.index(checkout) < steps.index(smoke)
+    for launcher in ("direct", "hatch-source", "pip-editable", "pipx", "uv-run", "uvx"):
+        assert "--launcher " + launcher in smoke["run"]
+    assert 'python -m venv "$launchers"' in smoke["run"]
+    assert '"$launchers/bin/python" -m pip install pipx uv "virtualenv<21"' in smoke["run"]
+    assert '--modules-repo "$GITHUB_WORKSPACE/specfact-cli/runtime-smoke-modules"' in smoke["run"]
+
+
 def test__native_test_command_uses_trusted_config(native_review, tmp_path):
     command = native_review._native_test_command(
         python=Path("/project/python"),
