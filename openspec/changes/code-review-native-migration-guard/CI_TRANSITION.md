@@ -1,8 +1,8 @@
 # Required CI transition for native review
 
-## Current dependency
+## Historical dependency before the authorized CI transition
 
-`.github/workflows/pr-orchestrator.yml` makes `quality` depend on `customer-capsules`. Its first prerequisite step rejects a non-successful capsule result before checkout, formatting, types, lint, contracts or tests execute. The approved Darwin local deferral also requires the indexed candidate and independent signed capsule jobs. Therefore successful native Hatch acceptance alone cannot produce merge-ready status under the current contract.
+`.github/workflows/pr-orchestrator.yml` makes `quality` depend on `customer-capsules`. Its first prerequisite step rejects a non-successful capsule result before checkout, formatting, types, lint, contracts or tests execute. The approved Darwin local deferral also requires the indexed candidate and independent signed capsule jobs. That historical contract blocked merge before the maintainer-authorized transition below.
 
 This is a migration dependency, not evidence that the new native execution owner needs capsule resources. The approved execution direction remains trusted local native execution. Do not repair capsule tooling, native dependencies, admission or diagnostics to clear it.
 
@@ -19,6 +19,12 @@ At that accepted transition:
 
 The complete native acceptance and independent-security consumer must exist and pass before an old mandatory gate is removed. If that transition cannot preserve a protected contract, record the exact unresolved interface; do not manufacture compatibility fields or call a local result protected assurance.
 
-## What this unit changes now
+## Original migration-guard scope, superseded for CI scheduling
 
-The new lightweight native scope job runs independently of capsule execution. The existing required quality matrix consumes its successful result. The same checker runs in the existing local boundary stage. This enforces the prohibition on new capsule work without replacing any runtime/security verdict or changing test ownership. Existing failing capsule results remain visible and blocking. There is no new choice between capsule expansion and native execution.
+The new lightweight native scope job runs independently of capsule execution. The existing required quality matrix consumes its successful result. The same checker runs in the existing local boundary stage. This enforces the prohibition on new capsule work without replacing any runtime/security verdict or changing test ownership. Under that original scope, failing capsule results remained visible and blocking. The separately authorized native CI transition below replaces this prerequisite only after complete native evidence passes. There is no new choice between capsule expansion and native execution.
+
+## Maintainer-authorized CI exception, 2026-10-25
+
+The maintainer subsequently authorized the CI/security transition before merging PR #524. This supersedes the earlier scheduling restriction for CI only. `code-review-native-pr-ci-transition` owns the complete independently installed signed native reviewer, raw completeness barrier, native test/coverage evidence and exact-head prerequisites. Public runtime and distribution changes remain in 17 → 18 → 19 → paired core → 20. No capsule repair or protected-report compatibility is authorized.
+
+The proposed prerequisite replacement remains unaccepted until all required local gates, independent review and exact-head Linux native evidence pass. A failing native replacement continues to block quality and merge. No historical capsule failure is relabeled successful.
