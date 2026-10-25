@@ -45,3 +45,11 @@ All raw findings remain in the native receipt. No tool error, unknown result, in
 ## Delivery
 
 Signed delivery and exact-head hosted outcomes are recorded after push. Merge remains closed until the required native review, native Hatch, scope, signatures, quality matrix and compatibility checks pass on that exact head. Do not archive this change until actual completion and merge through OpenSpec CLI.
+
+## Exact-head Linux bootstrap correction
+
+Head `415abf69a1c98053c8ecdb6f88d4f7bc7dc617b6`, run 40230445251, failed before analyzer execution. Pip correctly rejected signed core 0.55.4 requiring Click >=8.3.3 alongside pinned Semgrep 1.144.0 requiring Click 8.1.x. No analysis result was accepted or retried.
+
+The native workflow now installs the same trusted-base Semgrep pin in its own CLI environment. Controller dependencies retain trusted-base constraints; Semgrep remains on the sanitized controller PATH and its actual executable version enters the receipt. This changes CI packaging only, with no candidate runtime dependency, signed analyzer, finding-policy or admission change.
+
+Two focused regressions failed before implementation. The generated controller requirements still contained Semgrep, reproducing the conflicting ownership, and executable version collection was absent. After the fix all 26 transition cases passed with zero skips. Actual hosted dependency resolution and all ten review members remain blocking on the next signed event head.
