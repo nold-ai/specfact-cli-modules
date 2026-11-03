@@ -62,8 +62,11 @@ Before running quality gates in a fresh worktree, bootstrap the Hatch environmen
 Run the full pipeline manually with `./scripts/pre-commit-quality-checks.sh` or `… all`.
 
 An explicitly approved local ARM64 Darwin feature-worktree exception may set
-`SPECFACT_CODE_REVIEW_DEFER_TO_CI=github-linux` to defer only the capsule review
-to the blocking exact-head GitHub Linux customer job. Every other hook component
+`SPECFACT_CODE_REVIEW_DEFER_TO_CI=github-linux` to defer only the existing local reviewer
+to the blocking exact-head GitHub Linux independent signed native review job.
+The maintainer authorized this CI-only transition on 2026-10-25; its owner is
+`native-pr-review.yml` with `scripts/native_pr_review.py`. Public customer
+reviewer adoption remains in change 19. Every other hook component
 still executes. This reports DEFERRED, never PASS; it is rejected in CI, on other
 platforms or protected checkouts. Record maintainer approval in change evidence
 and require hosted review completion before merge.

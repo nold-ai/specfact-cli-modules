@@ -486,39 +486,41 @@ def _orchestrator_workflow():
     )
 
 
-def test_required_quality_runs_capsule_assertion_even_after_dependency_failure():
+def test_required_quality_runs_native_assertion_even_after_dependency_failure():
     workflow = _orchestrator_workflow()
     quality = workflow["jobs"]["quality"]
-    assert "customer-capsules" in quality["needs"]
+    assert "native-review" in quality["needs"]
     assert "always()" in quality["if"]
-    assert quality["steps"][0]["name"] == "Require signature and customer capsule prerequisites"
-    assert workflow["jobs"]["customer-capsules"]["uses"] == "./.github/workflows/capsule-customer-execution.yml"
+    assert quality["steps"][0]["name"] == "Require signature prerequisite"
+    assert workflow["jobs"]["native-review"]["uses"] == "./.github/workflows/native-pr-review.yml"
 
 
 @pytest.mark.parametrize(
-    "required,result,signature,expected",
+    "legacy_required,result,signature,expected",
     [
         ("true", "success", "success", 0),
         ("true", "failure", "success", 1),
         ("true", "skipped", "success", 1),
         ("true", "cancelled", "success", 1),
-        ("false", "skipped", "success", 0),
+        ("false", "skipped", "success", 1),
         ("false", "skipped", "failure", 1),
     ],
 )
-def test_quality_prerequisite_step_cannot_turn_capsule_failure_into_success(required, result, signature, expected):
+def test_quality_prerequisite_cannot_waive_native_review(legacy_required, result, signature, expected):
     import subprocess
 
-    step = _orchestrator_workflow()["jobs"]["quality"]["steps"][0]
-    assert step["name"] == "Require signature and customer capsule prerequisites"
-    result = subprocess.run(
-        ["/bin/bash", "-c", step["run"]],
+    steps = _orchestrator_workflow()["jobs"]["quality"]["steps"]
+    signature_step = steps[0]
+    native_step = next(step for step in steps if step.get("name") == "Require independent native review")
+    assert signature_step["name"] == "Require signature prerequisite"
+    completed = subprocess.run(
+        ["/bin/bash", "-c", signature_step["run"] + "\n" + native_step["run"]],
         capture_output=True,
         text=True,
         check=False,
-        env={"CAPSULE_REQUIRED": required, "CAPSULE_RESULT": result, "SIGNATURE_RESULT": signature},
+        env={"CAPSULE_REQUIRED": legacy_required, "NATIVE_REVIEW_RESULT": result, "SIGNATURE_RESULT": signature},
     )
-    assert result.returncode == expected
+    assert completed.returncode == expected
 
 
 def test_minimum_core_smoke_uses_current_authenticated_lock_not_completed_checkpoint():

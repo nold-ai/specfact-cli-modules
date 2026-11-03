@@ -1,6 +1,6 @@
 # Tasks for code-review-17-project-runtime-bootstrap
 
-All boxes are future implementation. This artifact delivery completes no runtime task and creates no RED/GREEN or installed-support evidence.
+The full-change checklist remains pending beyond the explicitly bounded checkpoint below. The first Hatch milestone does not complete this change, migrate ordinary consumers or establish installed/release acceptance.
 
 ## Readiness and specification
 
@@ -31,3 +31,14 @@ All boxes are future implementation. This artifact delivery completes no runtime
 - [ ] Apply required semver, CHANGELOG.md, compatibility, module payload/signature and canonical publication steps only when runtime assets change.
 - [ ] Demonstrate the exact installed user workflow and rollback for the owning scope; keep unavailable cells and required failures nonaccepting.
 - [ ] Submit implementation for normal review to dev, reconcile issue/project state and archive only after actual completion using openspec archive.
+
+## Authorized first Hatch checkpoint, 2026-10-23
+
+- [x] Confirm owner takeover, public hierarchy/dependencies and the bounded existing/cold trusted-local use case.
+- [x] Preserve the real legacy wrong-interpreter RED before production and retain later genuine constraint/default-discovery RED evidence.
+- [x] Implement the Codebase-owned detached Hatch execution capability without changing public review or legacy sidecar consumers.
+- [x] Prove existing and cold target Python 3.11.15 from controller 3.12.13, actual imports/entrypoint/native async tests/customer lint/seeded failure, immutable declarations and inventory.
+- [x] Reconcile exact mapped executable selectors with genuine independent local technical acceptance and actual JUnit through the canonical Requirements lifecycle using the honest legacy-TDD transition record.
+- [x] Complete bounded independent implementation review and resolve its three reproduced corrections. Required SpecFact and CodeRabbit review prerequisites remain separate open gates.
+- [ ] Finish all mandatory quality gates and retain any incomplete review prerequisites explicitly.
+- [ ] Complete remaining native script/context fidelity, other managers, consumer migrations and full change-17 acceptance before archive.

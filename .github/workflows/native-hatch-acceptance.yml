@@ -1,0 +1,113 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+name: native-hatch-acceptance
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  native-hatch:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout exact head
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up project Python
+        id: project-python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.11.15"
+      - name: Set up controller Python
+        id: controller-python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.12.13"
+      - name: Install pinned native Hatch
+        id: hatch
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install hatch==1.18.1
+          echo "executable=$(command -v hatch)" >> "$GITHUB_OUTPUT"
+      - name: Bootstrap repository Hatch environment serially
+        shell: bash
+        run: |
+          set -euo pipefail
+          hatch run python -m pip --version
+          hatch run dev-deps
+      - name: Run mapped native Hatch acceptance
+        env:
+          SPECFACT_HATCH_PROJECT_PYTHON: ${{ steps.project-python.outputs.python-path }}
+          SPECFACT_HATCH_EXECUTABLE: ${{ steps.hatch.outputs.executable }}
+          SPECFACT_HATCH_PROOF_WORKSPACE: ${{ runner.temp }}/native-hatch-proof
+          NATIVE_HATCH_JUNIT: ${{ runner.temp }}/native-hatch-acceptance/junit.xml
+        run: |
+          hatch run python - <<'PY'
+          import os
+          import subprocess
+          import sys
+          import xml.etree.ElementTree as ET
+          from pathlib import Path
+
+          import yaml
+
+          mapping = Path("openspec/changes/code-review-17-project-runtime-bootstrap/requirements-evidence.yaml")
+          if not mapping.is_file():
+              archived = list(Path("openspec/changes/archive").glob(
+                  "*-code-review-17-project-runtime-bootstrap/requirements-evidence.yaml"
+              ))
+              if len(archived) != 1:
+                  raise SystemExit("Native acceptance mapping needs exactly one active or archived source")
+              mapping = archived[0]
+          requirements = yaml.safe_load(mapping.read_text())["requirements"]
+          selectors = [
+              case["selector"]["node_id"]
+              for requirement in requirements.values()
+              for case in requirement.get("verification_cases", [])
+              if case.get("method") == "test" and case.get("selector", {}).get("runner") == "pytest"
+          ]
+          if not selectors or any(not isinstance(item, str) or not item for item in selectors):
+              raise SystemExit("Native acceptance mapping must contain nonempty pytest selectors")
+          if len(set(selectors)) != len(selectors):
+              raise SystemExit("Native acceptance mapping contains duplicate selectors")
+          report = Path(os.environ["NATIVE_HATCH_JUNIT"])
+          report.parent.mkdir(parents=True, exist_ok=True)
+          if report.exists():
+              raise SystemExit("Native acceptance report path must be fresh")
+          completed = subprocess.run(
+              [sys.executable, "-m", "pytest", *selectors,
+               "-o", "addopts=-ra -q --import-mode=importlib",
+               "-o", "junit_family=xunit1", "--junitxml", str(report)],
+              check=False,
+          )
+          if completed.returncode != 0 or not report.is_file():
+              raise SystemExit("Native acceptance pytest failed or produced no report")
+          result = ET.parse(report).getroot()
+          if result.tag not in {"testsuite", "testsuites"}:
+              raise SystemExit("Native acceptance report has an invalid root")
+          if any(element.tag in {"skipped", "failure", "error"} for element in result.iter()):
+              raise SystemExit("Native acceptance report contains an unsuccessful outcome")
+          observed = []
+          for case in result.iter("testcase"):
+              properties = case.findall("./properties/property[@name='specfact.selector']")
+              if len(properties) != 1 or not properties[0].get("value"):
+                  raise SystemExit("Each testcase must report exactly one selector property")
+              observed.append(properties[0].get("value"))
+          if len(observed) != len(selectors) or set(observed) != set(selectors):
+              raise SystemExit("Native acceptance report does not match the exact mapped selectors")
+          PY
+      - name: Upload native Hatch acceptance evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: native-hatch-acceptance
+          path: |
+            ${{ runner.temp }}/native-hatch-acceptance/junit.xml
+            ${{ runner.temp }}/native-hatch-proof/receipt.json
+          if-no-files-found: error

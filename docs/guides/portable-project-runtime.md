@@ -9,7 +9,9 @@ expertise_level: [intermediate]
 doc_owner: specfact-cli-modules
 tracks:
   - packages/specfact-code-review/**
-last_reviewed: 2026-10-05
+  - packages/specfact-codebase/src/specfact_codebase/project_runtime.py
+  - scripts/prove_hatch_project_runtime.py
+last_reviewed: 2026-10-23
 exempt: false
 exempt_reason: ""
 ---
@@ -136,3 +138,72 @@ Portable analysis uses a verified private source copy with local environments an
 Portable reviews retain skipped, XFAIL, and XPASS outcomes as non-passing test evidence, even when other tests pass. Each reviewed production Python source needs coverage evidence of at least 80 percent, or the effective project threshold when higher. A package directory used for pytest discovery does not exempt its production files from coverage. Missing coverage remains incomplete evidence.
 
 Coverage provenance distinguishes native pytest-cov requests from review-only measurement. When the repository does not request coverage, the review collects private evidence through the supported pytest-cov lifecycle without activating its dormant aggregate `fail_under` policy. The per-reviewed-file floor above still applies. Native `--cov`, `--cov-reset`, `--cov-config`, source/include/omit settings, report destinations, threshold and precision retain their effect; actual native aggregate failures remain blocking findings. The report records both configured and effective measurement scopes. Explicit `--no-cov`, blocked coverage plugins, `--no-cov-on-fail`, excluded sources, missing distributed-worker data and unsupported plugin contracts leave required evidence incomplete. Native report write failures remain visible rather than replacing the requested output. The current lifecycle contract supports pytest-cov7.0.0 and7.1.0; xdist and configured Coverage subprocess collection use its native worker lifecycle.
+
+## Direct Hatch bootstrap milestone
+
+Codebase 0.42.0 adds a Python service for trusted local projects. This bounded
+milestone supports explicitly selected detached virtual Hatch environments.
+Ordinary review and existing framework sidecar commands have not migrated to it.
+
+```python
+from pathlib import Path
+from specfact_codebase.project_runtime import (
+    PreparedProject,
+    ProjectCommand,
+    ProjectSelection,
+    inspect_project,
+    prepare_project,
+)
+
+root = Path("/absolute/customer/project")
+plan = inspect_project(root, ProjectSelection(environment="review"))
+project = prepare_project(plan, Path("/absolute/fresh/external/invocation"))
+if isinstance(project, PreparedProject):
+    result = project.run(ProjectCommand(("python", "-m", "pytest"), root), timeout=120)
+else:
+    print(project.reason, project.remedy)
+```
+
+Existing selected environments are execution targets. Preparation never runs a
+Hatch dependency synchronization against them. A cold environment requires a
+compatible local Python, selected with `ProjectSelection(python="/absolute/python")`
+or an unambiguous version declaration. Native Hatch creates it in the fresh
+external invocation directory. Trusted native installation/build hooks may run.
+This service does not provide a hostile-code sandbox.
+
+Bare `python` uses the probed venv executable. Other bare commands must exist in
+that environment's scripts directory. A missing customer tool never falls back
+to a controller executable. Commands use executable-first argv, a project working
+directory and validated explicit environment overrides. Configuration/dependency
+changes require reinspection. Source edits are allowed and have per-command
+provenance. Normal failing tests remain normal nonzero exits.
+
+Named Hatch script expansion, effective native environment contexts, custom
+plugins, cold locked environments, other managers and installed reviewer cutover
+remain pending. Selected unsupported capabilities return actionable diagnostics.
+Unused script declarations, unrelated environments and locks do not prohibit
+explicit execution of a supported existing environment.
+
+Customer `HATCH_DATA_DIR` and `HATCH_CACHE_DIR` settings are preserved. Controller
+Hatch interpreter, active-environment and target-path settings are removed.
+Custom `HATCH_CONFIG` is unsupported in this slice and produces a diagnostic
+before native queries, including when it changes after inspection.
+
+Unreadable fingerprint inputs return diagnostics or structured execution failure.
+If cleanup of a failed preparation also fails, the original failure remains and
+the remedy identifies the retained workspace. Use a fresh external workspace
+after resolving the diagnostic.
+
+Run the repeatable native companion proof from a Python 3.12 controller after
+providing local Hatch and Python 3.11.15. Use a fresh external workspace.
+
+```bash
+PYTHONPATH=packages/specfact-codebase/src python scripts/prove_hatch_project_runtime.py \
+  --workspace /absolute/fresh/external/proof \
+  --hatch /absolute/hatch --python /absolute/python3.11
+```
+
+The external `receipt.json` records actual versions, commands, inventories and
+input hashes for both existing and cold cases. The labeled companion omits ODBC
+only in that fixture and declares customer Ruff. The original native-dependency
+reconstruction remains unchanged for later acceptance.

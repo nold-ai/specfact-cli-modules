@@ -1,0 +1,1176 @@
+schema_version: '2'
+requirements:
+  openspec:code-review-linux-analyzer-diagnostics:linux-analyzer-failure-diagnostics:bounded-analyzer-failure-provenance:
+    rationale: Owner-approved diagnostic unit. Exact selectors are authored before production edits; source-bound
+      RED/GREEN and exact-head Linux evidence remain required.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#513
+    touchpoints:
+    - id: linux-analyzer-failure-diagnostics-spec
+      kind: config_file
+      locator: openspec/changes/code-review-linux-analyzer-diagnostics/specs/linux-analyzer-failure-diagnostics/spec.md
+    verification_cases:
+    - case_id: test-failure-provenance-retains-actual-side-base-false-customer
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_failure_provenance_retains_actual_side[base-False-customer]
+    - case_id: test-failure-provenance-retains-actual-side-base-false-independent-review
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_failure_provenance_retains_actual_side[base-False-independent-review]
+    - case_id: test-failure-provenance-retains-actual-side-base-true-customer
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_failure_provenance_retains_actual_side[base-True-customer]
+    - case_id: test-failure-provenance-retains-actual-side-base-true-independent-review
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_failure_provenance_retains_actual_side[base-True-independent-review]
+    - case_id: test-failure-provenance-retains-actual-side-head-false-customer
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_failure_provenance_retains_actual_side[head-False-customer]
+    - case_id: test-failure-provenance-retains-actual-side-head-false-independent-review
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_failure_provenance_retains_actual_side[head-False-independent-review]
+    - case_id: test-failure-provenance-retains-actual-side-head-true-customer
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_failure_provenance_retains_actual_side[head-True-customer]
+    - case_id: test-failure-provenance-retains-actual-side-head-true-independent-review
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_failure_provenance_retains_actual_side[head-True-independent-review]
+    - case_id: test-failure-provenance-retains-actual-side-unavailable-false-customer
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_failure_provenance_retains_actual_side[unavailable-False-customer]
+    - case_id: test-failure-provenance-retains-actual-side-unavailable-false-independent-review
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_failure_provenance_retains_actual_side[unavailable-False-independent-review]
+    - case_id: test-failure-provenance-retains-actual-side-unavailable-true-customer
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_failure_provenance_retains_actual_side[unavailable-True-customer]
+    - case_id: test-failure-provenance-retains-actual-side-unavailable-true-independent-review
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_failure_provenance_retains_actual_side[unavailable-True-independent-review]
+    - case_id: test-crosshair-classes-match-structured-and-oversized-timeout-false-customer
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_crosshair_classes_match_structured_and_oversized[timeout-False-customer]
+    - case_id: test-crosshair-classes-match-structured-and-oversized-timeout-false-independent-review
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_crosshair_classes_match_structured_and_oversized[timeout-False-independent-review]
+    - case_id: test-crosshair-classes-match-structured-and-oversized-timeout-true-customer
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_crosshair_classes_match_structured_and_oversized[timeout-True-customer]
+    - case_id: test-crosshair-classes-match-structured-and-oversized-timeout-true-independent-review
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_crosshair_classes_match_structured_and_oversized[timeout-True-independent-review]
+    - case_id: test-crosshair-classes-match-structured-and-oversized-process-false-customer
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_crosshair_classes_match_structured_and_oversized[process-False-customer]
+    - case_id: test-crosshair-classes-match-structured-and-oversized-process-false-independent-review
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_crosshair_classes_match_structured_and_oversized[process-False-independent-review]
+    - case_id: test-crosshair-classes-match-structured-and-oversized-process-true-customer
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_crosshair_classes_match_structured_and_oversized[process-True-customer]
+    - case_id: test-crosshair-classes-match-structured-and-oversized-process-true-independent-review
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_crosshair_classes_match_structured_and_oversized[process-True-independent-review]
+    - case_id: test-crosshair-classes-match-structured-and-oversized-unrecognized-false-customer
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_crosshair_classes_match_structured_and_oversized[unrecognized-False-customer]
+    - case_id: test-crosshair-classes-match-structured-and-oversized-unrecognized-false-independent-review
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_crosshair_classes_match_structured_and_oversized[unrecognized-False-independent-review]
+    - case_id: test-crosshair-classes-match-structured-and-oversized-unrecognized-true-customer
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_crosshair_classes_match_structured_and_oversized[unrecognized-True-customer]
+    - case_id: test-crosshair-classes-match-structured-and-oversized-unrecognized-true-independent-review
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_crosshair_classes_match_structured_and_oversized[unrecognized-True-independent-review]
+    - case_id: test-crosshair-classes-match-structured-and-oversized-execute-false-customer
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_crosshair_classes_match_structured_and_oversized[execute-False-customer]
+    - case_id: test-crosshair-classes-match-structured-and-oversized-execute-false-independent-review
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_crosshair_classes_match_structured_and_oversized[execute-False-independent-review]
+    - case_id: test-crosshair-classes-match-structured-and-oversized-execute-true-customer
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_crosshair_classes_match_structured_and_oversized[execute-True-customer]
+    - case_id: test-crosshair-classes-match-structured-and-oversized-execute-true-independent-review
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_crosshair_classes_match_structured_and_oversized[execute-True-independent-review]
+    - case_id: test-crosshair-exception-observations-are-closed-module-customer
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_crosshair_exception_observations_are_closed[module-customer]
+    - case_id: test-crosshair-exception-observations-are-closed-module-independent-review
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_crosshair_exception_observations_are_closed[module-independent-review]
+    - case_id: test-crosshair-exception-observations-are-closed-import-customer
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_crosshair_exception_observations_are_closed[import-customer]
+    - case_id: test-crosshair-exception-observations-are-closed-import-independent-review
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_crosshair_exception_observations_are_closed[import-independent-review]
+    - case_id: test-crosshair-exception-observations-are-closed-syntax-customer
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_crosshair_exception_observations_are_closed[syntax-customer]
+    - case_id: test-crosshair-exception-observations-are-closed-syntax-independent-review
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_crosshair_exception_observations_are_closed[syntax-independent-review]
+    - case_id: test-crosshair-exception-observations-are-closed-permission-customer
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_crosshair_exception_observations_are_closed[permission-customer]
+    - case_id: test-crosshair-exception-observations-are-closed-permission-independent-review
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_crosshair_exception_observations_are_closed[permission-independent-review]
+    - case_id: test-crosshair-exception-observations-are-closed-type-customer
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_crosshair_exception_observations_are_closed[type-customer]
+    - case_id: test-crosshair-exception-observations-are-closed-type-independent-review
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_crosshair_exception_observations_are_closed[type-independent-review]
+    - case_id: test-crosshair-exception-observations-are-closed-file-customer
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_crosshair_exception_observations_are_closed[file-customer]
+    - case_id: test-crosshair-exception-observations-are-closed-file-independent-review
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_crosshair_exception_observations_are_closed[file-independent-review]
+    - case_id: test-crosshair-exception-observations-are-closed-value-customer
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_crosshair_exception_observations_are_closed[value-customer]
+    - case_id: test-crosshair-exception-observations-are-closed-value-independent-review
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_crosshair_exception_observations_are_closed[value-independent-review]
+    - case_id: test-crosshair-exception-observations-are-closed-parameter-order-customer
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_crosshair_exception_observations_are_closed[parameter-order-customer]
+    - case_id: test-crosshair-exception-observations-are-closed-parameter-order-independent-review
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_crosshair_exception_observations_are_closed[parameter-order-independent-review]
+    - case_id: test-pytest-error-classification-does-not-infer-from-anchor-unknown-customer
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_pytest_error_classification_does_not_infer_from_anchor[unknown-customer]
+    - case_id: test-pytest-error-classification-does-not-infer-from-anchor-unknown-independent-review
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_pytest_error_classification_does_not_infer_from_anchor[unknown-independent-review]
+    - case_id: test-pytest-error-classification-does-not-infer-from-anchor-collection-customer
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_pytest_error_classification_does_not_infer_from_anchor[collection-customer]
+    - case_id: test-pytest-error-classification-does-not-infer-from-anchor-collection-independent-review
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_pytest_error_classification_does_not_infer_from_anchor[collection-independent-review]
+    - case_id: test-pytest-error-classification-does-not-infer-from-anchor-file-missing-customer
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_pytest_error_classification_does_not_infer_from_anchor[file-missing-customer]
+    - case_id: test-pytest-error-classification-does-not-infer-from-anchor-file-missing-independent-review
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_pytest_error_classification_does_not_infer_from_anchor[file-missing-independent-review]
+    - case_id: test-pytest-error-classification-does-not-infer-from-anchor-permission-customer
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_pytest_error_classification_does_not_infer_from_anchor[permission-customer]
+    - case_id: test-pytest-error-classification-does-not-infer-from-anchor-permission-independent-review
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_pytest_error_classification_does_not_infer_from_anchor[permission-independent-review]
+    - case_id: test-native-prerequisite-classification-uses-only-recorded-skips-skipped-workspace-customer
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_native_prerequisite_classification_uses_only_recorded_skips[skipped-workspace-customer]
+    - case_id: test-native-prerequisite-classification-uses-only-recorded-skips-skipped-workspace-independent-review
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_native_prerequisite_classification_uses_only_recorded_skips[skipped-workspace-independent-review]
+    - case_id: test-native-prerequisite-classification-uses-only-recorded-skips-skipped-storage-customer
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_native_prerequisite_classification_uses_only_recorded_skips[skipped-storage-customer]
+    - case_id: test-native-prerequisite-classification-uses-only-recorded-skips-skipped-storage-independent-review
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_native_prerequisite_classification_uses_only_recorded_skips[skipped-storage-independent-review]
+    - case_id: test-native-prerequisite-classification-uses-only-recorded-skips-skipped-declaration-customer
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_native_prerequisite_classification_uses_only_recorded_skips[skipped-declaration-customer]
+    - case_id: test-native-prerequisite-classification-uses-only-recorded-skips-skipped-declaration-independent-review
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_native_prerequisite_classification_uses_only_recorded_skips[skipped-declaration-independent-review]
+    - case_id: test-native-prerequisite-classification-uses-only-recorded-skips-skipped-unknown-customer
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_native_prerequisite_classification_uses_only_recorded_skips[skipped-unknown-customer]
+    - case_id: test-native-prerequisite-classification-uses-only-recorded-skips-skipped-unknown-independent-review
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_native_prerequisite_classification_uses_only_recorded_skips[skipped-unknown-independent-review]
+    - case_id: test-native-prerequisite-classification-uses-only-recorded-skips-skipped-absent-customer
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_native_prerequisite_classification_uses_only_recorded_skips[skipped-absent-customer]
+    - case_id: test-native-prerequisite-classification-uses-only-recorded-skips-skipped-absent-independent-review
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_native_prerequisite_classification_uses_only_recorded_skips[skipped-absent-independent-review]
+    - case_id: test-native-prerequisite-classification-uses-only-recorded-skips-failed-workspace-customer
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_native_prerequisite_classification_uses_only_recorded_skips[failed-workspace-customer]
+    - case_id: test-native-prerequisite-classification-uses-only-recorded-skips-failed-workspace-independent-review
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_native_prerequisite_classification_uses_only_recorded_skips[failed-workspace-independent-review]
+    - case_id: test-native-prerequisite-classification-uses-only-recorded-skips-failed-storage-customer
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_native_prerequisite_classification_uses_only_recorded_skips[failed-storage-customer]
+    - case_id: test-native-prerequisite-classification-uses-only-recorded-skips-failed-storage-independent-review
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_native_prerequisite_classification_uses_only_recorded_skips[failed-storage-independent-review]
+    - case_id: test-native-prerequisite-classification-uses-only-recorded-skips-failed-declaration-customer
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_native_prerequisite_classification_uses_only_recorded_skips[failed-declaration-customer]
+    - case_id: test-native-prerequisite-classification-uses-only-recorded-skips-failed-declaration-independent-review
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_native_prerequisite_classification_uses_only_recorded_skips[failed-declaration-independent-review]
+    - case_id: test-native-prerequisite-classification-uses-only-recorded-skips-failed-unknown-customer
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_native_prerequisite_classification_uses_only_recorded_skips[failed-unknown-customer]
+    - case_id: test-native-prerequisite-classification-uses-only-recorded-skips-failed-unknown-independent-review
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_native_prerequisite_classification_uses_only_recorded_skips[failed-unknown-independent-review]
+    - case_id: test-native-prerequisite-classification-uses-only-recorded-skips-failed-absent-customer
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_native_prerequisite_classification_uses_only_recorded_skips[failed-absent-customer]
+    - case_id: test-native-prerequisite-classification-uses-only-recorded-skips-failed-absent-independent-review
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_native_prerequisite_classification_uses_only_recorded_skips[failed-absent-independent-review]
+    - case_id: test-recorded-pytest-exceptions-remain-allowlisted-known-customer
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_recorded_pytest_exceptions_remain_allowlisted[known-customer]
+    - case_id: test-recorded-pytest-exceptions-remain-allowlisted-known-independent-review
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_recorded_pytest_exceptions_remain_allowlisted[known-independent-review]
+    - case_id: test-recorded-pytest-exceptions-remain-allowlisted-unknown-customer
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_recorded_pytest_exceptions_remain_allowlisted[unknown-customer]
+    - case_id: test-recorded-pytest-exceptions-remain-allowlisted-unknown-independent-review
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_recorded_pytest_exceptions_remain_allowlisted[unknown-independent-review]
+    - case_id: test-pytest-producer-failures-retain-fixed-cause-without-private-text-execute-file-customer
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_pytest_producer_failures_retain_fixed_cause_without_private_text[execute-file-customer]
+    - case_id: test-pytest-producer-failures-retain-fixed-cause-without-private-text-execute-file-independent-review
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_pytest_producer_failures_retain_fixed_cause_without_private_text[execute-file-independent-review]
+    - case_id: test-pytest-producer-failures-retain-fixed-cause-without-private-text-execute-permission-customer
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_pytest_producer_failures_retain_fixed_cause_without_private_text[execute-permission-customer]
+    - case_id: test-pytest-producer-failures-retain-fixed-cause-without-private-text-execute-permission-independent-review
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_pytest_producer_failures_retain_fixed_cause_without_private_text[execute-permission-independent-review]
+    - case_id: test-pytest-producer-failures-retain-fixed-cause-without-private-text-execute-unknown-customer
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_pytest_producer_failures_retain_fixed_cause_without_private_text[execute-unknown-customer]
+    - case_id: test-pytest-producer-failures-retain-fixed-cause-without-private-text-execute-unknown-independent-review
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_pytest_producer_failures_retain_fixed_cause_without_private_text[execute-unknown-independent-review]
+    - case_id: test-pytest-producer-failures-retain-fixed-cause-without-private-text-read-collection-customer
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_pytest_producer_failures_retain_fixed_cause_without_private_text[read-collection-customer]
+    - case_id: test-pytest-producer-failures-retain-fixed-cause-without-private-text-read-collection-independent-review
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_pytest_producer_failures_retain_fixed_cause_without_private_text[read-collection-independent-review]
+    - case_id: test-pytest-producer-failures-retain-fixed-cause-without-private-text-read-unknown-customer
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_pytest_producer_failures_retain_fixed_cause_without_private_text[read-unknown-customer]
+    - case_id: test-pytest-producer-failures-retain-fixed-cause-without-private-text-read-unknown-independent-review
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_pytest_producer_failures_retain_fixed_cause_without_private_text[read-unknown-independent-review]
+    - case_id: test-pytest-producer-failures-retain-fixed-cause-without-private-text-reconciliation-customer
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_pytest_producer_failures_retain_fixed_cause_without_private_text[reconciliation-customer]
+    - case_id: test-pytest-producer-failures-retain-fixed-cause-without-private-text-reconciliation-independent-review
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_pytest_producer_failures_retain_fixed_cause_without_private_text[reconciliation-independent-review]
+    - case_id: test-pytest-producer-failures-retain-fixed-cause-without-private-text-arbitrary-wrapper-customer
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_pytest_producer_failures_retain_fixed_cause_without_private_text[arbitrary-wrapper-customer]
+    - case_id: test-pytest-producer-failures-retain-fixed-cause-without-private-text-arbitrary-wrapper-independent-review
+      scenario_id: bounded-analyzer-failure-provenance
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_pytest_producer_failures_retain_fixed_cause_without_private_text[arbitrary-wrapper-independent-review]
+  ? openspec:code-review-linux-analyzer-diagnostics:linux-analyzer-failure-diagnostics:finding-lifecycle-remains-distinct-from-severity
+  : rationale: Owner-approved diagnostic unit. Exact selectors are authored before production edits; source-bound
+      RED/GREEN and exact-head Linux evidence remain required.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#513
+    touchpoints:
+    - id: linux-analyzer-failure-diagnostics-spec
+      kind: config_file
+      locator: openspec/changes/code-review-linux-analyzer-diagnostics/specs/linux-analyzer-failure-diagnostics/spec.md
+    verification_cases:
+    - case_id: test-finding-lifecycle-preserves-authoritative-fields-fixed-fixed-false-customer
+      scenario_id: finding-lifecycle-remains-distinct-from-severity
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_finding_lifecycle_preserves_authoritative_fields[fixed-fixed-False-customer]
+    - case_id: test-finding-lifecycle-preserves-authoritative-fields-fixed-fixed-false-independent-review
+      scenario_id: finding-lifecycle-remains-distinct-from-severity
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_finding_lifecycle_preserves_authoritative_fields[fixed-fixed-False-independent-review]
+    - case_id: test-finding-lifecycle-preserves-authoritative-fields-introduced-open-true-customer
+      scenario_id: finding-lifecycle-remains-distinct-from-severity
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_finding_lifecycle_preserves_authoritative_fields[introduced-open-True-customer]
+    - case_id: test-finding-lifecycle-preserves-authoritative-fields-introduced-open-true-independent-review
+      scenario_id: finding-lifecycle-remains-distinct-from-severity
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_finding_lifecycle_preserves_authoritative_fields[introduced-open-True-independent-review]
+    - case_id: test-finding-lifecycle-preserves-authoritative-fields-unchanged-open-true-customer
+      scenario_id: finding-lifecycle-remains-distinct-from-severity
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_finding_lifecycle_preserves_authoritative_fields[unchanged-open-True-customer]
+    - case_id: test-finding-lifecycle-preserves-authoritative-fields-unchanged-open-true-independent-review
+      scenario_id: finding-lifecycle-remains-distinct-from-severity
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_finding_lifecycle_preserves_authoritative_fields[unchanged-open-True-independent-review]
+    - case_id: test-finding-lifecycle-preserves-authoritative-fields-unknown-waived-by-reference-false-customer
+      scenario_id: finding-lifecycle-remains-distinct-from-severity
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_finding_lifecycle_preserves_authoritative_fields[unknown-waived-by-reference-False-customer]
+    - case_id: test-finding-lifecycle-preserves-authoritative-fields-unknown-waived-by-reference-false-independent-review
+      scenario_id: finding-lifecycle-remains-distinct-from-severity
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_finding_lifecycle_preserves_authoritative_fields[unknown-waived-by-reference-False-independent-review]
+    - case_id: test-invalid-lifecycle-never-defaults-to-nonblocking-none-customer
+      scenario_id: finding-lifecycle-remains-distinct-from-severity
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_invalid_lifecycle_never_defaults_to_nonblocking[None-customer]
+    - case_id: test-invalid-lifecycle-never-defaults-to-nonblocking-none-independent-review
+      scenario_id: finding-lifecycle-remains-distinct-from-severity
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_invalid_lifecycle_never_defaults_to_nonblocking[None-independent-review]
+    - case_id: test-invalid-lifecycle-never-defaults-to-nonblocking-0-customer
+      scenario_id: finding-lifecycle-remains-distinct-from-severity
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_invalid_lifecycle_never_defaults_to_nonblocking[0-customer]
+    - case_id: test-invalid-lifecycle-never-defaults-to-nonblocking-0-independent-review
+      scenario_id: finding-lifecycle-remains-distinct-from-severity
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_invalid_lifecycle_never_defaults_to_nonblocking[0-independent-review]
+    - case_id: test-invalid-lifecycle-never-defaults-to-nonblocking-1-customer
+      scenario_id: finding-lifecycle-remains-distinct-from-severity
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_invalid_lifecycle_never_defaults_to_nonblocking[1-customer]
+    - case_id: test-invalid-lifecycle-never-defaults-to-nonblocking-1-independent-review
+      scenario_id: finding-lifecycle-remains-distinct-from-severity
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_invalid_lifecycle_never_defaults_to_nonblocking[1-independent-review]
+    - case_id: test-invalid-lifecycle-never-defaults-to-nonblocking-false-customer
+      scenario_id: finding-lifecycle-remains-distinct-from-severity
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_invalid_lifecycle_never_defaults_to_nonblocking[false-customer]
+    - case_id: test-invalid-lifecycle-never-defaults-to-nonblocking-false-independent-review
+      scenario_id: finding-lifecycle-remains-distinct-from-severity
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_invalid_lifecycle_never_defaults_to_nonblocking[false-independent-review]
+    - case_id: test-invalid-lifecycle-never-defaults-to-nonblocking-value4-customer
+      scenario_id: finding-lifecycle-remains-distinct-from-severity
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_invalid_lifecycle_never_defaults_to_nonblocking[value4-customer]
+    - case_id: test-invalid-lifecycle-never-defaults-to-nonblocking-value4-independent-review
+      scenario_id: finding-lifecycle-remains-distinct-from-severity
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_invalid_lifecycle_never_defaults_to_nonblocking[value4-independent-review]
+    - case_id: test-invalid-lifecycle-never-defaults-to-nonblocking-value5-customer
+      scenario_id: finding-lifecycle-remains-distinct-from-severity
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_invalid_lifecycle_never_defaults_to_nonblocking[value5-customer]
+    - case_id: test-invalid-lifecycle-never-defaults-to-nonblocking-value5-independent-review
+      scenario_id: finding-lifecycle-remains-distinct-from-severity
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_invalid_lifecycle_never_defaults_to_nonblocking[value5-independent-review]
+  ? openspec:code-review-linux-analyzer-diagnostics:linux-analyzer-failure-diagnostics:diagnostic-output-preserves-privacy-bounds
+  : rationale: Owner-approved diagnostic unit. Exact selectors are authored before production edits; source-bound
+      RED/GREEN and exact-head Linux evidence remain required.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#513
+    touchpoints:
+    - id: linux-analyzer-failure-diagnostics-spec
+      kind: config_file
+      locator: openspec/changes/code-review-linux-analyzer-diagnostics/specs/linux-analyzer-failure-diagnostics/spec.md
+    verification_cases:
+    - case_id: test-failure-projection-rejects-invalid-private-reports-invalid-json-customer
+      scenario_id: diagnostic-output-preserves-privacy-bounds
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_failure_projection_rejects_invalid_private_reports[invalid-json-customer]
+    - case_id: test-failure-projection-rejects-invalid-private-reports-invalid-json-independent-review
+      scenario_id: diagnostic-output-preserves-privacy-bounds
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_failure_projection_rejects_invalid_private_reports[invalid-json-independent-review]
+    - case_id: test-failure-projection-rejects-invalid-private-reports-duplicate-key-customer
+      scenario_id: diagnostic-output-preserves-privacy-bounds
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_failure_projection_rejects_invalid_private_reports[duplicate-key-customer]
+    - case_id: test-failure-projection-rejects-invalid-private-reports-duplicate-key-independent-review
+      scenario_id: diagnostic-output-preserves-privacy-bounds
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_failure_projection_rejects_invalid_private_reports[duplicate-key-independent-review]
+    - case_id: test-failure-projection-rejects-invalid-private-reports-invalid-shape-customer
+      scenario_id: diagnostic-output-preserves-privacy-bounds
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_failure_projection_rejects_invalid_private_reports[invalid-shape-customer]
+    - case_id: test-failure-projection-rejects-invalid-private-reports-invalid-shape-independent-review
+      scenario_id: diagnostic-output-preserves-privacy-bounds
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_failure_projection_rejects_invalid_private_reports[invalid-shape-independent-review]
+    - case_id: test-failure-projection-rejects-invalid-private-reports-over-bound-customer
+      scenario_id: diagnostic-output-preserves-privacy-bounds
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_failure_projection_rejects_invalid_private_reports[over-bound-customer]
+    - case_id: test-failure-projection-rejects-invalid-private-reports-over-bound-independent-review
+      scenario_id: diagnostic-output-preserves-privacy-bounds
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_failure_projection_rejects_invalid_private_reports[over-bound-independent-review]
+    - case_id: test-public-location-bounds-and-private-fields-remain-closed-customer
+      scenario_id: diagnostic-output-preserves-privacy-bounds
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_public_location_bounds_and_private_fields_remain_closed[customer]
+    - case_id: test-public-location-bounds-and-private-fields-remain-closed-independent-review
+      scenario_id: diagnostic-output-preserves-privacy-bounds
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_public_location_bounds_and_private_fields_remain_closed[independent-review]
+    - case_id: test-failure-iteration-limits-do-not-reveal-late-private-evidence-customer
+      scenario_id: diagnostic-output-preserves-privacy-bounds
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_failure_iteration_limits_do_not_reveal_late_private_evidence[customer]
+    - case_id: test-failure-iteration-limits-do-not-reveal-late-private-evidence-independent-review
+      scenario_id: diagnostic-output-preserves-privacy-bounds
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_failure_iteration_limits_do_not_reveal_late_private_evidence[independent-review]
+  ? openspec:code-review-linux-analyzer-diagnostics:linux-analyzer-failure-diagnostics:diagnostics-cannot-alter-review-authority
+  : rationale: Owner-approved diagnostic unit. Exact selectors are authored before production edits; source-bound
+      RED/GREEN and exact-head Linux evidence remain required.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#513
+    touchpoints:
+    - id: linux-analyzer-failure-diagnostics-spec
+      kind: config_file
+      locator: openspec/changes/code-review-linux-analyzer-diagnostics/specs/linux-analyzer-failure-diagnostics/spec.md
+    verification_cases:
+    - case_id: test-diagnostics-preserve-failed-review-capture-and-identity-17-customer
+      scenario_id: diagnostics-cannot-alter-review-authority
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_diagnostics_preserve_failed_review_capture_and_identity[17-customer]
+    - case_id: test-diagnostics-preserve-failed-review-capture-and-identity-17-independent-review
+      scenario_id: diagnostics-cannot-alter-review-authority
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_diagnostics_preserve_failed_review_capture_and_identity[17-independent-review]
+    - case_id: test-diagnostics-preserve-failed-review-capture-and-identity-124-customer
+      scenario_id: diagnostics-cannot-alter-review-authority
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_diagnostics_preserve_failed_review_capture_and_identity[124-customer]
+    - case_id: test-diagnostics-preserve-failed-review-capture-and-identity-124-independent-review
+      scenario_id: diagnostics-cannot-alter-review-authority
+      method: test
+      intent: Execute the actual workflow projection for this exact fixture case.
+      observable: Public output preserves approved fixed provenance and existing privacy/authority boundaries. Actual
+        RED/GREEN execution is recorded separately.
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_capsule_analyzer_diagnostics.py::test_diagnostics_preserve_failed_review_capture_and_identity[124-independent-review]

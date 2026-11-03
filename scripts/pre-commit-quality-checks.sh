@@ -327,16 +327,16 @@ run_code_review_gate() {
       exit 1
     fi
     local indexed_workflow
-    if ! indexed_workflow="$(git show :.github/workflows/capsule-customer-execution.yml 2>/dev/null)"; then
-      error "Capsule review deferral requires the indexed blocking GitHub Linux workflow."
+    if ! indexed_workflow="$(git show :.github/workflows/native-pr-review.yml 2>/dev/null)"; then
+      error "Capsule review deferral requires the indexed blocking GitHub Linux native workflow."
       exit 1
     fi
-    if ! grep -Fq 'name: Run deferred candidate commit review without weakening enforcement' <<<"${indexed_workflow}"; then
-      error "Capsule review deferral requires the blocking GitHub Linux candidate review step."
+    if ! grep -Fq 'name: independent signed native review' <<<"${indexed_workflow}"; then
+      error "Capsule review deferral requires the blocking independent signed-review job (native)."
       exit 1
     fi
-    if ! grep -Fq 'name: independent signed capsule review' <<<"${indexed_workflow}"; then
-      error "Capsule review deferral requires the blocking independent signed-review job."
+    if ! grep -Fq 'name: Run complete independent native review' <<<"${indexed_workflow}"; then
+      error "Capsule review deferral requires the blocking GitHub Linux native review step."
       exit 1
     fi
     local capsule_paths candidate_base
@@ -345,7 +345,7 @@ run_code_review_gate() {
       exit 1
     fi
     if ! capsule_paths="$(git diff --cached --name-only "${candidate_base}" -- \
-      packages/specfact-code-review .github/workflows/capsule-customer-execution.yml)"; then
+      packages/specfact-code-review tests/fixtures/portable-runtime .github/workflows/capsule-customer-execution.yml)"; then
       error "Capsule review deferral cannot determine the staged candidate delta against origin/dev."
       exit 1
     fi
@@ -353,7 +353,7 @@ run_code_review_gate() {
       error "Capsule review deferral requires a candidate change that schedules the blocking capsule workflow."
       exit 1
     fi
-    warn "DEFERRED: only the local capsule review requires mandatory exact-head GitHub Linux CI; this is not a PASS."
+    warn "DEFERRED: only the local capsule review requires mandatory exact-head signed native GitHub Linux review; this is not a PASS."
     return 0
   fi
   local review_array=()
