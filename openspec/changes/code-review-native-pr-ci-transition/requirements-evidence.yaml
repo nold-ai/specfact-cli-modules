@@ -200,6 +200,105 @@
             "runner": "pytest",
             "node_id": "tests/unit/scripts/test_native_pr_review.py::test_type_projection_retains_imported_type_errors"
           }
+        },
+        {
+          "case_id": "immutable-core-api-owner",
+          "scenario_id": "preserve-complete-independent-native-review",
+          "method": "test",
+          "intent": "Keep immutable release verification separate from intentionally selected paired-core quality execution.",
+          "observable": "Exact0.55.4 declaration and unpaired release remain required; paired mode verifies editable metadata and actual root/registry origins; unconditional independent release API checks precede bootstrap.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/scripts/test_native_pr_review.py::test_immutable_core_registry_apis_are_checked_before_candidate_bootstrap"
+          }
+        },
+        {
+          "case_id": "real-core-registry-handoff",
+          "scenario_id": "preserve-complete-independent-native-review",
+          "method": "test",
+          "intent": "Keep immutable release verification separate from intentionally selected paired-core quality execution.",
+          "observable": "Exact0.55.4 declaration and unpaired release remain required; paired mode verifies editable metadata and actual root/registry origins; unconditional independent release API checks precede bootstrap.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/specfact_code_review/run/test_runtime_compatibility.py::test_declared_core_dependency_supplies_registry_handoff"
+          }
+        },
+        {
+          "case_id": "explicit-paired-core",
+          "scenario_id": "preserve-complete-independent-native-review",
+          "method": "test",
+          "intent": "Keep immutable release verification separate from intentionally selected paired-core quality execution.",
+          "observable": "Exact0.55.4 declaration and unpaired release remain required; paired mode verifies editable metadata and actual root/registry origins; unconditional independent release API checks precede bootstrap.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/specfact_code_review/run/test_runtime_compatibility.py::test_explicit_paired_core_keeps_registry_handoff"
+          }
+        },
+        {
+          "case_id": "reject-paired-noneditable",
+          "scenario_id": "preserve-complete-independent-native-review",
+          "method": "test",
+          "intent": "Keep immutable release verification separate from intentionally selected paired-core quality execution.",
+          "observable": "Exact0.55.4 declaration and unpaired release remain required; paired mode verifies editable metadata and actual root/registry origins; unconditional independent release API checks precede bootstrap.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/specfact_code_review/run/test_runtime_compatibility.py::test_paired_core_registry_handoff_rejects_unrelated_installation[noneditable]"
+          }
+        },
+        {
+          "case_id": "reject-paired-other-checkout",
+          "scenario_id": "preserve-complete-independent-native-review",
+          "method": "test",
+          "intent": "Keep immutable release verification separate from intentionally selected paired-core quality execution.",
+          "observable": "Exact0.55.4 declaration and unpaired release remain required; paired mode verifies editable metadata and actual root/registry origins; unconditional independent release API checks precede bootstrap.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/specfact_code_review/run/test_runtime_compatibility.py::test_paired_core_registry_handoff_rejects_unrelated_installation[other-checkout]"
+          }
+        },
+        {
+          "case_id": "reject-paired-core-origin",
+          "scenario_id": "preserve-complete-independent-native-review",
+          "method": "test",
+          "intent": "Keep immutable release verification separate from intentionally selected paired-core quality execution.",
+          "observable": "Exact0.55.4 declaration and unpaired release remain required; paired mode verifies editable metadata and actual root/registry origins; unconditional independent release API checks precede bootstrap.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/specfact_code_review/run/test_runtime_compatibility.py::test_paired_core_registry_handoff_rejects_unrelated_installation[core-origin]"
+          }
+        },
+        {
+          "case_id": "reject-paired-registry-origin",
+          "scenario_id": "preserve-complete-independent-native-review",
+          "method": "test",
+          "intent": "Keep immutable release verification separate from intentionally selected paired-core quality execution.",
+          "observable": "Exact0.55.4 declaration and unpaired release remain required; paired mode verifies editable metadata and actual root/registry origins; unconditional independent release API checks precede bootstrap.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/specfact_code_review/run/test_runtime_compatibility.py::test_paired_core_registry_handoff_rejects_unrelated_installation[registry-origin]"
+          }
+        },
+        {
+          "case_id": "reject-paired-version",
+          "scenario_id": "preserve-complete-independent-native-review",
+          "method": "test",
+          "intent": "Keep immutable release verification separate from intentionally selected paired-core quality execution.",
+          "observable": "Exact0.55.4 declaration and unpaired release remain required; paired mode verifies editable metadata and actual root/registry origins; unconditional independent release API checks precede bootstrap.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/specfact_code_review/run/test_runtime_compatibility.py::test_paired_core_registry_handoff_rejects_unrelated_installation[version]"
+          }
+        },
+        {
+          "case_id": "reject-paired-unpaired",
+          "scenario_id": "preserve-complete-independent-native-review",
+          "method": "test",
+          "intent": "Keep immutable release verification separate from intentionally selected paired-core quality execution.",
+          "observable": "Exact0.55.4 declaration and unpaired release remain required; paired mode verifies editable metadata and actual root/registry origins; unconditional independent release API checks precede bootstrap.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/specfact_code_review/run/test_runtime_compatibility.py::test_paired_core_registry_handoff_rejects_unrelated_installation[unpaired]"
+          }
         }
       ]
     },

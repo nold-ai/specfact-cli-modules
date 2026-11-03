@@ -48,3 +48,9 @@ The native CI receipt SHALL bind the event head and complete required-member inv
 - **THEN** CI authenticates that fixture and runs all six existing launchers with isolated launcher dependencies, while candidate source remains subject to the complete quality, native acceptance and signing gates
 - **AND** fixture smoke does not claim candidate module acceptance
 - **AND** CI authenticates and seeds the paired core's frozen dependency cache before its offline child synchronization
+
+#### Scenario: Preserve released and paired core verification
+- **WHEN** quality intentionally installs the selected paired core checkout instead of the immutable development release
+- **THEN** the complete quality matrix verifies its editable distribution identity and registry API import origins against that selected checkout
+- **AND** the declared development core remains exactly version 0.55.4, and the independent native job always verifies that released version and both registry APIs before candidate bootstrap
+- **AND** an unrelated or unproven installation cannot satisfy either verification mode

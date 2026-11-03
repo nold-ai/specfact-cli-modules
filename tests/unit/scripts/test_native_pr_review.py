@@ -168,6 +168,21 @@ def test_all_signed_semgrep_passes_are_required(native_review, tmp_path):
         native_review._rule_identities(tmp_path)
 
 
+def test_immutable_core_registry_apis_are_checked_before_candidate_bootstrap():
+    workflow = yaml.safe_load((ROOT / ".github/workflows/native-pr-review.yml").read_text())
+    steps = workflow["jobs"]["independent-review"]["steps"]
+    name = "Verify immutable core registry APIs"
+    assert name in [step.get("name") for step in steps]
+    verify = _step_named(steps, name)
+    assert not verify.get("if") and not verify.get("continue-on-error", False)
+    assert steps.index(_step_named(steps, "Install independent signed reviewer")) < steps.index(verify)
+    assert steps.index(verify) < steps.index(_step_named(steps, "Bootstrap native repository environment"))
+    assert 'version("specfact-cli") == "0.55.4"' in verify["run"]
+    assert '"$trusted/venv/bin/python" -I -' in verify["run"]
+    assert "discover_all_modules_for_project_with_shadowed" in verify["run"]
+    assert "verify_module_artifact" in verify["run"]
+
+
 def test_native_tools_are_installed_from_base_before_project_bootstrap():
     workflow = yaml.safe_load((ROOT / ".github/workflows/native-pr-review.yml").read_text())
     steps = workflow["jobs"]["independent-review"]["steps"]
