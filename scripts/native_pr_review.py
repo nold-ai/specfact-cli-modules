@@ -35,6 +35,12 @@ REQUIRED_MEMBERS = (
     "targeted-pytest-coverage",
 )
 _INCOMPLETE_STATES = {"UNKNOWN", "skipped", "error", "timeout", "unavailable"}
+_TEST_CORRESPONDENCE = {
+    "tools/smart_test_coverage.py": (
+        "tests/unit/test_capsule_proof_contexts.py",
+        "tests/unit/specfact_code_review/run/test_reviewer_bootstrap.py",
+    ),
+}
 
 
 def _incomplete(finding: dict) -> bool:
@@ -187,6 +193,11 @@ def _native_test_command(*, python: Path, config: Path, output: Path, selectors:
 
 
 def _source_tests(root: Path, relative: Path) -> tuple[Path, ...]:
+    mapped = _TEST_CORRESPONDENCE.get(relative.as_posix())
+    if mapped is not None:
+        if any(not (root / path).is_file() for path in mapped):
+            raise ValueError(f"required mapped tests missing: {relative}")
+        return tuple(Path(path) for path in mapped)
     expected = Path("tests/unit") / relative.parent / f"test_{relative.name}"
     if (root / expected).is_file():
         return (expected,)

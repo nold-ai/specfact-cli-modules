@@ -299,6 +299,39 @@
             "runner": "pytest",
             "node_id": "tests/unit/specfact_code_review/run/test_runtime_compatibility.py::test_paired_core_registry_handoff_rejects_unrelated_installation[unpaired]"
           }
+        },
+        {
+          "case_id": "nonmirrored-tool-tests",
+          "scenario_id": "preserve-complete-independent-native-review",
+          "method": "test",
+          "intent": "Select the known existing tests for a nonmirrored tool before directory fallback.",
+          "observable": "Both explicit smart-test files are selected and either missing mapped file blocks acceptance; coverage remains independently required.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/scripts/test_native_pr_review.py::test_nonmirrored_tool_selects_its_existing_test_files"
+          }
+        },
+        {
+          "case_id": "missing-context-map",
+          "scenario_id": "preserve-complete-independent-native-review",
+          "method": "test",
+          "intent": "Select the known existing tests for a nonmirrored tool before directory fallback.",
+          "observable": "Both explicit smart-test files are selected and either missing mapped file blocks acceptance; coverage remains independently required.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/scripts/test_native_pr_review.py::test_nonmirrored_tool_rejects_missing_mapped_test[context]"
+          }
+        },
+        {
+          "case_id": "missing-bootstrap-map",
+          "scenario_id": "preserve-complete-independent-native-review",
+          "method": "test",
+          "intent": "Select the known existing tests for a nonmirrored tool before directory fallback.",
+          "observable": "Both explicit smart-test files are selected and either missing mapped file blocks acceptance; coverage remains independently required.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/scripts/test_native_pr_review.py::test_nonmirrored_tool_rejects_missing_mapped_test[bootstrap]"
+          }
         }
       ]
     },

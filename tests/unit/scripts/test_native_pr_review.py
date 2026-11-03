@@ -339,6 +339,29 @@ def test_coverage_roots_select_existing_source_tests(native_review, source, expe
     assert expected in inventory
 
 
+def test_nonmirrored_tool_selects_its_existing_test_files(native_review):
+    inventory = native_review._test_inventory(ROOT, [Path("tools/smart_test_coverage.py")], roots=COVERAGE_ROOTS)
+    assert set(inventory) == {
+        "tests/unit/test_capsule_proof_contexts.py",
+        "tests/unit/specfact_code_review/run/test_reviewer_bootstrap.py",
+    }
+
+
+@pytest.mark.parametrize("missing", ["context", "bootstrap"])
+def test_nonmirrored_tool_rejects_missing_mapped_test(native_review, tmp_path, missing):
+    tests = {
+        "context": "tests/unit/test_capsule_proof_contexts.py",
+        "bootstrap": "tests/unit/specfact_code_review/run/test_reviewer_bootstrap.py",
+    }
+    for name, file in tests.items():
+        if name != missing:
+            path = tmp_path / file
+            path.parent.mkdir(parents=True)
+            path.write_text("def test_existing(): pass\n")
+    with pytest.raises(ValueError, match="test"):
+        native_review._test_inventory(tmp_path, [Path("tools/smart_test_coverage.py")], roots=COVERAGE_ROOTS)
+
+
 def test__native_test_command_uses_trusted_config(native_review, tmp_path):
     command = native_review._native_test_command(
         python=Path("/project/python"),
