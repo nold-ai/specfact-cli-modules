@@ -66,6 +66,22 @@ jobs:
             "$trusted/venv/bin/python" -I -m specfact_cli.cli \
             module install nold-ai/specfact-code-review --scope user --version 0.51.2 --source marketplace
           cp "$GITHUB_WORKSPACE/scripts/native_pr_review.py" "$trusted/native_pr_review.py"
+      - name: Verify immutable core registry APIs
+        run: |
+          set -euo pipefail
+          trusted="$RUNNER_TEMP/native-independent-review"
+          cd "$trusted"
+          env -i HOME="$trusted/home" PATH="$trusted/venv/bin:/usr/bin:/bin" \
+            "$trusted/venv/bin/python" -I - <<'PYTHON'
+          from importlib import import_module
+          from importlib.metadata import version
+          assert version("specfact-cli") == "0.55.4"
+          for name, entry in (
+              ("module_discovery", "discover_all_modules_for_project_with_shadowed"),
+              ("module_installer", "verify_module_artifact"),
+          ):
+              assert callable(getattr(import_module(f"specfact_cli.registry.{name}"), entry))
+          PYTHON
       - name: Bootstrap native repository environment
         run: |
           set -euo pipefail
