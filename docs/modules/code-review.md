@@ -77,7 +77,7 @@ Options (aligned with `specfact code review run --help`):
 - `--instructions`: print AI-facing simplify / clean-code workflow instructions
   and exit without requiring installed slash prompts or skills
 
-Semgrep 1.144.0 runs both governed passes with `--disable-nosem`, so findings
+Both governed Semgrep passes use `--disable-nosem`, so findings
 hidden by `nosem` or `nosemgrep` directives remain visible in evidence. Under
 `--enforcement changed`, only blocking findings on changed lines block the local
 pre-commit gate; unchanged-line legacy findings remain in the report without
@@ -328,11 +328,21 @@ Additional behavior:
 
 ### Semgrep runner
 
-`specfact_code_review.tools.semgrep_runner.run_semgrep(files)` executes:
+On the host, `specfact_code_review.tools.semgrep_runner.run_semgrep(files)` executes:
 
 ```bash
-semgrep --config packages/specfact-code-review/src/specfact_code_review/.semgrep/clean_code.yaml --json <files...>
+osemgrep scan --experimental --metrics=off --disable-version-check --quiet --disable-nosem --config packages/specfact-code-review/src/specfact_code_review/.semgrep/clean_code.yaml --json <files...>
 ```
+
+The host requires the reviewed native `osemgrep` executable on `PATH`. Python
+Semgrep does not satisfy this prerequisite. See the core repository's
+[native scanner setup](https://docs.specfact.io/modules/code-review/#native-scanner-prerequisite).
+The host runner preserves explicit `SSL_CERT_FILE` values and defaults to its
+installed certifi bundle when that variable is absent. It reads native JSON from
+stdout with strict UTF-8 decoding.
+
+Managed reviews retain their admitted scanner command, immutable rule inputs and
+sealed CA bundle. Host environment defaults do not change that request.
 
 Custom rule mapping:
 

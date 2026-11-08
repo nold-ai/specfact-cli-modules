@@ -1,0 +1,312 @@
+schema_version: '2'
+requirements:
+  openspec:native-semgrep-cli-remediation:native-semgrep-cli:build-the-windows-curl-correction-from-frozen-inputs:
+    rationale: build the windows curl correction from frozen inputs
+    stakeholder_refs:
+      - nold-ai/specfact-cli#786
+    touchpoints:
+      - id: existing-owner
+        kind: config_file
+        locator: openspec/changes/native-semgrep-cli-remediation/specs/native-semgrep-cli/spec.md
+    verification_cases:
+      - case_id: NATIVE-PREP-001
+        scenario_id: build-the-windows-curl-correction-from-frozen-inputs
+        method: inspection
+        intent: Inspect the paired source and retained evidence for build the windows curl correction
+          from frozen inputs.
+        observable: Inspect the paired core owner and its retained current result for this requirement.
+          This module-side mapping does not execute core tests or provide native/current-head authority.
+          The final policy retains the unmodified engine, frozen corrected curl and only the exact now-unneeded
+          SSH removal. Cross-build identity is recorded separately; actual Windows execution remains required.
+  openspec:native-semgrep-cli-remediation:native-semgrep-cli:capture-native-json-at-the-existing-ci-boundary:
+    rationale: capture native json at the existing ci boundary
+    stakeholder_refs:
+      - nold-ai/specfact-cli#786
+    touchpoints:
+      - id: existing-owner
+        kind: config_file
+        locator: openspec/changes/native-semgrep-cli-remediation/specs/native-semgrep-cli/spec.md
+    verification_cases:
+      - case_id: NATIVE-PREP-002
+        scenario_id: capture-native-json-at-the-existing-ci-boundary
+        method: inspection
+        intent: Inspect the paired source and retained evidence for capture native json at the existing
+          ci boundary.
+        observable: Inspect the paired core owner and its retained current result for this requirement.
+          This module-side mapping does not execute core tests or provide native/current-head authority.
+          The existing producer captures actual native stdout as JSON and preserves its CA input behavior
+          without claiming a protected CI run.
+  openspec:native-semgrep-cli-remediation:native-semgrep-cli:check-the-actual-companion-python-dependency-license-boundary:
+    rationale: check the actual companion python dependency license boundary
+    stakeholder_refs:
+      - nold-ai/specfact-cli#786
+    touchpoints:
+      - id: existing-owner
+        kind: config_file
+        locator: openspec/changes/native-semgrep-cli-remediation/specs/native-semgrep-cli/spec.md
+    verification_cases:
+      - case_id: NATIVE-PREP-003
+        scenario_id: check-the-actual-companion-python-dependency-license-boundary
+        method: inspection
+        intent: Inspect the paired source and retained evidence for check the actual companion python
+          dependency license boundary.
+        observable: Inspect the paired core owner and its retained current result for this requirement.
+          This module-side mapping does not execute core tests or provide native/current-head authority.
+          An empty selected companion manifest root fails before a success result; no empty-root or schema-only
+          result is license approval. Positive exact-certifi and unsupported-dependency cases remain required
+          in the full affected/current-head suite.
+  ? openspec:native-semgrep-cli-remediation:native-semgrep-cli:development-scan-commands-do-not-restore-the-removed-python-graph
+  : rationale: development scan commands do not restore the removed python graph
+    stakeholder_refs:
+      - nold-ai/specfact-cli#786
+    touchpoints:
+      - id: existing-owner
+        kind: config_file
+        locator: pyproject.toml
+    verification_cases:
+      - case_id: NATIVE-PREP-004
+        scenario_id: development-scan-commands-do-not-restore-the-removed-python-graph
+        method: test
+        intent: Execute the exact authored regression for development scan commands do not restore the
+          removed python graph.
+        observable: Both prepared default environments remove Python Semgrep/MCP and retain direct certifi
+          and native prerequisites. No declaration inspection substitutes for actual scanner availability.
+        selector:
+          runner: pytest
+          node_id: tests/unit/specfact_code_review/test_native_hatch_commands.py::test_hatch_native_commands_do_not_reintroduce_python_scanner_dependencies
+  openspec:native-semgrep-cli-remediation:native-semgrep-cli:fixed-native-pcre2-preserves-the-actual-macos-scanner-platform:
+    rationale: fixed native pcre2 preserves the actual macos scanner platform
+    stakeholder_refs:
+      - nold-ai/specfact-cli#786
+    touchpoints:
+      - id: existing-owner
+        kind: config_file
+        locator: openspec/changes/native-semgrep-cli-remediation/specs/native-semgrep-cli/spec.md
+    verification_cases:
+      - case_id: NATIVE-PREP-005
+        scenario_id: fixed-native-pcre2-preserves-the-actual-macos-scanner-platform
+        method: inspection
+        intent: Inspect the paired source and retained evidence for fixed native pcre2 preserves the actual
+          macos scanner platform.
+        observable: Inspect the paired core owner and its retained current result for this requirement.
+          This module-side mapping does not execute core tests or provide native/current-head authority.
+          Authenticated PCRE2 correction and notice are installed with the original engine; mismatches
+          block publication. Actual minimum macOS15 is documented without claiming macOS11 compatibility.
+  openspec:native-semgrep-cli-remediation:native-semgrep-cli:isolate-native-source-building-and-preserve-argument-boundaries:
+    rationale: isolate native source building and preserve argument boundaries
+    stakeholder_refs:
+      - nold-ai/specfact-cli#786
+    touchpoints:
+      - id: existing-owner
+        kind: config_file
+        locator: openspec/changes/native-semgrep-cli-remediation/specs/native-semgrep-cli/spec.md
+    verification_cases:
+      - case_id: NATIVE-PREP-006
+        scenario_id: isolate-native-source-building-and-preserve-argument-boundaries
+        method: inspection
+        intent: Inspect the paired source and retained evidence for isolate native source building and
+          preserve argument boundaries.
+        observable: Inspect the paired core owner and its retained current result for this requirement.
+          This module-side mapping does not execute core tests or provide native/current-head authority.
+          Identical repeated CRT inputs are accepted and conflicting inputs rejected. Exact source/tool
+          archives, response-file boundaries and cross-build-with-spaces evidence remain separately reviewed;
+          actual Windows build is still required.
+  ? openspec:native-semgrep-cli-remediation:native-semgrep-cli:keep-native-component-identities-visible-in-existing-delivery-evidence
+  : rationale: keep native component identities visible in existing delivery evidence
+    stakeholder_refs:
+      - nold-ai/specfact-cli#786
+    touchpoints:
+      - id: existing-owner
+        kind: config_file
+        locator: openspec/changes/native-semgrep-cli-remediation/specs/native-semgrep-cli/spec.md
+    verification_cases:
+      - case_id: NATIVE-PREP-007
+        scenario_id: keep-native-component-identities-visible-in-existing-delivery-evidence
+        method: inspection
+        intent: Inspect the paired source and retained evidence for keep native component identities visible
+          in existing delivery evidence.
+        observable: Inspect the paired core owner and its retained current result for this requirement.
+          This module-side mapping does not execute core tests or provide native/current-head authority.
+          Metadata cannot refer to removed or absent files. Existing SPDX records preserve file hashes
+          and known corrected versions; unknown versions and C-library notice coverage remain unasserted.
+  openspec:native-semgrep-cli-remediation:native-semgrep-cli:keep-native-hatch-trust-local-to-the-scanner:
+    rationale: keep native hatch trust local to the scanner
+    stakeholder_refs:
+      - nold-ai/specfact-cli#786
+    touchpoints:
+      - id: existing-owner
+        kind: config_file
+        locator: pyproject.toml
+    verification_cases:
+      - case_id: NATIVE-PREP-008
+        scenario_id: keep-native-hatch-trust-local-to-the-scanner
+        method: test
+        intent: Execute the exact authored regression for keep native hatch trust local to the scanner.
+        observable: Drift in the selected CA aborts before current native version output; explicit caller
+          inputs stay authoritative, unrelated commands stay unchanged, and copied files are not rewritten.
+        selector:
+          runner: pytest
+          node_id: tests/unit/specfact_code_review/test_native_hatch_commands.py::test_native_hatch_ca_input_states[installed-drift-1]
+  openspec:native-semgrep-cli-remediation:native-semgrep-cli:native-delivery-evidence-reports-the-verified-composition:
+    rationale: native delivery evidence reports the verified composition
+    stakeholder_refs:
+      - nold-ai/specfact-cli#786
+    touchpoints:
+      - id: existing-owner
+        kind: config_file
+        locator: openspec/changes/native-semgrep-cli-remediation/specs/native-semgrep-cli/spec.md
+    verification_cases:
+      - case_id: NATIVE-PREP-009
+        scenario_id: native-delivery-evidence-reports-the-verified-composition
+        method: inspection
+        intent: Inspect the paired source and retained evidence for native delivery evidence reports the
+          verified composition.
+        observable: Inspect the paired core owner and its retained current result for this requirement.
+          This module-side mapping does not execute core tests or provide native/current-head authority.
+          Changing verified native bytes changes the combined SPDX namespace, retaining complete file
+          relationships without downloading or repairing during evidence generation.
+  openspec:native-semgrep-cli-remediation:native-semgrep-cli:preserve-existing-external-code-review-providers:
+    rationale: preserve existing external code review providers
+    stakeholder_refs:
+      - nold-ai/specfact-cli#786
+    touchpoints:
+      - id: existing-owner
+        kind: config_file
+        locator: packages/specfact-code-review/module-package.yaml
+    verification_cases:
+      - case_id: NATIVE-PREP-010
+        scenario_id: preserve-existing-external-code-review-providers
+        method: test
+        intent: Execute the exact authored regression for preserve existing external code review providers.
+        observable: Existing Pylint and npm BasedPyright providers and logical tool identities remain
+          present. The explicit-source local review and current-head default CLI assurance remain distinct.
+        selector:
+          runner: pytest
+          node_id: tests/integration/specfact_code_review/test_cli_contract_review_run_reports.py::test_native_only_review_prerequisites_do_not_skip
+  openspec:native-semgrep-cli-remediation:native-semgrep-cli:preserve-migration-scope-and-gates:
+    rationale: preserve migration scope and gates
+    stakeholder_refs:
+      - nold-ai/specfact-cli#786
+    touchpoints:
+      - id: existing-owner
+        kind: config_file
+        locator: openspec/changes/native-semgrep-cli-remediation/specs/native-semgrep-cli/spec.md
+    verification_cases:
+      - case_id: NATIVE-PREP-011
+        scenario_id: preserve-migration-scope-and-gates
+        method: inspection
+        intent: Inspect the paired source and retained evidence for preserve migration scope and gates.
+        observable: Inspect the paired core owner and its retained current result for this requirement.
+          This module-side mapping does not execute core tests or provide native/current-head authority.
+          Actual owner preparation grants, the reviewed source manifest and unchanged historical inputs
+          are inspected. No local preparation authorizes signing, protected adoption, exception renewal
+          or merge.
+  openspec:native-semgrep-cli-remediation:native-semgrep-cli:preserve-native-repro-coverage-and-missing-tool-reports:
+    rationale: preserve native repro coverage and missing tool reports
+    stakeholder_refs:
+      - nold-ai/specfact-cli#786
+    touchpoints:
+      - id: existing-owner
+        kind: config_file
+        locator: openspec/changes/native-semgrep-cli-remediation/specs/native-semgrep-cli/spec.md
+    verification_cases:
+      - case_id: NATIVE-PREP-012
+        scenario_id: preserve-native-repro-coverage-and-missing-tool-reports
+        method: inspection
+        intent: Inspect the paired source and retained evidence for preserve native repro coverage and
+          missing tool reports.
+        observable: Inspect the paired core owner and its retained current result for this requirement.
+          This module-side mapping does not execute core tests or provide native/current-head authority.
+          Optional missing native scans retain SKIPPED status with truthful native installation guidance,
+          preserving repro coverage and existing timeout/prefix contracts.
+  openspec:native-semgrep-cli-remediation:native-semgrep-cli:preserve-project-import-scanner-coverage:
+    rationale: preserve project import scanner coverage
+    stakeholder_refs:
+      - nold-ai/specfact-cli#786
+    touchpoints:
+      - id: existing-owner
+        kind: config_file
+        locator: openspec/changes/native-semgrep-cli-remediation/specs/native-semgrep-cli/spec.md
+    verification_cases:
+      - case_id: NATIVE-PREP-013
+        scenario_id: preserve-project-import-scanner-coverage
+        method: inspection
+        intent: Inspect the paired source and retained evidence for preserve project import scanner coverage.
+        observable: Inspect this module checkout’s two existing Project scanner owners and their authored
+          tests for native findings, rule bytes, explicit CA input and optional behavior. Test-authored
+          planning does not claim protected module delivery or native execution proof.
+  openspec:native-semgrep-cli-remediation:native-semgrep-cli:provision-only-the-frozen-upstream-native-payload:
+    rationale: provision only the frozen upstream native payload
+    stakeholder_refs:
+      - nold-ai/specfact-cli#786
+    touchpoints:
+      - id: existing-owner
+        kind: config_file
+        locator: openspec/changes/native-semgrep-cli-remediation/specs/native-semgrep-cli/spec.md
+    verification_cases:
+      - case_id: NATIVE-PREP-014
+        scenario_id: provision-only-the-frozen-upstream-native-payload
+        method: inspection
+        intent: Inspect the paired source and retained evidence for provision only the frozen upstream
+          native payload.
+        observable: Inspect the paired core owner and its retained current result for this requirement.
+          This module-side mapping does not execute core tests or provide native/current-head authority.
+          Only complete authenticated SDK members/notices are published and verified on reuse. Altered
+          bytes, unsafe paths, links and changed existing SDKs remain fail-closed; installation is not
+          advisory clearance.
+  ? openspec:native-semgrep-cli-remediation:native-semgrep-cli:remove-the-vulnerable-python-dependency-through-reviewed-delivery
+  : rationale: remove the vulnerable python dependency through reviewed delivery
+    stakeholder_refs:
+      - nold-ai/specfact-cli#786
+    touchpoints:
+      - id: existing-owner
+        kind: config_file
+        locator: openspec/changes/native-semgrep-cli-remediation/specs/native-semgrep-cli/spec.md
+    verification_cases:
+      - case_id: NATIVE-PREP-015
+        scenario_id: remove-the-vulnerable-python-dependency-through-reviewed-delivery
+        method: inspection
+        intent: Inspect the paired source and retained evidence for remove the vulnerable python dependency
+          through reviewed delivery.
+        observable: Inspect the paired core owner and its retained current result for this requirement.
+          This module-side mapping does not execute core tests or provide native/current-head authority.
+          Current frozen declarations/export use the normal selected graph with no Python Semgrep/MCP,
+          retaining patched OpenTelemetry and exact official registry records. New module signatures/adoption
+          remain separate.
+  openspec:native-semgrep-cli-remediation:native-semgrep-cli:use-the-upstream-native-scanner-without-python-fallback:
+    rationale: use the upstream native scanner without python fallback
+    stakeholder_refs:
+      - nold-ai/specfact-cli#786
+    touchpoints:
+      - id: existing-owner
+        kind: config_file
+        locator: openspec/changes/native-semgrep-cli-remediation/specs/native-semgrep-cli/spec.md
+    verification_cases:
+      - case_id: NATIVE-PREP-016
+        scenario_id: use-the-upstream-native-scanner-without-python-fallback
+        method: inspection
+        intent: Inspect the paired source and retained evidence for use the upstream native scanner without
+          python fallback.
+        observable: Inspect the paired core owner and its retained current result for this requirement.
+          This module-side mapping does not execute core tests or provide native/current-head authority.
+          The actual native executable is available without Python Semgrep; findings, propagation and
+          existing rule sets remain covered by the affected full suite. Python-only fallback remains unavailable.
+  ? openspec:native-semgrep-cli-remediation:native-semgrep-cli:verify-the-current-selection-without-transferring-expired-approvals
+  : rationale: verify the current selection without transferring expired approvals
+    stakeholder_refs:
+      - nold-ai/specfact-cli#786
+    touchpoints:
+      - id: existing-owner
+        kind: config_file
+        locator: openspec/changes/native-semgrep-cli-remediation/specs/native-semgrep-cli/spec.md
+    verification_cases:
+      - case_id: NATIVE-PREP-017
+        scenario_id: verify-the-current-selection-without-transferring-expired-approvals
+        method: inspection
+        intent: Inspect the paired source and retained evidence for verify the current selection without
+          transferring expired approvals.
+        observable: Inspect the paired core owner and its retained current result for this requirement.
+          This module-side mapping does not execute core tests or provide native/current-head authority.
+          The old security floors are unchanged and active registers remain empty. Historical policy tests
+          retain explicit synthetic dates; expired original approvals do not authorize any new ID/version/date
+          or source input.

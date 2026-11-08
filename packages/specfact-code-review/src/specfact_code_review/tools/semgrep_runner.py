@@ -6,11 +6,13 @@ import ast
 import json
 import os
 import subprocess
+import sys
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal, cast
 
+import certifi
 import yaml
 from beartype import beartype
 from icontract import ensure, require
@@ -344,6 +346,17 @@ def _run_semgrep_command(
     del bundle_root
     config_files = config_file if isinstance(config_file, list) else [config_file]
     config_args = [arg for path in config_files for arg in ("--config", str(path))]
+    command = analyzer_command(
+        [
+            "semgrep",
+            "--disable-version-check",
+            "--quiet",
+            "--disable-nosem",
+            *config_args,
+            "--json",
+            *(str(file_path) for file_path in files),
+        ]
+    )
     with tempfile.TemporaryDirectory(prefix="semgrep-home-") as temp_home:
         semgrep_home = Path(temp_home)
         semgrep_log_dir = semgrep_home / ".semgrep"
@@ -353,25 +366,20 @@ def _run_semgrep_command(
         semgrep_config_dir.mkdir(parents=True, exist_ok=True)
         semgrep_cache_dir.mkdir(parents=True, exist_ok=True)
         env = os.environ.copy()
+        if command[0] == "osemgrep":
+            env.setdefault("SSL_CERT_FILE", certifi.where())
+            if sys.platform == "linux":
+                env.setdefault("LD_LIBRARY_PATH", "$ORIGIN/libs")
         env["HOME"] = str(semgrep_home)
         env["XDG_CONFIG_HOME"] = str(semgrep_config_dir)
         env["XDG_CACHE_HOME"] = str(semgrep_cache_dir)
         env["SEMGREP_SETTINGS_FILE"] = str(semgrep_log_dir / "settings.yml")
         env.setdefault("SEMGREP_SEND_METRICS", "off")
         return subprocess.run(
-            analyzer_command(
-                [
-                    "semgrep",
-                    "--disable-version-check",
-                    "--quiet",
-                    "--disable-nosem",
-                    *config_args,
-                    "--json",
-                    *(str(file_path) for file_path in files),
-                ]
-            ),
+            command,
             capture_output=True,
-            text=True,
+            encoding="utf-8",
+            errors="strict",
             check=False,
             timeout=SEMGREP_TIMEOUT_SECONDS,
             env=env,
