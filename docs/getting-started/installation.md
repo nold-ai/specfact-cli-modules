@@ -388,7 +388,7 @@ specfact project sync repository --repo . --watch
 - **Global flags**: Place `--no-banner` before the command: `specfact --no-banner <command>`
 - **Bridge adapter sync**: Use `sync bridge --adapter <adapter-name>` for external tool integration (Spec-Kit, OpenSpec, GitHub, etc.)
 - **Repository sync**: Use `project sync repository` for code change tracking
-- **Semgrep (optional)**: Install `pip install semgrep` for async pattern detection in `specfact code repro`
+- **Native Semgrep (optional for repro)**: Provide the reviewed `osemgrep` executable on `PATH` for async pattern detection in `specfact code repro`. Python Semgrep does not satisfy this prerequisite. Repro reports a missing native scanner as skipped. See [native scanner setup](../modules/code-review.md#native-scanner-prerequisite).
 
 ---
 

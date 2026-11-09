@@ -77,7 +77,7 @@ Options (aligned with `specfact code review run --help`):
 - `--instructions`: print AI-facing simplify / clean-code workflow instructions
   and exit without requiring installed slash prompts or skills
 
-Semgrep 1.144.0 runs both governed passes with `--disable-nosem`, so findings
+Both governed Semgrep passes use `--disable-nosem`, so findings
 hidden by `nosem` or `nosemgrep` directives remain visible in evidence. Under
 `--enforcement changed`, only blocking findings on changed lines block the local
 pre-commit gate; unchanged-line legacy findings remain in the report without
@@ -326,13 +326,48 @@ Additional behavior:
 - severity is derived from the message id prefix (`E*`/`F*` -> `error`, `I*` -> `info`, otherwise `warning`)
 - malformed output or a missing pylint executable yields a single `tool_error` finding
 
-### Semgrep runner
+### Native scanner prerequisite
 
-`specfact_code_review.tools.semgrep_runner.run_semgrep(files)` executes:
+For paired repository development, use the reviewed `specfact-cli` checkout that
+contains `.github/actions/setup-frozen-python/provision_semgrep.py`. Its existing
+provisioner selects and verifies the native SDK and its supporting libraries.
+Run these commands from that core checkout, then run the module commands in the
+same shell:
 
 ```bash
-semgrep --config packages/specfact-code-review/src/specfact_code_review/.semgrep/clean_code.yaml --json <files...>
+hatch run python .github/actions/setup-frozen-python/provision_semgrep.py "$PWD/.specfact/native-semgrep"
+export PATH="$PWD/.specfact/native-semgrep:$PATH"
+osemgrep --version
 ```
+
+Use a new owned destination. An existing destination must already match the
+selected bytes. The provisioner refuses to repair mismatches. Keep the SDK's
+libraries and notices beside the executable. The selected macOS arm64 SDK
+requires macOS 15.
+
+These steps require the paired core source and do not install an unreleased
+module bundle. Windows private-CA HTTPS validation remains blocked by the
+[upstream native trust issue](https://github.com/semgrep/semgrep/issues/12067).
+Do not add a CA to the system trust store or disable certificate verification to
+work around that blocker. A successful version command does not prove HTTPS
+trust behavior.
+
+### Semgrep runner
+
+On the host, `specfact_code_review.tools.semgrep_runner.run_semgrep(files)` executes:
+
+```bash
+osemgrep scan --experimental --metrics=off --disable-version-check --quiet --disable-nosem --config packages/specfact-code-review/src/specfact_code_review/.semgrep/clean_code.yaml --json <files...>
+```
+
+The host requires the reviewed native `osemgrep` executable on `PATH`. Python
+Semgrep does not satisfy this prerequisite. See [Native scanner prerequisite](#native-scanner-prerequisite).
+The host runner preserves explicit `SSL_CERT_FILE` values and defaults to its
+installed certifi bundle when that variable is absent. It reads native JSON from
+stdout with strict UTF-8 decoding.
+
+Managed reviews retain their admitted scanner command, immutable rule inputs and
+sealed CA bundle. Host environment defaults do not change that request.
 
 Custom rule mapping:
 
