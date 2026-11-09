@@ -23,7 +23,7 @@ def _repo_root() -> Path:
 
 REPO_ROOT = _repo_root()
 SCENARIO_PATH = REPO_ROOT / "tests" / "cli-contracts" / "specfact-code-review-run.scenarios.yaml"
-REQUIRED_TOOLS = ("ruff", "radon", "basedpyright", "pylint", "semgrep")
+REQUIRED_TOOLS = ("ruff", "radon", "basedpyright", "pylint", "osemgrep")
 REPORT_PLACEHOLDER = "CONTRACT_TMP_REPORT.json"
 
 runner = CliRunner()
@@ -48,6 +48,20 @@ def _scenario_names_with_file_expectations() -> list[str]:
         if expect.get("file_content_contains"):
             names.append(scenario["name"])
     return names
+
+
+def test_native_only_review_prerequisites_do_not_skip(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(shutil, "which", lambda tool: None if tool in {"semgrep", "pysemgrep"} else f"/tools/{tool}")
+    try:
+        _skip_if_tools_missing()
+    except pytest.skip.Exception as exc:
+        pytest.fail(f"Native-only review prerequisites were rejected: {exc}")
+
+
+def test_python_only_semgrep_does_not_satisfy_review_prerequisites(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(shutil, "which", lambda tool: None if tool == "osemgrep" else f"/tools/{tool}")
+    with pytest.raises(pytest.skip.Exception, match="osemgrep"):
+        _skip_if_tools_missing()
 
 
 @pytest.mark.integration

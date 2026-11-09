@@ -19,6 +19,7 @@ native_tools = ["git", "uname", "sed"]
 type = "virtual"
 path = ".venv"
 dependencies = [
+    "certifi==2026.10.19",
     "specfact-cli==0.55.4",
     "beartype>=0.22.0",
     "json5>=0.9.28",
@@ -34,7 +35,6 @@ dependencies = [
     "nodejs-wheel-binaries==24.16.0",
     "radon>=6.0.1",
     "ruff>=0.14.2",
-    "semgrep>=1.144.0",
     "pylint==4.0.7",
     "crosshair-tool==0.0.109",
     "pre-commit>=3.7.0",
@@ -46,6 +46,25 @@ dependencies = [
 [tool.hatch.envs.default.env-vars]
 SPECFACT_MODULES_REPO = "{root}"
 
+[tool.hatch.envs.default.overrides.platform.linux]
+scripts = [
+    "scan=python -c \"import certifi,hashlib,pathlib,sys; p=pathlib.Path(sys.argv[1]); f=p.open('rb'); a=f.read(262145); f.close(); f=pathlib.Path(certifi.where()).open('rb'); b=f.read(262145); f.close(); sys.exit(0 if len(a)<=262144 and len(b)<=262144 and hashlib.sha256(a).hexdigest()==p.stem.removeprefix('cacert-') and a==b else 'Selected certifi CA data mismatch; no native scan started')\" tools/certifi/cacert-50f79f98dac192b20dbf73f35c56f0b0c557ab267ff5199d1117cc1180b70785.pem && LD_LIBRARY_PATH=\"${LD_LIBRARY_PATH-\\$ORIGIN/libs}\" SSL_CERT_FILE=tools/certifi/cacert-50f79f98dac192b20dbf73f35c56f0b0c557ab267ff5199d1117cc1180b70785.pem osemgrep scan --experimental --metrics=off --disable-version-check --config packages/specfact-code-review/src/specfact_code_review/.semgrep/clean_code.yaml {args}",
+    "scan-all=python -c \"import certifi,hashlib,pathlib,sys; p=pathlib.Path(sys.argv[1]); f=p.open('rb'); a=f.read(262145); f.close(); f=pathlib.Path(certifi.where()).open('rb'); b=f.read(262145); f.close(); sys.exit(0 if len(a)<=262144 and len(b)<=262144 and hashlib.sha256(a).hexdigest()==p.stem.removeprefix('cacert-') and a==b else 'Selected certifi CA data mismatch; no native scan started')\" tools/certifi/cacert-50f79f98dac192b20dbf73f35c56f0b0c557ab267ff5199d1117cc1180b70785.pem && LD_LIBRARY_PATH=\"${LD_LIBRARY_PATH-\\$ORIGIN/libs}\" SSL_CERT_FILE=tools/certifi/cacert-50f79f98dac192b20dbf73f35c56f0b0c557ab267ff5199d1117cc1180b70785.pem osemgrep scan --experimental --metrics=off --disable-version-check --config packages/specfact-code-review/src/specfact_code_review/.semgrep/clean_code.yaml packages/specfact-code-review/src/specfact_code_review",
+]
+
+[tool.hatch.envs.default.overrides.platform.windows]
+scripts = [
+    "scan=python -c \"import certifi,hashlib,pathlib,sys; p=pathlib.Path(sys.argv[1]); f=p.open('rb'); a=f.read(262145); f.close(); f=pathlib.Path(certifi.where()).open('rb'); b=f.read(262145); f.close(); sys.exit(0 if len(a)<=262144 and len(b)<=262144 and hashlib.sha256(a).hexdigest()==p.stem.removeprefix('cacert-') and a==b else 'Selected certifi CA data mismatch; no native scan started')\" tools/certifi/cacert-50f79f98dac192b20dbf73f35c56f0b0c557ab267ff5199d1117cc1180b70785.pem && set \"SSL_CERT_FILE=tools/certifi/cacert-50f79f98dac192b20dbf73f35c56f0b0c557ab267ff5199d1117cc1180b70785.pem\" && osemgrep scan --experimental --metrics=off --disable-version-check --config packages/specfact-code-review/src/specfact_code_review/.semgrep/clean_code.yaml {args}",
+    "scan-all=python -c \"import certifi,hashlib,pathlib,sys; p=pathlib.Path(sys.argv[1]); f=p.open('rb'); a=f.read(262145); f.close(); f=pathlib.Path(certifi.where()).open('rb'); b=f.read(262145); f.close(); sys.exit(0 if len(a)<=262144 and len(b)<=262144 and hashlib.sha256(a).hexdigest()==p.stem.removeprefix('cacert-') and a==b else 'Selected certifi CA data mismatch; no native scan started')\" tools/certifi/cacert-50f79f98dac192b20dbf73f35c56f0b0c557ab267ff5199d1117cc1180b70785.pem && set \"SSL_CERT_FILE=tools/certifi/cacert-50f79f98dac192b20dbf73f35c56f0b0c557ab267ff5199d1117cc1180b70785.pem\" && osemgrep scan --experimental --metrics=off --disable-version-check --config packages/specfact-code-review/src/specfact_code_review/.semgrep/clean_code.yaml packages/specfact-code-review/src/specfact_code_review",
+]
+
+[tool.hatch.envs.default.overrides.env.SSL_CERT_FILE]
+scripts = [
+    "scan=osemgrep scan --experimental --metrics=off --disable-version-check --config packages/specfact-code-review/src/specfact_code_review/.semgrep/clean_code.yaml {args}",
+    "scan-all=osemgrep scan --experimental --metrics=off --disable-version-check --config packages/specfact-code-review/src/specfact_code_review/.semgrep/clean_code.yaml packages/specfact-code-review/src/specfact_code_review",
+    { key = "scan", value = "LD_LIBRARY_PATH=\"${LD_LIBRARY_PATH-\\$ORIGIN/libs}\" osemgrep scan --experimental --metrics=off --disable-version-check --config packages/specfact-code-review/src/specfact_code_review/.semgrep/clean_code.yaml {args}", platform = ["linux"] },
+    { key = "scan-all", value = "LD_LIBRARY_PATH=\"${LD_LIBRARY_PATH-\\$ORIGIN/libs}\" osemgrep scan --experimental --metrics=off --disable-version-check --config packages/specfact-code-review/src/specfact_code_review/.semgrep/clean_code.yaml packages/specfact-code-review/src/specfact_code_review", platform = ["linux"] },
+]
 [tool.hatch.envs.hatch-test]
 extra-dependencies = [
     "pyyaml>=6.0.3",
@@ -57,8 +76,14 @@ format = "ruff check . --fix && ruff format ."
 type-check = "python tools/run_basedpyright.py {args}"
 lint = "python tools/ensure_core_dependency.py && ruff format . --check && python tools/run_basedpyright.py && ruff check . && PYLINTHOME=.pylint.d pylint src tests tools"
 test = "python tools/ensure_core_dependency.py && pytest tests/host/proof_capsule_deferred_review_ci.py && pytest tests --ignore=tests/unit/test_capsule_deferred_review_ci.py --ignore=tests/unit/test_macos_managed_uv_child.py --ignore=tests/unit/test_macos_native_broker_wait.py --ignore=tests/unit/test_macos_python_candidate.py {args}"
-scan = "semgrep --config packages/specfact-code-review/src/specfact_code_review/.semgrep/clean_code.yaml {args}"
-scan-all = "semgrep --config packages/specfact-code-review/src/specfact_code_review/.semgrep/clean_code.yaml packages/specfact-code-review/src/specfact_code_review"
+scan = [
+    "python -c \"import certifi,hashlib,pathlib,sys; p=pathlib.Path(sys.argv[1]); f=p.open('rb'); a=f.read(262145); f.close(); f=pathlib.Path(certifi.where()).open('rb'); b=f.read(262145); f.close(); sys.exit(0 if len(a)<=262144 and len(b)<=262144 and hashlib.sha256(a).hexdigest()==p.stem.removeprefix('cacert-') and a==b else 'Selected certifi CA data mismatch; no native scan started')\" tools/certifi/cacert-50f79f98dac192b20dbf73f35c56f0b0c557ab267ff5199d1117cc1180b70785.pem",
+    "SSL_CERT_FILE=tools/certifi/cacert-50f79f98dac192b20dbf73f35c56f0b0c557ab267ff5199d1117cc1180b70785.pem osemgrep scan --experimental --metrics=off --disable-version-check --config packages/specfact-code-review/src/specfact_code_review/.semgrep/clean_code.yaml {args}",
+]
+scan-all = [
+    "python -c \"import certifi,hashlib,pathlib,sys; p=pathlib.Path(sys.argv[1]); f=p.open('rb'); a=f.read(262145); f.close(); f=pathlib.Path(certifi.where()).open('rb'); b=f.read(262145); f.close(); sys.exit(0 if len(a)<=262144 and len(b)<=262144 and hashlib.sha256(a).hexdigest()==p.stem.removeprefix('cacert-') and a==b else 'Selected certifi CA data mismatch; no native scan started')\" tools/certifi/cacert-50f79f98dac192b20dbf73f35c56f0b0c557ab267ff5199d1117cc1180b70785.pem",
+    "SSL_CERT_FILE=tools/certifi/cacert-50f79f98dac192b20dbf73f35c56f0b0c557ab267ff5199d1117cc1180b70785.pem osemgrep scan --experimental --metrics=off --disable-version-check --config packages/specfact-code-review/src/specfact_code_review/.semgrep/clean_code.yaml packages/specfact-code-review/src/specfact_code_review",
+]
 
 # Modules-repo scoped parity commands
 yaml-lint = "python tools/validate_repo_manifests.py"

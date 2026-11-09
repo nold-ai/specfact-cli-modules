@@ -10,7 +10,7 @@ from typing import Literal
 from beartype import beartype
 from icontract import ensure, require
 
-from specfact_code_review._review_utils import tool_error
+from specfact_code_review._review_utils import analyzer_command, tool_error
 from specfact_code_review.run.findings import ReviewFinding
 
 
@@ -24,7 +24,6 @@ ReviewToolId = Literal[
     "pytest",
 ]
 
-# tool_id -> pip distribution name(s) declared on module-package.yaml
 REVIEW_TOOL_PIP_PACKAGES: dict[ReviewToolId, str] = {
     "ruff": "ruff",
     "radon": "radon",
@@ -50,7 +49,12 @@ _EXECUTABLE_ON_PATH: dict[ReviewToolId, str] = {
 }
 
 
-def _skip_message(tool_id: ReviewToolId) -> str:
+def _skip_message(tool_id: ReviewToolId, executable: str) -> str:
+    if tool_id == "semgrep" and executable == "osemgrep":
+        return (
+            "Review checks for semgrep were skipped: native executable osemgrep not found on PATH. "
+            "Install the reviewed upstream native Semgrep executable."
+        )
     pip_name = REVIEW_TOOL_PIP_PACKAGES[tool_id]
     return (
         f"Review checks for {tool_id} were skipped: executable not found on PATH. "
@@ -64,12 +68,14 @@ def _skip_message(tool_id: ReviewToolId) -> str:
 def skip_if_tool_missing(tool_id: ReviewToolId, file_path: Path) -> list[ReviewFinding]:
     """Return a single tool_error when the CLI is absent; otherwise return an empty list."""
     exe = _EXECUTABLE_ON_PATH.get(tool_id)
+    if exe == "semgrep" and analyzer_command([exe])[0] == "osemgrep":
+        exe = "osemgrep"
     if exe is not None and shutil.which(exe) is None:
         return [
             tool_error(
                 tool=tool_id,
                 file_path=file_path,
-                message=_skip_message(tool_id),
+                message=_skip_message(tool_id, exe),
                 severity="warning",
             )
         ]

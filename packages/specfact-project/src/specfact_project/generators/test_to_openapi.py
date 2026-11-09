@@ -11,12 +11,20 @@ import ast
 import json
 import os
 import subprocess
-from concurrent.futures import ThreadPoolExecutor, as_completed
+import sys
+from concurrent.futures import Future, ThreadPoolExecutor, as_completed
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+import certifi
 from beartype import beartype
 from icontract import ensure, require
+
+
+@dataclass
+class _ExampleCollectionState:
+    interrupted: bool = False
 
 
 class OpenAPITestConverter:
@@ -73,7 +81,7 @@ class OpenAPITestConverter:
             return self._extract_examples_from_ast(test_files)
 
         # Extract unique test file paths
-        test_paths = set()
+        test_paths: set[Path] = set()
         for test_ref in test_files:
             file_path = test_ref.split("::")[0] if "::" in test_ref else test_ref
             test_paths.add(self.repo_path / file_path)
@@ -86,49 +94,58 @@ class OpenAPITestConverter:
             # No valid test files, fall back to AST
             return self._extract_examples_from_ast(test_files)
 
-        # Parallelize Semgrep calls for faster processing in production
-        max_workers = min(len(test_paths_list), 4)  # Cap at 4 workers for Semgrep (I/O bound)
+        examples.update(self._merge_semgrep_examples(test_paths_list))
+
+        if not examples:
+            examples = self._extract_examples_from_ast(test_files)
+
+        return examples
+
+    @staticmethod
+    def _cancel_pending_futures(future_to_path: dict[Future[Any], Path]) -> None:
+        for f in future_to_path:
+            if not f.done():
+                f.cancel()
+
+    def _collect_semgrep_results_from_futures(
+        self, future_to_path: dict[Future[Any], Path], examples: dict[str, Any], state: _ExampleCollectionState
+    ) -> None:
+        try:
+            for future in as_completed(future_to_path):
+                test_path = future_to_path[future]
+                try:
+                    semgrep_results = future.result()
+                    file_examples = self._parse_semgrep_results(semgrep_results, test_path)
+                    examples.update(file_examples)
+                except KeyboardInterrupt:
+                    state.interrupted = True
+                    self._cancel_pending_futures(future_to_path)
+                    return
+                except Exception:
+                    continue
+        except KeyboardInterrupt:
+            state.interrupted = True
+            self._cancel_pending_futures(future_to_path)
+
+    def _merge_semgrep_examples(self, test_paths_list: list[Path]) -> dict[str, Any]:
+        examples: dict[str, Any] = {}
+        max_workers = min(len(test_paths_list), 4)
         executor = ThreadPoolExecutor(max_workers=max_workers)
-        interrupted = False
+        state = _ExampleCollectionState()
         try:
             future_to_path = {executor.submit(self._run_semgrep, test_path): test_path for test_path in test_paths_list}
-
-            try:
-                for future in as_completed(future_to_path):
-                    test_path = future_to_path[future]
-                    try:
-                        semgrep_results = future.result()
-                        file_examples = self._parse_semgrep_results(semgrep_results, test_path)
-                        examples.update(file_examples)
-                    except KeyboardInterrupt:
-                        interrupted = True
-                        for f in future_to_path:
-                            if not f.done():
-                                f.cancel()
-                        break
-                    except Exception:
-                        # Fall back to AST if Semgrep fails for this file
-                        continue
-            except KeyboardInterrupt:
-                interrupted = True
-                for f in future_to_path:
-                    if not f.done():
-                        f.cancel()
-            if interrupted:
+            self._collect_semgrep_results_from_futures(future_to_path, examples, state)
+            if state.interrupted:
                 raise KeyboardInterrupt
         except KeyboardInterrupt:
-            interrupted = True
+            state.interrupted = True
             executor.shutdown(wait=False, cancel_futures=True)
             raise
         finally:
-            if not interrupted:
+            if not state.interrupted:
                 executor.shutdown(wait=True)
             else:
                 executor.shutdown(wait=False)
-
-        # If Semgrep didn't find anything, fall back to AST
-        if not examples:
-            examples = self._extract_examples_from_ast(test_files)
 
         return examples
 
@@ -138,14 +155,30 @@ class OpenAPITestConverter:
     def _run_semgrep(self, test_path: Path) -> list[dict[str, Any]]:
         """Run Semgrep on a test file and return results."""
         try:
+            env = dict(os.environ)
+            env.setdefault("SSL_CERT_FILE", certifi.where())
+            if sys.platform == "linux":
+                env.setdefault("LD_LIBRARY_PATH", "$ORIGIN/libs")
             # Reduced timeout to avoid hanging on large test files
             # Further reduced to 5s for faster processing (can be made configurable)
             result = subprocess.run(
-                ["semgrep", "--config", str(self.semgrep_config), "--json", str(test_path)],
+                [
+                    "osemgrep",
+                    "scan",
+                    "--experimental",
+                    "--metrics=off",
+                    "--disable-version-check",
+                    "--config",
+                    str(self.semgrep_config),
+                    "--json",
+                    str(test_path),
+                ],
                 capture_output=True,
                 text=True,
+                encoding="utf-8",
                 timeout=5,  # Reduced from 10 to 5 seconds for faster processing
                 check=False,
+                env=env,
             )
 
             if result.returncode != 0:
@@ -164,35 +197,25 @@ class OpenAPITestConverter:
     def _parse_semgrep_results(self, results: list[dict[str, Any]], test_path: Path) -> dict[str, Any]:
         """Parse Semgrep results and extract example data."""
         examples: dict[str, Any] = {}
-
-        # Parse test file with AST to get actual code
         try:
             tree = ast.parse(test_path.read_text(encoding="utf-8"), filename=str(test_path))
         except Exception:
             return examples
-
-        # Map Semgrep results to AST nodes
         for result in results:
             rule_id = result.get("check_id", "")
             start_line = result.get("start", {}).get("line", 0)
-
-            # Extract examples based on rule type
             if "extract-test-request-data" in rule_id:
                 example = self._extract_request_example(tree, start_line)
                 if example:
                     operation_id = example.get("operation_id", "unknown")
-                    if operation_id not in examples:
-                        examples[operation_id] = {}
-                    examples[operation_id]["request"] = example.get("request", {})
-            elif "extract-test-response-data" in rule_id:
+                    examples.setdefault(operation_id, {})["request"] = example.get("request", {})
+                continue
+            if "extract-test-response-data" in rule_id:
                 example = self._extract_response_example(tree, start_line)
                 if example:
                     operation_id = example.get("operation_id", "unknown")
-                    if operation_id not in examples:
-                        examples[operation_id] = {}
-                    examples[operation_id]["response"] = example.get("response", {})
+                    examples.setdefault(operation_id, {})["response"] = example.get("response", {})
                     examples[operation_id]["status_code"] = example.get("status_code", 200)
-
         return examples
 
     @beartype
@@ -201,32 +224,63 @@ class OpenAPITestConverter:
     @ensure(lambda result: result is None or isinstance(result, dict), "Must return None or dict")
     def _extract_request_example(self, tree: ast.AST, line: int) -> dict[str, Any] | None:
         """Extract request example from AST node near the specified line."""
-        # Find the function containing this line
         for node in ast.walk(tree):
-            if isinstance(node, ast.FunctionDef) and node.lineno <= line <= (node.end_lineno or node.lineno):
-                # Look for HTTP request patterns
-                for child in ast.walk(node):
-                    if (
-                        isinstance(child, ast.Call)
-                        and isinstance(child.func, ast.Attribute)
-                        and child.func.attr in ("post", "get", "put", "delete", "patch")
-                    ):
-                        method_name = child.func.attr
-                        # Extract path and data
-                        path = self._extract_string_arg(child, 0)
-                        data = self._extract_json_arg(child, "json") or self._extract_json_arg(child, "data")
+            if not isinstance(node, ast.FunctionDef) or not node.lineno <= line <= (node.end_lineno or node.lineno):
+                continue
+            for child in ast.walk(node):
+                if not (
+                    isinstance(child, ast.Call)
+                    and isinstance(child.func, ast.Attribute)
+                    and child.func.attr in ("post", "get", "put", "delete", "patch")
+                ):
+                    continue
+                method_name = child.func.attr
+                path = self._extract_string_arg(child, 0)
+                data = self._extract_json_arg(child, "json") or self._extract_json_arg(child, "data")
+                if path:
+                    operation_id = f"{method_name}_{path.replace('/', '_').replace('-', '_').strip('_')}"
+                    return {
+                        "operation_id": operation_id,
+                        "request": {"path": path, "method": method_name.upper(), "body": data or {}},
+                    }
+        return None
 
-                        if path:
-                            operation_id = f"{method_name}_{path.replace('/', '_').replace('-', '_').strip('_')}"
-                            return {
-                                "operation_id": operation_id,
-                                "request": {
-                                    "path": path,
-                                    "method": method_name.upper(),
-                                    "body": data or {},
-                                },
-                            }
+    def _extract_json_assertion(self, child: ast.AST) -> dict[str, Any] | None:
+        if not (isinstance(child, ast.Assert) and isinstance(child.test, ast.Compare)):
+            return None
+        left = child.test.left
+        if (
+            isinstance(left, ast.Call)
+            and isinstance(left.func, ast.Attribute)
+            and left.func.attr == "json"
+            and child.test.comparators
+        ):
+            expected = self._extract_ast_value(child.test.comparators[0])
+            if expected:
+                return {"operation_id": "unknown", "response": expected, "status_code": 200}
+        return None
 
+    def _extract_status_code_assertion(self, child: ast.AST) -> dict[str, Any] | None:
+        if (
+            isinstance(child, ast.Call)
+            and isinstance(child.func, ast.Attribute)
+            and child.func.attr == "status_code"
+            and isinstance(child, ast.Compare)
+            and child.comparators
+        ):
+            status_code = self._extract_ast_value(child.comparators[0])
+            if isinstance(status_code, int):
+                return {"operation_id": "unknown", "response": {}, "status_code": status_code}
+        return None
+
+    def _scan_function_for_response(self, func_node: ast.FunctionDef) -> dict[str, Any] | None:
+        for child in ast.walk(func_node):
+            result = self._extract_json_assertion(child)
+            if result:
+                return result
+            result = self._extract_status_code_assertion(child)
+            if result:
+                return result
         return None
 
     @beartype
@@ -235,44 +289,11 @@ class OpenAPITestConverter:
     @ensure(lambda result: result is None or isinstance(result, dict), "Must return None or dict")
     def _extract_response_example(self, tree: ast.AST, line: int) -> dict[str, Any] | None:
         """Extract response example from AST node near the specified line."""
-        # Find the function containing this line
         for node in ast.walk(tree):
             if isinstance(node, ast.FunctionDef) and node.lineno <= line <= (node.end_lineno or node.lineno):
-                # Look for response assertions
-                for child in ast.walk(node):
-                    if isinstance(child, ast.Assert) and isinstance(child.test, ast.Compare):
-                        # Check for response.json() or response.status_code
-                        left = child.test.left
-                        if (
-                            isinstance(left, ast.Call)
-                            and isinstance(left.func, ast.Attribute)
-                            and left.func.attr == "json"
-                            and child.test.comparators
-                        ):
-                            # Extract expected JSON response
-                            expected = self._extract_ast_value(child.test.comparators[0])
-                            if expected:
-                                return {
-                                    "operation_id": "unknown",
-                                    "response": expected,
-                                    "status_code": 200,
-                                }
-                    elif (
-                        isinstance(child, ast.Call)
-                        and isinstance(child.func, ast.Attribute)
-                        and child.func.attr == "status_code"
-                        and isinstance(child, ast.Compare)
-                        and child.comparators
-                    ):
-                        # Extract status code
-                        status_code = self._extract_ast_value(child.comparators[0])
-                        if isinstance(status_code, int):
-                            return {
-                                "operation_id": "unknown",
-                                "response": {},
-                                "status_code": status_code,
-                            }
-
+                result = self._scan_function_for_response(node)
+                if result:
+                    return result
         return None
 
     @beartype
@@ -287,25 +308,29 @@ class OpenAPITestConverter:
                 if hasattr(ast, "unparse"):
                     return ast.unparse(arg)
             except Exception:
-                pass
+                return None
         return None
+
+    def _coerce_ast_dict_to_plain(self, value: ast.Dict) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        for k, v in zip(value.keys, value.values, strict=True):
+            if k is None:
+                continue
+            key = self._extract_ast_value(k)
+            val = self._extract_ast_value(v)
+            if key is not None:
+                result[str(key)] = val
+        return result
 
     @beartype
     def _extract_json_arg(self, call: ast.Call, keyword: str) -> dict[str, Any] | None:
         """Extract JSON/data argument from function call."""
         for keyword_arg in call.keywords:
-            if keyword_arg.arg == keyword:
-                value = keyword_arg.value
-                # Try to extract dict literal
-                if isinstance(value, ast.Dict):
-                    result: dict[str, Any] = {}
-                    for k, v in zip(value.keys, value.values, strict=True):
-                        if k is not None:
-                            key = self._extract_ast_value(k)
-                            val = self._extract_ast_value(v)
-                            if key is not None:
-                                result[str(key)] = val
-                    return result
+            if keyword_arg.arg != keyword:
+                continue
+            inner = keyword_arg.value
+            if isinstance(inner, ast.Dict):
+                return self._coerce_ast_dict_to_plain(inner)
         return None
 
     @beartype
@@ -314,13 +339,7 @@ class OpenAPITestConverter:
         if isinstance(node, ast.Constant):
             return node.value
         if isinstance(node, ast.Dict):
-            result: dict[str, Any] = {}
-            for k, v in zip(node.keys, node.values, strict=True):
-                key = self._extract_ast_value(k) if k else None
-                val = self._extract_ast_value(v)
-                if key is not None:
-                    result[str(key)] = val
-            return result
+            return self._coerce_ast_dict_to_plain(node)
         if isinstance(node, ast.List):
             return [self._extract_ast_value(item) for item in node.elts]
         if isinstance(node, ast.Name):
@@ -331,8 +350,24 @@ class OpenAPITestConverter:
             if hasattr(ast, "unparse"):
                 return ast.unparse(node)
         except Exception:
-            pass
+            return None
         return None
+
+    def _merge_examples_from_parsed_test_file(
+        self, tree: ast.AST, func_name: str | None, examples: dict[str, Any]
+    ) -> None:
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.FunctionDef):
+                continue
+            if func_name and node.name != func_name:
+                continue
+            if not node.name.startswith("test_"):
+                continue
+            example = self._extract_examples_from_test_function(node)
+            if not example:
+                continue
+            operation_id = example.get("operation_id", "unknown")
+            examples.setdefault(operation_id, {}).update(example)
 
     @beartype
     @require(lambda test_files: isinstance(test_files, list), "Test files must be list")
@@ -354,24 +389,33 @@ class OpenAPITestConverter:
 
             try:
                 tree = ast.parse(test_path.read_text(encoding="utf-8"), filename=str(test_path))
-
-                for node in ast.walk(tree):
-                    if isinstance(node, ast.FunctionDef):
-                        if func_name and node.name != func_name:
-                            continue
-                        if node.name.startswith("test_"):
-                            # Extract examples from test function
-                            example = self._extract_examples_from_test_function(node)
-                            if example:
-                                operation_id = example.get("operation_id", "unknown")
-                                if operation_id not in examples:
-                                    examples[operation_id] = {}
-                                examples[operation_id].update(example)
-
+                self._merge_examples_from_parsed_test_file(tree, func_name, examples)
             except Exception:
                 continue
 
         return examples
+
+    def _apply_http_call_to_example(self, child: ast.Call, method_name: str, example: dict[str, Any]) -> None:
+        path = self._extract_string_arg(child, 0)
+        data = self._extract_json_arg(child, "json") or self._extract_json_arg(child, "data")
+        if path:
+            operation_id = f"{method_name}_{path.replace('/', '_').replace('-', '_').strip('_')}"
+            example["operation_id"] = operation_id
+            example.setdefault("request", {})
+            example["request"].update({"path": path, "method": method_name.upper(), "body": data or {}})
+
+    def _apply_json_response_to_example(self, node: ast.FunctionDef, child: ast.Call, example: dict[str, Any]) -> None:
+        for sibling in ast.walk(node):
+            if (
+                isinstance(sibling, ast.Assert)
+                and isinstance(sibling.test, ast.Compare)
+                and sibling.test.left == child
+                and sibling.test.comparators
+            ):
+                expected = self._extract_ast_value(sibling.test.comparators[0])
+                if expected:
+                    example["response"] = expected
+                    example["status_code"] = 200
 
     @beartype
     @require(lambda node: isinstance(node, ast.FunctionDef), "Node must be FunctionDef")
@@ -380,40 +424,13 @@ class OpenAPITestConverter:
         """Extract examples from a test function AST node."""
         example: dict[str, Any] = {}
 
-        # Look for HTTP requests and responses
         for child in ast.walk(node):
-            if isinstance(child, ast.Call) and isinstance(child.func, ast.Attribute):
-                method_name = child.func.attr
-                if method_name in ("post", "get", "put", "delete", "patch"):
-                    path = self._extract_string_arg(child, 0)
-                    data = self._extract_json_arg(child, "json") or self._extract_json_arg(child, "data")
-
-                    if path:
-                        operation_id = f"{method_name}_{path.replace('/', '_').replace('-', '_').strip('_')}"
-                        example["operation_id"] = operation_id
-                        if "request" not in example:
-                            example["request"] = {}
-                        example["request"].update(
-                            {
-                                "path": path,
-                                "method": method_name.upper(),
-                                "body": data or {},
-                            }
-                        )
-
-                # Look for response assertions
-                if method_name == "json" and isinstance(child.func.value, ast.Attribute):
-                    # response.json() == {...}
-                    for sibling in ast.walk(node):
-                        if (
-                            isinstance(sibling, ast.Assert)
-                            and isinstance(sibling.test, ast.Compare)
-                            and sibling.test.left == child
-                            and sibling.test.comparators
-                        ):
-                            expected = self._extract_ast_value(sibling.test.comparators[0])
-                            if expected:
-                                example["response"] = expected
-                                example["status_code"] = 200
+            if not (isinstance(child, ast.Call) and isinstance(child.func, ast.Attribute)):
+                continue
+            method_name = child.func.attr
+            if method_name in ("post", "get", "put", "delete", "patch"):
+                self._apply_http_call_to_example(child, method_name, example)
+            if method_name == "json" and isinstance(child.func.value, ast.Attribute):
+                self._apply_json_response_to_example(node, child, example)
 
         return example

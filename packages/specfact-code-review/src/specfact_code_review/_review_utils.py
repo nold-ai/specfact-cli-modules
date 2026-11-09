@@ -99,6 +99,8 @@ _CAPSULE_TOOL_MODULES = {
 def analyzer_command(command: list[str]) -> list[str]:
     """Preserve isolated Python child imports and private Ruff cache in a capsule."""
     if Path(__file__).parent != Path("/opt/specfact/builtin/specfact_code_review"):
+        if command[0] == "semgrep":
+            return ["osemgrep", "scan", "--experimental", "--metrics=off", *command[1:]]
         development = _DEVELOPMENT_RUNTIME.get()
         if development is not None and command[0] == "basedpyright":
             return [*command, "--pythonpath", str(development / "bin/python")]

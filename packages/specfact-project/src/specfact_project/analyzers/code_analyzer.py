@@ -4,19 +4,23 @@ from __future__ import annotations
 
 import ast
 import json
+import logging
 import os
 import re
 import subprocess
+import sys
 from collections import defaultdict
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import Future, ThreadPoolExecutor, as_completed
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+import certifi
 import networkx as nx
 from beartype import beartype
 from icontract import ensure, require
 from rich.console import Console
-from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
+from rich.progress import BarColumn, Progress, SpinnerColumn, TaskID, TextColumn, TimeElapsedColumn
 from specfact_cli.models.plan import Feature, Idea, Metadata, PlanBundle, Product, Story
 
 from specfact_project.analyzers.contract_extractor import ContractExtractor
@@ -28,6 +32,88 @@ from specfact_project.utils.feature_keys import to_classname_key, to_sequential_
 
 
 console = Console()
+_LOGGER = logging.getLogger(__name__)
+
+_DEPENDENCY_IMPORT_EXCLUSIONS = frozenset(
+    {
+        "sys",
+        "os",
+        "json",
+        "yaml",
+        "pathlib",
+        "typing",
+        "collections",
+        "dataclasses",
+        "enum",
+        "abc",
+        "asyncio",
+        "functools",
+        "itertools",
+        "re",
+        "datetime",
+        "time",
+        "logging",
+        "hashlib",
+        "base64",
+        "urllib",
+        "http",
+        "socket",
+        "threading",
+        "multiprocessing",
+    }
+)
+
+
+_SEMGREP_EVIDENCE_RULES = (
+    ("has_api_endpoints", ("route-detection", "api-endpoint")),
+    ("has_database_models", ("model-detection", "database-model")),
+    ("has_crud_operations", ("crud",)),
+    ("has_auth_patterns", ("auth", "authentication", "permission")),
+    ("has_framework_patterns", ("framework", "async", "context-manager")),
+    ("has_test_patterns", ("test", "pytest", "unittest")),
+    (
+        "has_anti_patterns",
+        (
+            "antipattern",
+            "code-smell",
+            "god-class",
+            "mutable-default",
+            "lambda-assignment",
+            "string-concatenation",
+            "deprecated",
+        ),
+    ),
+    (
+        "has_security_issues",
+        ("security", "unsafe", "insecure", "weak-cryptographic", "hardcoded-secret", "command-injection"),
+    ),
+)
+
+
+@dataclass(frozen=True)
+class _SemgrepClassScope:
+    file_path: Path
+    class_name: str
+    start_line: int | None = None
+    end_line: int | None = None
+
+
+@dataclass
+class _SemgrepFeatureBuckets:
+    api_endpoints: list[str] = field(default_factory=list)
+    data_models: list[str] = field(default_factory=list)
+    auth_patterns: list[str] = field(default_factory=list)
+    crud_operations: list[dict[str, Any]] = field(default_factory=list)
+    anti_patterns: list[str] = field(default_factory=list)
+    code_smells: list[str] = field(default_factory=list)
+
+
+@dataclass
+class _FileAnalysisState:
+    progress: Progress
+    task_id: TaskID
+    completed_count: int = 0
+    interrupted: bool = False
 
 
 class CodeAnalyzer:
@@ -100,6 +186,9 @@ class CodeAnalyzer:
         self.requirement_extractor = RequirementExtractor()
         self.contract_extractor = ContractExtractor()
 
+        self._configure_semgrep()
+
+    def _configure_semgrep(self) -> None:
         # Semgrep integration
         self.semgrep_enabled = True
         # Try to find Semgrep config: check resources first (runtime), then tools (development)
@@ -150,171 +239,14 @@ class CodeAnalyzer:
             TimeElapsedColumn(),
             console=console,
         ) as progress:
-            # Phase 1: Discover Python files
-            task1 = progress.add_task("[cyan]Phase 1: Discovering Python files...", total=None)
-            if self.entry_point:
-                # Scope analysis to entry point directory
-                python_files = list(self.entry_point.rglob("*.py"))
-                entry_point_rel = self.entry_point.relative_to(self.repo_path)
-                progress.update(
-                    task1,
-                    description=f"[green]✓ Found {len(python_files)} Python files in {entry_point_rel}",
-                )
-            else:
-                # Full repository analysis
-                python_files = list(self.repo_path.rglob("*.py"))
-                progress.update(task1, description=f"[green]✓ Found {len(python_files)} Python files")
-            progress.remove_task(task1)
-
+            python_files = self._discover_python_files(progress)
             # Phase 2: Build dependency graph
             task2 = progress.add_task("[cyan]Phase 2: Building dependency graph...", total=None)
             self._build_dependency_graph(python_files)
             progress.update(task2, description="[green]✓ Dependency graph built")
             progress.remove_task(task2)
 
-            # Phase 3: Analyze files and extract features (parallelized)
-            task3 = progress.add_task(
-                "[cyan]Phase 3: Analyzing files and extracting features...", total=len(python_files)
-            )
-
-            # Filter out files to skip
-            files_to_analyze = [f for f in python_files if not self._should_skip_file(f)]
-
-            # Process files in parallel
-            # In test mode, use fewer workers to avoid resource contention
-            if os.environ.get("TEST_MODE") == "true":
-                max_workers = max(1, min(2, len(files_to_analyze)))  # Max 2 workers in test mode
-            else:
-                max_workers = max(
-                    1, min(os.cpu_count() or 4, 8, len(files_to_analyze))
-                )  # Cap at 8 workers, ensure at least 1
-            completed_count = 0
-
-            def analyze_file_safe(file_path: Path) -> dict[str, Any]:
-                """Analyze a file and return results (thread-safe)."""
-                return self._analyze_file_parallel(file_path)
-
-            if files_to_analyze:
-                # In test mode, use sequential processing to avoid ThreadPoolExecutor deadlocks
-                is_test_mode = os.environ.get("TEST_MODE") == "true"
-                if is_test_mode:
-                    # Sequential processing in test mode - avoids ThreadPoolExecutor deadlocks entirely
-                    for file_path in files_to_analyze:
-                        try:
-                            results = analyze_file_safe(file_path)
-                            prev_features_count = len(self.features)
-                            self._merge_analysis_results(results)
-                            completed_count += 1
-                            # Update progress with feature count in description
-                            features_count = len(self.features)
-                            progress.update(
-                                task3,
-                                completed=completed_count,
-                                description=f"[cyan]Phase 3: Analyzing files and extracting features... ({features_count} features discovered)",
-                            )
-
-                            # Phase 4.9: Report incremental results for quick first value
-                            if self.incremental_callback and len(self.features) > prev_features_count:
-                                # Only call callback when new features are discovered
-                                self.incremental_callback(len(self.features), sorted(self.themes))
-                        except Exception as e:
-                            console.print(f"[dim]⚠ Warning: Failed to analyze {file_path}: {e}[/dim]")
-                            completed_count += 1
-                            features_count = len(self.features)
-                            progress.update(
-                                task3,
-                                completed=completed_count,
-                                description=f"[cyan]Phase 3: Analyzing files and extracting features... ({features_count} features discovered)",
-                            )
-                else:
-                    executor = ThreadPoolExecutor(max_workers=max_workers)
-                    interrupted = False
-                    # In test mode, use wait=False to avoid hanging on shutdown
-                    wait_on_shutdown = not is_test_mode
-                    try:
-                        # Submit all tasks
-                        future_to_file = {executor.submit(analyze_file_safe, f): f for f in files_to_analyze}
-
-                        # Collect results as they complete
-                        try:
-                            for future in as_completed(future_to_file):
-                                try:
-                                    results = future.result()
-                                    # Merge results into instance variables (sequential merge is fast)
-                                    prev_features_count = len(self.features)
-                                    self._merge_analysis_results(results)
-                                    completed_count += 1
-                                    # Update progress with feature count in description
-                                    features_count = len(self.features)
-                                    progress.update(
-                                        task3,
-                                        completed=completed_count,
-                                        description=f"[cyan]Phase 3: Analyzing files and extracting features... ({features_count} features discovered)",
-                                    )
-
-                                    # Phase 4.9: Report incremental results for quick first value
-                                    if self.incremental_callback and len(self.features) > prev_features_count:
-                                        # Only call callback when new features are discovered
-                                        self.incremental_callback(len(self.features), sorted(self.themes))
-                                except KeyboardInterrupt:
-                                    # Cancel remaining tasks and break out of loop immediately
-                                    interrupted = True
-                                    for f in future_to_file:
-                                        if not f.done():
-                                            f.cancel()
-                                    break
-                                except Exception as e:
-                                    # Log error but continue processing
-                                    file_path = future_to_file[future]
-                                    console.print(f"[dim]⚠ Warning: Failed to analyze {file_path}: {e}[/dim]")
-                                    completed_count += 1
-                                    features_count = len(self.features)
-                                    progress.update(
-                                        task3,
-                                        completed=completed_count,
-                                        description=f"[cyan]Phase 3: Analyzing files and extracting features... ({features_count} features discovered)",
-                                    )
-                        except KeyboardInterrupt:
-                            # Also catch KeyboardInterrupt from as_completed() itself
-                            interrupted = True
-                            for f in future_to_file:
-                                if not f.done():
-                                    f.cancel()
-
-                        # If interrupted, re-raise KeyboardInterrupt after breaking out of loop
-                        if interrupted:
-                            raise KeyboardInterrupt
-                    except KeyboardInterrupt:
-                        # Gracefully shutdown executor on interrupt (cancel pending tasks, don't wait)
-                        interrupted = True
-                        executor.shutdown(wait=False, cancel_futures=True)
-                        raise
-                    finally:
-                        # Ensure executor is properly shutdown
-                        # If interrupted, don't wait for tasks (they're already cancelled)
-                        # shutdown() is safe to call multiple times
-                        # In test mode, use wait=False to avoid hanging
-                        if not interrupted:
-                            executor.shutdown(wait=wait_on_shutdown)
-                        else:
-                            # Already shutdown with wait=False, just ensure cleanup
-                            executor.shutdown(wait=False)
-
-            # Update progress for skipped files
-            skipped_count = len(python_files) - len(files_to_analyze)
-            if skipped_count > 0:
-                features_count = len(self.features)
-                progress.update(
-                    task3,
-                    completed=len(python_files),
-                    description=f"[cyan]Phase 3: Analyzing files and extracting features... ({features_count} features discovered)",
-                )
-
-            progress.update(
-                task3,
-                description=f"[green]✓ Analyzed {len(python_files)} files, extracted {len(self.features)} features",
-            )
-            progress.remove_task(task3)
+            self._analyze_python_files(python_files, progress)
 
             # Phase 4: Analyze commit history
             task4 = progress.add_task("[cyan]Phase 4: Analyzing commit history...", total=None)
@@ -334,24 +266,34 @@ class CodeAnalyzer:
             progress.update(task6, description="[green]✓ Technology stack extracted")
             progress.remove_task(task6)
 
+        return self._build_plan_bundle(technology_constraints)
+
+    def _discover_python_files(self, progress: Progress) -> list[Path]:
+        # Phase 1: Discover Python files
+        task1 = progress.add_task("[cyan]Phase 1: Discovering Python files...", total=None)
+        if self.entry_point:
+            # Scope analysis to entry point directory
+            python_files = list(self.entry_point.rglob("*.py"))
+            entry_point_rel = self.entry_point.relative_to(self.repo_path)
+            progress.update(
+                task1,
+                description=f"[green]✓ Found {len(python_files)} Python files in {entry_point_rel}",
+            )
+        else:
+            # Full repository analysis
+            python_files = list(self.repo_path.rglob("*.py"))
+            progress.update(task1, description=f"[green]✓ Found {len(python_files)} Python files")
+        progress.remove_task(task1)
+
+        return python_files
+
+    def _build_plan_bundle(self, technology_constraints: list[str]) -> PlanBundle:
         # If sequential format, update all keys now that we know the total count
         if self.key_format == "sequential":
             for idx, feature in enumerate(self.features, start=1):
                 feature.key = to_sequential_key(feature.key, idx)
 
-        # Generate plan bundle
-        # Use plan_name if provided, otherwise use entry point name or repo name
-        if self.plan_name:
-            # Use the plan name (already sanitized, but humanize for title)
-            title = self.plan_name.replace("_", " ").replace("-", " ").title()
-        elif self.entry_point:
-            # Use entry point name for partial analysis
-            entry_point_name = self.entry_point.name or self.entry_point.relative_to(self.repo_path).as_posix()
-            title = f"{self._humanize_name(entry_point_name)} Module"
-        else:
-            repo_name = self.repo_path.name or "Unknown Project"
-            title = self._humanize_name(repo_name)
-
+        title = self._plan_title()
         narrative = f"Auto-derived plan from brownfield analysis of {title}"
         if self.entry_point:
             entry_point_rel = self.entry_point.relative_to(self.repo_path)
@@ -390,6 +332,122 @@ class CodeAnalyzer:
             clarifications=None,
         )
 
+    def _plan_title(self) -> str:
+        if self.plan_name:
+            # Use the plan name (already sanitized, but humanize for title)
+            title = self.plan_name.replace("_", " ").replace("-", " ").title()
+        elif self.entry_point:
+            # Use entry point name for partial analysis
+            entry_point_name = self.entry_point.name or self.entry_point.relative_to(self.repo_path).as_posix()
+            title = f"{self._humanize_name(entry_point_name)} Module"
+        else:
+            repo_name = self.repo_path.name or "Unknown Project"
+            title = self._humanize_name(repo_name)
+
+        return title
+
+    def _analyze_python_files(self, python_files: list[Path], progress: Progress) -> None:
+        task_id = progress.add_task(
+            "[cyan]Phase 3: Analyzing files and extracting features...", total=len(python_files)
+        )
+        files = [path for path in python_files if not self._should_skip_file(path)]
+        if os.environ.get("TEST_MODE") == "true":
+            max_workers = max(1, min(2, len(files)))
+        else:
+            max_workers = max(1, min(os.cpu_count() or 4, 8, len(files)))
+        state = _FileAnalysisState(progress, task_id)
+        if files:
+            is_test_mode = os.environ.get("TEST_MODE") == "true"
+            if is_test_mode:
+                self._analyze_files_sequential(files, state)
+            else:
+                self._analyze_files_parallel(files, state, max_workers)
+        skipped_count = len(python_files) - len(files)
+        if skipped_count > 0:
+            features_count = len(self.features)
+            progress.update(
+                task_id,
+                completed=len(python_files),
+                description=(
+                    f"[cyan]Phase 3: Analyzing files and extracting features... ({features_count} features discovered)"
+                ),
+            )
+        progress.update(
+            task_id,
+            description=f"[green]✓ Analyzed {len(python_files)} files, extracted {len(self.features)} features",
+        )
+        progress.remove_task(task_id)
+
+    def _analyze_files_sequential(self, files: list[Path], state: _FileAnalysisState) -> None:
+        for file_path in files:
+            try:
+                self._merge_file_analysis(self._analyze_file_parallel(file_path), state)
+            except Exception as error:
+                self._record_file_analysis_failure(file_path, error, state)
+
+    def _merge_file_analysis(self, results: dict[str, Any], state: _FileAnalysisState) -> None:
+        previous_count = len(self.features)
+        self._merge_analysis_results(results)
+        state.completed_count += 1
+        self._update_file_analysis_progress(state)
+        if self.incremental_callback and len(self.features) > previous_count:
+            self.incremental_callback(len(self.features), sorted(self.themes))
+
+    def _update_file_analysis_progress(self, state: _FileAnalysisState) -> None:
+        features_count = len(self.features)
+        state.progress.update(
+            state.task_id,
+            completed=state.completed_count,
+            description=(
+                f"[cyan]Phase 3: Analyzing files and extracting features... ({features_count} features discovered)"
+            ),
+        )
+
+    def _record_file_analysis_failure(self, file_path: Path, error: Exception, state: _FileAnalysisState) -> None:
+        console.print(f"[dim]⚠ Warning: Failed to analyze {file_path}: {error}[/dim]")
+        state.completed_count += 1
+        self._update_file_analysis_progress(state)
+
+    def _analyze_files_parallel(self, files: list[Path], state: _FileAnalysisState, max_workers: int) -> None:
+        executor = ThreadPoolExecutor(max_workers=max_workers)
+        try:
+            future_to_file = {executor.submit(self._analyze_file_parallel, path): path for path in files}
+            self._collect_completed_file_results(future_to_file, state)
+        except KeyboardInterrupt:
+            state.interrupted = True
+            executor.shutdown(wait=False, cancel_futures=True)
+            raise
+        finally:
+            if not state.interrupted:
+                executor.shutdown(wait=True)
+            else:
+                executor.shutdown(wait=False)
+
+    def _collect_completed_file_results(
+        self, future_to_file: dict[Future[dict[str, Any]], Path], state: _FileAnalysisState
+    ) -> None:
+        try:
+            for future in as_completed(future_to_file):
+                try:
+                    self._merge_file_analysis(future.result(), state)
+                except KeyboardInterrupt:
+                    state.interrupted = True
+                    self._cancel_pending_file_tasks(future_to_file)
+                    break
+                except Exception as error:
+                    self._record_file_analysis_failure(future_to_file[future], error, state)
+        except KeyboardInterrupt:
+            state.interrupted = True
+            self._cancel_pending_file_tasks(future_to_file)
+        if state.interrupted:
+            raise KeyboardInterrupt
+
+    @staticmethod
+    def _cancel_pending_file_tasks(future_to_file: dict[Future[dict[str, Any]], Path]) -> None:
+        for future in future_to_file:
+            if not future.done():
+                future.cancel()
+
     def _probe_semgrep(self) -> tuple[bool, str | None]:
         """Check if Semgrep is available in the active repository environment."""
         # Skip Semgrep check in test mode to avoid timeouts
@@ -399,7 +457,7 @@ class CodeAnalyzer:
         from specfact_cli.utils.env_manager import check_tool_in_env, detect_env_manager
 
         env_info = detect_env_manager(self.repo_path)
-        available, message = check_tool_in_env(self.repo_path, "semgrep", env_info)
+        available, message = check_tool_in_env(self.repo_path, "osemgrep", env_info)
         return available, message
 
     def _check_semgrep_available(self) -> bool:
@@ -407,6 +465,21 @@ class CodeAnalyzer:
         available, _message = self._probe_semgrep()
         return available
 
+    @ensure(
+        lambda result: (
+            isinstance(result, list)
+            and all(
+                isinstance(plugin, dict)
+                and isinstance(plugin.get("name"), str)
+                and isinstance(plugin.get("reason"), str)
+                and isinstance(plugin.get("enabled"), bool)
+                and isinstance(plugin.get("used"), bool)
+                and (not plugin["used"] or plugin["enabled"])
+                for plugin in result
+            )
+        ),
+        "Plugin status records must contain display text and consistent Boolean states",
+    )
     def get_plugin_status(self) -> list[dict[str, Any]]:
         """
         Get status of all analysis plugins.
@@ -434,7 +507,7 @@ class CodeAnalyzer:
         semgrep_used = semgrep_enabled and self.semgrep_config is not None
 
         if not semgrep_available:
-            reason = semgrep_message or "Semgrep CLI not installed (install: pip install semgrep)"
+            reason = semgrep_message or "Native Semgrep executable osemgrep is not installed"
         elif self.semgrep_config is None:
             reason = "Semgrep config not found"
         else:
@@ -495,7 +568,7 @@ class CodeAnalyzer:
             from specfact_cli.utils.env_manager import build_tool_command, check_tool_in_env, detect_env_manager
 
             env_info = detect_env_manager(self.repo_path)
-            semgrep_available, _message = check_tool_in_env(self.repo_path, "semgrep", env_info)
+            semgrep_available, _message = check_tool_in_env(self.repo_path, "osemgrep", env_info)
             if not semgrep_available:
                 return []
 
@@ -507,25 +580,48 @@ class CodeAnalyzer:
 
             # Use shorter timeout in test environments (though we already skip in TEST_MODE)
             timeout = 10
+            env = dict(os.environ)
+            env.setdefault("SSL_CERT_FILE", certifi.where())
+            if sys.platform == "linux":
+                env.setdefault("LD_LIBRARY_PATH", "$ORIGIN/libs")
 
             result = subprocess.run(
-                build_tool_command(env_info, ["semgrep", "--config", *configs, "--json", str(file_path)]),
+                build_tool_command(
+                    env_info,
+                    [
+                        "osemgrep",
+                        "scan",
+                        "--experimental",
+                        "--metrics=off",
+                        "--disable-version-check",
+                        *(argument for config in configs for argument in ("--config", config)),
+                        "--json",
+                        str(file_path),
+                    ],
+                ),
                 capture_output=True,
                 text=True,
+                encoding="utf-8",
                 timeout=timeout,
+                env=env,
+                check=False,
             )
 
-            # Semgrep may return non-zero for valid findings
-            # Only fail if stderr indicates actual error
-            if result.returncode != 0 and ("error" in result.stderr.lower() or "not found" in result.stderr.lower()):
-                return []
-
-            # Parse JSON results
-            findings = json.loads(result.stdout)
-            return findings.get("results", [])
+            return self._parse_semgrep_result(result)
         except (subprocess.TimeoutExpired, json.JSONDecodeError, FileNotFoundError, ValueError):
             # Semgrep not available or config missing - continue without it
             return []
+
+    @staticmethod
+    def _parse_semgrep_result(result: subprocess.CompletedProcess[str]) -> list[dict[str, Any]]:
+        # Semgrep may return non-zero for valid findings
+        # Only fail if stderr indicates actual error
+        if result.returncode != 0 and ("error" in result.stderr.lower() or "not found" in result.stderr.lower()):
+            return []
+
+        # Parse JSON results
+        findings = json.loads(result.stdout)
+        return findings.get("results", [])
 
     def _should_skip_file(self, file_path: Path) -> bool:
         """
@@ -598,12 +694,12 @@ class CodeAnalyzer:
 
             # Extract type hints (return instead of modifying self)
             module_name = self._path_to_module_name(file_path)
-            type_hints = self._extract_type_hints_parallel(tree, file_path)
+            type_hints = self._extract_type_hints_parallel(tree)
             if type_hints:
                 results["type_hints"][module_name] = type_hints
 
             # Detect async patterns (return instead of modifying self)
-            async_methods = self._detect_async_patterns_parallel(tree, file_path)
+            async_methods = self._detect_async_patterns_parallel(tree)
             if async_methods:
                 results["async_patterns"][module_name] = async_methods
 
@@ -612,28 +708,25 @@ class CodeAnalyzer:
 
             # Extract classes as features
             for node in ast.walk(tree):
-                if isinstance(node, ast.ClassDef):
-                    # For sequential keys, use placeholder (will be fixed after all features collected)
-                    # For classname keys, we can generate immediately
-                    current_count = 0 if self.key_format == "sequential" else len(self.features)
+                if not isinstance(node, ast.ClassDef):
+                    continue
+                # Extract Semgrep evidence for confidence scoring
+                class_start_line = node.lineno if hasattr(node, "lineno") else None
+                class_end_line = node.end_lineno if hasattr(node, "end_lineno") else None
+                semgrep_evidence = self._extract_semgrep_evidence(
+                    semgrep_findings, node.name, class_start_line, class_end_line
+                )
 
-                    # Extract Semgrep evidence for confidence scoring
-                    class_start_line = node.lineno if hasattr(node, "lineno") else None
-                    class_end_line = node.end_lineno if hasattr(node, "end_lineno") else None
-                    semgrep_evidence = self._extract_semgrep_evidence(
-                        semgrep_findings, node.name, class_start_line, class_end_line
+                # Create feature with Semgrep evidence included in confidence calculation
+                feature = self._extract_feature_from_class_parallel(node, semgrep_evidence)
+                if feature:
+                    # Enhance feature with detailed Semgrep findings (outcomes, constraints, themes)
+                    self._enhance_feature_with_semgrep(
+                        feature,
+                        semgrep_findings,
+                        _SemgrepClassScope(file_path, node.name, class_start_line, class_end_line),
                     )
-
-                    # Create feature with Semgrep evidence included in confidence calculation
-                    feature = self._extract_feature_from_class_parallel(
-                        node, file_path, current_count, semgrep_evidence
-                    )
-                    if feature:
-                        # Enhance feature with detailed Semgrep findings (outcomes, constraints, themes)
-                        self._enhance_feature_with_semgrep(
-                            feature, semgrep_findings, file_path, node.name, class_start_line, class_end_line
-                        )
-                        results["features"].append(feature)
+                    results["features"].append(feature)
 
         except (SyntaxError, UnicodeDecodeError):
             # Skip files that can't be parsed
@@ -685,20 +778,18 @@ class CodeAnalyzer:
             "requests": "HTTP Client",
             "aiohttp": "Async HTTP",
         }
-
         for node in ast.walk(tree):
-            if isinstance(node, (ast.Import, ast.ImportFrom)):
-                if isinstance(node, ast.Import):
-                    for alias in node.names:
-                        for keyword, theme in theme_keywords.items():
-                            if keyword in alias.name.lower():
-                                themes.add(theme)
-                elif isinstance(node, ast.ImportFrom) and node.module:
-                    for keyword, theme in theme_keywords.items():
-                        if keyword in node.module.lower():
-                            themes.add(theme)
-
+            for name in self._import_module_names(node):
+                themes.update(theme for keyword, theme in theme_keywords.items() if keyword in name.lower())
         return themes
+
+    @staticmethod
+    def _import_module_names(node: ast.AST) -> list[str]:
+        if isinstance(node, ast.Import):
+            return [alias.name for alias in node.names]
+        if isinstance(node, ast.ImportFrom) and node.module:
+            return [node.module]
+        return []
 
     def _extract_semgrep_evidence(
         self,
@@ -707,35 +798,12 @@ class CodeAnalyzer:
         class_start_line: int | None,
         class_end_line: int | None,
     ) -> dict[str, Any]:
-        """
-        Extract Semgrep evidence for confidence scoring.
-
-        Args:
-            semgrep_findings: List of Semgrep findings
-            class_name: Name of the class
-            class_start_line: Starting line number of the class
-            class_end_line: Ending line number of the class
-
-        Returns:
-            Evidence dict with boolean flags for different pattern types
-        """
-        evidence: dict[str, Any] = {
-            "has_api_endpoints": False,
-            "has_database_models": False,
-            "has_crud_operations": False,
-            "has_auth_patterns": False,
-            "has_framework_patterns": False,
-            "has_test_patterns": False,
-            "has_anti_patterns": False,
-            "has_security_issues": False,
-        }
-
+        """Extract Semgrep evidence for confidence scoring."""
+        evidence: dict[str, Any] = {flag: False for flag, _ in _SEMGREP_EVIDENCE_RULES}
         for finding in semgrep_findings:
             rule_id = str(finding.get("check_id", "")).lower()
             start = finding.get("start", {})
             finding_line = start.get("line", 0) if isinstance(start, dict) else 0
-
-            # Check if finding is relevant to this class
             message = str(finding.get("message", ""))
             matches_class = (
                 class_name.lower() in message.lower()
@@ -747,54 +815,20 @@ class CodeAnalyzer:
                     and class_start_line <= finding_line <= class_end_line
                 )
             )
-
-            if not matches_class:
-                continue
-
-            # Categorize findings
-            if "route-detection" in rule_id or "api-endpoint" in rule_id:
-                evidence["has_api_endpoints"] = True
-            elif "model-detection" in rule_id or "database-model" in rule_id:
-                evidence["has_database_models"] = True
-            elif "crud" in rule_id:
-                evidence["has_crud_operations"] = True
-            elif "auth" in rule_id or "authentication" in rule_id or "permission" in rule_id:
-                evidence["has_auth_patterns"] = True
-            elif "framework" in rule_id or "async" in rule_id or "context-manager" in rule_id:
-                evidence["has_framework_patterns"] = True
-            elif "test" in rule_id or "pytest" in rule_id or "unittest" in rule_id:
-                evidence["has_test_patterns"] = True
-            elif (
-                "antipattern" in rule_id
-                or "code-smell" in rule_id
-                or "god-class" in rule_id
-                or "mutable-default" in rule_id
-                or "lambda-assignment" in rule_id
-                or "string-concatenation" in rule_id
-                or "deprecated" in rule_id
-            ):
-                evidence["has_anti_patterns"] = True
-            elif (
-                "security" in rule_id
-                or "unsafe" in rule_id
-                or "insecure" in rule_id
-                or "weak-cryptographic" in rule_id
-                or "hardcoded-secret" in rule_id
-                or "command-injection" in rule_id
-            ):
-                evidence["has_security_issues"] = True
-
+            if matches_class:
+                self._record_semgrep_evidence(evidence, rule_id)
         return evidence
 
-    def _extract_feature_from_class(self, node: ast.ClassDef, file_path: Path) -> Feature | None:
-        """Extract feature from class definition (legacy version)."""
-        return self._extract_feature_from_class_parallel(node, file_path, len(self.features), None)
+    @staticmethod
+    def _record_semgrep_evidence(evidence: dict[str, Any], rule_id: str) -> None:
+        for flag, tokens in _SEMGREP_EVIDENCE_RULES:
+            if any(token in rule_id for token in tokens):
+                evidence[flag] = True
+                break
 
     def _extract_feature_from_class_parallel(
         self,
         node: ast.ClassDef,
-        file_path: Path,
-        current_feature_count: int,
         semgrep_evidence: dict[str, Any] | None = None,
     ) -> Feature | None:
         """Extract feature from class definition (thread-safe version)."""
@@ -819,7 +853,7 @@ class CodeAnalyzer:
             first_para = docstring.split("\n\n")[0].strip()
             outcomes.append(first_para)  # type: ignore[reportUnknownMemberType]
         else:
-            outcomes.append(f"Provides {self._humanize_name(node.name)} functionality")  # type: ignore[reportUnknownMemberType]
+            outcomes.append(f"Provides {self._humanize_name(node.name)} functionality")
 
         # Collect all methods
         methods = [item for item in node.body if isinstance(item, ast.FunctionDef)]
@@ -862,206 +896,171 @@ class CodeAnalyzer:
         )
 
     def _enhance_feature_with_semgrep(
-        self,
-        feature: Feature,
-        semgrep_findings: list[dict[str, Any]],
-        file_path: Path,
-        class_name: str,
-        class_start_line: int | None = None,
-        class_end_line: int | None = None,
+        self, feature: Feature, semgrep_findings: list[dict[str, Any]], scope: _SemgrepClassScope
     ) -> None:
-        """
-        Enhance feature with Semgrep pattern detection results.
-
-        Args:
-            feature: Feature to enhance
-            semgrep_findings: List of Semgrep findings for the file
-            file_path: Path to the file being analyzed
-            class_name: Name of the class this feature represents
-            class_start_line: Starting line number of the class definition
-            class_end_line: Ending line number of the class definition
-        """
+        """Enhance feature with Semgrep pattern detection results."""
         if not semgrep_findings:
             return
+        relevant = [finding for finding in semgrep_findings if self._finding_matches_semgrep_scope(finding, scope)]
+        if not relevant:
+            return
+        buckets = _SemgrepFeatureBuckets()
+        for finding in relevant:
+            self._collect_semgrep_finding(finding, buckets)
+        self._append_semgrep_outcomes(feature, buckets)
+        self._append_semgrep_constraint(feature, "Code quality", buckets.anti_patterns)
+        self._append_semgrep_constraint(feature, "Issues detected", buckets.code_smells)
 
-        # Filter findings relevant to this class
-        relevant_findings = []
-        for finding in semgrep_findings:
-            # Check if finding is in the same file
-            finding_path = finding.get("path", "")
-            if str(file_path) not in finding_path and finding_path not in str(file_path):
-                continue
+    def _finding_matches_semgrep_scope(self, finding: dict[str, Any], scope: _SemgrepClassScope) -> bool:
+        finding_path = finding.get("path", "")
+        if str(scope.file_path) not in finding_path and finding_path not in str(scope.file_path):
+            return False
+        start = finding.get("start", {})
+        finding_line = start.get("line", 0) if isinstance(start, dict) else 0
+        message = str(finding.get("message", ""))
+        check_id = str(finding.get("check_id", ""))
+        is_anti_pattern = any(
+            token in check_id.lower() for token in ("antipattern", "code-smell", "god-class", "deprecated", "security")
+        )
+        if scope.class_name.lower() in message.lower() or scope.class_name.lower() in check_id.lower():
+            return True
+        return self._line_matches_semgrep_scope(finding_line, is_anti_pattern, scope)
 
-            # Get finding location for line-based matching
-            start = finding.get("start", {})
-            finding_line = start.get("line", 0) if isinstance(start, dict) else 0
+    @staticmethod
+    def _line_matches_semgrep_scope(finding_line: Any, is_anti_pattern: bool, scope: _SemgrepClassScope) -> bool:
+        if scope.start_line and scope.end_line and finding_line:
+            return bool(scope.start_line <= finding_line <= scope.end_line)
+        return bool(
+            is_anti_pattern
+            and scope.start_line
+            and finding_line
+            and finding_line >= scope.start_line
+            and (not scope.end_line or finding_line <= scope.start_line + 100)
+        )
 
-            # Check if finding mentions the class name or is in a method of the class
-            message = str(finding.get("message", ""))
-            check_id = str(finding.get("check_id", ""))
-
-            # Determine if this is an anti-pattern or code quality issue
-            is_anti_pattern = (
-                "antipattern" in check_id.lower()
-                or "code-smell" in check_id.lower()
-                or "god-class" in check_id.lower()
-                or "deprecated" in check_id.lower()
-                or "security" in check_id.lower()
-            )
-
-            # Match findings to this class by:
-            # 1. Class name in message/check_id
-            # 2. Line number within class definition (for class-level patterns)
-            # 3. Anti-patterns in the same file (if line numbers match)
-            matches_class = False
-
-            if class_name.lower() in message.lower() or class_name.lower() in check_id.lower():
-                matches_class = True
-            elif class_start_line and class_end_line and finding_line:
-                # Check if finding is within class definition lines
-                if class_start_line <= finding_line <= class_end_line:
-                    matches_class = True
-            elif (
-                is_anti_pattern
-                and class_start_line
-                and finding_line
-                and finding_line >= class_start_line
-                and (not class_end_line or finding_line <= (class_start_line + 100))
-            ):
-                # For anti-patterns, include if line number matches (class-level concerns)
-                matches_class = True
-
-            if matches_class:
-                relevant_findings.append(finding)
-
-        if not relevant_findings:
+    def _collect_semgrep_finding(self, finding: dict[str, Any], buckets: _SemgrepFeatureBuckets) -> None:
+        rule_id = str(finding.get("check_id", ""))
+        extra = finding.get("extra", {})
+        metadata = extra.get("metadata", {}) if isinstance(extra, dict) else {}
+        category = self._semgrep_enhancement_category(rule_id.lower())
+        if category == "api":
+            self._collect_semgrep_endpoint(metadata, buckets)
+            return
+        if category == "model":
+            self._collect_semgrep_model(metadata, buckets)
+            return
+        if category == "auth":
+            permission = str(metadata.get("permission", ""))
+            buckets.auth_patterns.append(permission or "authentication required")
+            self.themes.add("Security")
+            return
+        if category == "crud":
+            self._collect_semgrep_crud(finding, extra, metadata, buckets)
+            return
+        if category == "anti":
+            buckets.anti_patterns.append(str(finding.get("message", "")))
+            return
+        if category == "smell":
+            buckets.code_smells.append(str(finding.get("message", "")))
             return
 
-        # Process findings to enhance feature
-        api_endpoints: list[str] = []
-        data_models: list[str] = []
-        auth_patterns: list[str] = []
-        crud_operations: list[dict[str, str]] = []
-        anti_patterns: list[str] = []
-        code_smells: list[str] = []
+    @staticmethod
+    def _semgrep_enhancement_category(rule_id: str) -> str | None:
+        categories = (
+            ("api", ("route-detection",)),
+            ("model", ("model-detection",)),
+            ("auth", ("auth",)),
+            ("crud", ("crud",)),
+            (
+                "anti",
+                (
+                    "antipattern",
+                    "code-smell",
+                    "god-class",
+                    "mutable-default",
+                    "lambda-assignment",
+                    "string-concatenation",
+                ),
+            ),
+            (
+                "smell",
+                (
+                    "security",
+                    "unsafe",
+                    "insecure",
+                    "weak-cryptographic",
+                    "hardcoded-secret",
+                    "command-injection",
+                    "deprecated",
+                ),
+            ),
+        )
+        return next((category for category, tokens in categories if any(token in rule_id for token in tokens)), None)
 
-        for finding in relevant_findings:
-            rule_id = str(finding.get("check_id", ""))
-            extra = finding.get("extra", {})
-            metadata = extra.get("metadata", {}) if isinstance(extra, dict) else {}
+    def _collect_semgrep_endpoint(self, metadata: Any, buckets: _SemgrepFeatureBuckets) -> None:
+        method = str(metadata.get("method", "")).upper()
+        path = str(metadata.get("path", ""))
+        if method and path:
+            buckets.api_endpoints.append(f"{method} {path}")
+            self.themes.add("API")
 
-            # API endpoint detection
-            if "route-detection" in rule_id.lower():
-                method = str(metadata.get("method", "")).upper()
-                path = str(metadata.get("path", ""))
-                if method and path:
-                    api_endpoints.append(f"{method} {path}")
-                    # Add API theme (confidence already calculated with evidence)
-                    self.themes.add("API")
+    def _collect_semgrep_model(self, metadata: Any, buckets: _SemgrepFeatureBuckets) -> None:
+        model_name = str(metadata.get("model", ""))
+        if model_name:
+            buckets.data_models.append(model_name)
+            self.themes.add("Database")
 
-            # Database model detection
-            elif "model-detection" in rule_id.lower():
-                model_name = str(metadata.get("model", ""))
-                if model_name:
-                    data_models.append(model_name)
-                    # Add Database theme (confidence already calculated with evidence)
-                    self.themes.add("Database")
+    def _collect_semgrep_crud(
+        self, finding: dict[str, Any], extra: Any, metadata: Any, buckets: _SemgrepFeatureBuckets
+    ) -> None:
+        operation = str(metadata.get("operation", "")).upper()
+        message = str(finding.get("message", ""))
+        func_name = str(extra.get("message", "")) if isinstance(extra, dict) else ""
+        entity = self._semgrep_crud_entity(message, func_name)
+        if operation or entity:
+            buckets.crud_operations.append({"operation": operation or "UNKNOWN", "entity": entity or "unknown"})
 
-            # Auth pattern detection
-            elif "auth" in rule_id.lower():
-                permission = str(metadata.get("permission", ""))
-                auth_patterns.append(permission or "authentication required")
-                # Add security theme (confidence already calculated with evidence)
-                self.themes.add("Security")
+    @staticmethod
+    def _semgrep_crud_entity(message: str, func_name: str) -> str:
+        if func_name:
+            parts = func_name.split("_")
+            return "_".join(parts[1:]) if len(parts) > 1 else ""
+        if not message:
+            return ""
+        for operation in ["create", "get", "update", "delete", "add", "find", "remove"]:
+            if operation not in message.lower():
+                continue
+            parts = message.lower().split(operation + "_")
+            if len(parts) > 1:
+                return parts[1].split()[0] if parts[1] else ""
+        return ""
 
-            # CRUD operation detection
-            elif "crud" in rule_id.lower():
-                operation = str(metadata.get("operation", "")).upper()
-                # Extract entity from function name in message
-                message = str(finding.get("message", ""))
-                func_name = str(extra.get("message", "")) if isinstance(extra, dict) else ""
-                # Try to extract entity from function name (e.g., "create_user" -> "user")
-                entity = ""
-                if func_name:
-                    parts = func_name.split("_")
-                    if len(parts) > 1:
-                        entity = "_".join(parts[1:])
-                elif message:
-                    # Try to extract from message
-                    for op in ["create", "get", "update", "delete", "add", "find", "remove"]:
-                        if op in message.lower():
-                            parts = message.lower().split(op + "_")
-                            if len(parts) > 1:
-                                entity = parts[1].split()[0] if parts[1] else ""
-                                break
-
-                if operation or entity:
-                    crud_operations.append(
-                        {
-                            "operation": operation or "UNKNOWN",
-                            "entity": entity or "unknown",
-                        }
-                    )
-
-            # Anti-pattern detection (confidence already calculated with evidence)
-            elif (
-                "antipattern" in rule_id.lower()
-                or "code-smell" in rule_id.lower()
-                or "god-class" in rule_id.lower()
-                or "mutable-default" in rule_id.lower()
-                or "lambda-assignment" in rule_id.lower()
-                or "string-concatenation" in rule_id.lower()
-            ):
-                finding_message = str(finding.get("message", ""))
-                anti_patterns.append(finding_message)
-
-            # Security vulnerabilities (confidence already calculated with evidence)
-            elif (
-                "security" in rule_id.lower()
-                or "unsafe" in rule_id.lower()
-                or "insecure" in rule_id.lower()
-                or "weak-cryptographic" in rule_id.lower()
-                or "hardcoded-secret" in rule_id.lower()
-                or "command-injection" in rule_id.lower()
-            ) or "deprecated" in rule_id.lower():
-                finding_message = str(finding.get("message", ""))
-                code_smells.append(finding_message)
-
-        # Update feature outcomes with Semgrep findings
-        if api_endpoints:
-            endpoints_str = ", ".join(api_endpoints)
-            feature.outcomes.append(f"Exposes API endpoints: {endpoints_str}")
-
-        if data_models:
-            models_str = ", ".join(data_models)
-            feature.outcomes.append(f"Defines data models: {models_str}")
-
-        if auth_patterns:
-            auth_str = ", ".join(auth_patterns)
-            feature.outcomes.append(f"Requires authentication: {auth_str}")
-
-        if crud_operations:
-            crud_str = ", ".join(
-                [f"{op.get('operation', 'UNKNOWN')} {op.get('entity', 'unknown')}" for op in crud_operations]
+    @staticmethod
+    def _append_semgrep_outcomes(feature: Feature, buckets: _SemgrepFeatureBuckets) -> None:
+        if buckets.api_endpoints:
+            feature.outcomes.append(f"Exposes API endpoints: {', '.join(buckets.api_endpoints)}")
+        if buckets.data_models:
+            feature.outcomes.append(f"Defines data models: {', '.join(buckets.data_models)}")
+        if buckets.auth_patterns:
+            feature.outcomes.append(f"Requires authentication: {', '.join(buckets.auth_patterns)}")
+        if buckets.crud_operations:
+            crud = ", ".join(
+                [
+                    f"{operation.get('operation', 'UNKNOWN')} {operation.get('entity', 'unknown')}"
+                    for operation in buckets.crud_operations
+                ]
             )
-            feature.outcomes.append(f"Provides CRUD operations: {crud_str}")
+            feature.outcomes.append(f"Provides CRUD operations: {crud}")
 
-        # Add anti-patterns and code smells to constraints (maturity assessment)
-        if anti_patterns:
-            anti_pattern_str = "; ".join(anti_patterns[:3])  # Limit to first 3
-            if anti_pattern_str:
+    @staticmethod
+    def _append_semgrep_constraint(feature: Feature, label: str, values: list[str]) -> None:
+        if values:
+            text = "; ".join(values[:3])
+            if text:
                 if feature.constraints:
-                    feature.constraints.append(f"Code quality: {anti_pattern_str}")
+                    feature.constraints.append(f"{label}: {text}")
                 else:
-                    feature.constraints = [f"Code quality: {anti_pattern_str}"]
-
-        if code_smells:
-            code_smell_str = "; ".join(code_smells[:3])  # Limit to first 3
-            if code_smell_str:
-                if feature.constraints:
-                    feature.constraints.append(f"Issues detected: {code_smell_str}")
-                else:
-                    feature.constraints = [f"Issues detected: {code_smell_str}"]
+                    feature.constraints = [f"{label}: {text}"]
 
         # Confidence is already calculated with Semgrep evidence in _calculate_feature_confidence
         # No need to adjust here - this method only adds outcomes, constraints, and themes
@@ -1097,54 +1096,29 @@ class CodeAnalyzer:
     def _group_methods_by_functionality(self, methods: list[ast.FunctionDef]) -> dict[str, list[ast.FunctionDef]]:
         """Group methods by their functionality patterns."""
         groups: dict[str, list[ast.FunctionDef]] = defaultdict(list)
-
-        # Filter out private methods (except __init__)
-        public_methods = [m for m in methods if not m.name.startswith("_") or m.name == "__init__"]
-
+        public_methods = [method for method in methods if not method.name.startswith("_") or method.name == "__init__"]
         for method in public_methods:
-            # CRUD operations
-            if any(crud in method.name.lower() for crud in ["create", "add", "insert", "new"]):
-                groups["Create Operations"].append(method)  # type: ignore[reportUnknownMemberType]
-            elif any(read in method.name.lower() for read in ["get", "read", "fetch", "find", "list", "retrieve"]):
-                groups["Read Operations"].append(method)  # type: ignore[reportUnknownMemberType]
-            elif any(update in method.name.lower() for update in ["update", "modify", "edit", "change", "set"]):
-                groups["Update Operations"].append(method)  # type: ignore[reportUnknownMemberType]
-            elif any(delete in method.name.lower() for delete in ["delete", "remove", "destroy"]):
-                groups["Delete Operations"].append(method)  # type: ignore[reportUnknownMemberType]
-
-            # Validation
-            elif any(val in method.name.lower() for val in ["validate", "check", "verify", "is_valid"]):
-                groups["Validation"].append(method)  # type: ignore[reportUnknownMemberType]
-
-            # Processing/Computation
-            elif any(
-                proc in method.name.lower() for proc in ["process", "compute", "calculate", "transform", "convert"]
-            ):
-                groups["Processing"].append(method)  # type: ignore[reportUnknownMemberType]
-
-            # Analysis
-            elif any(an in method.name.lower() for an in ["analyze", "parse", "extract", "detect"]):
-                groups["Analysis"].append(method)  # type: ignore[reportUnknownMemberType]
-
-            # Generation
-            elif any(gen in method.name.lower() for gen in ["generate", "build", "create", "make"]):
-                groups["Generation"].append(method)  # type: ignore[reportUnknownMemberType]
-
-            # Comparison
-            elif any(cmp in method.name.lower() for cmp in ["compare", "diff", "match"]):
-                groups["Comparison"].append(method)  # type: ignore[reportUnknownMemberType]
-
-            # Setup/Configuration
-            elif method.name == "__init__" or any(
-                setup in method.name.lower() for setup in ["setup", "configure", "initialize"]
-            ):
-                groups["Configuration"].append(method)  # type: ignore[reportUnknownMemberType]
-
-            # Catch-all for other public methods
-            else:
-                groups["Core Functionality"].append(method)  # type: ignore[reportUnknownMemberType]
-
+            groups[self._classify_method_group(method.name)].append(method)
         return dict(groups)
+
+    @staticmethod
+    def _classify_method_group(method_name: str) -> str:
+        matchers = (
+            ("Create Operations", ("create", "add", "insert", "new")),
+            ("Read Operations", ("get", "read", "fetch", "find", "list", "retrieve")),
+            ("Update Operations", ("update", "modify", "edit", "change", "set")),
+            ("Delete Operations", ("delete", "remove", "destroy")),
+            ("Validation", ("validate", "check", "verify", "is_valid")),
+            ("Processing", ("process", "compute", "calculate", "transform", "convert")),
+            ("Analysis", ("analyze", "parse", "extract", "detect")),
+            ("Generation", ("generate", "build", "create", "make")),
+            ("Comparison", ("compare", "diff", "match")),
+            ("Configuration", ("setup", "configure", "initialize")),
+        )
+        for group, keywords in matchers:
+            if any(keyword in method_name.lower() for keyword in keywords):
+                return group
+        return "Configuration" if method_name == "__init__" else "Core Functionality"
 
     def _create_story_from_method_group(
         self, group_name: str, methods: list[ast.FunctionDef], class_name: str, story_number: int
@@ -1152,94 +1126,18 @@ class CodeAnalyzer:
         """Create a user story from a group of related methods."""
         if not methods:
             return None
-
-        # Generate story key
         story_key = f"STORY-{class_name.upper()}-{story_number:03d}"
-
-        # Create user-centric title based on group
         title = self._generate_story_title(group_name, class_name)
-
-        # Extract testable acceptance criteria using test patterns
-        acceptance: list[str] = []
-        tasks: list[str] = []
-
-        # Try to extract test patterns from existing tests
-        # Use minimal acceptance criteria (examples stored in contracts, not YAML)
-        test_patterns = self.test_extractor.extract_test_patterns_for_class(class_name, as_openapi_examples=True)
-
-        # If test patterns found, limit to 1-3 high-level acceptance criteria
-        # Detailed test patterns are extracted to OpenAPI contracts (Phase 5)
-        if test_patterns:
-            # Limit acceptance criteria to 1-3 high-level items per story
-            # All detailed test patterns are in OpenAPI contract files
-            if len(test_patterns) <= 3:
-                acceptance.extend(test_patterns)
-            else:
-                # Use first 3 as representative high-level acceptance criteria
-                # All test patterns are available in OpenAPI contract examples
-                acceptance.extend(test_patterns[:3])
-                # Note: Remaining test patterns are extracted to OpenAPI examples in contract files
-
-        # Also extract from code patterns (for methods without tests)
-        for method in methods:
-            # Add method as task
-            tasks.append(f"{method.name}()")
-
-            # Extract test patterns from code if no test file patterns found
-            if not test_patterns:
-                code_patterns = self.test_extractor.infer_from_code_patterns(method, class_name)
-                acceptance.extend(code_patterns)
-
-            # Also check docstrings for additional context
-            docstring = ast.get_docstring(method)
-            if docstring:
-                # Check if docstring contains Given/When/Then format (preserve if already present)
-                if "Given" in docstring and "When" in docstring and "Then" in docstring:
-                    # Extract Given/When/Then from docstring (legacy support)
-                    gwt_match = re.search(
-                        r"Given\s+(.+?),\s*When\s+(.+?),\s*Then\s+(.+?)(?:\.|$)", docstring, re.IGNORECASE
-                    )
-                    if gwt_match:
-                        # Convert to simple text format (not verbose GWT)
-                        then_part = gwt_match.group(3).strip()
-                        acceptance.append(then_part)
-                else:
-                    # Use first line as simple text description (not GWT format)
-                    first_line = docstring.split("\n")[0].strip()
-                    if first_line and first_line not in acceptance:
-                        # Use simple text description (examples will be in OpenAPI contracts)
-                        acceptance.append(first_line)
-
-        # Add default simple acceptance if none found
+        acceptance, tasks = self._story_acceptance_and_tasks(methods, class_name)
         if not acceptance:
-            # Use simple text description (not GWT format)
-            # Detailed examples will be extracted to OpenAPI contracts for Specmatic
             acceptance.append(f"{group_name} functionality works correctly")
-
-        # Extract scenarios from control flow (Step 1.2)
-        scenarios: dict[str, list[str]] | None = None
-        if methods:
-            # Extract scenarios from the first method (representative of the group)
-            # In the future, we could merge scenarios from all methods in the group
-            primary_method = methods[0]
-            scenarios = self.control_flow_analyzer.extract_scenarios_from_method(
-                primary_method, class_name, primary_method.name
-            )
-
-        # Extract contracts from function signatures (Step 2.1)
-        contracts: dict[str, Any] | None = None
-        if methods:
-            # Extract contracts from the first method (representative of the group)
-            # In the future, we could merge contracts from all methods in the group
-            primary_method = methods[0]
-            contracts = self.contract_extractor.extract_function_contracts(primary_method)
-
-        # Calculate story points (complexity) based on number of methods and their size
+        primary_method = methods[0]
+        scenarios = self.control_flow_analyzer.extract_scenarios_from_method(
+            primary_method, class_name, primary_method.name
+        )
+        contracts = self.contract_extractor.extract_function_contracts(primary_method)
         story_points = self._calculate_story_points(methods)
-
-        # Calculate value points based on public API exposure
         value_points = self._calculate_value_points(methods, group_name)
-
         return Story(
             key=story_key,
             title=title,
@@ -1251,6 +1149,35 @@ class CodeAnalyzer:
             scenarios=scenarios,
             contracts=contracts,
         )
+
+    def _story_acceptance_and_tasks(
+        self, methods: list[ast.FunctionDef], class_name: str
+    ) -> tuple[list[str], list[str]]:
+        acceptance: list[str] = []
+        tasks: list[str] = []
+        test_patterns = self.test_extractor.extract_test_patterns_for_class(class_name, as_openapi_examples=True)
+        if test_patterns:
+            acceptance.extend(test_patterns if len(test_patterns) <= 3 else test_patterns[:3])
+        for method in methods:
+            tasks.append(f"{method.name}()")
+            if not test_patterns:
+                acceptance.extend(self.test_extractor.infer_from_code_patterns(method, class_name))
+            self._append_method_docstring_acceptance(acceptance, method)
+        return acceptance, tasks
+
+    @staticmethod
+    def _append_method_docstring_acceptance(acceptance: list[str], method: ast.FunctionDef) -> None:
+        docstring = ast.get_docstring(method)
+        if not docstring:
+            return
+        if "Given" in docstring and "When" in docstring and "Then" in docstring:
+            match = re.search(r"Given\s+(.+?),\s*When\s+(.+?),\s*Then\s+(.+?)(?:\.|$)", docstring, re.IGNORECASE)
+            if match:
+                acceptance.append(match.group(3).strip())
+            return
+        first_line = docstring.split("\n")[0].strip()
+        if first_line and first_line not in acceptance:
+            acceptance.append(first_line)
 
     def _generate_story_title(self, group_name: str, class_name: str) -> str:
         """Generate user-centric story title."""
@@ -1380,30 +1307,31 @@ class CodeAnalyzer:
         if stories and documented_stories > len(stories) / 2:
             score += 0.1
 
-        # === Semgrep Evidence (Patterns) ===
         if semgrep_evidence:
-            # Framework patterns indicate real, well-defined features
-            if semgrep_evidence.get("has_api_endpoints", False):
-                score += 0.1  # API endpoints = clear feature boundary
-            if semgrep_evidence.get("has_database_models", False):
-                score += 0.15  # Data models = core domain feature
-            if semgrep_evidence.get("has_crud_operations", False):
-                score += 0.1  # CRUD = complete feature implementation
-            if semgrep_evidence.get("has_auth_patterns", False):
-                score += 0.1  # Auth = security-aware feature
-            if semgrep_evidence.get("has_framework_patterns", False):
-                score += 0.05  # Framework usage = intentional design
-            if semgrep_evidence.get("has_test_patterns", False):
-                score += 0.1  # Tests = validated feature
-
-            # Code quality issues reduce confidence (maturity assessment)
-            if semgrep_evidence.get("has_anti_patterns", False):
-                score -= 0.05  # Anti-patterns = lower code quality
-            if semgrep_evidence.get("has_security_issues", False):
-                score -= 0.1  # Security issues = critical problems
+            score = self._apply_semgrep_confidence(score, semgrep_evidence)
 
         # Cap at 0.0-1.0 range
         return min(max(score, 0.0), 1.0)
+
+    @staticmethod
+    def _apply_semgrep_confidence(score: float, semgrep_evidence: dict[str, Any]) -> float:
+        if semgrep_evidence.get("has_api_endpoints", False):
+            score += 0.1
+        if semgrep_evidence.get("has_database_models", False):
+            score += 0.15
+        if semgrep_evidence.get("has_crud_operations", False):
+            score += 0.1
+        if semgrep_evidence.get("has_auth_patterns", False):
+            score += 0.1
+        if semgrep_evidence.get("has_framework_patterns", False):
+            score += 0.05
+        if semgrep_evidence.get("has_test_patterns", False):
+            score += 0.1
+        if semgrep_evidence.get("has_anti_patterns", False):
+            score -= 0.05
+        if semgrep_evidence.get("has_security_issues", False):
+            score -= 0.1
+        return score
 
     def _humanize_name(self, name: str) -> str:
         """Convert snake_case or PascalCase to human-readable title."""
@@ -1414,56 +1342,36 @@ class CodeAnalyzer:
         return name.title()
 
     def _build_dependency_graph(self, python_files: list[Path]) -> None:
-        """
-        Build module dependency graph using AST imports.
-
-        Creates a directed graph where nodes are modules and edges represent imports.
-        """
-        # First pass: collect all modules as nodes
+        """Build module dependency graph using AST imports."""
         modules: dict[str, Path] = {}
         for file_path in python_files:
             if self._should_skip_file(file_path):
                 continue
-
-            # Convert file path to module name
             module_name = self._path_to_module_name(file_path)
             modules[module_name] = file_path
             self.dependency_graph.add_node(module_name, path=file_path)
-
-        # Second pass: add edges based on imports
         for module_name, file_path in modules.items():
-            try:
-                content = file_path.read_text(encoding="utf-8")
-                tree = ast.parse(content)
+            self._add_module_dependencies(module_name, file_path, modules)
 
-                # Extract imports
-                imports = self._extract_imports_from_ast(tree, file_path)
-                for imported_module in imports:
-                    # Only add edges for modules we know about (within repo)
-                    # Try exact match first, then partial match
-                    if imported_module in modules:
-                        self.dependency_graph.add_edge(module_name, imported_module)
-                    else:
-                        # Try to find matching module (e.g., "module_a" matches "src.module_a")
-                        matching_module = None
-                        for known_module in modules:
-                            # Check if imported name matches the module name (last part)
-                            if imported_module == known_module.split(".")[-1]:
-                                matching_module = known_module
-                                break
-                        if matching_module:
-                            self.dependency_graph.add_edge(module_name, matching_module)
-                        elif self.entry_point and not any(
-                            imported_module.startswith(prefix) for prefix in ["src.", "lib.", "app.", "main.", "core."]
-                        ):
-                            # Track external dependencies when using entry point
-                            # Check if it's a standard library or third-party import
-                            # (heuristic: if it doesn't start with known repo patterns)
-                            # Likely external dependency
-                            self.external_dependencies.add(imported_module)
-            except (SyntaxError, UnicodeDecodeError):
-                # Skip files that can't be parsed
-                continue
+    def _add_module_dependencies(self, module_name: str, file_path: Path, modules: dict[str, Path]) -> None:
+        try:
+            tree = ast.parse(file_path.read_text(encoding="utf-8"))
+            for imported_module in self._extract_imports_from_ast(tree, file_path):
+                self._add_import_dependency(module_name, imported_module, modules)
+        except (SyntaxError, UnicodeDecodeError):
+            _LOGGER.debug("Dependency analysis incomplete; retaining collected edges.")
+
+    def _add_import_dependency(self, module_name: str, imported_module: str, modules: dict[str, Path]) -> None:
+        if imported_module in modules:
+            self.dependency_graph.add_edge(module_name, imported_module)
+            return
+        matching_module = next((known for known in modules if imported_module == known.split(".")[-1]), None)
+        if matching_module:
+            self.dependency_graph.add_edge(module_name, matching_module)
+        elif self.entry_point and not any(
+            imported_module.startswith(prefix) for prefix in ["src.", "lib.", "app.", "main.", "core."]
+        ):
+            self.external_dependencies.add(imported_module)
 
     def _path_to_module_name(self, file_path: Path) -> str:
         """Convert file path to module name (e.g., src/foo/bar.py -> src.foo.bar)."""
@@ -1485,62 +1393,14 @@ class CodeAnalyzer:
         Returns:
             List of module names (relative to repo root if possible)
         """
-        imports: set[str] = set()
-
-        for node in ast.walk(tree):
-            if isinstance(node, ast.Import):
-                for alias in node.names:
-                    # Import aliases (e.g., import foo as bar)
-                    if "." in alias.name:
-                        # Extract root module (e.g., foo.bar.baz -> foo)
-                        root_module = alias.name.split(".")[0]
-                        imports.add(root_module)
-                    else:
-                        imports.add(alias.name)
-
-            elif isinstance(node, ast.ImportFrom) and node.module:
-                # From imports (e.g., from foo.bar import baz)
-                if "." in node.module:
-                    # Extract root module
-                    root_module = node.module.split(".")[0]
-                    imports.add(root_module)
-                else:
-                    imports.add(node.module)
+        imports = {name.split(".")[0] for node in ast.walk(tree) for name in self._import_module_names(node)}
 
         # Try to resolve local imports (relative to current file)
         resolved_imports: list[str] = []
         current_module = self._path_to_module_name(file_path)
 
         for imported in imports:
-            # Skip stdlib imports (common patterns)
-            stdlib_modules = {
-                "sys",
-                "os",
-                "json",
-                "yaml",
-                "pathlib",
-                "typing",
-                "collections",
-                "dataclasses",
-                "enum",
-                "abc",
-                "asyncio",
-                "functools",
-                "itertools",
-                "re",
-                "datetime",
-                "time",
-                "logging",
-                "hashlib",
-                "base64",
-                "urllib",
-                "http",
-                "socket",
-                "threading",
-                "multiprocessing",
-            }
-
-            if imported in stdlib_modules:
+            if imported in _DEPENDENCY_IMPORT_EXCLUSIONS:
                 continue
 
             # Try to resolve relative imports
@@ -1577,144 +1437,88 @@ class CodeAnalyzer:
 
         return None
 
-    def _extract_type_hints(self, tree: ast.AST, file_path: Path) -> dict[str, str]:
-        """
-        Extract type hints from function/method signatures (legacy version).
-        """
-        return self._extract_type_hints_parallel(tree, file_path)
+    def _extract_type_hints_parallel(self, tree: ast.AST) -> dict[str, str]:
+        """Extract type hints from function/method signatures (thread-safe version)."""
+        return {
+            node.name: self._return_annotation_name(node.returns)
+            for node in ast.walk(tree)
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        }
 
-    def _extract_type_hints_parallel(self, tree: ast.AST, file_path: Path) -> dict[str, str]:
-        """
-        Extract type hints from function/method signatures (thread-safe version).
-
-        Returns:
-            Dictionary mapping function names to their return type hints
-        """
-        type_hints: dict[str, str] = {}
-
-        for node in ast.walk(tree):
-            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                func_name = node.name
-                return_type = "None"
-
-                # Extract return type annotation
-                if node.returns:
-                    # Convert AST node to string representation
-                    if isinstance(node.returns, ast.Name):
-                        return_type = node.returns.id
-                    elif isinstance(node.returns, ast.Subscript):
-                        # Handle generics like List[str], Dict[str, int]
-                        container = node.returns.value.id if isinstance(node.returns.value, ast.Name) else "Any"
-                        return_type = str(container)  # Simplified representation
-
-                type_hints[func_name] = return_type
-
-        return type_hints
+    @staticmethod
+    def _return_annotation_name(annotation: ast.expr | None) -> str:
+        if isinstance(annotation, ast.Name):
+            return annotation.id
+        if isinstance(annotation, ast.Subscript):
+            return str(annotation.value.id if isinstance(annotation.value, ast.Name) else "Any")
+        return "None"
 
     def _detect_async_patterns(self, tree: ast.AST, file_path: Path) -> list[str]:
         """
         Detect async/await patterns in code (legacy version).
         """
-        async_methods = self._detect_async_patterns_parallel(tree, file_path)
+        async_methods = self._detect_async_patterns_parallel(tree)
         module_name = self._path_to_module_name(file_path)
         if module_name not in self.async_patterns:
             self.async_patterns[module_name] = []
         self.async_patterns[module_name].extend(async_methods)
         return async_methods
 
-    def _detect_async_patterns_parallel(self, tree: ast.AST, file_path: Path) -> list[str]:
-        """
-        Detect async/await patterns in code (thread-safe version).
-
-        Returns:
-            List of async method/function names
-        """
+    def _detect_async_patterns_parallel(self, tree: ast.AST) -> list[str]:
+        """Detect async/await patterns in code (thread-safe version)."""
         async_methods: list[str] = []
-
         for node in ast.walk(tree):
-            # Check for async functions
             if isinstance(node, ast.AsyncFunctionDef):
                 async_methods.append(node.name)
-
-            # Check for await statements (even in sync functions)
             if isinstance(node, ast.Await):
-                # Find containing function
-                for parent in ast.walk(tree):
-                    if isinstance(parent, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                        for child in ast.walk(parent):
-                            if child == node:
-                                if parent.name not in async_methods:
-                                    async_methods.append(parent.name)
-                                break
-
+                async_methods.extend(
+                    name for name in self._enclosing_function_names(tree, node) if name not in async_methods
+                )
         return async_methods
 
-    def _analyze_commit_history(self) -> None:
-        """
-        Mine commit history to identify feature boundaries.
+    @staticmethod
+    def _enclosing_function_names(tree: ast.AST, node: ast.Await) -> list[str]:
+        return [
+            parent.name
+            for parent in ast.walk(tree)
+            if isinstance(parent, (ast.FunctionDef, ast.AsyncFunctionDef)) and node in ast.walk(parent)
+        ]
 
-        Uses GitPython to analyze commit messages and associate them with features.
-        Limits analysis to recent commits to avoid performance issues.
-        """
+    def _analyze_commit_history(self) -> None:
+        """Mine recent commit history to identify feature boundaries."""
         try:
             from git import Repo
 
             if not (self.repo_path / ".git").exists():
                 return
-
             repo = Repo(self.repo_path)
-            # Limit to last 100 commits to avoid performance issues with large repositories
-            max_commits = 100
-            commits = list(repo.iter_commits(max_count=max_commits))
-
-            # Map commits to files to features
-            # Note: This mapping would be implemented in a full version
-            # For now, we track commit bounds per feature
-            for _feature in self.features:
-                # Extract potential file paths from feature key
-                # This is simplified - in reality we'd track which files contributed to which features
-                pass
-
-            # Analyze commit messages for feature references
+            commits = list(repo.iter_commits(max_count=100))
             for commit in commits:
                 try:
-                    # Skip commits that can't be accessed (corrupted or too old)
-                    # Use commit.message which is lazy-loaded but faster than full commit object
-                    commit_message = commit.message
-                    if isinstance(commit_message, bytes):
-                        commit_message = commit_message.decode("utf-8", errors="ignore")
-                    message = commit_message.lower()
-                    # Look for feature patterns (e.g., FEATURE-001, feat:, feature:)
-                    if "feat" in message or "feature" in message:
-                        # Try to extract feature keys from commit message
-                        feature_match = re.search(r"feature[-\s]?(\d+)", message, re.IGNORECASE)
-                        if feature_match:
-                            feature_num = feature_match.group(1)
-                            commit_hash = commit.hexsha[:8]  # Short hash
-
-                            # Find feature by key format (FEATURE-001, FEATURE-1, etc.)
-                            for feature in self.features:
-                                # Match feature key patterns: FEATURE-001, FEATURE-1, Feature-001, etc.
-                                if re.search(rf"feature[-\s]?{feature_num}", feature.key, re.IGNORECASE):
-                                    # Update commit bounds for this feature
-                                    if feature.key not in self.commit_bounds:
-                                        # First commit found for this feature
-                                        self.commit_bounds[feature.key] = (commit_hash, commit_hash)
-                                    else:
-                                        # Update last commit (commits are in reverse chronological order)
-                                        first_commit, _last_commit = self.commit_bounds[feature.key]
-                                        self.commit_bounds[feature.key] = (first_commit, commit_hash)
-                                    break
+                    self._record_commit_feature_bounds(commit)
                 except Exception:
-                    # Skip individual commits that fail (corrupted, etc.)
                     continue
-
         except ImportError:
-            # GitPython not available, skip
             pass
         except Exception:
-            # Git operations failed, skip gracefully
-            pass
+            _LOGGER.debug("Commit history analysis incomplete; retaining collected feature bounds.")
+
+    def _record_commit_feature_bounds(self, commit: Any) -> None:
+        commit_message = commit.message
+        if isinstance(commit_message, bytes):
+            commit_message = commit_message.decode("utf-8", errors="ignore")
+        message = commit_message.lower()
+        if "feat" in message or "feature" in message:
+            feature_match = re.search(r"feature[-\s]?(\d+)", message, re.IGNORECASE)
+            if feature_match:
+                self._update_feature_commit_bounds(feature_match.group(1), commit.hexsha[:8])
+
+    def _update_feature_commit_bounds(self, feature_num: str, commit_hash: str) -> None:
+        for feature in self.features:
+            if re.search(rf"feature[-\s]?{feature_num}", feature.key, re.IGNORECASE):
+                first_commit = self.commit_bounds[feature.key][0] if feature.key in self.commit_bounds else commit_hash
+                self.commit_bounds[feature.key] = (first_commit, commit_hash)
+                break
 
     def _enhance_features_with_dependencies(self) -> None:
         """Enhance features with dependency graph information."""
@@ -1726,262 +1530,122 @@ class CodeAnalyzer:
     @beartype
     @ensure(lambda result: isinstance(result, list), "Must return list")
     def _extract_technology_stack_from_dependencies(self) -> list[str]:
-        """
-        Extract technology stack from dependency files (requirements.txt, pyproject.toml).
-
-        Returns:
-            List of technology constraints extracted from dependency files
-        """
+        """Extract technology stack from requirements.txt and pyproject.toml."""
         constraints: list[str] = []
+        self._read_requirement_constraints(constraints)
+        self._read_project_constraints(constraints)
+        unique_constraints = list(dict.fromkeys(constraints))
+        return unique_constraints or ["Python 3.11+", "Typer for CLI", "Pydantic for data validation"]
 
-        # Try to read requirements.txt
+    def _read_requirement_constraints(self, constraints: list[str]) -> None:
         requirements_file = self.repo_path / "requirements.txt"
-        if requirements_file.exists():
-            try:
-                content = requirements_file.read_text(encoding="utf-8")
-                # Parse requirements.txt format: package==version or package>=version
-                for line in content.splitlines():
-                    line = line.strip()
-                    # Skip comments and empty lines
-                    if not line or line.startswith("#"):
-                        continue
+        if not requirements_file.exists():
+            return
+        try:
+            content = requirements_file.read_text(encoding="utf-8")
+            for line in content.splitlines():
+                line = line.strip()
+                if line and not line.startswith("#"):
+                    self._append_requirement_constraints(line, constraints)
+        except Exception:
+            _LOGGER.debug("Requirements analysis incomplete; retaining collected constraints.")
 
-                    # Remove version specifiers for framework detection
-                    package = (
-                        line.split("==")[0]
-                        .split(">=")[0]
-                        .split(">")[0]
-                        .split("<=")[0]
-                        .split("<")[0]
-                        .split("~=")[0]
-                        .strip()
-                    )
-                    package_lower = package.lower()
+    @staticmethod
+    def _dependency_package_name(dependency: str) -> str:
+        return (
+            dependency.split("==")[0]
+            .split(">=")[0]
+            .split(">")[0]
+            .split("<=")[0]
+            .split("<")[0]
+            .split("~=")[0]
+            .strip()
+            .lower()
+        )
 
-                    # Detect Python version requirement
-                    if package_lower == "python":
-                        # Extract version from line
-                        if ">=" in line:
-                            version = line.split(">=")[1].split(",")[0].strip()
-                            constraints.append(f"Python {version}+")
-                        elif "==" in line:
-                            version = line.split("==")[1].split(",")[0].strip()
-                            constraints.append(f"Python {version}")
+    def _append_requirement_constraints(self, line: str, constraints: list[str]) -> None:
+        package = self._dependency_package_name(line)
+        if package == "python":
+            if ">=" in line:
+                version = line.split(">=")[1].split(",")[0].strip()
+                constraints.append(f"Python {version}+")
+            elif "==" in line:
+                version = line.split("==")[1].split(",")[0].strip()
+                constraints.append(f"Python {version}")
+        self._append_framework_database_constraints(package, constraints)
+        tool_maps = (
+            {
+                "pytest": "pytest for testing",
+                "unittest": "unittest for testing",
+                "nose": "nose for testing",
+                "tox": "tox for testing",
+            },
+            {"docker": "Docker for containerization", "kubernetes": "Kubernetes for orchestration"},
+        )
+        for mapping in tool_maps:
+            if package in mapping:
+                constraints.append(mapping[package])
+        if package == "pydantic":
+            constraints.append("Pydantic for data validation")
 
-                    # Detect frameworks
-                    framework_map = {
-                        "fastapi": "FastAPI framework",
-                        "django": "Django framework",
-                        "flask": "Flask framework",
-                        "typer": "Typer for CLI",
-                        "tornado": "Tornado framework",
-                        "bottle": "Bottle framework",
-                    }
+    @staticmethod
+    def _append_framework_database_constraints(package: str, constraints: list[str]) -> None:
+        mappings = (
+            {
+                "fastapi": "FastAPI framework",
+                "django": "Django framework",
+                "flask": "Flask framework",
+                "typer": "Typer for CLI",
+                "tornado": "Tornado framework",
+                "bottle": "Bottle framework",
+            },
+            {
+                "psycopg2": "PostgreSQL database",
+                "psycopg2-binary": "PostgreSQL database",
+                "mysql-connector-python": "MySQL database",
+                "pymongo": "MongoDB database",
+                "redis": "Redis database",
+                "sqlalchemy": "SQLAlchemy ORM",
+            },
+        )
+        for mapping in mappings:
+            if package in mapping:
+                constraints.append(mapping[package])
 
-                    if package_lower in framework_map:
-                        constraints.append(framework_map[package_lower])
+    def _append_project_constraints(self, data: dict[str, Any], constraints: list[str]) -> None:
+        if "project" in data and "requires-python" in data["project"]:
+            python_req = data["project"]["requires-python"]
+            if python_req:
+                constraints.append(f"Python {python_req}")
+        if "project" in data and "dependencies" in data["project"]:
+            for dependency in data["project"]["dependencies"]:
+                package = self._dependency_package_name(dependency)
+                self._append_framework_database_constraints(package, constraints)
+                if package == "pydantic":
+                    constraints.append("Pydantic for data validation")
 
-                    # Detect databases
-                    db_map = {
-                        "psycopg2": "PostgreSQL database",
-                        "psycopg2-binary": "PostgreSQL database",
-                        "mysql-connector-python": "MySQL database",
-                        "pymongo": "MongoDB database",
-                        "redis": "Redis database",
-                        "sqlalchemy": "SQLAlchemy ORM",
-                    }
-
-                    if package_lower in db_map:
-                        constraints.append(db_map[package_lower])
-
-                    # Detect testing tools
-                    test_map = {
-                        "pytest": "pytest for testing",
-                        "unittest": "unittest for testing",
-                        "nose": "nose for testing",
-                        "tox": "tox for testing",
-                    }
-
-                    if package_lower in test_map:
-                        constraints.append(test_map[package_lower])
-
-                    # Detect deployment tools
-                    deploy_map = {
-                        "docker": "Docker for containerization",
-                        "kubernetes": "Kubernetes for orchestration",
-                    }
-
-                    if package_lower in deploy_map:
-                        constraints.append(deploy_map[package_lower])
-
-                    # Detect data validation
-                    if package_lower == "pydantic":
-                        constraints.append("Pydantic for data validation")
-            except Exception:
-                # If reading fails, continue silently
-                pass
-
-        # Try to read pyproject.toml
+    def _read_project_constraints(self, constraints: list[str]) -> None:
         pyproject_file = self.repo_path / "pyproject.toml"
         if pyproject_file.exists():
             try:
-                import tomli  # type: ignore[import-untyped]
+                import tomli
 
-                content = pyproject_file.read_text(encoding="utf-8")
-                data = tomli.loads(content)
-
-                # Extract Python version requirement
-                if "project" in data and "requires-python" in data["project"]:
-                    python_req = data["project"]["requires-python"]
-                    if python_req:
-                        constraints.append(f"Python {python_req}")
-
-                # Extract dependencies
-                if "project" in data and "dependencies" in data["project"]:
-                    deps = data["project"]["dependencies"]
-                    for dep in deps:
-                        # Similar parsing as requirements.txt
-                        package = (
-                            dep.split("==")[0]
-                            .split(">=")[0]
-                            .split(">")[0]
-                            .split("<=")[0]
-                            .split("<")[0]
-                            .split("~=")[0]
-                            .strip()
-                        )
-                        package_lower = package.lower()
-
-                        # Apply same mapping as requirements.txt
-                        framework_map = {
-                            "fastapi": "FastAPI framework",
-                            "django": "Django framework",
-                            "flask": "Flask framework",
-                            "typer": "Typer for CLI",
-                            "tornado": "Tornado framework",
-                            "bottle": "Bottle framework",
-                        }
-
-                        if package_lower in framework_map:
-                            constraints.append(framework_map[package_lower])
-
-                        db_map = {
-                            "psycopg2": "PostgreSQL database",
-                            "psycopg2-binary": "PostgreSQL database",
-                            "mysql-connector-python": "MySQL database",
-                            "pymongo": "MongoDB database",
-                            "redis": "Redis database",
-                            "sqlalchemy": "SQLAlchemy ORM",
-                        }
-
-                        if package_lower in db_map:
-                            constraints.append(db_map[package_lower])
-
-                        if package_lower == "pydantic":
-                            constraints.append("Pydantic for data validation")
+                data = tomli.loads(pyproject_file.read_text(encoding="utf-8"))
+                self._append_project_constraints(data, constraints)
             except ImportError:
-                # tomli not available, try tomllib (Python 3.11+)
-                try:
-                    import tomllib  # type: ignore[import-untyped]
-
-                    # tomllib.load() takes a file object opened in binary mode
-                    with pyproject_file.open("rb") as f:
-                        data = tomllib.load(f)
-
-                    # Extract Python version requirement
-                    if "project" in data and "requires-python" in data["project"]:
-                        python_req = data["project"]["requires-python"]
-                        if python_req:
-                            constraints.append(f"Python {python_req}")
-
-                    # Extract dependencies
-                    if "project" in data and "dependencies" in data["project"]:
-                        deps = data["project"]["dependencies"]
-                        for dep in deps:
-                            package = (
-                                dep.split("==")[0]
-                                .split(">=")[0]
-                                .split(">")[0]
-                                .split("<=")[0]
-                                .split("<")[0]
-                                .split("~=")[0]
-                                .strip()
-                            )
-                            package_lower = package.lower()
-
-                            framework_map = {
-                                "fastapi": "FastAPI framework",
-                                "django": "Django framework",
-                                "flask": "Flask framework",
-                                "typer": "Typer for CLI",
-                                "tornado": "Tornado framework",
-                                "bottle": "Bottle framework",
-                            }
-
-                            if package_lower in framework_map:
-                                constraints.append(framework_map[package_lower])
-
-                            db_map = {
-                                "psycopg2": "PostgreSQL database",
-                                "psycopg2-binary": "PostgreSQL database",
-                                "mysql-connector-python": "MySQL database",
-                                "pymongo": "MongoDB database",
-                                "redis": "Redis database",
-                                "sqlalchemy": "SQLAlchemy ORM",
-                            }
-
-                            if package_lower in db_map:
-                                constraints.append(db_map[package_lower])
-
-                            if package_lower == "pydantic":
-                                constraints.append("Pydantic for data validation")
-                except ImportError:
-                    # Neither tomli nor tomllib available, skip
-                    pass
+                self._read_project_constraints_fallback(pyproject_file, constraints)
             except Exception:
-                # If parsing fails, continue silently
-                pass
+                _LOGGER.debug("Project analysis incomplete; retaining collected constraints.")
 
-        # Remove duplicates while preserving order
-        seen: set[str] = set()
-        unique_constraints: list[str] = []
-        for constraint in constraints:
-            if constraint not in seen:
-                seen.add(constraint)
-                unique_constraints.append(constraint)
+    def _read_project_constraints_fallback(self, pyproject_file: Path, constraints: list[str]) -> None:
+        try:
+            import tomllib
 
-        # Default fallback if nothing extracted
-        if not unique_constraints:
-            unique_constraints = ["Python 3.11+", "Typer for CLI", "Pydantic for data validation"]
-
-        return unique_constraints
-
-    @beartype
-    def _convert_to_gwt_format(self, text: str, method_name: str, class_name: str) -> str:
-        """
-        DEPRECATED: Convert a text description to Given/When/Then format.
-
-        This method is deprecated. We now use simple text descriptions instead of verbose GWT format.
-        Detailed examples are extracted to OpenAPI contracts for Specmatic.
-
-        Args:
-            text: Original text description
-            method_name: Name of the method
-            class_name: Name of the class
-
-        Returns:
-            Simple text description (legacy GWT format preserved for backward compatibility)
-        """
-        # Return simple text instead of GWT format
-        # If text already contains GWT keywords, extract the "Then" part
-        if "Given" in text and "When" in text and "Then" in text:
-            # Extract the "Then" part from existing GWT format
-            then_match = re.search(r"Then\s+(.+?)(?:\.|$)", text, re.IGNORECASE)
-            if then_match:
-                return then_match.group(1).strip()
-
-        # Return simple text description
-        return text if text else f"{method_name} works correctly"
+            with pyproject_file.open("rb") as stream:
+                data = tomllib.load(stream)
+            self._append_project_constraints(data, constraints)
+        except ImportError:
+            pass
 
     def _get_module_dependencies(self, module_name: str) -> list[str]:
         """Get list of modules that the given module depends on."""
