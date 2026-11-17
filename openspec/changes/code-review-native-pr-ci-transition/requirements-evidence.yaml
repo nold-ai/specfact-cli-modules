@@ -929,6 +929,120 @@
           }
         }
       ]
+    },
+    "openspec:code-review-native-pr-ci-transition:native-pr-ci:preserve-generated-cli-evidence-across-supported-argument-types": {
+      "rationale": "Preserve required command-overview validation with current supported Typer arguments.",
+      "stakeholder_refs": [
+        "nold-ai/specfact-cli-modules#513"
+      ],
+      "touchpoints": [
+        {
+          "id": "preserve-generated-cli-evidence-across-supported-argument-types",
+          "kind": "config_file",
+          "locator": "openspec/changes/code-review-native-pr-ci-transition/specs/native-pr-ci/spec.md"
+        }
+      ],
+      "verification_cases": [
+        {
+          "case_id": "preserve-generated-cli-evidence-across-supported-argument-types-1",
+          "scenario_id": "preserve-generated-cli-evidence-across-supported-argument-types",
+          "method": "test",
+          "intent": "Render positional argument labels for Click and Typer without a removed display-name property.",
+          "observable": "Default names are uppercase and explicit mixed-case or empty metavars remain unchanged.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/docs/test_llms_overview_freshness.py::test_command_overview_records_optional_click_arguments"
+          }
+        },
+        {
+          "case_id": "preserve-generated-cli-evidence-across-supported-argument-types-2",
+          "scenario_id": "preserve-generated-cli-evidence-across-supported-argument-types",
+          "method": "test",
+          "intent": "Render positional argument labels for Click and Typer without a removed display-name property.",
+          "observable": "Default names are uppercase and explicit mixed-case or empty metavars remain unchanged.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/docs/test_llms_overview_freshness.py::test_command_overview_records_typer_parameters"
+          }
+        },
+        {
+          "case_id": "preserve-generated-cli-evidence-across-supported-argument-types-3",
+          "scenario_id": "preserve-generated-cli-evidence-across-supported-argument-types",
+          "method": "test",
+          "intent": "Render positional argument labels for Click and Typer without a removed display-name property.",
+          "observable": "Default names are uppercase and explicit mixed-case or empty metavars remain unchanged.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/docs/test_llms_overview_freshness.py::test_command_overview_preserves_explicit_typer_argument_metavar"
+          }
+        },
+        {
+          "case_id": "preserve-generated-cli-evidence-across-supported-argument-types-4",
+          "scenario_id": "preserve-generated-cli-evidence-across-supported-argument-types",
+          "method": "test",
+          "intent": "Render positional argument labels for Click and Typer without a removed display-name property.",
+          "observable": "Default names are uppercase and explicit mixed-case or empty metavars remain unchanged.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/docs/test_llms_overview_freshness.py::test_command_overview_preserves_optional_argument_labels[default-click]"
+          }
+        },
+        {
+          "case_id": "preserve-generated-cli-evidence-across-supported-argument-types-5",
+          "scenario_id": "preserve-generated-cli-evidence-across-supported-argument-types",
+          "method": "test",
+          "intent": "Render positional argument labels for Click and Typer without a removed display-name property.",
+          "observable": "Default names are uppercase and explicit mixed-case or empty metavars remain unchanged.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/docs/test_llms_overview_freshness.py::test_command_overview_preserves_optional_argument_labels[default-typer]"
+          }
+        },
+        {
+          "case_id": "preserve-generated-cli-evidence-across-supported-argument-types-6",
+          "scenario_id": "preserve-generated-cli-evidence-across-supported-argument-types",
+          "method": "test",
+          "intent": "Render positional argument labels for Click and Typer without a removed display-name property.",
+          "observable": "Default names are uppercase and explicit mixed-case or empty metavars remain unchanged.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/docs/test_llms_overview_freshness.py::test_command_overview_preserves_optional_argument_labels[explicit-click]"
+          }
+        },
+        {
+          "case_id": "preserve-generated-cli-evidence-across-supported-argument-types-7",
+          "scenario_id": "preserve-generated-cli-evidence-across-supported-argument-types",
+          "method": "test",
+          "intent": "Render positional argument labels for Click and Typer without a removed display-name property.",
+          "observable": "Default names are uppercase and explicit mixed-case or empty metavars remain unchanged.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/docs/test_llms_overview_freshness.py::test_command_overview_preserves_optional_argument_labels[explicit-typer]"
+          }
+        },
+        {
+          "case_id": "preserve-generated-cli-evidence-across-supported-argument-types-8",
+          "scenario_id": "preserve-generated-cli-evidence-across-supported-argument-types",
+          "method": "test",
+          "intent": "Render positional argument labels for Click and Typer without a removed display-name property.",
+          "observable": "Default names are uppercase and explicit mixed-case or empty metavars remain unchanged.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/docs/test_llms_overview_freshness.py::test_command_overview_preserves_optional_argument_labels[empty-click]"
+          }
+        },
+        {
+          "case_id": "preserve-generated-cli-evidence-across-supported-argument-types-9",
+          "scenario_id": "preserve-generated-cli-evidence-across-supported-argument-types",
+          "method": "test",
+          "intent": "Render positional argument labels for Click and Typer without a removed display-name property.",
+          "observable": "Default names are uppercase and explicit mixed-case or empty metavars remain unchanged.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/docs/test_llms_overview_freshness.py::test_command_overview_preserves_optional_argument_labels[empty-typer]"
+          }
+        }
+      ]
     }
   }
 }

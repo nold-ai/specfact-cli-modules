@@ -84,3 +84,15 @@ Both controller dependency installation operations SHALL constrain Typer to the 
 #### Scenario: Released controller installs after dependency drift
 - **WHEN** the independent reviewer is installed in a fresh controller environment
 - **THEN** both controller resolution operations retain Typer 0.27.0 and the released CLI and registry APIs load before the signed marketplace reviewer executes
+
+### Requirement: Preserve generated CLI evidence across supported argument types
+
+Command-overview validation SHALL render positional argument labels for supported Click and Typer argument objects. Explicit metavars and existing generated command semantics SHALL remain unchanged when an optional display-name attribute is unavailable. This compatibility correction SHALL preserve the required documentation and quality gates without changing customer command behavior.
+
+#### Scenario: Current Typer argument has no display-name property
+- **WHEN** a supported Typer argument exposes its name but lacks human_readable_name
+- **THEN** command-overview generation renders the same default uppercase argument label without raising AttributeError
+
+#### Scenario: Explicit argument label remains authoritative
+- **WHEN** an argument declares an explicit metavar
+- **THEN** generation preserves that label for both Click and Typer argument objects

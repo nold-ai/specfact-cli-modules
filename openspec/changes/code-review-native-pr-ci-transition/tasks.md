@@ -16,3 +16,10 @@
 - [x] Wire trusted historical verification key and shared controller compatibility constraint.
 - [x] Run focused proofs, required local gates and independent security/correctness review.
 - [ ] Publish signed commits and prove the full exact-head GitHub workflow and required readiness.
+
+## Required quality follow-up on 2026-11-17
+
+- [x] Identify command-overview argument API failure in exact-head quality jobs.
+- [ ] Prove current Typer argument regression before the minimal generator correction.
+- [ ] Preserve generated outputs, focused coverage and independent review.
+- [ ] Publish a signed follow-up and execute the complete required workflow on that exact head.

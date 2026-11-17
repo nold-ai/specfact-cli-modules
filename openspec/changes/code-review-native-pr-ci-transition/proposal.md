@@ -25,3 +25,5 @@ A prerequisite deletion or static-only scan drops existing obligations. Bare run
 ## CI prerequisite correction on 2026-11-17
 
 The maintainer authorized fixing both setup failures and rerunning the full workflow without merging. Attempt 2 failed before signature and reviewer acceptance because no public-key secret was configured and newly resolved Typer 0.29.1 removed an API used by released core 0.55.4. Resolve the existing public key from trusted event history and constrain only the independent controller to the already committed Typer 0.27.0. Keep all existing security, signing, quality and independent-review obligations.
+
+The fresh full run cleared both setup failures and then exposed a required command-overview compatibility defect. Current Typer argument objects no longer expose the display-name property used by the generator. Preserve existing generated labels through the supported argument interface, with a failing-first proof and exact-head review. GitHub account key registration and missing Actions signing secrets remain separate authority/configuration decisions; no signing policy change is authorized by this correction.
