@@ -12,7 +12,7 @@
 ## CI prerequisite correction on 2026-11-17
 
 - [x] Record exact setup failures and preserve existing acceptance boundaries.
-- [ ] Add focused failing-first signature trust and controller dependency regressions.
-- [ ] Wire trusted historical verification key and shared controller compatibility constraint.
-- [ ] Run focused proofs, required local gates and independent security/correctness review.
+- [x] Add focused failing-first signature trust and controller dependency regressions.
+- [x] Wire trusted historical verification key and shared controller compatibility constraint.
+- [x] Run focused proofs, required local gates and independent security/correctness review.
 - [ ] Publish signed commits and prove the full exact-head GitHub workflow and required readiness.

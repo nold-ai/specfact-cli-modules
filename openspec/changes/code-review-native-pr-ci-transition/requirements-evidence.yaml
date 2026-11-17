@@ -800,7 +800,7 @@
           "observable": "Only trusted historical keys or configured secrets verify; candidate replacement, tampering and missing authority fail, with main and version checks preserved.",
           "selector": {
             "runner": "pytest",
-            "node_id": "tests/unit/workflows/test_pr_orchestrator_signing_runtime.py::test_signature_workflow_prefers_configured_secret[SPECFACT_MODULE_PUBLIC_SIGN_KEY]"
+            "node_id": "tests/unit/workflows/test_pr_orchestrator_signing_runtime.py::test_signature_workflow_rejects_invalid_secret_even_with_candidate_default[nbsp-SPECFACT_MODULE_PUBLIC_SIGN_KEY]"
           }
         },
         {
@@ -811,7 +811,7 @@
           "observable": "Only trusted historical keys or configured secrets verify; candidate replacement, tampering and missing authority fail, with main and version checks preserved.",
           "selector": {
             "runner": "pytest",
-            "node_id": "tests/unit/workflows/test_pr_orchestrator_signing_runtime.py::test_signature_workflow_prefers_configured_secret[SPECFACT_MODULE_SIGNING_PUBLIC_KEY_PEM]"
+            "node_id": "tests/unit/workflows/test_pr_orchestrator_signing_runtime.py::test_signature_workflow_rejects_invalid_secret_even_with_candidate_default[nbsp-SPECFACT_MODULE_SIGNING_PUBLIC_KEY_PEM]"
           }
         },
         {
@@ -822,7 +822,7 @@
           "observable": "Only trusted historical keys or configured secrets verify; candidate replacement, tampering and missing authority fail, with main and version checks preserved.",
           "selector": {
             "runner": "pytest",
-            "node_id": "tests/unit/workflows/test_pr_orchestrator_signing_runtime.py::test_signature_workflow_still_requires_signatures_on_main[pull_request]"
+            "node_id": "tests/unit/workflows/test_pr_orchestrator_signing_runtime.py::test_signature_workflow_rejects_invalid_secret_even_with_candidate_default[file-separator-SPECFACT_MODULE_PUBLIC_SIGN_KEY]"
           }
         },
         {
@@ -833,7 +833,7 @@
           "observable": "Only trusted historical keys or configured secrets verify; candidate replacement, tampering and missing authority fail, with main and version checks preserved.",
           "selector": {
             "runner": "pytest",
-            "node_id": "tests/unit/workflows/test_pr_orchestrator_signing_runtime.py::test_signature_workflow_still_requires_signatures_on_main[push]"
+            "node_id": "tests/unit/workflows/test_pr_orchestrator_signing_runtime.py::test_signature_workflow_rejects_invalid_secret_even_with_candidate_default[file-separator-SPECFACT_MODULE_SIGNING_PUBLIC_KEY_PEM]"
           }
         },
         {
@@ -844,11 +844,55 @@
           "observable": "Only trusted historical keys or configured secrets verify; candidate replacement, tampering and missing authority fail, with main and version checks preserved.",
           "selector": {
             "runner": "pytest",
-            "node_id": "tests/unit/workflows/test_pr_orchestrator_signing_runtime.py::test_signature_workflow_still_rejects_payload_changes_without_version_bump[pull_request]"
+            "node_id": "tests/unit/workflows/test_pr_orchestrator_signing_runtime.py::test_signature_workflow_prefers_configured_secret[SPECFACT_MODULE_PUBLIC_SIGN_KEY]"
           }
         },
         {
           "case_id": "resolve-ci-verification-inputs-without-weakening-trust-25",
+          "scenario_id": "resolve-ci-verification-inputs-without-weakening-trust",
+          "method": "test",
+          "intent": "Execute the real signature workflow against signed Git fixtures.",
+          "observable": "Only trusted historical keys or configured secrets verify; candidate replacement, tampering and missing authority fail, with main and version checks preserved.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/workflows/test_pr_orchestrator_signing_runtime.py::test_signature_workflow_prefers_configured_secret[SPECFACT_MODULE_SIGNING_PUBLIC_KEY_PEM]"
+          }
+        },
+        {
+          "case_id": "resolve-ci-verification-inputs-without-weakening-trust-26",
+          "scenario_id": "resolve-ci-verification-inputs-without-weakening-trust",
+          "method": "test",
+          "intent": "Execute the real signature workflow against signed Git fixtures.",
+          "observable": "Only trusted historical keys or configured secrets verify; candidate replacement, tampering and missing authority fail, with main and version checks preserved.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/workflows/test_pr_orchestrator_signing_runtime.py::test_signature_workflow_still_requires_signatures_on_main[pull_request]"
+          }
+        },
+        {
+          "case_id": "resolve-ci-verification-inputs-without-weakening-trust-27",
+          "scenario_id": "resolve-ci-verification-inputs-without-weakening-trust",
+          "method": "test",
+          "intent": "Execute the real signature workflow against signed Git fixtures.",
+          "observable": "Only trusted historical keys or configured secrets verify; candidate replacement, tampering and missing authority fail, with main and version checks preserved.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/workflows/test_pr_orchestrator_signing_runtime.py::test_signature_workflow_still_requires_signatures_on_main[push]"
+          }
+        },
+        {
+          "case_id": "resolve-ci-verification-inputs-without-weakening-trust-28",
+          "scenario_id": "resolve-ci-verification-inputs-without-weakening-trust",
+          "method": "test",
+          "intent": "Execute the real signature workflow against signed Git fixtures.",
+          "observable": "Only trusted historical keys or configured secrets verify; candidate replacement, tampering and missing authority fail, with main and version checks preserved.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/workflows/test_pr_orchestrator_signing_runtime.py::test_signature_workflow_still_rejects_payload_changes_without_version_bump[pull_request]"
+          }
+        },
+        {
+          "case_id": "resolve-ci-verification-inputs-without-weakening-trust-29",
           "scenario_id": "resolve-ci-verification-inputs-without-weakening-trust",
           "method": "test",
           "intent": "Execute the real signature workflow against signed Git fixtures.",

@@ -37,7 +37,8 @@ jobs:
           trusted="$RUNNER_TEMP/native-independent-review"
           mkdir -m 0700 "$trusted" "$trusted/home" "$trusted/output"
           python -I -m venv "$trusted/venv"
-          "$trusted/venv/bin/python" -I -m pip install specfact-cli==0.55.4
+          printf '%s\n' 'typer==0.27.0' > "$trusted/controller-constraints.txt"
+          "$trusted/venv/bin/python" -I -m pip install specfact-cli==0.55.4 -c "$trusted/controller-constraints.txt"
           base="$(git merge-base "$EVENT_HEAD" "$EVENT_BASE")"
           git show "$base:pyproject.toml" > "$trusted/base-pyproject.toml"
           git show "$base:packages/specfact-code-review/src/specfact_code_review/resources/contracts/pr-range-v1-toolchain-lock.json" > "$trusted/analyzer-lock.json"
@@ -58,7 +59,7 @@ jobs:
           wheels = environment["wheelhouse"]["wheels"]
           (root / "semgrep-constraints.txt").write_text("\n".join(item["normalized_name"] + "==" + item["version"] for item in wheels) + "\n")
           PYTHON
-          "$trusted/venv/bin/python" -I -m pip install -r "$trusted/requirements.txt" -c "$trusted/constraints.txt"
+          "$trusted/venv/bin/python" -I -m pip install -r "$trusted/requirements.txt" -c "$trusted/constraints.txt" -c "$trusted/controller-constraints.txt"
           python -I -m venv "$trusted/semgrep"
           "$trusted/semgrep/bin/python" -I -m pip install -r "$trusted/semgrep-requirement.txt" -c "$trusted/semgrep-constraints.txt"
           cd "$trusted"
@@ -76,6 +77,7 @@ jobs:
           from importlib import import_module
           from importlib.metadata import version
           assert version("specfact-cli") == "0.55.4"
+          assert version("typer") == "0.27.0"
           for name, entry in (
               ("module_discovery", "discover_all_modules_for_project_with_shadowed"),
               ("module_installer", "verify_module_artifact"),
