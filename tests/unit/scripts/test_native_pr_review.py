@@ -499,3 +499,22 @@ def test_selected_test_file_cannot_disappear_from_evidence(native_review, tmp_pa
     </testsuite>""")
     with pytest.raises(ValueError, match="test_changed_source"):
         native_review._require_native_test_evidence(report, selectors=("tests/unit/test_changed_source.py",))
+
+
+def test_controller_installs_share_compatible_typer_constraint():
+    import shlex
+
+    workflow = yaml.safe_load((ROOT / ".github/workflows/native-pr-review.yml").read_text())
+    steps = workflow["jobs"]["independent-review"]["steps"]
+    install = _step_named(steps, "Install independent signed reviewer")["run"]
+    controller_installs = [
+        shlex.split(line) for line in install.splitlines() if '"$trusted/venv/bin/python" -I -m pip install ' in line
+    ]
+    assert len(controller_installs) == 2
+    constraint = "$trusted/controller-constraints.txt"
+    for command in controller_installs:
+        constraints = [command[index + 1] for index, argument in enumerate(command[:-1]) if argument == "-c"]
+        assert constraint in constraints, "Every controller install must preserve the compatible Typer pin"
+    assert "typer==0.27.0" in install
+    verify = _step_named(steps, "Verify immutable core registry APIs")["run"]
+    assert 'version("typer") == "0.27.0"' in verify

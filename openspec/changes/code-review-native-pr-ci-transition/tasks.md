@@ -8,3 +8,11 @@
 - [x] Run required gates and independent implementation review.
 - [ ] Deliver signed commits and verify exact-head Linux results.
 - [ ] Archive through OpenSpec CLI after completion and merge.
+
+## CI prerequisite correction on 2026-11-17
+
+- [x] Record exact setup failures and preserve existing acceptance boundaries.
+- [ ] Add focused failing-first signature trust and controller dependency regressions.
+- [ ] Wire trusted historical verification key and shared controller compatibility constraint.
+- [ ] Run focused proofs, required local gates and independent security/correctness review.
+- [ ] Publish signed commits and prove the full exact-head GitHub workflow and required readiness.
