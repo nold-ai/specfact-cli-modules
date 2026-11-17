@@ -587,6 +587,19 @@ def test_public_install_uses_clean_environment_and_explicit_main_marketplace():
     assert '"$CUSTOMER_ROOT/venv/bin/specfact" module install' in workflow
 
 
+def test_capsule_installations_use_compatible_released_core():
+    import yaml
+
+    path = Path(__file__).parents[2] / ".github/workflows/capsule-customer-execution.yml"
+    jobs = yaml.safe_load(path.read_text())["jobs"]
+    for job, step_name in (
+        ("customer", "Prepare fresh customer-owned installation"),
+        ("independent-review", "Install trusted reviewer in its own ordinary-user environment"),
+    ):
+        script = next(step["run"] for step in jobs[job]["steps"] if step.get("name") == step_name)
+        assert "specfact-cli==0.55.4 typer==0.28.0" in script, job
+
+
 def test_candidate_installation_uses_separate_published_registry_snapshot():
     import yaml
 
