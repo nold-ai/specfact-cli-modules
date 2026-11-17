@@ -7,6 +7,7 @@ from __future__ import annotations
 import argparse
 import base64
 import hashlib
+import json
 import os
 import subprocess
 import sys
@@ -220,6 +221,11 @@ def _verify_signature(payload: bytes, signature_b64: str, public_key_pem: str) -
     )
 
     public_key = crypto_serialization.load_pem_public_key(public_key_pem.encode("utf-8"))
+    public_der = public_key.public_bytes(
+        crypto_serialization.Encoding.DER, crypto_serialization.PublicFormat.SubjectPublicKeyInfo
+    )
+    if hashlib.sha256(public_der).hexdigest() == "98295305a48a4ab7801d537f1caa65ce8014ef75fab67d7473a59e5f2964d35a":
+        raise ValueError("The previous SpecFact module signing key is revoked")
     signature = base64.b64decode(signature_b64, validate=True)
 
     try:
@@ -237,6 +243,9 @@ def _verify_signature(payload: bytes, signature_b64: str, public_key_pem: str) -
 def _resolve_public_key(args: argparse.Namespace) -> str:
     if args.public_key_file:
         return Path(args.public_key_file).read_text(encoding="utf-8").strip()
+    replacement = Path(__file__).resolve().parents[1] / "ci" / "module-signing-public-next.pem"
+    if replacement.is_file() and not args.public_key_pem:
+        return replacement.read_text(encoding="utf-8").strip()
     env_key_file = os.environ.get("SPECFACT_MODULE_PUBLIC_SIGN_KEY_FILE", "").strip()
     if not env_key_file:
         env_key_file = os.environ.get("SPECFACT_MODULE_SIGNING_PUBLIC_KEY_FILE", "").strip()
@@ -363,6 +372,30 @@ def _verify_version_bumps(base_ref: str) -> list[str]:
     return failures
 
 
+def _matches_published_cutoff(manifest_path: Path, raw: dict[str, Any]) -> bool:
+    inventory_path = Path(__file__).resolve().parents[1] / "ci" / "official-module-release-cutoff.json"
+    if not inventory_path.is_file():
+        return False
+    inventory = json.loads(inventory_path.read_text(encoding="utf-8"))
+    versions = inventory["archives"].get(str(raw.get("name")), {})
+    expected = versions.get(str(raw.get("version")))
+    if expected is None:
+        return False
+    root = manifest_path.parent
+    entries: dict[str, str] = {}
+    if root.is_symlink():
+        raise ValueError("Release module root must not be a symlink")
+    for path in root.rglob("*"):
+        if path.is_symlink():
+            raise ValueError("Release module tree must not contain symlinks")
+        if path.is_file():
+            entries[path.relative_to(root).as_posix()] = hashlib.sha256(path.read_bytes()).hexdigest()
+    digest = hashlib.sha256("\n".join(f"{name}:{entries[name]}" for name in sorted(entries)).encode()).hexdigest()
+    if digest != expected["tree"]:
+        raise ValueError("Published module files do not match the approved release cutoff")
+    return True
+
+
 @beartype
 @require(lambda manifest_path: manifest_path.exists(), "manifest_path must exist")
 @ensure(lambda result: result in {"git", "filesystem"}, "verification mode must be explicit")
@@ -377,6 +410,8 @@ def verify_manifest(
     raw = yaml.safe_load(manifest_path.read_text(encoding="utf-8"))
     if not isinstance(raw, dict):
         raise ValueError("manifest YAML must be object")
+    if _matches_published_cutoff(manifest_path, raw):
+        return "filesystem"
     integrity = raw.get("integrity")
     if not isinstance(integrity, dict):
         raise ValueError("missing integrity metadata")
