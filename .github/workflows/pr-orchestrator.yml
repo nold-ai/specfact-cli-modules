@@ -85,13 +85,41 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install pyyaml cryptography cffi
       - name: Verify bundled module signatures and version bumps
+        env:
+          SIGNING_EVENT_NAME: ${{ github.event_name }}
+          SIGNING_PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          SIGNING_PUSH_BEFORE: ${{ github.event.before }}
         run: |
           set -euo pipefail
-          if [ -z "${SPECFACT_MODULE_PUBLIC_SIGN_KEY:-}" ] && [ -z "${SPECFACT_MODULE_SIGNING_PUBLIC_KEY_PEM:-}" ]; then
-            echo "warning: no public signing key secret set; verifier must resolve key from repo/default path"
-          fi
-
           VERIFY_CMD=(python scripts/verify-modules-signature.py --payload-from-filesystem --enforce-version-bump)
+          python -I - <<'PYTHON'
+          import os
+          for name in ("SPECFACT_MODULE_PUBLIC_SIGN_KEY", "SPECFACT_MODULE_SIGNING_PUBLIC_KEY_PEM"):
+              value = os.environ.get(name, "")
+              if value and not value.strip():
+                  raise SystemExit("error: configured public signing key is whitespace-only")
+          PYTHON
+          if [ -z "${SPECFACT_MODULE_PUBLIC_SIGN_KEY:-}" ] && [ -z "${SPECFACT_MODULE_SIGNING_PUBLIC_KEY_PEM:-}" ]; then
+            case "$SIGNING_EVENT_NAME" in
+              pull_request) TRUSTED_KEY_COMMIT="$SIGNING_PR_BASE_SHA" ;;
+              push) TRUSTED_KEY_COMMIT="$SIGNING_PUSH_BEFORE" ;;
+              *) echo "error: unsupported signing event" >&2; exit 1 ;;
+            esac
+            if [[ ! "$TRUSTED_KEY_COMMIT" =~ ^[0-9a-fA-F]{40}$ ]] || [ "$TRUSTED_KEY_COMMIT" = "0000000000000000000000000000000000000000" ]; then
+              echo "error: trusted signing key requires a nonzero event commit SHA" >&2
+              exit 1
+            fi
+            git cat-file -e "$TRUSTED_KEY_COMMIT^{commit}"
+            TRUSTED_KEY_FILE="$(mktemp "$RUNNER_TEMP/module-signing-public.XXXXXX")"
+            trap 'rm -f "$TRUSTED_KEY_FILE"' EXIT
+            chmod 0600 "$TRUSTED_KEY_FILE"
+            git show "$TRUSTED_KEY_COMMIT:scripts/native_release/module-signing-public.pem" > "$TRUSTED_KEY_FILE"
+            if [ ! -s "$TRUSTED_KEY_FILE" ]; then
+              echo "error: trusted signing key is empty" >&2
+              exit 1
+            fi
+            VERIFY_CMD+=(--public-key-file "$TRUSTED_KEY_FILE")
+          fi
 
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             BASE_REF="origin/${{ github.event.pull_request.base.ref }}"

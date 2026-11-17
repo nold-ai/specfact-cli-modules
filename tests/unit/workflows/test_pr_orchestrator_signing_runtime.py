@@ -159,6 +159,7 @@ def test_signature_workflow_rejects_missing_trust_even_with_candidate_default(si
         _git(repo, "rm", str(PUBLIC_KEY))
         _git(repo, "commit", "-m", "Revision without signing key")
         base = _git(repo, "rev-parse", "HEAD")
+        (repo / PUBLIC_KEY).parent.mkdir(parents=True, exist_ok=True)
         (repo / PUBLIC_KEY).write_text(_public_pem(key))
     else:
         base = {"missing": "", "zero": "0" * 40, "malformed": "HEAD", "unavailable": "f" * 40}[fault]
@@ -167,7 +168,9 @@ def test_signature_workflow_rejects_missing_trust_even_with_candidate_default(si
 
 
 @pytest.mark.parametrize("name", SECRET_NAMES)
-@pytest.mark.parametrize("secret", ["invalid PEM", " \t\n"], ids=["malformed-pem", "blank"])
+@pytest.mark.parametrize(
+    "secret", ["invalid PEM", " \t\n", "\u00a0", "\x1c"], ids=["malformed-pem", "blank", "nbsp", "file-separator"]
+)
 def test_signature_workflow_rejects_invalid_secret_even_with_candidate_default(signed_repository, name, secret):
     repo, base, key = signed_repository
     (repo / DEFAULT_KEY).parent.mkdir(parents=True)
