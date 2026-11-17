@@ -20,6 +20,6 @@
 ## Required quality follow-up on 2026-11-17
 
 - [x] Identify command-overview argument API failure in exact-head quality jobs.
-- [ ] Prove current Typer argument regression before the minimal generator correction.
-- [ ] Preserve generated outputs, focused coverage and independent review.
+- [x] Prove current Typer argument regression before the minimal generator correction.
+- [x] Preserve generated outputs, focused coverage and independent review.
 - [ ] Publish a signed follow-up and execute the complete required workflow on that exact head.
