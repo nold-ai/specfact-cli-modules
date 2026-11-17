@@ -3,12 +3,14 @@ from __future__ import annotations
 import os
 import subprocess
 import sys
+import textwrap
 import venv
 from pathlib import Path
 
 import pytest
 import yaml
 
+from specfact_code_review.run.runtime_discovery import discover_project
 from tests.support.capsule_review_fixtures import (
     _BLOCK2_HATCH_FIXTURE,
     _TRUSTED_BOOTSTRAP_LAUNCHER,
@@ -21,7 +23,13 @@ from tests.support.capsule_review_fixtures import (
     create_isolated_reviewer,
     deferral_worktree,
     deferred_review_repository,
+    independent_review_job,
 )
+
+
+@pytest.fixture(autouse=True)
+def acceptance_selector(request, record_property):
+    record_property("specfact.selector", request.node.nodeid)
 
 
 @pytest.mark.parametrize("gate_exit", [0, 7])
@@ -55,8 +63,6 @@ def test_deferred_gate_reviews_exact_staged_tree_and_propagates_failure(
         ["bash", "-c", step["run"]], cwd=repository, env=environment, capture_output=True, text=True, check=False
     )
     assert result.returncode == gate_exit, result.stdout + result.stderr
-    from specfact_code_review.run.runtime_discovery import discover_project
-
     plan = discover_project(REPO_ROOT, config_path=customer / "commit-review-project.toml")
     assert (plan.manager, plan.environment) == ("hatch", "default")
     assert not list((customer / "cache").iterdir())
@@ -130,8 +136,6 @@ def test_isolated_reviewer_preloads_trusted_code_and_never_accepts_incomplete_pr
 
 
 def test_trusted_bootstrap_cannot_import_candidate_venv_module(tmp_path: Path) -> None:
-    import textwrap
-
     workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())
     step = workflow["jobs"]["independent-review"]["steps"][2]
     candidate = tmp_path / "candidate"
@@ -169,8 +173,6 @@ def test_deferred_host_fixture_does_not_alias_managed_caller_python(tmp_path: Pa
 
 @pytest.mark.parametrize("review_exit", [0, 2, 7])
 def test_independent_no_impact_still_reviews_and_cleans_resolution(tmp_path: Path, review_exit: int) -> None:
-    from tests.support.capsule_review_fixtures import independent_review_job
-
     step = next(item for item in independent_review_job()["steps"] if item.get("id") == "independent_review")
     trusted, environment = create_isolated_reviewer(tmp_path, (review_exit, "NOT_APPLICABLE", "no_governed_impact"))
     result = subprocess.run(["bash", "-c", step["run"]], env=environment, text=True, capture_output=True, check=False)
@@ -193,8 +195,6 @@ def test_independent_no_impact_still_reviews_and_cleans_resolution(tmp_path: Pat
 def test_independent_invalid_no_impact_stops_before_review(
     tmp_path: Path, status, reason, selected, scope_exit
 ) -> None:
-    from tests.support.capsule_review_fixtures import independent_review_job
-
     step = next(item for item in independent_review_job()["steps"] if item.get("id") == "independent_review")
     trusted, environment = create_isolated_reviewer(
         tmp_path, (0, status, reason), selected_paths=selected, scope_exit=scope_exit
@@ -205,3 +205,46 @@ def test_independent_invalid_no_impact_stops_before_review(
     assert not (trusted / "prepared").exists()
     assert (trusted / "cleaned").exists()
     assert "private-reason" not in result.stdout
+
+
+@pytest.mark.parametrize(
+    "staged,independent_review,expected,diagnostic",
+    [
+        (True, True, 0, "DEFERRED: only the local capsule review"),
+        (False, True, 1, "requires a candidate change that schedules the blocking capsule workflow"),
+        (True, False, 1, "requires the blocking independent signed-review job"),
+    ],
+    ids=["staged-fixture", "unstaged-fixture", "missing-indexed-independent-review"],
+)
+def test_portable_fixture_deferral_retains_block2_guards(
+    tmp_path: Path, staged: bool, independent_review: bool, expected: int, diagnostic: str
+) -> None:
+    scenario = ("Darwin", "", "github-linux", "specfact-project", False, independent_review, expected)
+    worktree = deferral_worktree(tmp_path, scenario)
+    fixture = worktree / "tests/fixtures/portable-runtime/hatch-bootstrap-companion/pyproject.toml"
+    fixture.parent.mkdir(parents=True)
+    fixture.write_text('[project]\nname = "portable-fixture"\n')
+    if staged:
+        _git(worktree, "add", str(fixture.relative_to(worktree)))
+    calls = tmp_path / "calls"
+    script = (REPO_ROOT / "scripts/pre-commit-quality-checks.sh").read_text().rsplit('main "$@"', 1)[0]
+    environment = os.environ | {
+        "FIXTURE_PLATFORM": "Darwin",
+        "FIXTURE_CALLS": str(calls),
+        "GITHUB_ACTIONS": "",
+        "CI": "",
+        "SPECFACT_CODE_REVIEW_DEFER_TO_CI": "github-linux",
+    }
+    result = subprocess.run(
+        ["bash", "-c", script + _BLOCK2_HATCH_FIXTURE],
+        cwd=worktree,
+        env=environment,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == expected, result.stdout + result.stderr
+    assert diagnostic in result.stderr
+    assert_block2_trace(calls.read_text(), expected, result.stderr)
+    if expected == 0:
+        assert "this is not a PASS" in result.stderr

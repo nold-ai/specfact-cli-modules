@@ -1,0 +1,145 @@
+{
+  "schema_version": "2",
+  "requirements": {
+    "openspec:code-review-hatch-pr-review-fixes:native-hatch-review-corrections:directory-alias-retargeting-invalidates-in-project-provenance": {
+      "rationale": "Fix verified native PR findings without capsule repairs, admission changes or security gate waivers.",
+      "stakeholder_refs": [
+        "nold-ai/specfact-cli-modules#513"
+      ],
+      "touchpoints": [
+        {
+          "id": "native-review-corrections",
+          "kind": "config_file",
+          "locator": "openspec/changes/code-review-hatch-pr-review-fixes/specs/native-hatch-review-corrections/spec.md"
+        }
+      ],
+      "verification_cases": [
+        {
+          "case_id": "directory-alias-retargeting-invalidates-in-project-provenance-1",
+          "scenario_id": "directory-alias-retargeting-invalidates-in-project-provenance",
+          "method": "test",
+          "intent": "Exercise the real native service or mandatory checker with a disposable project or final-tree-only Git repository.",
+          "observable": "Alias binding drift is nonaccepting; the native guard survives squash without allowing classified edits.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/specfact_codebase/test_project_runtime.py::test_directory_alias_retargeting_invalidates_prepared_identity"
+          }
+        },
+        {
+          "case_id": "directory-alias-retargeting-invalidates-in-project-provenance-2",
+          "scenario_id": "directory-alias-retargeting-invalidates-in-project-provenance",
+          "method": "test",
+          "intent": "Exercise the real native service or mandatory checker with a disposable project or final-tree-only Git repository.",
+          "observable": "Alias binding drift is nonaccepting; the native guard survives squash without allowing classified edits.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/specfact_codebase/test_project_runtime.py::test_directory_alias_target_configuration_remains_fingerprinted"
+          }
+        }
+      ]
+    },
+    "openspec:code-review-hatch-pr-review-fixes:native-hatch-review-corrections:migration-scope-survives-normal-squash-integration": {
+      "rationale": "Fix verified native PR findings without capsule repairs, admission changes or security gate waivers.",
+      "stakeholder_refs": [
+        "nold-ai/specfact-cli-modules#513"
+      ],
+      "touchpoints": [
+        {
+          "id": "native-review-corrections",
+          "kind": "config_file",
+          "locator": "openspec/changes/code-review-hatch-pr-review-fixes/specs/native-hatch-review-corrections/spec.md"
+        }
+      ],
+      "verification_cases": [
+        {
+          "case_id": "migration-scope-survives-normal-squash-integration-1",
+          "scenario_id": "migration-scope-survives-normal-squash-integration",
+          "method": "test",
+          "intent": "Exercise the real native service or mandatory checker with a disposable project or final-tree-only Git repository.",
+          "observable": "Alias binding drift is nonaccepting; the native guard survives squash without allowing classified edits.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/scripts/test_native_review_scope.py::test_native_scope_survives_squash_only_checkout[unchanged]"
+          }
+        },
+        {
+          "case_id": "migration-scope-survives-normal-squash-integration-2",
+          "scenario_id": "migration-scope-survives-normal-squash-integration",
+          "method": "test",
+          "intent": "Exercise the real native service or mandatory checker with a disposable project or final-tree-only Git repository.",
+          "observable": "Alias binding drift is nonaccepting; the native guard survives squash without allowing classified edits.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/scripts/test_native_review_scope.py::test_native_scope_survives_squash_only_checkout[native]"
+          }
+        },
+        {
+          "case_id": "migration-scope-survives-normal-squash-integration-3",
+          "scenario_id": "migration-scope-survives-normal-squash-integration",
+          "method": "test",
+          "intent": "Exercise the real native service or mandatory checker with a disposable project or final-tree-only Git repository.",
+          "observable": "Alias binding drift is nonaccepting; the native guard survives squash without allowing classified edits.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/scripts/test_native_review_scope.py::test_native_scope_survives_squash_only_checkout[retirement]"
+          }
+        },
+        {
+          "case_id": "migration-scope-survives-normal-squash-integration-4",
+          "scenario_id": "migration-scope-survives-normal-squash-integration",
+          "method": "test",
+          "intent": "Exercise the real native service or mandatory checker with a disposable project or final-tree-only Git repository.",
+          "observable": "Alias binding drift is nonaccepting; the native guard survives squash without allowing classified edits.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/scripts/test_native_review_scope.py::test_native_scope_survives_squash_only_checkout[repair]"
+          }
+        },
+        {
+          "case_id": "migration-scope-survives-normal-squash-integration-5",
+          "scenario_id": "migration-scope-survives-normal-squash-integration",
+          "method": "test",
+          "intent": "Exercise the real native service or mandatory checker with a disposable project or final-tree-only Git repository.",
+          "observable": "Alias binding drift is nonaccepting; the native guard survives squash without allowing classified edits.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/scripts/test_native_review_scope.py::test_native_scope_survives_squash_only_checkout[addition]"
+          }
+        },
+        {
+          "case_id": "migration-scope-survives-normal-squash-integration-6",
+          "scenario_id": "migration-scope-survives-normal-squash-integration",
+          "method": "test",
+          "intent": "Exercise the real native service or mandatory checker with a disposable project or final-tree-only Git repository.",
+          "observable": "Alias binding drift is nonaccepting; the native guard survives squash without allowing classified edits.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/scripts/test_native_review_scope.py::test_native_scope_survives_squash_only_checkout[mode]"
+          }
+        },
+        {
+          "case_id": "migration-scope-survives-normal-squash-integration-7",
+          "scenario_id": "migration-scope-survives-normal-squash-integration",
+          "method": "test",
+          "intent": "Preserve native Git checkout and staged-mode comparison behavior after baseline retention changes.",
+          "observable": "Unchanged CRLF checkout passes; staged chmod remains nonaccepting even with core.filemode false.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/scripts/test_native_review_scope.py::test_native_scope_preserves_git_checkout_normalization"
+          }
+        },
+        {
+          "case_id": "migration-scope-survives-normal-squash-integration-8",
+          "scenario_id": "migration-scope-survives-normal-squash-integration",
+          "method": "test",
+          "intent": "Preserve native Git checkout and staged-mode comparison behavior after baseline retention changes.",
+          "observable": "Unchanged CRLF checkout passes; staged chmod remains nonaccepting even with core.filemode false.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/scripts/test_native_review_scope.py::test_native_scope_rejects_staged_mode_when_filemode_disabled"
+          }
+        }
+      ]
+    }
+  }
+}

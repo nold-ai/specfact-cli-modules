@@ -103,6 +103,31 @@ def test_command_overview_preserves_explicit_typer_argument_metavar() -> None:
     )
 
 
+@pytest.mark.parametrize("framework", ["click", "typer"])
+@pytest.mark.parametrize(
+    "metavar,expected",
+    [(None, "SOURCE_PATH"), ("path/to/file", "path/to/file"), ("", "")],
+    ids=["default", "explicit", "empty"],
+)
+def test_command_overview_preserves_optional_argument_labels(framework, metavar, expected) -> None:
+    generator = load_module_from_path("generate_command_overview_optional_labels", GENERATOR)
+    if framework == "click":
+        command = click.Command("inspect", params=[click.Argument(["source_path"], required=False, metavar=metavar)])
+    else:
+        app = typer.Typer()
+
+        @app.command()
+        def inspect(source_path: str | None = typer.Argument(None, metavar=metavar)) -> None:
+            del source_path
+
+        assert inspect.__name__ == "inspect"
+        command = get_typer_command(app)
+
+    assert generator._command_arguments(command) == [  # pylint: disable=protected-access
+        {"name": expected, "required": False, "nargs": 1}
+    ]
+
+
 def test_command_overview_rejects_unrepresented_official_inventory(tmp_path: Path, monkeypatch) -> None:
     generator = load_module_from_path("generate_command_overview_inventory", GENERATOR)
     manifest = tmp_path / "packages" / "specfact-example" / "module-package.yaml"

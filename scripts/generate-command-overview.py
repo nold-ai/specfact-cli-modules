@@ -268,7 +268,7 @@ def _command_options(command: click.Command) -> list[str]:
 
 
 def _argument_display_name(param: click.Argument | TyperArgument) -> str:
-    return param.metavar or param.human_readable_name.upper()
+    return param.metavar if param.metavar is not None else param.name.upper()
 
 
 def _command_arguments(command: click.Command) -> list[dict[str, Any]]:
