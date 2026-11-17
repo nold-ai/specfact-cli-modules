@@ -21,3 +21,7 @@ None.
 ## Alternatives and rollback
 
 A prerequisite deletion or static-only scan drops existing obligations. Bare run_review returned exit zero with a CrossHair UNKNOWN in a real probe and cannot own acceptance. Reuse the existing signed adapters behind one CI completeness barrier. Rollback restores the previous prerequisite through a reviewed revert and restores its blocking outcome.
+
+## CI prerequisite correction on 2026-11-17
+
+The maintainer authorized fixing both setup failures and rerunning the full workflow without merging. Attempt 2 failed before signature and reviewer acceptance because no public-key secret was configured and newly resolved Typer 0.29.1 removed an API used by released core 0.55.4. Resolve the existing public key from trusted event history and constrain only the independent controller to the already committed Typer 0.27.0. Keep all existing security, signing, quality and independent-review obligations.

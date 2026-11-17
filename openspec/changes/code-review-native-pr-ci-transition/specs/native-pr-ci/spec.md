@@ -59,3 +59,28 @@ The native CI receipt SHALL bind the event head and complete required-member inv
 - **THEN** the complete quality matrix verifies its editable distribution identity and registry API import origins against that selected checkout
 - **AND** the declared development core remains exactly version 0.55.4, and the independent native job always verifies that released version and both registry APIs before candidate bootstrap
 - **AND** an unrelated or unproven installation cannot satisfy either verification mode
+
+### Requirement: Resolve CI verification inputs without weakening trust
+
+The orchestrator SHALL preserve cryptographic manifest verification, filesystem payload checks, version-bump enforcement and main-target signature requirements. Secret-free verification SHALL use the existing public key from the exact trusted event commit and fail closed when that authority is unavailable.
+
+#### Scenario: Secret-free signature verification
+- **WHEN** neither public-key secret is configured and the exact PR base commit or pre-push commit contains the public key
+- **THEN** the workflow verifies signed candidate bundles with that historical key and retains every payload and version check
+
+#### Scenario: Candidate cannot replace trust
+- **WHEN** a candidate replaces the public key and signs a fixture with its replacement private key
+- **THEN** verification fails under the trusted event key
+
+#### Scenario: Invalid verification inputs
+- **WHEN** a signature or payload is invalid, the configured key is invalid, or the trusted fallback revision is missing, zero, malformed, unavailable or lacks the key
+- **THEN** the signature prerequisite fails without a looser fallback
+- **AND** an invalid configured secret cannot trigger fallback to a repository key
+
+### Requirement: Keep the released reviewer controller reproducible
+
+Both controller dependency installation operations SHALL constrain Typer to the already reviewed compatible version 0.27.0. The job SHALL assert the final Typer version together with released core 0.55.4 and preserve signed marketplace reviewer 0.51.2, immutable registry API checks, separate Semgrep constraints, exact-head review completeness, coverage and failure propagation. This compatibility correction SHALL not upgrade the reviewer or change candidate runtime policy.
+
+#### Scenario: Released controller installs after dependency drift
+- **WHEN** the independent reviewer is installed in a fresh controller environment
+- **THEN** both controller resolution operations retain Typer 0.27.0 and the released CLI and registry APIs load before the signed marketplace reviewer executes
