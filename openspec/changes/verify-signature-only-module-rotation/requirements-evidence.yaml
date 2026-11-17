@@ -1,0 +1,75 @@
+schema_version: '2'
+requirements:
+  ? openspec:verify-signature-only-module-rotation:resource-aware-integrity:authenticate-signature-only-source-manifest-rotation
+  : rationale: A verified replacement signature can update the source manifest while package content and version stay fixed.
+    stakeholder_refs:
+    - docs/agent-rules/50-quality-gates-and-review.md
+    touchpoints:
+    - id: module-version-verifier
+      kind: script
+      locator: scripts/verify-modules-signature.py
+    verification_cases:
+    - case_id: SIGNATURE-ROTATION-SIGNATURE-ONLY
+      scenario_id: authenticate-signature-only-source-manifest-rotation
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_verify_modules_signature_script.py::test_verify_version_bump_accepts_only_authenticated_signature_rotation[signature-only]
+      intent: The full version check reports no failure for the signature-only commit.
+      observable: The full version check reports no failure for the signature-only commit.
+    - case_id: SIGNATURE-ROTATION-WRONG-KEY
+      scenario_id: authenticate-signature-only-source-manifest-rotation
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_verify_modules_signature_script.py::test_verify_version_bump_accepts_only_authenticated_signature_rotation[wrong-key]
+      intent: A valid signature from an unrelated key does not exempt the unchanged version.
+      observable: A valid signature from an unrelated key does not exempt the unchanged version.
+    - case_id: SIGNATURE-ROTATION-SUBSTITUTED-KEY
+      scenario_id: authenticate-signature-only-source-manifest-rotation
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_verify_modules_signature_script.py::test_verify_version_bump_accepts_only_authenticated_signature_rotation[substituted-key]
+      intent: Substituting the PEM does not exempt the unchanged version.
+      observable: Substituting the PEM does not exempt the unchanged version.
+    - case_id: SIGNATURE-ROTATION-CHECKSUM
+      scenario_id: authenticate-signature-only-source-manifest-rotation
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_verify_modules_signature_script.py::test_verify_version_bump_accepts_only_authenticated_signature_rotation[checksum]
+      intent: A modified checksum does not qualify as a signature-only update.
+      observable: A modified checksum does not qualify as a signature-only update.
+    - case_id: SIGNATURE-ROTATION-EXTRA-FILE
+      scenario_id: authenticate-signature-only-source-manifest-rotation
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_verify_modules_signature_script.py::test_verify_version_bump_accepts_only_authenticated_signature_rotation[extra-file]
+      intent: An additional package file still requires a version increment.
+      observable: An additional package file still requires a version increment.
+    - case_id: SIGNATURE-ROTATION-WORKING-TREE
+      scenario_id: authenticate-signature-only-source-manifest-rotation
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_verify_modules_signature_script.py::test_verify_version_bump_accepts_only_authenticated_signature_rotation[working-tree]
+      intent: A dirty manifest that differs from the commit is rejected.
+      observable: A dirty manifest that differs from the commit is rejected.
+    - case_id: SIGNATURE-ROTATION-METADATA-ONLY
+      scenario_id: authenticate-signature-only-source-manifest-rotation
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_verify_modules_signature_script.py::test_verify_version_bump_accepts_only_authenticated_signature_rotation[metadata-only]
+      intent: Metadata-only verification cannot authorize a same-version update.
+      observable: Metadata-only verification cannot authorize a same-version update.
+    - case_id: SIGNATURE-ROTATION-CUTOFF
+      scenario_id: authenticate-signature-only-source-manifest-rotation
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_verify_modules_signature_script.py::test_verify_version_bump_accepts_only_authenticated_signature_rotation[cutoff]
+      intent: An immutable cutoff version is excluded from signature rotation.
+      observable: An immutable cutoff version is excluded from signature rotation.
