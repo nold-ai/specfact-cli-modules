@@ -1,8 +1,14 @@
 from __future__ import annotations
 
+import base64
+import hashlib
+import subprocess
 from pathlib import Path
 
+import pytest
 import yaml
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from tests.unit._script_test_utils import block_contract_imports, load_module_from_path
 
@@ -174,3 +180,95 @@ def test_verify_manifest_integrity_shape_only_enforces_signature_when_requested(
         assert "signature" in str(exc).lower()
     else:
         raise AssertionError("expected ValueError")
+
+
+@pytest.mark.parametrize(
+    "case",
+    (
+        "signature-only",
+        "wrong-key",
+        "substituted-key",
+        "checksum",
+        "extra-file",
+        "working-tree",
+        "metadata-only",
+        "cutoff",
+    ),
+)
+def test_verify_version_bump_accepts_only_authenticated_signature_rotation(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, case: str
+) -> None:
+    verify_script = _load_verify_script()
+    monkeypatch.chdir(tmp_path)
+
+    def git(*args: str) -> str:
+        return subprocess.check_output(
+            ["git", "-c", "core.hooksPath=/dev/null", "-c", "commit.gpgsign=false", *args], text=True
+        ).strip()
+
+    git("init", "--quiet")
+    git("config", "user.email", "fixture@example.test")
+    git("config", "user.name", "Fixture")
+    package = Path("packages/specfact-example")
+    package.mkdir(parents=True)
+    (package / "module.py").write_text("VALUE = 1\n", encoding="utf-8")
+    manifest = package / "module-package.yaml"
+    manifest.write_text("name: nold-ai/specfact-example\nversion: 0.1.0\n", encoding="utf-8")
+    payload = verify_script._module_payload(package, payload_from_filesystem=True)
+    checksum = hashlib.sha256(payload).hexdigest()
+    previous_key = Ed25519PrivateKey.generate()
+    replacement_key = Ed25519PrivateKey.generate()
+    public = replacement_key.public_key()
+    public_path = tmp_path / "module-signing-public-next.pem"
+    public_path.write_bytes(
+        public.public_bytes(serialization.Encoding.PEM, serialization.PublicFormat.SubjectPublicKeyInfo)
+    )
+    public_der = public.public_bytes(serialization.Encoding.DER, serialization.PublicFormat.SubjectPublicKeyInfo)
+    monkeypatch.setattr(verify_script, "_REPLACEMENT_PUBLIC_KEY", public_path, raising=False)
+    monkeypatch.setattr(
+        verify_script, "_REPLACEMENT_PUBLIC_KEY_SHA256", hashlib.sha256(public_der).hexdigest(), raising=False
+    )
+    original_signature = base64.b64encode(previous_key.sign(payload)).decode()
+    original = manifest.read_text(encoding="utf-8") + (
+        f"integrity:\n  checksum: sha256:{checksum}\n  signature: {original_signature}\n"
+    )
+    manifest.write_text(original, encoding="utf-8")
+    git("add", ".")
+    git("commit", "-qm", "Initial source manifest")
+    base_ref = git("rev-parse", "HEAD")
+
+    key = Ed25519PrivateKey.generate() if case in ("wrong-key", "substituted-key") else replacement_key
+    if case == "substituted-key":
+        public_path.write_bytes(
+            key.public_key().public_bytes(serialization.Encoding.PEM, serialization.PublicFormat.SubjectPublicKeyInfo)
+        )
+    signature = base64.b64encode(key.sign(payload)).decode()
+
+    candidate = original.replace(original_signature, signature)
+    if case == "checksum":
+        candidate = candidate.replace(checksum, "0" * 64)
+    manifest.write_text(candidate, encoding="utf-8")
+    if case == "extra-file":
+        excluded = package / "tests"
+        excluded.mkdir()
+        (excluded / "test_module.py").write_text("# new test content\n", encoding="utf-8")
+    git("add", ".")
+    git("commit", "-qm", "Rotate source manifest signature")
+    if case == "working-tree":
+        manifest.write_text(candidate + "\n", encoding="utf-8")
+    if case == "cutoff":
+        monkeypatch.setattr(verify_script, "_matches_published_cutoff", lambda *_: True)
+
+    if case == "metadata-only":
+        from argparse import Namespace
+
+        failures = verify_script._version_bump_failures_for_cli(
+            Namespace(enforce_version_bump=True, version_check_base=base_ref, metadata_only=True)
+        )
+    else:
+        failures = verify_script._verify_version_bumps(base_ref)
+    if case == "signature-only":
+        assert failures == []
+    else:
+        assert len(failures) == 1
+        assert "version was not incremented" in failures[0]

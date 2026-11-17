@@ -73,6 +73,8 @@ _IGNORED_MODULE_DIR_NAMES = {"__pycache__", ".pytest_cache", ".mypy_cache", ".ru
 _PAYLOAD_FROM_FS_IGNORED_DIRS = _IGNORED_MODULE_DIR_NAMES | {".git", "tests"}
 _IGNORED_MODULE_FILE_SUFFIXES = {".pyc", ".pyo"}
 _MANIFEST_NAMES = {"module-package.yaml", "metadata.yaml"}
+_REPLACEMENT_PUBLIC_KEY = Path(__file__).resolve().parents[1] / "ci" / "module-signing-public-next.pem"
+_REPLACEMENT_PUBLIC_KEY_SHA256 = "68ebe68cd4394c5319b85fe5b021460f3bae411dbfad795782657d0fe005d053"
 
 
 def _emit_line(message: str, *, error: bool = False) -> None:
@@ -243,9 +245,8 @@ def _verify_signature(payload: bytes, signature_b64: str, public_key_pem: str) -
 def _resolve_public_key(args: argparse.Namespace) -> str:
     if args.public_key_file:
         return Path(args.public_key_file).read_text(encoding="utf-8").strip()
-    replacement = Path(__file__).resolve().parents[1] / "ci" / "module-signing-public-next.pem"
-    if replacement.is_file() and not args.public_key_pem:
-        return replacement.read_text(encoding="utf-8").strip()
+    if _REPLACEMENT_PUBLIC_KEY.is_file() and not args.public_key_pem:
+        return _REPLACEMENT_PUBLIC_KEY.read_text(encoding="utf-8").strip()
     env_key_file = os.environ.get("SPECFACT_MODULE_PUBLIC_SIGN_KEY_FILE", "").strip()
     if not env_key_file:
         env_key_file = os.environ.get("SPECFACT_MODULE_SIGNING_PUBLIC_KEY_FILE", "").strip()
@@ -358,7 +359,71 @@ def _changed_manifests_from_git(base_ref: str) -> list[Path]:
     return manifests
 
 
-def _verify_version_bumps(base_ref: str) -> list[str]:
+def _signature_only_blobs(manifest: Path, base_ref: str) -> tuple[bytes, bytes]:
+    """Read the exact before and after blobs for one regular manifest change."""
+    change = subprocess.check_output(
+        [
+            "git",
+            "diff",
+            "--raw",
+            "--no-renames",
+            "--no-abbrev",
+            "-z",
+            f"{base_ref}...HEAD",
+            "--",
+            manifest.parent.as_posix(),
+        ]
+    )
+    row, path, end = change.split(b"\0")
+    before_mode, after_mode, before_blob, after_blob, status = row.removeprefix(b":").split()
+    if (
+        path != os.fsencode(manifest.as_posix())
+        or end
+        or status != b"M"
+        or before_mode != after_mode
+        or before_mode not in (b"100644", b"100755")
+    ):
+        raise ValueError("Bundle diff is not a regular manifest-only change")
+    before = subprocess.check_output(["git", "cat-file", "blob", before_blob.decode("ascii")])
+    after = subprocess.check_output(["git", "cat-file", "blob", after_blob.decode("ascii")])
+    return before, after
+
+
+def _is_authenticated_signature_rotation(manifest: Path, base_ref: str) -> bool:
+    """Verify a replacement signature over a byte-identical source package."""
+    try:
+        before, after = _signature_only_blobs(manifest, base_ref)
+        if manifest.is_symlink() or manifest.read_bytes() != after:
+            return False
+        old_data, new_data = yaml.safe_load(before), yaml.safe_load(after)
+        old_signature = old_data["integrity"]["signature"]
+        new_signature = new_data["integrity"]["signature"]
+        if not isinstance(old_signature, str) or not isinstance(new_signature, str):
+            return False
+        old_bytes, new_bytes = old_signature.encode("ascii"), new_signature.encode("ascii")
+        if not old_bytes or not new_bytes or old_bytes == new_bytes or before.count(old_bytes) != 1:
+            return False
+        old_data["integrity"] = {**old_data["integrity"], "signature": new_signature}
+        if before.replace(old_bytes, new_bytes, 1) != after or old_data != new_data:
+            return False
+        if _matches_published_cutoff(manifest, new_data):
+            return False
+
+        pem = _REPLACEMENT_PUBLIC_KEY.read_text(encoding="utf-8")
+        _, _, crypto_serialization, _, _, _ = _cryptography_backend()
+        key = crypto_serialization.load_pem_public_key(pem.encode("utf-8"))
+        key_der = key.public_bytes(
+            crypto_serialization.Encoding.DER, crypto_serialization.PublicFormat.SubjectPublicKeyInfo
+        )
+        if hashlib.sha256(key_der).hexdigest() != _REPLACEMENT_PUBLIC_KEY_SHA256:
+            return False
+        verify_manifest(manifest, require_signature=True, public_key_pem=pem, payload_from_filesystem=True)
+    except (OSError, ValueError, TypeError, KeyError, yaml.YAMLError, subprocess.CalledProcessError):
+        return False
+    return True
+
+
+def _verify_version_bumps(base_ref: str, *, allow_signature_rotation: bool = True) -> list[str]:
     failures: list[str] = []
     for manifest in _changed_manifests_from_git(base_ref):
         current_version = _read_manifest_version(manifest)
@@ -366,6 +431,8 @@ def _verify_version_bumps(base_ref: str) -> list[str]:
         if not current_version or not previous_version:
             continue
         if current_version == previous_version:
+            if allow_signature_rotation and _is_authenticated_signature_rotation(manifest, base_ref):
+                continue
             failures.append(
                 f"FAIL {manifest}: module version was not incremented (still {current_version}) compared to {base_ref}"
             )
@@ -556,7 +623,7 @@ def _version_bump_failures_for_cli(args: argparse.Namespace) -> list[str]:
         return []
     base_ref = _resolve_version_check_base(args.version_check_base)
     try:
-        return _verify_version_bumps(base_ref)
+        return _verify_version_bumps(base_ref, allow_signature_rotation=not args.metadata_only)
     except ValueError as exc:
         return [f"FAIL version-check: {exc}"]
 
