@@ -29,3 +29,5 @@ The exact public verification step passed on the push, PR, and manual verificati
 With Bash absent from the child process path, the publish and reproducibility tests each failed with `FileNotFoundError: 'bash'`. Both tests now run the Python in the workflow step directly. The mixed-bundle publish fixture also confirms that an already-published version leaves its archive, checksum, and signature untouched while the next bundle publishes to the scratch registry.
 
 The first hosted evidence check rejected a parameter ID containing spaces and a removal-only spec without scenarios. The corrected sidecar uses exact collected pytest IDs and maps each modified requirement. The local evidence replay against paired core commit `d72d0b39` passed both change sources with zero findings. The focused suite passed 29 tests.
+
+Hosted review found complexity 17 in the permissions test and 21 locals in the integration test. Radon 6.0.1 and Pylint reproduced both. The permissions test now has complexity 8, and Pylint reports no findings after extracting fixture setup. The same 29 tests passed.
