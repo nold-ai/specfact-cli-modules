@@ -73,7 +73,7 @@ requirements:
         node_id: tests/unit/test_verify_modules_signature_script.py::test_verify_version_bump_accepts_only_authenticated_signature_rotation[cutoff]
       intent: An immutable cutoff version is excluded from signature rotation.
       observable: An immutable cutoff version is excluded from signature rotation.
-  openspec:verify-signature-only-module-rotation:resource-aware-integrity:authenticate-capsule-source-controllers-with-the-replacement-key:
+  openspec:verify-signature-only-module-rotation:resource-aware-integrity:authenticate-capsule-review-controllers:
     rationale: The released CLI bundles the retired key and cannot authenticate rotated source by default.
     stakeholder_refs: [docs/agent-rules/50-quality-gates-and-review.md]
     touchpoints:
@@ -82,7 +82,7 @@ requirements:
         locator: .github/workflows/capsule-customer-execution.yml
     verification_cases:
       - case_id: CAPSULE-SOURCE-REPLACEMENT-KEY
-        scenario_id: authenticate-capsule-source-controllers-with-the-replacement-key
+        scenario_id: authenticate-capsule-review-controllers
         method: test
         selector:
           runner: pytest
@@ -90,10 +90,10 @@ requirements:
         intent: Require replacement-key validation before review.
         observable: Preparation and execution use the same authenticated controller.
       - case_id: CAPSULE-INDEPENDENT-BASE
-        scenario_id: authenticate-capsule-source-controllers-with-the-replacement-key
+        scenario_id: authenticate-capsule-review-controllers
         method: test
         selector:
           runner: pytest
           node_id: tests/unit/test_capsule_review_projection.py::test_independent_reviewer_runs_in_fresh_job_without_candidate_host_code
-        intent: Bind the independent reviewer to the trusted base.
-        observable: Only a validated signature can be carried from the candidate to the base controller.
+        intent: Bind the independent reviewer to hash-pinned base artifacts.
+        observable: The installed review fixture comes only from the pinned local registry.

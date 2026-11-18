@@ -44,10 +44,9 @@ def test_independent_reviewer_runs_in_fresh_job_without_candidate_host_code() ->
     assert not independent.get("needs"), "Candidate execution cannot suppress the independent review job"
     recipe = "\n".join(str(step.get("run", "")) for step in independent["steps"])
     assert "specfact-cli==0.55.4" in recipe
-    assert 'archive "$CANDIDATE_BASE" packages/specfact-code-review' in recipe
-    assert "require_signature=True" in recipe
-    assert 'SPECFACT_MODULES_ROOTS="$TRUSTED_ROOT/controller/packages"' in recipe
-    assert "--source marketplace" not in recipe
+    assert 'SPECFACT_REGISTRY_INDEX_URL="file://$TRUSTED_ROOT/index.json"' in recipe
+    assert "Frozen reviewer fixture checksum mismatch" in recipe
+    assert "--version 0.51.2 --source marketplace" in recipe
     assert "env -i" in recipe
 
 
@@ -56,6 +55,7 @@ def test_independent_reviewer_runs_in_fresh_job_without_candidate_host_code() ->
     [
         "pre_commit_code_review.py",
         "link_dev_module.py",
+        "SPECFACT_MODULES_ROOTS",
         "SPECFACT_ALLOW_UNSIGNED",
         "$GITHUB_WORKSPACE/scripts",
     ],

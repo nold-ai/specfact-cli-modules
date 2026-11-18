@@ -677,19 +677,59 @@ def test_customer_gate_always_adds_separate_targeted_regression(tmp_path, monkey
     assert calls == [(tmp_path, tmp_path / "cache")]
 
 
-def test_independent_source_controller_accepts_replacement_key():
+def test_independent_reviewer_registry_is_built_from_digest_pinned_archives(tmp_path):
+    import hashlib
+    import json
+    import shutil
+    import subprocess
+    import sys
+
+    import yaml
+
     root = Path(__file__).parents[2]
-    script = root / "scripts/verify-modules-signature.py"
-    spec = importlib.util.spec_from_file_location("verify_modules_signature", script)
-    assert spec is not None and spec.loader is not None
-    verifier = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(verifier)
-    assert (
-        verifier.verify_manifest(
-            root / "packages/specfact-code-review/module-package.yaml",
-            require_signature=True,
-            public_key_pem=(root / "ci/module-signing-public-next.pem").read_text(),
-            payload_from_filesystem=True,
-        )
-        == "filesystem"
+    workflow = yaml.safe_load((root / ".github/workflows/capsule-customer-execution.yml").read_text())
+    steps = workflow["jobs"]["independent-review"]["steps"]
+    install = next(step["run"] for step in steps if step.get("name", "").startswith("Install trusted reviewer"))
+    program = install.split("<<'PY_FIXTURE'\n", 1)[1].split("\nPY_FIXTURE", 1)[0]
+    version_by_bundle = {
+        "specfact-code-review": "0.51.2",
+        "specfact-codebase": "0.41.16",
+        "specfact-project": "0.41.27",
+        "specfact-requirements": "0.5.1",
+    }
+    repository = tmp_path / "base"
+    fixture_directory = repository / "registry/modules"
+    fixture_directory.mkdir(parents=True)
+    for name, version in version_by_bundle.items():
+        filename = f"{name}-{version}.tar.gz"
+        shutil.copyfile(root / "registry/modules" / filename, fixture_directory / filename)
+    subprocess.run(["git", "init", "-q", str(repository)], check=True)
+    subprocess.run(["git", "-C", str(repository), "add", "registry"], check=True)
+    subprocess.run(
+        [
+            "git",
+            "-C",
+            str(repository),
+            "-c",
+            "core.hooksPath=/dev/null",
+            "-c",
+            "commit.gpgsign=false",
+            "-c",
+            "user.name=Fixture",
+            "-c",
+            "user.email=fixture@example.invalid",
+            "commit",
+            "-qm",
+            "baseline",
+        ],
+        check=True,
     )
+    args = [sys.executable, "-I", "-", str(repository), "HEAD", str(tmp_path)]
+    subprocess.run(args, input=program, text=True, check=True)
+    entries = json.loads((tmp_path / "index.json").read_bytes())["modules"]
+    assert {entry["id"]: entry["latest_version"] for entry in entries} == {
+        f"nold-ai/{name}": version for name, version in version_by_bundle.items()
+    }
+    for entry in entries:
+        archive = tmp_path / entry["download_url"]
+        assert hashlib.sha256(archive.read_bytes()).hexdigest() == entry["checksum_sha256"]

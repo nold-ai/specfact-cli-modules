@@ -15,14 +15,14 @@ The version check SHALL allow a same-version signature-only source manifest chan
 - **WHEN** the package or other manifest bytes change, the replacement signature fails, or only metadata is checked
 - **THEN** the same-version exception is denied.
 
-### Requirement: Authenticate capsule source controllers with the replacement key
+### Requirement: Authenticate capsule review controllers
 
-Deferred capsule review SHALL verify the Code Review source controller with the pinned replacement public key before loading it. The independent job SHALL execute the controller from its immutable PR base with a verified signature. If the base still carries the retired signature, the job SHALL accept only a replacement signature over identical package and manifest bytes.
+Deferred capsule review SHALL verify the Code Review source controller with the pinned replacement public key before loading it. The independent capsule job SHALL install its historical review fixture and dependencies from Git base artifacts whose full archive hashes match the fixed CI inventory. The fixture registry SHALL be local to the isolated review job and shall not alter the release cutoff.
 
 #### Scenario: Review a signature rotation with isolated controller trust
 
-- **GIVEN** a candidate whose only package change is a replacement signature on the Code Review manifest
-- **WHEN** the candidate and independent capsule jobs prepare their review controllers
-- **THEN** both verify the Code Review payload with the pinned replacement key
-- **AND** the independent job imports its controller from the base tree outside the candidate subject
-- **AND** unsigned or incorrectly signed controllers fail before review
+- **GIVEN** a candidate with a replacement signature on the Code Review source manifest
+- **WHEN** the capsule jobs prepare their review controllers
+- **THEN** deferred review requires the replacement-key signature over the source payload
+- **AND** independent review rejects any historical fixture archive outside the exact CI inventory
+- **AND** the independent reviewer obtains its runtime receipt from the ordinary installer

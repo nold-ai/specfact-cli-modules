@@ -266,13 +266,13 @@ def test_independent_reviewer_runs_in_fresh_job_without_candidate_host_code() ->
     steps = independent["steps"]
     recipe = "\n".join(str(step.get("run", "")) for step in steps)
     assert "specfact-cli==0.55.4" in recipe
-    assert 'archive "$CANDIDATE_BASE" packages/specfact-code-review' in recipe
-    assert "require_signature=True" in recipe
-    assert "--source marketplace" not in recipe
+    assert 'SPECFACT_REGISTRY_INDEX_URL="file://$TRUSTED_ROOT/index.json"' in recipe
+    assert "Frozen reviewer fixture checksum mismatch" in recipe
+    assert "--version 0.51.2 --source marketplace" in recipe
     assert "env -i" in recipe
     assert "pre_commit_code_review.py" not in recipe
     assert "link_dev_module.py" not in recipe
-    assert 'SPECFACT_MODULES_ROOTS="$TRUSTED_ROOT/controller/packages"' in recipe
+    assert "SPECFACT_MODULES_ROOTS" not in recipe
     assert "SPECFACT_ALLOW_UNSIGNED" not in recipe
     assert "$GITHUB_WORKSPACE/scripts" not in recipe
     assert "timeout=300" in recipe and "timeout=1800" in recipe
@@ -315,7 +315,6 @@ def test_isolated_reviewer_preloads_trusted_code_and_never_accepts_incomplete_pr
     trusted = tmp_path / "trusted"
     for name in ("home", "tmp", "subject"):
         (trusted / name).mkdir(parents=True)
-    (trusted / "controller.pub").write_text("fixture public key")
     venv.create(trusted / "venv", with_pip=False)
     interpreter = trusted / "venv/bin/python"
     site = Path(
@@ -329,9 +328,7 @@ def test_isolated_reviewer_preloads_trusted_code_and_never_accepts_incomplete_pr
             "import os,json\nfrom pathlib import Path\n"
             "root=Path(os.environ['HOME']).parent\n"
             "assert Path.cwd() == root, 'core discovery entered the candidate subject'\n"
-            "assert not {'PYTHONPATH','GITHUB_TOKEN','GH_TOKEN','SPECFACT_ALLOW_UNSIGNED'} & os.environ.keys()\n"
-            "assert os.environ['SPECFACT_MODULES_ROOTS'] == str(root/'controller/packages')\n"
-            "assert os.environ['SPECFACT_MODULE_PUBLIC_KEY_PEM'] == 'fixture public key'\n"
+            "assert not {'PYTHONPATH','GITHUB_TOKEN','GH_TOKEN','SPECFACT_MODULES_ROOTS','SPECFACT_ALLOW_UNSIGNED'} & os.environ.keys()\n"
             "def app(*,args):\n"
             "    assert Path.cwd() == root/'subject'\n"
             "    (root/'argv.json').write_text(json.dumps(args))\n"
@@ -345,8 +342,6 @@ def test_isolated_reviewer_preloads_trusted_code_and_never_accepts_incomplete_pr
             "        root=Path(os.environ['HOME']).parent\n"
             "        assert name=='code' and Path.cwd()==root\n"
             "        (root/'preloaded').touch()\n"
-            "        from specfact_cli.cli import app\n"
-            "        return app\n"
         ),
         "specfact_code_review/__init__.py": "",
         "specfact_code_review/run/__init__.py": "",
@@ -414,7 +409,7 @@ def test_isolated_reviewer_preloads_trusted_code_and_never_accepts_incomplete_pr
         return
     assert (trusted / "prepared").read_text().splitlines() == ["base", "head"]
     args = json.loads((trusted / "argv.json").read_text())
-    assert args[:2] == ["review", "run"]
+    assert args[:3] == ["code", "review", "run"]
     assert args[args.index("--scope") + 1] == "index"
     assert args[args.index("--enforcement") + 1] == "changed"
     assert "--bug-hunt" in args
@@ -450,22 +445,14 @@ def test_trusted_bootstrap_cannot_import_candidate_venv_module(tmp_path: Path) -
             core=site/'specfact_cli'
             core.mkdir()
             (core/'__init__.py').write_text('')
-            registry=core/'registry'
-            registry.mkdir()
-            (registry/'__init__.py').write_text('')
-            (registry/'module_installer.py').write_text(
+            (core/'cli.py').write_text(
+                "import json,os,sys\\n"
                 "from pathlib import Path\\n"
-                "import os\\n"
-                "class ModulePackageMetadata:\\n"
-                "    @staticmethod\\n"
-                "    def model_validate(data): return data\\n"
-                "def verify_module_artifact(package, metadata, *, require_integrity, require_signature, **key):\\n"
-                "    assert Path.cwd() == Path(os.environ['HOME']).parent\\n"
-                "    assert require_integrity and require_signature and package.parent.name == 'packages'\\n"
-                "    assert key['public_key_pem'].startswith('-----BEGIN PUBLIC KEY-----')\\n"
-                "    return True\\n"
+                "index = Path(os.environ['SPECFACT_REGISTRY_INDEX_URL'].removeprefix('file://'))\\n"
+                "assert len(json.loads(index.read_bytes())['modules']) == 4\\n"
+                "assert sys.argv[1:]==['module','install','nold-ai/specfact-code-review',"
+                "'--scope','user','--version','0.51.2','--source','marketplace']\\n"
             )
-            (site/'yaml.py').write_text("def safe_load(data): return {}\\n")
             """)
     )
     launcher.chmod(0o700)
