@@ -23,3 +23,9 @@ The original push step exited 1 with `Missing SPECFACT_MODULE_PRIVATE_SIGN_KEY` 
 The independent review caught a mismatch between the manifest bytes and the full payload signed by `sign-modules.py`. A fixture signed by the production signer reproduced the failure. The corrected job uses the verifier's full filesystem payload and reproduces the signature without writing a new manifest.
 
 The exact public verification step passed on the push, PR, and manual verification paths with no signing secrets. Each verified seven manifests and enforced version checks against `dev`. On Python 3.12, 28 focused verifier and workflow tests passed. The signing fixture uses disposable keys and checks that wrong keys, changed cutoff trees, and changed signatures fail. Actionlint, Ruff, and strict OpenSpec validation passed.
+
+## Publish and reproducibility test portability
+
+With Bash absent from the child process path, the publish and reproducibility tests each failed with `FileNotFoundError: 'bash'`. Both tests now run the Python in the workflow step directly. The mixed-bundle publish fixture also confirms that an already-published version leaves its archive, checksum, and signature untouched while the next bundle publishes to the scratch registry.
+
+The first hosted evidence check rejected a parameter ID containing spaces and a removal-only spec without scenarios. The corrected sidecar uses exact collected pytest IDs and maps each modified requirement. The local evidence replay against paired core commit `d72d0b39` passed both change sources with zero findings. The focused suite passed 29 tests.

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import os
 import shutil
 import subprocess
 import sys
@@ -24,6 +23,18 @@ def _publish_job() -> dict:
 
 def _publish_step() -> dict:
     return next(step for step in _publish_job()["steps"] if step["name"] == "Publish changed bundles into registry")
+
+
+def _run_publish_step(tmp_path: Path, env: dict[str, str]) -> subprocess.CompletedProcess[str]:
+    script = _publish_step()["run"].removeprefix("python - <<'PY'\n").removesuffix("\nPY\n")
+    return subprocess.run(
+        [sys.executable, "-c", script],
+        cwd=tmp_path,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
 
 
 def test_publish_uses_only_protected_replacement_secrets() -> None:
@@ -96,7 +107,7 @@ def _publish_environment(tmp_path: Path, case: str) -> dict[str, str]:
     )
 
     return {
-        "PATH": f"{Path(sys.executable).parent}{os.pathsep}{os.defpath}",
+        "PATH": str(Path(sys.executable).parent),
         "BUNDLES_JSON": json.dumps([bundle]),
         "GITHUB_REF_NAME": "dev",
         "EXPECTED_PUBLIC_KEY_SHA256": fingerprint,
@@ -139,14 +150,7 @@ def test_publish_step_signs_new_release_and_preserves_old_artifacts(
     registry = tmp_path / "registry"
     previous = registry / "modules/specfact-example-1.0.0.tar.gz"
     previous_signature = registry / "signatures/specfact-example-1.0.0.tar.sig"
-    result = subprocess.run(
-        ["bash", "-e", "-c", _publish_step()["run"]],
-        cwd=tmp_path,
-        env=_publish_environment(tmp_path, case),
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    result = _run_publish_step(tmp_path, _publish_environment(tmp_path, case))
     assert previous.read_bytes() == b"previous release"
     assert previous_signature.read_bytes() == b"previous signature\n"
     if expected:
@@ -155,3 +159,24 @@ def test_publish_step_signs_new_release_and_preserves_old_artifacts(
     else:
         assert result.returncode == 0, result.stderr
     _assert_registry_publication(tmp_path, version, case)
+
+
+def test_publish_skips_current_release_and_continues_with_next_bundle(tmp_path: Path) -> None:
+    _prepare_publish_workspace(tmp_path, "1.0.0", "already-published")
+    artifacts = tmp_path / "registry/modules"
+    previous = artifacts / "specfact-example-1.0.0.tar.gz"
+    previous_checksum = previous.with_suffix(".gz.sha256")
+    previous_checksum.write_text(hashlib.sha256(previous.read_bytes()).hexdigest(), encoding="utf-8")
+    previous_signature = tmp_path / "registry/signatures/specfact-example-1.0.0.tar.sig"
+    frozen = {path: path.read_bytes() for path in (previous, previous_checksum, previous_signature)}
+
+    new_bundle = tmp_path / "packages/specfact-next"
+    new_bundle.mkdir()
+    (new_bundle / "module-package.yaml").write_text("name: nold-ai/specfact-next\nversion: 1.0.1\n", encoding="utf-8")
+    env = _publish_environment(tmp_path, "mixed")
+    env["BUNDLES_JSON"] = json.dumps(["specfact-example", "specfact-next"])
+    result = _run_publish_step(tmp_path, env)
+    assert result.returncode == 0, result.stderr
+    assert "Skipping specfact-example" in result.stdout
+    assert (artifacts / "specfact-next-1.0.1.tar.gz").is_file()
+    assert {path: path.read_bytes() for path in frozen} == frozen

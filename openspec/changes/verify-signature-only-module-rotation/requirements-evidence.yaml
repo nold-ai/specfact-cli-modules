@@ -1,5 +1,53 @@
 schema_version: '2'
 requirements:
+  openspec:verify-signature-only-module-rotation:ci-integration:pr-orchestrator-skips-signature-requirement-for-dev-targeting-events:
+    rationale: Both target branches retain their public integrity checks.
+    stakeholder_refs: [docs/guides/ci-cd-pipeline.md]
+    touchpoints:
+      - id: public-signature-check
+        kind: workflow
+        locator: .github/workflows/sign-modules.yml
+    verification_cases:
+      - case_id: SIGNING-VERIFY-BRANCHES
+        scenario_id: pr-orchestrator-skips-signature-requirement-for-dev-targeting-events
+        method: test
+        selector:
+          runner: pytest
+          node_id: tests/unit/workflows/test_sign_modules_hardening.py::test_verification_triggers_on_push_pr_and_dispatch
+        intent: Keep the public verification triggers for both dev and main.
+        observable: Push and pull request checks cover changes to packages, keys, the registry, and the cutoff.
+  openspec:verify-signature-only-module-rotation:ci-module-signing-on-approval:sign-packages-manifests-on-pr-approval:
+    rationale: PR approval cannot write production signatures outside the protected environment.
+    stakeholder_refs: [docs/authoring/module-signing.md]
+    touchpoints:
+      - id: read-only-signing-verification
+        kind: workflow
+        locator: .github/workflows/sign-modules.yml
+    verification_cases:
+      - case_id: SIGNING-APPROVAL-READ-ONLY
+        scenario_id: sign-packages-manifests-on-pr-approval
+        method: test
+        selector:
+          runner: pytest
+          node_id: tests/unit/workflows/test_sign_modules_hardening.py::test_pr_approval_cannot_write_signatures
+        intent: Retire the workflow that writes signatures on PR approval.
+        observable: No approval-triggered signer is configured.
+  openspec:verify-signature-only-module-rotation:ci-module-signing-on-approval:manifest-discovery-covers-packages-directory:
+    rationale: Protected reproducibility checks exact frozen package trees.
+    stakeholder_refs: [docs/authoring/module-signing.md]
+    touchpoints:
+      - id: package-reproducibility
+        kind: workflow
+        locator: .github/workflows/sign-modules.yml
+    verification_cases:
+      - case_id: SIGNING-PACKAGE-CUTOFF
+        scenario_id: manifest-discovery-covers-packages-directory
+        method: test
+        selector:
+          runner: pytest
+          node_id: tests/unit/workflows/test_sign_modules_hardening.py::test_reproducibility_step_checks_cutoff_and_replacement[changed-frozen-tree]
+        intent: Detect a change to a frozen package without editing its manifest.
+        observable: The protected job rejects a changed frozen tree under packages.
   openspec:verify-signature-only-module-rotation:resource-aware-integrity:separate-public-verification-from-replacement-signing:
     rationale: Manifest verification runs without a private key, and signature reproducibility uses protected V2 signing.
     stakeholder_refs: [docs/authoring/module-signing.md]
@@ -29,7 +77,7 @@ requirements:
         method: test
         selector:
           runner: pytest
-          node_id: tests/unit/workflows/test_sign_modules_hardening.py::test_reproducibility_step_checks_cutoff_and_replacement[valid-Reproduced replacement signature]
+          node_id: tests/unit/workflows/test_sign_modules_hardening.py::test_reproducibility_step_checks_cutoff_and_replacement[valid]
         intent: Reproduce an eligible replacement signature without writing either manifest.
         observable: Both the frozen tree and replacement signature pass verification and remain byte-identical.
   ? openspec:verify-signature-only-module-rotation:resource-aware-integrity:authenticate-signature-only-source-manifest-rotation

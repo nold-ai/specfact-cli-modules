@@ -3,7 +3,6 @@ from __future__ import annotations
 import base64
 import hashlib
 import json
-import os
 import shutil
 import subprocess
 import sys
@@ -89,6 +88,7 @@ def test_pr_approval_cannot_write_signatures() -> None:
         ("changed-frozen-tree", "do not match the approved release cutoff"),
         ("changed-signature", "Replacement signature is not reproducible"),
     ],
+    ids=("valid", "wrong-key", "changed-frozen-tree", "changed-signature"),
 )
 def test_reproducibility_step_checks_cutoff_and_replacement(tmp_path: Path, case: str, expected: str) -> None:
     key = Ed25519PrivateKey.generate()
@@ -133,11 +133,12 @@ def test_reproducibility_step_checks_cutoff_and_replacement(tmp_path: Path, case
         source.write_text(yaml.safe_dump(data), encoding="utf-8")
     original_manifests = [frozen.read_bytes(), source.read_bytes()]
     step = _workflow()["jobs"]["reproducibility"]["steps"][-1]
+    script = step["run"].removeprefix("python - <<'PYTHON'\n").removesuffix("\nPYTHON\n")
     result = subprocess.run(
-        ["bash", "-e", "-c", step["run"]],
+        [sys.executable, "-c", script],
         cwd=tmp_path,
         env={
-            "PATH": f"{Path(sys.executable).parent}{os.pathsep}{os.defpath}",
+            "PATH": str(Path(sys.executable).parent),
             "MODULE_PRIVATE_KEY": private_pem.decode(),
             "MODULE_KEY_PASSPHRASE": passphrase.decode(),
             "EXPECTED_PUBLIC_KEY_SHA256": hashlib.sha256(public_der).hexdigest(),
