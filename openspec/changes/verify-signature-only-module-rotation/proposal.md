@@ -6,3 +6,4 @@ A publisher key rotation can replace a source manifest signature over unchanged 
 
 - Allow full verification to accept a same-version source manifest update when the Git diff changes only its signature and the replacement key verifies the unchanged payload.
 - Preserve the release cutoff, published archives, and the version requirement for any other bundle change.
+- Retire the legacy automatic and manual source-manifest writers. Keep public verification independent of the signing environment, and reproduce replacement signatures on protected `main` using the existing protected V2 key.

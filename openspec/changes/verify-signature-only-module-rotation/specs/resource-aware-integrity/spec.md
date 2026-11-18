@@ -26,3 +26,19 @@ Deferred capsule review SHALL verify the Code Review source controller with the 
 - **THEN** deferred review requires the replacement-key signature over the source payload
 - **AND** independent review rejects any historical fixture archive outside the exact CI inventory
 - **AND** the independent reviewer obtains its runtime receipt from the ordinary installer
+
+### Requirement: Separate public verification from replacement signing
+
+CI SHALL verify module manifests without a private key or write access. PR approval events SHALL NOT sign or modify source manifests. The main-branch reproducibility check SHALL use the protected V2 key to reproduce checked-in replacement signatures and SHALL verify frozen bundles against their cutoff tree hashes.
+
+#### Scenario: Verify a push without a signing secret
+
+- **WHEN** a push targets `dev` or `main`
+- **THEN** the public verification job checks payloads, signatures, and version rules without signing or writing back.
+
+#### Scenario: Reproduce a signature after a protected main push
+
+- **WHEN** verification succeeds for a protected `main` push
+- **THEN** the reproducibility job requires the encrypted V2 key, its passphrase, and the pinned replacement fingerprint in the `module-signing` environment
+- **AND** it checks stored signatures outside the cutoff against newly computed signatures over the same complete module payload
+- **AND** it verifies exact frozen trees without re-signing them or modifying files.

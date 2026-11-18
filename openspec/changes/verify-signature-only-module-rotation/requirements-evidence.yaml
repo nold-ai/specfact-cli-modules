@@ -1,5 +1,37 @@
 schema_version: '2'
 requirements:
+  openspec:verify-signature-only-module-rotation:resource-aware-integrity:separate-public-verification-from-replacement-signing:
+    rationale: Manifest verification runs without a private key, and signature reproducibility uses protected V2 signing.
+    stakeholder_refs: [docs/authoring/module-signing.md]
+    touchpoints:
+      - id: module-signing-workflow
+        kind: workflow
+        locator: .github/workflows/sign-modules.yml
+    verification_cases:
+      - case_id: SIGNING-PUBLIC-VERIFICATION
+        scenario_id: separate-public-verification-from-replacement-signing
+        method: test
+        selector:
+          runner: pytest
+          node_id: tests/unit/workflows/test_sign_modules_hardening.py::test_verification_cannot_sign_or_write_to_github
+        intent: Keep push and PR checks at read-only permissions with the public key.
+        observable: The verification job checks signatures and versions without signing or pushing.
+      - case_id: SIGNING-PROTECTED-REPRODUCIBILITY
+        scenario_id: separate-public-verification-from-replacement-signing
+        method: test
+        selector:
+          runner: pytest
+          node_id: tests/unit/workflows/test_sign_modules_hardening.py::test_only_protected_main_reproducibility_can_use_signing_secrets
+        intent: Allow V2 secrets in the protected main reproducibility job.
+        observable: The only key-consuming job requires a protected main push and the module-signing environment.
+      - case_id: SIGNING-FROZEN-TREE
+        scenario_id: separate-public-verification-from-replacement-signing
+        method: test
+        selector:
+          runner: pytest
+          node_id: tests/unit/workflows/test_sign_modules_hardening.py::test_reproducibility_step_checks_cutoff_and_replacement[valid-Reproduced replacement signature]
+        intent: Reproduce an eligible replacement signature without writing either manifest.
+        observable: Both the frozen tree and replacement signature pass verification and remain byte-identical.
   ? openspec:verify-signature-only-module-rotation:resource-aware-integrity:authenticate-signature-only-source-manifest-rotation
   : rationale: A verified replacement signature can update the source manifest while package content and version stay fixed.
     stakeholder_refs:

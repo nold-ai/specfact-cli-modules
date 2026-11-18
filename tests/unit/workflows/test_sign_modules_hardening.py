@@ -1,164 +1,156 @@
 from __future__ import annotations
 
+import base64
+import hashlib
+import json
+import os
+import shutil
+import subprocess
+import sys
 from pathlib import Path
+from runpy import run_path
 from typing import Any, cast
 
 import pytest
 import yaml
-from pytest import FixtureRequest
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
+WORKFLOW = REPO_ROOT / ".github/workflows/sign-modules.yml"
+VERIFIER = REPO_ROOT / "scripts/verify-modules-signature.py"
 
 
-def _workflow_text() -> str:
-    path = REPO_ROOT / ".github" / "workflows" / "sign-modules.yml"
-    return path.read_text(encoding="utf-8")
+def _workflow() -> dict[str, Any]:
+    return cast(dict[str, Any], yaml.load(WORKFLOW.read_text(encoding="utf-8"), Loader=yaml.BaseLoader))
 
 
-def _parsed_workflow() -> dict[Any, Any]:
-    loaded = yaml.safe_load(_workflow_text())
-    assert isinstance(loaded, dict)
-    return cast(dict[Any, Any], loaded)
+def test_verification_triggers_on_push_pr_and_dispatch() -> None:
+    events = _workflow()["on"]
+    for event in ("push", "pull_request"):
+        assert events[event]["branches"] == ["dev", "main"]
+        assert "packages/**" in events[event]["paths"]
+        assert "registry/**" in events[event]["paths"]
+        assert "ci/official-module-release-cutoff.json" in events[event]["paths"]
+        assert "ci/module-signing-public-next.pem" in events[event]["paths"]
+    assert events["workflow_dispatch"]["inputs"]["base_branch"]["options"] == ["dev", "main"]
 
 
-def _strict_push_verify_step_block(workflow: str) -> str:
-    marker = "- name: Strict verify module manifests (push to dev/main)\n"
-    idx = workflow.find(marker)
-    if idx < 0:
-        msg = "strict push verify step not found in sign-modules workflow"
-        raise AssertionError(msg)
-    lines = workflow[idx:].splitlines(keepends=True)
-    block: list[str] = [lines[0]]
-    for line in lines[1:]:
-        if line.startswith("      - name:"):
-            break
-        block.append(line)
-    return "".join(block)
+def test_verification_cannot_sign_or_write_to_github() -> None:
+    workflow = _workflow()
+    assert workflow["permissions"] == {"contents": "read"}
+    verify = workflow["jobs"]["verify"]
+    assert verify["name"] == "Verify Module Signatures"
+    assert "environment" not in verify
+    assert "permissions" not in verify
+    assert "secrets." not in yaml.safe_dump(verify)
+    checkout = verify["steps"][0]["with"]
+    assert checkout["persist-credentials"] == "false"
+    assert "github.event.pull_request.head.sha" in checkout["ref"]
+    shell_steps = "\n".join(step["run"] for step in verify["steps"] if "run" in step)
+    assert "scripts/verify-modules-signature.py" in shell_steps
+    assert "--payload-from-filesystem" in shell_steps
+    assert "--require-signature" in shell_steps
+    assert "--enforce-version-bump" in shell_steps
+    assert "--version-check-base" in shell_steps
+    assert "scripts/sign-modules.py" not in shell_steps
+    assert "git push" not in shell_steps
 
 
-def _workflow_on_section(doc: dict[Any, Any]) -> dict[str, Any]:
-    section = doc.get(True)
-    if isinstance(section, dict):
-        return cast(dict[str, Any], section)
-    raw = doc.get("on")
-    assert isinstance(raw, dict)
-    return cast(dict[str, Any], raw)
+def test_only_protected_main_reproducibility_can_use_signing_secrets() -> None:
+    workflow = _workflow()
+    jobs = workflow["jobs"]
+    assert set(jobs) == {"verify", "reproducibility"}
+    repro = jobs["reproducibility"]
+    assert repro["name"] == "Assert signing reproducibility"
+    assert repro["environment"] == "module-signing"
+    assert repro["if"] == "github.event_name == 'push' && github.ref_protected && github.ref == 'refs/heads/main'"
+    assert repro["needs"] == ["verify"]
+    assert repro["steps"][0]["with"] == {"ref": "${{ github.sha }}", "persist-credentials": "false"}
+    assert repro["steps"][-1]["env"]["MODULE_PRIVATE_KEY"] == "${{ secrets.MODULE_SIGNING_PRIVATE_KEY_V2 }}"
+    assert (
+        repro["steps"][-1]["env"]["MODULE_KEY_PASSPHRASE"] == "${{ secrets.MODULE_SIGNING_PRIVATE_KEY_PASSPHRASE_V2 }}"
+    )
+    assert "secrets.SPECFACT_MODULE_PRIVATE_SIGN_KEY" not in WORKFLOW.read_text(encoding="utf-8")
+    assert "git push" not in yaml.safe_dump(workflow)
 
 
-def test_sign_modules_hardening_triggers_on_push_pr_and_dispatch() -> None:
-    doc = _parsed_workflow()
-    on = _workflow_on_section(doc)
-    push = on["push"]
-    assert isinstance(push, dict)
-    assert push["branches"] == ["dev", "main"]
-    paths = push["paths"]
-    assert isinstance(paths, list)
-    assert "packages/**" in paths
-    assert "registry/**" in paths
-
-    pr = on["pull_request"]
-    assert isinstance(pr, dict)
-    assert pr["branches"] == ["dev", "main"]
-    pr_paths = pr["paths"]
-    assert isinstance(pr_paths, list)
-    assert "registry/**" in pr_paths
-
-    dispatch = on["workflow_dispatch"]
-    assert isinstance(dispatch, dict)
-    assert "base_branch" in dispatch["inputs"]
-
-
-def test_sign_modules_hardening_verify_job_exports_public_signing_secrets() -> None:
-    doc = _parsed_workflow()
-    verify = doc["jobs"]["verify"]
-    assert isinstance(verify, dict)
-    env = verify.get("env")
-    assert isinstance(env, dict)
-    assert env["SPECFACT_MODULE_PUBLIC_SIGN_KEY"] == "${{ secrets.SPECFACT_MODULE_PUBLIC_SIGN_KEY }}"
-    assert env["SPECFACT_MODULE_SIGNING_PUBLIC_KEY_PEM"] == "${{ secrets.SPECFACT_MODULE_SIGNING_PUBLIC_KEY_PEM }}"
-
-
-def test_sign_modules_hardening_verify_job_can_open_sign_prs() -> None:
-    doc = _parsed_workflow()
-    verify = doc["jobs"]["verify"]
-    assert isinstance(verify, dict)
-    perms = verify.get("permissions")
-    assert isinstance(perms, dict)
-    assert perms.get("pull-requests") == "write"
-    assert verify.get("outputs", {}).get("opened_sign_pr") == "${{ steps.commit_auto_sign.outputs.opened_sign_pr }}"
-
-
-def test_sign_modules_hardening_auto_signs_on_push_non_bot() -> None:
-    workflow = _workflow_text()
-    assert "github.event_name == 'push'" in workflow
-    assert "github.actor != 'github-actions[bot]'" in workflow
-    assert "scripts/sign-modules.py" in workflow
-    assert "--changed-only" in workflow
-    assert "--bump-version patch" in workflow
-    assert 'git commit -m "chore(modules): auto-sign module manifests"' in workflow
-    assert "auto-sign module manifests [skip ci]" not in workflow
-    # Protected dev/main: push signing commit to a side branch, then open a PR (not HEAD -> dev).
-    assert "gh pr create" in workflow
-    assert 'git push origin "HEAD:refs/heads/${SIGN_BRANCH}"' in workflow
-
-
-def test_sign_modules_hardening_does_not_sign_pull_request_heads() -> None:
-    workflow = _workflow_text()
-    assert "Auto-sign changed module manifests (same-repo PRs" not in workflow
-    assert 'git push origin "HEAD:${PR_HEAD_REF}"' not in workflow
-
-
-def test_sign_modules_hardening_checks_out_pr_head_for_pr_events() -> None:
-    workflow = _workflow_text()
-    assert "github.event.pull_request.head.sha" in workflow
-    assert "github.sha" in workflow
+def test_pr_approval_cannot_write_signatures() -> None:
+    approval_workflow = REPO_ROOT / ".github/workflows/sign-modules-on-approval.yml"
+    assert not approval_workflow.exists()
 
 
 @pytest.mark.parametrize(
-    "needles",
-    (
-        pytest.param(
-            (
-                "--require-signature",
-                "github.event_name == 'push'",
-                "github.ref_name == 'dev' || github.ref_name == 'main'",
-            ),
-            id="push_strict_verify",
-        ),
-        pytest.param(
-            ("github.event_name != 'push'", "pull_request", "scripts/verify-modules-signature.py"),
-            id="pr_non_push_verify",
-        ),
-    ),
+    ("case", "expected"),
+    [
+        ("valid", "Reproduced replacement signature"),
+        ("wrong-key", "does not match the pinned public key"),
+        ("changed-frozen-tree", "do not match the approved release cutoff"),
+        ("changed-signature", "Replacement signature is not reproducible"),
+    ],
 )
-def test_sign_modules_hardening_workflow_contains_verify_snippets(
-    needles: tuple[str, ...], request: FixtureRequest
-) -> None:
-    workflow = _workflow_text()
-    if request.node.callspec.id == "push_strict_verify":
-        block = _strict_push_verify_step_block(workflow)
-        for needle in needles:
-            assert needle in block
-    else:
-        for needle in needles:
-            assert needle in workflow
-
-
-def test_sign_modules_hardening_reproducibility_on_main() -> None:
-    doc = _parsed_workflow()
-    repro = doc["jobs"]["reproducibility"]
-    assert isinstance(repro, dict)
-    assert repro["if"] == (
-        "github.event_name == 'push' && github.ref_name == 'main' && needs.verify.outputs.opened_sign_pr != 'true'"
+def test_reproducibility_step_checks_cutoff_and_replacement(tmp_path: Path, case: str, expected: str) -> None:
+    key = Ed25519PrivateKey.generate()
+    public = key.public_key()
+    passphrase = b"temporary test passphrase"
+    public_der = public.public_bytes(serialization.Encoding.DER, serialization.PublicFormat.SubjectPublicKeyInfo)
+    private = Ed25519PrivateKey.generate() if case == "wrong-key" else key
+    private_pem = private.private_bytes(
+        serialization.Encoding.PEM, serialization.PrivateFormat.PKCS8, serialization.BestAvailableEncryption(passphrase)
     )
-    needs = repro["needs"]
-    assert needs == ["verify"]
 
+    scripts = tmp_path / "scripts"
+    scripts.mkdir()
+    shutil.copyfile(VERIFIER, scripts / VERIFIER.name)
+    ci = tmp_path / "ci"
+    ci.mkdir()
+    (ci / "module-signing-public-next.pem").write_bytes(
+        public.public_bytes(serialization.Encoding.PEM, serialization.PublicFormat.SubjectPublicKeyInfo)
+    )
 
-def test_sign_modules_hardening_manual_dispatch_job() -> None:
-    doc = _parsed_workflow()
-    manual = doc["jobs"]["sign-and-push"]
-    assert isinstance(manual, dict)
-    assert manual["if"] == "github.event_name == 'workflow_dispatch'"
-    assert manual["needs"] == ["verify"]
+    frozen = tmp_path / "packages/frozen/module-package.yaml"
+    frozen.parent.mkdir(parents=True)
+    frozen.write_text("name: nold-ai/specfact-frozen\nversion: 1.0.0\n", encoding="utf-8")
+    file_digest = hashlib.sha256(frozen.read_bytes()).hexdigest()
+    frozen_tree = hashlib.sha256(f"module-package.yaml:{file_digest}".encode()).hexdigest()
+    (ci / "official-module-release-cutoff.json").write_text(
+        json.dumps({"archives": {"nold-ai/specfact-frozen": {"1.0.0": {"tree": frozen_tree}}}}),
+        encoding="utf-8",
+    )
+    if case == "changed-frozen-tree":
+        (frozen.parent / "payload.txt").write_text("changed", encoding="utf-8")
+
+    source = tmp_path / "packages/source/module-package.yaml"
+    source.parent.mkdir()
+    source.write_text("name: nold-ai/specfact-source\nversion: 2.0.0\n", encoding="utf-8")
+    (source.parent / "commands.py").write_text("enabled = True\n", encoding="utf-8")
+    signer = run_path(str(REPO_ROOT / "scripts/sign-modules.py"), run_name="specfact_module_signer")
+    signer["sign_manifest"](source, key, payload_from_filesystem=True)
+    if case == "changed-signature":
+        data = yaml.safe_load(source.read_bytes())
+        data["integrity"]["signature"] = base64.b64encode(key.sign(b"different payload")).decode()
+        source.write_text(yaml.safe_dump(data), encoding="utf-8")
+    original_manifests = [frozen.read_bytes(), source.read_bytes()]
+    step = _workflow()["jobs"]["reproducibility"]["steps"][-1]
+    result = subprocess.run(
+        ["bash", "-e", "-c", step["run"]],
+        cwd=tmp_path,
+        env={
+            "PATH": f"{Path(sys.executable).parent}{os.pathsep}{os.defpath}",
+            "MODULE_PRIVATE_KEY": private_pem.decode(),
+            "MODULE_KEY_PASSPHRASE": passphrase.decode(),
+            "EXPECTED_PUBLIC_KEY_SHA256": hashlib.sha256(public_der).hexdigest(),
+        },
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert [frozen.read_bytes(), source.read_bytes()] == original_manifests
+    if case == "valid":
+        assert result.returncode == 0, result.stderr
+        assert "Verified immutable cutoff tree" in result.stdout
+        assert expected in result.stdout
+    else:
+        assert result.returncode != 0
+        assert expected in result.stderr
