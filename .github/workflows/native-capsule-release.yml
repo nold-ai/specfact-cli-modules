@@ -41,7 +41,7 @@ env:
 
 jobs:
   tools:
-    runs-on: macos-14
+    runs-on: macos-15
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -51,7 +51,7 @@ jobs:
         with:
           python-version: "3.13"
           architecture: arm64
-      - run: python -m pip install specfact-cli==0.55.4 cryptography==50.0.2
+      - run: python -m pip install specfact-cli==0.55.4 cryptography==50.0.2 typer==0.28.0
       - name: Prove minimal CPython boundary for all three retained ABIs
         run: |
           python -m pip install pytest==9.1.1 pytest-xdist==3.8.0 pytest-cov==7.1.0

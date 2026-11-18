@@ -86,7 +86,7 @@ def test_verify_manifest_allows_unverified_optional_signature_without_public_key
         yaml.safe_dump({"name": "nold-ai/specfact-example", "version": "0.1.0"}, sort_keys=False),
         encoding="utf-8",
     )
-    payload = verify_script._module_payload(module_dir, payload_from_filesystem=True)  # pylint: disable=protected-access
+    payload = verify_script._module_payload(module_dir, payload_from_filesystem=True)
     manifest_path.write_text(
         yaml.safe_dump(
             {

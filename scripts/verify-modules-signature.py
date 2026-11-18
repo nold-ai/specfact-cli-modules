@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# ruff: noqa: N999
 """Verify bundled module checksums/signatures against full module payload."""
 
 from __future__ import annotations
@@ -27,14 +26,14 @@ if TYPE_CHECKING:
 else:
     try:
         from beartype import beartype
-    except ImportError:  # pragma: no cover - exercised in plain-python CI/runtime
+    except ImportError:
 
         def beartype(func: _FuncT) -> _FuncT:
             return func
 
     try:
         from icontract import ensure, require
-    except ImportError:  # pragma: no cover - exercised in plain-python CI/runtime
+    except ImportError:
 
         def require(
             _condition: Callable[..., bool],
@@ -60,7 +59,7 @@ try:
     from cryptography.exceptions import InvalidSignature
     from cryptography.hazmat.primitives import hashes, serialization
     from cryptography.hazmat.primitives.asymmetric import ed25519, padding, rsa
-except ImportError:  # pragma: no cover - exercised through runtime error path
+except ImportError:
     InvalidSignature = None
     hashes = None
     serialization = None
@@ -389,22 +388,29 @@ def _signature_only_blobs(manifest: Path, base_ref: str) -> tuple[bytes, bytes]:
     return before, after
 
 
+def _replacement_signature_data(before: bytes, after: bytes) -> dict[str, Any] | None:
+    old_data, new_data = yaml.safe_load(before), yaml.safe_load(after)
+    old_signature = old_data["integrity"]["signature"]
+    new_signature = new_data["integrity"]["signature"]
+    if not isinstance(old_signature, str) or not isinstance(new_signature, str):
+        return None
+    old_bytes, new_bytes = old_signature.encode("ascii"), new_signature.encode("ascii")
+    if not old_bytes or not new_bytes or old_bytes == new_bytes or before.count(old_bytes) != 1:
+        return None
+    old_data["integrity"]["signature"] = new_signature
+    if before.replace(old_bytes, new_bytes, 1) != after or old_data != new_data:
+        return None
+    return cast(dict[str, Any], new_data)
+
+
 def _is_authenticated_signature_rotation(manifest: Path, base_ref: str) -> bool:
     """Verify a replacement signature over a byte-identical source package."""
     try:
         before, after = _signature_only_blobs(manifest, base_ref)
         if manifest.is_symlink() or manifest.read_bytes() != after:
             return False
-        old_data, new_data = yaml.safe_load(before), yaml.safe_load(after)
-        old_signature = old_data["integrity"]["signature"]
-        new_signature = new_data["integrity"]["signature"]
-        if not isinstance(old_signature, str) or not isinstance(new_signature, str):
-            return False
-        old_bytes, new_bytes = old_signature.encode("ascii"), new_signature.encode("ascii")
-        if not old_bytes or not new_bytes or old_bytes == new_bytes or before.count(old_bytes) != 1:
-            return False
-        old_data["integrity"] = {**old_data["integrity"], "signature": new_signature}
-        if before.replace(old_bytes, new_bytes, 1) != after or old_data != new_data:
+        new_data = _replacement_signature_data(before, after)
+        if new_data is None:
             return False
         if _matches_published_cutoff(manifest, new_data):
             return False

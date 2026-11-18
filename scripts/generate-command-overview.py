@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# ruff: noqa: N999
 """Generate deterministic module command overview artifacts for humans and AI agents."""
 
 from __future__ import annotations

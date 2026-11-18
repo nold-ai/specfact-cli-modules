@@ -677,76 +677,19 @@ def test_customer_gate_always_adds_separate_targeted_regression(tmp_path, monkey
     assert calls == [(tmp_path, tmp_path / "cache")]
 
 
-def _published_reviewer_inputs():
-    """An isolated reviewer pin must be installable through the actual registry."""
-    import re
-    import tarfile
-
-    import yaml
-
+def test_independent_source_controller_accepts_replacement_key():
     root = Path(__file__).parents[2]
-    workflow = yaml.load(
-        (root / ".github/workflows/capsule-customer-execution.yml").read_text(), Loader=yaml.BaseLoader
-    )
-    steps = {step["name"]: step for step in workflow["jobs"]["independent-review"]["steps"] if "name" in step}
-    installation = steps["Install trusted reviewer in its own ordinary-user environment"]["run"]
-    version = re.search(r"--version\s+([0-9]+\.[0-9]+\.[0-9]+)\s+--source marketplace", installation)
-    core = re.search(r"specfact-cli==([0-9]+\.[0-9]+\.[0-9]+)", installation)
-    assert version is not None and core is not None, "reviewer identities must be literal released pins"
-    # The trusted main reviewer is independent of the advancing candidate index.
-    archive = root / "registry/modules" / f"specfact-code-review-{version.group(1)}.tar.gz"
-    with tarfile.open(archive) as stream:
-        manifests = [member for member in stream.getmembers() if member.name.endswith("/module-package.yaml")]
-        assert len(manifests) == 1
-        payload = stream.extractfile(manifests[0])
-        assert payload is not None
-        metadata = yaml.safe_load(payload.read())
-    entry = {
-        "latest_version": str(metadata["version"]),
-        "core_compatibility": metadata["core_compatibility"],
-        "download_url": str(archive.relative_to(root / "registry")),
-        "checksum_sha256": archive.with_suffix(archive.suffix + ".sha256").read_text().strip().split()[0],
-    }
-    return root, installation, version.group(1), core.group(1), entry
-
-
-def test_independent_reviewer_pin_is_installable_signed_published_baseline():
-    from packaging.specifiers import SpecifierSet
-
-    _root, installation, version, core, entry = _published_reviewer_inputs()
-    assert version == entry["latest_version"], "pinned reviewer is absent from the published registry"
-    assert SpecifierSet(entry["core_compatibility"]).contains(core)
-    assert "env -i" in installation and "SPECFACT_MODULES_BRANCH=main" in installation
-    assert "SPECFACT_MODULES_ROOTS" not in installation
-    assert "SPECFACT_ALLOW_UNSIGNED" not in installation
-
-
-def test_published_reviewer_archive_matches_registry_checksum_and_authenticated_manifest(tmp_path):
-    import hashlib
-    import tarfile
-
-    import yaml
-
-    root, _installation, version, _core, entry = _published_reviewer_inputs()
-    archive = root / "registry" / entry["download_url"]
-    assert hashlib.sha256(archive.read_bytes()).hexdigest() == entry["checksum_sha256"]
-    with tarfile.open(archive) as stream:
-        manifest = next(member for member in stream.getmembers() if member.name.endswith("module-package.yaml"))
-        payload = stream.extractfile(manifest)
-        assert payload is not None
-        metadata = yaml.safe_load(payload.read())
-    assert str(metadata["version"]) == version
-    assert metadata["integrity"]["signature"]
-    from specfact_cli.registry import module_installer
-
-    with tarfile.open(archive) as stream:
-        stream.extractall(tmp_path, filter="data")
-    package = next(tmp_path.rglob("module-package.yaml")).parent
-    assert module_installer.verify_module_artifact(
-        package,
-        module_installer.ModulePackageMetadata.model_validate(metadata),
-        allow_unsigned=False,
-        require_integrity=True,
-        require_signature=True,
-        public_key_pem=module_installer._bundled_public_key_path().read_text(),
+    script = root / "scripts/verify-modules-signature.py"
+    spec = importlib.util.spec_from_file_location("verify_modules_signature", script)
+    assert spec is not None and spec.loader is not None
+    verifier = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(verifier)
+    assert (
+        verifier.verify_manifest(
+            root / "packages/specfact-code-review/module-package.yaml",
+            require_signature=True,
+            public_key_pem=(root / "ci/module-signing-public-next.pem").read_text(),
+            payload_from_filesystem=True,
+        )
+        == "filesystem"
     )

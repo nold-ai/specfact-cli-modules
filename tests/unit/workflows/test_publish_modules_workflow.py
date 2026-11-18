@@ -38,24 +38,11 @@ def test_publish_uses_only_protected_replacement_secrets() -> None:
     )
 
 
-@pytest.mark.parametrize(
-    ("case", "expected"),
-    [
-        ("already-published", None),
-        ("new-version", None),
-        ("missing-key", "encrypted replacement signing key"),
-        ("wrong-key", "does not match the pinned replacement key"),
-        ("occupied-artifact", "Cannot replace existing"),
-    ],
-)
-def test_publish_step_signs_new_release_and_preserves_old_artifacts(
-    tmp_path: Path, case: str, expected: str | None
-) -> None:
+def _prepare_publish_workspace(tmp_path: Path, version: str, case: str) -> None:
     bundle = "specfact-example"
     module_id = f"nold-ai/{bundle}"
     source = tmp_path / "packages" / bundle
     source.mkdir(parents=True)
-    version = "1.0.0" if case == "already-published" else "1.0.1"
     manifest = source / "module-package.yaml"
     manifest.write_text(
         yaml.safe_dump({"name": module_id, "version": version, "core_compatibility": ">=0.55.4"}),
@@ -87,6 +74,11 @@ def test_publish_step_signs_new_release_and_preserves_old_artifacts(
     (ci / "official-module-release-cutoff.json").write_text(
         json.dumps({"latest": {module_id: "1.0.0"}, "archives": {}}),
     )
+
+
+def _publish_environment(tmp_path: Path, case: str) -> dict[str, str]:
+    ci = tmp_path / "ci"
+    bundle = "specfact-example"
     key = Ed25519PrivateKey.generate()
     public = key.public_key()
     (ci / "module-signing-public-next.pem").write_bytes(
@@ -103,17 +95,54 @@ def test_publish_step_signs_new_release_and_preserves_old_artifacts(
         serialization.BestAvailableEncryption(b"temporary test key"),
     )
 
+    return {
+        "PATH": f"{Path(sys.executable).parent}{os.pathsep}{os.defpath}",
+        "BUNDLES_JSON": json.dumps([bundle]),
+        "GITHUB_REF_NAME": "dev",
+        "EXPECTED_PUBLIC_KEY_SHA256": fingerprint,
+        "SPECFACT_MODULE_PRIVATE_SIGN_KEY": "" if case == "missing-key" else pem.decode(),
+        "SPECFACT_MODULE_PRIVATE_SIGN_KEY_PASSPHRASE": "temporary test key",
+    }
+
+
+def _assert_registry_publication(tmp_path: Path, version: str, case: str) -> None:
+    bundle = "specfact-example"
+    registry = tmp_path / "registry"
+    manifest = tmp_path / "packages" / bundle / "module-package.yaml"
+    entry = json.loads((registry / "index.json").read_text())["modules"][0]
+    if case == "new-version":
+        archive = registry / "modules" / f"{bundle}-{version}.tar.gz"
+        assert entry["latest_version"] == version
+        assert entry["checksum_sha256"] == hashlib.sha256(archive.read_bytes()).hexdigest()
+        assert entry["core_compatibility"] == ">=0.55.4"
+        assert (registry / "signatures" / f"{bundle}-{version}.tar.sig").is_file()
+    else:
+        assert entry["latest_version"] == "1.0.0"
+        assert "integrity" not in yaml.safe_load(manifest.read_text(encoding="utf-8"))
+
+
+@pytest.mark.parametrize(
+    ("case", "expected"),
+    [
+        ("already-published", None),
+        ("new-version", None),
+        ("missing-key", "encrypted replacement signing key"),
+        ("wrong-key", "does not match the pinned replacement key"),
+        ("occupied-artifact", "Cannot replace existing"),
+    ],
+)
+def test_publish_step_signs_new_release_and_preserves_old_artifacts(
+    tmp_path: Path, case: str, expected: str | None
+) -> None:
+    version = "1.0.0" if case == "already-published" else "1.0.1"
+    _prepare_publish_workspace(tmp_path, version, case)
+    registry = tmp_path / "registry"
+    previous = registry / "modules/specfact-example-1.0.0.tar.gz"
+    previous_signature = registry / "signatures/specfact-example-1.0.0.tar.sig"
     result = subprocess.run(
         ["bash", "-e", "-c", _publish_step()["run"]],
         cwd=tmp_path,
-        env={
-            "PATH": f"{Path(sys.executable).parent}{os.pathsep}{os.defpath}",
-            "BUNDLES_JSON": json.dumps([bundle]),
-            "GITHUB_REF_NAME": "dev",
-            "EXPECTED_PUBLIC_KEY_SHA256": fingerprint,
-            "SPECFACT_MODULE_PRIVATE_SIGN_KEY": "" if case == "missing-key" else pem.decode(),
-            "SPECFACT_MODULE_PRIVATE_SIGN_KEY_PASSPHRASE": "temporary test key",
-        },
+        env=_publish_environment(tmp_path, case),
         capture_output=True,
         text=True,
         check=False,
@@ -125,13 +154,4 @@ def test_publish_step_signs_new_release_and_preserves_old_artifacts(
         assert expected in result.stderr
     else:
         assert result.returncode == 0, result.stderr
-    entry = json.loads(registry_index.read_text())["modules"][0]
-    if case == "new-version":
-        archive = artifacts / f"{bundle}-{version}.tar.gz"
-        assert entry["latest_version"] == version
-        assert entry["checksum_sha256"] == hashlib.sha256(archive.read_bytes()).hexdigest()
-        assert entry["core_compatibility"] == ">=0.55.4"
-        assert (signatures / f"{bundle}-{version}.tar.sig").is_file()
-    else:
-        assert entry["latest_version"] == "1.0.0"
-        assert "integrity" not in yaml.safe_load(manifest.read_text(encoding="utf-8"))
+    _assert_registry_publication(tmp_path, version, case)

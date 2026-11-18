@@ -284,6 +284,8 @@ ignore = [
 "packages/**/commands.py" = ["B008"]
 "scripts/check-docs-commands.py" = ["N999"]
 "scripts/check-prompt-commands.py" = ["N999"]
+"scripts/generate-command-overview.py" = ["N999"]
+"scripts/verify-modules-signature.py" = ["N999"]
 
 [tool.ruff.lint.isort]
 force-single-line = false

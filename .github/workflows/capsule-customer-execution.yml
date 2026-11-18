@@ -166,6 +166,23 @@ jobs:
           test "${#review_paths[@]}" -gt 0
           PROJECT_CONFIG="$CUSTOMER_ROOT/commit-review-project.toml"
           printf '%s\n' 'manager = "hatch"' 'environment = "default"' > "$PROJECT_CONFIG"
+          key_file="$GITHUB_WORKSPACE/ci/module-signing-public-next.pem"
+          key_sha="$(openssl pkey -pubin -in "$key_file" -outform DER | sha256sum | cut -d ' ' -f 1)"
+          test "$key_sha" = "68ebe68cd4394c5319b85fe5b021460f3bae411dbfad795782657d0fe005d053"
+          key_pem="$(cat "$key_file")"
+          export SPECFACT_MODULE_PUBLIC_KEY_PEM="$key_pem"
+          export SPECFACT_ALLOW_UNSIGNED=0
+          "$CUSTOMER_ROOT/venv/bin/python" -I - "$GITHUB_WORKSPACE/packages/specfact-code-review" <<'PY_CONTROLLER'
+          from pathlib import Path
+          import sys
+          import yaml
+          from specfact_cli.registry.module_installer import ModulePackageMetadata, verify_module_artifact
+
+          package = Path(sys.argv[1])
+          manifest = ModulePackageMetadata.model_validate(yaml.safe_load((package / "module-package.yaml").read_bytes()))
+          if not verify_module_artifact(package, manifest, require_integrity=True, require_signature=True):
+              raise SystemExit("Code Review source controller failed replacement-key verification")
+          PY_CONTROLLER
           # Provisioning is separate from the unchanged 300-second analysis budget.
           # Prepare the same bound base/index snapshots; customer cold cache stays empty.
           preparation_exit=0
@@ -177,7 +194,11 @@ jobs:
             "$CUSTOMER_ROOT/venv/bin/python" -I -c \
               'import subprocess,sys; sys.exit(subprocess.run(sys.argv[1:],timeout=1800,check=False).returncode)' \
               "$CUSTOMER_ROOT/venv/bin/python" -B -P -c \
-              'import sys; from specfact_cli.cli import app; app(args=sys.argv[1:])' \
+              'import sys
+          from specfact_cli.utils.prompts import console
+          console.file = sys.stderr
+          from specfact_cli.cli import app
+          app(args=sys.argv[1:])' \
               code review runtime prepare --scope index --project-config "$PROJECT_CONFIG" --json \
               > "$CUSTOMER_ROOT/commit-review-preparation.private.json" || preparation_exit=$?
           if PREPARATION_COMMAND_SUCCEEDED="$([ "$preparation_exit" -eq 0 ] && echo 1 || echo 0)" \
@@ -656,10 +677,66 @@ jobs:
           cd "$TRUSTED_ROOT"
           python -I -m venv "$TRUSTED_ROOT/venv"
           "$TRUSTED_ROOT/venv/bin/python" -I -m pip install --no-cache-dir specfact-cli==0.55.4 typer==0.28.0
+          bundle=packages/specfact-code-review
+          manifest="$bundle/module-package.yaml"
+          mkdir -m 0700 "$TRUSTED_ROOT/controller"
+          git -C "$GITHUB_WORKSPACE" archive "$CANDIDATE_BASE" packages/specfact-code-review | \
+            tar -x -C "$TRUSTED_ROOT/controller"
+          key_file="$GITHUB_WORKSPACE/ci/module-signing-public-next.pem"
+          key_sha="$(openssl pkey -pubin -in "$key_file" -outform DER | sha256sum | cut -d ' ' -f 1)"
+          test "$key_sha" = "68ebe68cd4394c5319b85fe5b021460f3bae411dbfad795782657d0fe005d053"
+          cp "$key_file" "$TRUSTED_ROOT/controller.pub"
           env -i HOME="$TRUSTED_ROOT/home" TMPDIR="$TRUSTED_ROOT/tmp" \
-            PATH="$TRUSTED_ROOT/venv/bin:/usr/bin:/bin" SPECFACT_MODULES_BRANCH=main \
-            "$TRUSTED_ROOT/venv/bin/python" -I -m specfact_cli.cli \
-            module install nold-ai/specfact-code-review --scope user --version 0.51.2 --source marketplace
+            PATH="$TRUSTED_ROOT/venv/bin:/usr/bin:/bin" \
+            SPECFACT_MODULE_PUBLIC_KEY_PEM="$(cat "$TRUSTED_ROOT/controller.pub")" \
+            "$TRUSTED_ROOT/venv/bin/python" -I - "$GITHUB_WORKSPACE" "$CANDIDATE_BASE" "$CANDIDATE_HEAD" \
+            "$TRUSTED_ROOT/controller/$manifest" <<'PY_TRUSTED_CONTROLLER'
+          import os
+          import subprocess
+          import sys
+          from pathlib import Path
+
+          import yaml
+          from specfact_cli.registry.module_installer import ModulePackageMetadata, verify_module_artifact
+
+          repository, base, head = sys.argv[1:4]
+          manifest = Path(sys.argv[4])
+          package = manifest.parent
+          if any(path.is_symlink() for path in package.rglob("*")):
+              raise SystemExit("Trusted controller contains a symbolic link")
+
+          def verify(data):
+              return verify_module_artifact(
+                  package, ModulePackageMetadata.model_validate(data),
+                  require_integrity=True, require_signature=True,
+                  public_key_pem=os.environ["SPECFACT_MODULE_PUBLIC_KEY_PEM"],
+              )
+
+          before = manifest.read_bytes()
+          old_data = yaml.safe_load(before)
+          if not verify(old_data):
+              relative = "packages/specfact-code-review/module-package.yaml"
+              changed = subprocess.check_output(
+                  ["git", "-C", repository, "diff", "--raw", "--no-renames", "-z",
+                   base, head, "--", "packages/specfact-code-review"]
+              )
+              row, changed_path, end = changed.split(b"\0")
+              before_mode, after_mode, _, _, status = row.removeprefix(b":").split()
+              if changed_path != relative.encode() or end or status != b"M" or before_mode != after_mode:
+                  raise SystemExit("Controller handover requires a regular manifest-only change")
+              if before_mode not in (b"100644", b"100755"):
+                  raise SystemExit("Controller handover requires a regular manifest")
+              after = subprocess.check_output(["git", "-C", repository, "show", f"{head}:{relative}"])
+              new_data = yaml.safe_load(after)
+              old_signature = old_data["integrity"]["signature"].encode("ascii")
+              new_signature = new_data["integrity"]["signature"].encode("ascii")
+              if (not old_signature or not new_signature or old_signature == new_signature
+                  or before.count(old_signature) != 1 or before.replace(old_signature, new_signature, 1) != after):
+                  raise SystemExit("Controller handover changed bytes outside its signature")
+              if not verify(new_data):
+                  raise SystemExit("Trusted base controller failed replacement-key verification")
+              manifest.write_bytes(after)
+          PY_TRUSTED_CONTROLLER
       - name: Capture immutable candidate subject without executing its host code
         shell: bash
         run: |
@@ -693,12 +770,12 @@ jobs:
           import os
           import sys
           from pathlib import Path
-          from specfact_cli.cli import app
+          import specfact_cli.cli
           from specfact_cli.registry import CommandRegistry
 
           # Register and load the installed reviewer before entering the subject.
           # This fresh job has never executed candidate-controlled host programs.
-          CommandRegistry.get_module_typer("code")
+          controller = CommandRegistry.get_module_typer("code")
           from specfact_code_review.run.portable_snapshot import discover_snapshot
           from specfact_code_review.run.runtime_builder import prepare_runtime
           from specfact_code_review.run.runtime_interpreter import select_environment
@@ -711,7 +788,9 @@ jobs:
 
           os.chdir(sys.argv[1])
           if sys.argv[2] != "prepare-index":
-              app(args=sys.argv[2:])
+              if sys.argv[2] != "code":
+                  raise SystemExit("Unexpected independent reviewer command")
+              controller(args=sys.argv[3:])
               raise SystemExit(0)
           resolution = resolve_scope(ScopeRequest(
               repository=Path.cwd(), scope="index", portable_project_runtime=True,
@@ -746,7 +825,9 @@ jobs:
               cleanup_scope_resolution(resolution)
           PY
           trusted_env=(env -i HOME="$TRUSTED_ROOT/home" TMPDIR="$TRUSTED_ROOT/tmp"
-            PATH="$TRUSTED_ROOT/venv/bin:/usr/bin:/bin" SPECFACT_MODULES_BRANCH=main
+            PATH="$TRUSTED_ROOT/venv/bin:/usr/bin:/bin"
+            SPECFACT_MODULES_ROOTS="$TRUSTED_ROOT/controller/packages"
+            SPECFACT_MODULE_PUBLIC_KEY_PEM="$(cat "$TRUSTED_ROOT/controller.pub")"
             SPECFACT_CODE_REVIEW_CAPSULE_CACHE="$TRUSTED_ROOT/cache")
           if ! "${trusted_env[@]}" "$TRUSTED_ROOT/venv/bin/python" -I -c \
             'import subprocess,sys; sys.exit(subprocess.run(sys.argv[1:],timeout=1800,check=False).returncode)' \
@@ -1123,7 +1204,9 @@ jobs:
               "diagnostic_observations": codes or ["unclassified"]}
           if outcome == "oversized_report":
               projected["report_header_observed"] = bool(header)
+          if outcome in ("structured_report", "oversized_report"):
               projected["error_analyzer_sides"] = incomplete_sides(members)
-              projected["crosshair_failure_observations"] = crosshair_failure_observations(header.get("findings", []))
+              projected["crosshair_failure_observations"] = crosshair_failure_observations(
+                  header.get("findings", []) if outcome == "oversized_report" else findings)
           print(json.dumps(projected))
           PY_REVIEW_FAILURE
