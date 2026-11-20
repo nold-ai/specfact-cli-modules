@@ -1,0 +1,26 @@
+schema_version: '2'
+requirements:
+  openspec:fix-post-rotation-dev-quality:dev-quality-ci:use-the-reviewed-tool-and-fixture-for-dev-quality-checks:
+    rationale: Keep quality validation reproducible while retaining immutable runtime fixture checks.
+    stakeholder_refs: [docs/agent-rules/50-quality-gates-and-review.md]
+    touchpoints:
+      - id: modules-quality-workflow
+        kind: workflow
+        locator: .github/workflows/pr-orchestrator.yml
+    verification_cases:
+      - case_id: DEV-QUALITY-RUFF-PIN
+        scenario_id: use-the-reviewed-tool-and-fixture-for-dev-quality-checks
+        method: test
+        selector:
+          runner: pytest
+          node_id: tests/unit/workflows/test_runtime_discovery_quality.py::test_quality_uses_reviewed_ruff_version
+        intent: Match the paired core Ruff lock.
+        observable: The Hatch lint environment specifies an exact Ruff version.
+      - case_id: DEV-QUALITY-SMOKE-FIXTURE
+        scenario_id: use-the-reviewed-tool-and-fixture-for-dev-quality-checks
+        method: test
+        selector:
+          runner: pytest
+          node_id: tests/unit/workflows/test_runtime_discovery_quality.py::test_smoke_uses_separate_reviewed_checkout
+        intent: Run runtime smoke against a dedicated fixture checkout.
+        observable: The checkout ref comes from the validated lock and the smoke step consumes that path.
