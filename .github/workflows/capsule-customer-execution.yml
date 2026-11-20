@@ -62,7 +62,7 @@ jobs:
           echo "HOME=$CUSTOMER_ROOT/home" >> "$GITHUB_ENV"
           echo "TMPDIR=$CUSTOMER_ROOT/tmp" >> "$GITHUB_ENV"
           python -m venv "$CUSTOMER_ROOT/venv"
-          "$CUSTOMER_ROOT/venv/bin/pip" install --no-cache-dir specfact-cli==0.55.4
+          "$CUSTOMER_ROOT/venv/bin/pip" install --no-cache-dir specfact-cli==0.55.4 typer==0.28.0
           echo "$CUSTOMER_ROOT/venv/bin" >> "$GITHUB_PATH"
       - name: Install official signed module anonymously
         shell: bash
@@ -166,6 +166,23 @@ jobs:
           test "${#review_paths[@]}" -gt 0
           PROJECT_CONFIG="$CUSTOMER_ROOT/commit-review-project.toml"
           printf '%s\n' 'manager = "hatch"' 'environment = "default"' > "$PROJECT_CONFIG"
+          key_file="$GITHUB_WORKSPACE/ci/module-signing-public-next.pem"
+          key_sha="$(openssl pkey -pubin -in "$key_file" -outform DER | sha256sum | cut -d ' ' -f 1)"
+          test "$key_sha" = "68ebe68cd4394c5319b85fe5b021460f3bae411dbfad795782657d0fe005d053"
+          key_pem="$(cat "$key_file")"
+          export SPECFACT_MODULE_PUBLIC_KEY_PEM="$key_pem"
+          export SPECFACT_ALLOW_UNSIGNED=0
+          "$CUSTOMER_ROOT/venv/bin/python" -I - "$GITHUB_WORKSPACE/packages/specfact-code-review" <<'PY_CONTROLLER'
+          from pathlib import Path
+          import sys
+          import yaml
+          from specfact_cli.registry.module_installer import ModulePackageMetadata, verify_module_artifact
+
+          package = Path(sys.argv[1])
+          manifest = ModulePackageMetadata.model_validate(yaml.safe_load((package / "module-package.yaml").read_bytes()))
+          if not verify_module_artifact(package, manifest, require_integrity=True, require_signature=True):
+              raise SystemExit("Code Review source controller failed replacement-key verification")
+          PY_CONTROLLER
           # Provisioning is separate from the unchanged 300-second analysis budget.
           # Prepare the same bound base/index snapshots; customer cold cache stays empty.
           preparation_exit=0
@@ -177,7 +194,11 @@ jobs:
             "$CUSTOMER_ROOT/venv/bin/python" -I -c \
               'import subprocess,sys; sys.exit(subprocess.run(sys.argv[1:],timeout=1800,check=False).returncode)' \
               "$CUSTOMER_ROOT/venv/bin/python" -B -P -c \
-              'import sys; from specfact_cli.cli import app; app(args=sys.argv[1:])' \
+              'import sys
+          from specfact_cli.utils.prompts import console
+          console.file = sys.stderr
+          from specfact_cli.cli import app
+          app(args=sys.argv[1:])' \
               code review runtime prepare --scope index --project-config "$PROJECT_CONFIG" --json \
               > "$CUSTOMER_ROOT/commit-review-preparation.private.json" || preparation_exit=$?
           if PREPARATION_COMMAND_SUCCEEDED="$([ "$preparation_exit" -eq 0 ] && echo 1 || echo 0)" \
@@ -655,9 +676,39 @@ jobs:
           echo "TRUSTED_ROOT=$TRUSTED_ROOT" >> "$GITHUB_ENV"
           cd "$TRUSTED_ROOT"
           python -I -m venv "$TRUSTED_ROOT/venv"
-          "$TRUSTED_ROOT/venv/bin/python" -I -m pip install --no-cache-dir specfact-cli==0.55.4
+          "$TRUSTED_ROOT/venv/bin/python" -I -m pip install --no-cache-dir specfact-cli==0.55.4 typer==0.28.0
+          "$TRUSTED_ROOT/venv/bin/python" -I - "$GITHUB_WORKSPACE" "$CANDIDATE_BASE" "$TRUSTED_ROOT" <<'PY_FIXTURE'
+          import hashlib
+          import json
+          import subprocess
+          import sys
+          from pathlib import Path
+
+          repository, base, root = sys.argv[1:]
+          pinned_archives = (
+              ("specfact-code-review", "0.51.2", "dca4ffc795c54835d437f005c50613b5b42cb401d6937261b4508a92c5fd67b7"),
+              ("specfact-codebase", "0.41.16", "8cb2e0624889a180f4057698c094fc400b46879805a4d8934285fd007bebe44e"),
+              ("specfact-project", "0.41.27", "b434d4aa8f540516258b4fa8a5e51e6c34e7be7caeb5c265fa26d0f4a9658592"),
+              ("specfact-requirements", "0.5.1", "2325fb2187801bef536b294453763de57e2e66a73a4162a8bfda461f195e4449"),
+          )
+          modules = []
+          for name, version, digest in pinned_archives:
+              filename = f"{name}-{version}.tar.gz"
+              archive = subprocess.check_output(
+                  ["git", "-C", repository, "show", f"{base}:registry/modules/{filename}"]
+              )
+              if hashlib.sha256(archive).hexdigest() != digest:
+                  raise SystemExit(f"Frozen reviewer fixture checksum mismatch: {name}")
+              (Path(root) / filename).write_bytes(archive)
+              modules.append({
+                  "id": f"nold-ai/{name}", "latest_version": version,
+                  "download_url": filename, "checksum_sha256": digest,
+              })
+          (Path(root) / "index.json").write_text(json.dumps({"modules": modules}), encoding="utf-8")
+          PY_FIXTURE
           env -i HOME="$TRUSTED_ROOT/home" TMPDIR="$TRUSTED_ROOT/tmp" \
-            PATH="$TRUSTED_ROOT/venv/bin:/usr/bin:/bin" SPECFACT_MODULES_BRANCH=main \
+            PATH="$TRUSTED_ROOT/venv/bin:/usr/bin:/bin" \
+            SPECFACT_REGISTRY_INDEX_URL="file://$TRUSTED_ROOT/index.json" \
             "$TRUSTED_ROOT/venv/bin/python" -I -m specfact_cli.cli \
             module install nold-ai/specfact-code-review --scope user --version 0.51.2 --source marketplace
       - name: Capture immutable candidate subject without executing its host code
@@ -1123,7 +1174,9 @@ jobs:
               "diagnostic_observations": codes or ["unclassified"]}
           if outcome == "oversized_report":
               projected["report_header_observed"] = bool(header)
+          if outcome in ("structured_report", "oversized_report"):
               projected["error_analyzer_sides"] = incomplete_sides(members)
-              projected["crosshair_failure_observations"] = crosshair_failure_observations(header.get("findings", []))
+              projected["crosshair_failure_observations"] = crosshair_failure_observations(
+                  header.get("findings", []) if outcome == "oversized_report" else findings)
           print(json.dumps(projected))
           PY_REVIEW_FAILURE

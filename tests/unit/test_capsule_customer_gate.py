@@ -587,6 +587,19 @@ def test_public_install_uses_clean_environment_and_explicit_main_marketplace():
     assert '"$CUSTOMER_ROOT/venv/bin/specfact" module install' in workflow
 
 
+def test_capsule_installations_use_compatible_released_core():
+    import yaml
+
+    path = Path(__file__).parents[2] / ".github/workflows/capsule-customer-execution.yml"
+    jobs = yaml.safe_load(path.read_text())["jobs"]
+    for job, step_name in (
+        ("customer", "Prepare fresh customer-owned installation"),
+        ("independent-review", "Install trusted reviewer in its own ordinary-user environment"),
+    ):
+        script = next(step["run"] for step in jobs[job]["steps"] if step.get("name") == step_name)
+        assert "specfact-cli==0.55.4 typer==0.28.0" in script, job
+
+
 def test_candidate_installation_uses_separate_published_registry_snapshot():
     import yaml
 
@@ -664,76 +677,59 @@ def test_customer_gate_always_adds_separate_targeted_regression(tmp_path, monkey
     assert calls == [(tmp_path, tmp_path / "cache")]
 
 
-def _published_reviewer_inputs():
-    """An isolated reviewer pin must be installable through the actual registry."""
-    import re
-    import tarfile
+def test_independent_reviewer_registry_is_built_from_digest_pinned_archives(tmp_path):
+    import hashlib
+    import json
+    import shutil
+    import subprocess
+    import sys
 
     import yaml
 
     root = Path(__file__).parents[2]
-    workflow = yaml.load(
-        (root / ".github/workflows/capsule-customer-execution.yml").read_text(), Loader=yaml.BaseLoader
-    )
-    steps = {step["name"]: step for step in workflow["jobs"]["independent-review"]["steps"] if "name" in step}
-    installation = steps["Install trusted reviewer in its own ordinary-user environment"]["run"]
-    version = re.search(r"--version\s+([0-9]+\.[0-9]+\.[0-9]+)\s+--source marketplace", installation)
-    core = re.search(r"specfact-cli==([0-9]+\.[0-9]+\.[0-9]+)", installation)
-    assert version is not None and core is not None, "reviewer identities must be literal released pins"
-    # The trusted main reviewer is independent of the advancing candidate index.
-    archive = root / "registry/modules" / f"specfact-code-review-{version.group(1)}.tar.gz"
-    with tarfile.open(archive) as stream:
-        manifests = [member for member in stream.getmembers() if member.name.endswith("/module-package.yaml")]
-        assert len(manifests) == 1
-        payload = stream.extractfile(manifests[0])
-        assert payload is not None
-        metadata = yaml.safe_load(payload.read())
-    entry = {
-        "latest_version": str(metadata["version"]),
-        "core_compatibility": metadata["core_compatibility"],
-        "download_url": str(archive.relative_to(root / "registry")),
-        "checksum_sha256": archive.with_suffix(archive.suffix + ".sha256").read_text().strip().split()[0],
+    workflow = yaml.safe_load((root / ".github/workflows/capsule-customer-execution.yml").read_text())
+    steps = workflow["jobs"]["independent-review"]["steps"]
+    install = next(step["run"] for step in steps if step.get("name", "").startswith("Install trusted reviewer"))
+    program = install.split("<<'PY_FIXTURE'\n", 1)[1].split("\nPY_FIXTURE", 1)[0]
+    version_by_bundle = {
+        "specfact-code-review": "0.51.2",
+        "specfact-codebase": "0.41.16",
+        "specfact-project": "0.41.27",
+        "specfact-requirements": "0.5.1",
     }
-    return root, installation, version.group(1), core.group(1), entry
-
-
-def test_independent_reviewer_pin_is_installable_signed_published_baseline():
-    from packaging.specifiers import SpecifierSet
-
-    _root, installation, version, core, entry = _published_reviewer_inputs()
-    assert version == entry["latest_version"], "pinned reviewer is absent from the published registry"
-    assert SpecifierSet(entry["core_compatibility"]).contains(core)
-    assert "env -i" in installation and "SPECFACT_MODULES_BRANCH=main" in installation
-    assert "SPECFACT_MODULES_ROOTS" not in installation
-    assert "SPECFACT_ALLOW_UNSIGNED" not in installation
-
-
-def test_published_reviewer_archive_matches_registry_checksum_and_authenticated_manifest(tmp_path):
-    import hashlib
-    import tarfile
-
-    import yaml
-
-    root, _installation, version, _core, entry = _published_reviewer_inputs()
-    archive = root / "registry" / entry["download_url"]
-    assert hashlib.sha256(archive.read_bytes()).hexdigest() == entry["checksum_sha256"]
-    with tarfile.open(archive) as stream:
-        manifest = next(member for member in stream.getmembers() if member.name.endswith("module-package.yaml"))
-        payload = stream.extractfile(manifest)
-        assert payload is not None
-        metadata = yaml.safe_load(payload.read())
-    assert str(metadata["version"]) == version
-    assert metadata["integrity"]["signature"]
-    from specfact_cli.registry import module_installer
-
-    with tarfile.open(archive) as stream:
-        stream.extractall(tmp_path, filter="data")
-    package = next(tmp_path.rglob("module-package.yaml")).parent
-    assert module_installer.verify_module_artifact(
-        package,
-        module_installer.ModulePackageMetadata.model_validate(metadata),
-        allow_unsigned=False,
-        require_integrity=True,
-        require_signature=True,
-        public_key_pem=module_installer._bundled_public_key_path().read_text(),
+    repository = tmp_path / "base"
+    fixture_directory = repository / "registry/modules"
+    fixture_directory.mkdir(parents=True)
+    for name, version in version_by_bundle.items():
+        filename = f"{name}-{version}.tar.gz"
+        shutil.copyfile(root / "registry/modules" / filename, fixture_directory / filename)
+    subprocess.run(["git", "init", "-q", str(repository)], check=True)
+    subprocess.run(["git", "-C", str(repository), "add", "registry"], check=True)
+    subprocess.run(
+        [
+            "git",
+            "-C",
+            str(repository),
+            "-c",
+            "core.hooksPath=/dev/null",
+            "-c",
+            "commit.gpgsign=false",
+            "-c",
+            "user.name=Fixture",
+            "-c",
+            "user.email=fixture@example.invalid",
+            "commit",
+            "-qm",
+            "baseline",
+        ],
+        check=True,
     )
+    args = [sys.executable, "-I", "-", str(repository), "HEAD", str(tmp_path)]
+    subprocess.run(args, input=program, text=True, check=True)
+    entries = json.loads((tmp_path / "index.json").read_bytes())["modules"]
+    assert {entry["id"]: entry["latest_version"] for entry in entries} == {
+        f"nold-ai/{name}": version for name, version in version_by_bundle.items()
+    }
+    for entry in entries:
+        archive = tmp_path / entry["download_url"]
+        assert hashlib.sha256(archive.read_bytes()).hexdigest() == entry["checksum_sha256"]

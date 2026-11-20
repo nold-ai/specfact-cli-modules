@@ -1,0 +1,42 @@
+schema_version: '2'
+requirements:
+  openspec:fix-capsule-docs-typer-compatibility:resource-aware-integrity:start-the-published-core-in-both-capsule-environments:
+    rationale: Both capsule consumers need to start the published CLI before they can verify modules.
+    stakeholder_refs: [docs/agent-rules/50-quality-gates-and-review.md]
+    touchpoints:
+      - id: capsule-installations
+        kind: workflow
+        locator: .github/workflows/capsule-customer-execution.yml
+    verification_cases:
+      - case_id: CAPSULE-COMPATIBLE-TYPER
+        scenario_id: start-the-published-core-in-both-capsule-environments
+        method: test
+        selector:
+          runner: pytest
+          node_id: tests/unit/test_capsule_customer_gate.py::test_capsule_installations_use_compatible_released_core
+        intent: Both jobs select the same compatible Typer for the released CLI.
+        observable: Both installation commands pin SpecFact CLI 0.55.4 and Typer 0.28.0.
+  openspec:fix-capsule-docs-typer-compatibility:modules-docs-command-validation:preserve-command-overview-argument-labels:
+    rationale: The generated command inventory needs stable argument labels across supported Typer versions.
+    stakeholder_refs: [docs/agent-rules/50-quality-gates-and-review.md]
+    touchpoints:
+      - id: command-overview-generator
+        kind: script
+        locator: scripts/generate-command-overview.py
+    verification_cases:
+      - case_id: DOCS-TYPER-ARGUMENT-LABEL
+        scenario_id: preserve-command-overview-argument-labels
+        method: test
+        selector:
+          runner: pytest
+          node_id: tests/unit/docs/test_llms_overview_freshness.py::test_command_overview_records_typer_parameters
+        intent: Render the positional argument using the actual Typer command.
+        observable: The generated argument label is SOURCE_PATH.
+      - case_id: DOCS-TYPER-EXPLICIT-METAVAR
+        scenario_id: preserve-command-overview-argument-labels
+        method: test
+        selector:
+          runner: pytest
+          node_id: tests/unit/docs/test_llms_overview_freshness.py::test_command_overview_preserves_explicit_typer_argument_metavar
+        intent: Retain the command author's explicit label.
+        observable: The generated argument label is path/to/file.

@@ -31,6 +31,9 @@ def test_hosted_preparation_has_separate_bound_and_cannot_bypass_review() -> Non
     assert recipe.index("code review runtime prepare --scope index") < recipe.index("review_exit=0")
     assert 'SPECFACT_CODE_REVIEW_CAPSULE_CACHE="$CUSTOMER_ROOT/commit-review-cache"' in recipe
     assert "continue-on-error" not in step
+    assert "export SPECFACT_ALLOW_UNSIGNED=0" in recipe
+    assert "export SPECFACT_MODULE_PUBLIC_KEY_PEM=" in recipe
+    assert recipe.index("require_signature=True") < recipe.index("code review runtime prepare --scope index")
 
 
 def test_independent_reviewer_runs_in_fresh_job_without_candidate_host_code() -> None:
@@ -41,8 +44,9 @@ def test_independent_reviewer_runs_in_fresh_job_without_candidate_host_code() ->
     assert not independent.get("needs"), "Candidate execution cannot suppress the independent review job"
     recipe = "\n".join(str(step.get("run", "")) for step in independent["steps"])
     assert "specfact-cli==0.55.4" in recipe
-    assert "--version 0.51.2" in recipe
-    assert "--source marketplace" in recipe
+    assert 'SPECFACT_REGISTRY_INDEX_URL="file://$TRUSTED_ROOT/index.json"' in recipe
+    assert "Frozen reviewer fixture checksum mismatch" in recipe
+    assert "--version 0.51.2 --source marketplace" in recipe
     assert "env -i" in recipe
 
 
@@ -299,6 +303,7 @@ def _expected_review_projection(expected):
     }
     if outcome == "oversized_report":
         projection["report_header_observed"] = False
+    if outcome in {"oversized_report", "structured_report"}:
         projection["error_analyzer_sides"] = {}
         projection["crosshair_failure_observations"] = []
     return projection
@@ -331,7 +336,10 @@ def test_independent_review_failure_keeps_nested_evidence_and_private_tokens(tmp
     monkeypatch.setenv("REVIEW_LOG", str(log))
     result = _run_projector(tmp_path, program)
     assert result.returncode == 0
-    assert json.loads(result.stdout) == _expected_review_projection(expected)
+    projection = _expected_review_projection(expected)
+    if case == "nested":
+        projection["error_analyzer_sides"] = {"pylint": ["head"]}
+    assert json.loads(result.stdout) == projection
     assert "private-token" not in result.stdout + result.stderr
 
 

@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# ruff: noqa: N999
 """Generate deterministic module command overview artifacts for humans and AI agents."""
 
 from __future__ import annotations
@@ -268,7 +267,7 @@ def _command_options(command: click.Command) -> list[str]:
 
 
 def _argument_display_name(param: click.Argument | TyperArgument) -> str:
-    return param.metavar or param.human_readable_name.upper()
+    return param.metavar or (param.name or "").upper()
 
 
 def _command_arguments(command: click.Command) -> list[dict[str, Any]]:
