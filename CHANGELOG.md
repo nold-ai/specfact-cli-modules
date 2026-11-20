@@ -9,6 +9,9 @@ and this project follows SemVer for bundle versions.
 
 ### Fixed
 
+- Project 0.41.28 keeps valid Python sources eligible when a repository or
+  source path contains part of an excluded directory name.
+
 - Prepare Code Review 0.51.4: targeted selection counts distinct Python modules,
   source-root inference excludes separately verified VCS metadata from source
   budgets, and native pytest failures retain incomplete-evidence remedies while
