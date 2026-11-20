@@ -195,6 +195,48 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+      - name: Constrain Typer to the paired core lock
+        if: needs.changes.outputs.skip_tests_dev_to_main != 'true'
+        run: |
+          python - <<'PY'
+          import os
+          import re
+          import tomllib
+          from pathlib import Path
+
+          core_lock = tomllib.loads(Path("specfact-cli/uv.lock").read_text(encoding="utf-8"))
+          (typer_version,) = (
+              package["version"] for package in core_lock["package"] if package["name"] == "typer"
+          )
+          if not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", typer_version):
+              raise SystemExit("Paired core requires an exact Typer version")
+          constraints = Path(os.environ["RUNNER_TEMP"]) / "runtime-smoke-constraints.txt"
+          constraints.write_text(f"typer=={typer_version}\n", encoding="utf-8")
+          with Path(os.environ["GITHUB_ENV"]).open("a", encoding="utf-8") as environment:
+              environment.write(f"PIP_CONSTRAINT={constraints}\nUV_CONSTRAINT={constraints}\n")
+          PY
+      - name: Resolve reviewed runtime smoke fixture
+        id: runtime-fixture
+        if: needs.changes.outputs.skip_tests_dev_to_main != 'true' && matrix.python-version == '3.12'
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import re
+          from pathlib import Path
+
+          fixture_lock = Path("specfact-cli/ci/runtime-smoke-fixture.lock.json")
+          if not fixture_lock.is_file():
+              raise SystemExit("Paired core is missing the runtime smoke fixture lock. Promote core first.")
+          fixture = json.loads(fixture_lock.read_text(encoding="utf-8"))
+          if fixture.get("repository") != "nold-ai/specfact-cli-modules":
+              raise SystemExit("Runtime smoke fixture must use the official modules repository")
+          commit = fixture.get("commit")
+          if not isinstance(commit, str) or not re.fullmatch(r"[0-9a-f]{40}", commit):
+              raise SystemExit("Runtime smoke fixture must use a full lowercase commit SHA")
+          with Path(os.environ["GITHUB_OUTPUT"]).open("a", encoding="utf-8") as output:
+              output.write(f"ref={commit}\n")
+          PY
       - name: Install Hatch
         if: needs.changes.outputs.skip_tests_dev_to_main != 'true'
         run: |
@@ -206,11 +248,27 @@ jobs:
       - name: Install specfact-cli dependency
         if: needs.changes.outputs.skip_tests_dev_to_main != 'true'
         run: hatch run pip install -e ./specfact-cli
+      - name: Checkout reviewed runtime smoke fixture
+        if: needs.changes.outputs.skip_tests_dev_to_main != 'true' && matrix.python-version == '3.12'
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          repository: nold-ai/specfact-cli-modules
+          ref: ${{ steps.runtime-fixture.outputs.ref }}
+          path: .specfact/runtime-smoke-modules
+          persist-credentials: false
+      - name: Warm runtime smoke dependency cache
+        if: needs.changes.outputs.skip_tests_dev_to_main != 'true' && matrix.python-version == '3.12'
+        working-directory: specfact-cli
+        run: |
+          python -m pip install pipx uv
+          python scripts/check_dependency_trust_exceptions.py
+          uv sync --locked --all-extras --no-install-project
       - name: Runtime discovery smoke across package managers
         if: needs.changes.outputs.skip_tests_dev_to_main != 'true' && matrix.python-version == '3.12'
+        env:
+          UV_PYTHON: ${{ matrix.python-version }}
         run: |
-          python -m pip install pipx uv "virtualenv<21"
-          hatch run python specfact-cli/scripts/runtime_discovery_smoke.py --modules-repo "${GITHUB_WORKSPACE}" --launcher direct --launcher hatch-source --launcher pip-editable --launcher pipx --launcher uv-run --launcher uvx
+          hatch run python specfact-cli/scripts/runtime_discovery_smoke.py --modules-repo "${GITHUB_WORKSPACE}/.specfact/runtime-smoke-modules" --launcher direct --launcher hatch-source --launcher pip-editable --launcher pipx --launcher uv-run --launcher uvx
       - name: Validate generated command overview
         if: needs.changes.outputs.skip_tests_dev_to_main != 'true'
         run: |
