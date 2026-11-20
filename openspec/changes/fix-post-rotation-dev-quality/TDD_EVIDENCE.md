@@ -13,3 +13,9 @@ The five new workflow cases and the 12 existing workflow cases pass. Ruff 0.16.0
 The unchanged core verifier authenticates fixture commit `046d366`, verifies its tree, and builds a scratch registry from all seven 0.55.4 cutoff archives. Strict signature and version verification also passes for all seven source manifests in a clean modules checkout.
 
 The local six-launcher run reached the frozen wheel download after fixture verification and the offline child dependency sync. The download hit the existing 180-second timeout before the first launcher completed. This is partial execution evidence.
+
+## Launcher dependency drift
+
+The second local run passed the direct launcher. Hatch then failed because Typer 0.29.2 had removed the API used by the paired core. Constraining the smoke launchers to the existing core lock's Typer 0.27.0 let Hatch, pip editable, pipx, and uv run pass. The uvx launcher chose Python 3.15 and failed importing `sre_parse`. Binding uvx to the existing Python 3.12 matrix passed the original uvx smoke. All six launcher checks have passing local evidence across these runs.
+
+The workflow now sets the same Typer constraint for pip and uv before Hatch bootstrap, and binds uv to the matrix Python in the smoke step. The missing fixture lock on core `main` produces an explicit error until core is promoted. All 19 focused workflow tests and 10 existing core smoke-policy tests pass.

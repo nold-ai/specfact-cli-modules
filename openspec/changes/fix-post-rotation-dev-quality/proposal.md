@@ -5,5 +5,5 @@ After the module-signing rotation merged, the quality workflow supplied the curr
 ## What changes
 
 - Match the paired core's reviewed Ruff 0.16.0 pin and retain the full lint rules.
-- Check out the reviewed modules fixture separately for the existing runtime discovery matrix. Warm the artifact cache from the paired core lock.
+- Check out the reviewed modules fixture separately for the existing runtime discovery matrix. Warm the artifact cache and use the paired core's locked Typer version for the smoke launchers.
 - Preserve the existing 0.55.4 cutoff, signature verification, and publisher pause.

@@ -9,3 +9,4 @@ The quality workflow SHALL use Ruff 0.16.0, the version locked by the paired cor
 - **WHEN** the quality workflow runs after the modules checkout changes
 - **THEN** lint uses the pinned tool with the repository's full lint rules
 - **AND** runtime smoke uses the separately checked-out fixture with the existing launcher coverage.
+- **AND** the smoke launchers use the paired core's locked Typer version and the selected matrix Python.

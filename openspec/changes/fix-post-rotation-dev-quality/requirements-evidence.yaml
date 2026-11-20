@@ -24,3 +24,11 @@ requirements:
           node_id: tests/unit/workflows/test_runtime_discovery_quality.py::test_smoke_uses_separate_reviewed_checkout
         intent: Run runtime smoke against a dedicated fixture checkout.
         observable: The checkout ref comes from the validated lock and the smoke step consumes that path.
+      - case_id: DEV-QUALITY-SMOKE-TYPER
+        scenario_id: use-the-reviewed-tool-and-fixture-for-dev-quality-checks
+        method: test
+        selector:
+          runner: pytest
+          node_id: tests/unit/workflows/test_runtime_discovery_quality.py::test_quality_uses_core_lock_typer_before_hatch_bootstrap
+        intent: Use the paired core Typer version for runtime launcher installation.
+        observable: Pip and uv receive the same exact Typer constraint before the Hatch environment is created.
