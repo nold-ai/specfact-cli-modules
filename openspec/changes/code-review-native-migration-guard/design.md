@@ -9,3 +9,5 @@ Keep the policy and checker outside signed module payloads. Invoke the checker f
 The ratchet deliberately freezes legacy surfaces rather than trying to infer whether an edit is a worthwhile capsule repair. Future approved native cutover may remove those files. If useful native code needs a currently frozen location, revise the migration ownership explicitly rather than adding an undocumented exception.
 
 This is a regression guard against known scope drift, not hostile-code containment or proof of all possible future implementation semantics. The owner chose native execution already. No backend choice or runtime framework is introduced.
+
+This binding does not authenticate a candidate that also rewrites the checker and its fingerprint. The owner approved the four byte-exact merge identities for the #524 reconciliation on 22 November 2026. The original freeze revision remains audit metadata and every later change still fails.

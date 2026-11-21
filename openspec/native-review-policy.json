@@ -16,10 +16,10 @@
     "tests/host/proof_capsule*"
   ],
   "baseline_files": {
-    ".github/workflows/capsule-customer-execution.yml": ["100644", "53a41c25b5b5701b0dd14725dc4b33a43437056a"],
+    ".github/workflows/capsule-customer-execution.yml": ["100644", "cc389cafe4cb1d0117352f1dd6385d385890ea87"],
     ".github/workflows/code-review-macos-boundary.yml": ["100644", "50371e128983f91b76282f749f7ccf8bad4759e9"],
     ".github/workflows/native-capsule-customer.yml": ["100644", "8fd4eb6d55dac168d6358eabd96556429d1fc05e"],
-    ".github/workflows/native-capsule-release.yml": ["100644", "bba5ca7f3ac607e6892706f1b16b5a3f72aa51f5"],
+    ".github/workflows/native-capsule-release.yml": ["100644", "3792f0f24b703cf3c2d696de240831dabbe7ec22"],
     "packages/specfact-code-review/src/specfact_code_review/run/__init__.py": ["100644", "4d54cc5eefef51d3ccfc158659685ff28d1f8039"],
     "packages/specfact-code-review/src/specfact_code_review/run/cleanup_evidence.py": ["100644", "26864048d2341d06053be54986b47b82bc038d3b"],
     "packages/specfact-code-review/src/specfact_code_review/run/commands.py": ["100644", "8fb1c4d736283d55f043f9afe496553f738ebe4d"],
@@ -175,11 +175,11 @@
     "tests/unit/test_build_macos_native_capsule.py": ["100644", "80b4f68ff16875f8143c6ecc376162a56c45bb7a"],
     "tests/unit/test_capsule_analyzer_diagnostics.py": ["100644", "80b6fc6b4e067f6468190b9dee48c7139f0abe88"],
     "tests/unit/test_capsule_customer_gate.py": ["100644", "c55dfbc228b8e6e1452a9696943300c4b8d34188"],
-    "tests/unit/test_capsule_deferred_review_ci.py": ["100644", "bcbcd3a1b86dd759f4800561a7c7acc9cb31d1ef"],
+    "tests/unit/test_capsule_deferred_review_ci.py": ["100644", "5fd15fdff9e7f39986b09f3b4e0c16166f04c174"],
     "tests/unit/test_capsule_profile_summary.py": ["100644", "693888c42c82ff0c05b7849c49fc3fd4fafdf6ab"],
     "tests/unit/test_capsule_proof_contexts.py": ["100644", "407bb58c244b198b5e9afdb3a02c109081ae28ec"],
     "tests/unit/test_capsule_refresh_lock.py": ["100644", "72d68cd5088c6e982200a1ff408e2c10b1112209"],
-    "tests/unit/test_capsule_review_projection.py": ["100644", "7585292c2612d442e68801ce729755c94bc34dc4"],
+    "tests/unit/test_capsule_review_projection.py": ["100644", "c9a5fcba4ca6d89e7f6bc4056fbf43cb0635d52f"],
     "tests/unit/test_external_capsule_corpus.py": ["100644", "abbc7447db0bd82032e956dfaaa14bf43ff39cfd"],
     "tests/unit/test_macos_capsule_candidate.py": ["100644", "9ba838c2186808e2745039c1c80b83f9f22ad0d0"],
     "tests/unit/test_native_capsule_cache.py": ["100644", "ede75440fe1d4c948fd0d43225d0819dfa4bddea"]

@@ -26,10 +26,9 @@ concurrency:
 
 jobs:
   publish:
+    if: vars.MODULE_PUBLICATION_ENABLED == 'true' && github.ref_protected && (github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
-    env:
-      SPECFACT_MODULE_PRIVATE_SIGN_KEY: ${{ secrets.SPECFACT_MODULE_PRIVATE_SIGN_KEY }}
-      SPECFACT_MODULE_PRIVATE_SIGN_KEY_PASSPHRASE: ${{ secrets.SPECFACT_MODULE_PRIVATE_SIGN_KEY_PASSPHRASE }}
+    environment: module-signing
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -171,19 +170,47 @@ jobs:
           BUNDLES_JSON: ${{ steps.bundles.outputs.bundles_json }}
           BUNDLE_REASONS_JSON: ${{ steps.bundles.outputs.bundle_reasons_json }}
           TARGET_REGISTRY_BASE_REF: ${{ github.event.repository.default_branch }}
+          SPECFACT_MODULE_PRIVATE_SIGN_KEY: ${{ secrets.MODULE_SIGNING_PRIVATE_KEY_V2 }}
+          SPECFACT_MODULE_PRIVATE_SIGN_KEY_PASSPHRASE: ${{ secrets.MODULE_SIGNING_PRIVATE_KEY_PASSPHRASE_V2 }}
+          EXPECTED_PUBLIC_KEY_SHA256: ${{ vars.MODULE_SIGNING_PUBLIC_KEY_SHA256 }}
         run: |
           python - <<'PY'
           import hashlib
           import json
+          import os
+          import re
+          import runpy
           import subprocess
           import tarfile
           from pathlib import Path
 
           import yaml
+          from cryptography.hazmat.primitives import serialization
+          from packaging.version import Version
           from publish_bundle_selection import determine_registry_baseline_ref
 
           repo_root = Path(".").resolve()
-          import os
+          pinned_public_key = (repo_root / "ci" / "module-signing-public-next.pem").read_text(encoding="utf-8")
+          expected_fingerprint = os.environ.get("EXPECTED_PUBLIC_KEY_SHA256", "")
+          public_key = serialization.load_pem_public_key(pinned_public_key.encode())
+          public_der = public_key.public_bytes(serialization.Encoding.DER, serialization.PublicFormat.SubjectPublicKeyInfo)
+          if hashlib.sha256(public_der).hexdigest() != expected_fingerprint:
+              raise ValueError("Tracked replacement key does not match the signing environment")
+          pem = os.environ.get("SPECFACT_MODULE_PRIVATE_SIGN_KEY", "").strip()
+          passphrase = os.environ.get("SPECFACT_MODULE_PRIVATE_SIGN_KEY_PASSPHRASE", "").strip()
+          if not pem.startswith("-----BEGIN ENCRYPTED PRIVATE KEY-----\n") or not passphrase:
+              raise ValueError("An encrypted replacement signing key and passphrase are required")
+          private_key = serialization.load_pem_private_key(pem.encode(), password=passphrase.encode())
+          if private_key.public_key().public_bytes(
+              serialization.Encoding.DER, serialization.PublicFormat.SubjectPublicKeyInfo
+          ) != public_der:
+              raise ValueError("Signing secret does not match the pinned replacement key")
+
+          cutoff = json.loads((repo_root / "ci" / "official-module-release-cutoff.json").read_text(encoding="utf-8"))
+          verify_manifest = runpy.run_path(
+              str(repo_root / "scripts" / "verify-modules-signature.py"),
+              run_name="specfact_module_signature_verifier",
+          )["verify_manifest"]
 
           bundles = json.loads(os.environ["BUNDLES_JSON"])
           bundle_reasons = json.loads(os.environ.get("BUNDLE_REASONS_JSON", "{}"))
@@ -201,55 +228,6 @@ jobs:
           ignored_dir_names = {".git", "tests", "__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache", "logs"}
           ignored_suffixes = {".pyc", ".pyo"}
 
-          def manifest_has_signature(data: dict) -> bool:
-              integrity_obj = data.get("integrity")
-              if not isinstance(integrity_obj, dict):
-                  return False
-              return bool(str(integrity_obj.get("signature") or "").strip())
-
-          signing_key = os.environ.get("SPECFACT_MODULE_PRIVATE_SIGN_KEY", "").strip()
-
-          def sign_manifest_if_unsigned(manifest_path: Path, *, reason: str) -> None:
-              if not signing_key:
-                  return
-              if not manifest_path.is_file():
-                  return
-              raw = yaml.safe_load(manifest_path.read_text(encoding="utf-8"))
-              if not isinstance(raw, dict):
-                  return
-              if manifest_has_signature(raw):
-                  return
-              print(f"Signing {manifest_path} ({reason}).", flush=True)
-              subprocess.run(
-                  [
-                      "python",
-                      "scripts/sign-modules.py",
-                      "--payload-from-filesystem",
-                      "--allow-same-version",
-                      str(manifest_path),
-                  ],
-                  cwd=str(repo_root),
-                  check=True,
-              )
-
-          def write_registry_signature_sidecar(bundle: str, manifest: dict, *, expected_version: str | None = None) -> None:
-              version = str(manifest.get("version") or "").strip()
-              if expected_version is not None and version != expected_version:
-                  print(
-                      f"::warning::Skipping signature sidecar for {bundle}: "
-                      f"manifest version {version or '<missing>'} does not match published version {expected_version}.",
-                      flush=True,
-                  )
-                  return
-              integrity = manifest.get("integrity")
-              signature_text = ""
-              if isinstance(integrity, dict):
-                  signature_text = str(integrity.get("signature") or "").strip()
-              if version and signature_text:
-                  signature_path = registry_signatures_dir / f"{bundle}-{version}.tar.sig"
-                  signature_path.write_text(signature_text + "\n", encoding="utf-8")
-
-          skipped_bundles: dict[str, str] = {}
           current_branch = os.environ.get("GITHUB_REF_NAME", "").strip()
           baseline_ref = determine_registry_baseline_ref(
             current_branch=current_branch,
@@ -272,14 +250,10 @@ jobs:
           if not isinstance(baseline_modules, list):
             raise ValueError("baseline registry/index.json must contain a 'modules' list")
 
-          def registry_latest_version(bundle: str, manifest: dict | None = None) -> str:
-              module_id = str((manifest or {}).get("name") or f"nold-ai/{bundle}").strip()
-              for item in baseline_modules:
-                  if isinstance(item, dict) and str(item.get("id") or "").strip() == module_id:
-                      return str(item.get("latest_version") or "").strip()
-              return ""
-
+          changed = False
           for bundle in bundles:
+            if not re.fullmatch(r"specfact-[a-z0-9]+(?:-[a-z0-9]+)*", bundle):
+              raise ValueError("Invalid bundle name")
             reasons = bundle_reasons.get(bundle, [])
             print(f"Processing {bundle} because of: {', '.join(reasons) if reasons else 'unspecified'}")
             # Keep existing monotonic version guard logic.
@@ -306,11 +280,6 @@ jobs:
                 print(f"Skipping {bundle}: registry already at manifest version.")
                 if combined_output:
                   print(combined_output)
-                manifest_path = repo_root / "packages" / bundle / "module-package.yaml"
-                manifest = yaml.safe_load(manifest_path.read_text(encoding="utf-8"))
-                if not isinstance(manifest, dict):
-                    raise ValueError(f"Invalid manifest content: {manifest_path}")
-                skipped_bundles[bundle] = registry_latest_version(bundle, manifest)
                 continue
               if combined_output:
                 print(combined_output)
@@ -330,33 +299,47 @@ jobs:
             if not isinstance(manifest, dict):
                 raise ValueError(f"Invalid manifest content: {manifest_path}")
 
-            if not manifest_has_signature(manifest):
-                sign_manifest_if_unsigned(
-                    manifest_path,
-                    reason="missing integrity.signature before registry packaging",
-                )
-                manifest = yaml.safe_load(manifest_path.read_text(encoding="utf-8"))
-                if not isinstance(manifest, dict):
-                    raise ValueError(f"Invalid manifest content after signing: {manifest_path}")
-                if signing_key and not manifest_has_signature(manifest):
-                    raise ValueError(f"Signing did not produce integrity.signature: {manifest_path}")
-                if not signing_key:
-                    print(
-                        f"::warning::Publishing {bundle} with checksum-only tree manifest "
-                        "(SPECFACT_MODULE_PRIVATE_SIGN_KEY unset).",
-                        flush=True,
-                    )
-
-            module_id = str(manifest.get("name") or f"nold-ai/{bundle}")
+            module_id = str(manifest.get("name") or "")
+            if module_id != f"nold-ai/{bundle}":
+              raise ValueError(f"Unexpected official manifest identity: {manifest_path}")
             version = str(manifest.get("version") or "").strip()
-            if not version:
-              raise ValueError(f"Manifest missing version: {manifest_path}")
+            if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._+-]*", version):
+              raise ValueError(f"Invalid manifest version: {manifest_path}")
+            releases = [cutoff["latest"].get(module_id)]
+            releases.extend(
+                entry["latest_version"]
+                for entry in (*baseline_modules, *modules)
+                if isinstance(entry, dict) and entry.get("id") == module_id
+            )
+            if any(Version(version) <= Version(previous) for previous in releases if previous is not None):
+              raise ValueError(f"Version for {module_id} must be newer than every published version")
 
             artifact_name = f"{bundle}-{version}.tar.gz"
             artifact_path = registry_modules_dir / artifact_name
+            checksum_path = artifact_path.with_suffix(artifact_path.suffix + ".sha256")
+            signature_path = registry_signatures_dir / f"{bundle}-{version}.tar.sig"
+            if any(path.exists() or path.is_symlink() for path in (artifact_path, checksum_path, signature_path)):
+              raise ValueError(f"Cannot replace existing registry artifact or sidecar for {module_id} {version}")
+
+            subprocess.run(
+                ["python", "scripts/sign-modules.py", "--payload-from-filesystem", "--allow-same-version", str(manifest_path)],
+                cwd=repo_root,
+                check=True,
+            )
+            verify_manifest(
+                manifest_path,
+                require_signature=True,
+                public_key_pem=pinned_public_key,
+                payload_from_filesystem=True,
+            )
+            manifest = yaml.safe_load(manifest_path.read_text(encoding="utf-8"))
+            if manifest.get("name") != module_id or str(manifest.get("version")) != version:
+              raise ValueError("Signing changed the selected package identity")
 
             with tarfile.open(artifact_path, mode="w:gz") as tar:
               for path in sorted(bundle_dir.rglob("*")):
+                if path.is_symlink():
+                  raise ValueError(f"Cannot package symlink: {path}")
                 if not path.is_file():
                   continue
                 rel = path.relative_to(bundle_dir)
@@ -367,9 +350,9 @@ jobs:
                 tar.add(path, arcname=f"{bundle}/{rel.as_posix()}")
 
             digest = hashlib.sha256(artifact_path.read_bytes()).hexdigest()
-            (artifact_path.with_suffix(artifact_path.suffix + ".sha256")).write_text(f"{digest}\n", encoding="utf-8")
-
-            write_registry_signature_sidecar(bundle, manifest)
+            checksum_path.write_text(f"{digest}\n", encoding="utf-8")
+            signature_path.write_text(manifest["integrity"]["signature"] + "\n", encoding="utf-8")
+            changed = True
 
             entry = next(
               (
@@ -399,26 +382,8 @@ jobs:
 
             print(f"Published registry artifact for {module_id} v{version}")
 
-          if skipped_bundles:
-            print(f"Skipped already-published bundles: {sorted(skipped_bundles)}")
-
-          for bundle, published_version in skipped_bundles.items():
-              manifest_path = repo_root / "packages" / bundle / "module-package.yaml"
-              sign_manifest_if_unsigned(
-                  manifest_path,
-                  reason="registry version already published; still align git manifest signature",
-              )
-              manifest = yaml.safe_load(manifest_path.read_text(encoding="utf-8"))
-              if isinstance(manifest, dict):
-                  write_registry_signature_sidecar(bundle, manifest, expected_version=published_version)
-
-          for manifest_path in sorted((repo_root / "packages").glob("*/module-package.yaml")):
-              sign_manifest_if_unsigned(
-                  manifest_path,
-                  reason="final pass: ensure no unsigned module-package.yaml remains before commit",
-              )
-
-          registry_index_path.write_text(json.dumps(registry, indent=2) + "\n", encoding="utf-8")
+          if changed:
+              registry_index_path.write_text(json.dumps(registry, indent=2) + "\n", encoding="utf-8")
           PY
 
       - name: Commit registry updates via PR branch
@@ -428,7 +393,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           BUNDLE_REASONS_JSON: ${{ steps.bundles.outputs.bundle_reasons_json }}
         run: |
-          if git diff --quiet -- registry/index.json registry/modules registry/signatures && git diff --quiet -- packages/; then
+          if [ -z "$(git status --porcelain -- registry/index.json registry/modules registry/signatures packages/)" ]; then
             echo "No registry or signed package manifest changes to commit."
             exit 0
           fi

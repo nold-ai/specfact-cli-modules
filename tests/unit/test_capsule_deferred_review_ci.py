@@ -65,15 +65,22 @@ def test_deferred_gate_reviews_exact_staged_tree_and_propagates_failure(
         "assert not subprocess.check_output(['git', 'diff', '--name-only'])\n"
         "raise SystemExit(int(os.environ['FIXTURE_GATE_EXIT']))\n"
     )
+    key_path = Path("ci/module-signing-public-next.pem")
+    (repository / key_path.parent).mkdir()
+    (repository / key_path).write_bytes((REPO_ROOT / key_path).read_bytes())
     controller = repository / "packages/specfact-code-review/src/specfact_cli"
-    controller.mkdir(parents=True)
+    (controller / "utils").mkdir(parents=True)
     (controller / "__init__.py").write_text("")
+    (controller / "utils/prompts.py").write_text("from types import SimpleNamespace\nconsole = SimpleNamespace()\n")
     (controller / "cli.py").write_text(
-        "import os,sys\n"
-        "assert sys.argv[1:7] == ['code','review','runtime','prepare','--scope','index']\n"
-        "assert os.environ['SPECFACT_MODULES_REPO'] == os.environ['GITHUB_WORKSPACE']\n"
-        "assert os.environ['SPECFACT_CODE_REVIEW_CAPSULE_CACHE'].endswith('/commit-review-cache')\n"
-        "print('{}')\n"
+        "import json,os\nfrom pathlib import Path\n"
+        "def app(*,args):\n"
+        "    assert args[:6] == ['code','review','runtime','prepare','--scope','index']\n"
+        "    assert os.environ['SPECFACT_MODULES_REPO'] == os.environ['GITHUB_WORKSPACE']\n"
+        "    assert os.environ['SPECFACT_CODE_REVIEW_CAPSULE_CACHE'].endswith('/commit-review-cache')\n"
+        "    descriptor = Path(os.environ['CUSTOMER_ROOT']) / 'descriptor.json'\n"
+        "    descriptor.write_text('{}')\n"
+        "    print(json.dumps({'runtimes': {side: {'descriptor': str(descriptor)} for side in ('base','head')}}))\n"
     )
     _git(repository, "add", ".")
     _git(repository, "-c", "core.hooksPath=/dev/null", "commit", "-qm", "fixture base")
@@ -92,7 +99,18 @@ def test_deferred_gate_reviews_exact_staged_tree_and_propagates_failure(
     customer = tmp_path / "customer"
     (customer / "cache").mkdir(parents=True)
     (customer / "venv/bin").mkdir(parents=True)
-    (customer / "venv/bin/python").symlink_to(sys.executable)
+    python = customer / "venv/bin/python"
+    python.write_text(
+        f"#!{sys.executable}\n"
+        "import os, subprocess, sys\n"
+        "if sys.argv[1:3] == ['-I', '-'] and len(sys.argv) == 4:\n"
+        "    assert 'require_signature=True' in sys.stdin.read()\n"
+        "    assert os.environ['SPECFACT_ALLOW_UNSIGNED'] == '0'\n"
+        "    assert os.environ['SPECFACT_MODULE_PUBLIC_KEY_PEM'].startswith('-----BEGIN PUBLIC KEY-----')\n"
+        "    raise SystemExit(0)\n"
+        "raise SystemExit(subprocess.run([sys.executable, *sys.argv[1:]], check=False).returncode)\n"
+    )
+    python.chmod(0o700)
     environment = os.environ | {
         "CUSTOMER_ROOT": str(customer),
         "GITHUB_WORKSPACE": str(repository),
@@ -248,8 +266,9 @@ def test_independent_reviewer_runs_in_fresh_job_without_candidate_host_code() ->
     steps = independent["steps"]
     recipe = "\n".join(str(step.get("run", "")) for step in steps)
     assert "specfact-cli==0.55.4" in recipe
-    assert "--version 0.50.1" in recipe
-    assert "--source marketplace" in recipe
+    assert 'SPECFACT_REGISTRY_INDEX_URL="file://$TRUSTED_ROOT/index.json"' in recipe
+    assert "Frozen reviewer fixture checksum mismatch" in recipe
+    assert "--version 0.51.2 --source marketplace" in recipe
     assert "env -i" in recipe
     assert "pre_commit_code_review.py" not in recipe
     assert "link_dev_module.py" not in recipe
@@ -421,14 +440,18 @@ def test_trusted_bootstrap_cannot_import_candidate_venv_module(tmp_path: Path) -
             target=Path(sys.argv[-1])
             site=next((target/'lib').glob('python*/site-packages'))
             (site/'pip/__main__.py').write_text(
-                "import sys\\nassert sys.argv[1:]==['install','--no-cache-dir','specfact-cli==0.55.4']\\n"
+                "import sys\\nassert sys.argv[1:]==['install','--no-cache-dir','specfact-cli==0.55.4','typer==0.28.0']\\n"
             )
             core=site/'specfact_cli'
             core.mkdir()
             (core/'__init__.py').write_text('')
             (core/'cli.py').write_text(
-                "import sys\\nassert sys.argv[1:]==['module','install','nold-ai/specfact-code-review',"
-                "'--scope','user','--version','0.50.1','--source','marketplace']\\n"
+                "import json,os,sys\\n"
+                "from pathlib import Path\\n"
+                "index = Path(os.environ['SPECFACT_REGISTRY_INDEX_URL'].removeprefix('file://'))\\n"
+                "assert len(json.loads(index.read_bytes())['modules']) == 4\\n"
+                "assert sys.argv[1:]==['module','install','nold-ai/specfact-code-review',"
+                "'--scope','user','--version','0.51.2','--source','marketplace']\\n"
             )
             """)
     )
@@ -438,6 +461,9 @@ def test_trusted_bootstrap_cannot_import_candidate_venv_module(tmp_path: Path) -
     environment = os.environ | {
         "RUNNER_TEMP": str(runner_temp),
         "GITHUB_ENV": str(tmp_path / "job.env"),
+        "GITHUB_WORKSPACE": str(REPO_ROOT),
+        "CANDIDATE_BASE": _git(REPO_ROOT, "rev-parse", "HEAD"),
+        "CANDIDATE_HEAD": _git(REPO_ROOT, "rev-parse", "HEAD"),
         "PATH": str(launcher_dir) + os.pathsep + os.environ["PATH"],
     }
     result = subprocess.run(

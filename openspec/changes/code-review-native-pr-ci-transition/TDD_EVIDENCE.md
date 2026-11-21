@@ -127,3 +127,28 @@ Separately, quality 3.12 job134265754335 failed inside the exact consumed core0.
 The one-line argument correction passed nine selected cases on the exact current core0.55.12/Typer0.29.1/Click8.4.2 integration input and on legacy Typer0.27.0. The project docs/generator set passed 23 cases. Full generator --check passed with all three generated artifact hashes unchanged. Independent nonwriter review accepted the actual source diff and independently repeated current/project argument cases and both complete generator checks. Reviewed generator blob is b92d07e81fba0e5aaca5b685e9c5201c31255879.
 
 After this source correction, the full local command passed its 30-case host proof and 5,979 repository cases, retaining 77 platform/opt-in skips, five warnings and 95 passed subtests in 216.44 seconds. Fixture Git isolation remains test-only and real commit hooks remain unchanged. The hosted artifact for prior head4cd3a2e6 separately proves ten COMPLETE review members, 632 targeted cases with zero errors/failures/skips, and equal before/after source hashes. It is not acceptance for the new follow-up head. Hosted exact-head gates, core runtime remediation and signing configuration remain required.
+
+## 21 November 2026 integration and contracts repair
+
+The four conflicts against modules dev `2155370e` were resolved on the PR's
+`27ce5691` head. Runtime smoke retains its reviewed lock, checkout commit and
+tree checks, all six launchers and the isolated cache. The failure projection
+retains bounded direct and nested analyzer-side evidence. The command
+generator preserves default, explicit and empty argument labels.
+
+Hosted [independent review](https://github.com/nold-ai/specfact-cli-modules/actions/runs/44151392591/job/134280393684)
+reported incomplete contracts. Its receipt shows beartype rejecting the
+hyphenated module namespace while resolving postponed annotations. The new
+`test_contract_analyzer_can_import_command_overview` reproduced this failure.
+An actual CrossHair invocation then reproduced a separate exit 2 because the
+contracted argument parser received CrossHair's own arguments. The repair uses
+runtime annotations and keeps argument parsing and filesystem or module loading
+outside the analyzed checks. Inventory mismatch remains an expected error and
+the CLI behavior tests retain the generator's output contract.
+
+Local CrossHair completed with exit 0 using
+`crosshair check --per_path_timeout 10 scripts/generate-command-overview.py`.
+The required hosted review over the full PR has yet to run on the resolved tree.
+On a clean export, six unchanged manifests verified and Codebase 0.42.1 failed
+signature verification against the pinned replacement key. A clean dev
+baseline verified all seven manifests.

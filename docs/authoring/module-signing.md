@@ -141,9 +141,9 @@ python scripts/verify-modules-signature.py --require-signature --payload-from-fi
 
 `pr-orchestrator.yml` job **`verify-module-signatures`** always runs with `--payload-from-filesystem --enforce-version-bump`. It adds **`--require-signature` only when the pull request or push targets `main`**. For **`dev`** and feature work, the job still enforces checksums and version bumps so unsigned manifests can land on `dev`; signatures are expected by the time changes reach **`main`**.
 
-### Signing on approval (same-repo PRs)
+### Signature checks in CI
 
-Workflow **`sign-modules-on-approval.yml`** runs when a review is **submitted** and **approved** on a PR whose base is **`dev`** or **`main`**, and only when the PR head is in **this** repository (`head.repo` equals the base repo). It checks out **`github.event.pull_request.head.sha`** (the commit that was approved, not the moving branch tip), uses `SPECFACT_MODULE_PRIVATE_SIGN_KEY` and `SPECFACT_MODULE_PRIVATE_SIGN_KEY_PASSPHRASE` (each validated with a named error if missing), discovers changes against the **merge-base** with the base branch (not the moving base tip alone), runs `scripts/sign-modules.py --changed-only --bump-version patch --payload-from-filesystem`, and commits results **without** `[skip ci]` so PR checks and downstream workflows run on the signed head. If `git push` is rejected because the PR branch advanced after approval, the job fails with guidance to update the branch and re-approve. **Fork PRs** are skipped (the default `GITHUB_TOKEN` cannot push to a contributor fork).
+The `sign-modules.yml` workflow verifies manifests with the tracked replacement public key. PR reviews leave contributor branches untouched. On protected `main` pushes, **Assert signing reproducibility** uses the `module-signing` environment to reproduce V2 signatures and check frozen bundles against the cutoff. The job writes no signatures to the repository.
 
 ### Pre-commit
 

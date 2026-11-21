@@ -283,15 +283,18 @@ def test_runtime_smoke_preserves_launchers_and_isolates_dependencies():
     jobs = yaml.safe_load((ROOT / ".github/workflows/pr-orchestrator.yml").read_text())["jobs"]
     steps = jobs["quality"]["steps"]
     checkout = _step_named(steps, "Checkout reviewed runtime smoke fixture")
-    assert checkout["with"]["ref"] == "046d366c190af7a188d6f48953a96edb65e766db"
+    assert checkout["with"]["ref"] == "${{ steps.runtime-fixture.outputs.ref }}"
     assert checkout["with"]["persist-credentials"] is False
     smoke = _step_named(steps, "Runtime discovery smoke across package managers")
-    assert steps.index(checkout) < steps.index(smoke)
+    verify = _step_named(steps, "Verify reviewed runtime smoke fixture")
+    assert steps.index(checkout) < steps.index(verify) < steps.index(smoke)
+    assert "046d366c190af7a188d6f48953a96edb65e766db" in verify["run"]
+    assert "c5b44db3477d1c9ea8dae1dceab2af276d265353" in verify["run"]
     for launcher in ("direct", "hatch-source", "pip-editable", "pipx", "uv-run", "uvx"):
         assert "--launcher " + launcher in smoke["run"]
     assert 'python -m venv "$launchers"' in smoke["run"]
-    assert '"$launchers/bin/python" -m pip install uv' in smoke["run"]
-    assert '--modules-repo "$GITHUB_WORKSPACE/specfact-cli/runtime-smoke-modules"' in smoke["run"]
+    assert '"$launchers/bin/python" -m pip install pipx uv' in smoke["run"]
+    assert '--modules-repo "${GITHUB_WORKSPACE}/.specfact/runtime-smoke-modules"' in smoke["run"]
 
 
 def test_runtime_smoke_seeds_frozen_cache_before_offline_execution():

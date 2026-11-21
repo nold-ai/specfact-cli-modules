@@ -165,6 +165,34 @@ def apply_squash_change(root: Path, change: str) -> None:
         (root / LEGACY).chmod(0o755)
 
 
+def test_exact_reconciled_capsule_blobs_remain_frozen(tmp_path: Path) -> None:
+    capsule_paths = (
+        LEGACY,
+        ".github/workflows/native-capsule-release.yml",
+        "tests/unit/test_capsule_deferred_review_ci.py",
+        "tests/unit/test_capsule_review_projection.py",
+    )
+    checker = "scripts/check_native_review_scope.py"
+    for relative in (*capsule_paths, checker, "openspec/native-review-policy.json"):
+        target = tmp_path / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(ROOT / relative, target)
+    git(tmp_path, "init", "-q")
+    git(tmp_path, "add", ".")
+    command = [sys.executable, str(tmp_path / checker)]
+    accepted = subprocess.run(command, capture_output=True, text=True, check=False)
+    assert accepted.returncode == 0, accepted.stdout + accepted.stderr
+
+    for relative in capsule_paths:
+        target = tmp_path / relative
+        exact = target.read_bytes()
+        target.write_bytes(exact + b"\n# additional capsule change\n")
+        rejected = subprocess.run(command, capture_output=True, text=True, check=False)
+        assert rejected.returncode == 1, rejected.stdout + rejected.stderr
+        assert relative in rejected.stdout
+        target.write_bytes(exact)
+
+
 def test_native_scope_preserves_git_checkout_normalization(repository: Path) -> None:
     git(repository, "config", "core.autocrlf", "true")
     path = repository / LEGACY

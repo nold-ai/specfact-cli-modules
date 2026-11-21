@@ -1,8 +1,5 @@
 #!/usr/bin/env python3
-# ruff: noqa: N999
 """Generate deterministic module command overview artifacts for humans and AI agents."""
-
-from __future__ import annotations
 
 import argparse
 import difflib
@@ -17,7 +14,7 @@ from typing import Any, cast
 import click
 import yaml
 from beartype import beartype
-from icontract import ensure
+from icontract import ensure, require
 from packaging.version import InvalidVersion, Version
 from typer.core import TyperArgument, TyperOption
 from typer.main import get_command
@@ -157,7 +154,9 @@ def _official_registry_inventory() -> dict[str, dict[str, object]]:
     return inventory
 
 
+@ensure(lambda result: result is None)
 def _validate_matching_official_inventory_keys(manifests: Mapping[str, object], registry: Mapping[str, object]) -> None:
+    """:raises ValueError: The official manifest and registry package IDs differ."""
     if set(manifests) != set(registry):
         raise ValueError(
             "Official manifests and marketplace registry disagree: "
@@ -244,7 +243,6 @@ def _mount_inventory_findings(manifests: Mapping[str, Mapping[str, object]]) -> 
 
 
 @beartype
-@ensure(lambda result: result is None)
 def validate_official_mount_inventory() -> None:
     """Reject official package records that cannot appear in generated output."""
     manifests = _official_manifest_inventory()
@@ -268,7 +266,7 @@ def _command_options(command: click.Command) -> list[str]:
 
 
 def _argument_display_name(param: click.Argument | TyperArgument) -> str:
-    return param.metavar if param.metavar is not None else param.name.upper()
+    return param.metavar if param.metavar is not None else (param.name or "").upper()
 
 
 def _command_arguments(command: click.Command) -> list[dict[str, Any]]:
@@ -353,7 +351,6 @@ def _walk(command: click.Command, path: tuple[str, ...], source: str, module_id:
 
 
 @beartype
-@ensure(lambda result: all("command" in record for record in result))
 def build_records() -> list[dict[str, Any]]:
     _ensure_package_paths()
     validate_official_mount_inventory()
@@ -363,6 +360,12 @@ def build_records() -> list[dict[str, Any]]:
         app = getattr(module, attr_name)
         click_command = cast(click.Command, get_command(app))
         records.extend(_walk(click_command, prefix, f"{module_name}:{attr_name}", module_id))
+    return _sort_records(records)
+
+
+@require(lambda records: all(isinstance(record.get("command"), str) for record in records))
+@ensure(lambda result: all("command" in record for record in result))
+def _sort_records(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return sorted(records, key=lambda record: record["command"])
 
 
@@ -423,9 +426,9 @@ def _desired_outputs() -> dict[Path, str]:
     }
 
 
-def _check(outputs: dict[Path, str]) -> int:
+def _check() -> int:
     failures = []
-    for path, expected in outputs.items():
+    for path, expected in _desired_outputs().items():
         actual = path.read_text(encoding="utf-8") if path.exists() else ""
         if actual != expected:
             failures.append(path)
@@ -445,24 +448,26 @@ def _check(outputs: dict[Path, str]) -> int:
         sys.stdout.write(
             "Module command overview artifacts are stale. Run: python scripts/generate-command-overview.py --write\n"
         )
-        return 1
-    return 0
+    return _freshness_exit_code(bool(failures))
+
+
+@ensure(lambda result: result in {0, 1})
+def _freshness_exit_code(has_failures: bool) -> int:
+    return int(has_failures)
 
 
 @beartype
-@ensure(lambda result: result in {0, 1})
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--write", action="store_true", help="Write generated artifacts")
     parser.add_argument("--check", action="store_true", help="Check generated artifacts are current")
     args = parser.parse_args(argv)
-    outputs = _desired_outputs()
     if args.write:
-        for path, text in outputs.items():
+        for path, text in _desired_outputs().items():
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(text, encoding="utf-8")
         return 0
-    return _check(outputs)
+    return _check()
 
 
 if __name__ == "__main__":

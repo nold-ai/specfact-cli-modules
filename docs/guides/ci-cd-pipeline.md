@@ -57,7 +57,7 @@ Map the local commands to the pipeline stages this repository enforces:
 GitHub Actions also runs:
 
 - **`pr-orchestrator`**: `verify-module-signatures` uses `--require-signature` only when the event targets **`main`**.
-- **`sign-modules-on-approval`**: after an **approved** review on a PR to **`dev`** or **`main`**, signs changed `packages/*/module-package.yaml` using repository secrets and pushes a commit back to the PR branch (**same-repo PRs only**; fork heads cannot be updated with the default token).
+- **`sign-modules`**: verifies PR and push manifests with the tracked public key. The protected `main` reproducibility job uses V2 to check replacement signatures in memory. It verifies frozen bundles against the cutoff.
 
 ## 3. Add scoped workflow checks while developing
 

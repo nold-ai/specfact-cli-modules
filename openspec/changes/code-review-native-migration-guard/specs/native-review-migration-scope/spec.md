@@ -23,10 +23,14 @@ The repository SHALL reject additions or edits on classified legacy capsule surf
 - **WHEN** only native-owned code changes or a legacy file is deleted
 - **THEN** the scope check accepts that change without claiming runtime acceptance
 
-### Requirement: Fail closed on invalid migration policy
-The checker SHALL accept only the established trusted-local-native execution direction and the committed reviewed baseline manifest. The freeze revision SHALL remain audit metadata rather than a default runtime dependency. An invalid policy or unavailable explicitly requested historical revision SHALL fail with an actionable diagnostic.
+#### Scenario: Preserve the exact protected-dev reconciliation
+- **GIVEN** the maintainer approved the four exact capsule blobs reconciled from PR #524 and protected dev
+- **WHEN** the independent scope checker evaluates them
+- **THEN** it accepts those exact identities and rejects a later edit to any of the four files
+- **AND** the original freeze ref and legacy path classifications remain in force
 
-The policy SHALL be bound to the reviewed fingerprint in the checker. A policy-only change that alters its baseline or removes a classified surface SHALL fail rather than silently authorizing capsule work. This binding does not authenticate a candidate that also rewrites the checker and its fingerprint. Revision arguments SHALL resolve to commit identities before comparison and SHALL never be interpreted as Git options.
+### Requirement: Fail closed on invalid migration policy
+The checker SHALL enforce the trusted-local-native backend and the reviewed blob manifest. It SHALL bind policy to its reviewed fingerprint and reject changes to the baseline or classified paths. The freeze ref is audit metadata. Invalid policy or a requested historical ref that cannot resolve SHALL fail with an actionable diagnostic. The checker SHALL resolve revision arguments to commit IDs without treating them as Git options.
 
 #### Scenario: Reject policy weakening
 - **WHEN** an agent advances the freeze revision to include a repair or removes a classified path
