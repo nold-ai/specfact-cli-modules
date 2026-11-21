@@ -18,6 +18,8 @@ on:
       - "scripts/sign-modules.py"
       - "scripts/verify-modules-signature.py"
       - ".github/workflows/sign-modules.yml"
+      - ".github/workflows/module-signing-key-preflight.yml"
+      - "ci/codebase-0.42.1.signing-payload.txt"
       - ".github/workflows/sign-modules-on-approval.yml"
   pull_request:
     branches: [dev, main]
@@ -29,6 +31,8 @@ on:
       - "scripts/sign-modules.py"
       - "scripts/verify-modules-signature.py"
       - ".github/workflows/sign-modules.yml"
+      - ".github/workflows/module-signing-key-preflight.yml"
+      - "ci/codebase-0.42.1.signing-payload.txt"
       - ".github/workflows/sign-modules-on-approval.yml"
 
 permissions:

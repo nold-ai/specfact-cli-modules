@@ -1,0 +1,35 @@
+schema_version: '2'
+requirements:
+  openspec:sign-codebase-0-42-1:codebase-candidate-signature:sign-only-the-approved-codebase-candidate:
+    rationale: Bind the one-time signature to the reviewed Codebase payload and existing protected key.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#513
+    touchpoints:
+    - id: codebase-candidate-signature
+      kind: config_file
+      locator: openspec/changes/sign-codebase-0-42-1/specs/codebase-candidate-signature/spec.md
+    verification_cases:
+    - case_id: candidate-signature-protected-dispatch-and-exact-payload
+      scenario_id: sign-only-the-approved-codebase-candidate
+      method: test
+      intent: Verify the protected dev payload trigger and detached signature command.
+      observable: The reviewed payload has the exact checksum and the command emits a verifiable signature with a test key.
+      selector:
+        runner: pytest
+        node_id: tests/unit/workflows/test_codebase_candidate_signer.py::test_signing_job_requires_payload_push_to_protected_dev
+    - case_id: candidate-signature-test-key-execution
+      scenario_id: sign-only-the-approved-codebase-candidate
+      method: test
+      intent: Exercise the actual workflow shell using a locally generated Ed25519 key.
+      observable: Verification succeeds for the detached signature of the reviewed payload.
+      selector:
+        runner: pytest
+        node_id: tests/unit/workflows/test_codebase_candidate_signer.py::test_candidate_signing_command
+    - case_id: candidate-signature-mismatch
+      scenario_id: sign-only-the-approved-codebase-candidate
+      method: test
+      intent: Reject altered candidate bytes and unapproved keys before output.
+      observable: The signer command exits nonzero and emits no signature on mismatched inputs.
+      selector:
+        runner: pytest
+        node_id: tests/unit/workflows/test_codebase_candidate_signer.py::test_mismatch_prevents_signature_output

@@ -1,0 +1,5 @@
+- [x] Pin the maintainer-approved Codebase 0.42.1 payload and replacement key in the specification.
+- [x] Verify the workflow behavior with failing-first and passing tests using an ephemeral Ed25519 key.
+- [ ] Review and land the workflow on protected dev through the existing required checks.
+- [ ] Verify the payload-triggered run and obtain the maintainer's environment approval.
+- [ ] Verify the detached signature and pass it to PR #524. Retire the signing job and payload through a reviewed cleanup.
