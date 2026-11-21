@@ -31,6 +31,9 @@ def test_hosted_preparation_has_separate_bound_and_cannot_bypass_review() -> Non
     assert recipe.index("code review runtime prepare --scope index") < recipe.index("review_exit=0")
     assert 'SPECFACT_CODE_REVIEW_CAPSULE_CACHE="$CUSTOMER_ROOT/commit-review-cache"' in recipe
     assert "continue-on-error" not in step
+    assert "export SPECFACT_ALLOW_UNSIGNED=0" in recipe
+    assert "export SPECFACT_MODULE_PUBLIC_KEY_PEM=" in recipe
+    assert recipe.index("require_signature=True") < recipe.index("code review runtime prepare --scope index")
 
 
 def test_independent_reviewer_runs_in_fresh_job_without_candidate_host_code() -> None:
@@ -41,8 +44,9 @@ def test_independent_reviewer_runs_in_fresh_job_without_candidate_host_code() ->
     assert not independent.get("needs"), "Candidate execution cannot suppress the independent review job"
     recipe = "\n".join(str(step.get("run", "")) for step in independent["steps"])
     assert "specfact-cli==0.55.4" in recipe
-    assert "--version 0.51.2" in recipe
-    assert "--source marketplace" in recipe
+    assert 'SPECFACT_REGISTRY_INDEX_URL="file://$TRUSTED_ROOT/index.json"' in recipe
+    assert "Frozen reviewer fixture checksum mismatch" in recipe
+    assert "--version 0.51.2 --source marketplace" in recipe
     assert "env -i" in recipe
 
 
@@ -283,7 +287,7 @@ def _write_independent_failure_fixture(tmp_path, case):
     return path, log
 
 
-def _expected_review_projection(expected, case):
+def _expected_review_projection(expected):
     outcome, flags, codes = expected
     verdict = "FAIL" if outcome == "structured_report" else "UNAVAILABLE"
     keys = ("findings_present", "tool_error_present", "execution_error_present", "unknown_evidence_present")
@@ -299,11 +303,8 @@ def _expected_review_projection(expected, case):
     }
     if outcome == "oversized_report":
         projection["report_header_observed"] = False
+    if outcome in {"oversized_report", "structured_report"}:
         projection["error_analyzer_sides"] = {}
-        projection["crosshair_failure_observations"] = []
-    if outcome == "structured_report":
-        sides = {"nested": {"pylint": ["head"]}, "direct": {"pylint": ["unavailable"]}}
-        projection["error_analyzer_sides"] = sides.get(case, {})
         projection["crosshair_failure_observations"] = []
     return projection
 
@@ -335,7 +336,10 @@ def test_independent_review_failure_keeps_nested_evidence_and_private_tokens(tmp
     monkeypatch.setenv("REVIEW_LOG", str(log))
     result = _run_projector(tmp_path, program)
     assert result.returncode == 0
-    assert json.loads(result.stdout) == _expected_review_projection(expected, case)
+    projection = _expected_review_projection(expected)
+    if case == "nested":
+        projection["error_analyzer_sides"] = {"pylint": ["head"]}
+    assert json.loads(result.stdout) == projection
     assert "private-token" not in result.stdout + result.stderr
 
 
@@ -1104,9 +1108,9 @@ json.loads = _depth_failure
         ),
         ("[Errno 2] PRIVATE_PATH", "file_missing"),
         ("[Errno 13] PRIVATE_PATH", "permission_denied"),
-        ("PRIVATE project_pytest_execution_incomplete", "unclassified"),
-        ("project_pytest_execution_incomplete_PRIVATE", "unclassified"),
-        ("PRIVATE_UNKNOWN", "unclassified"),
+        ("PRIVATE project_pytest_execution_incomplete", None),
+        ("project_pytest_execution_incomplete_PRIVATE", None),
+        ("PRIVATE_UNKNOWN", None),
     ],
 )
 def test_public_pytest_failure_codes_withhold_private_payload(tmp_path: Path, job_name, message, code):

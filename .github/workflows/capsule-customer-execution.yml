@@ -62,7 +62,7 @@ jobs:
           echo "HOME=$CUSTOMER_ROOT/home" >> "$GITHUB_ENV"
           echo "TMPDIR=$CUSTOMER_ROOT/tmp" >> "$GITHUB_ENV"
           python -m venv "$CUSTOMER_ROOT/venv"
-          "$CUSTOMER_ROOT/venv/bin/pip" install --no-cache-dir specfact-cli==0.55.4
+          "$CUSTOMER_ROOT/venv/bin/pip" install --no-cache-dir specfact-cli==0.55.4 typer==0.28.0
           echo "$CUSTOMER_ROOT/venv/bin" >> "$GITHUB_PATH"
       - name: Install official signed module anonymously
         shell: bash
@@ -166,6 +166,23 @@ jobs:
           test "${#review_paths[@]}" -gt 0
           PROJECT_CONFIG="$CUSTOMER_ROOT/commit-review-project.toml"
           printf '%s\n' 'manager = "hatch"' 'environment = "default"' > "$PROJECT_CONFIG"
+          key_file="$GITHUB_WORKSPACE/ci/module-signing-public-next.pem"
+          key_sha="$(openssl pkey -pubin -in "$key_file" -outform DER | sha256sum | cut -d ' ' -f 1)"
+          test "$key_sha" = "68ebe68cd4394c5319b85fe5b021460f3bae411dbfad795782657d0fe005d053"
+          key_pem="$(cat "$key_file")"
+          export SPECFACT_MODULE_PUBLIC_KEY_PEM="$key_pem"
+          export SPECFACT_ALLOW_UNSIGNED=0
+          "$CUSTOMER_ROOT/venv/bin/python" -I - "$GITHUB_WORKSPACE/packages/specfact-code-review" <<'PY_CONTROLLER'
+          from pathlib import Path
+          import sys
+          import yaml
+          from specfact_cli.registry.module_installer import ModulePackageMetadata, verify_module_artifact
+
+          package = Path(sys.argv[1])
+          manifest = ModulePackageMetadata.model_validate(yaml.safe_load((package / "module-package.yaml").read_bytes()))
+          if not verify_module_artifact(package, manifest, require_integrity=True, require_signature=True):
+              raise SystemExit("Code Review source controller failed replacement-key verification")
+          PY_CONTROLLER
           # Provisioning is separate from the unchanged 300-second analysis budget.
           # Prepare the same bound base/index snapshots; customer cold cache stays empty.
           preparation_exit=0
@@ -177,7 +194,11 @@ jobs:
             "$CUSTOMER_ROOT/venv/bin/python" -I -c \
               'import subprocess,sys; sys.exit(subprocess.run(sys.argv[1:],timeout=1800,check=False).returncode)' \
               "$CUSTOMER_ROOT/venv/bin/python" -B -P -c \
-              'import sys; from specfact_cli.cli import app; app(args=sys.argv[1:])' \
+              'import sys
+          from specfact_cli.utils.prompts import console
+          console.file = sys.stderr
+          from specfact_cli.cli import app
+          app(args=sys.argv[1:])' \
               code review runtime prepare --scope index --project-config "$PROJECT_CONFIG" --json \
               > "$CUSTOMER_ROOT/commit-review-preparation.private.json" || preparation_exit=$?
           if PREPARATION_COMMAND_SUCCEEDED="$([ "$preparation_exit" -eq 0 ] && echo 1 || echo 0)" \
@@ -330,13 +351,6 @@ jobs:
                   detail = test_failure_details.get((nodeid, outcome, phase), "")
                   exception = re.search(r"^E\s+(?:subprocess\.)?(AssertionError|FileNotFoundError|PermissionError|CalledProcessError|RuntimeError|ImportError|ModuleNotFoundError|TypeError|ValueError)(?=:|\s|$)", detail, re.MULTILINE)
                   failure = {"test_failure_class": exception.group(1)} if exception else {}
-                  native_skips = {
-                      "Set SPECFACT_HATCH_PROOF_WORKSPACE with native Hatch and Python 3.11 prerequisites for the acceptance cell",
-                      "Native Hatch and project Python are required for customer storage acceptance",
-                      "Native Hatch and project Python are required for absolute declaration acceptance",
-                  }
-                  if outcome == "skipped" and detail in native_skips:
-                      failure["test_diagnostic"] = "native_prerequisites_not_supplied"
                   for option in ("-I", "-E", "-S"):
                       if "project_python_option_unsupported:" + option + ";" in detail:
                           failure.update(test_diagnostic="project_python_option_unsupported", python_option=option)
@@ -389,8 +403,6 @@ jobs:
                   ):
                       location = {"file": file, "line": line, "severity": severity}
                       public_values = {
-                          "differential_state": {"introduced", "fixed", "unchanged", "unknown"},
-                          "status": {"open", "fixed", "waived-by-reference"},
                           "category": {"clean_code", "security", "type_safety", "contracts", "testing", "style", "architecture", "tool_error", "naming", "kiss", "yagni", "dry", "solid", "ai_bloat"},
                           "tool": {"ruff", "radon", "radon-kiss", "semgrep", "ast", "basedpyright", "pylint", "contract_runner", "crosshair", "pytest"},
                           "rule": {"tool_error", "TEST_OUTCOME_NOT_PASS", "TEST_COVERAGE_POLICY_FAILED", "MISSING_ICONTRACT", "CROSSHAIR_COUNTEREXAMPLE", "CROSSHAIR_INCOMPLETE_EVIDENCE", "kiss.loc.error", "kiss.loc.warning", "kiss.nesting.error", "kiss.nesting.warning", "kiss.parameter-count.error", "kiss.parameter-count.warning", *(f"CC{number}" for number in range(1, 1001))},
@@ -399,8 +411,6 @@ jobs:
                           value = finding.get(key)
                           if isinstance(value, str) and value in allowed:
                               location[key] = value
-                      if type(finding.get("blocking")) is bool:
-                          location["blocking"] = finding["blocking"]
                       if location.get("tool") == "pytest" and location.get("rule") == "TEST_OUTCOME_NOT_PASS":
                           location.update(_public_test_observation(finding, file))
                       if location.get("category") == "tool_error":
@@ -412,21 +422,7 @@ jobs:
                               ("semgrep returned empty stdout", "empty_output"),
                               ("unrecognized crosshair output", "unrecognized_output"),
                           )
-                          if location.get("tool") == "pytest":
-                              location["diagnostic_code"] = "unclassified"
                           if isinstance(message, str) and location.get("tool") == "pytest":
-                              diagnostic_message = message
-                              producer_prefixes = {
-                                  "Unable to execute targeted tests: ": "pytest_execute_error",
-                                  "Unable to read targeted pytest evidence: ": "pytest_evidence_read_error",
-                              }
-                              for prefix, failure_class in producer_prefixes.items():
-                                  if message.startswith(prefix):
-                                      location["failure_class"] = failure_class
-                                      diagnostic_message = message[len(prefix):]
-                                      break
-                              if message == "Targeted pytest observer, JUnit, and process outcomes could not be reconciled.":
-                                  location["failure_class"] = "pytest_outcome_reconciliation_failed"
                               pytest_codes = {
                                   "project_pytest_request_invalid", "project_pytest_configuration_or_collection_failed",
                                   "project_pytest_collection_error", "project_pytest_root_missing_or_invalid",
@@ -443,14 +439,14 @@ jobs:
                                   "project_pytest_installed_coverage_unavailable", "project_pytest_installed_coverage",
                                   "project_pytest_failure_without_observed_test", "project_pytest_internal_error",
                               }
-                              prefix = diagnostic_message.split(":", 1)[0].split(";", 1)[0]
+                              prefix = message.split(":", 1)[0].split(";", 1)[0]
                               if prefix in pytest_codes:
                                   location["diagnostic_code"] = prefix
-                              elif diagnostic_message.startswith("[Errno 2] "):
+                              elif message.startswith("[Errno 2] "):
                                   location["diagnostic_code"] = "file_missing"
-                              elif diagnostic_message.startswith("[Errno 13] "):
+                              elif message.startswith("[Errno 13] "):
                                   location["diagnostic_code"] = "permission_denied"
-                          if isinstance(message, str) and "failure_class" not in location:
+                          if isinstance(message, str):
                               for marker, classification in classes:
                                   if marker in message.lower():
                                       location["failure_class"] = classification
@@ -500,8 +496,6 @@ jobs:
                       continue
                   incomplete_sides = [side for side in ("base", "head")
                       if isinstance(row.get(side), dict) and (row[side].get("execution_state") == "error" or row[side].get("evidence_outcome") == "UNKNOWN")]
-                  if not incomplete_sides and (row.get("execution_state") == "error" or row.get("evidence_outcome") == "UNKNOWN"):
-                      incomplete_sides = ["unavailable"]
                   if incomplete_sides:
                       print(json.dumps({"analyzer": row["id"], "incomplete_snapshot_sides": incomplete_sides}))
                   tokens = str(row.get("diagnostic", "")).split(":")[:3]
@@ -682,9 +676,39 @@ jobs:
           echo "TRUSTED_ROOT=$TRUSTED_ROOT" >> "$GITHUB_ENV"
           cd "$TRUSTED_ROOT"
           python -I -m venv "$TRUSTED_ROOT/venv"
-          "$TRUSTED_ROOT/venv/bin/python" -I -m pip install --no-cache-dir specfact-cli==0.55.4
+          "$TRUSTED_ROOT/venv/bin/python" -I -m pip install --no-cache-dir specfact-cli==0.55.4 typer==0.28.0
+          "$TRUSTED_ROOT/venv/bin/python" -I - "$GITHUB_WORKSPACE" "$CANDIDATE_BASE" "$TRUSTED_ROOT" <<'PY_FIXTURE'
+          import hashlib
+          import json
+          import subprocess
+          import sys
+          from pathlib import Path
+
+          repository, base, root = sys.argv[1:]
+          pinned_archives = (
+              ("specfact-code-review", "0.51.2", "dca4ffc795c54835d437f005c50613b5b42cb401d6937261b4508a92c5fd67b7"),
+              ("specfact-codebase", "0.41.16", "8cb2e0624889a180f4057698c094fc400b46879805a4d8934285fd007bebe44e"),
+              ("specfact-project", "0.41.27", "b434d4aa8f540516258b4fa8a5e51e6c34e7be7caeb5c265fa26d0f4a9658592"),
+              ("specfact-requirements", "0.5.1", "2325fb2187801bef536b294453763de57e2e66a73a4162a8bfda461f195e4449"),
+          )
+          modules = []
+          for name, version, digest in pinned_archives:
+              filename = f"{name}-{version}.tar.gz"
+              archive = subprocess.check_output(
+                  ["git", "-C", repository, "show", f"{base}:registry/modules/{filename}"]
+              )
+              if hashlib.sha256(archive).hexdigest() != digest:
+                  raise SystemExit(f"Frozen reviewer fixture checksum mismatch: {name}")
+              (Path(root) / filename).write_bytes(archive)
+              modules.append({
+                  "id": f"nold-ai/{name}", "latest_version": version,
+                  "download_url": filename, "checksum_sha256": digest,
+              })
+          (Path(root) / "index.json").write_text(json.dumps({"modules": modules}), encoding="utf-8")
+          PY_FIXTURE
           env -i HOME="$TRUSTED_ROOT/home" TMPDIR="$TRUSTED_ROOT/tmp" \
-            PATH="$TRUSTED_ROOT/venv/bin:/usr/bin:/bin" SPECFACT_MODULES_BRANCH=main \
+            PATH="$TRUSTED_ROOT/venv/bin:/usr/bin:/bin" \
+            SPECFACT_REGISTRY_INDEX_URL="file://$TRUSTED_ROOT/index.json" \
             "$TRUSTED_ROOT/venv/bin/python" -I -m specfact_cli.cli \
             module install nold-ai/specfact-code-review --scope user --version 0.51.2 --source marketplace
       - name: Capture immutable candidate subject without executing its host code
@@ -921,13 +945,6 @@ jobs:
                   detail = test_failure_details.get((nodeid, outcome, phase), "")
                   exception = re.search(r"^E\s+(?:subprocess\.)?(AssertionError|FileNotFoundError|PermissionError|CalledProcessError|RuntimeError|ImportError|ModuleNotFoundError|TypeError|ValueError)(?=:|\s|$)", detail, re.MULTILINE)
                   failure = {"test_failure_class": exception.group(1)} if exception else {}
-                  native_skips = {
-                      "Set SPECFACT_HATCH_PROOF_WORKSPACE with native Hatch and Python 3.11 prerequisites for the acceptance cell",
-                      "Native Hatch and project Python are required for customer storage acceptance",
-                      "Native Hatch and project Python are required for absolute declaration acceptance",
-                  }
-                  if outcome == "skipped" and detail in native_skips:
-                      failure["test_diagnostic"] = "native_prerequisites_not_supplied"
                   for option in ("-I", "-E", "-S"):
                       if "project_python_option_unsupported:" + option + ";" in detail:
                           failure.update(test_diagnostic="project_python_option_unsupported", python_option=option)
@@ -980,8 +997,6 @@ jobs:
                   ):
                       location = {"file": file, "line": line, "severity": severity}
                       public_values = {
-                          "differential_state": {"introduced", "fixed", "unchanged", "unknown"},
-                          "status": {"open", "fixed", "waived-by-reference"},
                           "category": {"clean_code", "security", "type_safety", "contracts", "testing", "style", "architecture", "tool_error", "naming", "kiss", "yagni", "dry", "solid", "ai_bloat"},
                           "tool": {"ruff", "radon", "radon-kiss", "semgrep", "ast", "basedpyright", "pylint", "contract_runner", "crosshair", "pytest"},
                           "rule": {"tool_error", "TEST_OUTCOME_NOT_PASS", "TEST_COVERAGE_POLICY_FAILED", "MISSING_ICONTRACT", "CROSSHAIR_COUNTEREXAMPLE", "CROSSHAIR_INCOMPLETE_EVIDENCE", "kiss.loc.error", "kiss.loc.warning", "kiss.nesting.error", "kiss.nesting.warning", "kiss.parameter-count.error", "kiss.parameter-count.warning", *(f"CC{number}" for number in range(1, 1001))},
@@ -990,8 +1005,6 @@ jobs:
                           value = finding.get(key)
                           if isinstance(value, str) and value in allowed:
                               location[key] = value
-                      if type(finding.get("blocking")) is bool:
-                          location["blocking"] = finding["blocking"]
                       if location.get("tool") == "pytest" and location.get("rule") == "TEST_OUTCOME_NOT_PASS":
                           location.update(_public_test_observation(finding, file))
                       if location.get("category") == "tool_error":
@@ -1003,21 +1016,7 @@ jobs:
                               ("semgrep returned empty stdout", "empty_output"),
                               ("unrecognized crosshair output", "unrecognized_output"),
                           )
-                          if location.get("tool") == "pytest":
-                              location["diagnostic_code"] = "unclassified"
                           if isinstance(message, str) and location.get("tool") == "pytest":
-                              diagnostic_message = message
-                              producer_prefixes = {
-                                  "Unable to execute targeted tests: ": "pytest_execute_error",
-                                  "Unable to read targeted pytest evidence: ": "pytest_evidence_read_error",
-                              }
-                              for prefix, failure_class in producer_prefixes.items():
-                                  if message.startswith(prefix):
-                                      location["failure_class"] = failure_class
-                                      diagnostic_message = message[len(prefix):]
-                                      break
-                              if message == "Targeted pytest observer, JUnit, and process outcomes could not be reconciled.":
-                                  location["failure_class"] = "pytest_outcome_reconciliation_failed"
                               pytest_codes = {
                                   "project_pytest_request_invalid", "project_pytest_configuration_or_collection_failed",
                                   "project_pytest_collection_error", "project_pytest_root_missing_or_invalid",
@@ -1034,14 +1033,14 @@ jobs:
                                   "project_pytest_installed_coverage_unavailable", "project_pytest_installed_coverage",
                                   "project_pytest_failure_without_observed_test", "project_pytest_internal_error",
                               }
-                              prefix = diagnostic_message.split(":", 1)[0].split(";", 1)[0]
+                              prefix = message.split(":", 1)[0].split(";", 1)[0]
                               if prefix in pytest_codes:
                                   location["diagnostic_code"] = prefix
-                              elif diagnostic_message.startswith("[Errno 2] "):
+                              elif message.startswith("[Errno 2] "):
                                   location["diagnostic_code"] = "file_missing"
-                              elif diagnostic_message.startswith("[Errno 13] "):
+                              elif message.startswith("[Errno 13] "):
                                   location["diagnostic_code"] = "permission_denied"
-                          if isinstance(message, str) and "failure_class" not in location:
+                          if isinstance(message, str):
                               for marker, classification in classes:
                                   if marker in message.lower():
                                       location["failure_class"] = classification
@@ -1114,8 +1113,6 @@ jobs:
                       node = row.get(side)
                       if isinstance(node, dict) and (node.get("execution_state") == "error" or node.get("evidence_outcome") == "UNKNOWN"):
                           observed.setdefault(name, set()).add(side)
-                  if name not in observed and (row.get("execution_state") == "error" or row.get("evidence_outcome") == "UNKNOWN"):
-                      observed[name] = {"unavailable"}
               return {name: sorted(sides) for name, sides in sorted(observed.items())}
 
           report, header = {}, {}
@@ -1179,6 +1176,7 @@ jobs:
               projected["report_header_observed"] = bool(header)
           if outcome in ("structured_report", "oversized_report"):
               projected["error_analyzer_sides"] = incomplete_sides(members)
-              projected["crosshair_failure_observations"] = crosshair_failure_observations(evidence_source.get("findings", []))
+              projected["crosshair_failure_observations"] = crosshair_failure_observations(
+                  header.get("findings", []) if outcome == "oversized_report" else findings)
           print(json.dumps(projected))
           PY_REVIEW_FAILURE
