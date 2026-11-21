@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# ruff: noqa: N999
 """Verify bundled module checksums/signatures against full module payload."""
 
 from __future__ import annotations
@@ -7,6 +6,7 @@ from __future__ import annotations
 import argparse
 import base64
 import hashlib
+import json
 import os
 import subprocess
 import sys
@@ -26,14 +26,14 @@ if TYPE_CHECKING:
 else:
     try:
         from beartype import beartype
-    except ImportError:  # pragma: no cover - exercised in plain-python CI/runtime
+    except ImportError:
 
         def beartype(func: _FuncT) -> _FuncT:
             return func
 
     try:
         from icontract import ensure, require
-    except ImportError:  # pragma: no cover - exercised in plain-python CI/runtime
+    except ImportError:
 
         def require(
             _condition: Callable[..., bool],
@@ -59,7 +59,7 @@ try:
     from cryptography.exceptions import InvalidSignature
     from cryptography.hazmat.primitives import hashes, serialization
     from cryptography.hazmat.primitives.asymmetric import ed25519, padding, rsa
-except ImportError:  # pragma: no cover - exercised through runtime error path
+except ImportError:
     InvalidSignature = None
     hashes = None
     serialization = None
@@ -72,6 +72,8 @@ _IGNORED_MODULE_DIR_NAMES = {"__pycache__", ".pytest_cache", ".mypy_cache", ".ru
 _PAYLOAD_FROM_FS_IGNORED_DIRS = _IGNORED_MODULE_DIR_NAMES | {".git", "tests"}
 _IGNORED_MODULE_FILE_SUFFIXES = {".pyc", ".pyo"}
 _MANIFEST_NAMES = {"module-package.yaml", "metadata.yaml"}
+_REPLACEMENT_PUBLIC_KEY = Path(__file__).resolve().parents[1] / "ci" / "module-signing-public-next.pem"
+_REPLACEMENT_PUBLIC_KEY_SHA256 = "68ebe68cd4394c5319b85fe5b021460f3bae411dbfad795782657d0fe005d053"
 
 
 def _emit_line(message: str, *, error: bool = False) -> None:
@@ -220,6 +222,11 @@ def _verify_signature(payload: bytes, signature_b64: str, public_key_pem: str) -
     )
 
     public_key = crypto_serialization.load_pem_public_key(public_key_pem.encode("utf-8"))
+    public_der = public_key.public_bytes(
+        crypto_serialization.Encoding.DER, crypto_serialization.PublicFormat.SubjectPublicKeyInfo
+    )
+    if hashlib.sha256(public_der).hexdigest() == "98295305a48a4ab7801d537f1caa65ce8014ef75fab67d7473a59e5f2964d35a":
+        raise ValueError("The previous SpecFact module signing key is revoked")
     signature = base64.b64decode(signature_b64, validate=True)
 
     try:
@@ -237,6 +244,8 @@ def _verify_signature(payload: bytes, signature_b64: str, public_key_pem: str) -
 def _resolve_public_key(args: argparse.Namespace) -> str:
     if args.public_key_file:
         return Path(args.public_key_file).read_text(encoding="utf-8").strip()
+    if _REPLACEMENT_PUBLIC_KEY.is_file() and not args.public_key_pem:
+        return _REPLACEMENT_PUBLIC_KEY.read_text(encoding="utf-8").strip()
     env_key_file = os.environ.get("SPECFACT_MODULE_PUBLIC_SIGN_KEY_FILE", "").strip()
     if not env_key_file:
         env_key_file = os.environ.get("SPECFACT_MODULE_SIGNING_PUBLIC_KEY_FILE", "").strip()
@@ -349,7 +358,78 @@ def _changed_manifests_from_git(base_ref: str) -> list[Path]:
     return manifests
 
 
-def _verify_version_bumps(base_ref: str) -> list[str]:
+def _signature_only_blobs(manifest: Path, base_ref: str) -> tuple[bytes, bytes]:
+    """Read the exact before and after blobs for one regular manifest change."""
+    change = subprocess.check_output(
+        [
+            "git",
+            "diff",
+            "--raw",
+            "--no-renames",
+            "--no-abbrev",
+            "-z",
+            f"{base_ref}...HEAD",
+            "--",
+            manifest.parent.as_posix(),
+        ]
+    )
+    row, path, end = change.split(b"\0")
+    before_mode, after_mode, before_blob, after_blob, status = row.removeprefix(b":").split()
+    if (
+        path != os.fsencode(manifest.as_posix())
+        or end
+        or status != b"M"
+        or before_mode != after_mode
+        or before_mode not in (b"100644", b"100755")
+    ):
+        raise ValueError("Bundle diff is not a regular manifest-only change")
+    before = subprocess.check_output(["git", "cat-file", "blob", before_blob.decode("ascii")])
+    after = subprocess.check_output(["git", "cat-file", "blob", after_blob.decode("ascii")])
+    return before, after
+
+
+def _replacement_signature_data(before: bytes, after: bytes) -> dict[str, Any] | None:
+    old_data, new_data = yaml.safe_load(before), yaml.safe_load(after)
+    old_signature = old_data["integrity"]["signature"]
+    new_signature = new_data["integrity"]["signature"]
+    if not isinstance(old_signature, str) or not isinstance(new_signature, str):
+        return None
+    old_bytes, new_bytes = old_signature.encode("ascii"), new_signature.encode("ascii")
+    if not old_bytes or not new_bytes or old_bytes == new_bytes or before.count(old_bytes) != 1:
+        return None
+    old_data["integrity"]["signature"] = new_signature
+    if before.replace(old_bytes, new_bytes, 1) != after or old_data != new_data:
+        return None
+    return cast(dict[str, Any], new_data)
+
+
+def _is_authenticated_signature_rotation(manifest: Path, base_ref: str) -> bool:
+    """Verify a replacement signature over a byte-identical source package."""
+    try:
+        before, after = _signature_only_blobs(manifest, base_ref)
+        if manifest.is_symlink() or manifest.read_bytes() != after:
+            return False
+        new_data = _replacement_signature_data(before, after)
+        if new_data is None:
+            return False
+        if _matches_published_cutoff(manifest, new_data):
+            return False
+
+        pem = _REPLACEMENT_PUBLIC_KEY.read_text(encoding="utf-8")
+        _, _, crypto_serialization, _, _, _ = _cryptography_backend()
+        key = crypto_serialization.load_pem_public_key(pem.encode("utf-8"))
+        key_der = key.public_bytes(
+            crypto_serialization.Encoding.DER, crypto_serialization.PublicFormat.SubjectPublicKeyInfo
+        )
+        if hashlib.sha256(key_der).hexdigest() != _REPLACEMENT_PUBLIC_KEY_SHA256:
+            return False
+        verify_manifest(manifest, require_signature=True, public_key_pem=pem, payload_from_filesystem=True)
+    except (OSError, ValueError, TypeError, KeyError, yaml.YAMLError, subprocess.CalledProcessError):
+        return False
+    return True
+
+
+def _verify_version_bumps(base_ref: str, *, allow_signature_rotation: bool = True) -> list[str]:
     failures: list[str] = []
     for manifest in _changed_manifests_from_git(base_ref):
         current_version = _read_manifest_version(manifest)
@@ -357,10 +437,36 @@ def _verify_version_bumps(base_ref: str) -> list[str]:
         if not current_version or not previous_version:
             continue
         if current_version == previous_version:
+            if allow_signature_rotation and _is_authenticated_signature_rotation(manifest, base_ref):
+                continue
             failures.append(
                 f"FAIL {manifest}: module version was not incremented (still {current_version}) compared to {base_ref}"
             )
     return failures
+
+
+def _matches_published_cutoff(manifest_path: Path, raw: dict[str, Any]) -> bool:
+    inventory_path = Path(__file__).resolve().parents[1] / "ci" / "official-module-release-cutoff.json"
+    if not inventory_path.is_file():
+        return False
+    inventory = json.loads(inventory_path.read_text(encoding="utf-8"))
+    versions = inventory["archives"].get(str(raw.get("name")), {})
+    expected = versions.get(str(raw.get("version")))
+    if expected is None:
+        return False
+    root = manifest_path.parent
+    entries: dict[str, str] = {}
+    if root.is_symlink():
+        raise ValueError("Release module root must not be a symlink")
+    for path in root.rglob("*"):
+        if path.is_symlink():
+            raise ValueError("Release module tree must not contain symlinks")
+        if path.is_file():
+            entries[path.relative_to(root).as_posix()] = hashlib.sha256(path.read_bytes()).hexdigest()
+    digest = hashlib.sha256("\n".join(f"{name}:{entries[name]}" for name in sorted(entries)).encode()).hexdigest()
+    if digest != expected["tree"]:
+        raise ValueError("Published module files do not match the approved release cutoff")
+    return True
 
 
 @beartype
@@ -377,6 +483,8 @@ def verify_manifest(
     raw = yaml.safe_load(manifest_path.read_text(encoding="utf-8"))
     if not isinstance(raw, dict):
         raise ValueError("manifest YAML must be object")
+    if _matches_published_cutoff(manifest_path, raw):
+        return "filesystem"
     integrity = raw.get("integrity")
     if not isinstance(integrity, dict):
         raise ValueError("missing integrity metadata")
@@ -521,7 +629,7 @@ def _version_bump_failures_for_cli(args: argparse.Namespace) -> list[str]:
         return []
     base_ref = _resolve_version_check_base(args.version_check_base)
     try:
-        return _verify_version_bumps(base_ref)
+        return _verify_version_bumps(base_ref, allow_signature_rotation=not args.metadata_only)
     except ValueError as exc:
         return [f"FAIL version-check: {exc}"]
 

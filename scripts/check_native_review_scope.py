@@ -14,7 +14,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-POLICY_SHA256 = "1d9696307907e1af6985ae5e41a4a453a1e5ce9bcd6662b5855d795893ba8cef"
+POLICY_SHA256 = "69dd6333264b2413643b86405bed17792850967c73d34a13cf5f60c2117722c4"
 
 
 def read_policy(root: Path) -> tuple[str, tuple[str, ...], dict[str, list[str]]]:

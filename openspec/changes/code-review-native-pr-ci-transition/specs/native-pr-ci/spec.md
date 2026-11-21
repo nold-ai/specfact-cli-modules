@@ -96,3 +96,7 @@ Command-overview validation SHALL render positional argument labels for supporte
 #### Scenario: Explicit argument label remains authoritative
 - **WHEN** an argument declares an explicit metavar
 - **THEN** generation preserves that label for both Click and Typer argument objects
+
+#### Scenario: Independent analyzer imports the command overview generator
+- **WHEN** the contracts analyzer imports the hyphenated command-overview script by its source path
+- **THEN** the generator's runtime contracts load without an annotation-resolution error and the analyzer inspects generation and freshness without passing its own arguments to the generator's CLI

@@ -1,0 +1,179 @@
+schema_version: '2'
+requirements:
+  openspec:verify-signature-only-module-rotation:ci-integration:pr-orchestrator-skips-signature-requirement-for-dev-targeting-events:
+    rationale: Both target branches retain their public integrity checks.
+    stakeholder_refs: [docs/guides/ci-cd-pipeline.md]
+    touchpoints:
+      - id: public-signature-check
+        kind: workflow
+        locator: .github/workflows/sign-modules.yml
+    verification_cases:
+      - case_id: SIGNING-VERIFY-BRANCHES
+        scenario_id: pr-orchestrator-skips-signature-requirement-for-dev-targeting-events
+        method: test
+        selector:
+          runner: pytest
+          node_id: tests/unit/workflows/test_sign_modules_hardening.py::test_verification_triggers_on_push_pr_and_dispatch
+        intent: Keep the public verification triggers for both dev and main.
+        observable: Push and pull request checks cover changes to packages, keys, the registry, and the cutoff.
+  openspec:verify-signature-only-module-rotation:ci-module-signing-on-approval:sign-packages-manifests-on-pr-approval:
+    rationale: PR approval cannot write production signatures outside the protected environment.
+    stakeholder_refs: [docs/authoring/module-signing.md]
+    touchpoints:
+      - id: read-only-signing-verification
+        kind: workflow
+        locator: .github/workflows/sign-modules.yml
+    verification_cases:
+      - case_id: SIGNING-APPROVAL-READ-ONLY
+        scenario_id: sign-packages-manifests-on-pr-approval
+        method: test
+        selector:
+          runner: pytest
+          node_id: tests/unit/workflows/test_sign_modules_hardening.py::test_pr_approval_cannot_write_signatures
+        intent: Retire the workflow that writes signatures on PR approval.
+        observable: No approval-triggered signer is configured.
+  openspec:verify-signature-only-module-rotation:ci-module-signing-on-approval:manifest-discovery-covers-packages-directory:
+    rationale: Protected reproducibility checks exact frozen package trees.
+    stakeholder_refs: [docs/authoring/module-signing.md]
+    touchpoints:
+      - id: package-reproducibility
+        kind: workflow
+        locator: .github/workflows/sign-modules.yml
+    verification_cases:
+      - case_id: SIGNING-PACKAGE-CUTOFF
+        scenario_id: manifest-discovery-covers-packages-directory
+        method: test
+        selector:
+          runner: pytest
+          node_id: tests/unit/workflows/test_sign_modules_hardening.py::test_reproducibility_step_checks_cutoff_and_replacement[changed-frozen-tree]
+        intent: Detect a change to a frozen package without editing its manifest.
+        observable: The protected job rejects a changed frozen tree under packages.
+  openspec:verify-signature-only-module-rotation:resource-aware-integrity:separate-public-verification-from-replacement-signing:
+    rationale: Manifest verification runs without a private key, and signature reproducibility uses protected V2 signing.
+    stakeholder_refs: [docs/authoring/module-signing.md]
+    touchpoints:
+      - id: module-signing-workflow
+        kind: workflow
+        locator: .github/workflows/sign-modules.yml
+    verification_cases:
+      - case_id: SIGNING-PUBLIC-VERIFICATION
+        scenario_id: separate-public-verification-from-replacement-signing
+        method: test
+        selector:
+          runner: pytest
+          node_id: tests/unit/workflows/test_sign_modules_hardening.py::test_verification_cannot_sign_or_write_to_github
+        intent: Keep push and PR checks at read-only permissions with the public key.
+        observable: The verification job checks signatures and versions without signing or pushing.
+      - case_id: SIGNING-PROTECTED-REPRODUCIBILITY
+        scenario_id: separate-public-verification-from-replacement-signing
+        method: test
+        selector:
+          runner: pytest
+          node_id: tests/unit/workflows/test_sign_modules_hardening.py::test_only_protected_main_reproducibility_can_use_signing_secrets
+        intent: Allow V2 secrets in the protected main reproducibility job.
+        observable: The only key-consuming job requires a protected main push and the module-signing environment.
+      - case_id: SIGNING-FROZEN-TREE
+        scenario_id: separate-public-verification-from-replacement-signing
+        method: test
+        selector:
+          runner: pytest
+          node_id: tests/unit/workflows/test_sign_modules_hardening.py::test_reproducibility_step_checks_cutoff_and_replacement[valid]
+        intent: Reproduce an eligible replacement signature without writing either manifest.
+        observable: Both the frozen tree and replacement signature pass verification and remain byte-identical.
+  ? openspec:verify-signature-only-module-rotation:resource-aware-integrity:authenticate-signature-only-source-manifest-rotation
+  : rationale: A verified replacement signature can update the source manifest while package content and version stay fixed.
+    stakeholder_refs:
+    - docs/agent-rules/50-quality-gates-and-review.md
+    touchpoints:
+    - id: module-version-verifier
+      kind: script
+      locator: scripts/verify-modules-signature.py
+    verification_cases:
+    - case_id: SIGNATURE-ROTATION-SIGNATURE-ONLY
+      scenario_id: authenticate-signature-only-source-manifest-rotation
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_verify_modules_signature_script.py::test_verify_version_bump_accepts_only_authenticated_signature_rotation[signature-only]
+      intent: The full version check reports no failure for the signature-only commit.
+      observable: The full version check reports no failure for the signature-only commit.
+    - case_id: SIGNATURE-ROTATION-WRONG-KEY
+      scenario_id: authenticate-signature-only-source-manifest-rotation
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_verify_modules_signature_script.py::test_verify_version_bump_accepts_only_authenticated_signature_rotation[wrong-key]
+      intent: A valid signature from an unrelated key does not exempt the unchanged version.
+      observable: A valid signature from an unrelated key does not exempt the unchanged version.
+    - case_id: SIGNATURE-ROTATION-SUBSTITUTED-KEY
+      scenario_id: authenticate-signature-only-source-manifest-rotation
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_verify_modules_signature_script.py::test_verify_version_bump_accepts_only_authenticated_signature_rotation[substituted-key]
+      intent: Substituting the PEM does not exempt the unchanged version.
+      observable: Substituting the PEM does not exempt the unchanged version.
+    - case_id: SIGNATURE-ROTATION-CHECKSUM
+      scenario_id: authenticate-signature-only-source-manifest-rotation
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_verify_modules_signature_script.py::test_verify_version_bump_accepts_only_authenticated_signature_rotation[checksum]
+      intent: A modified checksum does not qualify as a signature-only update.
+      observable: A modified checksum does not qualify as a signature-only update.
+    - case_id: SIGNATURE-ROTATION-EXTRA-FILE
+      scenario_id: authenticate-signature-only-source-manifest-rotation
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_verify_modules_signature_script.py::test_verify_version_bump_accepts_only_authenticated_signature_rotation[extra-file]
+      intent: An additional package file still requires a version increment.
+      observable: An additional package file still requires a version increment.
+    - case_id: SIGNATURE-ROTATION-WORKING-TREE
+      scenario_id: authenticate-signature-only-source-manifest-rotation
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_verify_modules_signature_script.py::test_verify_version_bump_accepts_only_authenticated_signature_rotation[working-tree]
+      intent: A dirty manifest that differs from the commit is rejected.
+      observable: A dirty manifest that differs from the commit is rejected.
+    - case_id: SIGNATURE-ROTATION-METADATA-ONLY
+      scenario_id: authenticate-signature-only-source-manifest-rotation
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_verify_modules_signature_script.py::test_verify_version_bump_accepts_only_authenticated_signature_rotation[metadata-only]
+      intent: Metadata-only verification cannot authorize a same-version update.
+      observable: Metadata-only verification cannot authorize a same-version update.
+    - case_id: SIGNATURE-ROTATION-CUTOFF
+      scenario_id: authenticate-signature-only-source-manifest-rotation
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/test_verify_modules_signature_script.py::test_verify_version_bump_accepts_only_authenticated_signature_rotation[cutoff]
+      intent: An immutable cutoff version is excluded from signature rotation.
+      observable: An immutable cutoff version is excluded from signature rotation.
+  openspec:verify-signature-only-module-rotation:resource-aware-integrity:authenticate-capsule-review-controllers:
+    rationale: The released CLI bundles the retired key and cannot authenticate rotated source by default.
+    stakeholder_refs: [docs/agent-rules/50-quality-gates-and-review.md]
+    touchpoints:
+      - id: authenticated-capsule-controller
+        kind: workflow
+        locator: .github/workflows/capsule-customer-execution.yml
+    verification_cases:
+      - case_id: CAPSULE-SOURCE-REPLACEMENT-KEY
+        scenario_id: authenticate-capsule-review-controllers
+        method: test
+        selector:
+          runner: pytest
+          node_id: tests/unit/test_capsule_review_projection.py::test_hosted_preparation_has_separate_bound_and_cannot_bypass_review
+        intent: Require replacement-key validation before review.
+        observable: Preparation and execution use the same authenticated controller.
+      - case_id: CAPSULE-INDEPENDENT-BASE
+        scenario_id: authenticate-capsule-review-controllers
+        method: test
+        selector:
+          runner: pytest
+          node_id: tests/unit/test_capsule_review_projection.py::test_independent_reviewer_runs_in_fresh_job_without_candidate_host_code
+        intent: Bind the independent reviewer to hash-pinned base artifacts.
+        observable: The installed review fixture comes only from the pinned local registry.

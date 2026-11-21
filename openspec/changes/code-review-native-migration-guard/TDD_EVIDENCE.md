@@ -53,3 +53,17 @@ The canonical Requirements reconciliation for the current mapping reports verifi
 CodeRabbit CLI 0.9.1 completed full fifteen-file review. Earlier major/minor findings were fixed as described above. The final pass returned two minor findings. The spec now states the fingerprint trust limit explicitly. The proposed staged-file bypass was dismissed after the actual installed `pre_commit.staged_files_only` rejected that repair in a disposable repository and restored the working tree; committed CI also checks the committed tree. Standalone working-tree mode retains that documented limitation. Detailed dispositions and proof are `.audit/513-native-guard-review-dispositions.md` and `.audit/513-native-guard-staged-boundary.txt`. No unresolved actionable local engineering finding is claimed, and this disposition does not turn the separate protected security review into PASS.
 
 The native scope check does not turn existing failures into PASS. The legacy CI transition is specified in `CI_TRANSITION.md`; no old security gate is bypassed by this unit. Independent protected review, exact-head CI and signed delivery remain separate prerequisites. No merge, publication, complete change-17 claim or archive is authorized.
+
+## 22 November 2026 exact #524 merge reconciliation
+
+The owner approved reconciling only the four classified blobs in the merge of
+verified PR head `894c18e6` with protected dev `2155370e`. Two files take
+protected dev verbatim and two reconcile the existing PR and dev content.
+The classification, source modes, original audit freeze ref and all other
+baseline entries remain unchanged. Only the SHA-256 binding and those four
+entries change.
+
+The new workflow-path regression failed with all four frozen paths before
+the fingerprint and manifest update. Afterward the actual scope checker and
+all 24 scope tests passed, including the regression that changes each of the
+four files in turn and requires rejection.

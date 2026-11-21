@@ -90,6 +90,17 @@
             "runner": "pytest",
             "node_id": "tests/unit/scripts/test_native_review_scope.py::test_boundary_preserves_native_work_and_retirement[retirement]"
           }
+        },
+        {
+          "case_id": "protect-exact-reconciled-capsule-blobs",
+          "scenario_id": "enforce-native-only-implementation-scope",
+          "method": "test",
+          "intent": "Accept exactly the four owner-approved merge blobs and reject later changes.",
+          "observable": "The real policy checker accepts the reconciled files and names each later edit as frozen.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/scripts/test_native_review_scope.py::test_exact_reconciled_capsule_blobs_remain_frozen"
+          }
         }
       ]
     },

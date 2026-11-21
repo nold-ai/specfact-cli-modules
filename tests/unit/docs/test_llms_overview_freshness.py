@@ -12,6 +12,7 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
+from importlib import import_module
 from pathlib import Path
 
 import click
@@ -54,6 +55,27 @@ def test_llms_and_command_overview_are_current() -> None:
         "Regenerate with 'hatch run generate-command-overview' and commit the result.\n"
         f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
     )
+
+
+def test_contract_analyzer_can_import_command_overview() -> None:
+    generator = import_module("scripts.generate-command-overview")
+
+    assert generator.__file__ is not None
+    assert Path(generator.__file__).resolve() == GENERATOR
+    assert callable(generator.validate_official_mount_inventory)
+
+
+def test_contract_analyzer_keeps_its_arguments_out_of_command_overview() -> None:
+    result = subprocess.run(
+        [sys.executable, "-m", "crosshair", "check", "scripts.generate-command-overview.main"],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=30,
+    )
+
+    assert result.returncode == 0, result.stdout + result.stderr
 
 
 def test_command_overview_records_optional_click_arguments() -> None:
