@@ -15,7 +15,8 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 
 ROOT = Path(__file__).resolve().parents[3]
-PUBLIC_KEY = Path("scripts/native_release/module-signing-public.pem")
+PUBLIC_KEY = Path("ci/module-signing-public-next.pem")
+LEGACY_KEY = Path("scripts/native_release/module-signing-public.pem")
 DEFAULT_KEY = Path("resources/keys/module-signing-public.pem")
 MANIFEST = Path("packages/specfact-example/module-package.yaml")
 SECRET_NAMES = ("SPECFACT_MODULE_PUBLIC_SIGN_KEY", "SPECFACT_MODULE_SIGNING_PUBLIC_KEY_PEM")
@@ -65,6 +66,8 @@ def signed_repository(tmp_path: Path) -> tuple[Path, str, Ed25519PrivateKey]:
     key = Ed25519PrivateKey.generate()
     (repo / PUBLIC_KEY).parent.mkdir(parents=True)
     (repo / PUBLIC_KEY).write_text(_public_pem(key))
+    (repo / LEGACY_KEY).parent.mkdir(parents=True)
+    (repo / LEGACY_KEY).write_text(_public_pem(Ed25519PrivateKey.generate()))
     (repo / "scripts/verify-modules-signature.py").write_bytes(
         (ROOT / "scripts/verify-modules-signature.py").read_bytes()
     )
