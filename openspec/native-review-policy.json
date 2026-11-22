@@ -165,7 +165,7 @@
     "tests/fixtures/portable-runtime/hatch-detached/src/portable_customer/core.py.in": ["100644", "737a5a1464fb9a4352727d5379e79057303be217"],
     "tests/fixtures/portable-runtime/hatch-detached/tests/test_core.py.in": ["100644", "dda44e8c8f53f07178d5fa53acaf2364419079fa"],
     "tests/fixtures/portable-runtime/hatch-detached/tools/fixture_value.py.in": ["100644", "cb05742b435b396b06970ba2a091ad0decdb63e3"],
-    "tests/host/proof_capsule_deferred_review_ci.py": ["100644", "02f126711d39d384c188921972fa0b639af872a5"],
+    "tests/host/proof_capsule_deferred_review_ci.py": ["100644", "d28bb1455062d5ae52b3513160f31005af0afd43"],
     "tests/native/proof_macos_managed_uv_child.py": ["100644", "f598b7fa33fd66b37b85a3bc29f9782c65e086dc"],
     "tests/native/proof_macos_native_broker_wait.py": ["100644", "7721d86578ccba860390a551c58260eb24002709"],
     "tests/native/proof_python_candidate_matrix.py": ["100644", "450d09cc75858841c6a72520503be340c7cfeb2b"],
