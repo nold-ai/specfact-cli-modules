@@ -169,6 +169,7 @@ def test_exact_reconciled_capsule_blobs_remain_frozen(tmp_path: Path) -> None:
     capsule_paths = (
         LEGACY,
         ".github/workflows/native-capsule-release.yml",
+        "tests/host/proof_capsule_deferred_review_ci.py",
         "tests/unit/test_capsule_deferred_review_ci.py",
         "tests/unit/test_capsule_review_projection.py",
     )

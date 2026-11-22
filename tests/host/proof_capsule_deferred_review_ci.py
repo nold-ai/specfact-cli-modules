@@ -1,10 +1,10 @@
 from __future__ import annotations
 
+import base64
 import os
 import subprocess
 import sys
 import textwrap
-import venv
 from pathlib import Path
 
 import pytest
@@ -24,6 +24,7 @@ from tests.support.capsule_review_fixtures import (
     deferral_worktree,
     deferred_review_repository,
     independent_review_job,
+    prepare_deferred_customer,
 )
 
 
@@ -32,10 +33,10 @@ def acceptance_selector(request, record_property):
     record_property("specfact.selector", request.node.nodeid)
 
 
-@pytest.mark.parametrize("gate_exit", [0, 7])
+@pytest.mark.parametrize("gate_exit", [0, 7, None])
 @pytest.mark.parametrize("advanced_dev", [False, True])
 def test_deferred_gate_reviews_exact_staged_tree_and_propagates_failure(
-    tmp_path: Path, gate_exit: int, advanced_dev: bool
+    tmp_path: Path, gate_exit: int | None, advanced_dev: bool
 ) -> None:
     workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())
     steps = workflow["jobs"]["customer"]["steps"]
@@ -47,21 +48,31 @@ def test_deferred_gate_reviews_exact_staged_tree_and_propagates_failure(
         i for i, item in enumerate(steps) if item.get("name", "").startswith("Allow user namespaces")
     )
     repository, base, head = deferred_review_repository(tmp_path, advanced_dev)
+    if gate_exit is None:
+        manifest = repository / "packages/specfact-code-review/module-package.yaml"
+        contents = yaml.safe_load(manifest.read_text())
+        contents["integrity"]["signature"] = base64.b64encode(bytes(64)).decode()
+        manifest.write_text(yaml.safe_dump(contents, sort_keys=False))
     customer = tmp_path / "customer"
-    (customer / "cache").mkdir(parents=True)
-    venv.create(customer / "venv", with_pip=False)
+    prepare_deferred_customer(customer)
     environment = os.environ | {
         "CUSTOMER_ROOT": str(customer),
         "GITHUB_WORKSPACE": str(repository),
         "CANDIDATE_HEAD": head,
         "CANDIDATE_BASE": base,
-        "FIXTURE_GATE_EXIT": str(gate_exit),
+        "FIXTURE_GATE_EXIT": str(gate_exit or 0),
         "GITHUB_TOKEN": "fixture-unused",
         "GH_TOKEN": "fixture-unused",
     }
     result = subprocess.run(
         ["bash", "-c", step["run"]], cwd=repository, env=environment, capture_output=True, text=True, check=False
     )
+    if gate_exit is None:
+        assert result.returncode == 1, result.stdout + result.stderr
+        assert "Code Review source controller failed replacement-key verification" in result.stderr
+        assert not (customer / "fixture-descriptor.json").exists()
+        assert not (customer / "commit-review-cache").exists()
+        return
     assert result.returncode == gate_exit, result.stdout + result.stderr
     plan = discover_project(REPO_ROOT, config_path=customer / "commit-review-project.toml")
     assert (plan.manager, plan.environment) == ("hatch", "default")
@@ -154,6 +165,8 @@ def test_trusted_bootstrap_cannot_import_candidate_venv_module(tmp_path: Path) -
     environment = os.environ | {
         "RUNNER_TEMP": str(runner_temp),
         "GITHUB_ENV": str(tmp_path / "job.env"),
+        "GITHUB_WORKSPACE": str(REPO_ROOT),
+        "CANDIDATE_BASE": _git(REPO_ROOT, "rev-parse", "HEAD"),
         "PATH": str(launcher_dir) + os.pathsep + os.environ["PATH"],
     }
     result = subprocess.run(
