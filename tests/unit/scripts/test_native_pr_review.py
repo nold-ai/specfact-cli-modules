@@ -213,6 +213,8 @@ def test_semgrep_dependencies_are_separate_from_signed_controller(tmp_path):
     assert not any(item.startswith("semgrep") for item in requirements), (
         "Semgrep and core require incompatible Click versions"
     )
+    assert [item for item in requirements if item.startswith("ruff")] == ["ruff==0.15.12"]
+    assert "ruff==0.15.12" in (tmp_path / "constraints.txt").read_text().splitlines()
     assert (tmp_path / "semgrep-requirement.txt").read_text().strip() == "semgrep==1.144.0"
     assert '"$trusted/semgrep/bin/python" -I -m pip install -r "$trusted/semgrep-requirement.txt"' in install
     constraints = (tmp_path / "semgrep-constraints.txt").read_text().splitlines()

@@ -49,10 +49,13 @@ jobs:
           root = Path(sys.argv[1])
           config = tomllib.loads((root / "base-pyproject.toml").read_text())
           dependencies = config["tool"]["hatch"]["envs"]["default"]["dependencies"]
-          (root / "requirements.txt").write_text("\n".join(item for item in dependencies if Requirement(item).name != "semgrep") + "\n")
           lock = json.loads((root / "analyzer-lock.json").read_text())
           environment = next(item for item in lock["environments"] if item["python_abi"] == "cp312" and item["os"] == "linux")
           pins = environment["wheelhouse"]["direct_requirements"]
+          ruff = next(item for item in pins if item["normalized_name"] == "ruff")
+          controller_dependencies = [item for item in dependencies if Requirement(item).name not in {"ruff", "semgrep"}]
+          controller_dependencies.append("ruff" + ruff["specifier"])
+          (root / "requirements.txt").write_text("\n".join(controller_dependencies) + "\n")
           (root / "constraints.txt").write_text("\n".join(item["normalized_name"] + item["specifier"] for item in pins) + "\n")
           semgrep = next(item for item in pins if item["normalized_name"] == "semgrep")
           (root / "semgrep-requirement.txt").write_text("semgrep" + semgrep["specifier"] + "\n")

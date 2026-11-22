@@ -150,8 +150,8 @@
           "case_id": "semgrep-isolation",
           "scenario_id": "preserve-complete-independent-native-review",
           "method": "test",
-          "intent": "Keep incompatible analyzer CLI dependencies separate from the signed controller.",
-          "observable": "Pinned Semgrep remains selected and its invoked version is recorded without imposing its Click dependency on core.",
+          "intent": "Resolve controller Ruff from the trusted analyzer lock and isolate Semgrep's incompatible dependencies.",
+          "observable": "The controller uses the locked Ruff despite a different development pin, and Semgrep stays in its own environment.",
           "selector": {
             "runner": "pytest",
             "node_id": "tests/unit/scripts/test_native_pr_review.py::test_semgrep_dependencies_are_separate_from_signed_controller"

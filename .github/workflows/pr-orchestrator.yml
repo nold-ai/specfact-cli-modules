@@ -99,7 +99,13 @@ jobs:
               if value and not value.strip():
                   raise SystemExit("error: configured public signing key is whitespace-only")
           PYTHON
-          if [ -z "${SPECFACT_MODULE_PUBLIC_SIGN_KEY:-}" ] && [ -z "${SPECFACT_MODULE_SIGNING_PUBLIC_KEY_PEM:-}" ]; then
+          TRUSTED_KEY_FILE="$(mktemp "$RUNNER_TEMP/module-signing-public.XXXXXX")"
+          trap 'rm -f "$TRUSTED_KEY_FILE"' EXIT
+          chmod 0600 "$TRUSTED_KEY_FILE"
+          CONFIGURED_KEY="${SPECFACT_MODULE_PUBLIC_SIGN_KEY:-${SPECFACT_MODULE_SIGNING_PUBLIC_KEY_PEM:-}}"
+          if [ -n "$CONFIGURED_KEY" ]; then
+            printf '%s\n' "$CONFIGURED_KEY" > "$TRUSTED_KEY_FILE"
+          else
             case "$SIGNING_EVENT_NAME" in
               pull_request) TRUSTED_KEY_COMMIT="$SIGNING_PR_BASE_SHA" ;;
               push) TRUSTED_KEY_COMMIT="$SIGNING_PUSH_BEFORE" ;;
@@ -110,16 +116,13 @@ jobs:
               exit 1
             fi
             git cat-file -e "$TRUSTED_KEY_COMMIT^{commit}"
-            TRUSTED_KEY_FILE="$(mktemp "$RUNNER_TEMP/module-signing-public.XXXXXX")"
-            trap 'rm -f "$TRUSTED_KEY_FILE"' EXIT
-            chmod 0600 "$TRUSTED_KEY_FILE"
-            git show "$TRUSTED_KEY_COMMIT:scripts/native_release/module-signing-public.pem" > "$TRUSTED_KEY_FILE"
-            if [ ! -s "$TRUSTED_KEY_FILE" ]; then
-              echo "error: trusted signing key is empty" >&2
-              exit 1
-            fi
-            VERIFY_CMD+=(--public-key-file "$TRUSTED_KEY_FILE")
+            git show "$TRUSTED_KEY_COMMIT:ci/module-signing-public-next.pem" > "$TRUSTED_KEY_FILE"
           fi
+          if [ ! -s "$TRUSTED_KEY_FILE" ]; then
+            echo "error: trusted signing key is empty" >&2
+            exit 1
+          fi
+          VERIFY_CMD+=(--public-key-file "$TRUSTED_KEY_FILE")
 
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             BASE_REF="origin/${{ github.event.pull_request.base.ref }}"

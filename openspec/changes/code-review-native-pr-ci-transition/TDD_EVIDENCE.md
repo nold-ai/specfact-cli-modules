@@ -152,3 +152,9 @@ The required hosted review over the full PR has yet to run on the resolved tree.
 On a clean export, six unchanged manifests verified and Codebase 0.42.1 failed
 signature verification against the pinned replacement key. A clean dev
 baseline verified all seven manifests.
+
+## 22 November 2026 signed-merge CI
+
+The signature job on `29db9222` loaded the revoked key from the trusted event tree. The independent reviewer tried to install repository Ruff 0.16.0 under its own Ruff 0.15.12 constraint. Standalone Docs Review failed to import CrossHair.
+
+The PR and push event fixtures failed against the old key path, and the reviewer bootstrap fixture reproduced the conflicting Ruff requests. The follow-up selects the replacement public key from the same event tree, passes configured keys explicitly so the checkout cannot shadow them, and uses the pinned Ruff version for the isolated reviewer. Docs Review installs the CrossHair version already pinned for repository checks. The actual PR verification step passed all seven signed manifests against the same `dev` base. With the paired core source on `PYTHONPATH`, all 103 focused tests passed, including the command-overview CrossHair invocation.

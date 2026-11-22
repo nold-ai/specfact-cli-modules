@@ -62,11 +62,11 @@ The native CI receipt SHALL bind the event head and complete required-member inv
 
 ### Requirement: Resolve CI verification inputs without weakening trust
 
-The orchestrator SHALL preserve cryptographic manifest verification, filesystem payload checks, version-bump enforcement and main-target signature requirements. Secret-free verification SHALL use the existing public key from the exact trusted event commit and fail closed when that authority is unavailable.
+The orchestrator SHALL preserve cryptographic manifest verification, filesystem payload checks, version-bump enforcement and main-target signature requirements. Secret-free verification SHALL read the pinned replacement public key from the exact trusted event commit and fail closed when that authority is unavailable.
 
 #### Scenario: Secret-free signature verification
 - **WHEN** neither public-key secret is configured and the exact PR base commit or pre-push commit contains the public key
-- **THEN** the workflow verifies signed candidate bundles with that historical key and retains every payload and version check
+- **THEN** the workflow verifies signed candidate bundles with the replacement key in that commit and retains every payload and version check
 
 #### Scenario: Candidate cannot replace trust
 - **WHEN** a candidate replaces the public key and signs a fixture with its replacement private key
@@ -80,6 +80,10 @@ The orchestrator SHALL preserve cryptographic manifest verification, filesystem 
 ### Requirement: Keep the released reviewer controller reproducible
 
 Both controller dependency installation operations SHALL constrain Typer to the already reviewed compatible version 0.27.0. The job SHALL assert the final Typer version together with released core 0.55.4 and preserve signed marketplace reviewer 0.51.2, immutable registry API checks, separate Semgrep constraints, exact-head review completeness, coverage and failure propagation. This compatibility correction SHALL not upgrade the reviewer or change candidate runtime policy.
+
+#### Scenario: Repository Ruff and signed reviewer Ruff diverge
+- **WHEN** the repository development configuration requires a different Ruff version from the trusted analyzer lock
+- **THEN** the isolated signed reviewer installs Ruff at the lock's exact pin and the repository quality environment retains its own Ruff dependency
 
 #### Scenario: Released controller installs after dependency drift
 - **WHEN** the independent reviewer is installed in a fresh controller environment
@@ -100,3 +104,4 @@ Command-overview validation SHALL render positional argument labels for supporte
 #### Scenario: Independent analyzer imports the command overview generator
 - **WHEN** the contracts analyzer imports the hyphenated command-overview script by its source path
 - **THEN** the generator's runtime contracts load without an annotation-resolution error and the analyzer inspects generation and freshness without passing its own arguments to the generator's CLI
+- **AND** the standalone documentation CI environment installs the same pinned analyzer before running the regression test

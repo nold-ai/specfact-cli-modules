@@ -2,6 +2,7 @@
 # The workflow installs the checked-out paired specfact-cli source separately.
 beartype==0.22.9
 click==8.4.2
+crosshair-tool==0.0.109
 icontract==2.7.3
 pydantic==2.13.1
 pytest==9.0.3
