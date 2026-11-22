@@ -98,3 +98,11 @@ requirements:
       selector:
         runner: pytest
         node_id: tests/integration/test_code_review_installed_payload_layout.py::test_signed_installed_bundle_runs_copied_builtin[src]
+    - case_id: 459-3-2
+      scenario_id: installed-release-regression-evidence
+      method: test
+      intent: Keep the active installer's trust policy in force for official releases.
+      observable: The preserved published archive installs and verifies while the scratch archive is rejected.
+      selector:
+        runner: pytest
+        node_id: tests/integration/test_code_review_installed_payload_layout.py::test_official_install_admits_release_and_rejects_scratch_archive
