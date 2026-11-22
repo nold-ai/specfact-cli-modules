@@ -9,6 +9,7 @@ import stat
 import subprocess
 import sys
 import tarfile
+from collections.abc import Callable
 from pathlib import Path
 
 import pytest
@@ -20,9 +21,57 @@ from specfact_cli.registry import module_installer
 from specfact_cli.registry.module_discovery import DiscoveredModule
 
 from specfact_code_review.run import toolchain
+from tests.support.capsule_review_fixtures import released_capsule_core
 
 
 MODULE_ID = "nold-ai/specfact-code-review"
+REPO_ROOT = Path(__file__).resolve().parents[2]
+PUBLISHED_VERSION = "0.49.76"
+
+
+@pytest.fixture(scope="session")
+def released_layout_core(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    return released_capsule_core(tmp_path_factory.mktemp("signed-layout-core"))
+
+
+def _run_released_layout_case(
+    case: Callable[[Path, pytest.MonkeyPatch, str], None], root: Path, layout: str, core_root: Path
+) -> None:
+    program = """\
+import runpy
+import sys
+from pathlib import Path
+
+core, module_source, repo, test_file, case, root, layout = sys.argv[1:]
+sys.path[:0] = [core, module_source, repo]
+import pytest
+
+test_module = runpy.run_path(test_file)
+assert Path(test_module['module_installer'].__file__).resolve().is_relative_to(Path(core).resolve())
+with pytest.MonkeyPatch.context() as monkeypatch:
+    test_module[case](Path(root), monkeypatch, layout)
+"""
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-B",
+            "-I",
+            "-c",
+            program,
+            str(core_root),
+            str(REPO_ROOT / "packages/specfact-code-review/src"),
+            str(REPO_ROOT),
+            str(Path(__file__).resolve()),
+            case.__name__,
+            str(root),
+            layout,
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=60,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
 
 
 def _fixture_package(root: Path, layout: str, *, real_bundle: bool) -> Path:
@@ -110,9 +159,13 @@ def _install_fixture(
 
 @pytest.mark.parametrize("layout", ["src", ""], ids=["src", "flat"])
 def test_signed_install_handoff_and_copy_after_archive_removal(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, layout: str
+    tmp_path: Path, layout: str, released_layout_core: Path
 ) -> None:
     """459-1-1/459-1-2: preserve installed paths, resources, modes and copy startup."""
+    _run_released_layout_case(_assert_handoff_and_copy, tmp_path, layout, released_layout_core)
+
+
+def _assert_handoff_and_copy(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, layout: str) -> None:
     discovered, install_root, public_key = _install_fixture(tmp_path, monkeypatch, layout)
     handoff = toolchain.derive_core_0_55_1_install_handoff(
         discovered,
@@ -151,10 +204,12 @@ def test_signed_install_handoff_and_copy_after_archive_removal(
 
 
 @pytest.mark.parametrize("layout", ["src", ""], ids=["src", "flat"])
-def test_signed_installed_bundle_runs_copied_builtin(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, layout: str
-) -> None:
+def test_signed_installed_bundle_runs_copied_builtin(tmp_path: Path, layout: str, released_layout_core: Path) -> None:
     """Run the actual AST built-in from the signed, installed and copied bundle."""
+    _run_released_layout_case(_assert_copied_builtin, tmp_path, layout, released_layout_core)
+
+
+def _assert_copied_builtin(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, layout: str) -> None:
     discovered, install_root, public_key = _install_fixture(tmp_path, monkeypatch, layout, real_bundle=True)
     handoff = toolchain.derive_core_0_55_1_install_handoff(
         discovered,
@@ -188,3 +243,41 @@ def test_signed_installed_bundle_runs_copied_builtin(
     )
     assert startup.returncode == 0, startup.stderr
     assert startup.stdout.strip() == "copied-builtin-completed"
+
+
+@pytest.mark.parametrize("substitute", [False, True], ids=["published", "scratch"])
+def test_official_install_admits_release_and_rejects_scratch_archive(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, substitute: bool
+) -> None:
+    if substitute:
+        archive, _, _ = _signed_fixture(tmp_path, "src")
+    else:
+        archive = REPO_ROOT / f"registry/modules/specfact-code-review-{PUBLISHED_VERSION}.tar.gz"
+    public_key = REPO_ROOT / "scripts/native_release/module-signing-public.pem"
+    public_pem = public_key.read_text(encoding="utf-8")
+    monkeypatch.delenv("SPECFACT_ALLOW_UNSIGNED", raising=False)
+    monkeypatch.setenv("SPECFACT_MODULE_PUBLIC_KEY_PEM", public_pem)
+    monkeypatch.setattr(module_installer, "_download_archive_with_cache", lambda *_a, **_kw: archive)
+    install_root = tmp_path / "user-modules"
+    options = module_installer.InstallModuleOptions(
+        install_root=install_root, skip_deps=True, non_interactive=True, version=PUBLISHED_VERSION
+    )
+
+    if substitute:
+        with pytest.raises(ValueError, match=r"approved release cutoff|failed integrity verification"):
+            module_installer.install_module(MODULE_ID, options)
+        assert not (install_root / "specfact-code-review").exists()
+        return
+
+    installed = module_installer.install_module(MODULE_ID, options)
+    manifest = yaml.safe_load((installed / "module-package.yaml").read_text(encoding="utf-8"))
+    assert manifest["name"] == MODULE_ID
+    assert manifest["version"] == PUBLISHED_VERSION
+    assert (installed / "src/specfact_code_review/__init__.py").is_file()
+    assert module_installer.verify_module_artifact(
+        installed,
+        ModulePackageMetadata.model_validate(manifest),
+        require_integrity=True,
+        require_signature=True,
+        public_key_pem=public_pem,
+    )

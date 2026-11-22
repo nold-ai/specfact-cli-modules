@@ -322,3 +322,11 @@ supplies command content. Neither note identifies a current priority defect.
 The combined regression suite passed **136 tests** on core 0.55.4 / Python
 3.12.13, including descriptor cleanup and actual copied built-in startup.
 Published 0.49.77 assets remain unchanged by this review follow-up.
+
+## 22 November 2026 paired-core test repair
+
+The four src and flat layout regressions failed on paired core `afae348b`. They asked the official installer to admit scratch archives, which the current release cutoff rejects. The capsule handoff requires the official publisher, and the cutoff contains only src layout releases.
+
+The layout cases now run in an isolated Python process with the real, hash-pinned 0.55.4 installer. Their existing install, signature, handoff, copy, and analyzer assertions remain in place. Two companion cases use whichever core the test suite installed. That core accepts the preserved official 0.49.76 archive and rejects a scratch archive claiming the same module identity. The tests substitute local archive transport and exercise the actual installer and verifier.
+
+All 154 focused integration, toolchain, and host tests passed on Python 3.12.13 in each of the released and paired-core environments.
