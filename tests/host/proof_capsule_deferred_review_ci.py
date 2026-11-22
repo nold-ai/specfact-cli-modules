@@ -25,6 +25,7 @@ from tests.support.capsule_review_fixtures import (
     deferred_review_repository,
     independent_review_job,
     prepare_deferred_customer,
+    released_capsule_core,
 )
 
 
@@ -33,10 +34,15 @@ def acceptance_selector(request, record_property):
     record_property("specfact.selector", request.node.nodeid)
 
 
+@pytest.fixture(scope="session")
+def capsule_verifier_root(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    return released_capsule_core(tmp_path_factory.mktemp("released-capsule-core"))
+
+
 @pytest.mark.parametrize("gate_exit", [0, 7, None])
 @pytest.mark.parametrize("advanced_dev", [False, True])
 def test_deferred_gate_reviews_exact_staged_tree_and_propagates_failure(
-    tmp_path: Path, gate_exit: int | None, advanced_dev: bool
+    tmp_path: Path, gate_exit: int | None, advanced_dev: bool, capsule_verifier_root: Path
 ) -> None:
     workflow = yaml.safe_load((REPO_ROOT / ".github/workflows/capsule-customer-execution.yml").read_text())
     steps = workflow["jobs"]["customer"]["steps"]
@@ -54,7 +60,7 @@ def test_deferred_gate_reviews_exact_staged_tree_and_propagates_failure(
         contents["integrity"]["signature"] = base64.b64encode(bytes(64)).decode()
         manifest.write_text(yaml.safe_dump(contents, sort_keys=False))
     customer = tmp_path / "customer"
-    prepare_deferred_customer(customer)
+    prepare_deferred_customer(customer, capsule_verifier_root)
     environment = os.environ | {
         "CUSTOMER_ROOT": str(customer),
         "GITHUB_WORKSPACE": str(repository),
@@ -176,12 +182,14 @@ def test_trusted_bootstrap_cannot_import_candidate_venv_module(tmp_path: Path) -
     assert result.returncode == 0, result.stdout + result.stderr
 
 
-def test_deferred_host_fixture_does_not_alias_managed_caller_python(tmp_path: Path, monkeypatch):
+def test_deferred_host_fixture_does_not_alias_managed_caller_python(
+    tmp_path: Path, monkeypatch, capsule_verifier_root: Path
+):
     managed = tmp_path / "managed-python"
     managed.write_text("#!/bin/sh\nexit 78\n")
     managed.chmod(0o755)
     monkeypatch.setattr(sys, "executable", str(managed))
-    test_deferred_gate_reviews_exact_staged_tree_and_propagates_failure(tmp_path, 0, False)
+    test_deferred_gate_reviews_exact_staged_tree_and_propagates_failure(tmp_path, 0, False, capsule_verifier_root)
 
 
 @pytest.mark.parametrize("review_exit", [0, 2, 7])

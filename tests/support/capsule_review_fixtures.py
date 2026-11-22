@@ -7,9 +7,11 @@ import json
 import os
 import shlex
 import subprocess
+import sys
 import sysconfig
 import tarfile
 import venv
+from importlib.metadata import distribution
 from pathlib import Path
 from string import Template
 
@@ -37,6 +39,7 @@ __all__ = [
     "independent_review_job",
     "prepare_deferred_customer",
     "public_projector",
+    "released_capsule_core",
     "write_public_phase_record_report",
 ]
 
@@ -260,14 +263,46 @@ def _write_deferred_fixture_sources(repository):
     return target, unrelated
 
 
-def prepare_deferred_customer(customer: Path) -> None:
-    from specfact_cli.registry import module_installer
+def released_capsule_core(destination: Path) -> Path:
+    """Match the released verifier used by the capsule workflow in every test lane."""
+    installed = distribution("specfact-cli")
+    module_installer = "specfact_cli/registry/module_installer.py"
+    if installed.version == "0.55.4" and installed.locate_file(module_installer).is_file():
+        return installed.locate_file("").resolve()
 
+    requirements = destination / "capsule-verifier.txt"
+    requirements.write_text(
+        "specfact-cli==0.55.4 --hash=sha256:aac27b5b1d9d96990510f22797316909ed78e38590ab77bc72eff9d51b65f4b5\n"
+    )
+    package_root = destination / "wheel"
+    subprocess.run(
+        [
+            sys.executable,
+            "-I",
+            "-m",
+            "pip",
+            "--disable-pip-version-check",
+            "install",
+            "--require-hashes",
+            "--no-deps",
+            "--only-binary=:all:",
+            "--target",
+            str(package_root),
+            "-r",
+            str(requirements),
+        ],
+        check=True,
+        timeout=120,
+    )
+    assert (package_root / module_installer).is_file()
+    return package_root
+
+
+def prepare_deferred_customer(customer: Path, core_root: Path) -> None:
     (customer / "cache").mkdir(parents=True)
     environment = customer / "venv"
     venv.create(environment, with_pip=False)
     site_packages = next((environment / "lib").glob("python*/site-packages"))
-    core_root = Path(module_installer.__file__).resolve().parents[2]
     (site_packages / "fixture-dependencies.pth").write_text(f"{core_root}\n{sysconfig.get_path('purelib')}\n")
 
     preparation_root = customer / "fixture-preparation"
