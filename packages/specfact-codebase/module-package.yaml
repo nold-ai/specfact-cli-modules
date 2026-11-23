@@ -13,6 +13,7 @@ pip_dependencies:
   - click
   - icontract
   - pydantic
+  - packaging
   - pyyaml
   - rich
   - ruamel.yaml
@@ -24,4 +25,4 @@ description: Official SpecFact codebase bundle package.
 category: codebase
 bundle_group_command: code
 integrity:
-  checksum: sha256:37112860ab2aa19bd452406cb769d1abe04a9a06499e29f0042ca2585dcac97e
+  checksum: sha256:ff4b80e9e93022b81e17f4a466a8a400abb1fe14d580498c78246ca04bfd873a

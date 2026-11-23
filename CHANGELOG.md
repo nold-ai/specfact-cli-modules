@@ -7,6 +7,13 @@ and this project follows SemVer for bundle versions.
 
 ## [Unreleased]
 
+### Added
+
+- Prepare Codebase 0.42.0 with a trusted-project runtime service for existing
+  and cold detached Hatch environments. Explicit commands use the selected
+  project Python without synchronizing existing dependencies. Ordinary review
+  and legacy sidecar consumers remain on their existing routes.
+
 ### Fixed
 
 - Route Codebase Repro async analysis through the built-in core scanner. Use

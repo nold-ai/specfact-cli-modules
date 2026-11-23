@@ -27,6 +27,13 @@ Deferred capsule review SHALL verify the Code Review source controller with the 
 - **AND** independent review rejects any historical fixture archive outside the exact CI inventory
 - **AND** the independent reviewer obtains its runtime receipt from the ordinary installer
 
+#### Scenario: Host fixtures exercise the current verification boundary
+
+- **GIVEN** the deferred host fixture supplies the signed source controller and the independent bootstrap fixture supplies the pinned base archives
+- **WHEN** the fixtures execute the hosted workflow steps
+- **THEN** the real released verifier selected by the capsule workflow accepts the signed controller and rejects an invalid signature before preparation or review, including when the parent test environment uses paired editable core
+- **AND** the independent bootstrap checks its pinned inputs while remaining isolated from the candidate's working directory
+
 ### Requirement: Separate public verification from replacement signing
 
 CI SHALL verify module manifests without a private key or write access. PR approval events SHALL NOT sign or modify source manifests. The main-branch reproducibility check SHALL use the protected V2 key to reproduce checked-in replacement signatures and SHALL verify frozen bundles against their cutoff tree hashes.

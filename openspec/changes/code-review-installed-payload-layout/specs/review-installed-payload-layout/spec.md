@@ -55,3 +55,10 @@ The correction SHALL be verified against real core installation contracts and di
 - **GIVEN** signed src-layout fixture coverage for core 0.55.1 and 0.55.4
 - **WHEN** the future implementation reruns handoff, copy, analyzer startup, and the Linux range reproduction
 - **THEN** layout failures are eliminated, compatibility evidence is recorded, and remaining policy/runtime UNKNOWN results remain explicit
+
+#### Scenario: Published cutoff stays authoritative
+
+- **GIVEN** a preserved official release archive and a scratch archive signed under an ephemeral test key
+- **WHEN** the active core installer is asked to install them as the official release
+- **THEN** it admits the preserved release and rejects the scratch archive before installing it
+- **AND** the historical src and flat layout regressions use the released core verifier without changing the active core's cutoff

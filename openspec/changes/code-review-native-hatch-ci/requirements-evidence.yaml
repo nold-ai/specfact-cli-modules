@@ -1,0 +1,248 @@
+{
+  "schema_version": "2",
+  "requirements": {
+    "openspec:code-review-native-hatch-ci:native-hatch-ci:execute-exact-native-hatch-acceptance-in-mandatory-ci": {
+      "rationale": "Continue the approved first Hatch milestone with native hosted acceptance, preserving independent gates.",
+      "stakeholder_refs": [
+        "nold-ai/specfact-cli-modules#513"
+      ],
+      "touchpoints": [
+        {
+          "id": "native-hatch-ci-spec",
+          "kind": "config_file",
+          "locator": "openspec/changes/code-review-native-hatch-ci/specs/native-hatch-ci/spec.md"
+        }
+      ],
+      "verification_cases": [
+        {
+          "case_id": "execute-exact-native-hatch-acceptance-in-mandatory-ci-1",
+          "scenario_id": "execute-exact-native-hatch-acceptance-in-mandatory-ci",
+          "method": "test",
+          "intent": "Exercise the actual native workflow contract or its acceptance program.",
+          "observable": "Exact native inputs and mapped success are required; adverse or incomplete evidence fails without replacing independent gates.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/workflows/test_native_hatch_acceptance.py::test_native_hatch_job_binds_exact_head_and_separate_interpreters"
+          }
+        }
+      ]
+    },
+    "openspec:code-review-native-hatch-ci:native-hatch-ci:incomplete-mapped-execution-cannot-pass": {
+      "rationale": "Continue the approved first Hatch milestone with native hosted acceptance, preserving independent gates.",
+      "stakeholder_refs": [
+        "nold-ai/specfact-cli-modules#513"
+      ],
+      "touchpoints": [
+        {
+          "id": "native-hatch-ci-spec",
+          "kind": "config_file",
+          "locator": "openspec/changes/code-review-native-hatch-ci/specs/native-hatch-ci/spec.md"
+        }
+      ],
+      "verification_cases": [
+        {
+          "case_id": "incomplete-mapped-execution-cannot-pass-1",
+          "scenario_id": "incomplete-mapped-execution-cannot-pass",
+          "method": "test",
+          "intent": "Exercise the actual native workflow contract or its acceptance program.",
+          "observable": "Exact native inputs and mapped success are required; adverse or incomplete evidence fails without replacing independent gates.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/workflows/test_native_hatch_acceptance.py::test_native_hatch_accepts_only_complete_exact_mapping[complete]"
+          }
+        },
+        {
+          "case_id": "incomplete-mapped-execution-cannot-pass-2",
+          "scenario_id": "incomplete-mapped-execution-cannot-pass",
+          "method": "test",
+          "intent": "Exercise the actual native workflow contract or its acceptance program.",
+          "observable": "Exact native inputs and mapped success are required; adverse or incomplete evidence fails without replacing independent gates.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/workflows/test_native_hatch_acceptance.py::test_native_hatch_accepts_only_complete_exact_mapping[skipped]"
+          }
+        },
+        {
+          "case_id": "incomplete-mapped-execution-cannot-pass-3",
+          "scenario_id": "incomplete-mapped-execution-cannot-pass",
+          "method": "test",
+          "intent": "Exercise the actual native workflow contract or its acceptance program.",
+          "observable": "Exact native inputs and mapped success are required; adverse or incomplete evidence fails without replacing independent gates.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/workflows/test_native_hatch_acceptance.py::test_native_hatch_accepts_only_complete_exact_mapping[failure]"
+          }
+        },
+        {
+          "case_id": "incomplete-mapped-execution-cannot-pass-4",
+          "scenario_id": "incomplete-mapped-execution-cannot-pass",
+          "method": "test",
+          "intent": "Exercise the actual native workflow contract or its acceptance program.",
+          "observable": "Exact native inputs and mapped success are required; adverse or incomplete evidence fails without replacing independent gates.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/workflows/test_native_hatch_acceptance.py::test_native_hatch_accepts_only_complete_exact_mapping[error]"
+          }
+        },
+        {
+          "case_id": "incomplete-mapped-execution-cannot-pass-5",
+          "scenario_id": "incomplete-mapped-execution-cannot-pass",
+          "method": "test",
+          "intent": "Exercise the actual native workflow contract or its acceptance program.",
+          "observable": "Exact native inputs and mapped success are required; adverse or incomplete evidence fails without replacing independent gates.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/workflows/test_native_hatch_acceptance.py::test_native_hatch_accepts_only_complete_exact_mapping[missing]"
+          }
+        },
+        {
+          "case_id": "incomplete-mapped-execution-cannot-pass-6",
+          "scenario_id": "incomplete-mapped-execution-cannot-pass",
+          "method": "test",
+          "intent": "Exercise the actual native workflow contract or its acceptance program.",
+          "observable": "Exact native inputs and mapped success are required; adverse or incomplete evidence fails without replacing independent gates.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/workflows/test_native_hatch_acceptance.py::test_native_hatch_accepts_only_complete_exact_mapping[duplicate]"
+          }
+        },
+        {
+          "case_id": "incomplete-mapped-execution-cannot-pass-7",
+          "scenario_id": "incomplete-mapped-execution-cannot-pass",
+          "method": "test",
+          "intent": "Exercise the actual native workflow contract or its acceptance program.",
+          "observable": "Exact native inputs and mapped success are required; adverse or incomplete evidence fails without replacing independent gates.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/workflows/test_native_hatch_acceptance.py::test_native_hatch_accepts_only_complete_exact_mapping[extra]"
+          }
+        },
+        {
+          "case_id": "incomplete-mapped-execution-cannot-pass-8",
+          "scenario_id": "incomplete-mapped-execution-cannot-pass",
+          "method": "test",
+          "intent": "Exercise the actual native workflow contract or its acceptance program.",
+          "observable": "Exact native inputs and mapped success are required; adverse or incomplete evidence fails without replacing independent gates.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/workflows/test_native_hatch_acceptance.py::test_native_hatch_accepts_only_complete_exact_mapping[nonzero]"
+          }
+        },
+        {
+          "case_id": "incomplete-mapped-execution-cannot-pass-9",
+          "scenario_id": "incomplete-mapped-execution-cannot-pass",
+          "method": "test",
+          "intent": "Exercise the actual native workflow contract or its acceptance program.",
+          "observable": "Exact native inputs and mapped success are required; adverse or incomplete evidence fails without replacing independent gates.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/workflows/test_native_hatch_acceptance.py::test_native_hatch_accepts_only_complete_exact_mapping[no-report]"
+          }
+        },
+        {
+          "case_id": "incomplete-mapped-execution-cannot-pass-10",
+          "scenario_id": "incomplete-mapped-execution-cannot-pass",
+          "method": "test",
+          "intent": "Exercise the actual native workflow contract or its acceptance program.",
+          "observable": "Exact native inputs and mapped success are required; adverse or incomplete evidence fails without replacing independent gates.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/workflows/test_native_hatch_acceptance.py::test_native_hatch_accepts_only_complete_exact_mapping[empty-mapping]"
+          }
+        },
+        {
+          "case_id": "incomplete-mapped-execution-cannot-pass-11",
+          "scenario_id": "incomplete-mapped-execution-cannot-pass",
+          "method": "test",
+          "intent": "Exercise the actual native workflow contract or its acceptance program.",
+          "observable": "Exact native inputs and mapped success are required; adverse or incomplete evidence fails without replacing independent gates.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/workflows/test_native_hatch_acceptance.py::test_native_hatch_accepts_only_complete_exact_mapping[duplicate-mapping]"
+          }
+        },
+        {
+          "case_id": "incomplete-mapped-execution-cannot-pass-12",
+          "scenario_id": "incomplete-mapped-execution-cannot-pass",
+          "method": "test",
+          "intent": "Keep the single authoritative mapping usable through OpenSpec archival without guessing history.",
+          "observable": "One archived mapping executes; ambiguous archived sources fail before pytest with an explicit diagnostic.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/workflows/test_native_hatch_acceptance.py::test_native_hatch_accepts_only_complete_exact_mapping[archived-mapping]"
+          }
+        },
+        {
+          "case_id": "incomplete-mapped-execution-cannot-pass-13",
+          "scenario_id": "incomplete-mapped-execution-cannot-pass",
+          "method": "test",
+          "intent": "Keep the single authoritative mapping usable through OpenSpec archival without guessing history.",
+          "observable": "One archived mapping executes; ambiguous archived sources fail before pytest with an explicit diagnostic.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/workflows/test_native_hatch_acceptance.py::test_native_hatch_accepts_only_complete_exact_mapping[ambiguous-archive]"
+          }
+        }
+      ]
+    },
+    "openspec:code-review-native-hatch-ci:native-hatch-ci:preserve-existing-independently-owned-gates": {
+      "rationale": "Continue the approved first Hatch milestone with native hosted acceptance, preserving independent gates.",
+      "stakeholder_refs": [
+        "nold-ai/specfact-cli-modules#513"
+      ],
+      "touchpoints": [
+        {
+          "id": "native-hatch-ci-spec",
+          "kind": "config_file",
+          "locator": "openspec/changes/code-review-native-hatch-ci/specs/native-hatch-ci/spec.md"
+        }
+      ],
+      "verification_cases": [
+        {
+          "case_id": "preserve-existing-independently-owned-gates-1",
+          "scenario_id": "preserve-existing-independently-owned-gates",
+          "method": "test",
+          "intent": "Exercise the actual native workflow contract or its acceptance program.",
+          "observable": "Exact native inputs and mapped success are required; adverse or incomplete evidence fails without replacing independent gates.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/workflows/test_native_hatch_acceptance.py::test_native_hatch_result_blocks_quality_without_replacing_security[success-0]"
+          }
+        },
+        {
+          "case_id": "preserve-existing-independently-owned-gates-2",
+          "scenario_id": "preserve-existing-independently-owned-gates",
+          "method": "test",
+          "intent": "Exercise the actual native workflow contract or its acceptance program.",
+          "observable": "Exact native inputs and mapped success are required; adverse or incomplete evidence fails without replacing independent gates.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/workflows/test_native_hatch_acceptance.py::test_native_hatch_result_blocks_quality_without_replacing_security[failure-1]"
+          }
+        },
+        {
+          "case_id": "preserve-existing-independently-owned-gates-3",
+          "scenario_id": "preserve-existing-independently-owned-gates",
+          "method": "test",
+          "intent": "Exercise the actual native workflow contract or its acceptance program.",
+          "observable": "Exact native inputs and mapped success are required; adverse or incomplete evidence fails without replacing independent gates.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/workflows/test_native_hatch_acceptance.py::test_native_hatch_result_blocks_quality_without_replacing_security[cancelled-1]"
+          }
+        },
+        {
+          "case_id": "preserve-existing-independently-owned-gates-4",
+          "scenario_id": "preserve-existing-independently-owned-gates",
+          "method": "test",
+          "intent": "Exercise the actual native workflow contract or its acceptance program.",
+          "observable": "Exact native inputs and mapped success are required; adverse or incomplete evidence fails without replacing independent gates.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/workflows/test_native_hatch_acceptance.py::test_native_hatch_result_blocks_quality_without_replacing_security[skipped-1]"
+          }
+        }
+      ]
+    }
+  }
+}
