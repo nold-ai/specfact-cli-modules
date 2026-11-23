@@ -26,8 +26,9 @@ SpecFact-owned Project and Codebase entry points SHALL run supported feature, qu
 - **AND** projects with no async request or legacy policy retain their existing check set
 
 #### Scenario: Native tests use the paired core with the analyzer
-- **GIVEN** the modules pull request has a paired branch in the public core repository
+- **GIVEN** the modules pull request has a paired branch in the public core repository or a commit reaches protected modules `dev`
 - **WHEN** native CI prepares the candidate test environment
 - **THEN** that environment uses the exact matching core commit for the Repro tests
+- **AND** the protected modules `dev` push uses protected core `dev`
 - **AND** targeted pytest receives the same checkout path for provenance checks, while unpaired runs retain the released core
 - **AND** the independent signed reviewer still uses its own release, core version, and trusted analyzer inputs

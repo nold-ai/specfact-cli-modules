@@ -72,3 +72,11 @@ requirements:
         node_id: tests/unit/workflows/test_paired_core_ref_trust.py::test_native_review_uses_paired_core_only_for_candidate_tests
       intent: Use the exact paired core commit in native candidate tests.
       observable: The candidate bootstrap receives the paired checkout after the separate signed reviewer is verified.
+    - case_id: CODEBASE-ASYNC-PROTECTED-DEV-CORE
+      scenario_id: module-scanner-entry-points-operate-without-semgrep
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/workflows/test_paired_core_ref_trust.py::test_native_review_uses_core_dev_for_protected_modules_dev_push
+      intent: Use the protected core branch for native candidate tests after a modules dev push.
+      observable: The candidate resolver admits an official protected dev push and selects its matching core ref.

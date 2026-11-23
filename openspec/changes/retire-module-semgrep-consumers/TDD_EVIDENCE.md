@@ -47,3 +47,16 @@ released-core behavior when no checkout is selected. The independent reviewer
 still verifies its pinned released core before candidate setup. All 75 focused
 cases passed, and the real registry provenance test passed with the exact
 editable paired core and the environment supplied by the coordinator.
+
+## Native review on protected modules dev
+
+The signed #529 pull request passed the required checks before merge. Native
+review of the subsequent protected dev push completed all contract targets,
+then failed four Repro tests against released core 0.55.4, which lacked the
+built-in scanner. See modules Actions run 45274139569, job 138041399412.
+
+The workflow regression failed on commit `4cf2747d` because the candidate
+resolver accepted only pull requests. It now accepts official protected dev
+pushes and uses the exact commit resolved from core dev. All five resolver
+and provenance cases passed on Python 3.12.13. The controller and its signed
+reviewer retain their existing released inputs.
