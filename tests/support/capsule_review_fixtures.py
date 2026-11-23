@@ -2,10 +2,16 @@
 
 from __future__ import annotations
 
+import io
 import json
 import os
+import shlex
 import subprocess
+import sys
+import sysconfig
+import tarfile
 import venv
+from importlib.metadata import distribution
 from pathlib import Path
 from string import Template
 
@@ -31,7 +37,9 @@ __all__ = [
     "deferral_worktree",
     "deferred_review_repository",
     "independent_review_job",
+    "prepare_deferred_customer",
     "public_projector",
+    "released_capsule_core",
     "write_public_phase_record_report",
 ]
 
@@ -104,13 +112,16 @@ _TRUSTED_BOOTSTRAP_LAUNCHER = (
     "            target=Path(sys.argv[-1])\n"
     "            site=next((target/'lib').glob('python*/site-packages'))\n"
     "            (site/'pip/__main__.py').write_text(\n"
-    "                \"import sys\\nassert sys.argv[1:]==['install','--no-cache-dir','specfact-cli==0.55.4']\\n\"\n"
+    "                \"import sys\\nassert sys.argv[1:]==['install','--no-cache-dir','specfact-cli==0.55.4',\"\n"
+    "                \"'typer==0.28.0']\\n\"\n"
     "            )\n"
     "            core=site/'specfact_cli'\n"
     "            core.mkdir()\n"
     "            (core/'__init__.py').write_text('')\n"
     "            (core/'cli.py').write_text(\n"
-    "                \"import sys\\nassert sys.argv[1:]==['module','install','nold-ai/specfact-code-review',\"\n"
+    '                "import os,sys\\nfrom pathlib import Path\\n"\n'
+    "                \"assert Path(os.environ['SPECFACT_REGISTRY_INDEX_URL'].removeprefix('file://')).is_file()\\n\"\n"
+    "                \"assert sys.argv[1:]==['module','install','nold-ai/specfact-code-review',\"\n"
     "                \"'--scope','user','--version','0.51.2','--source','marketplace']\\n\"\n"
     "            )\n"
     "            "
@@ -234,11 +245,83 @@ def _write_deferred_fixture_sources(repository):
     script = repository / "scripts/pre_commit_code_review.py"
     script.parent.mkdir()
     script.write_text(_DEFERRED_REVIEW_SCRIPT)
-    controller = repository / "packages/specfact-code-review/src/specfact_cli"
-    controller.mkdir(parents=True)
-    (controller / "__init__.py").write_text("")
-    (controller / "cli.py").write_text(_PREPARATION_CLI_SCRIPT)
+    signed_inputs = subprocess.check_output(
+        [
+            "git",
+            "-C",
+            str(REPO_ROOT),
+            "archive",
+            "--format=tar",
+            "HEAD",
+            "--",
+            "ci/module-signing-public-next.pem",
+            "packages/specfact-code-review",
+        ]
+    )
+    with tarfile.open(fileobj=io.BytesIO(signed_inputs)) as archive:
+        archive.extractall(repository, filter="data")
     return target, unrelated
+
+
+def released_capsule_core(destination: Path) -> Path:
+    """Match the released verifier used by the capsule workflow in every test lane."""
+    installed = distribution("specfact-cli")
+    module_installer = "specfact_cli/registry/module_installer.py"
+    if installed.version == "0.55.4" and installed.locate_file(module_installer).is_file():
+        return installed.locate_file("").resolve()
+
+    requirements = destination / "capsule-verifier.txt"
+    requirements.write_text(
+        "specfact-cli==0.55.4 --hash=sha256:aac27b5b1d9d96990510f22797316909ed78e38590ab77bc72eff9d51b65f4b5\n"
+    )
+    package_root = destination / "wheel"
+    subprocess.run(
+        [
+            sys.executable,
+            "-I",
+            "-m",
+            "pip",
+            "--disable-pip-version-check",
+            "install",
+            "--require-hashes",
+            "--no-deps",
+            "--only-binary=:all:",
+            "--target",
+            str(package_root),
+            "-r",
+            str(requirements),
+        ],
+        check=True,
+        timeout=120,
+    )
+    assert (package_root / module_installer).is_file()
+    return package_root
+
+
+def prepare_deferred_customer(customer: Path, core_root: Path) -> None:
+    (customer / "cache").mkdir(parents=True)
+    environment = customer / "venv"
+    venv.create(environment, with_pip=False)
+    site_packages = next((environment / "lib").glob("python*/site-packages"))
+    (site_packages / "fixture-dependencies.pth").write_text(f"{core_root}\n{sysconfig.get_path('purelib')}\n")
+
+    preparation_root = customer / "fixture-preparation"
+    controller = preparation_root / "specfact_cli"
+    (controller / "utils").mkdir(parents=True)
+    (controller / "__init__.py").touch()
+    (controller / "cli.py").write_text(_PREPARATION_CLI_SCRIPT)
+    (controller / "utils/prompts.py").write_text("from types import SimpleNamespace\nconsole = SimpleNamespace()\n")
+    python = environment / "bin/python"
+    python.unlink()
+    # Only the preparation command receives the test CLI. The -I verifier uses the real core.
+    python.write_text(
+        "#!/bin/sh\n"
+        'if [ "$1" = -B ] && [ "$2" = -P ] && [ "$3" = -c ]; then\n'
+        f"    export PYTHONPATH={shlex.quote(str(preparation_root))}\n"
+        "fi\n"
+        f'exec {shlex.quote(str(python.with_name("python3")))} "$@"\n'
+    )
+    python.chmod(0o700)
 
 
 def deferred_review_repository(tmp_path: Path, advanced_dev: bool):
@@ -278,6 +361,9 @@ def deferral_worktree(tmp_path: Path, scenario):
     workflow.write_text(
         workflow_source if independent_review else workflow_source.split("\n  independent-review:", 1)[0]
     )
+    native = repository / ".github/workflows/native-pr-review.yml"
+    native_source = (REPO_ROOT / ".github/workflows/native-pr-review.yml").read_text()
+    native.write_text(native_source if independent_review else "name: missing-independent-review\n")
     files = [
         "llms.txt",
         "docs/reference/commands.generated.json",
@@ -308,9 +394,13 @@ def deferral_worktree(tmp_path: Path, scenario):
         (worktree / ".github/workflows/capsule-customer-execution.yml").write_text(
             workflow_source.split("\n  independent-review:", 1)[0]
         )
+    if independent_review == "unstaged_restore":
+        (worktree / ".github/workflows/native-pr-review.yml").write_text("name: missing-independent-review\n")
     _git(worktree, "add", ".")
     if independent_review == "unstaged_restore":
         (worktree / ".github/workflows/capsule-customer-execution.yml").write_text(workflow_source)
+    if independent_review == "unstaged_restore":
+        (worktree / ".github/workflows/native-pr-review.yml").write_text(native_source)
     return worktree
 
 

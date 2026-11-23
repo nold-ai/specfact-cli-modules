@@ -2,11 +2,13 @@
 
 import importlib.util
 import json
+import os
 import shutil
 import tomllib
 from importlib import import_module
 from importlib.metadata import distribution
 from pathlib import Path
+from urllib.parse import unquote, urlsplit
 
 import pytest
 from packaging.requirements import Requirement
@@ -16,6 +18,11 @@ from packaging.version import Version
 from specfact_code_review.run import target_bootstrap, target_launch
 from specfact_code_review.run.runtime_compatibility import analyzer_dependency_conflicts
 from specfact_code_review.run.runtime_domains import member_dependency_graphs
+
+
+@pytest.fixture(autouse=True)
+def record_selector(request):
+    request.node.user_properties.append(("specfact.selector", request.node.nodeid))
 
 
 def test_incompatible_dependency_identifies_only_affected_member(tmp_path: Path) -> None:
@@ -193,11 +200,80 @@ def test_declared_core_dependency_supplies_registry_handoff() -> None:
     declared = _declared_development_dependencies(root)
     requirement = declared.get("specfact-cli")
     assert requirement is not None, "Core installed by developer bootstrap is not a declared target dependency"
+    assert str(requirement.specifier) == "==0.55.4", "Declare the verified immutable core release"
     installed = distribution("specfact-cli")
-    assert str(requirement.specifier) == f"=={installed.version}", "Declare the verified immutable core release"
+    paired = os.environ.get("SPECFACT_CLI_REPO")
+    core = Path(paired).resolve() if paired else None
+    if core is None:
+        assert installed.version == "0.55.4", "Unpaired review requires the declared immutable release"
+    else:
+        provenance = json.loads(installed.read_text("direct_url.json") or "{}")
+        location = urlsplit(provenance.get("url", ""))
+        assert provenance.get("dir_info", {}).get("editable") is True, "Paired core must be installed editable"
+        assert location.scheme == "file" and not location.netloc, "Paired core must be a local checkout"
+        assert Path(unquote(location.path)).resolve() == core, "Installed core differs from the selected checkout"
+        declared_version = tomllib.loads((core / "pyproject.toml").read_text())["project"]["version"]
+        assert installed.version == declared_version, "Installed core metadata differs from its checkout"
+        package = import_module("specfact_cli")
+        assert package.__file__ and Path(package.__file__).resolve() == core / "src/specfact_cli/__init__.py"
     for module_name, entry in (
         ("module_discovery", "discover_all_modules_for_project_with_shadowed"),
         ("module_installer", "verify_module_artifact"),
     ):
         module = import_module(f"specfact_cli.registry.{module_name}")
         assert callable(getattr(module, entry)), f"Declared core does not supply registry API {entry}"
+        if core is not None:
+            assert module.__file__ and Path(module.__file__).resolve().is_relative_to(core / "src/specfact_cli")
+
+
+@pytest.fixture
+def paired_core_facts(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    from types import SimpleNamespace
+
+    core = tmp_path / "paired-core"
+    source = core / "src/specfact_cli/registry"
+    source.mkdir(parents=True)
+    (core / "pyproject.toml").write_text('[project]\nversion = "0.55.4"\n')
+    metadata = {"dir_info": {"editable": True}, "url": core.as_uri()}
+    installed = SimpleNamespace(version="0.55.4", read_text=lambda name: json.dumps(metadata))
+    modules = {"specfact_cli": SimpleNamespace(__file__=str(source.parent / "__init__.py"))}
+    for name, entry in (
+        ("module_discovery", "discover_all_modules_for_project_with_shadowed"),
+        ("module_installer", "verify_module_artifact"),
+    ):
+        path = source / f"{name}.py"
+        path.touch()
+        modules[f"specfact_cli.registry.{name}"] = SimpleNamespace(__file__=str(path), **{entry: lambda: None})
+    monkeypatch.setenv("SPECFACT_CLI_REPO", str(core))
+    monkeypatch.setattr(__name__ + ".distribution", lambda name: installed)
+    monkeypatch.setattr(__name__ + ".import_module", modules.__getitem__)
+    return core, installed, metadata, modules
+
+
+def test_explicit_paired_core_keeps_registry_handoff(paired_core_facts):
+    core, installed, _, _ = paired_core_facts
+    installed.version = "0.55.11"
+    (core / "pyproject.toml").write_text('[project]\nversion = "0.55.11"\n')
+    test_declared_core_dependency_supplies_registry_handoff()
+
+
+@pytest.mark.parametrize(
+    "fault", ["noneditable", "other-checkout", "core-origin", "registry-origin", "version", "unpaired"]
+)
+def test_paired_core_registry_handoff_rejects_unrelated_installation(paired_core_facts, tmp_path, monkeypatch, fault):
+    _, installed, metadata, modules = paired_core_facts
+    if fault == "noneditable":
+        metadata["dir_info"]["editable"] = False
+    if fault == "other-checkout":
+        metadata["url"] = tmp_path.as_uri()
+    if fault == "registry-origin":
+        modules["specfact_cli.registry.module_installer"].__file__ = str(tmp_path / "module_installer.py")
+    if fault == "core-origin":
+        modules["specfact_cli"].__file__ = str(tmp_path / "__init__.py")
+    if fault == "version":
+        installed.version = "0.55.11"
+    if fault == "unpaired":
+        installed.version = "0.55.11"
+        monkeypatch.delenv("SPECFACT_CLI_REPO")
+    with pytest.raises(AssertionError):
+        test_declared_core_dependency_supplies_registry_handoff()

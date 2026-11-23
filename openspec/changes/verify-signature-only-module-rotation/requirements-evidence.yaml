@@ -177,3 +177,19 @@ requirements:
           node_id: tests/unit/test_capsule_review_projection.py::test_independent_reviewer_runs_in_fresh_job_without_candidate_host_code
         intent: Bind the independent reviewer to hash-pinned base artifacts.
         observable: The installed review fixture comes only from the pinned local registry.
+      - case_id: CAPSULE-HOST-REAL-VERIFIER
+        scenario_id: authenticate-capsule-review-controllers
+        method: test
+        selector:
+          runner: pytest
+          node_id: tests/host/proof_capsule_deferred_review_ci.py::test_deferred_gate_reviews_exact_staged_tree_and_propagates_failure
+        intent: Run the workflow with the signed controller and with its signature deliberately invalidated.
+        observable: The signed source reaches review, and the invalid signature fails before preparation.
+      - case_id: CAPSULE-HOST-PINNED-BOOTSTRAP
+        scenario_id: authenticate-capsule-review-controllers
+        method: test
+        selector:
+          runner: pytest
+          node_id: tests/host/proof_capsule_deferred_review_ci.py::test_trusted_bootstrap_cannot_import_candidate_venv_module
+        intent: Run isolated bootstrap with the current install pins and trusted Git archives.
+        observable: The candidate does not execute, and the isolated installer receives the pinned file registry.

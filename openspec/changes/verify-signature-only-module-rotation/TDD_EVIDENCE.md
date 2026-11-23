@@ -31,3 +31,13 @@ With Bash absent from the child process path, the publish and reproducibility te
 The first hosted evidence check rejected a parameter ID containing spaces and a removal-only spec without scenarios. The corrected sidecar uses exact collected pytest IDs and maps each modified requirement. The local evidence replay against paired core commit `d72d0b39` passed both change sources with zero findings. The focused suite passed 29 tests.
 
 Hosted review found complexity 17 in the permissions test and 21 locals in the integration test. Radon 6.0.1 and Pylint reproduced both. The permissions test now has complexity 8, and Pylint reports no findings after extracting fixture setup. The same 29 tests passed.
+
+## 22 November 2026 host fixture repair
+
+The exact `26029bf1` hosted run reported six failures in the capsule host proof. The stale fixture lacked the replacement public key and signed controller files, and its bootstrap launcher expected the old install arguments. Before the fixture setup was repaired, the six existing cases and two added invalid-signature cases failed locally.
+
+The deferred fixture now supplies the tracked signed controller and public key. Only runtime preparation and review use test doubles. The isolated workflow verifier accepts the signed payload and rejects the deliberately invalid signature before either test double runs. The bootstrap fixture extracts the four pinned base archives and checks that the installer receives the private file registry. The candidate import marker remains absent.
+
+All 56 host and scope-check tests passed with released SpecFact CLI 0.55.4 on Python 3.12. The updated freeze record admits the exact repaired host fixture and rejects further changes. Production workflow files and signed modules are byte-identical to `26029bf1`.
+
+Hosted native review passed all 655 cases at `bb600f01`, including all 32 capsule host cases. The Python 3.11 and 3.13 quality jobs used paired editable core `afae348b`; its official-module cutoff rejected the source controller. The paired core reproduced five fixture failures locally. The fixture now selects the capsule workflow's released verifier even when quality uses paired editable core. The harness reuses that installed release when present and otherwise provisions its exact hash-pinned wheel without resolving new dependencies. All 56 host and scope tests passed from the paired-core environment and all 32 host tests passed from the original released environment. Python 3.12 runtime smoke separately reported the expired `pycparser==3.12` trust entry in paired core.
