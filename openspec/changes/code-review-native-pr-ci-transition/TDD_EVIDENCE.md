@@ -177,3 +177,10 @@ inventory, budgets, failure handling, and coverage threshold are retained.
 The actual CLI fixture reports its expected false postcondition, preserves
 argument binding, and separates output. A second test modifies one original
 file and proves that the workflow refuses to patch it.
+
+With the constructor fixed, the combined local contracts process reached the
+existing 120-second limit. Isolated calls completed for both Repro files with
+the same per-path settings. The native coordinator now calls the existing
+signed adapter once per changed Python file, retains every result and keeps
+the same failure handling and bug-hunt invocation. Its regression was red
+before the per-file invocation was wired.

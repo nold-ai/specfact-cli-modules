@@ -354,6 +354,17 @@
             "runner": "pytest",
             "node_id": "tests/unit/workflows/test_native_crosshair_compat.py::test_native_crosshair_patch_rejects_unexpected_input"
           }
+        },
+        {
+          "case_id": "native-contracts-isolates-target-processes",
+          "scenario_id": "preserve-complete-independent-native-review",
+          "method": "test",
+          "intent": "Execute the pinned bug-hunt adapter for every required Python input without shared solver state.",
+          "observable": "All paths run under the existing settings and every input's result remains in the required contracts member.",
+          "selector": {
+            "runner": "pytest",
+            "node_id": "tests/unit/scripts/test_native_pr_review.py::test_contracts_runs_each_file_and_retains_every_result"
+          }
         }
       ]
     },

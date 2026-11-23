@@ -29,6 +29,7 @@ The repository SHALL require a separately installed verified signed reviewer, al
 - **THEN** it binds the constructor without passing a receiver or discarding variadic parameters
 - **AND** it sends candidate console output to diagnostics and keeps contract findings in the structured result stream
 - **AND** unexpected analyzer source inputs or incomplete execution fail the existing independent review
+- **AND** each changed Python input has its own contracts process with the existing bug-hunt settings, and every finding contributes to the required member
 
 ### Requirement: Bind acceptance to exact source and required jobs
 The native CI receipt SHALL bind the event head and complete required-member inventory. The quality matrix SHALL reject every non-successful native prerequisite. Native receipts SHALL NOT satisfy protected pr_range, core #680 or C15 contracts.

@@ -523,3 +523,17 @@ def test_controller_installs_share_compatible_typer_constraint():
     assert "typer==0.27.0" in install
     verify = _step_named(steps, "Verify immutable core registry APIs")["run"]
     assert 'version("typer") == "0.27.0"' in verify
+
+
+def test_contracts_runs_each_file_and_retains_every_result(native_review):
+    files = [Path("first.py"), Path("second.py")]
+    examined = []
+
+    def run(paths, *, bug_hunt):
+        assert bug_hunt is True
+        assert len(paths) == 1
+        examined.extend(paths)
+        return [str(paths[0])]
+
+    assert native_review._run_contracts(run, files) == ["first.py", "second.py"]
+    assert examined == files
