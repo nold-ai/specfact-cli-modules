@@ -13,3 +13,11 @@ source from the verified core #799 merge `e90a4b57`.
 - Signed external module acceptance remains pending under #516. This
   implements the Codebase Repro milestone of #523. The Project consumers
   and other retirement work remain open.
+
+The first hosted run exposed six inherited host-fixture failures before the
+Codebase tests could run. Four existing signed-install layout cases also
+failed locally against the paired core's protected release cutoff. The
+fixture-only follow-up reuses the reviewed repairs from #524, restores the
+exact public-key and released-verifier inputs, and retains the invalid
+signature and substituted archive rejection cases. Production workflows,
+verification logic, and policies are unchanged.
