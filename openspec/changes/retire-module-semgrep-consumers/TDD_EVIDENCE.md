@@ -21,3 +21,18 @@ fixture-only follow-up reuses the reviewed repairs from #524, restores the
 exact public-key and released-verifier inputs, and retains the invalid
 signature and substituted archive rejection cases. Production workflows,
 verification logic, and policies are unchanged.
+
+## Native CI after merging the modules baseline
+
+The signed update incorporates modules `dev` at `9f0de196`. The independent
+review stops at CrossHair before it runs candidate tests. A separate local run
+using the native candidate environment's released core 0.55.4 produced four
+failures because that wheel predates the built-in analyzer. The paired-core
+workflow regression also failed against the original workflow before the
+checkout was added.
+
+The updated workflow resolves the exact same-repository companion commit and
+uses it for candidate tests only. It still installs and verifies the separate
+signed controller first. The Repro, workflow, and independent-review regression
+set passed 52 cases locally. The 42 focused Repro tests passed with branch
+coverage of 81.53% for the command and 83.94% for the checker.

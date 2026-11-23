@@ -64,3 +64,11 @@ requirements:
         node_id: tests/integration/specfact_codebase/test_repro_async_checks.py::test_missing_core_scanner_fails_with_upgrade_guidance
       intent: Required analysis fails with upgrade guidance when the scanner is absent.
       observable: Required analysis fails with upgrade guidance when the scanner is absent.
+    - case_id: CODEBASE-ASYNC-PAIRED-CORE
+      scenario_id: module-scanner-entry-points-operate-without-semgrep
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/workflows/test_paired_core_ref_trust.py::test_native_review_uses_paired_core_only_for_candidate_tests
+      intent: Use the exact paired core commit in native candidate tests.
+      observable: The candidate bootstrap receives the paired checkout after the separate signed reviewer is verified.

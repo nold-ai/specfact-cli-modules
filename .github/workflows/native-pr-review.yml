@@ -87,7 +87,37 @@ jobs:
           ):
               assert callable(getattr(import_module(f"specfact_cli.registry.{name}"), entry))
           PYTHON
+      - name: Resolve paired core for candidate tests
+        id: candidate-core
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        shell: bash
+        env:
+          CANDIDATE_BRANCH: ${{ github.head_ref }}
+        run: |
+          set -euo pipefail
+          ref="refs/heads/$CANDIDATE_BRANCH"
+          git check-ref-format "$ref"
+          if remote_ref=$(git ls-remote --exit-code --heads https://github.com/nold-ai/specfact-cli.git "$ref"); then
+            read -r commit resolved_ref <<< "$remote_ref"
+            [[ "$commit" =~ ^[0-9a-f]{40}$ && "$resolved_ref" == "$ref" ]]
+            echo "commit=$commit" >> "$GITHUB_OUTPUT"
+          else
+            result=$?
+            if [ "$result" -ne 2 ]; then
+              exit "$result"
+            fi
+          fi
+      - name: Checkout paired core for candidate tests
+        if: steps.candidate-core.outputs.commit != ''
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          repository: nold-ai/specfact-cli
+          ref: ${{ steps.candidate-core.outputs.commit }}
+          path: specfact-cli
+          persist-credentials: false
       - name: Bootstrap native repository environment
+        env:
+          SPECFACT_CLI_REPO: ${{ steps.candidate-core.outputs.commit != '' && format('{0}/specfact-cli', github.workspace) || '' }}
         run: |
           set -euo pipefail
           python -m pip install hatch==1.18.1
