@@ -23,7 +23,7 @@ This reference describes how to run thorough in-depth validation in different mo
 
 ## 1. Quick check (`specfact code repro`)
 
-Run the standard reproducibility suite (ruff, semgrep if config exists, basedpyright, CrossHair, optional pytest contracts/smoke):
+Run the standard reproducibility suite (Ruff, optional built-in async analysis, BasedPyright, CrossHair, and optional pytest contracts and smoke tests):
 
 ```bash
 specfact code repro --repo .
@@ -38,6 +38,13 @@ specfact code repro --repo . --crosshair-per-path-timeout 60
 ```
 
 Required env: none. Optional: `[tool.crosshair]` in `pyproject.toml` (e.g. from `specfact code repro setup`).
+
+Enable the core Python async analyzer with `specfact code repro --repo . --async-checks`.
+An existing `tools/semgrep/async.yml` also selects async analysis. The standard
+legacy policy uses the built-in rules. Custom rules need migration before Repro
+can report complete analysis. Upgrade SpecFact CLI if the installed core lacks
+the analyzer. For async findings, `--fix` reports manual remediation and leaves
+source files untouched.
 
 ## 2. Thorough validation for contract-decorated codebases
 
@@ -69,7 +76,7 @@ For repositories you cannot or do not want to modify (no contract decorators add
 specfact code repro --repo <path> --sidecar --sidecar-bundle <bundle-name>
 ```
 
-- Main repro checks run first (lint, semgrep, type-check, CrossHair if available).
+- Main repro checks run first (lint, requested async analysis, type checking, and CrossHair if available).
 - Then sidecar validation runs: unannotated detection, harness generation, CrossHair/Specmatic on generated harnesses. No files in the target repo are modified.
 - If CrossHair is not installed or the bundle is invalid, sidecar is skipped or partial with clear messaging; non-zero exit only for main check failures (sidecar can be advisory).
 

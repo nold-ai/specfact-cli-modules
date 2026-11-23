@@ -523,3 +523,32 @@ def test_controller_installs_share_compatible_typer_constraint():
     assert "typer==0.27.0" in install
     verify = _step_named(steps, "Verify immutable core registry APIs")["run"]
     assert 'version("typer") == "0.27.0"' in verify
+
+
+def test_contracts_runs_each_file_and_retains_every_result(native_review):
+    files = [Path("first.py"), Path("second.py")]
+    examined = []
+
+    def run(paths, *, bug_hunt):
+        assert bug_hunt is True
+        assert len(paths) == 1
+        examined.extend(paths)
+        return [str(paths[0])]
+
+    assert native_review._run_contracts(run, files) == ["first.py", "second.py"]
+    assert examined == files
+
+
+@pytest.mark.parametrize("paired_core", ["", "/work/specfact-cli"])
+def test_targeted_pytest_receives_paired_core_path(native_review, monkeypatch, paired_core):
+    monkeypatch.delenv("SPECFACT_CLI_REPO", raising=False)
+    monkeypatch.setenv("NATIVE_REVIEW_PROJECT_CORE", paired_core)
+
+    environment = native_review._native_test_environment()
+
+    if paired_core:
+        assert environment["SPECFACT_CLI_REPO"] == paired_core
+    else:
+        assert "SPECFACT_CLI_REPO" not in environment
+    assert "NATIVE_REVIEW_PROJECT_CORE" not in environment
+    assert "SPECFACT_CLI_REPO" not in native_review.os.environ

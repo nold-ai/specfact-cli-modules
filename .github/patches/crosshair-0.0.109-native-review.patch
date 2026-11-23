@@ -1,0 +1,91 @@
+--- a/crosshair/core.py
++++ b/crosshair/core.py
+@@ -476,15 +476,20 @@
+                 return_annotation=object
+             )  # make return types compatible (& use __new__'s return)
+             applicable_sigs.append(sig)
+-    if len(applicable_sigs) == 0:
+-        return inspect.Signature([])
+-    if len(applicable_sigs) == 2:
+-        sig = dynamic_typing.intersect_signatures(*applicable_sigs)
+-    else:
+-        sig = applicable_sigs[0]
+-    # strip first argument ("self" or "cls")
+-    newparams = list(sig.parameters.values())[1:]
+-    return sig.replace(parameters=newparams)
++    bound_sigs = []
++    for sig in applicable_sigs:
++        params = list(sig.parameters.values())
++        if params and params[0].kind in (
++            inspect.Parameter.POSITIONAL_ONLY,
++            inspect.Parameter.POSITIONAL_OR_KEYWORD,
++        ):
++            params = params[1:]
++        bound_sigs.append(sig.replace(parameters=params))
++    if not bound_sigs:
++        return inspect.Signature()
++    if len(bound_sigs) == 2:
++        return dynamic_typing.intersect_signatures(*bound_sigs)
++    return bound_sigs[0]
+
+
+ _TYPE_HINTS = IdKeyedDict()
+--- a/crosshair/dynamic_typing.py
++++ b/crosshair/dynamic_typing.py
+@@ -340,7 +340,8 @@
+     else:
+         out_return_annotation = sig2.return_annotation
+     result = Signature(
+-        parameters=list(out_params.values()), return_annotation=out_return_annotation
++        parameters=sorted(out_params.values(), key=lambda param: param.kind),
++        return_annotation=out_return_annotation
+     )
+     debug("Combined __init__ and __new__ signatures", sig1, "and", sig2, "into", result)
+     return result
+--- a/crosshair/main.py
++++ b/crosshair/main.py
+@@ -1,4 +1,5 @@
+ import argparse
++from contextlib import redirect_stdout
+ import enum
+ import linecache
+ import os.path
+@@ -840,21 +841,23 @@
+     args: argparse.Namespace, options: AnalysisOptionSet, stdout: TextIO, stderr: TextIO
+ ) -> int:
+     any_problems = False
+-    entities = checked_load(args.target, stderr)
+-    if isinstance(entities, int):
+-        return entities
+-    full_options = DEFAULT_OPTIONS.overlay(report_verbose=False).overlay(options)
+-    checkables = [c for e in entities for c in analyze_any(e, options)]
+-    if not checkables:
+-        extra_help = ""
+-        if full_options.analysis_kind == [AnalysisKind.asserts]:
+-            extra_help = "\nHINT: Ensure that your functions to analyze lead with assert statements."
+-        print(
+-            "WARNING: Targets found, but contain no checkable functions." + extra_help,
+-            file=stderr,
+-        )
+-
+-    for message in run_checkables(checkables):
++    with redirect_stdout(stderr):
++        entities = checked_load(args.target, stderr)
++        if isinstance(entities, int):
++            return entities
++        full_options = DEFAULT_OPTIONS.overlay(report_verbose=False).overlay(options)
++        checkables = [c for e in entities for c in analyze_any(e, options)]
++        if not checkables:
++            extra_help = ""
++            if full_options.analysis_kind == [AnalysisKind.asserts]:
++                extra_help = "\nHINT: Ensure that your functions to analyze lead with assert statements."
++            print(
++                "WARNING: Targets found, but contain no checkable functions." + extra_help,
++                file=stderr,
++            )
++        messages = run_checkables(checkables)
++
++    for message in messages:
+         line = describe_message(message, full_options)
+         if line is None:
+             continue

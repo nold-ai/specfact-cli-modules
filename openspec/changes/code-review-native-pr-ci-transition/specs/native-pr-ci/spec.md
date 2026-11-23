@@ -24,6 +24,13 @@ The repository SHALL require a separately installed verified signed reviewer, al
 - **WHEN** a pinned analyzer CLI has dependencies incompatible with the signed controller
 - **THEN** CI installs that CLI separately, preserves its trusted pin and recorded transitive constraints, records the version of the executable actually invoked and retains bounded startup failure diagnostics
 
+#### Scenario: CrossHair analyzes variadic constructors and preserves findings
+- **WHEN** the pinned Python 3.12 contracts analyzer synthesizes a constructor whose allocation and initialization methods accept variadic arguments
+- **THEN** it binds the constructor without passing a receiver or discarding variadic parameters
+- **AND** it sends candidate console output to diagnostics and keeps contract findings in the structured result stream
+- **AND** unexpected analyzer source inputs or incomplete execution fail the existing independent review
+- **AND** each changed Python input has its own contracts process with the existing bug-hunt settings, and every finding contributes to the required member
+
 ### Requirement: Bind acceptance to exact source and required jobs
 The native CI receipt SHALL bind the event head and complete required-member inventory. The quality matrix SHALL reject every non-successful native prerequisite. Native receipts SHALL NOT satisfy protected pr_range, core #680 or C15 contracts.
 

@@ -154,6 +154,11 @@ def _trusted_configuration(root: Path, base: str, output: Path, files: list[Path
     return config, type_config, parsed
 
 
+def _run_contracts(run: Callable[..., list[Any]], files: list[Path]) -> list[Any]:
+    """Give each input a fresh solver process and retain the signed adapter's full evidence."""
+    return [finding for path in files for finding in run([path], bug_hunt=True)]
+
+
 def _analyzers(reviewer: Path, config: Path, type_config: Path) -> list[tuple[str, Callable[..., list[Any]]]]:
     modules = {
         name: importlib.import_module(f"specfact_code_review.tools.{name}_runner")
@@ -168,7 +173,7 @@ def _analyzers(reviewer: Path, config: Path, type_config: Path) -> list[tuple[st
         ("ast-clean-code", modules["ast_clean_code"].run_ast_clean_code),
         ("basedpyright", partial(modules["basedpyright"].run_basedpyright, extra_args=("--project", str(type_config)))),
         ("pylint", partial(modules["pylint"].run_pylint, extra_args=("--rcfile", str(config)))),
-        ("contracts", partial(modules["contract"].run_contract_check, bug_hunt=True)),
+        ("contracts", partial(_run_contracts, modules["contract"].run_contract_check)),
     ]
 
 
@@ -226,6 +231,8 @@ def _test_inventory(root: Path, files: list[Path], *, roots: tuple[str, ...]) ->
 def _native_test_environment() -> dict[str, str]:
     environment = os.environ.copy()
     environment.pop("SPECFACT_CODE_REVIEW_CHANGED_DIFF", None)
+    if paired_core := environment.pop("NATIVE_REVIEW_PROJECT_CORE", ""):
+        environment["SPECFACT_CLI_REPO"] = paired_core
     return environment
 
 

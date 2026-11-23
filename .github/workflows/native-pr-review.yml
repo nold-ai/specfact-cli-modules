@@ -70,6 +70,25 @@ jobs:
             "$trusted/venv/bin/python" -I -m specfact_cli.cli \
             module install nold-ai/specfact-code-review --scope user --version 0.51.2 --source marketplace
           cp "$GITHUB_WORKSPACE/scripts/native_pr_review.py" "$trusted/native_pr_review.py"
+      - name: Apply verified CrossHair compatibility patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          python="$RUNNER_TEMP/native-independent-review/venv/bin/python"
+          site="$("$python" -I -c 'import sysconfig; print(sysconfig.get_path("purelib"))')"
+          patch="$GITHUB_WORKSPACE/.github/patches/crosshair-0.0.109-native-review.patch"
+          cd "$site"
+          sha256sum -c /dev/stdin <<'ORIGINAL'
+          86c4c6d34f48ee8c0bd16e4791485aa016bda8284491813dd2217bc9583aa986  crosshair/core.py
+          a6783e90170fec0f02af0526ae1400c7f9d72f2ab66a6cd487078d2a5009aa9f  crosshair/dynamic_typing.py
+          b386c0e7a31ce603cad652a86252e4e4815d4f21be256b65c9b0791ee2fce969  crosshair/main.py
+          ORIGINAL
+          git apply "$patch"
+          sha256sum -c /dev/stdin <<'PATCHED'
+          8b51b63291f7deb5a2b3f4343d33673668498bf59babc26ad153c04433854a57  crosshair/core.py
+          a698815202099fd262354c5aeabcb8346a478f2cc9fdab0b43c0770ead9a8ab6  crosshair/dynamic_typing.py
+          1b14cade6e751f24ba7b11832459820a166bc129cdf7857e411b2f420e033c2f  crosshair/main.py
+          PATCHED
       - name: Verify immutable core registry APIs
         run: |
           set -euo pipefail
@@ -87,7 +106,37 @@ jobs:
           ):
               assert callable(getattr(import_module(f"specfact_cli.registry.{name}"), entry))
           PYTHON
+      - name: Resolve paired core for candidate tests
+        id: candidate-core
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        shell: bash
+        env:
+          CANDIDATE_BRANCH: ${{ github.head_ref }}
+        run: |
+          set -euo pipefail
+          ref="refs/heads/$CANDIDATE_BRANCH"
+          git check-ref-format "$ref"
+          if remote_ref=$(git ls-remote --exit-code --heads https://github.com/nold-ai/specfact-cli.git "$ref"); then
+            read -r commit resolved_ref <<< "$remote_ref"
+            [[ "$commit" =~ ^[0-9a-f]{40}$ && "$resolved_ref" == "$ref" ]]
+            echo "commit=$commit" >> "$GITHUB_OUTPUT"
+          else
+            result=$?
+            if [ "$result" -ne 2 ]; then
+              exit "$result"
+            fi
+          fi
+      - name: Checkout paired core for candidate tests
+        if: steps.candidate-core.outputs.commit != ''
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          repository: nold-ai/specfact-cli
+          ref: ${{ steps.candidate-core.outputs.commit }}
+          path: specfact-cli
+          persist-credentials: false
       - name: Bootstrap native repository environment
+        env:
+          SPECFACT_CLI_REPO: ${{ steps.candidate-core.outputs.commit != '' && format('{0}/specfact-cli', github.workspace) || '' }}
         run: |
           set -euo pipefail
           python -m pip install hatch==1.18.1
@@ -108,6 +157,7 @@ jobs:
           echo "NATIVE_REVIEW_BASE=$base" >> "$GITHUB_ENV"
       - name: Run complete independent native review
         env:
+          NATIVE_REVIEW_PROJECT_CORE: ${{ steps.candidate-core.outputs.commit != '' && format('{0}/specfact-cli', github.workspace) || '' }}
           SPECFACT_HATCH_PROJECT_PYTHON: ${{ steps.project-python.outputs.python-path }}
         run: |
           set -euo pipefail
@@ -119,6 +169,7 @@ jobs:
             PATH="$trusted/venv/bin:$trusted/semgrep/bin:$(dirname "$SPECFACT_HATCH_PROJECT_PYTHON"):$(dirname "$(command -v hatch)"):/usr/local/bin:/usr/bin:/bin" \
             PYTHONPATH="$project_paths" SPECFACT_MODULES_BRANCH=main \
             NATIVE_REVIEW_HEAD="$NATIVE_REVIEW_HEAD" NATIVE_REVIEW_BASE="$NATIVE_REVIEW_BASE" \
+            NATIVE_REVIEW_PROJECT_CORE="$NATIVE_REVIEW_PROJECT_CORE" \
             SPECFACT_HATCH_PROJECT_PYTHON="$SPECFACT_HATCH_PROJECT_PYTHON" \
             SPECFACT_HATCH_EXECUTABLE="$(command -v hatch)" \
             SPECFACT_HATCH_PROOF_WORKSPACE="$trusted/hatch-proof" \

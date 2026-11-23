@@ -158,3 +158,29 @@ baseline verified all seven manifests.
 The signature job on `29db9222` loaded the revoked key from the trusted event tree. The independent reviewer tried to install repository Ruff 0.16.0 under its own Ruff 0.15.12 constraint. Standalone Docs Review failed to import CrossHair.
 
 The PR and push event fixtures failed against the old key path, and the reviewer bootstrap fixture reproduced the conflicting Ruff requests. The follow-up selects the replacement public key from the same event tree, passes configured keys explicitly so the checkout cannot shadow them, and uses the pinned Ruff version for the isolated reviewer. Docs Review installs the CrossHair version already pinned for repository checks. The actual PR verification step passed all seven signed manifests against the same `dev` base. With the paired core source on `PYTHONPATH`, all 103 focused tests passed, including the command-overview CrossHair invocation.
+
+## CrossHair constructor compatibility on Python 3.12
+
+The independent review for #529 failed before pytest because CrossHair 0.0.109
+merged an unbound constructor receiver into the keyword-only section ahead of
+variadic positional arguments. Python 3.12 rejected that signature. The failing
+CLI fixture reproduced the parameter-order exception before the repair.
+Binding both receiver parameters before intersection preserves the real
+variadic arguments. The CLI now sends imported subject output and contract
+console output to stderr while retaining the analyzer's findings and exit
+status on its usual interface.
+
+The official Linux wheel matched the trusted base's SHA-256. The workflow
+verifies all three original and patched source identities in the independent
+controller environment. The signed reviewer, pinned versions, member
+inventory, budgets, failure handling, and coverage threshold are retained.
+The actual CLI fixture reports its expected false postcondition, preserves
+argument binding, and separates output. A second test modifies one original
+file and proves that the workflow refuses to patch it.
+
+With the constructor fixed, the combined local contracts process reached the
+existing 120-second limit. Isolated calls completed for both Repro files with
+the same per-path settings. The native coordinator now calls the existing
+signed adapter once per changed Python file, retains every result and keeps
+the same failure handling and bug-hunt invocation. Its regression was red
+before the per-file invocation was wired.

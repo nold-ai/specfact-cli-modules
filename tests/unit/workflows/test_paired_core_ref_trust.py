@@ -93,3 +93,28 @@ def test_lean_docs_workflow_keeps_serial_suite_and_failure_propagation() -> None
     }
     assert set(re.findall(r"tests/[^\s]+\.py", suite)) == expected
     assert 'exit "${PIPESTATUS[0]:-$?}"' in suite
+
+
+def test_native_review_uses_paired_core_only_for_candidate_tests() -> None:
+    workflow_name = "native-pr-review.yml"
+    job = "independent-review"
+    signed = _step_text(workflow_name, job, "Install independent signed reviewer")
+    verified = _step_text(workflow_name, job, "Verify immutable core registry APIs")
+    resolver = _step_text(workflow_name, job, "Resolve paired core for candidate tests")
+    checkout = _step_text(workflow_name, job, "Checkout paired core for candidate tests")
+    bootstrap = _step_text(workflow_name, job, "Bootstrap native repository environment")
+    workflow = (REPO_ROOT / ".github" / "workflows" / workflow_name).read_text(encoding="utf-8")
+    review = _step_text(workflow_name, job, "Run complete independent native review")
+    steps = [signed, verified, resolver, checkout, bootstrap, review]
+    assert [workflow.index(step) for step in steps] == sorted(workflow.index(step) for step in steps)
+    assert "github.event.pull_request.head.repo.full_name == github.repository" in resolver
+    assert "repository: nold-ai/specfact-cli" in checkout
+    assert "ref: ${{ steps.candidate-core.outputs.commit }}" in checkout
+    assert "persist-credentials: false" in checkout
+    paired_path = (
+        "${{ steps.candidate-core.outputs.commit != '' && format('{0}/specfact-cli', github.workspace) || '' }}"
+    )
+    assert f"SPECFACT_CLI_REPO: {paired_path}" in bootstrap
+    assert f"NATIVE_REVIEW_PROJECT_CORE: {paired_path}" in review
+    assert 'NATIVE_REVIEW_PROJECT_CORE="$NATIVE_REVIEW_PROJECT_CORE"' in review
+    assert "SPECFACT_CLI_REPO:" not in signed + verified
