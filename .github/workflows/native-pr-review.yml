@@ -70,6 +70,25 @@ jobs:
             "$trusted/venv/bin/python" -I -m specfact_cli.cli \
             module install nold-ai/specfact-code-review --scope user --version 0.51.2 --source marketplace
           cp "$GITHUB_WORKSPACE/scripts/native_pr_review.py" "$trusted/native_pr_review.py"
+      - name: Apply verified CrossHair compatibility patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          python="$RUNNER_TEMP/native-independent-review/venv/bin/python"
+          site="$("$python" -I -c 'import sysconfig; print(sysconfig.get_path("purelib"))')"
+          patch="$GITHUB_WORKSPACE/.github/patches/crosshair-0.0.109-native-review.patch"
+          cd "$site"
+          sha256sum -c /dev/stdin <<'ORIGINAL'
+          86c4c6d34f48ee8c0bd16e4791485aa016bda8284491813dd2217bc9583aa986  crosshair/core.py
+          a6783e90170fec0f02af0526ae1400c7f9d72f2ab66a6cd487078d2a5009aa9f  crosshair/dynamic_typing.py
+          b386c0e7a31ce603cad652a86252e4e4815d4f21be256b65c9b0791ee2fce969  crosshair/main.py
+          ORIGINAL
+          git apply "$patch"
+          sha256sum -c /dev/stdin <<'PATCHED'
+          8b51b63291f7deb5a2b3f4343d33673668498bf59babc26ad153c04433854a57  crosshair/core.py
+          a698815202099fd262354c5aeabcb8346a478f2cc9fdab0b43c0770ead9a8ab6  crosshair/dynamic_typing.py
+          1b14cade6e751f24ba7b11832459820a166bc129cdf7857e411b2f420e033c2f  crosshair/main.py
+          PATCHED
       - name: Verify immutable core registry APIs
         run: |
           set -euo pipefail
