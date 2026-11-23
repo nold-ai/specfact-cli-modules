@@ -118,3 +118,16 @@ def test_native_review_uses_paired_core_only_for_candidate_tests() -> None:
     assert f"NATIVE_REVIEW_PROJECT_CORE: {paired_path}" in review
     assert 'NATIVE_REVIEW_PROJECT_CORE="$NATIVE_REVIEW_PROJECT_CORE"' in review
     assert "SPECFACT_CLI_REPO:" not in signed + verified
+
+
+def test_native_review_uses_core_dev_for_protected_modules_dev_push() -> None:
+    resolve = _step_text("native-pr-review.yml", "independent-review", "Resolve paired core for candidate tests")
+    parsed = import_module("yaml").safe_load(resolve)
+    condition = parsed[0]["if"]
+    assert condition == (
+        "(github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name "
+        "== github.repository) || "
+        "(github.event_name == 'push' && github.repository == 'nold-ai/specfact-cli-modules' "
+        "&& github.ref == 'refs/heads/dev' && github.ref_protected)"
+    )
+    assert parsed[0]["env"]["CANDIDATE_BRANCH"] == "${{ github.head_ref || github.ref_name }}"

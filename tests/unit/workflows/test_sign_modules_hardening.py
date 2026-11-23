@@ -36,6 +36,13 @@ def test_verification_triggers_on_push_pr_and_dispatch() -> None:
     assert events["workflow_dispatch"]["inputs"]["base_branch"]["options"] == ["dev", "main"]
 
 
+def test_native_review_workflow_changes_trigger_pr_signature_verification() -> None:
+    events = _workflow()["on"]
+    reviewer_path = ".github/workflows/native-pr-review.yml"
+    assert reviewer_path in events["pull_request"]["paths"]
+    assert reviewer_path not in events["push"]["paths"]
+
+
 def test_verification_cannot_sign_or_write_to_github() -> None:
     workflow = _workflow()
     assert workflow["permissions"] == {"contents": "read"}

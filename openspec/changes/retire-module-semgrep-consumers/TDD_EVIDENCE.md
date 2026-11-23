@@ -70,3 +70,24 @@ assertions on inline requests, recognizes Flask test clients, and replaces
 stale Python import aliases. All five fixtures and the unchanged Project
 suite passed. Coverage is 88.85% for the converter and 94.59% for the source
 helpers.
+
+## Native review on protected modules dev
+
+The signed #529 pull request passed the required checks before merge. Native
+review of the subsequent protected dev push completed all contract targets,
+then failed four Repro tests against released core 0.55.4, which lacked the
+built-in scanner. See modules Actions run 45274139569, job 138041399412.
+
+The workflow regression failed on commit `4cf2747d` because the candidate
+resolver accepted only pull requests. It now accepts official protected dev
+pushes and uses the exact commit resolved from core dev. All five resolver
+and provenance cases passed on Python 3.12.13. The controller and its signed
+reviewer retain their existing released inputs.
+
+After all three quality jobs passed on #531 head `743cfccc`, GitHub still
+blocked the PR. Native-review-only changes did not select the required
+`sign-modules` pull request workflow. Verification-only dispatch run
+45279879008 passed on the exact commit but its check contexts were absent
+from the PR rollup. The new trigger regression failed on that head, then
+passed after adding the exact workflow path to PR verification. The push
+filter, verifier, and protected-main signing environment are unchanged.
