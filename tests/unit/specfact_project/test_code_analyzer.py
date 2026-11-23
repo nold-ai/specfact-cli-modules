@@ -4,7 +4,6 @@ Focus: Business logic and edge cases only (@beartype handles type validation).
 """
 
 import ast
-import os
 import tempfile
 from pathlib import Path
 from textwrap import dedent
@@ -122,8 +121,7 @@ class TestCodeAnalyzer:
             constraints = plan_bundle.idea.constraints
             assert len(constraints) > 0
 
-            constraint_str = " ".join(constraints).lower()
-            assert "python" in constraint_str or "fastapi" in constraint_str
+            assert {"FastAPI framework", "Python 3.11+"} <= set(constraints)
 
     def test_extract_technology_stack_from_pyproject_toml(self):
         """Test technology stack extraction from pyproject.toml."""
@@ -148,8 +146,7 @@ class TestCodeAnalyzer:
             constraints = plan_bundle.idea.constraints
             assert len(constraints) > 0
 
-            constraint_str = " ".join(constraints).lower()
-            assert "python" in constraint_str or "django" in constraint_str
+            assert {"Django framework", "Python >=3.12"} <= set(constraints)
 
     def test_extract_technology_stack_fallback_to_defaults(self):
         """Test that defaults are used when no dependency files exist."""
@@ -200,8 +197,6 @@ class TestCodeAnalyzer:
 
     def test_extract_simple_class_as_feature(self):
         """Test extracting a simple class as a feature."""
-        # Set TEST_MODE to skip Semgrep (test focuses on feature extraction, not Semgrep)
-        os.environ["TEST_MODE"] = "true"
         code = dedent(
             '''
             class UserManager:
@@ -532,7 +527,7 @@ class TestCodeAnalyzerStoryWording:
 
             # All validation methods should be in tasks
             validation_story = validation_stories[0]
-            assert "validate_email()" in validation_story.tasks or "validate_phone()" in validation_story.tasks
+            assert {"validate_email()", "validate_phone()", "is_valid()"} <= set(validation_story.tasks)
         finally:
             temp_file.unlink()
 

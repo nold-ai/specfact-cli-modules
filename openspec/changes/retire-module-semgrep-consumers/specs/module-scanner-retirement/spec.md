@@ -17,6 +17,7 @@ SpecFact-owned Project and Codebase entry points SHALL run supported feature, qu
 - **GIVEN** a Python test with a literal HTTP request, asserted status and asserted JSON response
 - **WHEN** Project extracts OpenAPI contracts with or without process workers
 - **THEN** the operation contains the request example and response example under the asserted status
+- **AND** inline assertions and Flask client contexts preserve supported examples, and repeated operations keep each selected request and response together
 - **AND** an existing legacy test-pattern configuration produces migration guidance without invoking Semgrep
 
 #### Scenario: Prior scanner configuration needs migration
@@ -43,4 +44,5 @@ SpecFact-owned Project and Codebase entry points SHALL run supported feature, qu
 - **WHEN** Project analyzes the repository without an available Semgrep tool
 - **THEN** the first feature retains the route outcome, the quality constraint, and its corresponding confidence evidence
 - **AND** the second feature receives no quality constraint from the first
+- **AND** endpoint and authentication findings require evidence from the owning source scope, with no inferred route methods or string types when unresolved
 - **AND** legacy Project feature or quality configuration produces migration guidance without invoking Semgrep

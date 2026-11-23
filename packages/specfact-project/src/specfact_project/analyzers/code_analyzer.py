@@ -46,7 +46,6 @@ class _PatternFeatureBuckets:
 class _PatternEnhancementContext:
     pattern_findings: list[dict[str, Any]]
     file_path: Path
-    class_name: str
     class_start_line: int | None = None
     class_end_line: int | None = None
     file_theme_accumulator: set[str] | None = None
@@ -551,9 +550,9 @@ class CodeAnalyzer:
     ) -> Feature | None:
         """Extract and enrich one feature using its source findings."""
         current_count = 0 if self.key_format == "sequential" else len(self.features)
-        class_start_line = node.lineno if hasattr(node, "lineno") else None
+        class_start_line = min([node.lineno, *(decorator.lineno for decorator in node.decorator_list)])
         class_end_line = node.end_lineno if hasattr(node, "end_lineno") else None
-        pattern_evidence = self._extract_pattern_evidence(pattern_findings, node.name, class_start_line, class_end_line)
+        pattern_evidence = self._extract_pattern_evidence(pattern_findings, class_start_line, class_end_line)
 
         feature = self._extract_feature_from_class_parallel(node, file_path, current_count, pattern_evidence)
         if feature is None:
@@ -564,7 +563,6 @@ class CodeAnalyzer:
             _PatternEnhancementContext(
                 pattern_findings=pattern_findings,
                 file_path=file_path,
-                class_name=node.name,
                 class_start_line=class_start_line,
                 class_end_line=class_end_line,
                 file_theme_accumulator=file_theme_accumulator,
@@ -635,7 +633,6 @@ class CodeAnalyzer:
     def _extract_pattern_evidence(
         self,
         pattern_findings: list[dict[str, Any]],
-        class_name: str,
         class_start_line: int | None,
         class_end_line: int | None,
     ) -> dict[str, Any]:
@@ -644,7 +641,6 @@ class CodeAnalyzer:
 
         Args:
             pattern_findings: List of Pattern findings
-            class_name: Name of the class
             class_start_line: Starting line number of the class
             class_end_line: Ending line number of the class
 
@@ -655,7 +651,7 @@ class CodeAnalyzer:
 
         for finding in pattern_findings:
             rule_id = str(finding.get("check_id", "")).lower()
-            if not self._finding_matches_class(finding, class_name, class_start_line, class_end_line):
+            if not self._finding_matches_class(finding, class_start_line, class_end_line):
                 continue
             self._apply_pattern_evidence_flag(evidence, rule_id)
 
@@ -664,16 +660,10 @@ class CodeAnalyzer:
     def _finding_matches_class(
         self,
         finding: dict[str, Any],
-        class_name: str,
         class_start_line: int | None,
         class_end_line: int | None,
     ) -> bool:
         """Check whether a pattern finding belongs to the target class."""
-        effective_rule_id = str(finding.get("check_id", "")).lower()
-        message = str(finding.get("message", "")).lower()
-        class_name_lower = class_name.lower()
-        if class_name_lower in message or class_name_lower in effective_rule_id:
-            return True
         finding_line = self._pattern_finding_line(finding)
         return bool(
             class_start_line and class_end_line and finding_line and class_start_line <= finding_line <= class_end_line
@@ -794,39 +784,14 @@ class CodeAnalyzer:
         )
 
     def _filter_relevant_pattern_findings(self, ctx: _PatternEnhancementContext) -> list[dict[str, Any]]:
-        """Select findings that belong to the target class or its immediate vicinity."""
-        relevant: list[dict[str, Any]] = []
-        for finding in ctx.pattern_findings:
-            finding_path = finding.get("path", "")
-            if str(ctx.file_path) not in finding_path and finding_path not in str(ctx.file_path):
-                continue
-            if self._finding_matches_class(finding, ctx.class_name, ctx.class_start_line, ctx.class_end_line):
-                relevant.append(finding)
-                continue
-            finding_line = self._pattern_finding_line(finding)
-            check_id = str(finding.get("check_id", "")).lower()
-            if self._is_nearby_anti_pattern(check_id, finding_line, ctx.class_start_line, ctx.class_end_line):
-                relevant.append(finding)
-        return relevant
-
-    def _is_nearby_anti_pattern(
-        self,
-        check_id: str,
-        finding_line: int,
-        class_start_line: int | None,
-        class_end_line: int | None,
-    ) -> bool:
-        """Check whether a finding is a nearby anti-pattern for the class."""
-        if not class_start_line or not finding_line:
-            return False
-        is_anti_pattern = any(
-            term in check_id for term in ("antipattern", "code-smell", "god-class", "deprecated", "security")
-        )
-        if not is_anti_pattern or finding_line < class_start_line:
-            return False
-        if class_end_line:
-            return finding_line <= class_end_line
-        return finding_line <= (class_start_line + 100)
+        """Select findings located inside the owning class in this source file."""
+        path = str(ctx.file_path)
+        return [
+            finding
+            for finding in ctx.pattern_findings
+            if finding.get("path") == path
+            and self._finding_matches_class(finding, ctx.class_start_line, ctx.class_end_line)
+        ]
 
     def _categorise_pattern_finding(
         self,

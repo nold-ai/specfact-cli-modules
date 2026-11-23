@@ -9,17 +9,21 @@ from specfact_project.analyzers.python_patterns import feature_patterns
 
 def test_routes_keep_http_methods_and_attach_only_auth_dependencies(tmp_path: Path) -> None:
     source = dedent("""\
-        from fastapi import Depends, Security
+        from fastapi import APIRouter, Depends, Security
+        from flask import Blueprint
 
-        @app.get("/health", dependencies=[Depends(record_metrics)])
+        api = APIRouter()
+        app = Blueprint("widgets", __name__)
+
+        @api.get("/health", dependencies=[Depends(record_metrics)])
         def health():
             pass
 
-        @app.get("/protected", dependencies=[Depends(dependency=require_auth)])
+        @api.get("/protected", dependencies=[Depends(dependency=require_auth)])
         def protected():
             pass
 
-        @app.get("/scoped", dependencies=[Security(check_scopes)])
+        @api.get("/scoped", dependencies=[Security(require_permission)])
         def scoped():
             pass
 
@@ -36,9 +40,10 @@ def test_routes_keep_http_methods_and_attach_only_auth_dependencies(tmp_path: Pa
     findings = feature_patterns(ast.parse(source), path)
 
     assert {item["path"] for item in findings} == {str(path)}
-    assert [item["start"]["line"] for item in findings if item["check_id"] == "fastapi-dependency-auth-detection"] == [
-        7,
-        11,
+    auth = [item["start"]["line"] for item in findings if item["check_id"] == "fastapi-dependency-auth-detection"]
+    assert [source.splitlines()[line - 1] for line in auth] == [
+        '@api.get("/protected", dependencies=[Depends(dependency=require_auth)])',
+        '@api.get("/scoped", dependencies=[Security(require_permission)])',
     ]
     assert [item["extra"]["metadata"] for item in findings if item["check_id"] == "flask-route-detection"] == [
         {"method": "POST", "path": "/widgets"},
@@ -111,3 +116,109 @@ def test_reports_scoped_python_quality_and_feature_signals(tmp_path: Path) -> No
     concatenations = [item["start"]["line"] for item in findings if item["check_id"] == "string-concatenation-loop"]
     assert len(concatenations) == 1
     assert source.splitlines()[concatenations[0] - 1].strip() == "output = output + part"
+
+
+def test_only_known_http_receivers_produce_route_findings(tmp_path: Path) -> None:
+    source = dedent("""\
+        from fastapi import APIRouter
+        from flask import Flask
+
+        api = APIRouter()
+        app = Flask(__name__)
+        methods = ["POST"]
+
+        @api.get(path="/widgets")
+        def widgets():
+            pass
+
+        @cache.get("/internal")
+        def cached():
+            pass
+
+        @app.route("/explicit", methods=methods)
+        def unresolved():
+            pass
+
+        @app.post("/orders")
+        def orders():
+            pass
+        """)
+    findings = feature_patterns(ast.parse(source), tmp_path / "routes.py")
+
+    routes = {
+        (item["check_id"], item["extra"]["metadata"]["method"], item["extra"]["metadata"]["path"])
+        for item in findings
+        if item["check_id"].endswith("-route-detection")
+    }
+    assert routes == {
+        ("fastapi-route-detection", "GET", "/widgets"),
+        ("flask-route-detection", "POST", "/orders"),
+    }
+
+
+def test_route_authentication_requires_known_dependencies(tmp_path: Path) -> None:
+    source = dedent("""\
+        from fastapi import APIRouter, Depends, Security
+        from typing import Annotated
+
+        api = APIRouter()
+
+        @api.get("/health", dependencies=[Security(record_metrics)])
+        def health():
+            pass
+
+        @api.get("/auth")
+        def authenticated(user=Depends(get_current_user)):
+            pass
+
+        @api.get("/scoped")
+        def scoped(user: Annotated[str, Security(require_permission, scopes=["read"])]):
+            pass
+
+        @api.get("/anonymous", dependencies=[Depends(record_metrics)])
+        def anonymous():
+            pass
+        """)
+    findings = feature_patterns(ast.parse(source), tmp_path / "authorization.py")
+
+    matches = [item["start"]["line"] for item in findings if item["check_id"] == "fastapi-dependency-auth-detection"]
+    assert [source.splitlines()[line - 1] for line in matches] == ['@api.get("/auth")', '@api.get("/scoped")']
+
+
+def test_local_imports_stay_in_their_own_function(tmp_path: Path) -> None:
+    source = dedent("""\
+        def first():
+            import logging as log
+            return log.getLogger("first")
+
+        def second():
+            import cache as log
+            return log.getLogger("second")
+
+        class Reporter:
+            import logging as log
+
+            def emit(self):
+                return log.getLogger("unbound")
+        """)
+    findings = feature_patterns(ast.parse(source), tmp_path / "helpers.py")
+
+    lines = [item["start"]["line"] for item in findings if item["check_id"] == "logger-instantiation"]
+    assert lines == [3]
+
+
+def test_numeric_accumulator_is_not_string_evidence(tmp_path: Path) -> None:
+    source = dedent("""\
+        def summarize(parts):
+            text = ""
+            total = 0
+            for part in parts:
+                total = total + len(part)
+                text = text + part
+            return text, total
+        """)
+    findings = feature_patterns(ast.parse(source), tmp_path / "formatting.py")
+
+    matches = [item for item in findings if item["check_id"] == "string-concatenation-loop"]
+    assert [source.splitlines()[item["start"]["line"] - 1].strip() for item in matches] == ["text = text + part"]
+    assert matches[0]["message"] == "Review repeated concatenation in a loop"

@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pytest
 
+from specfact_project.analyzers.python_source import import_aliases
 from specfact_project.generators.test_to_openapi import OpenAPITestConverter
 
 
@@ -216,3 +217,83 @@ def test_aliases():
     assert examples["post_orders"]["request"]["body"] == {"quantity": 2}
     assert examples["post_orders"]["status_code"] == 201
     assert examples["post_orders"]["response"] == {"id": 4}
+
+
+def test_repeated_operation_keeps_one_complete_example(tmp_path: Path) -> None:
+    source = tmp_path / "test_widgets.py"
+    source.write_text(
+        """
+def test_created(client):
+    response = client.post("/widgets", json={"name": "old"})
+    assert response.status_code == 201
+    assert response.json() == {"id": 7}
+
+def test_invalid(client):
+    response = client.post("/widgets", json={"name": ""})
+    assert response.status_code == 422
+""",
+        encoding="utf-8",
+    )
+
+    example = OpenAPITestConverter(tmp_path).extract_examples_from_tests([source.name])["post_widgets"]
+
+    assert example["request"]["body"] == {"name": ""}
+    assert example["status_code"] == 422
+    assert "response" not in example
+
+
+def test_inline_assertion_extracts_the_request_and_status(tmp_path: Path) -> None:
+    source = tmp_path / "test_health.py"
+    source.write_text(
+        'def test_health(client):\n    assert client.get("/health").status_code == 200\n', encoding="utf-8"
+    )
+
+    example = OpenAPITestConverter(tmp_path).extract_examples_from_tests([source.name])["get_health"]
+
+    assert example["request"]["path"] == "/health"
+    assert example["status_code"] == 200
+
+
+def test_flask_test_client_context_keeps_request_and_response(tmp_path: Path) -> None:
+    source = tmp_path / "test_widgets.py"
+    source.write_text(
+        """
+def test_widgets(app):
+    with app.test_client() as client:
+        response = client.post("/widgets", json={"name": "example"})
+        assert response.status_code == 201
+        assert response.json() == {"id": 7}
+""",
+        encoding="utf-8",
+    )
+
+    example = OpenAPITestConverter(tmp_path).extract_examples_from_tests([source.name])["post_widgets"]
+
+    assert example["request"]["body"] == {"name": "example"}
+    assert example["status_code"] == 201
+    assert example["response"] == {"id": 7}
+
+
+def test_http_context_rebinds_the_response(tmp_path: Path) -> None:
+    source = tmp_path / "test_context.py"
+    source.write_text(
+        """
+def test_context(client):
+    response = client.get("/health")
+    assert response.status_code == 200
+    with client.get("/widgets") as response:
+        assert response.status_code == 206
+""",
+        encoding="utf-8",
+    )
+
+    examples = OpenAPITestConverter(tmp_path).extract_examples_from_tests([source.name])
+
+    assert examples["get_health"]["status_code"] == 200
+    assert examples["get_widgets"]["status_code"] == 206
+
+
+def test_plain_import_replaces_previous_binding() -> None:
+    tree = ast.parse("import logging as os\nimport os.path\nimport httpx as http")
+
+    assert import_aliases(tree.body) == {"os": "os", "http": "httpx"}

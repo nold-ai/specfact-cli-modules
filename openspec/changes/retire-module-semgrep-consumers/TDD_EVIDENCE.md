@@ -62,6 +62,15 @@ was 82.64% for the converter and 92.59% for its source-name helpers. A legacy
 test-pattern configuration emits migration guidance. Feature and quality
 findings, Spec-Kit output, and signed installed acceptance remain open.
 
+## OpenAPI review regressions
+
+Five focused fixtures failed on signed #530 head `55d3a1ee`. The follow-up
+replaces whole operation examples, binds context responses, extracts
+assertions on inline requests, recognizes Flask test clients, and replaces
+stale Python import aliases. All five fixtures and the unchanged Project
+suite passed. Coverage is 88.85% for the converter and 94.59% for the source
+helpers.
+
 ## Project feature and quality evidence
 
 The normal analyzer regression failed on `4cf2747d`: loading the feature
@@ -73,3 +82,14 @@ findings, scope, history, dependency graph, and incremental feature output.
 On Python 3.12.13 with paired core `41216d9`, 75 focused cases passed.
 Branch-inclusive coverage reached 80.94% for the
 analyzer and 92.59% for the rule engine.
+
+## Project analyzer review corrections
+
+Five production-behavior fixtures failed on signed #532 head `5279c6ef`.
+The follow-up uses source ranges, statically recognized Flask and FastAPI
+receivers, resolved literal route parameters, known authentication
+callables, scoped imports, and string initialization evidence. Tests also
+require the expected parsed dependency names and validation tasks without
+leaking TEST_MODE. After incorporating signed #530 head `685830f4`, all
+85 focused Project tests passed. Coverage reached 81.41%
+for the analyzer and 93.16% for source rules.

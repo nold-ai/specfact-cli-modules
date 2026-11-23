@@ -151,3 +151,29 @@ def test_malformed_module_does_not_hide_async_functions(tmp_path: Path) -> None:
     assert analyzer.async_patterns["services"] == ["await_widgets"]
     assert len(plan.features) == 2
     assert any("Exposes API endpoints: POST /widgets" in item.outcomes for item in plan.features)
+
+
+def test_route_evidence_belongs_to_its_owning_feature(tmp_path: Path) -> None:
+    (tmp_path / "service.py").write_text(
+        """\
+from fastapi import APIRouter
+
+api = APIRouter()
+
+class Route:
+    def get_name(self):
+        return "route"
+
+class Billing:
+    @api.get("/bills")
+    def get_bill(self):
+        return "bill"
+""",
+        encoding="utf-8",
+    )
+
+    plan = CodeAnalyzer(tmp_path, confidence_threshold=0.0).analyze()
+
+    by_title = {feature.title: feature for feature in plan.features}
+    assert "Exposes API endpoints: GET /bills" in by_title["Billing"].outcomes
+    assert all("Exposes API endpoints" not in outcome for outcome in by_title["Route"].outcomes)

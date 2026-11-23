@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any, NamedTuple
 
 from beartype import beartype
-from icontract import require
+from icontract import ensure, require
 
 from specfact_project.analyzers.python_source import import_aliases, qualified_name
 
@@ -78,30 +78,63 @@ QUALITY_CALLS = {
 }
 
 
-def _literal_string(node: ast.AST) -> str:
+ROUTER_CONSTRUCTORS = {
+    "fastapi.FastAPI": "fastapi",
+    "fastapi.APIRouter": "fastapi",
+    "flask.Flask": "flask",
+    "flask.Blueprint": "flask",
+}
+SCOPE_NODES = (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)
+SourceValues = dict[str, list[tuple[int, ast.expr]]]
+
+
+class _SourceScope(NamedTuple):
+    aliases: dict[str, str]
+    assignments: SourceValues
+
+    @ensure(lambda result: result is None or isinstance(result, ast.expr), "A binding has a source expression")
+    def before(self, name: str, line: int) -> ast.expr | None:
+        return next((value for at, value in reversed(self.assignments.get(name, [])) if at < line), None)
+
+
+def _literal_string(node: ast.AST | None) -> str:
     return node.value if isinstance(node, ast.Constant) and isinstance(node.value, str) else ""
 
 
-def _decorated_route(node: ast.Call, name: str) -> Iterator[tuple[str, str, str]]:
-    method = name.rsplit(".", 1)[-1]
-    path = _literal_string(node.args[0]) if node.args else ""
-    if not path or not isinstance(node.func, ast.Attribute):
+def _keyword(call: ast.Call, *names: str) -> ast.expr | None:
+    return next((item.value for item in call.keywords if item.arg in names), None)
+
+
+def _route_framework(node: ast.Call, scope: _SourceScope) -> str:
+    if not isinstance(node.func, ast.Attribute):
+        return ""
+    receiver = node.func.value
+    constructor = scope.before(receiver.id, node.lineno) if isinstance(receiver, ast.Name) else receiver
+    if isinstance(constructor, ast.Call):
+        return ROUTER_CONSTRUCTORS.get(qualified_name(constructor.func, scope.aliases), "")
+    return ""
+
+
+def _decorated_route(node: ast.Call, framework: str) -> Iterator[tuple[str, str]]:
+    if not isinstance(node.func, ast.Attribute):
+        return
+    method = node.func.attr
+    path = _literal_string(node.args[0] if node.args else _keyword(node, "path", "rule"))
+    if not path:
         return
     if method in HTTP_METHODS:
-        yield "fastapi", method.upper(), path
-        return
-    if method != "route":
-        return
-    for verb in _configured_route_methods(node):
-        if verb.lower() in HTTP_METHODS:
-            yield "flask", verb.upper(), path
+        yield method.upper(), path
+    if method == "route" and framework == "flask":
+        for verb in _configured_route_methods(node):
+            if verb.lower() in HTTP_METHODS:
+                yield verb.upper(), path
 
 
 def _configured_route_methods(node: ast.Call) -> Iterator[str]:
-    configured = next((item.value for item in node.keywords if item.arg == "methods"), None)
+    configured = _keyword(node, "methods")
     if isinstance(configured, (ast.List, ast.Tuple)):
         yield from map(_literal_string, configured.elts)
-    else:
+    elif configured is None:
         yield "GET"
 
 
@@ -121,42 +154,64 @@ AUTH_DEPENDENCY_NAMES = frozenset({"require_auth", "require_permission", "get_cu
 
 def _is_auth_dependency(call: ast.Call, aliases: dict[str, str]) -> bool:
     function = qualified_name(call.func, aliases)
-    if function in {"Security", "fastapi.Security"}:
-        return True
-    if function not in {"Depends", "fastapi.Depends"}:
+    if function not in {"Depends", "fastapi.Depends", "Security", "fastapi.Security"}:
         return False
-    dependency = (
-        call.args[0]
-        if call.args
-        else next((keyword.value for keyword in call.keywords if keyword.arg == "dependency"), None)
-    )
+    dependency = call.args[0] if call.args else _keyword(call, "dependency")
     if dependency is None:
         return False
     name = qualified_name(dependency.func if isinstance(dependency, ast.Call) else dependency, aliases)
     return name.startswith("fastapi.security.") or name.rsplit(".", 1)[-1] in AUTH_DEPENDENCY_NAMES
 
 
-def _requires_auth_dependency(node: ast.Call, aliases: dict[str, str]) -> bool:
-    targets = (keyword.value for keyword in node.keywords if keyword.arg == "dependencies")
-    calls = (item for value in targets for item in ast.walk(value) if isinstance(item, ast.Call))
-    return any(_is_auth_dependency(item, aliases) for item in calls)
+def _annotated_dependencies(argument: ast.arg, aliases: dict[str, str]) -> tuple[ast.expr, ...]:
+    annotation = argument.annotation
+    if not isinstance(annotation, ast.Subscript) or not isinstance(annotation.slice, ast.Tuple):
+        return ()
+    if qualified_name(annotation.value, aliases) not in {
+        "Annotated",
+        "typing.Annotated",
+        "typing_extensions.Annotated",
+    }:
+        return ()
+    return tuple(annotation.slice.elts[1:])
 
 
-def _call_decorator_patterns(node: ast.Call, name: str, aliases: dict[str, str]) -> Iterator[PatternMatch]:
-    for framework, method, path in _decorated_route(node, name):
+def _parameter_dependencies(args: ast.arguments, aliases: dict[str, str]) -> Iterator[ast.expr]:
+    yield from args.defaults
+    yield from (value for value in args.kw_defaults if value is not None)
+    for argument in (*args.posonlyargs, *args.args, *args.kwonlyargs):
+        yield from _annotated_dependencies(argument, aliases)
+
+
+def _requires_auth_dependency(node: ast.Call, args: ast.arguments, aliases: dict[str, str]) -> bool:
+    values = list(_parameter_dependencies(args, aliases))
+    configured = _keyword(node, "dependencies")
+    if configured is not None:
+        values.append(configured)
+    return any(
+        _is_auth_dependency(item, aliases) for value in values for item in ast.walk(value) if isinstance(item, ast.Call)
+    )
+
+
+def _route_patterns(node: ast.Call, args: ast.arguments, scope: _SourceScope) -> Iterator[PatternMatch]:
+    framework = _route_framework(node, scope)
+    if not framework:
+        return
+    routes = tuple(_decorated_route(node, framework))
+    for method, path in routes:
         yield PatternMatch(f"{framework}-route-detection", node, metadata={"method": method, "path": path})
-    if _requires_auth_dependency(node, aliases):
+    if routes and framework == "fastapi" and _requires_auth_dependency(node, args, scope.aliases):
         yield PatternMatch("fastapi-dependency-auth-detection", node)
 
 
 def _decorator_patterns(
-    function: ast.FunctionDef | ast.AsyncFunctionDef, aliases: dict[str, str]
+    function: ast.FunctionDef | ast.AsyncFunctionDef, scope: _SourceScope
 ) -> Iterator[PatternMatch]:
     for node in function.decorator_list:
-        name = qualified_name(node.func if isinstance(node, ast.Call) else node, aliases)
+        name = qualified_name(node.func if isinstance(node, ast.Call) else node, scope.aliases)
         suffix = name.rsplit(".", 1)[-1]
         if isinstance(node, ast.Call):
-            yield from _call_decorator_patterns(node, name, aliases)
+            yield from _route_patterns(node, function.args, scope)
         if suffix in {"require_auth", "require_permission", "login_required"}:
             permission = _literal_string(node.args[0]) if isinstance(node, ast.Call) and node.args else ""
             yield PatternMatch("auth-decorator-detection", node, metadata={"permission": permission})
@@ -164,8 +219,8 @@ def _decorator_patterns(
             yield PatternMatch(rule, node)
 
 
-def _function_patterns(node: ast.FunctionDef | ast.AsyncFunctionDef, aliases: dict[str, str]) -> Iterator[PatternMatch]:
-    yield from _decorator_patterns(node, aliases)
+def _function_patterns(node: ast.FunctionDef | ast.AsyncFunctionDef, scope: _SourceScope) -> Iterator[PatternMatch]:
+    yield from _decorator_patterns(node, scope)
     prefix, _, entity = node.name.partition("_")
     operation = CRUD.get(prefix)
     if operation and entity:
@@ -269,7 +324,7 @@ def _import_patterns(node: ast.Import | ast.ImportFrom) -> Iterator[PatternMatch
             yield PatternMatch("structlog-usage" if name == "structlog" else "dotenv-usage", node)
 
 
-def _repeated_additions(node: ast.For | ast.AsyncFor) -> Iterator[ast.Assign]:
+def _repeated_additions(node: ast.For | ast.AsyncFor, scope: _SourceScope) -> Iterator[ast.Assign]:
     assignments = (statement for statement in node.body if isinstance(statement, ast.Assign))
     for statement in assignments:
         value = statement.value
@@ -281,16 +336,18 @@ def _repeated_additions(node: ast.For | ast.AsyncFor) -> Iterator[ast.Assign]:
             continue
         targets = {target.id for target in statement.targets if isinstance(target, ast.Name)}
         if value.left.id in targets:
-            yield statement
+            initial = scope.before(value.left.id, node.lineno)
+            if isinstance(initial, ast.Constant) and isinstance(initial.value, str):
+                yield statement
 
 
-def _definition_evidence(node: ast.AST, aliases: dict[str, str]) -> Iterator[PatternMatch]:
+def _definition_evidence(node: ast.AST, scope: _SourceScope) -> Iterator[PatternMatch]:
     if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-        return _function_patterns(node, aliases)
+        return _function_patterns(node, scope)
     if isinstance(node, ast.ClassDef):
-        return _class_patterns(node, aliases)
+        return _class_patterns(node, scope.aliases)
     if isinstance(node, ast.Call):
-        return _call_patterns(node, aliases)
+        return _call_patterns(node, scope.aliases)
     if isinstance(node, ast.Assign):
         return _assignment_patterns(node)
     if isinstance(node, (ast.Import, ast.ImportFrom)):
@@ -298,25 +355,55 @@ def _definition_evidence(node: ast.AST, aliases: dict[str, str]) -> Iterator[Pat
     return iter(())
 
 
-def _statement_evidence(node: ast.AST, aliases: dict[str, str]) -> Iterator[PatternMatch]:
+def _statement_evidence(node: ast.AST, scope: _SourceScope) -> Iterator[PatternMatch]:
     if isinstance(node, ast.ExceptHandler) and node.type is None:
         yield PatternMatch("bare-except-antipattern", node, "Use a specific exception instead of bare except")
     if isinstance(node, (ast.Try, ast.TryStar)) and node.finalbody:
         yield PatternMatch("finally-block-usage", node)
     if isinstance(node, ast.AnnAssign):
         yield PatternMatch("type-annotations-detection", node)
-    if isinstance(node, ast.Subscript) and qualified_name(node.value, aliases) == "os.environ":
+    if isinstance(node, ast.Subscript) and qualified_name(node.value, scope.aliases) == "os.environ":
         yield PatternMatch("env-variable-access", node)
     if isinstance(node, (ast.For, ast.AsyncFor)):
-        for statement in _repeated_additions(node):
+        for statement in _repeated_additions(node, scope):
             yield PatternMatch("string-concatenation-loop", statement, "Review repeated concatenation in a loop")
 
 
-def _source_matches(tree: ast.Module) -> Iterator[PatternMatch]:
-    aliases = import_aliases(tree.body)
-    for node in ast.walk(tree):
-        yield from _definition_evidence(node, aliases)
-        yield from _statement_evidence(node, aliases)
+def _owned_nodes(root: ast.AST) -> Iterator[ast.AST]:
+    pending = list(reversed(list(ast.iter_child_nodes(root))))
+    while pending:
+        node = pending.pop()
+        yield node
+        if not isinstance(node, SCOPE_NODES):
+            pending.extend(reversed(list(ast.iter_child_nodes(node))))
+
+
+def _assignment_values(nodes: list[ast.AST]) -> SourceValues:
+    values: SourceValues = {}
+    for node in nodes:
+        if isinstance(node, ast.Assign):
+            targets = node.targets
+        elif isinstance(node, ast.AnnAssign):
+            targets = [node.target]
+        else:
+            continue
+        if node.value is None:
+            continue
+        for target in targets:
+            if isinstance(target, ast.Name):
+                values.setdefault(target.id, []).append((node.lineno, node.value))
+    return values
+
+
+def _source_matches(tree: ast.AST, inherited: _SourceScope) -> Iterator[PatternMatch]:
+    nodes = list(_owned_nodes(tree))
+    scope = _SourceScope(inherited.aliases | import_aliases(nodes), inherited.assignments | _assignment_values(nodes))
+    enclosing = inherited if isinstance(tree, ast.ClassDef) else scope
+    for node in nodes:
+        yield from _definition_evidence(node, scope)
+        yield from _statement_evidence(node, scope)
+        if isinstance(node, SCOPE_NODES):
+            yield from _source_matches(node, enclosing)
 
 
 @beartype
@@ -331,5 +418,5 @@ def feature_patterns(tree: ast.Module, file_path: Path) -> list[dict[str, Any]]:
             "message": match.message,
             "extra": {"metadata": match.metadata or {}, "message": match.function_name},
         }
-        for match in _source_matches(tree)
+        for match in _source_matches(tree, _SourceScope({}, {}))
     ]

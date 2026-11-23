@@ -45,7 +45,8 @@ def _test_body_nodes(body: Sequence[ast.stmt]) -> Iterator[ast.AST]:
 
 def _client_assignment(value: ast.AST, aliases: dict[str, str], clients: set[str]) -> bool:
     if isinstance(value, ast.Call):
-        return qualified_name(value.func, aliases) in CLIENT_CONSTRUCTORS
+        constructor = qualified_name(value.func, aliases)
+        return constructor in CLIENT_CONSTRUCTORS or constructor.endswith(".test_client")
     return qualified_name(value, {}) in clients
 
 
@@ -66,11 +67,9 @@ def _is_equality_assertion(node: ast.AST) -> TypeGuard[ast.Compare]:
     return isinstance(node, ast.Compare) and len(node.ops) == 1 and isinstance(node.ops[0], ast.Eq)
 
 
-def _response_attribute(expression: ast.expr) -> tuple[str, str] | None:
+def _response_attribute(expression: ast.expr) -> ast.Attribute | None:
     attribute = expression.func if isinstance(expression, ast.Call) else expression
-    if isinstance(attribute, ast.Attribute) and isinstance(attribute.value, ast.Name):
-        return attribute.value.id, attribute.attr
-    return None
+    return attribute if isinstance(attribute, ast.Attribute) else None
 
 
 class OpenAPITestConverter:
@@ -105,8 +104,7 @@ class OpenAPITestConverter:
                     continue
                 if selected_test and node.name != selected_test:
                     continue
-                for operation, example in self._extract_examples_from_test_function(node, aliases).items():
-                    examples.setdefault(operation, {}).update(example)
+                examples.update(self._extract_examples_from_test_function(node, aliases))
         return examples
 
     def _extract_examples_from_test_function(
@@ -122,21 +120,29 @@ class OpenAPITestConverter:
         responses: dict[str, dict[str, Any]] = {}
         for statement in statements:
             if isinstance(statement, ast.Assert):
-                self._apply_response_assertion(statement, responses)
+                inline_example = self._apply_response_assertion(statement, responses, clients)
+                if inline_example is not None:
+                    examples[inline_example["operation_id"]] = inline_example
                 continue
-            if isinstance(statement, (ast.With, ast.AsyncWith)):
-                self._bind_context_clients(statement.items, aliases, clients)
-                continue
-            targets = self._assignment_names(statement)
-            for target in targets:
-                responses.pop(target, None)
-            value = statement.value
-            example = self._request_example(value, clients)
-            self._bind_clients(targets, value, aliases, clients)
-            if example is not None:
-                examples[example["operation_id"]] = example
-                responses.update(dict.fromkeys(targets, example))
+            for value, targets in self._request_bindings(statement):
+                for target in targets:
+                    responses.pop(target, None)
+                example = self._request_example(value, clients)
+                self._bind_clients(targets, value, aliases, clients)
+                if example is not None:
+                    examples[example["operation_id"]] = example
+                    responses.update(dict.fromkeys(targets, example))
         return examples
+
+    def _request_bindings(
+        self, statement: ast.Assign | ast.AnnAssign | ast.Expr | ast.With | ast.AsyncWith
+    ) -> Iterator[tuple[ast.expr | None, list[str]]]:
+        if isinstance(statement, (ast.With, ast.AsyncWith)):
+            for item in statement.items:
+                targets = [item.optional_vars.id] if isinstance(item.optional_vars, ast.Name) else []
+                yield item.context_expr, targets
+            return
+        yield statement.value, self._assignment_names(statement)
 
     @staticmethod
     def _bind_clients(
@@ -150,12 +156,6 @@ class OpenAPITestConverter:
             clients.difference_update(targets)
         for target in targets:
             aliases.pop(target, None)
-
-    @staticmethod
-    def _bind_context_clients(items: Sequence[ast.withitem], aliases: dict[str, str], clients: set[str]) -> None:
-        for item in items:
-            if isinstance(item.optional_vars, ast.Name):
-                OpenAPITestConverter._bind_clients([item.optional_vars.id], item.context_expr, aliases, clients)
 
     def _request_example(self, value: ast.AST | None, clients: set[str]) -> dict[str, Any] | None:
         if isinstance(value, ast.Await):
@@ -181,20 +181,30 @@ class OpenAPITestConverter:
             return [statement.target.id]
         return []
 
-    def _apply_response_assertion(self, statement: ast.Assert, responses: dict[str, dict[str, Any]]) -> None:
+    def _apply_response_assertion(
+        self, statement: ast.Assert, responses: dict[str, dict[str, Any]], clients: set[str]
+    ) -> dict[str, Any] | None:
         compare = statement.test
         if not _is_equality_assertion(compare):
-            return
+            return None
         left = compare.left
-        target = _response_attribute(left)
-        if target is None:
-            return
-        receiver, attribute = target
-        example = responses.get(receiver)
+        attribute = _response_attribute(left)
+        if attribute is None:
+            return None
+        receiver = attribute.value
+        if isinstance(receiver, ast.Name):
+            example = responses.get(receiver.id)
+            inline = None
+        else:
+            example = inline = self._request_example(receiver, clients)
         if example is None:
-            return
-        expected = self._extract_ast_value(compare.comparators[0])
-        if isinstance(left, ast.Call):
+            return None
+        self._record_asserted_value(example, attribute.attr, isinstance(left, ast.Call), compare.comparators[0])
+        return inline
+
+    def _record_asserted_value(self, example: dict[str, Any], attribute: str, called: bool, value: ast.expr) -> None:
+        expected = self._extract_ast_value(value)
+        if called:
             if attribute == "json" and expected is not None:
                 example["response"] = expected
                 example.setdefault("status_code", 200)
