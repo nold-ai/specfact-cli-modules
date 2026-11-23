@@ -7,7 +7,8 @@
 
 ## Replacement and cutover
 
-- [ ] Migrate Project feature/quality analysis and Codebase async scanning and requested-fix behavior without invoking Semgrep.
+- [x] Migrate the Codebase async scan and preserve explicit diagnostics for requested fixes.
+- [x] Derive Project feature and quality findings from the parsed Python source.
 - [x] Route supported OpenAPI examples through AST extraction in sequential and worker imports.
 - [ ] Retire the Spec-Kit scanner preset while preserving protocol and workflow generation.
 - [ ] Delete obsolete tool discovery, commands, docs and active resources. Preserve historical report interpretation and explicit migration results.

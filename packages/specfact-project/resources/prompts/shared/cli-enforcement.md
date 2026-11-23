@@ -14,11 +14,11 @@ Prompt instructions are operating guidance for SpecFact CLI, not the source of t
 
 The CLI can perform these operations **without LLM**:
 
-- ✅ Tool execution (ruff, pylint, basedpyright, mypy, semgrep, specmatic)
+- ✅ Tool execution (ruff, pylint, basedpyright, mypy, specmatic)
 - ✅ Bundle management (create, load, save, validate structure)
 - ✅ Metadata management (timestamps, hashes, telemetry)
 - ✅ Planning operations (init, add-feature, add-story, update-idea, update-feature)
-- ✅ AST/Semgrep-based analysis (code structure, patterns, relationships)
+- ✅ Python AST analysis (code structure, patterns, relationships)
 - ✅ Specmatic validation (OpenAPI/AsyncAPI contract validation)
 - ✅ Format validation (YAML/JSON schema compliance)
 - ✅ Source tracking and drift detection

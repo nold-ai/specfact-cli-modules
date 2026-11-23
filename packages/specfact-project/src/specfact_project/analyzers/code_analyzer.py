@@ -3,14 +3,13 @@
 from __future__ import annotations
 
 import ast
-import json
 import os
 import re
-import subprocess
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import networkx as nx
 from beartype import beartype
@@ -18,9 +17,11 @@ from icontract import ensure, require
 from rich.console import Console
 from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
 from specfact_cli.models.plan import Feature, Idea, Metadata, PlanBundle, Product, Story
+from specfact_cli.utils import optional_deps
 
 from specfact_project.analyzers.contract_extractor import ContractExtractor
 from specfact_project.analyzers.control_flow_analyzer import ControlFlowAnalyzer
+from specfact_project.analyzers.python_patterns import feature_patterns
 from specfact_project.analyzers.requirement_extractor import RequirementExtractor
 from specfact_project.analyzers.test_pattern_extractor import TestPatternExtractor
 from specfact_project.migrations.plan_migrator import get_current_schema_version
@@ -28,6 +29,27 @@ from specfact_project.utils.feature_keys import to_classname_key, to_sequential_
 
 
 console = Console()
+
+
+@dataclass
+class _PatternFeatureBuckets:
+    api_endpoints: list[str] = field(default_factory=list)
+    data_models: list[str] = field(default_factory=list)
+    auth_patterns: list[str] = field(default_factory=list)
+    crud_operations: list[dict[str, str]] = field(default_factory=list)
+    anti_patterns: list[str] = field(default_factory=list)
+    code_smells: list[str] = field(default_factory=list)
+    themes: set[str] = field(default_factory=set)
+
+
+@dataclass
+class _PatternEnhancementContext:
+    pattern_findings: list[dict[str, Any]]
+    file_path: Path
+    class_name: str
+    class_start_line: int | None = None
+    class_end_line: int | None = None
+    file_theme_accumulator: set[str] | None = None
 
 
 class CodeAnalyzer:
@@ -40,6 +62,16 @@ class CodeAnalyzer:
 
     # Fibonacci sequence for story points
     FIBONACCI = [1, 2, 3, 5, 8, 13, 21, 34, 55, 89]
+    FEATURE_EVIDENCE_FLAGS = {
+        "api": "has_api_endpoints",
+        "model": "has_database_models",
+        "crud": "has_crud_operations",
+        "auth": "has_auth_patterns",
+        "framework": "has_framework_patterns",
+        "test": "has_test_patterns",
+        "anti": "has_anti_patterns",
+        "security": "has_security_issues",
+    }
 
     @beartype
     @require(lambda repo_path: repo_path is not None and isinstance(repo_path, Path), "Repo path must be Path")
@@ -99,28 +131,6 @@ class CodeAnalyzer:
         self.control_flow_analyzer = ControlFlowAnalyzer()
         self.requirement_extractor = RequirementExtractor()
         self.contract_extractor = ContractExtractor()
-
-        # Semgrep integration
-        self.semgrep_enabled = True
-        # Try to find Semgrep config: check resources first (runtime), then tools (development)
-        self.semgrep_config: Path | None = None
-        self.semgrep_quality_config: Path | None = None
-        resources_config = Path(__file__).parent.parent / "resources" / "semgrep" / "feature-detection.yml"
-        tools_config = self.repo_path / "tools" / "semgrep" / "feature-detection.yml"
-        resources_quality_config = Path(__file__).parent.parent / "resources" / "semgrep" / "code-quality.yml"
-        tools_quality_config = self.repo_path / "tools" / "semgrep" / "code-quality.yml"
-        if resources_config.exists():
-            self.semgrep_config = resources_config
-        elif tools_config.exists():
-            self.semgrep_config = tools_config
-        if resources_quality_config.exists():
-            self.semgrep_quality_config = resources_quality_config
-        elif tools_quality_config.exists():
-            self.semgrep_quality_config = tools_quality_config
-        # Disable if Semgrep not available or config missing
-        # Check TEST_MODE first to avoid any subprocess calls in tests
-        if os.environ.get("TEST_MODE") == "true" or self.semgrep_config is None or not self._check_semgrep_available():
-            self.semgrep_enabled = False
 
     @beartype
     @ensure(lambda result: isinstance(result, PlanBundle), "Must return PlanBundle")
@@ -390,23 +400,11 @@ class CodeAnalyzer:
             clarifications=None,
         )
 
-    def _probe_semgrep(self) -> tuple[bool, str | None]:
-        """Check if Semgrep is available in the active repository environment."""
-        # Skip Semgrep check in test mode to avoid timeouts
-        if os.environ.get("TEST_MODE") == "true":
-            return False, "Semgrep skipped in TEST_MODE"
-
-        from specfact_cli.utils.env_manager import check_tool_in_env, detect_env_manager
-
-        env_info = detect_env_manager(self.repo_path)
-        available, message = check_tool_in_env(self.repo_path, "semgrep", env_info)
-        return available, message
-
-    def _check_semgrep_available(self) -> bool:
-        """Check if Semgrep is available in the active repository environment."""
-        available, _message = self._probe_semgrep()
-        return available
-
+    @beartype
+    @ensure(
+        lambda result: any(status["name"] == "AST Analysis" and status["used"] for status in result),
+        "Built-in Python checks must be reported as used",
+    )
     def get_plugin_status(self) -> list[dict[str, Any]]:
         """
         Get status of all analysis plugins.
@@ -414,46 +412,18 @@ class CodeAnalyzer:
         Returns:
             List of plugin status dictionaries with keys: name, enabled, used, reason
         """
-        from specfact_cli.utils.optional_deps import check_cli_tool_available, check_python_package_available
-
         plugins: list[dict[str, Any]] = []
 
-        # AST Analysis (always enabled)
-        plugins.append(
-            {
-                "name": "AST Analysis",
-                "enabled": True,
-                "used": True,
-                "reason": "Core analysis engine",
-            }
-        )
-
-        # Semgrep Pattern Detection
-        semgrep_available, semgrep_message = self._probe_semgrep()
-        semgrep_enabled = self.semgrep_enabled and semgrep_available
-        semgrep_used = semgrep_enabled and self.semgrep_config is not None
-
-        if not semgrep_available:
-            reason = semgrep_message or "Semgrep CLI not installed (install: pip install semgrep)"
-        elif self.semgrep_config is None:
-            reason = "Semgrep config not found"
-        else:
-            reason = "Pattern detection enabled"
-            if self.semgrep_quality_config:
-                reason += " (with code quality rules)"
-
-        plugins.append(
-            {
-                "name": "Semgrep Pattern Detection",
-                "enabled": semgrep_enabled,
-                "used": semgrep_used,
-                "reason": reason,
-            }
-        )
+        reason = "Built-in Python feature and quality checks"
+        legacy_directory = self.repo_path / "tools" / "semgrep"
+        legacy_filenames = ("feature-detection.yml", "code-quality.yml")
+        if any((legacy_directory / filename).is_file() for filename in legacy_filenames):
+            reason += ". Legacy Semgrep feature or quality rules require migration; custom rules were not run."
+        plugins.append({"name": "AST Analysis", "enabled": True, "used": True, "reason": reason})
 
         # Dependency Graph Analysis (requires pyan3 and networkx)
-        pyan3_available, _ = check_cli_tool_available("pyan3")
-        networkx_available = check_python_package_available("networkx")
+        pyan3_available, _ = optional_deps.check_cli_tool_available("pyan3")
+        networkx_available = optional_deps.check_python_package_available("networkx")
         graph_enabled = pyan3_available and networkx_available
         graph_used = graph_enabled  # Used if both dependencies are available
 
@@ -476,56 +446,6 @@ class CodeAnalyzer:
         )
 
         return plugins
-
-    def _run_semgrep_patterns(self, file_path: Path) -> list[dict[str, Any]]:
-        """
-        Run Semgrep for pattern detection on a single file.
-
-        Returns:
-            List of Semgrep findings (empty list if Semgrep not available or error)
-        """
-        # Skip Semgrep in test mode to avoid timeouts
-        if os.environ.get("TEST_MODE") == "true":
-            return []
-
-        if not self.semgrep_enabled or self.semgrep_config is None:
-            return []
-
-        try:
-            from specfact_cli.utils.env_manager import build_tool_command, check_tool_in_env, detect_env_manager
-
-            env_info = detect_env_manager(self.repo_path)
-            semgrep_available, _message = check_tool_in_env(self.repo_path, "semgrep", env_info)
-            if not semgrep_available:
-                return []
-
-            # Run feature detection
-            configs = [str(self.semgrep_config)]
-            # Also include code-quality config if available (for anti-patterns)
-            if self.semgrep_quality_config is not None:
-                configs.append(str(self.semgrep_quality_config))
-
-            # Use shorter timeout in test environments (though we already skip in TEST_MODE)
-            timeout = 10
-
-            result = subprocess.run(
-                build_tool_command(env_info, ["semgrep", "--config", *configs, "--json", str(file_path)]),
-                capture_output=True,
-                text=True,
-                timeout=timeout,
-            )
-
-            # Semgrep may return non-zero for valid findings
-            # Only fail if stderr indicates actual error
-            if result.returncode != 0 and ("error" in result.stderr.lower() or "not found" in result.stderr.lower()):
-                return []
-
-            # Parse JSON results
-            findings = json.loads(result.stdout)
-            return findings.get("results", [])
-        except (subprocess.TimeoutExpired, json.JSONDecodeError, FileNotFoundError, ValueError):
-            # Semgrep not available or config missing - continue without it
-            return []
 
     def _should_skip_file(self, file_path: Path) -> bool:
         """
@@ -607,39 +527,51 @@ class CodeAnalyzer:
             if async_methods:
                 results["async_patterns"][module_name] = async_methods
 
-            # NEW: Run Semgrep for pattern detection
-            semgrep_findings = self._run_semgrep_patterns(file_path)
+            pattern_findings = feature_patterns(tree, file_path)
 
             # Extract classes as features
-            for node in ast.walk(tree):
-                if isinstance(node, ast.ClassDef):
-                    # For sequential keys, use placeholder (will be fixed after all features collected)
-                    # For classname keys, we can generate immediately
-                    current_count = 0 if self.key_format == "sequential" else len(self.features)
-
-                    # Extract Semgrep evidence for confidence scoring
-                    class_start_line = node.lineno if hasattr(node, "lineno") else None
-                    class_end_line = node.end_lineno if hasattr(node, "end_lineno") else None
-                    semgrep_evidence = self._extract_semgrep_evidence(
-                        semgrep_findings, node.name, class_start_line, class_end_line
-                    )
-
-                    # Create feature with Semgrep evidence included in confidence calculation
-                    feature = self._extract_feature_from_class_parallel(
-                        node, file_path, current_count, semgrep_evidence
-                    )
-                    if feature:
-                        # Enhance feature with detailed Semgrep findings (outcomes, constraints, themes)
-                        self._enhance_feature_with_semgrep(
-                            feature, semgrep_findings, file_path, node.name, class_start_line, class_end_line
-                        )
-                        results["features"].append(feature)
+            classes = (node for node in ast.walk(tree) if isinstance(node, ast.ClassDef))
+            for class_node in classes:
+                feature = self._extract_feature_for_results(class_node, file_path, pattern_findings, results["themes"])
+                if feature is not None:
+                    results["features"].append(feature)
 
         except (SyntaxError, UnicodeDecodeError):
             # Skip files that can't be parsed
             pass
 
         return results
+
+    def _extract_feature_for_results(
+        self,
+        node: ast.ClassDef,
+        file_path: Path,
+        pattern_findings: list[dict[str, Any]],
+        file_theme_accumulator: set[str],
+    ) -> Feature | None:
+        """Extract and enrich one feature using its source findings."""
+        current_count = 0 if self.key_format == "sequential" else len(self.features)
+        class_start_line = node.lineno if hasattr(node, "lineno") else None
+        class_end_line = node.end_lineno if hasattr(node, "end_lineno") else None
+        pattern_evidence = self._extract_pattern_evidence(pattern_findings, node.name, class_start_line, class_end_line)
+
+        feature = self._extract_feature_from_class_parallel(node, file_path, current_count, pattern_evidence)
+        if feature is None:
+            return None
+
+        self._enhance_feature_with_patterns(
+            feature,
+            _PatternEnhancementContext(
+                pattern_findings=pattern_findings,
+                file_path=file_path,
+                class_name=node.name,
+                class_start_line=class_start_line,
+                class_end_line=class_end_line,
+                file_theme_accumulator=file_theme_accumulator,
+            ),
+        )
+
+        return feature
 
     def _merge_analysis_results(self, results: dict[str, Any]) -> None:
         """Merge parallel analysis results into instance variables."""
@@ -700,18 +632,18 @@ class CodeAnalyzer:
 
         return themes
 
-    def _extract_semgrep_evidence(
+    def _extract_pattern_evidence(
         self,
-        semgrep_findings: list[dict[str, Any]],
+        pattern_findings: list[dict[str, Any]],
         class_name: str,
         class_start_line: int | None,
         class_end_line: int | None,
     ) -> dict[str, Any]:
         """
-        Extract Semgrep evidence for confidence scoring.
+        Extract Pattern evidence for confidence scoring.
 
         Args:
-            semgrep_findings: List of Semgrep findings
+            pattern_findings: List of Pattern findings
             class_name: Name of the class
             class_start_line: Starting line number of the class
             class_end_line: Ending line number of the class
@@ -719,72 +651,72 @@ class CodeAnalyzer:
         Returns:
             Evidence dict with boolean flags for different pattern types
         """
-        evidence: dict[str, Any] = {
-            "has_api_endpoints": False,
-            "has_database_models": False,
-            "has_crud_operations": False,
-            "has_auth_patterns": False,
-            "has_framework_patterns": False,
-            "has_test_patterns": False,
-            "has_anti_patterns": False,
-            "has_security_issues": False,
-        }
+        evidence: dict[str, Any] = dict.fromkeys(self.FEATURE_EVIDENCE_FLAGS.values(), False)
 
-        for finding in semgrep_findings:
+        for finding in pattern_findings:
             rule_id = str(finding.get("check_id", "")).lower()
-            start = finding.get("start", {})
-            finding_line = start.get("line", 0) if isinstance(start, dict) else 0
-
-            # Check if finding is relevant to this class
-            message = str(finding.get("message", ""))
-            matches_class = (
-                class_name.lower() in message.lower()
-                or class_name.lower() in rule_id
-                or (
-                    class_start_line
-                    and class_end_line
-                    and finding_line
-                    and class_start_line <= finding_line <= class_end_line
-                )
-            )
-
-            if not matches_class:
+            if not self._finding_matches_class(finding, class_name, class_start_line, class_end_line):
                 continue
-
-            # Categorize findings
-            if "route-detection" in rule_id or "api-endpoint" in rule_id:
-                evidence["has_api_endpoints"] = True
-            elif "model-detection" in rule_id or "database-model" in rule_id:
-                evidence["has_database_models"] = True
-            elif "crud" in rule_id:
-                evidence["has_crud_operations"] = True
-            elif "auth" in rule_id or "authentication" in rule_id or "permission" in rule_id:
-                evidence["has_auth_patterns"] = True
-            elif "framework" in rule_id or "async" in rule_id or "context-manager" in rule_id:
-                evidence["has_framework_patterns"] = True
-            elif "test" in rule_id or "pytest" in rule_id or "unittest" in rule_id:
-                evidence["has_test_patterns"] = True
-            elif (
-                "antipattern" in rule_id
-                or "code-smell" in rule_id
-                or "god-class" in rule_id
-                or "mutable-default" in rule_id
-                or "lambda-assignment" in rule_id
-                or "string-concatenation" in rule_id
-                or "deprecated" in rule_id
-            ):
-                evidence["has_anti_patterns"] = True
-            elif (
-                "security" in rule_id
-                or "unsafe" in rule_id
-                or "insecure" in rule_id
-                or "weak-cryptographic" in rule_id
-                or "hardcoded-secret" in rule_id
-                or "command-injection" in rule_id
-            ):
-                evidence["has_security_issues"] = True
+            self._apply_pattern_evidence_flag(evidence, rule_id)
 
         return evidence
+
+    def _finding_matches_class(
+        self,
+        finding: dict[str, Any],
+        class_name: str,
+        class_start_line: int | None,
+        class_end_line: int | None,
+    ) -> bool:
+        """Check whether a pattern finding belongs to the target class."""
+        effective_rule_id = str(finding.get("check_id", "")).lower()
+        message = str(finding.get("message", "")).lower()
+        class_name_lower = class_name.lower()
+        if class_name_lower in message or class_name_lower in effective_rule_id:
+            return True
+        finding_line = self._pattern_finding_line(finding)
+        return bool(
+            class_start_line and class_end_line and finding_line and class_start_line <= finding_line <= class_end_line
+        )
+
+    def _pattern_finding_line(self, finding: dict[str, Any]) -> int:
+        """Extract the start line from a Pattern finding."""
+        raw_start = finding.get("start", {})
+        if not isinstance(raw_start, dict):
+            return 0
+        start: dict[str, Any] = raw_start
+        return int(start.get("line", 0))
+
+    def _apply_pattern_evidence_flag(self, evidence: dict[str, Any], rule_id: str) -> None:
+        """Apply the first matching evidence flag for a rule id."""
+        matchers = (
+            ("api", ("route-detection", "api-endpoint")),
+            ("model", ("model-detection", "database-model")),
+            ("crud", ("crud",)),
+            ("auth", ("auth", "authentication", "permission")),
+            ("framework", ("framework", "async", "context-manager")),
+            ("test", ("test", "pytest", "unittest")),
+            (
+                "anti",
+                (
+                    "antipattern",
+                    "code-smell",
+                    "god-class",
+                    "mutable-default",
+                    "lambda-assignment",
+                    "string-concatenation",
+                    "deprecated",
+                ),
+            ),
+            (
+                "security",
+                ("security", "unsafe", "insecure", "weak-cryptographic", "hardcoded-secret", "command-injection"),
+            ),
+        )
+        for category, keywords in matchers:
+            if any(keyword in rule_id for keyword in keywords):
+                evidence[self.FEATURE_EVIDENCE_FLAGS[category]] = True
+                return
 
     def _extract_feature_from_class(self, node: ast.ClassDef, file_path: Path) -> Feature | None:
         """Extract feature from class definition (legacy version)."""
@@ -795,7 +727,7 @@ class CodeAnalyzer:
         node: ast.ClassDef,
         file_path: Path,
         current_feature_count: int,
-        semgrep_evidence: dict[str, Any] | None = None,
+        pattern_evidence: dict[str, Any] | None = None,
     ) -> Feature | None:
         """Extract feature from class definition (thread-safe version)."""
         # Skip private classes and test classes
@@ -827,8 +759,8 @@ class CodeAnalyzer:
         # Group methods into user stories
         stories = self._extract_stories_from_methods(methods, node.name)
 
-        # Calculate confidence based on documentation, story quality, and Semgrep evidence
-        confidence = self._calculate_feature_confidence(node, stories, semgrep_evidence)
+        # Calculate confidence based on documentation, story quality, and pattern evidence
+        confidence = self._calculate_feature_confidence(node, stories, pattern_evidence)
 
         if confidence < self.confidence_threshold:
             return None
@@ -861,209 +793,266 @@ class CodeAnalyzer:
             protocol=None,
         )
 
-    def _enhance_feature_with_semgrep(
+    def _filter_relevant_pattern_findings(self, ctx: _PatternEnhancementContext) -> list[dict[str, Any]]:
+        """Select findings that belong to the target class or its immediate vicinity."""
+        relevant: list[dict[str, Any]] = []
+        for finding in ctx.pattern_findings:
+            finding_path = finding.get("path", "")
+            if str(ctx.file_path) not in finding_path and finding_path not in str(ctx.file_path):
+                continue
+            if self._finding_matches_class(finding, ctx.class_name, ctx.class_start_line, ctx.class_end_line):
+                relevant.append(finding)
+                continue
+            finding_line = self._pattern_finding_line(finding)
+            check_id = str(finding.get("check_id", "")).lower()
+            if self._is_nearby_anti_pattern(check_id, finding_line, ctx.class_start_line, ctx.class_end_line):
+                relevant.append(finding)
+        return relevant
+
+    def _is_nearby_anti_pattern(
         self,
-        feature: Feature,
-        semgrep_findings: list[dict[str, Any]],
-        file_path: Path,
-        class_name: str,
-        class_start_line: int | None = None,
-        class_end_line: int | None = None,
-    ) -> None:
+        check_id: str,
+        finding_line: int,
+        class_start_line: int | None,
+        class_end_line: int | None,
+    ) -> bool:
+        """Check whether a finding is a nearby anti-pattern for the class."""
+        if not class_start_line or not finding_line:
+            return False
+        is_anti_pattern = any(
+            term in check_id for term in ("antipattern", "code-smell", "god-class", "deprecated", "security")
+        )
+        if not is_anti_pattern or finding_line < class_start_line:
+            return False
+        if class_end_line:
+            return finding_line <= class_end_line
+        return finding_line <= (class_start_line + 100)
+
+    def _categorise_pattern_finding(
+        self,
+        finding: dict[str, Any],
+    ) -> tuple[str, str]:
         """
-        Enhance feature with Semgrep pattern detection results.
+        Categorise a single Pattern finding into a type string and its payload value.
+
+        Args:
+            finding: Single Pattern finding dict
+
+        Returns:
+            Tuple of (category, value) where category is one of
+            "api", "model", "auth", "crud", "antipattern", "codesmell", or "".
+        """
+        rule_id = str(finding.get("check_id", "")).lower()
+        extra_raw = finding.get("extra", {})
+        extra: dict[str, Any] = extra_raw if isinstance(extra_raw, dict) else {}
+        metadata_raw = extra.get("metadata", {})
+        metadata: dict[str, Any] = metadata_raw if isinstance(metadata_raw, dict) else {}
+        category_builders = (
+            self._categorise_api_finding,
+            self._categorise_model_finding,
+            self._categorise_auth_finding,
+            self._categorise_crud_finding,
+            self._categorise_antipattern_finding,
+            self._categorise_codesmell_finding,
+        )
+        for builder in category_builders:
+            category, value = builder(finding, rule_id, metadata, extra)
+            if category:
+                return category, value
+        return "", ""
+
+    def _categorise_api_finding(
+        self,
+        _finding: dict[str, Any],
+        rule_id: str,
+        metadata: dict[str, Any],
+        _extra: Any,
+    ) -> tuple[str, str]:
+        """Categorise API findings."""
+        if "route-detection" not in rule_id:
+            return "", ""
+        method = str(metadata.get("method", "")).upper()
+        path = str(metadata.get("path", ""))
+        return ("api", f"{method} {path}") if method and path else ("", "")
+
+    def _categorise_model_finding(
+        self,
+        _finding: dict[str, Any],
+        rule_id: str,
+        metadata: dict[str, Any],
+        _extra: Any,
+    ) -> tuple[str, str]:
+        """Categorise model findings."""
+        if "model-detection" not in rule_id:
+            return "", ""
+        model_name = str(metadata.get("model", ""))
+        return ("model", model_name) if model_name else ("", "")
+
+    def _categorise_auth_finding(
+        self,
+        _finding: dict[str, Any],
+        rule_id: str,
+        metadata: dict[str, Any],
+        _extra: Any,
+    ) -> tuple[str, str]:
+        """Categorise auth findings."""
+        if "auth" not in rule_id:
+            return "", ""
+        permission = str(metadata.get("permission", ""))
+        return "auth", permission or "authentication required"
+
+    def _categorise_crud_finding(
+        self,
+        finding: dict[str, Any],
+        rule_id: str,
+        metadata: dict[str, Any],
+        extra: Any,
+    ) -> tuple[str, str]:
+        """Categorise CRUD findings."""
+        if "crud" not in rule_id:
+            return "", ""
+        operation = str(metadata.get("operation", "")).upper()
+        entity = self._extract_crud_entity(finding, extra)
+        return ("crud", f"{operation or 'UNKNOWN'}:{entity or 'unknown'}") if (operation or entity) else ("", "")
+
+    def _extract_crud_entity(self, finding: dict[str, Any], extra: Any) -> str:
+        """Extract the target entity from a CRUD finding."""
+        if isinstance(extra, dict):
+            extra_d: dict[str, Any] = cast(dict[str, Any], extra)
+            func_name = str(extra_d.get("message", ""))
+        else:
+            func_name = ""
+        if func_name:
+            parts = func_name.split("_")
+            return "_".join(parts[1:]) if len(parts) > 1 else ""
+        message = str(finding.get("message", "")).lower()
+        for operation in ["create", "get", "update", "delete", "add", "find", "remove"]:
+            if operation in message:
+                parts = message.split(operation + "_")
+                if len(parts) > 1 and parts[1]:
+                    return parts[1].split()[0]
+        return ""
+
+    def _categorise_antipattern_finding(
+        self,
+        finding: dict[str, Any],
+        rule_id: str,
+        _metadata: dict[str, Any],
+        _extra: Any,
+    ) -> tuple[str, str]:
+        """Categorise anti-pattern findings."""
+        terms = (
+            "antipattern",
+            "code-smell",
+            "god-class",
+            "mutable-default",
+            "lambda-assignment",
+            "string-concatenation",
+        )
+        return ("antipattern", str(finding.get("message", ""))) if any(term in rule_id for term in terms) else ("", "")
+
+    def _categorise_codesmell_finding(
+        self,
+        finding: dict[str, Any],
+        rule_id: str,
+        _metadata: dict[str, Any],
+        _extra: Any,
+    ) -> tuple[str, str]:
+        """Categorise code-smell and security findings."""
+        terms = (
+            "security",
+            "unsafe",
+            "insecure",
+            "weak-cryptographic",
+            "hardcoded-secret",
+            "command-injection",
+            "deprecated",
+        )
+        return ("codesmell", str(finding.get("message", ""))) if any(term in rule_id for term in terms) else ("", "")
+
+    def _apply_pattern_findings_to_feature(self, feature: Feature, buckets: _PatternFeatureBuckets) -> None:
+        """
+        Apply categorised Pattern findings to a feature by updating outcomes and constraints.
+
+        Args:
+            feature: Feature to update in-place
+            buckets: Categorized source finding lists (API, models, auth, CRUD, anti-patterns, smells).
+        """
+        if buckets.api_endpoints:
+            feature.outcomes.append(f"Exposes API endpoints: {', '.join(buckets.api_endpoints)}")
+        if buckets.data_models:
+            feature.outcomes.append(f"Defines data models: {', '.join(buckets.data_models)}")
+        if buckets.auth_patterns:
+            feature.outcomes.append(f"Requires authentication: {', '.join(buckets.auth_patterns)}")
+        if buckets.crud_operations:
+            crud_str = ", ".join(
+                f"{op.get('operation', 'UNKNOWN')} {op.get('entity', 'unknown')}" for op in buckets.crud_operations
+            )
+            feature.outcomes.append(f"Provides CRUD operations: {crud_str}")
+        if buckets.anti_patterns:
+            anti_str = "; ".join(buckets.anti_patterns[:3])
+            if anti_str:
+                if feature.constraints:
+                    feature.constraints.append(f"Code quality: {anti_str}")
+                else:
+                    feature.constraints = [f"Code quality: {anti_str}"]
+        if buckets.code_smells:
+            smell_str = "; ".join(buckets.code_smells[:3])
+            if smell_str:
+                if feature.constraints:
+                    feature.constraints.append(f"Issues detected: {smell_str}")
+                else:
+                    feature.constraints = [f"Issues detected: {smell_str}"]
+
+    def _accumulate_pattern_finding_bucket(self, buckets: _PatternFeatureBuckets, category: str, value: str) -> None:
+        if category == "api":
+            buckets.api_endpoints.append(value)
+            buckets.themes.add("API")
+            return
+        if category == "model":
+            buckets.data_models.append(value)
+            buckets.themes.add("Database")
+            return
+        if category == "auth":
+            buckets.auth_patterns.append(value)
+            buckets.themes.add("Security")
+            return
+        if category == "crud":
+            op, _, entity = value.partition(":")
+            buckets.crud_operations.append({"operation": op, "entity": entity})
+            return
+        if category == "antipattern":
+            buckets.anti_patterns.append(value)
+            return
+        if category == "codesmell":
+            buckets.code_smells.append(value)
+
+    def _enhance_feature_with_patterns(self, feature: Feature, ctx: _PatternEnhancementContext) -> None:
+        """
+        Enrich a feature with findings from parsed source.
 
         Args:
             feature: Feature to enhance
-            semgrep_findings: List of Semgrep findings for the file
-            file_path: Path to the file being analyzed
-            class_name: Name of the class this feature represents
-            class_start_line: Starting line number of the class definition
-            class_end_line: Ending line number of the class definition
+            ctx: File and class scope for the source findings
         """
-        if not semgrep_findings:
+        if not ctx.pattern_findings:
             return
 
-        # Filter findings relevant to this class
-        relevant_findings = []
-        for finding in semgrep_findings:
-            # Check if finding is in the same file
-            finding_path = finding.get("path", "")
-            if str(file_path) not in finding_path and finding_path not in str(file_path):
-                continue
-
-            # Get finding location for line-based matching
-            start = finding.get("start", {})
-            finding_line = start.get("line", 0) if isinstance(start, dict) else 0
-
-            # Check if finding mentions the class name or is in a method of the class
-            message = str(finding.get("message", ""))
-            check_id = str(finding.get("check_id", ""))
-
-            # Determine if this is an anti-pattern or code quality issue
-            is_anti_pattern = (
-                "antipattern" in check_id.lower()
-                or "code-smell" in check_id.lower()
-                or "god-class" in check_id.lower()
-                or "deprecated" in check_id.lower()
-                or "security" in check_id.lower()
-            )
-
-            # Match findings to this class by:
-            # 1. Class name in message/check_id
-            # 2. Line number within class definition (for class-level patterns)
-            # 3. Anti-patterns in the same file (if line numbers match)
-            matches_class = False
-
-            if class_name.lower() in message.lower() or class_name.lower() in check_id.lower():
-                matches_class = True
-            elif class_start_line and class_end_line and finding_line:
-                # Check if finding is within class definition lines
-                if class_start_line <= finding_line <= class_end_line:
-                    matches_class = True
-            elif (
-                is_anti_pattern
-                and class_start_line
-                and finding_line
-                and finding_line >= class_start_line
-                and (not class_end_line or finding_line <= (class_start_line + 100))
-            ):
-                # For anti-patterns, include if line number matches (class-level concerns)
-                matches_class = True
-
-            if matches_class:
-                relevant_findings.append(finding)
-
+        relevant_findings = self._filter_relevant_pattern_findings(ctx)
         if not relevant_findings:
             return
 
-        # Process findings to enhance feature
-        api_endpoints: list[str] = []
-        data_models: list[str] = []
-        auth_patterns: list[str] = []
-        crud_operations: list[dict[str, str]] = []
-        anti_patterns: list[str] = []
-        code_smells: list[str] = []
+        buckets = _PatternFeatureBuckets()
 
         for finding in relevant_findings:
-            rule_id = str(finding.get("check_id", ""))
-            extra = finding.get("extra", {})
-            metadata = extra.get("metadata", {}) if isinstance(extra, dict) else {}
+            category, value = self._categorise_pattern_finding(finding)
+            self._accumulate_pattern_finding_bucket(buckets, category, value)
 
-            # API endpoint detection
-            if "route-detection" in rule_id.lower():
-                method = str(metadata.get("method", "")).upper()
-                path = str(metadata.get("path", ""))
-                if method and path:
-                    api_endpoints.append(f"{method} {path}")
-                    # Add API theme (confidence already calculated with evidence)
-                    self.themes.add("API")
+        self._apply_pattern_findings_to_feature(feature, buckets)
+        if ctx.file_theme_accumulator is not None:
+            ctx.file_theme_accumulator.update(buckets.themes)
 
-            # Database model detection
-            elif "model-detection" in rule_id.lower():
-                model_name = str(metadata.get("model", ""))
-                if model_name:
-                    data_models.append(model_name)
-                    # Add Database theme (confidence already calculated with evidence)
-                    self.themes.add("Database")
-
-            # Auth pattern detection
-            elif "auth" in rule_id.lower():
-                permission = str(metadata.get("permission", ""))
-                auth_patterns.append(permission or "authentication required")
-                # Add security theme (confidence already calculated with evidence)
-                self.themes.add("Security")
-
-            # CRUD operation detection
-            elif "crud" in rule_id.lower():
-                operation = str(metadata.get("operation", "")).upper()
-                # Extract entity from function name in message
-                message = str(finding.get("message", ""))
-                func_name = str(extra.get("message", "")) if isinstance(extra, dict) else ""
-                # Try to extract entity from function name (e.g., "create_user" -> "user")
-                entity = ""
-                if func_name:
-                    parts = func_name.split("_")
-                    if len(parts) > 1:
-                        entity = "_".join(parts[1:])
-                elif message:
-                    # Try to extract from message
-                    for op in ["create", "get", "update", "delete", "add", "find", "remove"]:
-                        if op in message.lower():
-                            parts = message.lower().split(op + "_")
-                            if len(parts) > 1:
-                                entity = parts[1].split()[0] if parts[1] else ""
-                                break
-
-                if operation or entity:
-                    crud_operations.append(
-                        {
-                            "operation": operation or "UNKNOWN",
-                            "entity": entity or "unknown",
-                        }
-                    )
-
-            # Anti-pattern detection (confidence already calculated with evidence)
-            elif (
-                "antipattern" in rule_id.lower()
-                or "code-smell" in rule_id.lower()
-                or "god-class" in rule_id.lower()
-                or "mutable-default" in rule_id.lower()
-                or "lambda-assignment" in rule_id.lower()
-                or "string-concatenation" in rule_id.lower()
-            ):
-                finding_message = str(finding.get("message", ""))
-                anti_patterns.append(finding_message)
-
-            # Security vulnerabilities (confidence already calculated with evidence)
-            elif (
-                "security" in rule_id.lower()
-                or "unsafe" in rule_id.lower()
-                or "insecure" in rule_id.lower()
-                or "weak-cryptographic" in rule_id.lower()
-                or "hardcoded-secret" in rule_id.lower()
-                or "command-injection" in rule_id.lower()
-            ) or "deprecated" in rule_id.lower():
-                finding_message = str(finding.get("message", ""))
-                code_smells.append(finding_message)
-
-        # Update feature outcomes with Semgrep findings
-        if api_endpoints:
-            endpoints_str = ", ".join(api_endpoints)
-            feature.outcomes.append(f"Exposes API endpoints: {endpoints_str}")
-
-        if data_models:
-            models_str = ", ".join(data_models)
-            feature.outcomes.append(f"Defines data models: {models_str}")
-
-        if auth_patterns:
-            auth_str = ", ".join(auth_patterns)
-            feature.outcomes.append(f"Requires authentication: {auth_str}")
-
-        if crud_operations:
-            crud_str = ", ".join(
-                [f"{op.get('operation', 'UNKNOWN')} {op.get('entity', 'unknown')}" for op in crud_operations]
-            )
-            feature.outcomes.append(f"Provides CRUD operations: {crud_str}")
-
-        # Add anti-patterns and code smells to constraints (maturity assessment)
-        if anti_patterns:
-            anti_pattern_str = "; ".join(anti_patterns[:3])  # Limit to first 3
-            if anti_pattern_str:
-                if feature.constraints:
-                    feature.constraints.append(f"Code quality: {anti_pattern_str}")
-                else:
-                    feature.constraints = [f"Code quality: {anti_pattern_str}"]
-
-        if code_smells:
-            code_smell_str = "; ".join(code_smells[:3])  # Limit to first 3
-            if code_smell_str:
-                if feature.constraints:
-                    feature.constraints.append(f"Issues detected: {code_smell_str}")
-                else:
-                    feature.constraints = [f"Issues detected: {code_smell_str}"]
-
-        # Confidence is already calculated with Semgrep evidence in _calculate_feature_confidence
+        # Confidence is already calculated with Pattern evidence in _calculate_feature_confidence
         # No need to adjust here - this method only adds outcomes, constraints, and themes
 
     def _extract_stories_from_methods(self, methods: list[ast.FunctionDef], class_name: str) -> list[Story]:
@@ -1338,15 +1327,15 @@ class CodeAnalyzer:
         self,
         node: ast.ClassDef,
         stories: list[Story],
-        semgrep_evidence: dict[str, Any] | None = None,
+        pattern_evidence: dict[str, Any] | None = None,
     ) -> float:
         """
-        Calculate confidence score for a feature combining AST + Semgrep evidence.
+        Calculate confidence score for a feature combining AST + Pattern evidence.
 
         Args:
             node: AST class node
             stories: List of stories extracted from methods
-            semgrep_evidence: Optional Semgrep findings evidence dict with keys:
+            pattern_evidence: Optional Pattern findings evidence dict with keys:
                 - has_api_endpoints: bool
                 - has_database_models: bool
                 - has_crud_operations: bool
@@ -1357,53 +1346,51 @@ class CodeAnalyzer:
                 - has_security_issues: bool
 
         Returns:
-            Confidence score (0.0-1.0) combining AST and Semgrep evidence
+            Confidence score (0.0-1.0) combining AST and Pattern evidence
         """
-        score = 0.3  # Base score (30%)
+        score = 0.3
+        score += self._ast_confidence_bonus(node, stories)
+        score += self._pattern_confidence_bonus(pattern_evidence)
+        return min(max(score, 0.0), 1.0)
 
-        # === AST Evidence (Structure) ===
-
-        # Has docstring (+20%)
+    def _ast_confidence_bonus(self, node: ast.ClassDef, stories: list[Story]) -> float:
+        """Calculate AST-derived confidence bonuses."""
+        score = 0.0
         if ast.get_docstring(node):
             score += 0.2
-
-        # Has stories (+20%)
         if stories:
             score += 0.2
-
-        # Has multiple stories (better coverage) (+20%)
         if len(stories) > 2:
             score += 0.2
-
-        # Stories are well-documented (+10%)
-        documented_stories = sum(1 for s in stories if s.acceptance and len(s.acceptance) > 1)
+        documented_stories = sum(1 for story in stories if story.acceptance and len(story.acceptance) > 1)
         if stories and documented_stories > len(stories) / 2:
             score += 0.1
+        return score
 
-        # === Semgrep Evidence (Patterns) ===
-        if semgrep_evidence:
-            # Framework patterns indicate real, well-defined features
-            if semgrep_evidence.get("has_api_endpoints", False):
-                score += 0.1  # API endpoints = clear feature boundary
-            if semgrep_evidence.get("has_database_models", False):
-                score += 0.15  # Data models = core domain feature
-            if semgrep_evidence.get("has_crud_operations", False):
-                score += 0.1  # CRUD = complete feature implementation
-            if semgrep_evidence.get("has_auth_patterns", False):
-                score += 0.1  # Auth = security-aware feature
-            if semgrep_evidence.get("has_framework_patterns", False):
-                score += 0.05  # Framework usage = intentional design
-            if semgrep_evidence.get("has_test_patterns", False):
-                score += 0.1  # Tests = validated feature
-
-            # Code quality issues reduce confidence (maturity assessment)
-            if semgrep_evidence.get("has_anti_patterns", False):
-                score -= 0.05  # Anti-patterns = lower code quality
-            if semgrep_evidence.get("has_security_issues", False):
-                score -= 0.1  # Security issues = critical problems
-
-        # Cap at 0.0-1.0 range
-        return min(max(score, 0.0), 1.0)
+    def _pattern_confidence_bonus(self, pattern_evidence: dict[str, Any] | None) -> float:
+        """Calculate confidence adjustments from Pattern evidence."""
+        if not pattern_evidence:
+            return 0.0
+        positive_adjustments = {
+            "has_api_endpoints": 0.1,
+            "has_database_models": 0.15,
+            "has_crud_operations": 0.1,
+            "has_auth_patterns": 0.1,
+            "has_framework_patterns": 0.05,
+            "has_test_patterns": 0.1,
+        }
+        negative_adjustments = {
+            "has_anti_patterns": -0.05,
+            "has_security_issues": -0.1,
+        }
+        score = 0.0
+        for key, value in positive_adjustments.items():
+            if pattern_evidence.get(key, False):
+                score += value
+        for key, value in negative_adjustments.items():
+            if pattern_evidence.get(key, False):
+                score += value
+        return score
 
     def _humanize_name(self, name: str) -> str:
         """Convert snake_case or PascalCase to human-readable title."""

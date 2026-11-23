@@ -88,3 +88,11 @@ requirements:
         node_id: tests/integration/specfact_project/test_semgrep_retirement.py::test_project_contract_examples_keep_request_and_asserted_response[workers]
       intent: Preserve request and asserted response examples without Semgrep.
       observable: The contract contains the source request and asserted HTTP 201 response.
+    - case_id: PROJECT-SOURCE-QUALITY
+      scenario_id: module-scanner-entry-points-operate-without-semgrep
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/specfact_project/test_code_analyzer_semgrep_status.py::test_project_feature_and_quality_evidence_without_semgrep
+      intent: Preserve feature and quality evidence from parsed source.
+      observable: The route and quality finding reach their own feature without a Semgrep probe.

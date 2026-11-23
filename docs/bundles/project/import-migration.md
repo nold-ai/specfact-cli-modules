@@ -52,6 +52,13 @@ Patterns are applied before traversal so ignored trees do not inflate scanned-fi
 
 ### Feature Analysis Progress
 
+Project identifies routes, data models, authentication, and quality findings
+from Python source during feature analysis. Move custom rules out of
+`tools/semgrep/feature-detection.yml` and `tools/semgrep/code-quality.yml` to a
+separate analysis step if you still need them. Project reports when those
+legacy files are present.
+
+
 During the initial codebase analysis, you'll see:
 
 ```

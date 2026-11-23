@@ -61,3 +61,15 @@ The Project suite passed 41 cases on Python 3.12.13 against released core
 was 82.64% for the converter and 92.59% for its source-name helpers. A legacy
 test-pattern configuration emits migration guidance. Feature and quality
 findings, Spec-Kit output, and signed installed acceptance remain open.
+
+## Project feature and quality evidence
+
+The normal analyzer regression failed on `4cf2747d`: loading the feature
+policy probed for Semgrep. The source-based replacement retains the HTTP
+route and mutable-default finding on the appropriate feature, keeps the
+healthy feature clear, and reports legacy configuration without probing
+the tool. Fixtures cover authentication controls, normalized scanner
+findings, scope, history, dependency graph, and incremental feature output.
+On Python 3.12.13 with paired core `41216d9`, 75 focused cases passed.
+Branch-inclusive coverage reached 80.94% for the
+analyzer and 92.59% for the rule engine.
