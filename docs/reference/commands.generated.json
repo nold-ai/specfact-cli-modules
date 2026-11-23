@@ -925,6 +925,7 @@
     "hidden": false,
     "install_prerequisite": "specfact module install nold-ai/specfact-codebase",
     "options": [
+      "--async-checks",
       "--budget",
       "--crosshair-per-path-timeout",
       "--crosshair-required",

@@ -1,0 +1,66 @@
+schema_version: '2'
+requirements:
+  ? openspec:retire-module-semgrep-consumers:module-scanner-retirement:module-scanner-entry-points-operate-without-semgrep
+  : rationale: Specify the planned scanner migration.
+    stakeholder_refs:
+    - nold-ai/specfact-cli-modules#523
+    touchpoints:
+    - id: module-scanner-retirement-spec
+      kind: config_file
+      locator: openspec/changes/retire-module-semgrep-consumers/specs/module-scanner-retirement/spec.md
+    verification_cases:
+    - case_id: module-scanner-entry-points-operate-without-semgrep-native-commands-inspection
+      scenario_id: module-scanner-entry-points-operate-without-semgrep
+      method: inspection
+      intent: Inspect planned Project and Codebase command parity and absent scanner provisioning.
+      observable: Planning inspection only. Runtime and release evidence remain pending.
+    - case_id: module-scanner-entry-points-operate-without-semgrep-project-import-inspection
+      scenario_id: module-scanner-entry-points-operate-without-semgrep
+      method: inspection
+      intent: Inspect planned OpenAPI example parity and Spec-Kit outputs without scanner or preset generation.
+      observable: Planning inspection only. Runtime and release evidence remain pending.
+    - case_id: module-scanner-entry-points-operate-without-semgrep-legacy-configuration-inspection
+      scenario_id: module-scanner-entry-points-operate-without-semgrep
+      method: inspection
+      intent: Inspect the planned explicit migration outcome for an unsupported legacy configuration.
+      observable: Planning inspection only. Runtime and release evidence remain pending.
+    - case_id: CODEBASE-ASYNC-SAFE
+      scenario_id: module-scanner-entry-points-operate-without-semgrep
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/integration/specfact_codebase/test_repro_async_checks.py::test_explicit_async_check_reports_safe_and_blocking_cases[safe]
+      intent: Optional analysis reports no blocking finding on safe async Python.
+      observable: Optional analysis reports no blocking finding on safe async Python.
+    - case_id: CODEBASE-ASYNC-FINDING
+      scenario_id: module-scanner-entry-points-operate-without-semgrep
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/integration/specfact_codebase/test_repro_async_checks.py::test_explicit_async_check_reports_safe_and_blocking_cases[blocking]
+      intent: Repro reports the blocking finding and fails.
+      observable: Repro reports the blocking finding and fails.
+    - case_id: CODEBASE-ASYNC-CUSTOM
+      scenario_id: module-scanner-entry-points-operate-without-semgrep
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/integration/specfact_codebase/test_repro_async_checks.py::test_custom_legacy_policy_fails_with_migration_guidance
+      intent: Custom legacy rules fail with migration guidance.
+      observable: Custom legacy rules fail with migration guidance.
+    - case_id: CODEBASE-ASYNC-FIX
+      scenario_id: module-scanner-entry-points-operate-without-semgrep
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/integration/specfact_codebase/test_repro_async_checks.py::test_async_fix_reports_manual_remediation
+      intent: Repro reports manual remediation and leaves source unchanged.
+      observable: Repro reports manual remediation and leaves source unchanged.
+    - case_id: CODEBASE-ASYNC-MISSING
+      scenario_id: module-scanner-entry-points-operate-without-semgrep
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/integration/specfact_codebase/test_repro_async_checks.py::test_missing_core_scanner_fails_with_upgrade_guidance
+      intent: Required analysis fails with upgrade guidance when the scanner is absent.
+      observable: Required analysis fails with upgrade guidance when the scanner is absent.

@@ -27,7 +27,7 @@ from specfact_cli.telemetry import telemetry
 from specfact_cli.utils.env_manager import check_tool_in_env, detect_env_manager, detect_source_directories
 from specfact_cli.utils.structure import SpecFactStructure
 
-from specfact_codebase.validators.repro_checker import ReproChecker
+from specfact_codebase.validators.repro_checker import ReproChecker, ReproReport
 
 
 app = typer.Typer(help="Run validation suite for reproducibility")
@@ -130,6 +130,21 @@ def _count_python_files(path: Path) -> int:
     return sum(1 for _ in path.rglob("*.py"))
 
 
+def _print_check_details(report: ReproReport, *, verbose: bool) -> None:
+    error_styles = {"failed": ("Error", "red"), "timeout": ("Error", "red"), "skipped": ("Details", "yellow")}
+    for check in report.checks:
+        error_style = error_styles.get(check.status.value)
+        if check.tool == "async-checks" and check.error:
+            console.print(check.error, markup=False)
+        elif verbose and check.error and error_style:
+            label, style = error_style
+            console.print(f"\n[bold {style}]{check.name} {label}:[/bold {style}]")
+            console.print(f"[dim]{check.error}[/dim]")
+        if verbose and check.output and check.status.value == "failed":
+            console.print(f"\n[bold red]{check.name} Output:[/bold red]")
+            console.print(f"[dim]{check.output[:500]}[/dim]")
+
+
 @app.callback(invoke_without_command=True, no_args_is_help=False)
 # CrossHair: Skip analysis for Typer-decorated functions (signature analysis limitation)
 # type: ignore[crosshair]
@@ -165,8 +180,9 @@ def main(
     fix: bool = typer.Option(
         False,
         "--fix",
-        help="Apply auto-fixes where available (Semgrep auto-fixes)",
+        help="Show manual remediation guidance for async findings that used to support automatic fixes",
     ),
+    async_checks: bool = typer.Option(False, "--async-checks", help="Run the built-in Python async analyzer"),
     crosshair_required: bool = typer.Option(
         False,
         "--crosshair-required",
@@ -204,7 +220,7 @@ def main(
 
     Executes:
     - Lint checks (ruff) - optional
-    - Async patterns (semgrep) - optional, only if config exists
+    - Async patterns - runs with --async-checks or a legacy async policy
     - Type checking (basedpyright) - optional
     - Contract exploration (CrossHair) - optional
     - Property tests (pytest tests/contracts/) - optional, only if directory exists
@@ -252,7 +268,7 @@ def main(
     if fail_fast:
         console.print("[dim]Fail-fast: enabled[/dim]")
     if fix:
-        console.print("[dim]Auto-fix: enabled[/dim]")
+        console.print("[dim]Manual fix guidance: enabled[/dim]")
     if crosshair_required:
         console.print("[dim]CrossHair required: enabled[/dim]")
     if crosshair_per_path_timeout is not None:
@@ -279,6 +295,7 @@ def main(
             crosshair_required=crosshair_required,
             crosshair_per_path_timeout=crosshair_per_path_timeout,
         )
+        checker.run_async_checks = async_checks
 
         # Detect and display environment manager before starting progress spinner
         from specfact_cli.utils.env_manager import detect_env_manager
@@ -325,7 +342,6 @@ def main(
             table.add_row(check.name, check.tool, status_icon, duration_str)
 
         console.print(table)
-
         # Summary stats
         console.print("\n[bold]Summary:[/bold]")
         console.print(f"  Total checks: {report.total_checks}")
@@ -358,17 +374,7 @@ def main(
             }
         )
 
-        # Show errors if verbose
-        if verbose:
-            for check in report.checks:
-                if check.error and check.status.value in {"failed", "timeout", "skipped"}:
-                    label = "Error" if check.status.value in {"failed", "timeout"} else "Details"
-                    style = "red" if check.status.value in {"failed", "timeout"} else "yellow"
-                    console.print(f"\n[bold {style}]{check.name} {label}:[/bold {style}]")
-                    console.print(f"[dim]{check.error}[/dim]")
-                if check.output and check.status.value == "failed":
-                    console.print(f"\n[bold red]{check.name} Output:[/bold red]")
-                    console.print(f"[dim]{check.output[:500]}[/dim]")  # Limit output
+        _print_check_details(report, verbose=verbose)
 
         # Write report if requested (Phase 8.5: try to use bundle-specific path)
         if out is None:

@@ -9,23 +9,47 @@ CrossHair: skip (known signature synthesis limitation on complex pathlib/type si
 
 from __future__ import annotations
 
+import json
 import os
 import re
 import shutil
 import subprocess
+import sys
 import time
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
+import specfact_cli
 from beartype import beartype
 from icontract import ensure, require
 from rich.console import Console
 
 
 console = Console()
+_ASYNC_TOOL = "async-checks"
+_LEGACY_ASYNC_POLICY = Path("tools/semgrep/async.yml")
+
+
+def _core_async_scanner() -> Path | None:
+    """Locate the scanner alongside the installed core package."""
+    if specfact_cli.__file__ is not None:
+        return Path(specfact_cli.__file__).resolve().parent / "analyzers" / "async_checks.py"
+    return None
+
+
+def _async_command(*, legacy_policy: bool, fix: bool) -> list[str]:
+    scanner = _core_async_scanner()
+    if scanner is None or not scanner.is_file():
+        return []
+    command = [sys.executable, "-I", str(scanner)]
+    if legacy_policy:
+        command.extend(("--legacy-config", str(_LEGACY_ASYNC_POLICY)))
+    if fix:
+        command.append("--fix")
+    return command
 
 
 class CheckStatus(Enum):
@@ -460,7 +484,7 @@ def _extract_findings(tool: str, output: str, error: str) -> dict[str, Any]:
     Extract structured findings from tool output based on tool type.
 
     Args:
-        tool: Tool name (ruff, semgrep, basedpyright, crosshair, pytest)
+        tool: Tool name (Ruff, async checks, legacy Semgrep, BasedPyright, CrossHair, or pytest)
         output: Tool stdout output
         error: Tool stderr output
 
@@ -472,6 +496,8 @@ def _extract_findings(tool: str, output: str, error: str) -> dict[str, Any]:
         return _extract_ruff_findings(output)
     if tool_lower == "semgrep":
         return _extract_semgrep_findings(output, error)
+    if tool_lower == _ASYNC_TOOL:
+        return _extract_async_findings(output)
     if tool_lower == "basedpyright":
         return _extract_basedpyright_findings(output)
     if tool_lower == "crosshair":
@@ -480,6 +506,29 @@ def _extract_findings(tool: str, output: str, error: str) -> dict[str, Any]:
         return _extract_pytest_findings(output)
     # Unknown tool - return empty findings
     return {}
+
+
+def _extract_async_findings(output: str) -> dict[str, Any]:
+    """Read the installed analyzer's report, or leave process errors to the caller."""
+    if not output:
+        raise ValueError("The built-in async analyzer returned no report")
+    payload: object = json.loads(output)
+    if not isinstance(payload, dict) or payload.get("engine") != "python-ast":
+        raise ValueError("Invalid built-in async analyzer report")
+    return cast(dict[str, Any], payload)
+
+
+def _async_process_errors(process: subprocess.CompletedProcess[str]) -> str:
+    if process.returncode != 2:
+        return process.stderr
+    try:
+        diagnostics = _extract_async_findings(process.stdout).get("diagnostics", [])
+    except ValueError:
+        return process.stderr or "The built-in async analyzer did not complete."
+    messages = [f"{item['file']}: {item['message']}" if item["file"] else item["message"] for item in diagnostics]
+    if any(item["file"] == _LEGACY_ASYNC_POLICY.as_posix() for item in diagnostics):
+        messages.append("Review or move the legacy policy, then rerun specfact code repro --async-checks.")
+    return "\n".join(messages) or process.stderr
 
 
 @dataclass
@@ -684,7 +733,7 @@ class ReproChecker:
     """
     Runs validation checks with time budgets and result aggregation.
 
-    Executes various tools (ruff, semgrep, basedpyright, crosshair, pytest)
+    Executes Ruff, built-in async checks, BasedPyright, CrossHair, and pytest
     and aggregates their results into a comprehensive report.
     """
 
@@ -707,13 +756,14 @@ class ReproChecker:
             repo_path: Path to repository (default: current directory)
             budget: Total time budget in seconds (must be > 0)
             fail_fast: Stop on first failure
-            fix: Apply auto-fixes where available (Semgrep auto-fixes)
+            fix: Request remediation guidance for unsupported automatic fixes
             crosshair_per_path_timeout: If set, pass --per_path_timeout N to CrossHair (deep validation).
         """
         self.repo_path = Path(repo_path) if repo_path else Path(".")
         self.budget = budget
         self.fail_fast = fail_fast
         self.fix = fix
+        self.run_async_checks = False
         self.crosshair_required = crosshair_required
         self.crosshair_per_path_timeout = crosshair_per_path_timeout
         self.report = ReproReport()
@@ -798,7 +848,7 @@ class ReproChecker:
             result.duration = time.time() - start
             result.exit_code = proc.returncode
             result.output = proc.stdout
-            result.error = proc.stderr
+            result.error = _async_process_errors(proc) if tool == _ASYNC_TOOL else proc.stderr
 
             # Check if this is a CrossHair signature analysis limitation (not a real failure)
             is_signature_issue = False
@@ -894,9 +944,7 @@ class ReproChecker:
                 # For external repos, try to find Python packages at root
                 source_dirs = ["."]
 
-        # Check if semgrep config exists
-        semgrep_config = self.repo_path / "tools" / "semgrep" / "async.yml"
-        semgrep_enabled = semgrep_config.exists()
+        has_legacy_policy = (self.repo_path / _LEGACY_ASYNC_POLICY).exists()
 
         # Check if test directories exist
         contracts_tests = self.repo_path / "tests" / "contracts"
@@ -918,25 +966,9 @@ class ReproChecker:
             # Add as skipped check with message
             checks.append(("Linting (ruff)", "ruff", [], None, True, None))
 
-        # Semgrep - optional, only if config exists
-        if semgrep_enabled:
-            semgrep_available, _ = check_tool_in_env(self.repo_path, "semgrep", env_info)
-            if semgrep_available:
-                semgrep_log_path = self.repo_path / ".specfact" / "logs" / "semgrep.log"
-                semgrep_cache_path = self.repo_path / ".specfact" / "cache" / "semgrep_version"
-                semgrep_log_path.parent.mkdir(parents=True, exist_ok=True)
-                semgrep_cache_path.parent.mkdir(parents=True, exist_ok=True)
-                semgrep_env = os.environ.copy()
-                semgrep_env["SEMGREP_LOG_FILE"] = str(semgrep_log_path)
-                semgrep_env["SEMGREP_VERSION_CACHE_PATH"] = str(semgrep_cache_path)
-                semgrep_env["XDG_CACHE_HOME"] = str((self.repo_path / ".specfact" / "cache").resolve())
-                semgrep_command = ["semgrep", "--config", str(semgrep_config.relative_to(self.repo_path)), "."]
-                if self.fix:
-                    semgrep_command.append("--autofix")
-                semgrep_command = build_tool_command(env_info, semgrep_command)
-                checks.append(("Async patterns (semgrep)", "semgrep", semgrep_command, 30, True, semgrep_env))
-            else:
-                checks.append(("Async patterns (semgrep)", "semgrep", [], 30, True, None))
+        if self.run_async_checks or has_legacy_policy:
+            command = _async_command(legacy_policy=has_legacy_policy, fix=self.fix)
+            checks.append(("Async patterns", _ASYNC_TOOL, command, 30, False, None))
 
         # Type checking (basedpyright) - optional
         basedpyright_available, _ = check_tool_in_env(self.repo_path, "basedpyright", env_info)
@@ -1016,6 +1048,17 @@ class ReproChecker:
 
             # Skip checks with empty commands (tool not available)
             name, tool, command, _timeout, _skip_if_missing, _env = check_args
+            if not command and tool == _ASYNC_TOOL:
+                result = CheckResult(
+                    name=name,
+                    tool=tool,
+                    status=CheckStatus.FAILED,
+                    error="Upgrade SpecFact CLI to a version that includes the built-in async analyzer.",
+                )
+                self.report.add_check(result)
+                if self.fail_fast:
+                    break
+                continue
             if not command:
                 # Tool not available - create skipped result with helpful message
                 _tool_available, tool_message = check_tool_in_env(self.repo_path, tool, env_info)

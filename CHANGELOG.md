@@ -9,6 +9,10 @@ and this project follows SemVer for bundle versions.
 
 ### Fixed
 
+- Route Codebase Repro async analysis through the built-in core scanner. Use
+  `--async-checks` to opt in and get migration guidance for unsupported legacy
+  policies and automatic fixes.
+
 - Prepare Code Review 0.51.4: targeted selection counts distinct Python modules,
   source-root inference excludes separately verified VCS metadata from source
   budgets, and native pytest failures retain incomplete-evidence remedies while
