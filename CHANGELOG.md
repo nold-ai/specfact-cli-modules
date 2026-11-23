@@ -16,6 +16,10 @@ and this project follows SemVer for bundle versions.
 
 ### Fixed
 
+- Extract Project OpenAPI request and asserted response examples directly from
+  Python tests in sequential and worker imports. Legacy test-pattern rules
+  produce migration guidance without running Semgrep.
+
 - Route Codebase Repro async analysis through the built-in core scanner. Use
   `--async-checks` to opt in and get migration guidance for unsupported legacy
   policies and automatic fixes.

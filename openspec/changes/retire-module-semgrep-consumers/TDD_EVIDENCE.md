@@ -47,3 +47,17 @@ released-core behavior when no checkout is selected. The independent reviewer
 still verifies its pinned released core before candidate setup. All 75 focused
 cases passed, and the real registry provenance test passed with the exact
 editable paired core and the environment supplied by the coordinator.
+
+## Project OpenAPI example extraction
+
+On 23 November 2026, both integration fixtures failed against modules
+`4cf2747d`. Serial extraction omitted the asserted response example, and
+the process worker launched the Semgrep sentinel. The same fixtures pass
+with the Project-owned source converter. Both paths preserve the POST
+request body and asserted HTTP 201 JSON response.
+
+The Project suite passed 41 cases on Python 3.12.13 against released core
+0.55.4 and the exact paired core source `41216d9`. Branch-inclusive coverage
+was 82.64% for the converter and 92.59% for its source-name helpers. A legacy
+test-pattern configuration emits migration guidance. Feature and quality
+findings, Spec-Kit output, and signed installed acceptance remain open.

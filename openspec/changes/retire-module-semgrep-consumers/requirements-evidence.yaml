@@ -72,3 +72,19 @@ requirements:
         node_id: tests/unit/workflows/test_paired_core_ref_trust.py::test_native_review_uses_paired_core_only_for_candidate_tests
       intent: Use the exact paired core commit in native candidate tests.
       observable: The candidate bootstrap receives the paired checkout after the separate signed reviewer is verified.
+    - case_id: PROJECT-OPENAPI-SEQUENTIAL
+      scenario_id: module-scanner-entry-points-operate-without-semgrep
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/integration/specfact_project/test_semgrep_retirement.py::test_project_contract_examples_keep_request_and_asserted_response[sequential]
+      intent: Preserve request and asserted response examples without Semgrep.
+      observable: The contract contains the source request and asserted HTTP 201 response.
+    - case_id: PROJECT-OPENAPI-WORKERS
+      scenario_id: module-scanner-entry-points-operate-without-semgrep
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/integration/specfact_project/test_semgrep_retirement.py::test_project_contract_examples_keep_request_and_asserted_response[workers]
+      intent: Preserve request and asserted response examples without Semgrep.
+      observable: The contract contains the source request and asserted HTTP 201 response.
