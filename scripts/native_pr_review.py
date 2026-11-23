@@ -231,6 +231,8 @@ def _test_inventory(root: Path, files: list[Path], *, roots: tuple[str, ...]) ->
 def _native_test_environment() -> dict[str, str]:
     environment = os.environ.copy()
     environment.pop("SPECFACT_CODE_REVIEW_CHANGED_DIFF", None)
+    if paired_core := environment.pop("NATIVE_REVIEW_PROJECT_CORE", ""):
+        environment["SPECFACT_CLI_REPO"] = paired_core
     return environment
 
 

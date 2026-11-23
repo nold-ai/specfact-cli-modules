@@ -157,6 +157,7 @@ jobs:
           echo "NATIVE_REVIEW_BASE=$base" >> "$GITHUB_ENV"
       - name: Run complete independent native review
         env:
+          NATIVE_REVIEW_PROJECT_CORE: ${{ steps.candidate-core.outputs.commit != '' && format('{0}/specfact-cli', github.workspace) || '' }}
           SPECFACT_HATCH_PROJECT_PYTHON: ${{ steps.project-python.outputs.python-path }}
         run: |
           set -euo pipefail
@@ -168,6 +169,7 @@ jobs:
             PATH="$trusted/venv/bin:$trusted/semgrep/bin:$(dirname "$SPECFACT_HATCH_PROJECT_PYTHON"):$(dirname "$(command -v hatch)"):/usr/local/bin:/usr/bin:/bin" \
             PYTHONPATH="$project_paths" SPECFACT_MODULES_BRANCH=main \
             NATIVE_REVIEW_HEAD="$NATIVE_REVIEW_HEAD" NATIVE_REVIEW_BASE="$NATIVE_REVIEW_BASE" \
+            NATIVE_REVIEW_PROJECT_CORE="$NATIVE_REVIEW_PROJECT_CORE" \
             SPECFACT_HATCH_PROJECT_PYTHON="$SPECFACT_HATCH_PROJECT_PYTHON" \
             SPECFACT_HATCH_EXECUTABLE="$(command -v hatch)" \
             SPECFACT_HATCH_PROOF_WORKSPACE="$trusted/hatch-proof" \

@@ -36,3 +36,14 @@ uses it for candidate tests only. It still installs and verifies the separate
 signed controller first. The Repro, workflow, and independent-review regression
 set passed 52 cases locally. The 42 focused Repro tests passed with branch
 coverage of 81.53% for the command and 83.94% for the checker.
+
+## Paired core provenance in targeted pytest
+
+Review on #529 identified that the native bootstrap selected the paired checkout
+but the clean environment discarded its path before targeted pytest. All three
+workflow and handoff regression cases failed before the repair. The native
+coordinator now maps the selected path into the pytest environment and retains
+released-core behavior when no checkout is selected. The independent reviewer
+still verifies its pinned released core before candidate setup. All 75 focused
+cases passed, and the real registry provenance test passed with the exact
+editable paired core and the environment supplied by the coordinator.

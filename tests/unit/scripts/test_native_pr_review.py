@@ -537,3 +537,18 @@ def test_contracts_runs_each_file_and_retains_every_result(native_review):
 
     assert native_review._run_contracts(run, files) == ["first.py", "second.py"]
     assert examined == files
+
+
+@pytest.mark.parametrize("paired_core", ["", "/work/specfact-cli"])
+def test_targeted_pytest_receives_paired_core_path(native_review, monkeypatch, paired_core):
+    monkeypatch.delenv("SPECFACT_CLI_REPO", raising=False)
+    monkeypatch.setenv("NATIVE_REVIEW_PROJECT_CORE", paired_core)
+
+    environment = native_review._native_test_environment()
+
+    if paired_core:
+        assert environment["SPECFACT_CLI_REPO"] == paired_core
+    else:
+        assert "SPECFACT_CLI_REPO" not in environment
+    assert "NATIVE_REVIEW_PROJECT_CORE" not in environment
+    assert "SPECFACT_CLI_REPO" not in native_review.os.environ
