@@ -29,6 +29,7 @@ on:
       - "scripts/sign-modules.py"
       - "scripts/verify-modules-signature.py"
       - ".github/workflows/sign-modules.yml"
+      - ".github/workflows/native-pr-review.yml"
       - ".github/workflows/sign-modules-on-approval.yml"
 
 permissions:

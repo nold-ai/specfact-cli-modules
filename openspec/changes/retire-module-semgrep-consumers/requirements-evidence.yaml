@@ -80,3 +80,11 @@ requirements:
         node_id: tests/unit/workflows/test_paired_core_ref_trust.py::test_native_review_uses_core_dev_for_protected_modules_dev_push
       intent: Use the protected core branch for native candidate tests after a modules dev push.
       observable: The candidate resolver admits an official protected dev push and selects its matching core ref.
+    - case_id: NATIVE-REVIEW-MODULE-SIGNATURE-TRIGGER
+      scenario_id: module-scanner-entry-points-operate-without-semgrep
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/workflows/test_sign_modules_hardening.py::test_native_review_workflow_changes_trigger_pr_signature_verification
+      intent: Publish the required module verification checks in the workflow-only pull request context.
+      observable: A native review workflow-only change matches the existing verifier's pull request path filter.
