@@ -61,3 +61,12 @@ The Project suite passed 41 cases on Python 3.12.13 against released core
 was 82.64% for the converter and 92.59% for its source-name helpers. A legacy
 test-pattern configuration emits migration guidance. Feature and quality
 findings, Spec-Kit output, and signed installed acceptance remain open.
+
+## OpenAPI review regressions
+
+Five focused fixtures failed on signed #530 head `55d3a1ee`. The follow-up
+replaces whole operation examples, binds context responses, extracts
+assertions on inline requests, recognizes Flask test clients, and replaces
+stale Python import aliases. All five fixtures and the unchanged Project
+suite passed. Coverage is 88.85% for the converter and 94.59% for the source
+helpers.

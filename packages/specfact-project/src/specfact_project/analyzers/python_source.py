@@ -27,7 +27,9 @@ def import_aliases(nodes: Sequence[ast.AST]) -> dict[str, str]:
     aliases: dict[str, str] = {}
     for node in nodes:
         if isinstance(node, ast.Import):
-            aliases.update({name.asname: name.name for name in node.names if name.asname})
+            for name in node.names:
+                bound_name = name.name.partition(".")[0]
+                aliases[name.asname or bound_name] = name.name if name.asname else bound_name
         elif isinstance(node, ast.ImportFrom) and node.level == 0 and node.module:
             aliases.update({name.asname or name.name: f"{node.module}.{name.name}" for name in node.names})
     return aliases
