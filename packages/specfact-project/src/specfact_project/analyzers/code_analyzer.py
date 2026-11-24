@@ -42,15 +42,6 @@ class _PatternFeatureBuckets:
     themes: set[str] = field(default_factory=set)
 
 
-@dataclass
-class _PatternEnhancementContext:
-    pattern_findings: list[dict[str, Any]]
-    file_path: Path
-    class_start_line: int | None = None
-    class_end_line: int | None = None
-    file_theme_accumulator: set[str] | None = None
-
-
 class CodeAnalyzer:
     """
     Analyzes Python code to auto-derive plan bundles.
@@ -529,9 +520,11 @@ class CodeAnalyzer:
             pattern_findings = feature_patterns(tree, file_path)
 
             # Extract classes as features
-            classes = (node for node in ast.walk(tree) if isinstance(node, ast.ClassDef))
+            classes = [node for node in ast.walk(tree) if isinstance(node, ast.ClassDef)]
+            class_findings = self._group_class_findings(classes, pattern_findings)
             for class_node in classes:
-                feature = self._extract_feature_for_results(class_node, file_path, pattern_findings, results["themes"])
+                findings = class_findings.get(class_node, [])
+                feature = self._extract_feature_for_results(class_node, file_path, findings, results["themes"])
                 if feature is not None:
                     results["features"].append(feature)
 
@@ -550,24 +543,13 @@ class CodeAnalyzer:
     ) -> Feature | None:
         """Extract and enrich one feature using its source findings."""
         current_count = 0 if self.key_format == "sequential" else len(self.features)
-        class_start_line = min([node.lineno, *(decorator.lineno for decorator in node.decorator_list)])
-        class_end_line = node.end_lineno if hasattr(node, "end_lineno") else None
-        pattern_evidence = self._extract_pattern_evidence(pattern_findings, class_start_line, class_end_line)
+        pattern_evidence = self._extract_pattern_evidence(pattern_findings)
 
         feature = self._extract_feature_from_class_parallel(node, file_path, current_count, pattern_evidence)
         if feature is None:
             return None
 
-        self._enhance_feature_with_patterns(
-            feature,
-            _PatternEnhancementContext(
-                pattern_findings=pattern_findings,
-                file_path=file_path,
-                class_start_line=class_start_line,
-                class_end_line=class_end_line,
-                file_theme_accumulator=file_theme_accumulator,
-            ),
-        )
+        self._enhance_feature_with_patterns(feature, pattern_findings, file_theme_accumulator)
 
         return feature
 
@@ -630,44 +612,29 @@ class CodeAnalyzer:
 
         return themes
 
-    def _extract_pattern_evidence(
-        self,
-        pattern_findings: list[dict[str, Any]],
-        class_start_line: int | None,
-        class_end_line: int | None,
-    ) -> dict[str, Any]:
-        """
-        Extract Pattern evidence for confidence scoring.
+    def _group_class_findings(
+        self, classes: list[ast.ClassDef], findings: list[dict[str, Any]]
+    ) -> dict[ast.ClassDef, list[dict[str, Any]]]:
+        """Assign each source finding to its innermost class, including private classes."""
+        spans = [
+            (min([node.lineno, *(decorator.lineno for decorator in node.decorator_list)]), node.end_lineno or 0, node)
+            for node in classes
+        ]
+        spans.sort(key=lambda span: span[0], reverse=True)
+        grouped: dict[ast.ClassDef, list[dict[str, Any]]] = {}
+        for finding in findings:
+            line = self._pattern_finding_line(finding)
+            owner = next((node for start, end, node in spans if start <= line <= end), None)
+            if owner is not None:
+                grouped.setdefault(owner, []).append(finding)
+        return grouped
 
-        Args:
-            pattern_findings: List of Pattern findings
-            class_start_line: Starting line number of the class
-            class_end_line: Ending line number of the class
-
-        Returns:
-            Evidence dict with boolean flags for different pattern types
-        """
+    def _extract_pattern_evidence(self, pattern_findings: list[dict[str, Any]]) -> dict[str, Any]:
+        """Extract confidence flags from findings already scoped to the owning class."""
         evidence: dict[str, Any] = dict.fromkeys(self.FEATURE_EVIDENCE_FLAGS.values(), False)
-
         for finding in pattern_findings:
-            rule_id = str(finding.get("check_id", "")).lower()
-            if not self._finding_matches_class(finding, class_start_line, class_end_line):
-                continue
-            self._apply_pattern_evidence_flag(evidence, rule_id)
-
+            self._apply_pattern_evidence_flag(evidence, str(finding.get("check_id", "")).lower())
         return evidence
-
-    def _finding_matches_class(
-        self,
-        finding: dict[str, Any],
-        class_start_line: int | None,
-        class_end_line: int | None,
-    ) -> bool:
-        """Check whether a pattern finding belongs to the target class."""
-        finding_line = self._pattern_finding_line(finding)
-        return bool(
-            class_start_line and class_end_line and finding_line and class_start_line <= finding_line <= class_end_line
-        )
 
     def _pattern_finding_line(self, finding: dict[str, Any]) -> int:
         """Extract the start line from a Pattern finding."""
@@ -782,16 +749,6 @@ class CodeAnalyzer:
             contract=None,
             protocol=None,
         )
-
-    def _filter_relevant_pattern_findings(self, ctx: _PatternEnhancementContext) -> list[dict[str, Any]]:
-        """Select findings located inside the owning class in this source file."""
-        path = str(ctx.file_path)
-        return [
-            finding
-            for finding in ctx.pattern_findings
-            if finding.get("path") == path
-            and self._finding_matches_class(finding, ctx.class_start_line, ctx.class_end_line)
-        ]
 
     def _categorise_pattern_finding(
         self,
@@ -992,33 +949,18 @@ class CodeAnalyzer:
         if category == "codesmell":
             buckets.code_smells.append(value)
 
-    def _enhance_feature_with_patterns(self, feature: Feature, ctx: _PatternEnhancementContext) -> None:
-        """
-        Enrich a feature with findings from parsed source.
-
-        Args:
-            feature: Feature to enhance
-            ctx: File and class scope for the source findings
-        """
-        if not ctx.pattern_findings:
+    def _enhance_feature_with_patterns(
+        self, feature: Feature, pattern_findings: list[dict[str, Any]], file_themes: set[str]
+    ) -> None:
+        """Add outcomes, constraints, and themes using findings owned by the feature."""
+        if not pattern_findings:
             return
-
-        relevant_findings = self._filter_relevant_pattern_findings(ctx)
-        if not relevant_findings:
-            return
-
         buckets = _PatternFeatureBuckets()
-
-        for finding in relevant_findings:
+        for finding in pattern_findings:
             category, value = self._categorise_pattern_finding(finding)
             self._accumulate_pattern_finding_bucket(buckets, category, value)
-
         self._apply_pattern_findings_to_feature(feature, buckets)
-        if ctx.file_theme_accumulator is not None:
-            ctx.file_theme_accumulator.update(buckets.themes)
-
-        # Confidence is already calculated with Pattern evidence in _calculate_feature_confidence
-        # No need to adjust here - this method only adds outcomes, constraints, and themes
+        file_themes.update(buckets.themes)
 
     def _extract_stories_from_methods(self, methods: list[ast.FunctionDef], class_name: str) -> list[Story]:
         """
