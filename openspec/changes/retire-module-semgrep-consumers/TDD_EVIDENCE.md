@@ -144,3 +144,13 @@ addition with a definite string went unreported, and the same pattern in
 a nested loop was missed. The corrected scanner assigns each finding to
 its innermost loop and keeps the negative control for a possible list
 write. All 102 focused Project tests passed.
+
+## Loop-carried assignments
+
+The pre-signing review of `927c16a2` identified list assignments carried
+into later iterations. The direct and nested-loop fixtures reproduced
+the false positive. A third regression demonstrated why a `continue`
+must preserve the state at that path. The analyzer uses bindings
+known both at entry and across repeat paths, and still reports a
+concatenation when the current iteration establishes a string.
+All 106 focused Project tests passed.

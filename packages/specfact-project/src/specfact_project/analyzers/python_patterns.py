@@ -342,19 +342,44 @@ def _repeats_string_addition(node: ast.Assign, strings: set[str]) -> bool:
     )
 
 
-def _repeated_additions(node: ast.For | ast.AsyncFor, scope: _SourceScope) -> Iterator[ast.Assign]:
-    loop_scope = _SourceScope(scope.aliases.copy(), scope.origins.copy(), scope.strings.copy())
-    _track_binding(node.target, None, loop_scope, definite=True)
+def _track_loop_write(statement: ast.AST, scope: _SourceScope, definite: bool) -> None:
+    if isinstance(statement, ast.Assign) and _repeats_string_addition(statement, scope.strings):
+        return
+    _track_source_bindings(statement, scope, definite)
+
+
+def _loop_entry_scope(
+    node: ast.For | ast.AsyncFor, scope: _SourceScope, body_nodes: Sequence[ast.AST], owned_nodes: frozenset[ast.AST]
+) -> _SourceScope:
     direct_statements = frozenset(node.body)
+    after_iteration = _SourceScope(scope.aliases.copy(), scope.origins.copy(), scope.strings.copy())
+    _track_binding(node.target, None, after_iteration, definite=True)
+    entry_strings = after_iteration.strings.copy()
+    for statement in body_nodes:
+        if isinstance(statement, ast.Continue) and statement in owned_nodes:
+            entry_strings.intersection_update(after_iteration.strings)
+        _track_loop_write(statement, after_iteration, statement in direct_statements)
+
+    # The loop can repeat under either its initial bindings or bindings carried from an earlier iteration.
+    return _SourceScope(scope.aliases.copy(), scope.origins.copy(), entry_strings & after_iteration.strings)
+
+
+def _additions_at_statement(statement: ast.AST, scope: _SourceScope) -> Iterator[ast.Assign]:
+    if isinstance(statement, FOR_NODES):
+        yield from _repeated_additions(statement, scope)
+    if isinstance(statement, ast.Assign) and _repeats_string_addition(statement, scope.strings):
+        yield statement
+
+
+def _repeated_additions(node: ast.For | ast.AsyncFor, scope: _SourceScope) -> Iterator[ast.Assign]:
+    body_nodes = list(_owned_nodes(node.body))
     owned_nodes = frozenset(_owned_nodes(node.body, boundaries=(*SCOPE_NODES, *FOR_NODES)))
-    for statement in _owned_nodes(node.body):
-        if (
-            statement in owned_nodes
-            and isinstance(statement, ast.Assign)
-            and _repeats_string_addition(statement, loop_scope.strings)
-        ):
-            yield statement
-        _track_source_bindings(statement, loop_scope, statement in direct_statements)
+    loop_scope = _loop_entry_scope(node, scope, body_nodes, owned_nodes)
+    direct_statements = frozenset(node.body)
+    for statement in body_nodes:
+        if statement in owned_nodes:
+            yield from _additions_at_statement(statement, loop_scope)
+        _track_loop_write(statement, loop_scope, statement in direct_statements)
 
 
 def _definition_evidence(node: ast.AST, scope: _SourceScope) -> Iterator[PatternMatch]:
@@ -380,9 +405,6 @@ def _statement_evidence(node: ast.AST, scope: _SourceScope) -> Iterator[PatternM
         yield PatternMatch("type-annotations-detection", node)
     if isinstance(node, ast.Subscript) and qualified_name(node.value, scope.aliases) == "os.environ":
         yield PatternMatch("env-variable-access", node)
-    if isinstance(node, FOR_NODES):
-        for statement in _repeated_additions(node, scope):
-            yield PatternMatch("string-concatenation-loop", statement, "Review repeated concatenation in a loop")
 
 
 def _owned_nodes(nodes: Sequence[ast.AST], *, boundaries: tuple[type[ast.AST], ...] = SCOPE_NODES) -> Iterator[ast.AST]:
@@ -458,6 +480,11 @@ def _track_source_bindings(node: ast.AST, scope: _SourceScope, definite: bool) -
         _track_binding(node.target, None, scope, definite=False)
 
 
+def _loop_evidence(node: ast.For | ast.AsyncFor, scope: _SourceScope) -> Iterator[PatternMatch]:
+    for statement in _repeated_additions(node, scope):
+        yield PatternMatch("string-concatenation-loop", statement, "Review repeated concatenation in a loop")
+
+
 def _definition_header_evidence(node: _Definition, scope: _SourceScope) -> Iterator[PatternMatch]:
     body = frozenset(node.body)
     header = [child for child in ast.iter_child_nodes(node) if child not in body]
@@ -474,9 +501,12 @@ def _source_matches(tree: _SourceRoot, inherited: _SourceScope) -> Iterator[Patt
                 _forget_name(parameter.arg, scope)
     enclosing = inherited if isinstance(tree, ast.ClassDef) else scope
     direct_statements = frozenset(tree.body)
+    outer_nodes = frozenset(_owned_nodes(tree.body, boundaries=(*SCOPE_NODES, *FOR_NODES)))
     for node in _owned_nodes(tree.body):
         yield from _definition_evidence(node, scope)
         yield from _statement_evidence(node, scope)
+        if isinstance(node, FOR_NODES) and node in outer_nodes:
+            yield from _loop_evidence(node, scope)
         if isinstance(node, SCOPE_NODES):
             yield from _definition_header_evidence(node, scope)
         if isinstance(node, ast.ClassDef):

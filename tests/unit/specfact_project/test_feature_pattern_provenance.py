@@ -137,7 +137,7 @@ def test_fastapi_security_dependency_instances_keep_auth_evidence(tmp_path: Path
                 certain = certain + part
                 optional = optional + part
         """),
-            "certain = certain + part",
+            ["certain = certain + part"],
             id="prior-writes",
         ),
         pytest.param(
@@ -155,7 +155,7 @@ def test_fastapi_security_dependency_instances_keep_auth_evidence(tmp_path: Path
                 uncertain = uncertain + part
                 unchanged = unchanged + part
         """),
-            "unchanged = unchanged + part",
+            ["unchanged = unchanged + part"],
             id="loop-body-writes",
         ),
         pytest.param(
@@ -170,7 +170,7 @@ def test_fastapi_security_dependency_instances_keep_auth_evidence(tmp_path: Path
                     uncertain = uncertain + part
                     certain = certain + part
         """),
-            "certain = certain + part",
+            ["certain = certain + part"],
             id="conditional-addition",
         ),
         pytest.param(
@@ -182,19 +182,69 @@ def test_fastapi_security_dependency_instances_keep_auth_evidence(tmp_path: Path
                     if part:
                         result = result + part
         """),
-            "result = result + part",
+            ["result = result + part"],
             id="nested-loop-owner",
+        ),
+        pytest.param(
+            dedent("""\
+        result = ""
+        for part in [[], [1]]:
+            if part:
+                result = result + part
+            result = []
+        """),
+            [],
+            id="loop-carried-list",
+        ),
+        pytest.param(
+            dedent("""\
+        result = ""
+        for group in [[], [[1]]]:
+            for part in group:
+                if part:
+                    result = result + part
+            result = []
+        """),
+            [],
+            id="outer-loop-carried-list",
+        ),
+        pytest.param(
+            dedent("""\
+        result = []
+        for part in ("a", "b"):
+            result = ""
+            if part:
+                result = result + part
+            result = []
+        """),
+            ["result = result + part"],
+            id="each-iteration-establishes-string",
+        ),
+        pytest.param(
+            dedent("""\
+        result = ""
+        for part in [[], [1]]:
+            if part:
+                result = result + part
+                result = ""
+            else:
+                result = []
+                continue
+            result = ""
+        """),
+            [],
+            id="continue-carries-list",
         ),
     ],
 )
-def test_concatenation_requires_a_definite_string(tmp_path: Path, source: str, expected: str) -> None:
+def test_concatenation_requires_a_definite_string(tmp_path: Path, source: str, expected: list[str]) -> None:
     findings = feature_patterns(ast.parse(source), tmp_path / "render.py")
 
     assert [
         source.splitlines()[item["start"]["line"] - 1].strip()
         for item in findings
         if item["check_id"] == "string-concatenation-loop"
-    ] == [expected]
+    ] == expected
 
 
 @pytest.mark.parametrize("rebind", ["", "\nfrom pathlib import Path as Router\n"])
