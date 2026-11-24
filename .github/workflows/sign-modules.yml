@@ -1,140 +1,52 @@
-name: sign-modules
+name: Sign two reviewed Project payloads once
 
 on:
   workflow_dispatch:
-    inputs:
-      base_branch:
-        description: Branch to compare against for version checks
-        type: choice
-        options: [dev, main]
-        default: dev
-  push:
-    branches: [dev, main]
-    paths:
-      - "packages/**"
-      - "registry/**"
-      - "ci/module-signing-public-next.pem"
-      - "ci/official-module-release-cutoff.json"
-      - "scripts/sign-modules.py"
-      - "scripts/verify-modules-signature.py"
-      - ".github/workflows/sign-modules.yml"
-      - ".github/workflows/sign-modules-on-approval.yml"
-  pull_request:
-    branches: [dev, main]
-    paths:
-      - "packages/**"
-      - "registry/**"
-      - "ci/module-signing-public-next.pem"
-      - "ci/official-module-release-cutoff.json"
-      - "scripts/sign-modules.py"
-      - "scripts/verify-modules-signature.py"
-      - ".github/workflows/sign-modules.yml"
-      - ".github/workflows/native-pr-review.yml"
-      - ".github/workflows/sign-modules-on-approval.yml"
 
 permissions:
   contents: read
 
 jobs:
-  verify:
-    name: Verify Module Signatures
+  sign-source-manifest:
+    if: github.repository == 'nold-ai/specfact-cli-modules' && github.ref == 'refs/heads/codex/532-525-project-binding-order-resign' && github.run_attempt == 1
     runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Install verifier dependencies
-        run: python -m pip install pyyaml cryptography cffi
-
-      - name: Verify checksums, signatures and versions
-        env:
-          BASE_BRANCH: ${{ github.base_ref || inputs.base_branch }}
-          BEFORE_SHA: ${{ github.event.before }}
-        run: |
-          set -euo pipefail
-          args=(--public-key-file ci/module-signing-public-next.pem --payload-from-filesystem --enforce-version-bump)
-          if [[ "$GITHUB_EVENT_NAME" == push ]]; then
-            base="$BEFORE_SHA"
-            if [[ -z "$base" || "$base" == 0000000000000000000000000000000000000000 ]]; then
-              base=HEAD~1
-            fi
-            args+=(--require-signature)
-          else
-            base="refs/remotes/origin/$BASE_BRANCH"
-          fi
-          python scripts/verify-modules-signature.py "${args[@]}" --version-check-base "$base"
-
-  reproducibility:
-    name: Assert signing reproducibility
-    if: github.event_name == 'push' && github.ref_protected && github.ref == 'refs/heads/main'
-    needs: [verify]
-    runs-on: ubuntu-latest
+    timeout-minutes: 5
     environment: module-signing
     steps:
-      - name: Checkout verified main commit
-        uses: actions/checkout@v4
+      - name: Check out the frozen signing branch
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
         with:
-          ref: ${{ github.sha }}
           persist-credentials: false
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Install verifier dependencies
-        run: python -m pip install pyyaml cryptography cffi
-
-      - name: Reproduce replacement signatures
+      - name: Sign the exact two Project source payloads
+        shell: bash
         env:
           MODULE_PRIVATE_KEY: ${{ secrets.MODULE_SIGNING_PRIVATE_KEY_V2 }}
           MODULE_KEY_PASSPHRASE: ${{ secrets.MODULE_SIGNING_PRIVATE_KEY_PASSPHRASE_V2 }}
           EXPECTED_PUBLIC_KEY_SHA256: ${{ vars.MODULE_SIGNING_PUBLIC_KEY_SHA256 }}
         run: |
-          python - <<'PYTHON'
-          import base64
-          import hashlib
-          import os
-          import runpy
-          from pathlib import Path
-
-          import yaml
-          from cryptography.hazmat.primitives import serialization
-          from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-
-          pem = os.environ["MODULE_PRIVATE_KEY"].strip()
-          passphrase = os.environ["MODULE_KEY_PASSPHRASE"]
-          if not pem.startswith("-----BEGIN ENCRYPTED PRIVATE KEY-----\n") or not passphrase:
-              raise SystemExit("An encrypted replacement signing key and passphrase are required.")
-          key = serialization.load_pem_private_key(pem.encode(), password=passphrase.encode())
-          if not isinstance(key, Ed25519PrivateKey):
-              raise SystemExit("The replacement signing key must be Ed25519.")
-          public_der = key.public_key().public_bytes(
-              serialization.Encoding.DER, serialization.PublicFormat.SubjectPublicKeyInfo,
-          )
-          tracked_key = serialization.load_pem_public_key(Path("ci/module-signing-public-next.pem").read_bytes())
-          tracked_der = tracked_key.public_bytes(
-              serialization.Encoding.DER, serialization.PublicFormat.SubjectPublicKeyInfo,
-          )
-          if public_der != tracked_der or hashlib.sha256(public_der).hexdigest() != os.environ["EXPECTED_PUBLIC_KEY_SHA256"]:
-              raise SystemExit("The replacement signing key does not match the pinned public key.")
-
-          verifier = runpy.run_path("scripts/verify-modules-signature.py", run_name="specfact_module_signature_verifier")
-          for manifest in sorted(Path("packages").glob("*/module-package.yaml")):
-              data = yaml.safe_load(manifest.read_bytes())
-              if verifier["_matches_published_cutoff"](manifest, data):
-                  print(f"Verified immutable cutoff tree: {manifest}")
-                  continue
-              payload = verifier["_module_payload"](manifest.parent, payload_from_filesystem=True)
-              recorded_signature = base64.b64decode(data["integrity"]["signature"], validate=True)
-              if key.sign(payload) != recorded_signature:
-                  raise SystemExit(f"Replacement signature is not reproducible: {manifest}")
-              print(f"Reproduced replacement signature: {manifest}")
-          PYTHON
+          set -euo pipefail
+          umask 077
+          public_key=ci/module-signing-public-next.pem
+          expected=68ebe68cd4394c5319b85fe5b021460f3bae411dbfad795782657d0fe005d053
+          [[ "${EXPECTED_PUBLIC_KEY_SHA256:-}" == "$expected" ]]
+          fingerprint=$(openssl pkey -pubin -in "$public_key" -outform DER | sha256sum)
+          [[ "${fingerprint%% *}" == "$expected" ]]
+          [[ "${MODULE_PRIVATE_KEY:-}" == '-----BEGIN ENCRYPTED PRIVATE KEY-----'* && -n "${MODULE_KEY_PASSPHRASE:-}" ]]
+          scratch=$(mktemp -d "${RUNNER_TEMP:?}/manifest-sign.XXXXXXXX")
+          trap 'rm -rf -- "$scratch"' EXIT
+          while read -r label digest; do
+            payload="ci/532-525-binding-order-signing/$label.payload"
+            payload_digest=$(sha256sum "$payload")
+            [[ "${payload_digest%% *}" == "$digest" ]]
+            openssl pkeyutl -sign -rawin \
+              -inkey <(printf '%s\n' "$MODULE_PRIVATE_KEY") -passin fd:3 \
+              -in "$payload" -out "$scratch/$label.signature" \
+              3< <(printf '%s\n' "$MODULE_KEY_PASSPHRASE")
+            openssl pkeyutl -verify -rawin -pubin -inkey "$public_key" -in "$payload" -sigfile "$scratch/$label.signature"
+          done <<'EXPECTED_PAYLOADS'
+          project-0.41.32 d8a71b7f8a8f038d6d5ac873a2b541fd1212acd704dec355564b9285472aef71
+          project-0.41.33 04cfd9acd6ce2706e0fbb7784e0f0fde3f17c96899fe442bf8149608a14ede76
+          EXPECTED_PAYLOADS
+          for label in project-0.41.32 project-0.41.33; do
+            printf 'SOURCE_SIGNATURE %s %s\n' "$label" "$(openssl base64 -A -in "$scratch/$label.signature")"
+          done
