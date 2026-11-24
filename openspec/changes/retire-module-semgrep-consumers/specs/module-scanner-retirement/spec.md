@@ -54,3 +54,4 @@ SpecFact-owned Project and Codebase entry points SHALL run supported feature, qu
 - **AND** repeated addition needs a definite string initializer and no preceding write that could leave a non-string value
 - **AND** repeated-addition evidence accounts for preceding writes in the loop body
 - **AND** function definitions and parameters shadow prior bindings in their Python scopes while defaults and decorators retain their enclosing scope
+- **AND** eligible additions in conditional loop bodies appear once and are attributed to their innermost loop

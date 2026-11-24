@@ -136,3 +136,11 @@ reported a replaced import after a function definition, or attributed an
 imported callable to a shadowing parameter. The default-expression control
 also checks that the declaration still sees its enclosing scope.
 All 100 focused Project tests passed with the corrected scanner.
+
+## Conditional loop additions
+
+Two cases failed on signed pull request head `6186a5a0`: a conditional
+addition with a definite string went unreported, and the same pattern in
+a nested loop was missed. The corrected scanner assigns each finding to
+its innermost loop and keeps the negative control for a possible list
+write. All 102 focused Project tests passed.

@@ -86,6 +86,7 @@ ROUTER_CONSTRUCTORS = {
 }
 FUNCTION_NODES = (ast.FunctionDef, ast.AsyncFunctionDef)
 SCOPE_NODES = (*FUNCTION_NODES, ast.ClassDef)
+FOR_NODES = (ast.For, ast.AsyncFor)
 _Definition = ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef
 _SourceRoot = ast.Module | _Definition
 
@@ -345,11 +346,15 @@ def _repeated_additions(node: ast.For | ast.AsyncFor, scope: _SourceScope) -> It
     loop_scope = _SourceScope(scope.aliases.copy(), scope.origins.copy(), scope.strings.copy())
     _track_binding(node.target, None, loop_scope, definite=True)
     direct_statements = frozenset(node.body)
+    owned_nodes = frozenset(_owned_nodes(node.body, boundaries=(*SCOPE_NODES, *FOR_NODES)))
     for statement in _owned_nodes(node.body):
-        definite = statement in direct_statements
-        if definite and isinstance(statement, ast.Assign) and _repeats_string_addition(statement, loop_scope.strings):
+        if (
+            statement in owned_nodes
+            and isinstance(statement, ast.Assign)
+            and _repeats_string_addition(statement, loop_scope.strings)
+        ):
             yield statement
-        _track_source_bindings(statement, loop_scope, definite)
+        _track_source_bindings(statement, loop_scope, statement in direct_statements)
 
 
 def _definition_evidence(node: ast.AST, scope: _SourceScope) -> Iterator[PatternMatch]:
@@ -375,17 +380,17 @@ def _statement_evidence(node: ast.AST, scope: _SourceScope) -> Iterator[PatternM
         yield PatternMatch("type-annotations-detection", node)
     if isinstance(node, ast.Subscript) and qualified_name(node.value, scope.aliases) == "os.environ":
         yield PatternMatch("env-variable-access", node)
-    if isinstance(node, (ast.For, ast.AsyncFor)):
+    if isinstance(node, FOR_NODES):
         for statement in _repeated_additions(node, scope):
             yield PatternMatch("string-concatenation-loop", statement, "Review repeated concatenation in a loop")
 
 
-def _owned_nodes(nodes: Sequence[ast.AST]) -> Iterator[ast.AST]:
+def _owned_nodes(nodes: Sequence[ast.AST], *, boundaries: tuple[type[ast.AST], ...] = SCOPE_NODES) -> Iterator[ast.AST]:
     pending = list(reversed(nodes))
     while pending:
         node = pending.pop()
         yield node
-        if not isinstance(node, SCOPE_NODES):
+        if not isinstance(node, boundaries):
             pending.extend(reversed(list(ast.iter_child_nodes(node))))
 
 
@@ -449,7 +454,7 @@ def _track_source_bindings(node: ast.AST, scope: _SourceScope, definite: bool) -
         _track_type_binding(node, scope, definite)
     if isinstance(node, FUNCTION_NODES):
         _forget_name(node.name, scope)
-    if isinstance(node, (ast.For, ast.AsyncFor)):
+    if isinstance(node, FOR_NODES):
         _track_binding(node.target, None, scope, definite=False)
 
 

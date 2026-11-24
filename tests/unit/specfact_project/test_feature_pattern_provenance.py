@@ -158,6 +158,33 @@ def test_fastapi_security_dependency_instances_keep_auth_evidence(tmp_path: Path
             "unchanged = unchanged + part",
             id="loop-body-writes",
         ),
+        pytest.param(
+            dedent("""\
+        def render(parts, mixed):
+            uncertain = ""
+            certain = ""
+            if mixed:
+                uncertain = []
+            for part in parts:
+                if part:
+                    uncertain = uncertain + part
+                    certain = certain + part
+        """),
+            "certain = certain + part",
+            id="conditional-addition",
+        ),
+        pytest.param(
+            dedent("""\
+        def render(groups):
+            result = ""
+            for group in groups:
+                for part in group:
+                    if part:
+                        result = result + part
+        """),
+            "result = result + part",
+            id="nested-loop-owner",
+        ),
     ],
 )
 def test_concatenation_requires_a_definite_string(tmp_path: Path, source: str, expected: str) -> None:
