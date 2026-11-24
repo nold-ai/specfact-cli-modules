@@ -154,3 +154,11 @@ must preserve the state at that path. The analyzer uses bindings
 known both at entry and across repeat paths, and still reports a
 concatenation when the current iteration establishes a string.
 All 106 focused Project tests passed.
+
+## Unpacked loop targets
+
+Three tests failed on `023e08b4`: tuple targets, nested list and starred
+targets, and an unpacking assignment inside the loop retained a stale
+string binding. All 109 focused Project tests passed after forgetting
+each name bound by unpacking. A separate accumulator still reports
+string concatenation in the same loop.

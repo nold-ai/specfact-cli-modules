@@ -353,7 +353,7 @@ def _loop_entry_scope(
 ) -> _SourceScope:
     direct_statements = frozenset(node.body)
     after_iteration = _SourceScope(scope.aliases.copy(), scope.origins.copy(), scope.strings.copy())
-    _track_binding(node.target, None, after_iteration, definite=True)
+    _forget_target_names(node.target, after_iteration)
     entry_strings = after_iteration.strings.copy()
     for statement in body_nodes:
         if isinstance(statement, ast.Continue) and statement in owned_nodes:
@@ -426,6 +426,7 @@ def _track_origin(name: str, origin: str, scope: _SourceScope, definite: bool) -
 
 def _track_binding(target: ast.expr, value: ast.expr | None, scope: _SourceScope, definite: bool) -> None:
     if not isinstance(target, ast.Name):
+        _forget_target_names(target, scope)
         return
     name = target.id
     origin = _source_origin(value, scope) if isinstance(value, ast.Call) else ""
@@ -448,6 +449,16 @@ def _forget_name(name: str, scope: _SourceScope) -> None:
     scope.aliases.pop(name, None)
     scope.origins.pop(name, None)
     scope.strings.discard(name)
+
+
+def _forget_target_names(target: ast.expr, scope: _SourceScope) -> None:
+    if isinstance(target, ast.Name):
+        _forget_name(target.id, scope)
+    if isinstance(target, ast.Starred):
+        _forget_target_names(target.value, scope)
+    if isinstance(target, (ast.Tuple, ast.List)):
+        for element in target.elts:
+            _forget_target_names(element, scope)
 
 
 def _track_imports(node: ast.Import | ast.ImportFrom, scope: _SourceScope, definite: bool) -> None:
@@ -477,7 +488,7 @@ def _track_source_bindings(node: ast.AST, scope: _SourceScope, definite: bool) -
     if isinstance(node, FUNCTION_NODES):
         _forget_name(node.name, scope)
     if isinstance(node, FOR_NODES):
-        _track_binding(node.target, None, scope, definite=False)
+        _forget_target_names(node.target, scope)
 
 
 def _loop_evidence(node: ast.For | ast.AsyncFor, scope: _SourceScope) -> Iterator[PatternMatch]:

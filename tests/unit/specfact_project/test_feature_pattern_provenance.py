@@ -235,6 +235,36 @@ def test_fastapi_security_dependency_instances_keep_auth_evidence(tmp_path: Path
             [],
             id="continue-carries-list",
         ),
+        pytest.param(
+            dedent("""\
+        result = ""
+        other = ""
+        for (result, flag) in [([], True)]:
+            result = result + [1]
+            other = other + "a"
+        """),
+            ['other = other + "a"'],
+            id="tuple-loop-target",
+        ),
+        pytest.param(
+            dedent("""\
+        result = ""
+        for [flag, (prefix, *result)] in [(True, ("x", 1))]:
+            result = result + [2]
+        """),
+            [],
+            id="nested-starred-loop-target",
+        ),
+        pytest.param(
+            dedent("""\
+        result = ""
+        for part in [[1]]:
+            result, flag = [], True
+            result = result + part
+        """),
+            [],
+            id="unpacking-write",
+        ),
     ],
 )
 def test_concatenation_requires_a_definite_string(tmp_path: Path, source: str, expected: list[str]) -> None:

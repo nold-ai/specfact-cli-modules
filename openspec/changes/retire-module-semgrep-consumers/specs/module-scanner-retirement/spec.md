@@ -56,3 +56,4 @@ SpecFact-owned Project and Codebase entry points SHALL run supported feature, qu
 - **AND** function definitions and parameters shadow prior bindings in their Python scopes while defaults and decorators retain their enclosing scope
 - **AND** eligible additions in conditional loop bodies appear once and are attributed to their innermost loop
 - **AND** writes from earlier iterations can invalidate the initial string evidence unless the current iteration establishes it again
+- **AND** unpacked loop targets replace existing evidence for every name they bind
