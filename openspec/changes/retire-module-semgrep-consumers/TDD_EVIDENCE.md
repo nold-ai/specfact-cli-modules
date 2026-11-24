@@ -127,3 +127,12 @@ With the corrections, 92 Project tests passed on Python 3.12.13.
 Branch-inclusive coverage was 81.48% for the analyzer and 90.56% for
 the source-pattern engine. Separate otherwise equivalent feature fixtures
 verify the 0.10 route bonus and 0.05 mutable-default penalty.
+
+## Loop writes and lexical shadowing
+
+Eight regression cases failed on signed pull request head `2aba6b08`.
+The scanner treated list or ambiguous loop writes as string concatenation,
+reported a replaced import after a function definition, or attributed an
+imported callable to a shadowing parameter. The default-expression control
+also checks that the declaration still sees its enclosing scope.
+All 100 focused Project tests passed with the corrected scanner.

@@ -119,8 +119,11 @@ def test_fastapi_security_dependency_instances_keep_auth_evidence(tmp_path: Path
     ] == ['@api.get("/protected")', '@api.get("/scoped", dependencies=[Security(scheme)])']
 
 
-def test_ambiguous_prior_writes_do_not_establish_string_accumulators(tmp_path: Path) -> None:
-    source = dedent("""\
+@pytest.mark.parametrize(
+    ("source", "expected"),
+    [
+        pytest.param(
+            dedent("""\
         def render(parts, mixed):
             uncertain = 0
             certain = 0
@@ -133,15 +136,38 @@ def test_ambiguous_prior_writes_do_not_establish_string_accumulators(tmp_path: P
                 uncertain = uncertain + part
                 certain = certain + part
                 optional = optional + part
-        """)
-
+        """),
+            "certain = certain + part",
+            id="prior-writes",
+        ),
+        pytest.param(
+            dedent("""\
+        def render(parts, mixed):
+            changed = ""
+            uncertain = ""
+            unchanged = ""
+            for part in parts:
+                changed = []
+                if mixed:
+                    uncertain = []
+                unchanged = "prefix"
+                changed = changed + part
+                uncertain = uncertain + part
+                unchanged = unchanged + part
+        """),
+            "unchanged = unchanged + part",
+            id="loop-body-writes",
+        ),
+    ],
+)
+def test_concatenation_requires_a_definite_string(tmp_path: Path, source: str, expected: str) -> None:
     findings = feature_patterns(ast.parse(source), tmp_path / "render.py")
 
     assert [
         source.splitlines()[item["start"]["line"] - 1].strip()
         for item in findings
         if item["check_id"] == "string-concatenation-loop"
-    ] == ["certain = certain + part"]
+    ] == [expected]
 
 
 @pytest.mark.parametrize("rebind", ["", "\nfrom pathlib import Path as Router\n"])
@@ -169,3 +195,63 @@ def test_route_constructor_keeps_the_import_at_its_assignment(tmp_path: Path, re
     assert [item["extra"]["metadata"] for item in findings if item["check_id"] == "fastapi-route-detection"] == [
         {"method": "GET", "path": "/widgets"}
     ]
+
+
+def test_new_functions_shadow_imported_callables(tmp_path: Path) -> None:
+    source = dedent("""\
+        from pickle import loads as unpack
+        from pickle import loads as parse_async
+
+        unpack(before)
+
+        def unpack(value):
+            return value
+
+        async def parse_async(value):
+            return value
+
+        unpack(after)
+        parse_async(after)
+        """)
+
+    findings = feature_patterns(ast.parse(source), tmp_path / "readers.py")
+
+    assert [
+        source.splitlines()[item["start"]["line"] - 1]
+        for item in findings
+        if item["check_id"] == "unsafe-pickle-deserialization"
+    ] == ["unpack(before)"]
+
+
+@pytest.mark.parametrize("signature", ["decode, /", "decode", "*decode", "*, decode", "**decode"])
+def test_function_parameters_shadow_imported_callables(tmp_path: Path, signature: str) -> None:
+    source = dedent(f"""\
+        from pickle import loads as decode
+
+        def external():
+            return decode(value)
+
+        class Reader:
+            def external(self):
+                return decode(value)
+
+            def local(self, {signature}):
+                return decode(value)
+        """)
+
+    findings = feature_patterns(ast.parse(source), tmp_path / "readers.py")
+
+    assert [item["start"]["line"] for item in findings if item["check_id"] == "unsafe-pickle-deserialization"] == [4, 8]
+
+
+def test_parameters_do_not_shadow_enclosing_defaults(tmp_path: Path) -> None:
+    source = dedent("""\
+        from pickle import loads as decode
+
+        def reader(decode=decode(default)):
+            return decode(value)
+        """)
+
+    findings = feature_patterns(ast.parse(source), tmp_path / "readers.py")
+
+    assert [item["start"]["line"] for item in findings if item["check_id"] == "unsafe-pickle-deserialization"] == [3]

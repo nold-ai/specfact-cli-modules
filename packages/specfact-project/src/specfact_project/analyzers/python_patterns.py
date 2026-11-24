@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import ast
-from collections.abc import Iterator
+from collections.abc import Iterator, Sequence
 from pathlib import Path
 from typing import Any, NamedTuple
 
@@ -84,8 +84,10 @@ ROUTER_CONSTRUCTORS = {
     "flask.Flask": "flask",
     "flask.Blueprint": "flask",
 }
-SCOPE_NODES = (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)
-_SourceRoot = ast.Module | ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef
+FUNCTION_NODES = (ast.FunctionDef, ast.AsyncFunctionDef)
+SCOPE_NODES = (*FUNCTION_NODES, ast.ClassDef)
+_Definition = ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef
+_SourceRoot = ast.Module | _Definition
 
 
 class _SourceScope(NamedTuple):
@@ -330,19 +332,24 @@ def _import_patterns(node: ast.Import | ast.ImportFrom) -> Iterator[PatternMatch
             yield PatternMatch("structlog-usage" if name == "structlog" else "dotenv-usage", node)
 
 
+def _repeats_string_addition(node: ast.Assign, strings: set[str]) -> bool:
+    value = node.value
+    if not isinstance(value, ast.BinOp) or not isinstance(value.op, ast.Add) or not isinstance(value.left, ast.Name):
+        return False
+    return value.left.id in strings and any(
+        isinstance(target, ast.Name) and target.id == value.left.id for target in node.targets
+    )
+
+
 def _repeated_additions(node: ast.For | ast.AsyncFor, scope: _SourceScope) -> Iterator[ast.Assign]:
-    assignments = (statement for statement in node.body if isinstance(statement, ast.Assign))
-    for statement in assignments:
-        value = statement.value
-        if (
-            not isinstance(value, ast.BinOp)
-            or not isinstance(value.op, ast.Add)
-            or not isinstance(value.left, ast.Name)
-        ):
-            continue
-        targets = {target.id for target in statement.targets if isinstance(target, ast.Name)}
-        if value.left.id in targets and value.left.id in scope.strings:
+    loop_scope = _SourceScope(scope.aliases.copy(), scope.origins.copy(), scope.strings.copy())
+    _track_binding(node.target, None, loop_scope, definite=True)
+    direct_statements = frozenset(node.body)
+    for statement in _owned_nodes(node.body):
+        definite = statement in direct_statements
+        if definite and isinstance(statement, ast.Assign) and _repeats_string_addition(statement, loop_scope.strings):
             yield statement
+        _track_source_bindings(statement, loop_scope, definite)
 
 
 def _definition_evidence(node: ast.AST, scope: _SourceScope) -> Iterator[PatternMatch]:
@@ -373,8 +380,8 @@ def _statement_evidence(node: ast.AST, scope: _SourceScope) -> Iterator[PatternM
             yield PatternMatch("string-concatenation-loop", statement, "Review repeated concatenation in a loop")
 
 
-def _owned_nodes(root: ast.AST) -> Iterator[ast.AST]:
-    pending = list(reversed(list(ast.iter_child_nodes(root))))
+def _owned_nodes(nodes: Sequence[ast.AST]) -> Iterator[ast.AST]:
+    pending = list(reversed(nodes))
     while pending:
         node = pending.pop()
         yield node
@@ -410,6 +417,12 @@ def _track_type_binding(node: ast.ClassDef, scope: _SourceScope, definite: bool)
     scope.strings.discard(node.name)
 
 
+def _forget_name(name: str, scope: _SourceScope) -> None:
+    scope.aliases.pop(name, None)
+    scope.origins.pop(name, None)
+    scope.strings.discard(name)
+
+
 def _track_imports(node: ast.Import | ast.ImportFrom, scope: _SourceScope, definite: bool) -> None:
     for name, imported in import_aliases([node]).items():
         scope.strings.discard(name)
@@ -434,18 +447,38 @@ def _track_source_bindings(node: ast.AST, scope: _SourceScope, definite: bool) -
         _track_binding(node.target, None, scope, definite)
     if isinstance(node, ast.ClassDef):
         _track_type_binding(node, scope, definite)
+    if isinstance(node, FUNCTION_NODES):
+        _forget_name(node.name, scope)
+    if isinstance(node, (ast.For, ast.AsyncFor)):
+        _track_binding(node.target, None, scope, definite=False)
+
+
+def _definition_header_evidence(node: _Definition, scope: _SourceScope) -> Iterator[PatternMatch]:
+    body = frozenset(node.body)
+    header = [child for child in ast.iter_child_nodes(node) if child not in body]
+    for expression in _owned_nodes(header):
+        yield from _definition_evidence(expression, scope)
+        yield from _statement_evidence(expression, scope)
 
 
 def _source_matches(tree: _SourceRoot, inherited: _SourceScope) -> Iterator[PatternMatch]:
     scope = _SourceScope(inherited.aliases.copy(), inherited.origins.copy(), set())
+    if isinstance(tree, FUNCTION_NODES):
+        for parameter in ast.iter_child_nodes(tree.args):
+            if isinstance(parameter, ast.arg):
+                _forget_name(parameter.arg, scope)
     enclosing = inherited if isinstance(tree, ast.ClassDef) else scope
     direct_statements = frozenset(tree.body)
-    for node in _owned_nodes(tree):
+    for node in _owned_nodes(tree.body):
         yield from _definition_evidence(node, scope)
         yield from _statement_evidence(node, scope)
         if isinstance(node, SCOPE_NODES):
+            yield from _definition_header_evidence(node, scope)
+        if isinstance(node, ast.ClassDef):
             yield from _source_matches(node, enclosing)
         _track_source_bindings(node, scope, node in direct_statements)
+        if isinstance(node, FUNCTION_NODES):
+            yield from _source_matches(node, enclosing)
 
 
 @beartype

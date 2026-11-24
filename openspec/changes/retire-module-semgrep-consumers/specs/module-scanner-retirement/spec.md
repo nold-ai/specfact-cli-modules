@@ -52,3 +52,5 @@ SpecFact-owned Project and Codebase entry points SHALL run supported feature, qu
 - **AND** otherwise equivalent features independently reflect the HTTP route bonus and mutable-default penalty
 - **AND** source evidence distinguishes SQLAlchemy bases from unrelated classes, resolves FastAPI security instances at their binding, and preserves established routes across later import rebinding
 - **AND** repeated addition needs a definite string initializer and no preceding write that could leave a non-string value
+- **AND** repeated-addition evidence accounts for preceding writes in the loop body
+- **AND** function definitions and parameters shadow prior bindings in their Python scopes while defaults and decorators retain their enclosing scope
