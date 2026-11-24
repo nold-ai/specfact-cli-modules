@@ -91,3 +91,82 @@ blocked the PR. Native-review-only changes did not select the required
 from the PR rollup. The new trigger regression failed on that head, then
 passed after adding the exact workflow path to PR verification. The push
 filter, verifier, and protected-main signing environment are unchanged.
+
+## Project feature and quality evidence
+
+The normal analyzer regression failed on `4cf2747d`: loading the feature
+policy probed for Semgrep. The source-based replacement retains the HTTP
+route and mutable-default finding on the appropriate feature, keeps the
+healthy feature clear, and reports legacy configuration without probing
+the tool. Fixtures cover authentication controls, normalized scanner
+findings, scope, history, dependency graph, and incremental feature output.
+On Python 3.12.13 with paired core `41216d9`, 75 focused cases passed.
+Branch-inclusive coverage reached 80.94% for the
+analyzer and 92.59% for the rule engine.
+
+## Project analyzer review corrections
+
+Five production-behavior fixtures failed on signed #532 head `5279c6ef`.
+The follow-up uses source ranges, statically recognized Flask and FastAPI
+receivers, resolved literal route parameters, known authentication
+callables, scoped imports, and string initialization evidence. Tests also
+require the expected parsed dependency names and validation tasks without
+leaking TEST_MODE. After incorporating signed #530 head `685830f4`, all
+85 focused Project tests passed. Coverage reached 81.41%
+for the analyzer and 93.16% for source rules.
+
+## Project source provenance
+
+On signed pull request head `f114bba4`, five regression cases failed.
+Nested findings reached the outer feature, ordinary bases counted as ORM
+models, named security dependencies lost their authentication evidence,
+ambiguous string initializers reported string concatenation, and a later
+import erased an earlier route. Two confidence and route controls passed.
+
+With the corrections, 92 Project tests passed on Python 3.12.13.
+Branch-inclusive coverage was 81.48% for the analyzer and 90.56% for
+the source-pattern engine. Separate otherwise equivalent feature fixtures
+verify the 0.10 route bonus and 0.05 mutable-default penalty.
+
+## Loop writes and lexical shadowing
+
+Eight regression cases failed on signed pull request head `2aba6b08`.
+The scanner treated list or ambiguous loop writes as string concatenation,
+reported a replaced import after a function definition, or attributed an
+imported callable to a shadowing parameter. The default-expression control
+also checks that the declaration still sees its enclosing scope.
+All 100 focused Project tests passed with the corrected scanner.
+
+## Conditional loop additions
+
+Two cases failed on signed pull request head `6186a5a0`: a conditional
+addition with a definite string went unreported, and the same pattern in
+a nested loop was missed. The corrected scanner assigns each finding to
+its innermost loop and keeps the negative control for a possible list
+write. All 102 focused Project tests passed.
+
+## Loop-carried assignments
+
+The pre-signing review of `927c16a2` identified list assignments carried
+into later iterations. The direct and nested-loop fixtures reproduced
+the false positive. A third regression demonstrated why a `continue`
+must preserve the state at that path. The analyzer uses bindings
+known both at entry and across repeat paths, and still reports a
+concatenation when the current iteration establishes a string.
+All 106 focused Project tests passed.
+
+## Unpacked loop targets
+
+Three tests failed on `023e08b4`: tuple targets, nested list and starred
+targets, and an unpacking assignment inside the loop retained a stale
+string binding. All 109 focused Project tests passed after forgetting
+each name bound by unpacking. A separate accumulator still reports
+string concatenation in the same loop.
+
+## Binding evaluation order
+
+Five cases failed on `7f0f7501`: a plain, unpacked, annotated, or augmented
+assignment and a loop iterable each lost a callable alias before the
+old binding was used. The scanner now inspects the evaluated value first.
+It still discards the old binding for subsequent statements and the
+loop body. All 114 focused Project tests passed.

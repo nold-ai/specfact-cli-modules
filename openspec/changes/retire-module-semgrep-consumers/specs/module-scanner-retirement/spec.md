@@ -40,3 +40,21 @@ SpecFact-owned Project and Codebase entry points SHALL run supported feature, qu
 - **AND** targeted pytest receives the same checkout path for provenance checks, while unpaired runs retain the released core
 - **AND** the independent signed reviewer still uses its own release, core version, and trusted analyzer inputs
 - **AND** a pull request changing the native review workflow runs the required module-signature verification for that pull request
+
+#### Scenario: Project feature and quality findings come from the parsed source
+- **GIVEN** a Python feature with an HTTP route and a mutable default and a second feature without the quality issue
+- **WHEN** Project analyzes the repository without an available Semgrep tool
+- **THEN** the first feature retains the route outcome, the quality constraint, and its corresponding confidence evidence
+- **AND** the second feature receives no quality constraint from the first
+- **AND** endpoint and authentication findings require evidence from the owning source scope, with no inferred route methods or string types when unresolved
+- **AND** legacy Project feature or quality configuration produces migration guidance without invoking Semgrep
+- **AND** nested classes own their findings, even when Project omits the nested class as a feature
+- **AND** otherwise equivalent features independently reflect the HTTP route bonus and mutable-default penalty
+- **AND** source evidence distinguishes SQLAlchemy bases from unrelated classes, resolves FastAPI security instances at their binding, and preserves established routes across later import rebinding
+- **AND** repeated addition needs a definite string initializer and no preceding write that could leave a non-string value
+- **AND** repeated-addition evidence accounts for preceding writes in the loop body
+- **AND** function definitions and parameters shadow prior bindings in their Python scopes while defaults and decorators retain their enclosing scope
+- **AND** eligible additions in conditional loop bodies appear once and are attributed to their innermost loop
+- **AND** writes from earlier iterations can invalidate the initial string evidence unless the current iteration establishes it again
+- **AND** unpacked loop targets replace existing evidence for every name they bind
+- **AND** assignment values and loop iterables use the bindings that exist before the corresponding targets are assigned

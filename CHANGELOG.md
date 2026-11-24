@@ -16,6 +16,9 @@ and this project follows SemVer for bundle versions.
 
 ### Fixed
 
+- Derive Project feature and code-quality evidence from parsed Python source.
+  Report legacy feature or quality rules that require migration.
+
 - Extract Project OpenAPI request and asserted response examples directly from
   Python tests in sequential and worker imports. Legacy test-pattern rules
   produce migration guidance without running Semgrep.

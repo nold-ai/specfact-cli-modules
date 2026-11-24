@@ -144,3 +144,51 @@ requirements:
         node_id: tests/unit/workflows/test_sign_modules_hardening.py::test_native_review_workflow_changes_trigger_pr_signature_verification
       intent: Publish the required module verification checks in the workflow-only pull request context.
       observable: A native review workflow-only change matches the existing verifier's pull request path filter.
+    - case_id: PROJECT-SOURCE-QUALITY
+      scenario_id: module-scanner-entry-points-operate-without-semgrep
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/specfact_project/test_code_analyzer_semgrep_status.py::test_project_feature_and_quality_evidence_without_semgrep
+      intent: Preserve feature and quality evidence from parsed source.
+      observable: The route and quality finding reach their own feature without a Semgrep probe.
+    - case_id: PROJECT-ROUTE-IDENTITY
+      scenario_id: module-scanner-entry-points-operate-without-semgrep
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/specfact_project/test_python_patterns.py::test_only_known_http_receivers_produce_route_findings
+      intent: Emit routes for statically known HTTP receivers with supported literal methods and paths.
+      observable: Emit routes for statically known HTTP receivers with supported literal methods and paths.
+    - case_id: PROJECT-AUTH-EVIDENCE
+      scenario_id: module-scanner-entry-points-operate-without-semgrep
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/specfact_project/test_python_patterns.py::test_route_authentication_requires_known_dependencies
+      intent: Retain evidenced authentication in defaults and annotated arguments without assigning metrics-only dependencies.
+      observable: Retain evidenced authentication in defaults and annotated arguments without assigning metrics-only dependencies.
+    - case_id: PROJECT-LOCAL-IMPORTS
+      scenario_id: module-scanner-entry-points-operate-without-semgrep
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/specfact_project/test_python_patterns.py::test_local_imports_stay_in_their_own_function
+      intent: Bind aliases in their lexically owning source scope.
+      observable: Bind aliases in their lexically owning source scope.
+    - case_id: PROJECT-STRING-ACCUMULATOR
+      scenario_id: module-scanner-entry-points-operate-without-semgrep
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/specfact_project/test_python_patterns.py::test_numeric_accumulator_is_not_string_evidence
+      intent: Use a string initializer before reporting repeated concatenation.
+      observable: Use a string initializer before reporting repeated concatenation.
+    - case_id: PROJECT-ROUTE-OWNERSHIP
+      scenario_id: module-scanner-entry-points-operate-without-semgrep
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/specfact_project/test_code_analyzer_semgrep_status.py::test_route_evidence_belongs_to_its_owning_feature
+      intent: Use the route's source range to attach evidence only to the relevant feature.
+      observable: Use the route's source range to attach evidence only to the relevant feature.
