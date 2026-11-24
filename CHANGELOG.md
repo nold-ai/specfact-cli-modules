@@ -16,6 +16,9 @@ and this project follows SemVer for bundle versions.
 
 ### Fixed
 
+- Project 0.41.33 keeps valid Python sources eligible when a repository or
+  source path contains part of an excluded directory name.
+
 - Derive Project feature and code-quality evidence from parsed Python source.
   Report legacy feature or quality rules that require migration.
 

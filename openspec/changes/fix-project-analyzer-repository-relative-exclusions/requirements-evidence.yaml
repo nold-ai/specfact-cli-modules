@@ -1,0 +1,46 @@
+schema_version: "2"
+requirements:
+  openspec:fix-project-analyzer-repository-relative-exclusions:codebase-import-runtime:project-analyzer-uses-repository-relative-directory-exclusions:
+    rationale: "Production sources remain eligible unless an existing exclusion matches."
+    stakeholder_refs:
+      - "https://github.com/nold-ai/specfact-cli/pull/791"
+    touchpoints:
+      - id: project-analyzer-filter
+        kind: source_file
+        locator: "packages/specfact-project/src/specfact_project/analyzers/code_analyzer.py"
+      - id: project-analyzer-regression
+        kind: test_file
+        locator: "tests/unit/specfact_project/test_code_analyzer_exclusions.py"
+    verification_cases:
+      - case_id: PROJECT-ANALYZER-ANCESTOR
+        scenario_id: project-analyzer-uses-repository-relative-directory-exclusions
+        method: test
+        intent: "Match excluded directories within the repository."
+        observable: "One feature under an env-named parent."
+        selector:
+          runner: pytest
+          node_id: "tests/unit/specfact_project/test_code_analyzer_exclusions.py::test_analyzer_matches_excluded_directories_within_repository[ancestor]"
+      - case_id: PROJECT-ANALYZER-ROOT
+        scenario_id: project-analyzer-uses-repository-relative-directory-exclusions
+        method: test
+        intent: "Match excluded directories within the repository."
+        observable: "One feature in a build-named repository."
+        selector:
+          runner: pytest
+          node_id: "tests/unit/specfact_project/test_code_analyzer_exclusions.py::test_analyzer_matches_excluded_directories_within_repository[root]"
+      - case_id: PROJECT-ANALYZER-SOURCE
+        scenario_id: project-analyzer-uses-repository-relative-directory-exclusions
+        method: test
+        intent: "Match excluded directories within the repository."
+        observable: "One feature in a source path containing exclusion fragments."
+        selector:
+          runner: pytest
+          node_id: "tests/unit/specfact_project/test_code_analyzer_exclusions.py::test_analyzer_matches_excluded_directories_within_repository[source]"
+      - case_id: PROJECT-ANALYZER-EXCLUDED
+        scenario_id: project-analyzer-uses-repository-relative-directory-exclusions
+        method: test
+        intent: "Match excluded directories within the repository."
+        observable: "No feature in a real build directory."
+        selector:
+          runner: pytest
+          node_id: "tests/unit/specfact_project/test_code_analyzer_exclusions.py::test_analyzer_matches_excluded_directories_within_repository[build]"
