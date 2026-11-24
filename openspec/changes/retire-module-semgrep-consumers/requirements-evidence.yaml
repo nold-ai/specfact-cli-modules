@@ -72,6 +72,62 @@ requirements:
         node_id: tests/unit/workflows/test_paired_core_ref_trust.py::test_native_review_uses_paired_core_only_for_candidate_tests
       intent: Use the exact paired core commit in native candidate tests.
       observable: The candidate bootstrap receives the paired checkout after the separate signed reviewer is verified.
+    - case_id: PROJECT-OPENAPI-SEQUENTIAL
+      scenario_id: module-scanner-entry-points-operate-without-semgrep
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/integration/specfact_project/test_semgrep_retirement.py::test_project_contract_examples_keep_request_and_asserted_response[sequential]
+      intent: Preserve request and asserted response examples without Semgrep.
+      observable: The contract contains the source request and asserted HTTP 201 response.
+    - case_id: PROJECT-OPENAPI-WORKERS
+      scenario_id: module-scanner-entry-points-operate-without-semgrep
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/integration/specfact_project/test_semgrep_retirement.py::test_project_contract_examples_keep_request_and_asserted_response[workers]
+      intent: Preserve request and asserted response examples without Semgrep.
+      observable: The contract contains the source request and asserted HTTP 201 response.
+    - case_id: PROJECT-OPENAPI-ATOMIC-EXAMPLE
+      scenario_id: module-scanner-entry-points-operate-without-semgrep
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/specfact_project/test_test_to_openapi.py::test_repeated_operation_keeps_one_complete_example
+      intent: A repeated operation preserves one coherent request, status, and response.
+      observable: A repeated operation preserves one coherent request, status, and response.
+    - case_id: PROJECT-OPENAPI-INLINE
+      scenario_id: module-scanner-entry-points-operate-without-semgrep
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/specfact_project/test_test_to_openapi.py::test_inline_assertion_extracts_the_request_and_status
+      intent: An inline response assertion produces a request and asserted status.
+      observable: An inline response assertion produces a request and asserted status.
+    - case_id: PROJECT-OPENAPI-FLASK-CLIENT
+      scenario_id: module-scanner-entry-points-operate-without-semgrep
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/specfact_project/test_test_to_openapi.py::test_flask_test_client_context_keeps_request_and_response
+      intent: Flask client context preserves request and response examples.
+      observable: Flask client context preserves request and response examples.
+    - case_id: PROJECT-OPENAPI-HTTP-CONTEXT
+      scenario_id: module-scanner-entry-points-operate-without-semgrep
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/specfact_project/test_test_to_openapi.py::test_http_context_rebinds_the_response
+      intent: The second HTTP context keeps its status separate from the earlier request.
+      observable: The second HTTP context keeps its status separate from the earlier request.
+    - case_id: PROJECT-PYTHON-IMPORT-REBINDING
+      scenario_id: module-scanner-entry-points-operate-without-semgrep
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/unit/specfact_project/test_test_to_openapi.py::test_plain_import_replaces_previous_binding
+      intent: A plain import replaces an earlier import alias.
+      observable: A plain import replaces an earlier import alias.
     - case_id: CODEBASE-ASYNC-PROTECTED-DEV-CORE
       scenario_id: module-scanner-entry-points-operate-without-semgrep
       method: test

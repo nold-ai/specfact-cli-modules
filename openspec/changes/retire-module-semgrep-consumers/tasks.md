@@ -8,6 +8,7 @@
 ## Replacement and cutover
 
 - [ ] Migrate Project feature/quality analysis and Codebase async scanning and requested-fix behavior without invoking Semgrep.
-- [ ] Route supported OpenAPI examples through the existing AST extractor and retire the Spec-Kit scanner preset while preserving protocol and workflow generation.
+- [x] Route supported OpenAPI examples through AST extraction in sequential and worker imports.
+- [ ] Retire the Spec-Kit scanner preset while preserving protocol and workflow generation.
 - [ ] Delete obsolete tool discovery, commands, docs and active resources. Preserve historical report interpretation and explicit migration results.
 - [ ] Run contract, signature, installed artifact and policy checks. Provide the exact affected signed bundle identities to #516, and archive after merge.

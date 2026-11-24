@@ -76,6 +76,12 @@ This is especially useful for large codebases where linking can take several min
 
 During OpenAPI contract extraction, progress is shown for each feature being processed.
 
+Project reads Python tests as source to extract literal HTTP request examples and
+asserted JSON responses and status codes. This works in both serial and parallel
+imports. If `tools/semgrep/test-patterns.yml` is present, Project reports that
+the legacy rules are retired. Express examples as literal requests and response
+assertions in Python tests.
+
 ---
 
 ## Feature Validation

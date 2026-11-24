@@ -13,6 +13,13 @@ SpecFact-owned Project and Codebase entry points SHALL run supported feature, qu
 - **WHEN** the Project import commands run in an external installation without Semgrep
 - **THEN** supported request, response and status-code examples appear in the OpenAPI contract, and Spec-Kit import writes its supported protocol and workflow without generating a Semgrep preset or invoking the scanner
 
+#### Scenario: Project import reads OpenAPI examples from test source
+- **GIVEN** a Python test with a literal HTTP request, asserted status and asserted JSON response
+- **WHEN** Project extracts OpenAPI contracts with or without process workers
+- **THEN** the operation contains the request example and response example under the asserted status
+- **AND** inline assertions and Flask client contexts preserve supported examples, and repeated operations keep each selected request and response together
+- **AND** an existing legacy test-pattern configuration produces migration guidance without invoking Semgrep
+
 #### Scenario: Prior scanner configuration needs migration
 - **GIVEN** a reviewed project requests a formerly supported Semgrep configuration or fix the replacement cannot interpret
 - **WHEN** the affected check resolves its configuration
