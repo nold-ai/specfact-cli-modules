@@ -162,3 +162,11 @@ targets, and an unpacking assignment inside the loop retained a stale
 string binding. All 109 focused Project tests passed after forgetting
 each name bound by unpacking. A separate accumulator still reports
 string concatenation in the same loop.
+
+## Binding evaluation order
+
+Five cases failed on `7f0f7501`: a plain, unpacked, annotated, or augmented
+assignment and a loop iterable each lost a callable alias before the
+old binding was used. The scanner now inspects the evaluated value first.
+It still discards the old binding for subsequent statements and the
+loop body. All 114 focused Project tests passed.

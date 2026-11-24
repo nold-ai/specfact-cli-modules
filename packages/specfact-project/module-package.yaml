@@ -27,4 +27,4 @@ core_compatibility: '>=0.40.0,<1.0.0'
 description: Official SpecFact project bundle package.
 bundle_group_command: project
 integrity:
-  checksum: sha256:916982a692feea55a2a2abf55f2b886d3ec9f637faf2d3b1bcff40162a7a7ec9
+  checksum: sha256:d8a71b7f8a8f038d6d5ac873a2b541fd1212acd704dec355564b9285472aef71

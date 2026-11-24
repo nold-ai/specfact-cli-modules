@@ -407,13 +407,25 @@ def _statement_evidence(node: ast.AST, scope: _SourceScope) -> Iterator[PatternM
         yield PatternMatch("env-variable-access", node)
 
 
+def _binding_value(node: ast.AST) -> ast.expr | None:
+    if isinstance(node, FOR_NODES):
+        return node.iter
+    if isinstance(node, (ast.Assign, ast.AnnAssign, ast.AugAssign)):
+        return node.value
+    return None
+
+
 def _owned_nodes(nodes: Sequence[ast.AST], *, boundaries: tuple[type[ast.AST], ...] = SCOPE_NODES) -> Iterator[ast.AST]:
     pending = list(reversed(nodes))
     while pending:
         node = pending.pop()
+        value = _binding_value(node)
+        if value is not None:
+            yield from _owned_nodes((value,), boundaries=boundaries)
         yield node
         if not isinstance(node, boundaries):
-            pending.extend(reversed(list(ast.iter_child_nodes(node))))
+            children = reversed(list(ast.iter_child_nodes(node)))
+            pending.extend(child for child in children if child is not value)
 
 
 def _track_origin(name: str, origin: str, scope: _SourceScope, definite: bool) -> None:

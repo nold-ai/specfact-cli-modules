@@ -362,3 +362,21 @@ def test_parameters_do_not_shadow_enclosing_defaults(tmp_path: Path) -> None:
     findings = feature_patterns(ast.parse(source), tmp_path / "readers.py")
 
     assert [item["start"]["line"] for item in findings if item["check_id"] == "unsafe-pickle-deserialization"] == [3]
+
+
+@pytest.mark.parametrize(
+    "binding",
+    [
+        "decode = decode(payload)",
+        "decode, flag = decode(payload)",
+        "for decode, flag in decode(payload):\n    decode(entry)",
+        "decode: object = decode(payload)",
+        "decode += decode(payload)",
+    ],
+    ids=["assignment", "unpacking", "iterable", "annotated-assignment", "augmented-assignment"],
+)
+def test_binding_uses_enclosing_names_for_its_value(tmp_path: Path, binding: str) -> None:
+    source = f"from pickle import loads as decode\n\n{binding}\n\ndecode(after)\n"
+    findings = feature_patterns(ast.parse(source), tmp_path / "bindings.py")
+
+    assert [item["start"]["line"] for item in findings if item["check_id"] == "unsafe-pickle-deserialization"] == [3]
