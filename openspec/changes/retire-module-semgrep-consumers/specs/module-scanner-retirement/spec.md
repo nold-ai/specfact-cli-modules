@@ -48,3 +48,7 @@ SpecFact-owned Project and Codebase entry points SHALL run supported feature, qu
 - **AND** the second feature receives no quality constraint from the first
 - **AND** endpoint and authentication findings require evidence from the owning source scope, with no inferred route methods or string types when unresolved
 - **AND** legacy Project feature or quality configuration produces migration guidance without invoking Semgrep
+- **AND** nested classes own their findings, even when Project omits the nested class as a feature
+- **AND** otherwise equivalent features independently reflect the HTTP route bonus and mutable-default penalty
+- **AND** source evidence distinguishes SQLAlchemy bases from unrelated classes, resolves FastAPI security instances at their binding, and preserves established routes across later import rebinding
+- **AND** repeated addition needs a definite string initializer and no preceding write that could leave a non-string value

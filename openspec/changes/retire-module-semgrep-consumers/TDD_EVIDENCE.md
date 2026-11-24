@@ -114,3 +114,16 @@ require the expected parsed dependency names and validation tasks without
 leaking TEST_MODE. After incorporating signed #530 head `685830f4`, all
 85 focused Project tests passed. Coverage reached 81.41%
 for the analyzer and 93.16% for source rules.
+
+## Project source provenance
+
+On signed pull request head `f114bba4`, five regression cases failed.
+Nested findings reached the outer feature, ordinary bases counted as ORM
+models, named security dependencies lost their authentication evidence,
+ambiguous string initializers reported string concatenation, and a later
+import erased an earlier route. Two confidence and route controls passed.
+
+With the corrections, 92 Project tests passed on Python 3.12.13.
+Branch-inclusive coverage was 81.48% for the analyzer and 90.56% for
+the source-pattern engine. Separate otherwise equivalent feature fixtures
+verify the 0.10 route bonus and 0.05 mutable-default penalty.

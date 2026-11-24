@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any, NamedTuple
 
 from beartype import beartype
-from icontract import ensure, require
+from icontract import require
 
 from specfact_project.analyzers.python_source import import_aliases, qualified_name
 
@@ -40,9 +40,9 @@ HTTP_METHODS = frozenset({"get", "post", "put", "delete", "patch", "head", "opti
 CHECKED_MODELS = {
     "BaseModel": "pydantic",
     "pydantic.BaseModel": "pydantic",
-    "Base": "sqlalchemy",
-    "DeclarativeBase": "sqlalchemy",
     "sqlalchemy.orm.DeclarativeBase": "sqlalchemy",
+    "sqlalchemy.orm.declarative_base": "sqlalchemy",
+    "sqlalchemy.ext.declarative.declarative_base": "sqlalchemy",
     "db.Model": "sqlalchemy",
     "Model": "django",
     "models.Model": "django",
@@ -85,16 +85,21 @@ ROUTER_CONSTRUCTORS = {
     "flask.Blueprint": "flask",
 }
 SCOPE_NODES = (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)
-SourceValues = dict[str, list[tuple[int, ast.expr]]]
+_SourceRoot = ast.Module | ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef
 
 
 class _SourceScope(NamedTuple):
     aliases: dict[str, str]
-    assignments: SourceValues
+    origins: dict[str, str]
+    strings: set[str]
 
-    @ensure(lambda result: result is None or isinstance(result, ast.expr), "A binding has a source expression")
-    def before(self, name: str, line: int) -> ast.expr | None:
-        return next((value for at, value in reversed(self.assignments.get(name, [])) if at < line), None)
+
+def _source_origin(node: ast.expr, scope: _SourceScope) -> str:
+    if isinstance(node, ast.Name) and node.id in scope.origins:
+        return scope.origins[node.id]
+    if isinstance(node, ast.Call):
+        return qualified_name(node.func, scope.aliases)
+    return qualified_name(node, scope.aliases)
 
 
 def _literal_string(node: ast.AST | None) -> str:
@@ -109,9 +114,10 @@ def _route_framework(node: ast.Call, scope: _SourceScope) -> str:
     if not isinstance(node.func, ast.Attribute):
         return ""
     receiver = node.func.value
-    constructor = scope.before(receiver.id, node.lineno) if isinstance(receiver, ast.Name) else receiver
-    if isinstance(constructor, ast.Call):
-        return ROUTER_CONSTRUCTORS.get(qualified_name(constructor.func, scope.aliases), "")
+    if isinstance(receiver, ast.Name):
+        return ROUTER_CONSTRUCTORS.get(scope.origins.get(receiver.id, ""), "")
+    if isinstance(receiver, ast.Call):
+        return ROUTER_CONSTRUCTORS.get(_source_origin(receiver, scope), "")
     return ""
 
 
@@ -152,14 +158,14 @@ DECORATOR_RULES = {
 AUTH_DEPENDENCY_NAMES = frozenset({"require_auth", "require_permission", "get_current_user", "get_current_active_user"})
 
 
-def _is_auth_dependency(call: ast.Call, aliases: dict[str, str]) -> bool:
-    function = qualified_name(call.func, aliases)
+def _is_auth_dependency(call: ast.Call, scope: _SourceScope) -> bool:
+    function = qualified_name(call.func, scope.aliases)
     if function not in {"Depends", "fastapi.Depends", "Security", "fastapi.Security"}:
         return False
     dependency = call.args[0] if call.args else _keyword(call, "dependency")
     if dependency is None:
         return False
-    name = qualified_name(dependency.func if isinstance(dependency, ast.Call) else dependency, aliases)
+    name = _source_origin(dependency, scope)
     return name.startswith("fastapi.security.") or name.rsplit(".", 1)[-1] in AUTH_DEPENDENCY_NAMES
 
 
@@ -183,13 +189,13 @@ def _parameter_dependencies(args: ast.arguments, aliases: dict[str, str]) -> Ite
         yield from _annotated_dependencies(argument, aliases)
 
 
-def _requires_auth_dependency(node: ast.Call, args: ast.arguments, aliases: dict[str, str]) -> bool:
-    values = list(_parameter_dependencies(args, aliases))
+def _requires_auth_dependency(node: ast.Call, args: ast.arguments, scope: _SourceScope) -> bool:
+    values = list(_parameter_dependencies(args, scope.aliases))
     configured = _keyword(node, "dependencies")
     if configured is not None:
         values.append(configured)
     return any(
-        _is_auth_dependency(item, aliases) for value in values for item in ast.walk(value) if isinstance(item, ast.Call)
+        _is_auth_dependency(item, scope) for value in values for item in ast.walk(value) if isinstance(item, ast.Call)
     )
 
 
@@ -200,7 +206,7 @@ def _route_patterns(node: ast.Call, args: ast.arguments, scope: _SourceScope) ->
     routes = tuple(_decorated_route(node, framework))
     for method, path in routes:
         yield PatternMatch(f"{framework}-route-detection", node, metadata={"method": method, "path": path})
-    if routes and framework == "fastapi" and _requires_auth_dependency(node, args, scope.aliases):
+    if routes and framework == "fastapi" and _requires_auth_dependency(node, args, scope):
         yield PatternMatch("fastapi-dependency-auth-detection", node)
 
 
@@ -267,11 +273,11 @@ def _class_shape_patterns(
         yield PatternMatch("icontract-decorator-detection", node)
 
 
-def _class_patterns(node: ast.ClassDef, aliases: dict[str, str]) -> Iterator[PatternMatch]:
-    bases = {qualified_name(base, aliases) for base in node.bases}
+def _class_patterns(node: ast.ClassDef, scope: _SourceScope) -> Iterator[PatternMatch]:
+    bases = {_source_origin(base, scope) for base in node.bases}
     methods = {item.name for item in node.body if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef))}
     decorators = {
-        qualified_name(item.func if isinstance(item, ast.Call) else item, aliases).rsplit(".", 1)[-1]
+        qualified_name(item.func if isinstance(item, ast.Call) else item, scope.aliases).rsplit(".", 1)[-1]
         for item in node.decorator_list
     }
     yield from _class_base_patterns(node, bases)
@@ -335,17 +341,15 @@ def _repeated_additions(node: ast.For | ast.AsyncFor, scope: _SourceScope) -> It
         ):
             continue
         targets = {target.id for target in statement.targets if isinstance(target, ast.Name)}
-        if value.left.id in targets:
-            initial = scope.before(value.left.id, node.lineno)
-            if isinstance(initial, ast.Constant) and isinstance(initial.value, str):
-                yield statement
+        if value.left.id in targets and value.left.id in scope.strings:
+            yield statement
 
 
 def _definition_evidence(node: ast.AST, scope: _SourceScope) -> Iterator[PatternMatch]:
     if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
         return _function_patterns(node, scope)
     if isinstance(node, ast.ClassDef):
-        return _class_patterns(node, scope.aliases)
+        return _class_patterns(node, scope)
     if isinstance(node, ast.Call):
         return _call_patterns(node, scope.aliases)
     if isinstance(node, ast.Assign):
@@ -378,32 +382,70 @@ def _owned_nodes(root: ast.AST) -> Iterator[ast.AST]:
             pending.extend(reversed(list(ast.iter_child_nodes(node))))
 
 
-def _assignment_values(nodes: list[ast.AST]) -> SourceValues:
-    values: SourceValues = {}
-    for node in nodes:
-        if isinstance(node, ast.Assign):
-            targets = node.targets
-        elif isinstance(node, ast.AnnAssign):
-            targets = [node.target]
+def _track_origin(name: str, origin: str, scope: _SourceScope, definite: bool) -> None:
+    scope.aliases.pop(name, None)
+    if definite and origin:
+        scope.origins[name] = origin
+    elif origin != scope.origins.get(name):
+        scope.origins.pop(name, None)
+
+
+def _track_binding(target: ast.expr, value: ast.expr | None, scope: _SourceScope, definite: bool) -> None:
+    if not isinstance(target, ast.Name):
+        return
+    name = target.id
+    origin = _source_origin(value, scope) if isinstance(value, ast.Call) else ""
+    _track_origin(name, origin, scope, definite)
+    if isinstance(value, ast.Constant) and isinstance(value.value, str):
+        if definite:
+            scope.strings.add(name)
+    else:
+        scope.strings.discard(name)
+
+
+def _track_type_binding(node: ast.ClassDef, scope: _SourceScope, definite: bool) -> None:
+    bases = (_source_origin(base, scope) for base in node.bases)
+    origin = next((base for base in bases if CHECKED_MODELS.get(base) == "sqlalchemy"), "")
+    _track_origin(node.name, origin, scope, definite)
+    scope.strings.discard(node.name)
+
+
+def _track_imports(node: ast.Import | ast.ImportFrom, scope: _SourceScope, definite: bool) -> None:
+    for name, imported in import_aliases([node]).items():
+        scope.strings.discard(name)
+        scope.origins.pop(name, None)
+        if definite or scope.aliases.get(name) == imported:
+            scope.aliases[name] = imported
         else:
-            continue
-        if node.value is None:
-            continue
-        for target in targets:
-            if isinstance(target, ast.Name):
-                values.setdefault(target.id, []).append((node.lineno, node.value))
-    return values
+            scope.aliases.pop(name, None)
 
 
-def _source_matches(tree: ast.AST, inherited: _SourceScope) -> Iterator[PatternMatch]:
-    nodes = list(_owned_nodes(tree))
-    scope = _SourceScope(inherited.aliases | import_aliases(nodes), inherited.assignments | _assignment_values(nodes))
+def _track_source_bindings(node: ast.AST, scope: _SourceScope, definite: bool) -> None:
+    if isinstance(node, (ast.Import, ast.ImportFrom)):
+        _track_imports(node, scope, definite)
+        return
+    if isinstance(node, ast.Assign):
+        for target in node.targets:
+            _track_binding(target, node.value, scope, definite)
+        return
+    if isinstance(node, ast.AnnAssign) and node.value is not None:
+        _track_binding(node.target, node.value, scope, definite)
+    if isinstance(node, ast.AugAssign):
+        _track_binding(node.target, None, scope, definite)
+    if isinstance(node, ast.ClassDef):
+        _track_type_binding(node, scope, definite)
+
+
+def _source_matches(tree: _SourceRoot, inherited: _SourceScope) -> Iterator[PatternMatch]:
+    scope = _SourceScope(inherited.aliases.copy(), inherited.origins.copy(), set())
     enclosing = inherited if isinstance(tree, ast.ClassDef) else scope
-    for node in nodes:
+    direct_statements = frozenset(tree.body)
+    for node in _owned_nodes(tree):
         yield from _definition_evidence(node, scope)
         yield from _statement_evidence(node, scope)
         if isinstance(node, SCOPE_NODES):
             yield from _source_matches(node, enclosing)
+        _track_source_bindings(node, scope, node in direct_statements)
 
 
 @beartype
@@ -418,5 +460,5 @@ def feature_patterns(tree: ast.Module, file_path: Path) -> list[dict[str, Any]]:
             "message": match.message,
             "extra": {"metadata": match.metadata or {}, "message": match.function_name},
         }
-        for match in _source_matches(tree, _SourceScope({}, {}))
+        for match in _source_matches(tree, _SourceScope({}, {}, set()))
     ]
