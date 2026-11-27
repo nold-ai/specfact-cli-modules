@@ -17,6 +17,7 @@ import xml.etree.ElementTree as ET
 from collections.abc import Callable
 from functools import partial
 from pathlib import Path
+from types import ModuleType
 from typing import Any
 
 import yaml
@@ -154,9 +155,31 @@ def _trusted_configuration(root: Path, base: str, output: Path, files: list[Path
     return config, type_config, parsed
 
 
-def _run_contracts(run: Callable[..., list[Any]], files: list[Path]) -> list[Any]:
-    """Give each input a fresh solver process and retain the signed adapter's full evidence."""
-    return [finding for path in files for finding in run([path], bug_hunt=True)]
+def _run_native_crosshair(adapter: ModuleType, path: Path) -> list[Any]:
+    """Run the signed adapter's solver command with a native per-file wall-clock budget."""
+    command = adapter.analyzer_command(["crosshair", "check", "--per_path_timeout", "10", str(path)])
+    try:
+        result = subprocess.run(command, capture_output=True, text=True, check=False, timeout=480)
+    except subprocess.TimeoutExpired:
+        return [adapter._crosshair_unknown(path, "CrossHair timed out before mandatory evidence completed.")]
+    except OSError as error:
+        return [adapter._crosshair_unknown(path, f"Unable to execute CrossHair: {error}")]
+    if result.returncode not in {0, 1} or (result.returncode == 1 and not result.stdout.strip()):
+        return [
+            adapter._crosshair_unknown(
+                path, f"CrossHair process error: {adapter._crosshair_process_diagnostic(result)}"
+            )
+        ]
+    return adapter._parse_crosshair_findings(result.stdout, [path])
+
+
+def _run_contracts(adapter: ModuleType, files: list[Path]) -> list[Any]:
+    """Keep the signed AST checks and run the full solver for each input."""
+    findings = []
+    for path in files:
+        findings.extend(adapter.run_contract_check([path], bug_hunt=True, crosshair_files=[]))
+        findings.extend(_run_native_crosshair(adapter, path))
+    return findings
 
 
 def _analyzers(reviewer: Path, config: Path, type_config: Path) -> list[tuple[str, Callable[..., list[Any]]]]:
@@ -173,7 +196,7 @@ def _analyzers(reviewer: Path, config: Path, type_config: Path) -> list[tuple[st
         ("ast-clean-code", modules["ast_clean_code"].run_ast_clean_code),
         ("basedpyright", partial(modules["basedpyright"].run_basedpyright, extra_args=("--project", str(type_config)))),
         ("pylint", partial(modules["pylint"].run_pylint, extra_args=("--rcfile", str(config)))),
-        ("contracts", partial(_run_contracts, modules["contract"].run_contract_check)),
+        ("contracts", partial(_run_contracts, modules["contract"])),
     ]
 
 

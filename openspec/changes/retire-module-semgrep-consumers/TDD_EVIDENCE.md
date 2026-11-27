@@ -197,3 +197,25 @@ Protected signing run 46065268836 signed Codebase 0.42.4 and Project
 0.41.34. Both signatures match the approved payloads and pass the strict
 module verifier. Hosted checks and installed-artifact acceptance remain
 pending.
+
+### Independent native contract review
+
+Run 46068014936 stopped before pytest because the pinned Semgrep parser
+rejected a keyword-only lambda in an import test. The named confirmation
+fixture passed in isolation and both Semgrep checks completed on the next
+signed head. CodeRabbit also found a test that depended on import runtime
+patches having run earlier. The standalone case failed with a missing
+`repo` key and passed after the test initialized those patches before
+injecting its I/O failure.
+
+Run 46068467669 retained two incomplete CrossHair results. The pinned
+solver crashed on Typer's `Literal` annotation and the Spec-Kit converter
+exceeded 120 seconds while the solver was still reaching additional
+contracts. The compatibility patch enumerates literal values and escapes
+line breaks in diagnostics, preserving the signed parser's one-record-per-line
+format. Native review gives each source 480 seconds of wall-clock time
+with the same 10-second per-path budget. The signed AST checks and result
+parser remain in use, and crashes or incomplete evidence still block.
+All 48 native-review unit tests passed after four new targeted cases failed
+against the previous driver. The signed Codebase and Project payloads are
+byte-identical to signing run 46065268836.

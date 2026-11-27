@@ -42,6 +42,12 @@ SpecFact-owned Project and Codebase entry points SHALL run supported feature, qu
 - **AND** the independent signed reviewer still uses its own release, core version, and trusted analyzer inputs
 - **AND** a pull request changing the native review workflow runs the required module-signature verification for that pull request
 
+#### Scenario: Native contract review completes on import sources
+- **GIVEN** changed import sources with Typer constructor annotations and multiple Spec-Kit conversion contracts
+- **WHEN** independent native review runs the pinned contract analyzers
+- **THEN** CrossHair explores each allowed literal value and runs against each changed Python source within an explicit per-file budget
+- **AND** the signed reviewer still checks the contracts and classifies the solver output, and an incomplete subprocess or unrecognized result still blocks the review
+
 #### Scenario: Project feature and quality findings come from the parsed source
 - **GIVEN** a Python feature with an HTTP route and a mutable default and a second feature without the quality issue
 - **WHEN** Project analyzes the repository without an available Semgrep tool

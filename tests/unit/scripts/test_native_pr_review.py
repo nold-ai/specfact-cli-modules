@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import importlib.util
+import subprocess
 import tomllib
 from copy import deepcopy
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 import yaml
@@ -525,18 +527,64 @@ def test_controller_installs_share_compatible_typer_constraint():
     assert 'version("typer") == "0.27.0"' in verify
 
 
-def test_contracts_runs_each_file_and_retains_every_result(native_review):
+def test_native_contracts_preserve_ast_and_solver_results(native_review, monkeypatch):
     files = [Path("first.py"), Path("second.py")]
     examined = []
 
-    def run(paths, *, bug_hunt):
+    def run_checks(paths, *, bug_hunt, crosshair_files):
         assert bug_hunt is True
-        assert len(paths) == 1
+        assert crosshair_files == []
         examined.extend(paths)
-        return [str(paths[0])]
+        return [f"contracts {paths[0]}"]
 
-    assert native_review._run_contracts(run, files) == ["first.py", "second.py"]
+    contract = SimpleNamespace(run_contract_check=run_checks)
+    monkeypatch.setattr(native_review, "_run_native_crosshair", lambda adapter, path: [f"solver {path}"])
+
+    findings = native_review._run_contracts(contract, files)
+
     assert examined == files
+    assert findings == ["contracts first.py", "solver first.py", "contracts second.py", "solver second.py"]
+
+
+def test_native_crosshair_keeps_the_path_budget_and_parses_full_output(native_review, monkeypatch):
+    file = Path("subject.py")
+    stdout = "subject.py:3: error: counterexample"
+
+    def run(args, *, capture_output, text, check, timeout):
+        assert args == ["crosshair", "check", "--per_path_timeout", "10", str(file)]
+        assert capture_output and text and not check
+        assert timeout > 120
+        return subprocess.CompletedProcess(args, 1, stdout, "")
+
+    def parse(output, paths):
+        assert output == stdout and paths == [file]
+        return ["verified finding"]
+
+    adapter = SimpleNamespace(analyzer_command=list, _parse_crosshair_findings=parse)
+    monkeypatch.setattr(native_review.subprocess, "run", run)
+
+    assert native_review._run_native_crosshair(adapter, file) == ["verified finding"]
+
+
+@pytest.mark.parametrize("failed_process", ["timeout", "crash"])
+def test_native_crosshair_still_blocks_incomplete_evidence(native_review, monkeypatch, failed_process):
+    def run(_command, **_kwargs):
+        if failed_process == "timeout":
+            raise subprocess.TimeoutExpired("crosshair", 480)
+        return subprocess.CompletedProcess("crosshair", 2, "", "solver failed")
+
+    adapter = SimpleNamespace(
+        analyzer_command=list,
+        _crosshair_process_diagnostic=lambda result: result.stderr,
+        _crosshair_unknown=lambda file, message: {"category": "tool_error", "file": str(file), "message": message},
+    )
+    monkeypatch.setattr(native_review.subprocess, "run", run)
+
+    findings = native_review._run_native_crosshair(adapter, Path("subject.py"))
+
+    assert len(findings) == 1
+    assert native_review._incomplete(findings[0])
+    assert findings[0]["file"] == "subject.py"
 
 
 @pytest.mark.parametrize("paired_core", ["", "/work/specfact-cli"])
