@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import os
 import subprocess
 import tomllib
 from copy import deepcopy
@@ -506,6 +507,23 @@ def test_selected_test_file_cannot_disappear_from_evidence(native_review, tmp_pa
     </testsuite>""")
     with pytest.raises(ValueError, match="test_changed_source"):
         native_review._require_native_test_evidence(report, selectors=("tests/unit/test_changed_source.py",))
+
+
+@pytest.mark.parametrize("paired", [False, True], ids=["released", "paired"])
+def test_native_bootstrap_constrains_the_unpaired_released_fixture(tmp_path, paired):
+    workflow = yaml.safe_load((ROOT / ".github/workflows/native-pr-review.yml").read_text())
+    steps = workflow["jobs"]["independent-review"]["steps"]
+    bootstrap = _step_named(steps, "Bootstrap native repository environment")["run"]
+    constraints = tmp_path / "native-independent-review" / "controller-constraints.txt"
+    constraints.parent.mkdir()
+    constraints.write_text("typer==0.27.0\n")
+    env = dict(os.environ, RUNNER_TEMP=str(tmp_path), SPECFACT_CLI_REPO=str(tmp_path / "core") if paired else "")
+    env.pop("PIP_CONSTRAINT", None)
+    shim = 'python() { :; }\nhatch() { printf "%s\\n" "${PIP_CONSTRAINT:-unset}"; }\n'
+
+    result = subprocess.run(["bash", "-c", shim + bootstrap], env=env, check=True, capture_output=True, text=True)
+
+    assert result.stdout.splitlines() == ["unset" if paired else str(constraints)] * 2
 
 
 def test_controller_installs_share_compatible_typer_constraint():

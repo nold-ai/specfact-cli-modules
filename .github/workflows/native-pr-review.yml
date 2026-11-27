@@ -143,6 +143,11 @@ jobs:
         run: |
           set -euo pipefail
           python -m pip install hatch==1.18.1
+          if [[ -z "$SPECFACT_CLI_REPO" ]]; then
+            # The released core fixture needs the same Typer API as the controller.
+            export PIP_CONSTRAINT="$RUNNER_TEMP/native-independent-review/controller-constraints.txt"
+            test -s "$PIP_CONSTRAINT"
+          fi
           hatch run python -m pip --version
           hatch run dev-deps
       - name: Capture exact native subject

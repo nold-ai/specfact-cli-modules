@@ -219,3 +219,12 @@ parser remain in use, and crashes or incomplete evidence still block.
 All 48 native-review unit tests passed after four new targeted cases failed
 against the previous driver. The signed Codebase and Project payloads are
 byte-identical to signing run 46065268836.
+
+Run 46070279491 completed all independent analyzers. Pytest then found
+nine brownfield cases failing at startup because the unpaired candidate
+fixture resolved a Typer version that lacked a helper used by released
+core. The native bootstrap now uses the existing controller Typer
+constraint for that released-core fixture. A shell-level regression
+failed for the unpaired branch and passed after the change. The paired
+branch retained its existing setup in both runs. All nine affected cases
+passed locally with released core 0.55.4 and Typer 0.27.0.

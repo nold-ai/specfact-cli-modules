@@ -38,7 +38,7 @@ SpecFact-owned Project and Codebase entry points SHALL run supported feature, qu
 - **WHEN** native CI prepares the candidate test environment
 - **THEN** that environment uses the exact matching core commit for the Repro tests
 - **AND** the protected modules `dev` push uses protected core `dev`
-- **AND** targeted pytest receives the same checkout path for provenance checks, while unpaired runs retain the released core
+- **AND** targeted pytest receives the same checkout path for provenance checks, while unpaired runs install the released core with the verified Typer constraint during candidate test setup
 - **AND** the independent signed reviewer still uses its own release, core version, and trusted analyzer inputs
 - **AND** a pull request changing the native review workflow runs the required module-signature verification for that pull request
 
