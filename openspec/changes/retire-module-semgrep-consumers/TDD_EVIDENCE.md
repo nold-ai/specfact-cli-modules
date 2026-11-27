@@ -170,3 +170,68 @@ assignment and a loop iterable each lost a callable alias before the
 old binding was used. The scanner now inspects the evaluated value first.
 It still discards the old binding for subsequent statements and the
 loop body. All 114 focused Project tests passed.
+
+## Spec-Kit import artifacts
+
+On modules dev `c8859ae2`, the Project handler attempted to generate a
+Semgrep preset and advertised it in the command output. On Typer 0.27.0, the
+public `code import from-bridge` route separately consumed the subcommand as
+the parent bundle argument and rejected its options.
+
+The mapped public-command regression now imports a minimal Spec-Kit project,
+loads the generated protocol with an empty transition list, parses the
+GitHub Actions workflow, and checks its Project health check. It verifies
+that neither the filesystem, the command, nor the report advertises a
+Semgrep preset. The native test selection passed 217 tests using the reviewed
+core source `58f6a2af`. The focused suite also passed on released core
+0.55.4 and Typer 0.27.0.
+
+The starting branch coverage was 17.75% for the shared Project import file.
+The added tests exercise real import and enrichment runs, recovery from saved
+checkpoints, generated and cached contracts, source tracking, and adapter
+diagnostics. The local native test selection passed 256 tests with 80.83%
+branch-inclusive coverage for the Project import file and 85.96% for the
+Codebase import route against the unchanged 80% requirement. The staged
+Requirements, Code Review, contract tests, and repository lint also passed.
+Protected signing run 46065268836 signed Codebase 0.42.4 and Project
+0.41.34. Both signatures match the approved payloads and pass the strict
+module verifier. Hosted checks and installed-artifact acceptance remain
+pending.
+
+### Independent native contract review
+
+Run 46068014936 stopped before pytest because the pinned Semgrep parser
+rejected a keyword-only lambda in an import test. The named confirmation
+fixture passed in isolation and both Semgrep checks completed on the next
+signed head. CodeRabbit also found a test that depended on import runtime
+patches having run earlier. The standalone case failed with a missing
+`repo` key and passed after the test initialized those patches before
+injecting its I/O failure.
+
+Run 46068467669 retained two incomplete CrossHair results. The pinned
+solver crashed on Typer's `Literal` annotation and the Spec-Kit converter
+exceeded 120 seconds while the solver was still reaching additional
+contracts. The compatibility patch enumerates literal values and escapes
+line breaks in diagnostics, preserving the signed parser's one-record-per-line
+format. Native review gives each source 480 seconds of wall-clock time
+with the same 10-second per-path budget. The signed AST checks and result
+parser remain in use, and crashes or incomplete evidence still block.
+All 48 native-review unit tests passed after four new targeted cases failed
+against the previous driver. The signed Codebase and Project payloads are
+byte-identical to signing run 46065268836.
+
+Run 46070279491 completed all independent analyzers. Pytest then found
+nine brownfield cases failing at startup because the unpaired candidate
+fixture resolved a Typer version that lacked a helper used by released
+core. The native bootstrap now uses the existing controller Typer
+constraint for that released-core fixture. A shell-level regression
+failed for the unpaired branch and passed after the change. The paired
+branch retained its existing setup in both runs. All nine affected cases
+passed locally with released core 0.55.4 and Typer 0.27.0.
+
+On signed head `ebf0b795`, run 46071555145 completed all ten native-review
+members and 356 tests. The Project import file reached 80.83% coverage.
+The Python 3.13 full suite then rejected only the new bridge help assertion
+because Rich inserted ANSI sequences inside option names. The test now
+requests colored output and strips formatting before verifying the visible
+options. Both import command contract tests passed with color forced.

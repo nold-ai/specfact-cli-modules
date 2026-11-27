@@ -12,6 +12,7 @@ SpecFact-owned Project and Codebase entry points SHALL run supported feature, qu
 - **GIVEN** a source project with HTTP request and response test examples and a Spec-Kit project eligible for protocol and workflow generation
 - **WHEN** the Project import commands run in an external installation without Semgrep
 - **THEN** supported request, response and status-code examples appear in the OpenAPI contract, and Spec-Kit import writes its supported protocol and workflow without generating a Semgrep preset or invoking the scanner
+- **AND** the public Codebase import route accepts the explicit Spec-Kit subcommand and its options, the protocol loads with or without transitions, and the command summary and optional report list the preserved artifacts without advertising the retired preset
 
 #### Scenario: Project import reads OpenAPI examples from test source
 - **GIVEN** a Python test with a literal HTTP request, asserted status and asserted JSON response
@@ -37,9 +38,15 @@ SpecFact-owned Project and Codebase entry points SHALL run supported feature, qu
 - **WHEN** native CI prepares the candidate test environment
 - **THEN** that environment uses the exact matching core commit for the Repro tests
 - **AND** the protected modules `dev` push uses protected core `dev`
-- **AND** targeted pytest receives the same checkout path for provenance checks, while unpaired runs retain the released core
+- **AND** targeted pytest receives the same checkout path for provenance checks, while unpaired runs install the released core with the verified Typer constraint during candidate test setup
 - **AND** the independent signed reviewer still uses its own release, core version, and trusted analyzer inputs
 - **AND** a pull request changing the native review workflow runs the required module-signature verification for that pull request
+
+#### Scenario: Native contract review completes on import sources
+- **GIVEN** changed import sources with Typer constructor annotations and multiple Spec-Kit conversion contracts
+- **WHEN** independent native review runs the pinned contract analyzers
+- **THEN** CrossHair explores each allowed literal value and runs against each changed Python source within an explicit per-file budget
+- **AND** the signed reviewer still checks the contracts and classifies the solver output, and an incomplete subprocess or unrecognized result still blocks the review
 
 #### Scenario: Project feature and quality findings come from the parsed source
 - **GIVEN** a Python feature with an HTTP route and a mutable default and a second feature without the quality issue

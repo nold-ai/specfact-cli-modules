@@ -10,6 +10,6 @@
 - [x] Migrate the Codebase async scan and preserve explicit diagnostics for requested fixes.
 - [x] Derive Project feature and quality findings from the parsed Python source.
 - [x] Route supported OpenAPI examples through AST extraction in sequential and worker imports.
-- [ ] Retire the Spec-Kit scanner preset while preserving protocol and workflow generation.
+- [x] Retire the Spec-Kit scanner preset while preserving protocol and workflow generation.
 - [ ] Delete obsolete tool discovery, commands, docs and active resources. Preserve historical report interpretation and explicit migration results.
 - [ ] Run contract, signature, installed artifact and policy checks. Provide the exact affected signed bundle identities to #516, and archive after merge.

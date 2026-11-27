@@ -30,6 +30,23 @@
 
 
  _TYPE_HINTS = IdKeyedDict()
+@@ -725,6 +730,16 @@
+             type_var_bindings = dict(zip(origin.__type_params__, type_args))
+             unified = dynamic_typing.realize(origin.__value__, type_var_bindings)
+             return proxy_for_type(unified, varname, allow_subtypes)
++
++        # Enumerate Literal alternatives as concrete branches, like enum members.
++        if typing.get_origin(typ) is typing.Literal:
++            values = typing.get_args(typ)
++            if not values:
++                raise IgnoreAttempt("No values for Literal")
++            for index, value in enumerate(values[:-1]):
++                if space.smt_fork(desc=f"choose_literal_{varname}_{index}"):
++                    return value
++            return values[-1]
+
+         # special cases
+         if isinstance(typ, type) and issubclass(typ, enum.Enum):
 --- a/crosshair/dynamic_typing.py
 +++ b/crosshair/dynamic_typing.py
 @@ -340,7 +340,8 @@
@@ -50,7 +67,7 @@
  import enum
  import linecache
  import os.path
-@@ -840,21 +841,23 @@
+@@ -840,25 +841,28 @@
      args: argparse.Namespace, options: AnalysisOptionSet, stdout: TextIO, stderr: TextIO
  ) -> int:
      any_problems = False
@@ -89,3 +106,9 @@
          line = describe_message(message, full_options)
          if line is None:
              continue
+-        stdout.write(line + "\n")
++        single_line = line.replace("\\", r"\\").replace("\r", r"\r").replace("\n", r"\n")
++        stdout.write(single_line + "\n")
+         if message.traceback:
+             debug("Traceback for output message:\n", message.traceback)
+         if message.state > MessageType.PRE_UNSAT:

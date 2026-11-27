@@ -85,9 +85,9 @@ jobs:
           ORIGINAL
           git apply "$patch"
           sha256sum -c /dev/stdin <<'PATCHED'
-          8b51b63291f7deb5a2b3f4343d33673668498bf59babc26ad153c04433854a57  crosshair/core.py
+          202bb8a2211a01bfd3cee3a3674b71f40ee9accd34447dcceca47dea5c3324b5  crosshair/core.py
           a698815202099fd262354c5aeabcb8346a478f2cc9fdab0b43c0770ead9a8ab6  crosshair/dynamic_typing.py
-          1b14cade6e751f24ba7b11832459820a166bc129cdf7857e411b2f420e033c2f  crosshair/main.py
+          ed9614854db0ed7fabc9abd6ae920ffd41a7214a2067e24f86e0ed78e67943bf  crosshair/main.py
           PATCHED
       - name: Verify immutable core registry APIs
         run: |
@@ -143,6 +143,11 @@ jobs:
         run: |
           set -euo pipefail
           python -m pip install hatch==1.18.1
+          if [[ -z "$SPECFACT_CLI_REPO" ]]; then
+            # The released core fixture needs the same Typer API as the controller.
+            export PIP_CONSTRAINT="$RUNNER_TEMP/native-independent-review/controller-constraints.txt"
+            test -s "$PIP_CONSTRAINT"
+          fi
           hatch run python -m pip --version
           hatch run dev-deps
       - name: Capture exact native subject

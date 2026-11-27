@@ -64,10 +64,7 @@ def _refresh_console() -> None:
     console = get_configured_console()
 
 
-@app.callback()
-def _import_callback() -> None:
-    """Ensure import command group always uses a fresh console per invocation."""
-    _refresh_console()
+app.callback()(_refresh_console)
 
 
 def _init_contract_worker(repo_path: str, contracts_dir: str) -> None:
@@ -135,11 +132,6 @@ def _extract_contract_worker(feature_data: dict[str, Any]) -> tuple[str, dict[st
 def _is_valid_repo_path(path: Path) -> bool:
     """Check if path exists and is a directory."""
     return path.exists() and path.is_dir()
-
-
-def _is_valid_output_path(path: Path | None) -> bool:
-    """Check if output path exists if provided."""
-    return path is None or path.exists()
 
 
 def _count_python_files(repo: Path) -> int:
@@ -2238,7 +2230,7 @@ def from_bridge(
             # Reload bundle after importing plans
             plan_bundle = load_project_bundle(bundle_dir, validate_hashes=False)
 
-            # For Spec-Kit adapter, also generate protocol, Semgrep rules and GitHub Actions if supported
+            # For Spec-Kit adapter, also generate the protocol and GitHub Actions workflow if supported
             # These are Spec-Kit-specific enhancements, not core import functionality
             if adapter_lower == "speckit":
                 from specfact_project.importers.speckit_converter import SpecKitConverter
@@ -2265,16 +2257,7 @@ def from_bridge(
                     except Exception as e:
                         console.print(f"[yellow]⚠[/yellow] Protocol generation failed: {e}")
 
-                # Step 4: Generate Semgrep rules (Spec-Kit specific)
-                if hasattr(converter, "generate_semgrep_rules"):
-                    task = progress.add_task("Generating Semgrep rules...", total=None)
-                    try:
-                        _semgrep_path = converter.generate_semgrep_rules()  # Not used yet
-                        progress.update(task, description="✓ Semgrep rules generated")
-                    except Exception as e:
-                        console.print(f"[yellow]⚠[/yellow] Semgrep rules generation failed: {e}")
-
-                # Step 5: Generate GitHub Action workflow (Spec-Kit specific)
+                # Step 4: Generate GitHub Action workflow (Spec-Kit specific)
                 if hasattr(converter, "generate_github_action"):
                     task = progress.add_task("Generating GitHub Action workflow...", total=None)
                     repo_name = repo.name if isinstance(repo, Path) else None
@@ -2315,6 +2298,10 @@ def from_bridge(
                         except Exception:
                             pass
 
+        bundle_features = plan_bundle.features if plan_bundle else []
+        imported_features = bundle_features.values() if isinstance(bundle_features, dict) else bundle_features
+        story_count = sum(len(feature.stories) for feature in imported_features)
+
         # Generate report
         if report and protocol and plan_bundle:
             report_content = f"""# {adapter_lower.upper()} Import Report
@@ -2325,20 +2312,19 @@ def from_bridge(
 ## Summary
 - **States Found**: {len(protocol.states)}
 - **Transitions**: {len(protocol.transitions)}
-- **Features Extracted**: {len(plan_bundle.features)}
-- **Total Stories**: {sum(len(f.stories) for f in plan_bundle.features)}
+- **Features Extracted**: {len(imported_features)}
+- **Total Stories**: {story_count}
 
 ## Generated Files
 - **Protocol**: `.specfact/protocols/workflow.protocol.yaml`
 - **Plan Bundle**: `.specfact/projects/<bundle-name>/`
-- **Semgrep Rules**: `.semgrep/async-anti-patterns.yml`
 - **GitHub Action**: `.github/workflows/specfact-gate.yml`
 
 ## States
 {chr(10).join(f"- {state}" for state in protocol.states)}
 
 ## Features
-{chr(10).join(f"- {f.title} ({f.key})" for f in plan_bundle.features)}
+{chr(10).join(f"- {feature.title} ({feature.key})" for feature in imported_features)}
 """
             report.parent.mkdir(parents=True, exist_ok=True)
             report.write_text(report_content, encoding="utf-8")
@@ -2368,7 +2354,6 @@ def from_bridge(
         console.print("[bold green]✓[/bold green] Import complete!")
         console.print("[dim]Protocol: .specfact/protocols/workflow.protocol.yaml[/dim]")
         console.print("[dim]Plan: .specfact/projects/<bundle-name>/ (modular bundle)[/dim]")
-        console.print("[dim]Semgrep Rules: .semgrep/async-anti-patterns.yml[/dim]")
         console.print("[dim]GitHub Action: .github/workflows/specfact-gate.yml[/dim]")
 
         if is_debug_mode():
@@ -2389,8 +2374,8 @@ def from_bridge(
                 {
                     "states_found": len(protocol.states),
                     "transitions": len(protocol.transitions),
-                    "features_extracted": len(plan_bundle.features),
-                    "total_stories": sum(len(f.stories) for f in plan_bundle.features),
+                    "features_extracted": len(imported_features),
+                    "total_stories": story_count,
                 }
             )
 

@@ -3,6 +3,7 @@ states:
   - {{ state | tojson }}
 {% endfor %}
 start: {{ start | tojson }}
+{% if transitions %}
 transitions:
 {% for transition in transitions %}
   - from_state: {{ transition.from_state | tojson }}
@@ -12,6 +13,9 @@ transitions:
     guard: {{ transition.guard | tojson }}
 {% endif %}
 {% endfor %}
+{% else %}
+transitions: []
+{% endif %}
 {% if guards %}
 guards:
 {% for guard_name, guard_expr in guards.items() %}
