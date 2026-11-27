@@ -12,6 +12,7 @@ SpecFact-owned Project and Codebase entry points SHALL run supported feature, qu
 - **GIVEN** a source project with HTTP request and response test examples and a Spec-Kit project eligible for protocol and workflow generation
 - **WHEN** the Project import commands run in an external installation without Semgrep
 - **THEN** supported request, response and status-code examples appear in the OpenAPI contract, and Spec-Kit import writes its supported protocol and workflow without generating a Semgrep preset or invoking the scanner
+- **AND** the public Codebase import route accepts the explicit Spec-Kit subcommand and its options, the protocol loads with or without transitions, and the command summary and optional report list the preserved artifacts without advertising the retired preset
 
 #### Scenario: Project import reads OpenAPI examples from test source
 - **GIVEN** a Python test with a literal HTTP request, asserted status and asserted JSON response

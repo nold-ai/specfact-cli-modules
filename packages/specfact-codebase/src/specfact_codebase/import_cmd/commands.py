@@ -8,19 +8,23 @@ before acting when examples and runtime behavior diverge.
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-import click
 import typer
 from icontract import require
-from typer.core import TyperGroup
+from typer.core import TyperArgument, TyperGroup
 
 from specfact_project.import_cmd.commands import from_bridge as legacy_from_bridge, from_code as legacy_from_code
+
+
+if TYPE_CHECKING:
+    from typer._click.core import Command, Context
 
 
 class _ImportCommandGroup(TyperGroup):
     """Detect common legacy callback ordering and print a migration-quality hint."""
 
-    def parse_args(self, ctx: click.Context, args: list[str]) -> list[str]:
+    def parse_args(self, ctx: Context, args: list[str]) -> list[str]:
         if args and args[0] in self.commands:
             if any(arg in ("--help", "-h", "--help-advanced", "-ha") for arg in args[1:]):
                 command = self.commands[args[0]]
@@ -30,7 +34,7 @@ class _ImportCommandGroup(TyperGroup):
                         prog_name=f"{ctx.command_path} {args[0]}",
                         standalone_mode=False,
                     )
-                except click.exceptions.Exit as exc:
+                except typer.Exit as exc:
                     ctx.exit(exc.exit_code)
                 ctx.exit(0)
             return self._parse_explicit_subcommand_args(ctx, args)
@@ -38,25 +42,23 @@ class _ImportCommandGroup(TyperGroup):
             self._raise_legacy_order_error(ctx)
         return super().parse_args(ctx, args)
 
-    def resolve_command(
-        self, ctx: click.Context, args: list[str]
-    ) -> tuple[str | None, click.Command | None, list[str]]:
+    def resolve_command(self, ctx: Context, args: list[str]) -> tuple[str | None, Command | None, list[str]]:
         if args and args[0] not in self.commands and any(arg.startswith("-") for arg in args[1:]):
             self._raise_legacy_order_error(ctx)
         return super().resolve_command(ctx, args)
 
-    def _raise_legacy_order_error(self, ctx: click.Context) -> None:
-        click.echo(ctx.get_help())
-        click.echo(
+    def _raise_legacy_order_error(self, ctx: Context) -> None:
+        typer.echo(ctx.get_help())
+        typer.echo(
             "\nError: Invalid option order for `specfact code import`.\n"
             "Use the canonical form: specfact code import --repo . <bundle>\n"
             "Or use the explicit command: specfact code import from-code <bundle> --repo ."
         )
-        raise click.UsageError("Invalid option order for specfact code import")
+        ctx.fail("Invalid option order for specfact code import")
 
-    def _parse_explicit_subcommand_args(self, ctx: click.Context, args: list[str]) -> list[str]:
+    def _parse_explicit_subcommand_args(self, ctx: Context, args: list[str]) -> list[str]:
         original_params = self.params
-        self.params = [param for param in self.params if not isinstance(param, click.Argument)]
+        self.params = [param for param in self.params if not isinstance(param, TyperArgument)]
         try:
             return super().parse_args(ctx, args)
         finally:

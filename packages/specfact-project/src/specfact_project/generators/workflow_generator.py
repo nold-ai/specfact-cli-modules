@@ -1,8 +1,7 @@
-"""Workflow generator for GitHub Actions and Semgrep rules."""
+"""Render SpecFact validation workflows for GitHub Actions."""
 
 from __future__ import annotations
 
-import shutil
 from pathlib import Path
 from typing import Any
 
@@ -14,11 +13,7 @@ from specfact_project.generators.template_paths import resolve_templates_dir
 
 
 class WorkflowGenerator:
-    """
-    Generator for GitHub Actions workflows and Semgrep rules.
-
-    Uses Jinja2 templates to render workflows and copies Semgrep rules.
-    """
+    """Render GitHub Actions workflows from the packaged templates."""
 
     @beartype
     def __init__(self, templates_dir: Path | None = None) -> None:
@@ -77,42 +72,3 @@ class WorkflowGenerator:
 
         # Write workflow file
         output_path.write_text(rendered, encoding="utf-8")
-
-    @beartype
-    @require(lambda output_path: output_path is not None, "Output path must not be None")
-    @ensure(lambda output_path: output_path.exists(), "Output file must exist after generation")
-    @ensure(lambda output_path: output_path.suffix in (".yml", ".yaml"), "Output must be YAML file")
-    def generate_semgrep_rules(self, output_path: Path, source_rules: Path | None = None) -> None:
-        """
-        Generate Semgrep async rules for the repository.
-
-        Args:
-            output_path: Path to write Semgrep rules (e.g., .semgrep/async-anti-patterns.yml)
-            source_rules: Path to source Semgrep rules (default: tools/semgrep/async.yml)
-
-        Raises:
-            FileNotFoundError: If source rules file doesn't exist
-            IOError: If unable to write output file
-        """
-        if source_rules is None:
-            # Try package resource first (for installed packages)
-            package_resource = Path(__file__).parent.parent / "resources" / "semgrep" / "async.yml"
-            # Fall back to tools/semgrep/async.yml for development
-            dev_resource = Path(__file__).parent.parent.parent.parent / "tools" / "semgrep" / "async.yml"
-
-            if package_resource.exists():
-                source_rules = package_resource
-            elif dev_resource.exists():
-                source_rules = dev_resource
-            else:
-                raise FileNotFoundError(f"Source Semgrep rules not found. Checked: {package_resource}, {dev_resource}")
-        else:
-            source_rules = Path(source_rules)
-            if not source_rules.exists():
-                raise FileNotFoundError(f"Source Semgrep rules not found: {source_rules}")
-
-        # Ensure output directory exists
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-
-        # Copy source rules to output path
-        shutil.copy2(source_rules, output_path)

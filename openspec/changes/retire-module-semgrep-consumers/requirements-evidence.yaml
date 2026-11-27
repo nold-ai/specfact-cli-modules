@@ -192,3 +192,11 @@ requirements:
         node_id: tests/unit/specfact_project/test_code_analyzer_semgrep_status.py::test_route_evidence_belongs_to_its_owning_feature
       intent: Use the route's source range to attach evidence only to the relevant feature.
       observable: Use the route's source range to attach evidence only to the relevant feature.
+    - case_id: PROJECT-SPECKIT-IMPORT
+      scenario_id: module-scanner-entry-points-operate-without-semgrep
+      method: test
+      selector:
+        runner: pytest
+        node_id: tests/integration/specfact_project/test_semgrep_retirement.py::test_speckit_import_keeps_protocol_and_workflow_without_scanner
+      intent: Preserve the Spec-Kit protocol and GitHub Actions workflow without generating or advertising a scanner preset.
+      observable: The protocol validates, the workflow runs the Project health check, and no preset appears in the workspace, CLI output, or import report.

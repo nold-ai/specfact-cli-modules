@@ -47,6 +47,12 @@ Inside the initialized project, the expected feature loop is:
 
 Use `/clarify` to resolve underspecified behavior before architecture work. Use `/analyze` to check consistency and coverage across the generated artifacts before implementation starts.
 
+## Import an Existing Spec-Kit Project
+
+Run `specfact code import from-bridge --repo . --write` from the Spec-Kit project. The import writes the protocol at
+`.specfact/protocols/workflow.protocol.yaml` and a GitHub Actions workflow at `.github/workflows/specfact-gate.yml`.
+The workflow runs the SpecFact project health check and requires no Semgrep preset.
+
 ## Hand Off to SpecFact
 
 SpecFact complements this flow in two common ways.

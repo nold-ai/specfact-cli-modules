@@ -170,3 +170,30 @@ assignment and a loop iterable each lost a callable alias before the
 old binding was used. The scanner now inspects the evaluated value first.
 It still discards the old binding for subsequent statements and the
 loop body. All 114 focused Project tests passed.
+
+## Spec-Kit import artifacts
+
+On modules dev `c8859ae2`, the Project handler attempted to generate a
+Semgrep preset and advertised it in the command output. On Typer 0.27.0, the
+public `code import from-bridge` route separately consumed the subcommand as
+the parent bundle argument and rejected its options.
+
+The mapped public-command regression now imports a minimal Spec-Kit project,
+loads the generated protocol with an empty transition list, parses the
+GitHub Actions workflow, and checks its Project health check. It verifies
+that neither the filesystem, the command, nor the report advertises a
+Semgrep preset. The native test selection passed 217 tests using the reviewed
+core source `58f6a2af`. The focused suite also passed on released core
+0.55.4 and Typer 0.27.0.
+
+The starting branch coverage was 17.75% for the shared Project import file.
+The added tests exercise real import and enrichment runs, recovery from saved
+checkpoints, generated and cached contracts, source tracking, and adapter
+diagnostics. The local native test selection passed 256 tests with 80.83%
+branch-inclusive coverage for the Project import file and 85.96% for the
+Codebase import route against the unchanged 80% requirement. The staged
+Requirements, Code Review, contract tests, and repository lint also passed.
+Protected signing run 46065268836 signed Codebase 0.42.4 and Project
+0.41.34. Both signatures match the approved payloads and pass the strict
+module verifier. Hosted checks and installed-artifact acceptance remain
+pending.

@@ -334,26 +334,6 @@ class SpecKitConverter:
         return sorted(themes)
 
     @beartype
-    @ensure(lambda result: result.exists(), "Output path must exist")
-    @ensure(lambda result: result.suffix == ".yml", "Must be YAML file")
-    def generate_semgrep_rules(self, output_path: Path | None = None) -> Path:
-        """
-        Generate Semgrep async rules for the repository.
-
-        Args:
-            output_path: Optional path to write Semgrep rules (default: .semgrep/async-anti-patterns.yml)
-
-        Returns:
-            Path to generated Semgrep rules file
-        """
-        if output_path is None:
-            # Use default path
-            output_path = self.repo_path / ".semgrep" / "async-anti-patterns.yml"
-
-        self.workflow_generator.generate_semgrep_rules(output_path)
-        return output_path
-
-    @beartype
     @require(lambda budget: budget > 0, "Budget must be positive")
     @require(lambda python_version: python_version.startswith("3."), "Python version must be 3.x")
     @ensure(lambda result: result.exists(), "Output path must exist")
