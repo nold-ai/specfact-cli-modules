@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from click import unstyle
 from typer.testing import CliRunner
 
 from specfact_codebase.import_cmd.commands import app
@@ -16,9 +17,10 @@ def test_code_import_legacy_option_order_reports_canonical_invocation(tmp_path) 
 
 
 def test_explicit_bridge_help_describes_its_flags() -> None:
-    result = CliRunner().invoke(app, ["from-bridge", "--help"])
+    result = CliRunner().invoke(app, ["from-bridge", "--help"], color=True)
 
     assert result.exit_code == 0, result.output
-    assert "from-bridge" in result.output
-    assert "--write" in result.output
-    assert "--dry-run" in result.output
+    output = unstyle(result.output)
+    assert "from-bridge" in output
+    assert "--write" in output
+    assert "--dry-run" in output

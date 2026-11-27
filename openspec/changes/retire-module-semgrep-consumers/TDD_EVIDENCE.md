@@ -228,3 +228,10 @@ constraint for that released-core fixture. A shell-level regression
 failed for the unpaired branch and passed after the change. The paired
 branch retained its existing setup in both runs. All nine affected cases
 passed locally with released core 0.55.4 and Typer 0.27.0.
+
+On signed head `ebf0b795`, run 46071555145 completed all ten native-review
+members and 356 tests. The Project import file reached 80.83% coverage.
+The Python 3.13 full suite then rejected only the new bridge help assertion
+because Rich inserted ANSI sequences inside option names. The test now
+requests colored output and strips formatting before verifying the visible
+options. Both import command contract tests passed with color forced.
