@@ -12,6 +12,7 @@ from specfact_cli.utils.structure import SpecFactStructure
 from typer.testing import CliRunner, Result
 
 from specfact_codebase.code.commands import app
+from specfact_project import import_runtime_patches
 from specfact_project.import_cmd import commands
 from specfact_project.utils import incremental_check
 
@@ -101,6 +102,7 @@ def test_failed_import_reports_the_read_error(widget_repo: Path, monkeypatch: py
     def fail_to_analyze(*_args: object, **_kwargs: object) -> None:
         raise OSError("Source fixture could not be read")
 
+    import_runtime_patches.apply_import_runtime_patches(commands_module=commands)
     monkeypatch.setattr(commands, "_analyze_codebase", fail_to_analyze)
     result = invoke_import(widget_repo, "unreadable")
 
