@@ -77,7 +77,11 @@ def test_interactive_constitution_bootstrap_follows_the_confirmation(
     monkeypatch.delenv("PYTEST_CURRENT_TEST")
     monkeypatch.delenv("TEST_MODE", raising=False)
     monkeypatch.setattr(commands.runtime, "is_interactive", lambda: True)
-    monkeypatch.setattr(commands.typer, "confirm", lambda _message, *, default: confirmed)
+
+    def confirm(_message: str, **_options: bool) -> bool:
+        return confirmed
+
+    monkeypatch.setattr(commands.typer, "confirm", confirm)
 
     commands._suggest_constitution_bootstrap(tmp_path)
 
